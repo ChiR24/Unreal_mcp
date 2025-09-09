@@ -4,12 +4,23 @@ MCP (Model Context Protocol) server for controlling Unreal Engine via Remote Con
 
 ## ✅ Features
 
+### Core Features
 - **Asset Management**: Search, filter, and browse all project assets
 - **Console Commands**: Execute any UE console command (stats, rendering, gameplay) 
 - **PIE Control**: Start, stop, pause Play-In-Editor sessions
 - **Actor Spawning**: Spawn actors and blueprints in levels
 - **Object Inspection**: Query functions and properties of UE objects
 - **Remote Control**: Full HTTP and WebSocket API access
+
+### 🚀 Advanced Features
+- **Animation System**: Create animation blueprints, state machines, montages, blend spaces
+- **Physics Simulation**: Chaos physics, ragdolls, constraints, destruction, vehicles
+- **Niagara Effects**: Particle systems, GPU simulations, preset effects (fire, water, explosions)
+- **Blueprint Visual Scripting**: Create and manage blueprints programmatically
+- **Audio System**: 3D spatial audio, sound cues, reverb zones
+- **UI/UMG Widgets**: Create and manage UI elements
+- **Level Sequences**: Cinematics and camera animations
+- **Control Rig**: Advanced skeletal control
 
 ## 🚀 Quick Start
 
@@ -65,6 +76,14 @@ Add to Claude Desktop or Cursor config:
 ```
 
 ## 🛠️ Available Tools
+
+### Tool Modes
+
+The server supports two modes:
+- **Consolidated Mode** (DEFAULT): 10 multi-purpose tools for simplified AI interaction
+- **Individual Mode**: 36+ specific tools for precise control
+
+See [TOOL_MODES_README.md](TOOL_MODES_README.md) for details on switching modes.
 
 ### Console Commands
 Execute any UE console command:

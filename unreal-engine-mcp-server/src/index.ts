@@ -9,6 +9,22 @@ import { ActorTools } from './tools/actors.js';
 import { AssetTools } from './tools/assets.js';
 import { EditorTools } from './tools/editor.js';
 import { MaterialTools } from './tools/materials.js';
+import { AnimationTools } from './tools/animation.js';
+import { PhysicsTools } from './tools/physics.js';
+import { NiagaraTools } from './tools/niagara.js';
+import { BlueprintTools } from './tools/blueprint.js';
+import { LevelTools } from './tools/level.js';
+import { LightingTools } from './tools/lighting.js';
+import { LandscapeTools } from './tools/landscape.js';
+import { FoliageTools } from './tools/foliage.js';
+import { DebugVisualizationTools } from './tools/debug.js';
+import { PerformanceTools } from './tools/performance.js';
+import { AudioTools } from './tools/audio.js';
+import { UITools } from './tools/ui.js';
+import { toolDefinitions } from './tools/tool-definitions.js';
+import { handleToolCall } from './tools/tool-handlers.js';
+import { consolidatedToolDefinitions } from './tools/consolidated-tool-definitions.js';
+import { handleConsolidatedToolCall } from './tools/consolidated-tool-handlers.js';
 import { prompts } from './prompts/index.js';
 import { 
   CallToolRequestSchema, 
@@ -20,6 +36,9 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 
 const log = new Logger('UE-MCP');
+
+// Configuration: Set to true to use consolidated tools (10 tools), false for individual tools (36 tools)
+const USE_CONSOLIDATED_TOOLS = true; // Change this to switch between modes
 
 export async function createServer() {
   const bridge = new UnrealBridge();
@@ -43,6 +62,18 @@ export async function createServer() {
   const assetTools = new AssetTools(bridge);
   const editorTools = new EditorTools(bridge);
   const materialTools = new MaterialTools(bridge);
+  const animationTools = new AnimationTools(bridge);
+  const physicsTools = new PhysicsTools(bridge);
+  const niagaraTools = new NiagaraTools(bridge);
+  const blueprintTools = new BlueprintTools(bridge);
+  const levelTools = new LevelTools(bridge);
+  const lightingTools = new LightingTools(bridge);
+  const landscapeTools = new LandscapeTools(bridge);
+  const foliageTools = new FoliageTools(bridge);
+  const debugTools = new DebugVisualizationTools(bridge);
+  const performanceTools = new PerformanceTools(bridge);
+  const audioTools = new AudioTools(bridge);
+  const uiTools = new UITools(bridge);
 
   const server = new Server(
     {
@@ -152,284 +183,44 @@ export async function createServer() {
     throw new Error(`Unknown resource: ${uri}`);
   });
 
-  // Handle tool listing
+  // Handle tool listing - switch between consolidated (10) or individual (36) tools
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-      tools: [
-        {
-          name: 'spawn_actor',
-          description: 'Spawn a new actor in the level',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              classPath: { type: 'string', description: 'Blueprint/class path (e.g. /Game/Blueprints/BP_Actor)' },
-              location: {
-                type: 'object',
-                properties: {
-                  x: { type: 'number' },
-                  y: { type: 'number' },
-                  z: { type: 'number' }
-                }
-              },
-              rotation: {
-                type: 'object',
-                properties: {
-                  pitch: { type: 'number' },
-                  yaw: { type: 'number' },
-                  roll: { type: 'number' }
-                }
-              }
-            },
-            required: ['classPath']
-          }
-        },
-        {
-          name: 'console_command',
-          description: 'Execute a console command in Unreal Engine',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              command: { type: 'string', description: 'Console command to execute' }
-            },
-            required: ['command']
-          }
-        },
-        {
-          name: 'play_in_editor',
-          description: 'Start Play In Editor (PIE) mode',
-          inputSchema: {
-            type: 'object',
-            properties: {}
-          }
-        },
-        {
-          name: 'stop_play_in_editor',
-          description: 'Stop Play In Editor (PIE) mode',
-          inputSchema: {
-            type: 'object',
-            properties: {}
-          }
-        },
-        {
-          name: 'set_camera',
-          description: 'Set viewport camera position and rotation',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              location: {
-                type: 'object',
-                properties: {
-                  x: { type: 'number' },
-                  y: { type: 'number' },
-                  z: { type: 'number' }
-                },
-                required: ['x', 'y', 'z']
-              },
-              rotation: {
-                type: 'object',
-                properties: {
-                  pitch: { type: 'number' },
-                  yaw: { type: 'number' },
-                  roll: { type: 'number' }
-                }
-              }
-            },
-            required: ['location']
-          }
-        },
-        {
-          name: 'build_lighting',
-          description: 'Build lighting for the current level',
-          inputSchema: {
-            type: 'object',
-            properties: {}
-          }
-        },
-        {
-          name: 'save_level',
-          description: 'Save the current level',
-          inputSchema: {
-            type: 'object',
-            properties: {}
-          }
-        },
-        {
-          name: 'import_asset',
-          description: 'Import an asset from file system',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              sourcePath: { type: 'string', description: 'File system path to import from' },
-              destinationPath: { type: 'string', description: 'Project path to import to (e.g. /Game/Assets)' }
-            },
-            required: ['sourcePath', 'destinationPath']
-          }
-        },
-        {
-          name: 'create_material',
-          description: 'Create a new material asset',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              name: { type: 'string', description: 'Material name' },
-              path: { type: 'string', description: 'Path to create material (e.g. /Game/Materials)' }
-            },
-            required: ['name', 'path']
-          }
-        }
-      ]
+      tools: USE_CONSOLIDATED_TOOLS ? consolidatedToolDefinitions : toolDefinitions
     };
   });
 
-  // Handle tool calls
+  // Handle tool calls - switch between consolidated (10) or individual (36) tools
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     
-    if (name === 'spawn_actor') {
-      try {
-        const result = await actorTools.spawn(args as any);
-        return {
-          content: [{
-            type: 'text',
-            text: `Actor spawned: ${JSON.stringify(result)}`
-          }]
-        };
-      } catch (err) {
-        return {
-          content: [{
-            type: 'text',
-            text: `Failed to spawn actor: ${err}`
-          }],
-          isError: true
-        };
-      }
-    }
+    // Create tools object for handler
+    const tools = {
+      actorTools,
+      assetTools,
+      materialTools,
+      editorTools,
+      animationTools,
+      physicsTools,
+      niagaraTools,
+      blueprintTools,
+      levelTools,
+      lightingTools,
+      landscapeTools,
+      foliageTools,
+      debugTools,
+      performanceTools,
+      audioTools,
+      uiTools,
+      bridge
+    };
     
-    if (name === 'console_command') {
-      try {
-        if (!args || !args.command) {
-          throw new Error('Command argument is required');
-        }
-        const result = await bridge.httpCall('/remote/object/call', 'PUT', {
-          objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-          functionName: 'ExecuteConsoleCommand',
-          parameters: {
-            WorldContextObject: null,
-            Command: args.command
-          }
-        });
-        return {
-          content: [{
-            type: 'text',
-            text: `Command executed: ${args.command}`
-          }]
-        };
-      } catch (err) {
-        return {
-          content: [{
-            type: 'text',
-            text: `Failed to execute command: ${err}`
-          }],
-          isError: true
-        };
-      }
+    // Use consolidated or individual handler based on configuration
+    if (USE_CONSOLIDATED_TOOLS) {
+      return await handleConsolidatedToolCall(name, args, tools);
+    } else {
+      return await handleToolCall(name, args, tools);
     }
-    
-    if (name === 'play_in_editor') {
-      const result = await editorTools.playInEditor();
-      return {
-        content: [{
-          type: 'text',
-          text: result.message || 'PIE started'
-        }],
-        isError: !result.success
-      };
-    }
-    
-    if (name === 'stop_play_in_editor') {
-      const result = await editorTools.stopPlayInEditor();
-      return {
-        content: [{
-          type: 'text',
-          text: result.message || 'PIE stopped'
-        }],
-        isError: !result.success
-      };
-    }
-    
-    if (name === 'set_camera') {
-      if (!args || !args.location) {
-        throw new Error('Location is required');
-      }
-      const result = await editorTools.setViewportCamera(
-        args.location as { x: number; y: number; z: number },
-        args.rotation as { pitch: number; yaw: number; roll: number } | undefined
-      );
-      return {
-        content: [{
-          type: 'text',
-          text: result.message || 'Camera set'
-        }],
-        isError: !result.success
-      };
-    }
-    
-    if (name === 'build_lighting') {
-      const result = await editorTools.buildLighting();
-      return {
-        content: [{
-          type: 'text',
-          text: result.message || 'Lighting built'
-        }],
-        isError: !result.success
-      };
-    }
-    
-    if (name === 'save_level') {
-      const result = await levelResources.saveCurrentLevel();
-      return {
-        content: [{
-          type: 'text',
-          text: 'Level saved'
-        }]
-      };
-    }
-    
-    if (name === 'import_asset') {
-      if (!args || !args.sourcePath || !args.destinationPath) {
-        throw new Error('sourcePath and destinationPath are required');
-      }
-      const result = await assetTools.importAsset(
-        args.sourcePath as string,
-        args.destinationPath as string
-      );
-      return {
-        content: [{
-          type: 'text',
-          text: result.error || `Asset imported to ${args.destinationPath}`
-        }],
-        isError: !!result.error
-      };
-    }
-    
-    if (name === 'create_material') {
-      if (!args || !args.name || !args.path) {
-        throw new Error('name and path are required');
-      }
-      const result = await materialTools.createMaterial(
-        args.name as string,
-        args.path as string
-      );
-      return {
-        content: [{
-          type: 'text',
-          text: result.success ? `Material created: ${result.path}` : result.error
-        }],
-        isError: !result.success
-      };
-    }
-    
-    throw new Error(`Unknown tool: ${name}`);
   });
 
   // Handle prompt listing
