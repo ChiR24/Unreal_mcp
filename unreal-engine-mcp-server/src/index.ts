@@ -3,7 +3,12 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { Logger } from './utils/logger.js';
 import { UnrealBridge } from './unreal-bridge.js';
 import { AssetResources } from './resources/assets.js';
+import { ActorResources } from './resources/actors.js';
+import { LevelResources } from './resources/levels.js';
 import { ActorTools } from './tools/actors.js';
+import { AssetTools } from './tools/assets.js';
+import { EditorTools } from './tools/editor.js';
+import { MaterialTools } from './tools/materials.js';
 import { prompts } from './prompts/index.js';
 import { 
   CallToolRequestSchema, 
@@ -28,8 +33,16 @@ export async function createServer() {
     // Continue anyway - connection can be retried
   }
 
-  const assets = new AssetResources(bridge);
-  const actors = new ActorTools(bridge);
+  // Resources
+  const assetResources = new AssetResources(bridge);
+  const actorResources = new ActorResources(bridge);
+  const levelResources = new LevelResources(bridge);
+  
+  // Tools
+  const actorTools = new ActorTools(bridge);
+  const assetTools = new AssetTools(bridge);
+  const editorTools = new EditorTools(bridge);
+  const materialTools = new MaterialTools(bridge);
 
   const server = new Server(
     {
@@ -63,6 +76,12 @@ export async function createServer() {
           mimeType: 'application/json'
         },
         {
+          uri: 'ue://level',
+          name: 'Current Level',
+          description: 'Information about the current level',
+          mimeType: 'application/json'
+        },
+        {
           uri: 'ue://exposed',
           name: 'Remote Control Exposed',
           description: 'List all exposed properties via Remote Control',
@@ -77,12 +96,34 @@ export async function createServer() {
     const uri = request.params.uri;
     
     if (uri === 'ue://assets') {
-      const list = await assets.list('/Game', true);
+      const list = await assetResources.list('/Game', true);
       return {
         contents: [{
           uri,
           mimeType: 'application/json',
           text: JSON.stringify(list, null, 2)
+        }]
+      };
+    }
+    
+    if (uri === 'ue://actors') {
+      const list = await actorResources.listActors();
+      return {
+        contents: [{
+          uri,
+          mimeType: 'application/json',
+          text: JSON.stringify(list, null, 2)
+        }]
+      };
+    }
+    
+    if (uri === 'ue://level') {
+      const level = await levelResources.getCurrentLevel();
+      return {
+        contents: [{
+          uri,
+          mimeType: 'application/json',
+          text: JSON.stringify(level, null, 2)
         }]
       };
     }
@@ -152,6 +193,89 @@ export async function createServer() {
             },
             required: ['command']
           }
+        },
+        {
+          name: 'play_in_editor',
+          description: 'Start Play In Editor (PIE) mode',
+          inputSchema: {
+            type: 'object',
+            properties: {}
+          }
+        },
+        {
+          name: 'stop_play_in_editor',
+          description: 'Stop Play In Editor (PIE) mode',
+          inputSchema: {
+            type: 'object',
+            properties: {}
+          }
+        },
+        {
+          name: 'set_camera',
+          description: 'Set viewport camera position and rotation',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              location: {
+                type: 'object',
+                properties: {
+                  x: { type: 'number' },
+                  y: { type: 'number' },
+                  z: { type: 'number' }
+                },
+                required: ['x', 'y', 'z']
+              },
+              rotation: {
+                type: 'object',
+                properties: {
+                  pitch: { type: 'number' },
+                  yaw: { type: 'number' },
+                  roll: { type: 'number' }
+                }
+              }
+            },
+            required: ['location']
+          }
+        },
+        {
+          name: 'build_lighting',
+          description: 'Build lighting for the current level',
+          inputSchema: {
+            type: 'object',
+            properties: {}
+          }
+        },
+        {
+          name: 'save_level',
+          description: 'Save the current level',
+          inputSchema: {
+            type: 'object',
+            properties: {}
+          }
+        },
+        {
+          name: 'import_asset',
+          description: 'Import an asset from file system',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              sourcePath: { type: 'string', description: 'File system path to import from' },
+              destinationPath: { type: 'string', description: 'Project path to import to (e.g. /Game/Assets)' }
+            },
+            required: ['sourcePath', 'destinationPath']
+          }
+        },
+        {
+          name: 'create_material',
+          description: 'Create a new material asset',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Material name' },
+              path: { type: 'string', description: 'Path to create material (e.g. /Game/Materials)' }
+            },
+            required: ['name', 'path']
+          }
         }
       ]
     };
@@ -163,7 +287,7 @@ export async function createServer() {
     
     if (name === 'spawn_actor') {
       try {
-        const result = await actors.spawn(args as any);
+        const result = await actorTools.spawn(args as any);
         return {
           content: [{
             type: 'text',
@@ -183,6 +307,9 @@ export async function createServer() {
     
     if (name === 'console_command') {
       try {
+        if (!args || !args.command) {
+          throw new Error('Command argument is required');
+        }
         const result = await bridge.httpCall('/remote/object/call', 'PUT', {
           objectPath: '/Script/Engine.Default__KismetSystemLibrary',
           functionName: 'ExecuteConsoleCommand',
@@ -206,6 +333,100 @@ export async function createServer() {
           isError: true
         };
       }
+    }
+    
+    if (name === 'play_in_editor') {
+      const result = await editorTools.playInEditor();
+      return {
+        content: [{
+          type: 'text',
+          text: result.message || 'PIE started'
+        }],
+        isError: !result.success
+      };
+    }
+    
+    if (name === 'stop_play_in_editor') {
+      const result = await editorTools.stopPlayInEditor();
+      return {
+        content: [{
+          type: 'text',
+          text: result.message || 'PIE stopped'
+        }],
+        isError: !result.success
+      };
+    }
+    
+    if (name === 'set_camera') {
+      if (!args || !args.location) {
+        throw new Error('Location is required');
+      }
+      const result = await editorTools.setViewportCamera(
+        args.location as { x: number; y: number; z: number },
+        args.rotation as { pitch: number; yaw: number; roll: number } | undefined
+      );
+      return {
+        content: [{
+          type: 'text',
+          text: result.message || 'Camera set'
+        }],
+        isError: !result.success
+      };
+    }
+    
+    if (name === 'build_lighting') {
+      const result = await editorTools.buildLighting();
+      return {
+        content: [{
+          type: 'text',
+          text: result.message || 'Lighting built'
+        }],
+        isError: !result.success
+      };
+    }
+    
+    if (name === 'save_level') {
+      const result = await levelResources.saveCurrentLevel();
+      return {
+        content: [{
+          type: 'text',
+          text: 'Level saved'
+        }]
+      };
+    }
+    
+    if (name === 'import_asset') {
+      if (!args || !args.sourcePath || !args.destinationPath) {
+        throw new Error('sourcePath and destinationPath are required');
+      }
+      const result = await assetTools.importAsset(
+        args.sourcePath as string,
+        args.destinationPath as string
+      );
+      return {
+        content: [{
+          type: 'text',
+          text: result.error || `Asset imported to ${args.destinationPath}`
+        }],
+        isError: !!result.error
+      };
+    }
+    
+    if (name === 'create_material') {
+      if (!args || !args.name || !args.path) {
+        throw new Error('name and path are required');
+      }
+      const result = await materialTools.createMaterial(
+        args.name as string,
+        args.path as string
+      );
+      return {
+        content: [{
+          type: 'text',
+          text: result.success ? `Material created: ${result.path}` : result.error
+        }],
+        isError: !result.success
+      };
     }
     
     throw new Error(`Unknown tool: ${name}`);

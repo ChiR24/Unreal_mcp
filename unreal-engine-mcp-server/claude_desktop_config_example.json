@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "unreal-engine": {
+      "command": "node",
+      "args": ["X:\\Newfolder(2)\\MCP\\Unreal 4.1\\unreal-engine-mcp-server\\dist\\cli.js"],
+      "env": {
+        "UE_HOST": "127.0.0.1",
+        "UE_RC_WS_PORT": "30020",
+        "UE_RC_HTTP_PORT": "30010"
+      }
+    }
+  }
+}
