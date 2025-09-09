@@ -1,0 +1,49 @@
+{
+  "name": "@unrealengine/mcp-server",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "MCP server that bridges Unreal Engine 5.6 Remote Control & Python APIs to AI assistants (Claude, Cursor, etc.)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "unreal-mcp-server": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "ts-node-esm src/index.ts",
+    "start": "node dist/cli.js",
+    "lint": "eslint . --ext .ts",
+    "prepare": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "unreal",
+    "unreal-engine",
+    "ue5",
+    "remote-control",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.4.0",
+    "ajv": "^8.12.0",
+    "axios": "^1.7.2",
+    "ws": "^8.18.0",
+    "zod": "^3.22.4",
+    "yargs": "^17.7.2",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "@types/ws": "^8.5.10",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.5",
+    "ts-node": "^10.9.2"
+  }
+}
