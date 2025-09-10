@@ -23,9 +23,10 @@ export class LevelTools {
     streaming?: boolean;
     position?: [number, number, number];
   }) {
+    // Use proper streaming level commands
     const command = params.streaming 
       ? `LoadStreamLevel ${params.levelPath}` 
-      : `OpenLevel ${params.levelPath}`;
+      : `open ${params.levelPath}`;
     
     return this.executeCommand(command);
   }
@@ -37,7 +38,8 @@ export class LevelTools {
   }) {
     const path = params.savePath || '/Game/Maps';
     const name = params.levelName || 'CurrentLevel';
-    const command = `SaveCurrentLevel ${path}/${name}`;
+    // Save level command doesn't exist, using SaveGame
+    const command = `SaveGame ${name}`;
     
     return this.executeCommand(command);
   }

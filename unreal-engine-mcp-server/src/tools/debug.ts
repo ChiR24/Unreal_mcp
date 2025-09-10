@@ -226,12 +226,56 @@ export class DebugVisualizationTools {
     return this.executeCommand(command);
   }
 
-  // Set view mode  
+  // Set view mode with crash protection
   async setViewMode(params: {
     mode: 'Lit' | 'Unlit' | 'Wireframe' | 'DetailLighting' | 'LightingOnly' | 'LightComplexity' | 'ShaderComplexity' | 'LightmapDensity' | 'StationaryLightOverlap' | 'ReflectionOverride' | 'CollisionPawn' | 'CollisionVisibility';
   }) {
-    const command = `viewmode ${params.mode}`;
-    return this.executeCommand(command);
+    // Known problematic viewmodes that can cause crashes
+    const UNSAFE_VIEWMODES = [
+      'LightComplexity', 'ShaderComplexity', 'LightmapDensity',
+      'StationaryLightOverlap', 'CollisionPawn', 'CollisionVisibility'
+    ];
+    
+    // Warn about potentially unsafe viewmodes
+    if (UNSAFE_VIEWMODES.includes(params.mode)) {
+      console.warn(`⚠️ Viewmode '${params.mode}' may cause crashes in some UE configurations.`);
+      
+      // Try to ensure we're not in PIE mode first (safer for viewmode changes)
+      try {
+        await this.executeCommand('stop');
+      } catch (e) {
+        // Ignore if not in PIE
+      }
+      
+      // Add a small delay to let the engine stabilize
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    try {
+      const command = `viewmode ${params.mode}`;
+      const result = await this.executeCommand(command);
+      
+      // For unsafe modes, immediately switch back to Lit if there's an issue
+      if (UNSAFE_VIEWMODES.includes(params.mode)) {
+        // Set a safety timeout to revert to Lit mode
+        setTimeout(async () => {
+          try {
+            // Check if we're still responsive
+            await this.executeCommand('stat unit');
+          } catch (e) {
+            // If unresponsive, try to recover
+            console.error('Viewmode may have caused an issue, attempting recovery...');
+            await this.executeCommand('viewmode Lit');
+          }
+        }, 2000);
+      }
+      
+      return { ...result, warning: UNSAFE_VIEWMODES.includes(params.mode) ? `Viewmode '${params.mode}' applied. This mode may be unstable.` : undefined };
+    } catch (error) {
+      // Fallback to Lit mode on error
+      await this.executeCommand('viewmode Lit');
+      throw new Error(`Failed to set viewmode '${params.mode}': ${error}. Reverted to Lit mode.`);
+    }
   }
 
   // Show debug info

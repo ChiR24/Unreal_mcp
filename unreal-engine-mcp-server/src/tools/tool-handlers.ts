@@ -47,9 +47,71 @@ export async function handleToolCall(
     switch (name) {
       // Asset Tools
       case 'list_assets':
-        // AssetTools doesn't have listAssets, use bridge directly
-        result = { assets: [] }; // TODO: Implement asset listing
-        message = `Asset listing not yet implemented`;
+        // Try multiple approaches to list assets
+        try {
+          // First try: Use the search API (this works!)
+          try {
+            const searchResult = await tools.bridge.httpCall('/remote/search/assets', 'PUT', {
+              Query: '',  // Empty query to match all (wildcard doesn't work)
+              Filter: {
+                PackagePaths: [args.directory || '/Game'],
+                RecursivePaths: args.recursive !== false,
+                ClassNames: [],  // Empty to get all types
+                RecursiveClasses: true
+              },
+              Limit: 1000,  // Increase limit
+              Start: 0
+            });
+            
+            if (searchResult?.Assets && Array.isArray(searchResult.Assets)) {
+              result = { assets: searchResult.Assets };
+              message = `Found ${result.assets.length} assets in ${args.directory || '/Game'}`;
+              break;
+            }
+          } catch (err1) {
+            // Continue to fallback
+          }
+          
+          // Second try: Use EditorAssetLibrary.ListAssets via bridge.call
+          try {
+            const listResult = await tools.bridge.call({
+              objectPath: '/Script/UnrealEd.Default__EditorAssetLibrary',
+              functionName: 'ListAssets',
+              parameters: { 
+                DirectoryPath: args.directory || '/Game',
+                bRecursive: args.recursive !== false,
+                bIncludeFolder: false
+              }
+            });
+            
+            if (listResult?.Result && Array.isArray(listResult.Result)) {
+              result = { assets: listResult.Result };
+              message = `Found ${result.assets.length} assets in ${args.directory || '/Game'}`;
+              break;
+            }
+          } catch (err2) {
+            // Continue to fallback
+          }
+          
+          // Third try: Use console command to get asset registry
+          const assetRegistryCmd = await tools.bridge.httpCall('/remote/object/call', 'PUT', {
+            objectPath: '/Script/Engine.Default__KismetSystemLibrary',
+            functionName: 'ExecuteConsoleCommand',
+            parameters: {
+              Command: `AssetRegistry.DumpAssets ${args.directory || '/Game'}`,
+              SpecificPlayer: null
+            },
+            generateTransaction: false
+          });
+          
+          // If all else fails, at least report the attempt
+          result = { assets: [], note: 'Asset listing requires proper Remote Control configuration' };
+          message = `Asset listing attempted for ${args.directory || '/Game'}. Check Remote Control settings.`;
+          
+        } catch (err) {
+          result = { assets: [], error: String(err) };
+          message = `Failed to list assets: ${err}`;
+        }
         break;
       
       case 'import_asset':
@@ -64,17 +126,24 @@ export async function handleToolCall(
         break;
       
       case 'delete_actor':
-        // ActorTools doesn't have deleteActor, use console command
-        result = await tools.bridge.httpCall('/remote/object/call', 'PUT', {
-          objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-          functionName: 'ExecuteConsoleCommand',
-          parameters: {
-            Command: `DestroyActor ${args.actorName}`,
-            SpecificPlayer: null
-          },
-          generateTransaction: false
-        });
-        message = `Actor deleted: ${args.actorName}`;
+        // Try Python EditorLevelLibrary first, fallback to console command
+        try {
+          const pythonCmd = `
+import unreal
+actors = unreal.EditorLevelLibrary.get_all_level_actors()
+for actor in actors:
+    if actor.get_name() == "${args.actorName}":
+        unreal.EditorLevelLibrary.destroy_actor(actor)
+        print(f"Destroyed {actor.get_name()}")
+        break
+          `.trim();
+          result = await tools.bridge.executePython(pythonCmd);
+          message = `Actor deleted via EditorLevelLibrary: ${args.actorName}`;
+        } catch (pyErr) {
+          // Fallback to console command
+          result = await tools.bridge.executeConsoleCommand(`DestroyActor ${args.actorName}`);
+          message = `Actor deleted via console: ${args.actorName}`;
+        }
         break;
 
       // Material Tools
@@ -170,34 +239,42 @@ export async function handleToolCall(
 
       // Lighting Tools
       case 'create_light':
+        // Convert location object to array if needed
+        const lightLoc = args.location ? 
+          (Array.isArray(args.location) ? args.location : [args.location.x || 0, args.location.y || 0, args.location.z || 0]) : 
+          [0, 0, 0];
+        const lightRot = args.rotation ? 
+          (Array.isArray(args.rotation) ? args.rotation : [args.rotation.pitch || 0, args.rotation.yaw || 0, args.rotation.roll || 0]) : 
+          [0, 0, 0];
+        
         switch (args.lightType?.toLowerCase()) {
           case 'directional':
             result = await tools.lightingTools.createDirectionalLight({
               name: args.name,
               intensity: args.intensity,
-              rotation: args.rotation
+              rotation: lightRot
             });
             break;
           case 'point':
             result = await tools.lightingTools.createPointLight({
               name: args.name,
-              location: args.location,
+              location: lightLoc,
               intensity: args.intensity
             });
             break;
           case 'spot':
             result = await tools.lightingTools.createSpotLight({
               name: args.name,
-              location: args.location,
-              rotation: args.rotation || [0, 0, 0],
+              location: lightLoc,
+              rotation: lightRot,
               intensity: args.intensity
             });
             break;
           case 'rect':
             result = await tools.lightingTools.createRectLight({
               name: args.name,
-              location: args.location,
-              rotation: args.rotation || [0, 0, 0],
+              location: lightLoc,
+              rotation: lightRot,
               intensity: args.intensity
             });
             break;
@@ -236,18 +313,22 @@ export async function handleToolCall(
 
       // Debug Visualization Tools
       case 'draw_debug_shape':
+        // Convert position object to array if needed
+        const position = Array.isArray(args.position) ? args.position : 
+          (args.position ? [args.position.x || 0, args.position.y || 0, args.position.z || 0] : [0, 0, 0]);
+        
         switch (args.shape?.toLowerCase()) {
           case 'line':
             result = await tools.debugTools.drawDebugLine({
-              start: args.position,
-              end: args.end || [args.position[0] + 100, args.position[1], args.position[2]],
+              start: position,
+              end: args.end || [position[0] + 100, position[1], position[2]],
               color: args.color,
               duration: args.duration
             });
             break;
           case 'box':
             result = await tools.debugTools.drawDebugBox({
-              center: args.position,
+              center: position,
               extent: [args.size, args.size, args.size],
               color: args.color,
               duration: args.duration
@@ -255,7 +336,7 @@ export async function handleToolCall(
             break;
           case 'sphere':
             result = await tools.debugTools.drawDebugSphere({
-              center: args.position,
+              center: position,
               radius: args.size || 50,
               color: args.color,
               duration: args.duration
@@ -330,16 +411,13 @@ export async function handleToolCall(
 
       // Console command (fallback)
       case 'console_command':
-        result = await tools.bridge.httpCall('/remote/object/call', 'PUT', {
-          objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-          functionName: 'ExecuteConsoleCommand',
-          parameters: {
-            Command: args.command,
-            SpecificPlayer: null
-          },
-          generateTransaction: false
-        });
-        message = `Command executed: ${args.command}`;
+        // For stat commands, replace 'stat fps' with 'stat unit' to avoid warnings
+        let command = args.command;
+        if (command && command.toLowerCase().trim() === 'stat fps') {
+          command = 'stat unit';
+        }
+        result = await tools.bridge.executeConsoleCommand(command);
+        message = `Console command executed: ${command}`;
         break;
 
       default:

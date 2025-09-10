@@ -5,16 +5,32 @@ export class MaterialTools {
 
   async createMaterial(name: string, path: string) {
     try {
-      // Create a basic material using console command
-      const res = await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          WorldContextObject: null,
-          Command: `CreateAsset Material ${path}/${name}`
-        }
-      });
-      return { success: true, path: `${path}/${name}` };
+      // Use Python API to create material
+      const materialPath = `${path}/${name}`;
+      const pythonCode = `
+import unreal
+
+# Create material using AssetTools
+asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+factory = unreal.MaterialFactoryNew()
+
+# Create the material asset
+package_path = '${path}'
+asset_name = '${name}'
+
+try:
+    material = asset_tools.create_asset(asset_name, package_path, unreal.Material, factory)
+    if material:
+        unreal.EditorAssetLibrary.save_asset('${materialPath}')
+        print(f"Material created successfully: ${materialPath}")
+    else:
+        print(f"Failed to create material: ${materialPath}")
+except Exception as e:
+    print(f"Error creating material: {str(e)}")
+`.trim();
+      
+      const result = await this.bridge.executePython(pythonCode);
+      return { success: true, path: materialPath, message: `Material ${name} created at ${path}` };
     } catch (err) {
       return { success: false, error: `Failed to create material: ${err}` };
     }

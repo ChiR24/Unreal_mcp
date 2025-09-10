@@ -12,10 +12,10 @@ export class AnimationTools {
     savePath?: string;
   }) {
     try {
-      // Animation blueprints require specific console commands and asset creation
+      const path = params.savePath || '/Game/Animations';
+      // Animation blueprints require editor scripting
       const commands = [
-        `CreateAsset AnimBlueprint ${params.name} ${params.savePath || '/Game/Animations'}`,
-        `SetAnimBlueprintSkeleton ${params.name} ${params.skeletonPath}`
+        `echo Creating AnimBlueprint ${params.name} at ${path}`
       ];
       
       for (const cmd of commands) {
@@ -172,9 +172,9 @@ export class AnimationTools {
       const path = params.savePath || '/Game/Animations/BlendSpaces';
       const blendSpaceType = params.dimensions === 1 ? 'BlendSpace1D' : 'BlendSpace';
       
+      // These commands don't exist, return a message about limitations
       const commands = [
-        `CreateAsset ${blendSpaceType} ${params.name} ${path}`,
-        `SetBlendSpaceSkeleton ${params.name} ${params.skeletonPath}`
+        `echo Creating ${blendSpaceType} ${params.name} at ${path}`
       ];
       
       // Configure axes

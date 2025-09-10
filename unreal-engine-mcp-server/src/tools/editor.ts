@@ -5,17 +5,15 @@ export class EditorTools {
 
   async playInEditor() {
     try {
-      // Use console command instead of EditorLevelLibrary (which is not accessible via Remote Control)
-      const res = await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          Command: 'play',
-          SpecificPlayer: null
-        },
-        generateTransaction: false
-      });
-      return { success: true, message: 'PIE started via console command' };
+      // Try Python first for proper EditorLevelLibrary access
+      try {
+        await this.bridge.executePython('import unreal; unreal.EditorLevelLibrary.editor_play_simulate()');
+        return { success: true, message: 'PIE started via EditorLevelLibrary' };
+      } catch (pythonErr) {
+        // Fallback to console command
+        await this.bridge.executeConsoleCommand('play');
+        return { success: true, message: 'PIE started via console command' };
+      }
     } catch (err) {
       return { success: false, error: `Failed to start PIE: ${err}` };
     }
@@ -23,17 +21,15 @@ export class EditorTools {
 
   async stopPlayInEditor() {
     try {
-      // Use console command instead of EditorLevelLibrary
-      const res = await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          Command: 'stop',
-          SpecificPlayer: null
-        },
-        generateTransaction: false
-      });
-      return { success: true, message: 'PIE stopped via console command' };
+      // Try Python first for proper EditorLevelLibrary access
+      try {
+        await this.bridge.executePython('import unreal; unreal.EditorLevelLibrary.editor_end_play()');
+        return { success: true, message: 'PIE stopped via EditorLevelLibrary' };
+      } catch (pythonErr) {
+        // Fallback to console command
+        await this.bridge.executeConsoleCommand('stop');
+        return { success: true, message: 'PIE stopped via console command' };
+      }
     } catch (err) {
       return { success: false, error: `Failed to stop PIE: ${err}` };
     }
@@ -75,24 +71,28 @@ export class EditorTools {
 
   async setViewportCamera(location: { x: number; y: number; z: number }, rotation?: { pitch: number; yaw: number; roll: number }) {
     try {
-      // EditorLevelLibrary is not accessible, use alternative console commands
-      // Set camera speed if needed
-      await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          Command: 'camspeed 4',
-          SpecificPlayer: null
-        },
-        generateTransaction: false
-      });
-      
-      // For actual camera positioning, we can use debug camera or suggest manual positioning
-      // Note: Direct camera positioning via console is limited
-      return { 
-        success: true, 
-        message: 'Camera controls set. Use debug camera (toggledebugcamera) for free movement' 
-      };
+      // Try Python for actual viewport camera positioning
+      try {
+        const rot = rotation || { pitch: 0, yaw: 0, roll: 0 };
+        const pythonCmd = `
+import unreal
+location = unreal.Vector(${location.x}, ${location.y}, ${location.z})
+rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
+unreal.EditorLevelLibrary.set_level_viewport_camera_info(location, rotation)
+        `.trim();
+        await this.bridge.executePython(pythonCmd);
+        return { 
+          success: true, 
+          message: 'Viewport camera positioned via EditorLevelLibrary' 
+        };
+      } catch (pythonErr) {
+        // Fallback to camera speed control
+        await this.bridge.executeConsoleCommand('camspeed 4');
+        return { 
+          success: true, 
+          message: 'Camera speed set. Use debug camera (toggledebugcamera) for manual positioning' 
+        };
+      }
     } catch (err) {
       return { success: false, error: `Failed to set camera: ${err}` };
     }

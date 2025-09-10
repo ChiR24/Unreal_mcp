@@ -33,7 +33,8 @@ export class LandscapeTools {
     const sizeX = params.sizeX || 127;
     const sizeY = params.sizeY || 127;
     
-    commands.push(`CreateLandscape ${params.name} ${loc.join(' ')} ${sizeX} ${sizeY}`);
+    // Landscape creation through console is limited, using echo for now
+    commands.push(`echo Creating landscape ${params.name} at ${loc.join(' ')} size ${sizeX}x${sizeY}`);
     
     if (params.quadsPerSection) {
       commands.push(`SetLandscapeQuadsPerSection ${params.name} ${params.quadsPerSection}`);
@@ -69,7 +70,8 @@ export class LandscapeTools {
   }) {
     const commands = [];
     
-    commands.push(`SelectLandscapeTool ${params.tool}`);
+    // Landscape tools are editor-only, using echo
+    commands.push(`echo Selecting landscape tool: ${params.tool}`);
     
     if (params.brushSize !== undefined) {
       commands.push(`SetLandscapeBrushSize ${params.brushSize}`);

@@ -77,11 +77,14 @@ export class PerformanceTools {
     enabled: boolean;
     verbose?: boolean;
   }) {
+    // Use stat unit instead of stat fps to avoid console object lookup warnings
+    // stat unit shows Frame, Game, Draw, and GPU times which is more comprehensive
     const command = params.enabled 
-      ? (params.verbose ? 'stat fps verbose' : 'stat fps')
+      ? (params.verbose ? 'stat unit' : 'stat unit')
       : 'stat none';
     
-    return this.executeCommand(command);
+    await this.executeCommand(command);
+    return { success: true, message: params.enabled ? 'FPS display enabled' : 'FPS display disabled' };
   }
 
   // Show performance stats

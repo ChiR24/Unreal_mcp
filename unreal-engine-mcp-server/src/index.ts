@@ -37,8 +37,78 @@ import {
 
 const log = new Logger('UE-MCP');
 
-// Configuration: Set to true to use consolidated tools (10 tools), false for individual tools (36 tools)
-const USE_CONSOLIDATED_TOOLS = true; // Change this to switch between modes
+// Performance metrics
+interface PerformanceMetrics {
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  averageResponseTime: number;
+  responseTimes: number[];
+  connectionStatus: 'connected' | 'disconnected' | 'error';
+  lastHealthCheck: Date;
+  uptime: number;
+}
+
+const metrics: PerformanceMetrics = {
+  totalRequests: 0,
+  successfulRequests: 0,
+  failedRequests: 0,
+  averageResponseTime: 0,
+  responseTimes: [],
+  connectionStatus: 'disconnected',
+  lastHealthCheck: new Date(),
+  uptime: Date.now()
+};
+
+// Configuration
+const CONFIG = {
+  // Tool mode: true = consolidated (10 tools), false = individual (36+ tools)
+  USE_CONSOLIDATED_TOOLS: process.env.USE_CONSOLIDATED_TOOLS !== 'false',
+  // Connection retry settings
+  MAX_RETRY_ATTEMPTS: 3,
+  RETRY_DELAY_MS: 2000,
+  // Server info
+  SERVER_NAME: 'unreal-engine-mcp',
+  SERVER_VERSION: '1.0.0',
+  // Monitoring
+  HEALTH_CHECK_INTERVAL_MS: 30000 // 30 seconds
+};
+
+// Helper function to track performance
+function trackPerformance(startTime: number, success: boolean) {
+  const responseTime = Date.now() - startTime;
+  metrics.totalRequests++;
+  if (success) {
+    metrics.successfulRequests++;
+  } else {
+    metrics.failedRequests++;
+  }
+  
+  // Keep last 100 response times for average calculation
+  metrics.responseTimes.push(responseTime);
+  if (metrics.responseTimes.length > 100) {
+    metrics.responseTimes.shift();
+  }
+  
+  // Calculate average
+  metrics.averageResponseTime = metrics.responseTimes.reduce((a, b) => a + b, 0) / metrics.responseTimes.length;
+}
+
+// Health check function
+async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
+  try {
+    // Try to get exposed properties as a health check
+    await bridge.getExposed();
+    metrics.connectionStatus = 'connected';
+    metrics.lastHealthCheck = new Date();
+    return true;
+  } catch (err) {
+    metrics.connectionStatus = 'error';
+    metrics.lastHealthCheck = new Date();
+    log.warn('Health check failed:', err);
+    return false;
+  }
+}
 
 export async function createServer() {
   const bridge = new UnrealBridge();
@@ -46,11 +116,18 @@ export async function createServer() {
   // Connect to UE5 Remote Control
   try {
     await bridge.connect();
+    metrics.connectionStatus = 'connected';
   } catch (err) {
     log.error('Failed to connect to Unreal Engine:', err);
     log.info('Make sure Unreal Engine is running with Remote Control enabled');
+    metrics.connectionStatus = 'disconnected';
     // Continue anyway - connection can be retried
   }
+  
+  // Start periodic health checks
+  setInterval(() => {
+    performHealthCheck(bridge);
+  }, CONFIG.HEALTH_CHECK_INTERVAL_MS);
 
   // Resources
   const assetResources = new AssetResources(bridge);
@@ -77,8 +154,8 @@ export async function createServer() {
 
   const server = new Server(
     {
-      name: 'unreal-engine-5.6',
-      version: '0.1.0'
+      name: CONFIG.SERVER_NAME,
+      version: CONFIG.SERVER_VERSION
     },
     {
       capabilities: {
@@ -116,6 +193,12 @@ export async function createServer() {
           uri: 'ue://exposed',
           name: 'Remote Control Exposed',
           description: 'List all exposed properties via Remote Control',
+          mimeType: 'application/json'
+        },
+        {
+          uri: 'ue://health',
+          name: 'Health Status',
+          description: 'Server health and performance metrics',
           mimeType: 'application/json'
         }
       ]
@@ -180,19 +263,52 @@ export async function createServer() {
       }
     }
     
+    if (uri === 'ue://health') {
+      const uptimeMs = Date.now() - metrics.uptime;
+      const health = {
+        status: metrics.connectionStatus,
+        uptime: Math.floor(uptimeMs / 1000),
+        performance: {
+          totalRequests: metrics.totalRequests,
+          successfulRequests: metrics.successfulRequests,
+          failedRequests: metrics.failedRequests,
+          successRate: metrics.totalRequests > 0 ? 
+            (metrics.successfulRequests / metrics.totalRequests * 100).toFixed(2) + '%' : 'N/A',
+          averageResponseTime: Math.round(metrics.averageResponseTime) + 'ms'
+        },
+        lastHealthCheck: metrics.lastHealthCheck.toISOString(),
+        unrealConnection: {
+          status: bridge.isConnected ? 'connected' : 'disconnected',
+          host: process.env.UE_HOST || 'localhost',
+          httpPort: process.env.UE_RC_HTTP_PORT || 30010,
+          wsPort: process.env.UE_RC_WS_PORT || 30020
+        }
+      };
+      
+      return {
+        contents: [{
+          uri,
+          mimeType: 'application/json',
+          text: JSON.stringify(health, null, 2)
+        }]
+      };
+    }
+    
     throw new Error(`Unknown resource: ${uri}`);
   });
 
   // Handle tool listing - switch between consolidated (10) or individual (36) tools
   server.setRequestHandler(ListToolsRequestSchema, async () => {
+    log.info(`Serving ${CONFIG.USE_CONSOLIDATED_TOOLS ? 'consolidated' : 'individual'} tools`);
     return {
-      tools: USE_CONSOLIDATED_TOOLS ? consolidatedToolDefinitions : toolDefinitions
+      tools: CONFIG.USE_CONSOLIDATED_TOOLS ? consolidatedToolDefinitions : toolDefinitions
     };
   });
 
   // Handle tool calls - switch between consolidated (10) or individual (36) tools
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+    const startTime = Date.now();
     
     // Create tools object for handler
     const tools = {
@@ -216,10 +332,19 @@ export async function createServer() {
     };
     
     // Use consolidated or individual handler based on configuration
-    if (USE_CONSOLIDATED_TOOLS) {
-      return await handleConsolidatedToolCall(name, args, tools);
-    } else {
-      return await handleToolCall(name, args, tools);
+    try {
+      let result;
+      if (CONFIG.USE_CONSOLIDATED_TOOLS) {
+        result = await handleConsolidatedToolCall(name, args, tools);
+      } else {
+        result = await handleToolCall(name, args, tools);
+      }
+      trackPerformance(startTime, true);
+      return result;
+    } catch (error) {
+      trackPerformance(startTime, false);
+      log.error(`Tool execution failed: ${name}`, error);
+      throw error;
     }
   });
 

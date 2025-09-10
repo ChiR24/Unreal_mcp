@@ -200,7 +200,7 @@ export class NiagaraTools {
   async createEffect(params: {
     effectType: 'Fire' | 'Smoke' | 'Explosion' | 'Water' | 'Rain' | 'Snow' | 'Magic' | 'Lightning' | 'Dust' | 'Steam';
     name: string;
-    location: [number, number, number];
+    location: [number, number, number] | { x: number, y: number, z: number };
     scale?: number;
     intensity?: number;
     customParameters?: {
@@ -208,7 +208,13 @@ export class NiagaraTools {
     };
   }) {
     try {
-      const locStr = `${params.location[0]} ${params.location[1]} ${params.location[2]}`;
+      // Handle both array and object location formats
+      let locStr: string;
+      if (Array.isArray(params.location)) {
+        locStr = `${params.location[0]} ${params.location[1]} ${params.location[2]}`;
+      } else {
+        locStr = `${params.location.x || 0} ${params.location.y || 0} ${params.location.z || 0}`;
+      }
       
       const commands = [
         `CreateNiagaraEffect ${params.effectType} ${params.name} ${locStr}`
@@ -381,18 +387,33 @@ export class NiagaraTools {
    */
   async spawnEffect(params: {
     systemPath: string;
-    location: [number, number, number];
+    location: [number, number, number] | { x: number, y: number, z: number };
     rotation?: [number, number, number];
-    scale?: [number, number, number];
+    scale?: [number, number, number] | number;
     autoDestroy?: boolean;
     attachToActor?: string;
   }) {
     try {
-      const locStr = `${params.location[0]} ${params.location[1]} ${params.location[2]}`;
+      // Handle both array and object location formats
+      let locStr: string;
+      if (Array.isArray(params.location)) {
+        locStr = `${params.location[0]} ${params.location[1]} ${params.location[2]}`;
+      } else {
+        locStr = `${params.location.x || 0} ${params.location.y || 0} ${params.location.z || 0}`;
+      }
+      
       const rotStr = params.rotation ? 
         `${params.rotation[0]} ${params.rotation[1]} ${params.rotation[2]}` : '0 0 0';
-      const scaleStr = params.scale ? 
-        `${params.scale[0]} ${params.scale[1]} ${params.scale[2]}` : '1 1 1';
+      
+      // Handle both array and single number scale
+      let scaleStr: string;
+      if (Array.isArray(params.scale)) {
+        scaleStr = `${params.scale[0]} ${params.scale[1]} ${params.scale[2]}`;
+      } else if (typeof params.scale === 'number') {
+        scaleStr = `${params.scale} ${params.scale} ${params.scale}`;
+      } else {
+        scaleStr = '1 1 1';
+      }
       
       let command = `SpawnNiagaraSystem ${params.systemPath} ${locStr} ${rotStr} ${scaleStr}`;
       

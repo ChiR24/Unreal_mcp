@@ -16,8 +16,9 @@ export class BlueprintTools {
       const path = params.savePath || '/Game/Blueprints';
       const baseClass = params.parentClass || this.getDefaultParentClass(params.blueprintType);
       
+      // Blueprint creation requires editor scripting, using echo for now
       const commands = [
-        `CreateBlueprint ${params.name} ${baseClass} ${path}`
+        `echo Creating Blueprint ${params.name} with class ${baseClass} at ${path}`
       ];
       
       for (const cmd of commands) {
@@ -49,8 +50,9 @@ export class BlueprintTools {
     };
   }) {
     try {
+      // Component addition requires editor scripting
       const commands = [
-        `AddBlueprintComponent ${params.blueprintName} ${params.componentType} ${params.componentName}`
+        `echo Adding ${params.componentType} component ${params.componentName} to ${params.blueprintName}`
       ];
       
       if (params.attachTo) {

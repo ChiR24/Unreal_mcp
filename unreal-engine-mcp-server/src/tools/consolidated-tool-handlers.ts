@@ -196,9 +196,11 @@ export async function handleConsolidatedToolCall(
             break;
           case 'debug_shape':
             mappedName = 'draw_debug_shape';
+            // Convert location object to array for position
+            const pos = args.location || args.position;
             mappedArgs = {
               shape: args.shape,
-              position: args.location,
+              position: pos ? [pos.x || 0, pos.y || 0, pos.z || 0] : [0, 0, 0],
               size: args.size,
               color: args.color,
               duration: args.duration

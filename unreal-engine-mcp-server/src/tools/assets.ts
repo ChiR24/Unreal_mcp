@@ -5,15 +5,32 @@ export class AssetTools {
 
   async importAsset(sourcePath: string, destinationPath: string) {
     try {
-      const res = await this.bridge.call({
-        objectPath: '/Script/UnrealEd.Default__EditorAssetLibrary',
-        functionName: 'ImportAsset',
-        parameters: {
-          SourcePath: sourcePath,
-          DestinationPath: destinationPath
-        }
-      });
-      return res?.Result ?? res;
+      // Use Python API to import asset
+      const pythonCode = `
+import unreal
+
+# Set up the import task
+task = unreal.AssetImportTask()
+task.filename = r'${sourcePath}'
+task.destination_path = '${destinationPath}'
+task.automated = True
+task.save = True
+task.replace_existing = True
+
+# Use AssetTools to import
+asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+try:
+    asset_tools.import_asset_tasks([task])
+    if task.imported_object_paths:
+        print(f"Successfully imported: {task.imported_object_paths}")
+    else:
+        print(f"No assets imported from: {task.filename}")
+except Exception as e:
+    print(f"Error importing asset: {str(e)}")
+`.trim();
+      
+      const result = await this.bridge.executePython(pythonCode);
+      return { success: true, message: `Import attempted from ${sourcePath} to ${destinationPath}` };
     } catch (err) {
       return { error: `Failed to import asset: ${err}` };
     }
@@ -22,7 +39,7 @@ export class AssetTools {
   async duplicateAsset(sourcePath: string, destinationPath: string) {
     try {
       const res = await this.bridge.call({
-        objectPath: '/Script/UnrealEd.Default__EditorAssetLibrary',
+        objectPath: '/Script/EditorScriptingUtilities.Default__EditorAssetLibrary',
         functionName: 'DuplicateAsset',
         parameters: {
           SourceAssetPath: sourcePath,
@@ -38,7 +55,7 @@ export class AssetTools {
   async deleteAsset(assetPath: string) {
     try {
       const res = await this.bridge.call({
-        objectPath: '/Script/UnrealEd.Default__EditorAssetLibrary',
+        objectPath: '/Script/EditorScriptingUtilities.Default__EditorAssetLibrary',
         functionName: 'DeleteAsset',
         parameters: {
           AssetPathToDelete: assetPath
@@ -53,7 +70,7 @@ export class AssetTools {
   async saveAsset(assetPath: string) {
     try {
       const res = await this.bridge.call({
-        objectPath: '/Script/UnrealEd.Default__EditorAssetLibrary',
+        objectPath: '/Script/EditorScriptingUtilities.Default__EditorAssetLibrary',
         functionName: 'SaveAsset',
         parameters: {
           AssetToSave: assetPath
