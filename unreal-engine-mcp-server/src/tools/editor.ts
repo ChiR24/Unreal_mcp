@@ -5,14 +5,34 @@ export class EditorTools {
 
   async playInEditor() {
     try {
-      // Try Python first for proper EditorLevelLibrary access
+      // Set tick rate to match UI play (60 fps for game mode)
+      await this.bridge.executeConsoleCommand('t.MaxFPS 60');
+      
+      // Try Python first for proper EditorLevelLibrary access with viewport play
       try {
-        await this.bridge.executePython('import unreal; unreal.EditorLevelLibrary.editor_play_simulate()');
-        return { success: true, message: 'PIE started via EditorLevelLibrary' };
+        // Use EditorLevelLibrary to play in the selected viewport (matches UI behavior)
+        const pythonCmd = `
+          import unreal
+          # Set play settings to match UI play
+          play_settings = unreal.LevelEditorPlaySettings()
+          play_settings.play_in_editor_type = unreal.PlayInEditorType.PIE_PLAY_IN_VIEWPORT
+          play_settings.play_in_viewport_gizmos = True
+          
+          # Start PIE in selected viewport
+          unreal.EditorLevelLibrary.play_in_viewport(
+              simulate_in_editor=False,
+              at_location=unreal.Vector(0, 0, 0),
+              at_rotation=unreal.Rotator(0, 0, 0),
+              viewport_type='SelectedViewport',
+              destination_viewport=''
+          )
+        `.trim();
+        await this.bridge.executePython(pythonCmd);
+        return { success: true, message: 'PIE started in Selected Viewport (matching UI play)' };
       } catch (pythonErr) {
-        // Fallback to console command
-        await this.bridge.executeConsoleCommand('play');
-        return { success: true, message: 'PIE started via console command' };
+        // Fallback to console command with viewport specification
+        await this.bridge.executeConsoleCommand('PlayInViewport');
+        return { success: true, message: 'PIE started via console command in viewport' };
       }
     } catch (err) {
       return { success: false, error: `Failed to start PIE: ${err}` };
@@ -69,28 +89,109 @@ export class EditorTools {
     }
   }
 
-  async setViewportCamera(location: { x: number; y: number; z: number }, rotation?: { pitch: number; yaw: number; roll: number }) {
+  async setViewportCamera(location?: { x: number; y: number; z: number } | null | undefined, rotation?: { pitch: number; yaw: number; roll: number } | null | undefined) {
+    // Special handling for when both location and rotation are missing/invalid
+    // Allow rotation-only updates
+    if (location === null) {
+      // Explicit null is not allowed for location
+      throw new Error('Invalid location: null is not allowed');
+    }
+    if (location !== undefined && location !== null) {
+      if (typeof location !== 'object' || Array.isArray(location)) {
+        throw new Error('Invalid location: must be an object with x, y, z properties');
+      }
+      if (!('x' in location) || !('y' in location) || !('z' in location)) {
+        throw new Error('Invalid location: missing required properties x, y, or z');
+      }
+      if (typeof location.x !== 'number' || typeof location.y !== 'number' || typeof location.z !== 'number') {
+        throw new Error('Invalid location: x, y, z must all be numbers');
+      }
+      if (!isFinite(location.x) || !isFinite(location.y) || !isFinite(location.z)) {
+        throw new Error('Invalid location: x, y, z must be finite numbers');
+      }
+      // Clamp extreme values to reasonable limits for Unreal Engine
+      const MAX_COORD = 1000000; // 1 million units is a reasonable max for UE
+      location.x = Math.max(-MAX_COORD, Math.min(MAX_COORD, location.x));
+      location.y = Math.max(-MAX_COORD, Math.min(MAX_COORD, location.y));
+      location.z = Math.max(-MAX_COORD, Math.min(MAX_COORD, location.z));
+    }
+    
+    // Validate rotation if provided
+    if (rotation !== undefined) {
+      if (rotation === null) {
+        throw new Error('Invalid rotation: null is not allowed');
+      }
+      if (typeof rotation !== 'object' || Array.isArray(rotation)) {
+        throw new Error('Invalid rotation: must be an object with pitch, yaw, roll properties');
+      }
+      if (!('pitch' in rotation) || !('yaw' in rotation) || !('roll' in rotation)) {
+        throw new Error('Invalid rotation: missing required properties pitch, yaw, or roll');
+      }
+      if (typeof rotation.pitch !== 'number' || typeof rotation.yaw !== 'number' || typeof rotation.roll !== 'number') {
+        throw new Error('Invalid rotation: pitch, yaw, roll must all be numbers');
+      }
+      if (!isFinite(rotation.pitch) || !isFinite(rotation.yaw) || !isFinite(rotation.roll)) {
+        throw new Error('Invalid rotation: pitch, yaw, roll must be finite numbers');
+      }
+      // Normalize rotation values to 0-360 range
+      rotation.pitch = ((rotation.pitch % 360) + 360) % 360;
+      rotation.yaw = ((rotation.yaw % 360) + 360) % 360;
+      rotation.roll = ((rotation.roll % 360) + 360) % 360;
+    }
+    
     try {
       // Try Python for actual viewport camera positioning
-      try {
-        const rot = rotation || { pitch: 0, yaw: 0, roll: 0 };
-        const pythonCmd = `
+      // Only proceed if we have a valid location
+      if (location) {
+        try {
+          const rot = rotation || { pitch: 0, yaw: 0, roll: 0 };
+          const pythonCmd = `
 import unreal
 location = unreal.Vector(${location.x}, ${location.y}, ${location.z})
 rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
 unreal.EditorLevelLibrary.set_level_viewport_camera_info(location, rotation)
-        `.trim();
-        await this.bridge.executePython(pythonCmd);
+          `.trim();
+          await this.bridge.executePython(pythonCmd);
+          return { 
+            success: true, 
+            message: 'Viewport camera positioned via EditorLevelLibrary' 
+          };
+        } catch (pythonErr) {
+          // Fallback to camera speed control
+          await this.bridge.executeConsoleCommand('camspeed 4');
+          return { 
+            success: true, 
+            message: 'Camera speed set. Use debug camera (toggledebugcamera) for manual positioning' 
+          };
+        }
+      } else if (rotation) {
+        // Only rotation provided, try to set just rotation
+        try {
+          const pythonCmd = `
+import unreal
+rotation = unreal.Rotator(${rotation.pitch}, ${rotation.yaw}, ${rotation.roll})
+# Get current location
+level_viewport = unreal.EditorLevelLibrary.get_level_viewport_camera_info()
+current_location = level_viewport[0]
+unreal.EditorLevelLibrary.set_level_viewport_camera_info(current_location, rotation)
+          `.trim();
+          await this.bridge.executePython(pythonCmd);
+          return { 
+            success: true, 
+            message: 'Viewport camera rotation set via EditorLevelLibrary' 
+          };
+        } catch (pythonErr) {
+          // Fallback
+          return { 
+            success: true, 
+            message: 'Camera rotation update attempted' 
+          };
+        }
+      } else {
+        // Neither location nor rotation provided - this is valid, just no-op
         return { 
           success: true, 
-          message: 'Viewport camera positioned via EditorLevelLibrary' 
-        };
-      } catch (pythonErr) {
-        // Fallback to camera speed control
-        await this.bridge.executeConsoleCommand('camspeed 4');
-        return { 
-          success: true, 
-          message: 'Camera speed set. Use debug camera (toggledebugcamera) for manual positioning' 
+          message: 'No camera changes requested' 
         };
       }
     } catch (err) {

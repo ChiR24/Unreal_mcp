@@ -5,8 +5,40 @@ export class MaterialTools {
 
   async createMaterial(name: string, path: string) {
     try {
+      // Validate name
+      if (!name || name.trim() === '') {
+        return { success: false, error: 'Material name cannot be empty' };
+      }
+      
+      // Check name length (Unreal has 260 char path limit)
+      if (name.length > 100) {
+        return { success: false, error: `Material name too long (${name.length} chars). Maximum is 100 characters.` };
+      }
+      
+      // Validate name doesn't contain invalid characters
+      // Unreal Engine doesn't allow: spaces, dots, slashes, backslashes, pipes, angle brackets, 
+      // curly braces, square brackets, parentheses, @, #, etc.
+      const invalidChars = /[\s\.\/<>\|\{\}\[\]\(\)@#\\]/;
+      if (invalidChars.test(name)) {
+        const foundChars = name.match(invalidChars);
+        return { success: false, error: `Material name contains invalid characters: '${foundChars?.[0]}'. Avoid spaces, dots, slashes, backslashes, brackets, and special symbols.` };
+      }
+      
+      // Validate path type
+      if (typeof path !== 'string') {
+        return { success: false, error: `Invalid path type: expected string, got ${typeof path}` };
+      }
+      
+      // Clean up path - remove trailing slashes
+      const cleanPath = path.replace(/\/$/, '');
+      
+      // Validate path starts with /Game or /Engine
+      if (!cleanPath.startsWith('/Game') && !cleanPath.startsWith('/Engine')) {
+        return { success: false, error: `Invalid path: must start with /Game or /Engine, got ${cleanPath}` };
+      }
+      
       // Use Python API to create material
-      const materialPath = `${path}/${name}`;
+      const materialPath = `${cleanPath}/${name}`;
       // Use the correct Unreal Engine 5 Python API
       const pythonCode = `
 import unreal
@@ -18,11 +50,14 @@ try:
     # Create a MaterialFactoryNew
     factory = unreal.MaterialFactoryNew()
     
+    # Clean up the path - remove trailing slashes
+    clean_path = '${cleanPath}'.rstrip('/')
+    
     # Create the material asset at the specified path
     # The path should be: /Game/FolderName and asset name separately
     asset = asset_tools.create_asset(
         asset_name='${name}',
-        package_path='${path}',
+        package_path=clean_path,
         asset_class=unreal.Material,
         factory=factory
     )

@@ -47,9 +47,123 @@ export async function handleToolCall(
     switch (name) {
       // Asset Tools
       case 'list_assets':
+        // Validate directory argument
+        if (args.directory === null) {
+          result = { assets: [], error: 'Directory cannot be null' };
+          message = 'Failed to list assets: directory cannot be null';
+          break;
+        }
+        if (args.directory === undefined) {
+          result = { assets: [], error: 'Directory cannot be undefined' };
+          message = 'Failed to list assets: directory cannot be undefined';
+          break;
+        }
+        if (typeof args.directory !== 'string') {
+          result = { assets: [], error: `Invalid directory type: expected string, got ${typeof args.directory}` };
+          message = `Failed to list assets: directory must be a string path, got ${typeof args.directory}`;
+          break;
+        } else if (args.directory.trim() === '') {
+          result = { assets: [], error: 'Directory path cannot be empty' };
+          message = 'Failed to list assets: directory path cannot be empty';
+          break;
+        }
+        
         // Try multiple approaches to list assets
         try {
-          // First try: Use the search API (this works!)
+          // First try: Use Python for most reliable listing
+          const pythonCode = `
+import unreal
+import json
+
+directory = '${args.directory || '/Game'}'
+recursive = ${args.recursive !== false ? 'True' : 'False'}
+
+try:
+    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+    
+    # Create filter using proper constructor parameters
+    filter = unreal.ARFilter(
+        package_paths=[directory],
+        recursive_paths=recursive
+    )
+    
+    # Get all assets in the directory
+    assets = asset_registry.get_assets(filter)
+    
+    # Format asset information
+    asset_list = []
+    for asset in assets:
+        asset_info = {
+            'Name': asset.asset_name,
+            'Path': str(asset.package_path) + '/' + str(asset.asset_name),
+            'Class': str(asset.asset_class_path.asset_name if hasattr(asset.asset_class_path, 'asset_name') else asset.asset_class),
+            'PackagePath': str(asset.package_path)
+        }
+        asset_list.append(asset_info)
+        print(f"Asset: {asset_info['Path']}")
+    
+    result = {
+        'success': True,
+        'count': len(asset_list),
+        'assets': asset_list
+    }
+    print(f"RESULT:{json.dumps(result)}")
+except Exception as e:
+    # Fallback to EditorAssetLibrary if ARFilter fails
+    try:
+        import unreal
+        asset_paths = unreal.EditorAssetLibrary.list_assets(directory, recursive, False)
+        asset_list = []
+        for path in asset_paths:
+            asset_list.append({
+                'Name': path.split('/')[-1].split('.')[0],
+                'Path': path,
+                'PackagePath': '/'.join(path.split('/')[:-1])
+            })
+        result = {
+            'success': True,
+            'count': len(asset_list),
+            'assets': asset_list,
+            'method': 'EditorAssetLibrary'
+        }
+        print(f"RESULT:{json.dumps(result)}")
+    except Exception as e2:
+        print(f"Error listing assets: {e} | Fallback error: {e2}")
+        print(f"RESULT:{json.dumps({'success': False, 'error': str(e), 'assets': []})}")
+`.trim();
+          
+          const pyResponse = await tools.bridge.executePython(pythonCode);
+          
+          // Parse Python output
+          let outputStr = '';
+          if (typeof pyResponse === 'object' && pyResponse !== null) {
+            if (pyResponse.LogOutput && Array.isArray(pyResponse.LogOutput)) {
+              outputStr = pyResponse.LogOutput
+                .map((log: any) => log.Output || '')
+                .join('');
+            } else {
+              outputStr = JSON.stringify(pyResponse);
+            }
+          } else {
+            outputStr = String(pyResponse || '');
+          }
+          
+          // Extract result from Python output
+          const resultMatch = outputStr.match(/RESULT:({.*})/);
+          if (resultMatch) {
+            try {
+              const listResult = JSON.parse(resultMatch[1]);
+              if (listResult.success && listResult.assets) {
+                result = { assets: listResult.assets };
+                message = `Found ${listResult.count} assets in ${args.directory || '/Game'}`;
+                break;
+              }
+            } catch (parseErr) {
+              // Fall through to HTTP method
+            }
+          }
+          
+          // Fallback: Use the search API (this also works!)
           try {
             const searchResult = await tools.bridge.httpCall('/remote/search/assets', 'PUT', {
               Query: '',  // Empty query to match all (wildcard doesn't work)
@@ -112,11 +226,38 @@ export async function handleToolCall(
           result = { assets: [], error: String(err) };
           message = `Failed to list assets: ${err}`;
         }
+        
+        // Format the message to include asset details
+        if (result && result.assets && result.assets.length > 0) {
+          const assetList = result.assets.map((asset: any) => {
+            if (typeof asset === 'string') {
+              return asset;
+            } else if (asset.Path) {
+              return asset.Path;
+            } else if (asset.Name && asset.PackagePath) {
+              return `${asset.PackagePath}/${asset.Name}`;
+            } else if (asset.Name) {
+              return asset.Name;
+            } else if (asset.ObjectPath) {
+              return asset.ObjectPath;
+            } else {
+              return JSON.stringify(asset);
+            }
+          });
+          message = `Found ${result.assets.length} assets in ${args.directory || '/Game'}:\n${assetList.join('\n')}`;
+        }
         break;
       
       case 'import_asset':
         result = await tools.assetTools.importAsset(args.sourcePath, args.destinationPath);
-        message = result.error || `Asset imported to ${args.destinationPath}`;
+        // Check if import actually succeeded
+        if (result.error) {
+          message = result.error;
+        } else if (result.success && result.paths && result.paths.length > 0) {
+          message = result.message || `Successfully imported ${result.paths.length} asset(s) to ${args.destinationPath}`;
+        } else {
+          message = result.message || result.error || `Import did not report success for source ${args.sourcePath}`;
+        }
         break;
 
       // Actor Tools
@@ -130,41 +271,116 @@ export async function handleToolCall(
         try {
           const pythonCmd = `
 import unreal
-actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-actors = actor_subsystem.get_all_level_actors()
-found = False
-deleted_actors = []
+import json
 
-for actor in actors:
-    if actor:
-        # Check both actor name and label
-        actor_name = actor.get_name()
-        actor_label = actor.get_actor_label()
-        
-        # Match exact name, starts with name, or contains name
-        if (actor_label == "${args.actorName}" or 
-            actor_label.startswith("${args.actorName}_") or
-            actor_name == "${args.actorName}"):
-            actor_subsystem.destroy_actor(actor)
-            deleted_actors.append(actor_label)
-            print(f"Destroyed {actor_label}")
-            found = True
-            # Continue to delete all matching actors
+result = {"success": False, "message": "", "deleted_count": 0, "deleted_actors": []}
+
+try:
+    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    actors = actor_subsystem.get_all_level_actors()
+    deleted_actors = []
+    search_name = "${args.actorName}"
+    
+    for actor in actors:
+        if actor:
+            # Check both actor name and label
+            actor_name = actor.get_name()
+            actor_label = actor.get_actor_label()
             
-if found:
-    print(f"Deleted {len(deleted_actors)} actor(s): {deleted_actors}")
-else:
-    print(f"No actors found matching: ${args.actorName}")
-    # List available actors for debugging
-    all_labels = [a.get_actor_label() for a in actors[:10] if a]
-    print(f"First 10 actors in level: {all_labels}")
+            # Case-insensitive partial matching
+            if (search_name.lower() in actor_label.lower() or
+                actor_label.lower().startswith(search_name.lower() + "_") or
+                actor_label.lower() == search_name.lower() or
+                actor_name.lower() == search_name.lower()):
+                actor_subsystem.destroy_actor(actor)
+                deleted_actors.append(actor_label)
+                
+    if deleted_actors:
+        result["success"] = True
+        result["deleted_count"] = len(deleted_actors)
+        result["deleted_actors"] = deleted_actors
+        result["message"] = f"Deleted {len(deleted_actors)} actor(s): {deleted_actors}"
+    else:
+        result["message"] = f"No actors found matching: {search_name}"
+        # List available actors for debugging
+        all_labels = [a.get_actor_label() for a in actors[:10] if a]
+        result["available_actors"] = all_labels
+        
+except Exception as e:
+    result["message"] = f"Error deleting actors: {e}"
+    
+print(f"RESULT:{json.dumps(result)}")
           `.trim();
-          result = await tools.bridge.executePython(pythonCmd);
-          message = `Actor deleted: ${args.actorName}`;
+          const response = await tools.bridge.executePython(pythonCmd);
+          
+          // Extract output from Python response
+          let outputStr = '';
+          if (typeof response === 'object' && response !== null) {
+            // Check if it has LogOutput (standard Python execution response)
+            if (response.LogOutput && Array.isArray(response.LogOutput)) {
+              // Concatenate all log outputs
+              outputStr = response.LogOutput
+                .map((log: any) => log.Output || '')
+                .join('');
+            } else if ('result' in response) {
+              outputStr = String(response.result);
+            } else {
+              outputStr = JSON.stringify(response);
+            }
+          } else {
+            outputStr = String(response || '');
+          }
+          
+          // Parse the result
+          const resultMatch = outputStr.match(/RESULT:(\{.*\})/);
+          if (resultMatch) {
+            try {
+              const deleteResult = JSON.parse(resultMatch[1]);
+              if (!deleteResult.success) {
+                throw new Error(deleteResult.message);
+              }
+              result = deleteResult;
+              message = deleteResult.message;
+            } catch (parseErr) {
+              // Fallback to checking output
+              if (outputStr.includes('Deleted')) {
+                result = { success: true, message: outputStr };
+                message = `Actor deleted: ${args.actorName}`;
+              } else {
+                throw new Error(outputStr || 'Delete failed');
+              }
+            }
+          } else {
+            // Check for error patterns  
+            if (outputStr.includes('No actors found') || outputStr.includes('Error')) {
+              throw new Error(outputStr || 'Delete failed - no actors found');
+            }
+            // Only report success if clear indication
+            if (outputStr.includes('Deleted')) {
+              result = { success: true, message: outputStr };
+              message = `Actor deleted: ${args.actorName}`;
+            } else {
+              throw new Error('No valid result from Python delete operation');
+            }
+          }
         } catch (pyErr) {
           // Fallback to console command
-          result = await tools.bridge.executeConsoleCommand(`DestroyActor ${args.actorName}`);
-          message = `Actor deleted via console: ${args.actorName}`;
+          const consoleResult = await tools.bridge.executeConsoleCommand(`DestroyActor ${args.actorName}`);
+          
+          // Check console command result
+          if (consoleResult && typeof consoleResult === 'object') {
+            // Console commands don't reliably report success/failure
+            // Return an error to avoid false positives
+            throw new Error(`Delete operation uncertain via console command for '${args.actorName}'. Python execution failed: ${pyErr}`);
+          }
+          
+          // If we're here, we can't guarantee the delete worked
+          result = { 
+            success: false, 
+            message: `Console command fallback attempted for '${args.actorName}', but result uncertain`,
+            fallback: true 
+          };
+          message = result.message;
         }
         break;
 
@@ -220,6 +436,10 @@ else:
           vector: [args.force.x, args.force.y, args.force.z],
           isLocal: false // World space by default
         });
+        // Check if the result indicates an error
+        if (result.error || (result.success === false)) {
+          throw new Error(result.error || result.message || `Failed to apply force to ${args.actorName}`);
+        }
         message = result.message || `Force applied to ${args.actorName}`;
         break;
 

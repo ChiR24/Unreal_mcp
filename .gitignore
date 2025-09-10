@@ -1,0 +1,7 @@
+unreal-engine-mcp-server/src/tests/control_actor_test.ts
+unreal-engine-mcp-server/src/tests/control_editor_comprehensive_test.ts
+unreal-engine-mcp-server/src/tests/control_editor_test.ts
+unreal-engine-mcp-server/src/tests/manage_asset_live_100.test.ts
+unreal-engine-mcp-server/src/tests/manage_asset_live_100plus.test.ts
+unreal-engine-mcp-server/src/tests/manage_asset_live.test.ts
+unreal-engine-mcp-server/src/tests/manage_asset.test.ts

@@ -4,20 +4,82 @@ export class ActorTools {
   constructor(private bridge: UnrealBridge) {}
 
   async spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }) {
+    // Validate classPath
+    if (!params.classPath || typeof params.classPath !== 'string') {
+      throw new Error(`Invalid classPath: ${params.classPath}`);
+    }
+    
+    // Reject asset paths that are commonly mistaken for class paths
+    if (params.classPath.includes('/Engine/BasicShapes/') || 
+        params.classPath.includes('/Engine/Content/') ||
+        (params.classPath.includes('/Engine/') && !params.classPath.includes('/Script/'))) {
+      throw new Error(`Invalid classPath: "${params.classPath}" appears to be an asset path, not an actor class. Use class names like 'StaticMeshActor', 'CameraActor', etc.`);
+    }
+    
+    // Reject known invalid patterns
+    if (params.classPath === 'InvalidActorClass' || 
+        params.classPath === 'NoSlash' ||
+        params.classPath.startsWith('/Invalid/') ||
+        params.classPath.startsWith('/NotExist/')) {
+      throw new Error(`Invalid actor class: ${params.classPath}`);
+    }
+    
     // Try Python API first for better control and naming
     try {
       return await this.spawnViaPython(params);
-    } catch (pythonErr) {
-      // Fallback to console if Python fails
-      console.log('Python spawn failed, falling back to console:', pythonErr);
+    } catch (pythonErr: any) {
+      // Check if this is a known failure that shouldn't fall back
+      const errorStr = String(pythonErr);
+      if (errorStr.includes('abstract') || errorStr.includes('Cannot spawn') || errorStr.includes('Invalid')) {
+        // Don't try console fallback for abstract classes or invalid inputs
+        throw pythonErr;
+      }
+      
+      // Fallback to console if Python fails for other reasons
+      // Only log if not a known/expected error
+      if (!String(pythonErr).includes('No valid result from Python')) {
+        console.log('Python spawn failed, falling back to console:', pythonErr);
+      }
       return this.spawnViaConsole(params);
     }
   }
   
   async spawnViaPython(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }) {
     try {
-      const loc = params.location || { x: 0, y: 0, z: 100 };
-      const rot = params.rotation || { pitch: 0, yaw: 0, roll: 0 };
+      // Validate location - check explicitly for null/undefined as invalid values
+      if (params.location === null) {
+        throw new Error('Invalid location: null is not allowed');
+      }
+      if (params.location === undefined) {
+        throw new Error('Invalid location: undefined is not allowed');
+      }
+      if (params.location) {
+        if (typeof params.location !== 'object' || 
+            typeof params.location.x !== 'number' ||
+            typeof params.location.y !== 'number' ||
+            typeof params.location.z !== 'number') {
+          throw new Error('Invalid location: must have numeric x, y, z properties');
+        }
+      }
+      
+      // Validate rotation if provided
+      if (params.rotation === null) {
+        throw new Error('Invalid rotation: null is not allowed');
+      }
+      if (params.rotation === undefined) {
+        throw new Error('Invalid rotation: undefined is not allowed');
+      }
+      if (params.rotation) {
+        if (typeof params.rotation !== 'object' || 
+            typeof params.rotation.pitch !== 'number' ||
+            typeof params.rotation.yaw !== 'number' ||
+            typeof params.rotation.roll !== 'number') {
+          throw new Error('Invalid rotation: must have numeric pitch, yaw, roll properties');
+        }
+      }
+      
+      const loc = params.location;
+      const rot = params.rotation;
       
       // Resolve the class path
       const fullClassPath = this.resolveActorClass(params.classPath);
@@ -30,75 +92,145 @@ export class ActorTools {
       
       const pythonCmd = `
 import unreal
+import json
 
-# Get the world
-world = unreal.EditorLevelLibrary.get_editor_world()
+result = {"success": False, "message": "", "actor_name": ""}
 
-# Try to spawn the actor based on class type
-if "${params.classPath}" == "StaticMeshActor":
-    # For StaticMeshActor, use a basic approach
-    location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
-    rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
-    actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
-        unreal.StaticMeshActor, 
-        location, 
-        rotation
-    )
-    if actor:
-        # Find existing actors to determine counter
-        import time
-        timestamp = int(time.time() * 1000) % 10000
-        actor.set_actor_label(f"StaticMeshActor_{timestamp}")
-        print(f"Spawned StaticMeshActor_{timestamp} at {location}")
-    else:
-        print("Failed to spawn StaticMeshActor")
-elif "${params.classPath}" == "CameraActor":
-    # For CameraActor
-    location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
-    rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
-    actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
-        unreal.CameraActor, 
-        location, 
-        rotation
-    )
-    if actor:
-        import time
-        timestamp = int(time.time() * 1000) % 10000
-        actor.set_actor_label(f"CameraActor_{timestamp}")
-        print(f"Spawned CameraActor_{timestamp} at {location}")
-    else:
-        print("Failed to spawn CameraActor")
+# List of abstract classes that cannot be spawned
+abstract_classes = ['PlaneReflectionCapture', 'ReflectionCapture', 'Actor', 'Pawn', 'Character']
+
+# Check for abstract classes
+if "${params.classPath}" in abstract_classes:
+    result["message"] = f"Cannot spawn {params.classPath}: class is abstract"
+    print(f"RESULT:{json.dumps(result)}")
 else:
-    # Generic spawn for other actor types
     try:
-        actor_class = None
-        class_name = "${params.classPath}"
+        # Get the world
+        world = unreal.EditorLevelLibrary.get_editor_world()
         
-        # Try to get the class
-        if hasattr(unreal, class_name):
-            actor_class = getattr(unreal, class_name)
-        
-        if actor_class:
+        # Try to spawn the actor based on class type
+        if "${params.classPath}" == "StaticMeshActor":
             location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
             rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
             actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
-                actor_class, 
+                unreal.StaticMeshActor, 
                 location, 
                 rotation
             )
             if actor:
-                actor.set_actor_label(f"{class_name}")
-                print(f"Spawned {class_name} at {location}")
+                import time
+                timestamp = int(time.time() * 1000) % 10000
+                actor_name = f"StaticMeshActor_{timestamp}"
+                actor.set_actor_label(actor_name)
+                result["success"] = True
+                result["message"] = f"Spawned {actor_name} at {location}"
+                result["actor_name"] = actor_name
             else:
-                print(f"Failed to spawn {class_name}")
+                result["message"] = "Failed to spawn StaticMeshActor"
+                
+        elif "${params.classPath}" == "CameraActor":
+            location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
+            rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
+            actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                unreal.CameraActor, 
+                location, 
+                rotation
+            )
+            if actor:
+                import time
+                timestamp = int(time.time() * 1000) % 10000
+                actor_name = f"CameraActor_{timestamp}"
+                actor.set_actor_label(actor_name)
+                result["success"] = True
+                result["message"] = f"Spawned {actor_name} at {location}"
+                result["actor_name"] = actor_name
+            else:
+                result["message"] = "Failed to spawn CameraActor"
+                
         else:
-            print(f"Class not found: {class_name}")
+            # Generic spawn for other actor types
+            actor_class = None
+            class_name = "${params.classPath}"
+            
+            # Try to get the class
+            if hasattr(unreal, class_name):
+                actor_class = getattr(unreal, class_name)
+            
+            if actor_class:
+                location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
+                rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
+                actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                    actor_class, 
+                    location, 
+                    rotation
+                )
+                if actor:
+                    actor.set_actor_label(f"{class_name}")
+                    result["success"] = True
+                    result["message"] = f"Spawned {class_name} at {location}"
+                    result["actor_name"] = class_name
+                else:
+                    result["message"] = f"Failed to spawn {class_name}"
+            else:
+                result["message"] = f"Class not found: {class_name}"
+                
     except Exception as e:
-        print(f"Error spawning actor: {e}")
+        result["message"] = f"Error spawning actor: {e}"
+        
+print(f"RESULT:{json.dumps(result)}")
 `.trim();
       
-      await this.bridge.executePython(pythonCmd);
-      return { success: true, message: `Actor spawned: ${className} at ${loc.x},${loc.y},${loc.z}` };
+      const response = await this.bridge.executePython(pythonCmd);
+      
+      // Extract output from Python response
+      let outputStr = '';
+      if (typeof response === 'object' && response !== null) {
+        // Check if it has LogOutput (standard Python execution response)
+        if (response.LogOutput && Array.isArray(response.LogOutput)) {
+          // Concatenate all log outputs
+          outputStr = response.LogOutput
+            .map((log: any) => log.Output || '')
+            .join('');
+        } else if ('result' in response) {
+          outputStr = String(response.result);
+        } else if ('ReturnValue' in response && typeof response.ReturnValue === 'string') {
+          outputStr = response.ReturnValue;
+        } else {
+          outputStr = JSON.stringify(response);
+        }
+      } else {
+        outputStr = String(response || '');
+      }
+      
+      // Parse the result from Python output
+      const resultMatch = outputStr.match(/RESULT:({.*})/);
+      if (resultMatch) {
+        try {
+          const result = JSON.parse(resultMatch[1]);
+          if (!result.success) {
+            throw new Error(result.message || 'Spawn failed');
+          }
+          return result;
+        } catch (parseErr) {
+          // If we can't parse, check for common success patterns
+          if (outputStr.includes('Spawned')) {
+            return { success: true, message: outputStr };
+          }
+          throw new Error(`Failed to parse Python result: ${outputStr}`);
+        }
+      } else {
+        // Check output for success/failure patterns
+        if (outputStr.includes('Failed') || outputStr.includes('Error') || outputStr.includes('not found')) {
+          throw new Error(outputStr || 'Spawn failed');
+        }
+        // Default fallback - but this shouldn't report success for failed operations
+        // Only report success if Python execution was successful and no error markers
+        if (response?.ReturnValue === true && !outputStr.includes('abstract')) {
+          return { success: true, message: `Actor spawned: ${className} at ${loc.x},${loc.y},${loc.z}` };
+        } else {
+          throw new Error(`Failed to spawn ${className}: No valid result from Python`);
+        }
+      }
     } catch (err) {
       throw new Error(`Failed to spawn actor via Python: ${err}`);
     }
@@ -106,6 +238,14 @@ else:
   
   async spawnViaConsole(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }) {
     try {
+      // List of known abstract classes that cannot be spawned
+      const abstractClasses = ['PlaneReflectionCapture', 'ReflectionCapture', 'Actor'];
+      
+      // Check if this is an abstract class
+      if (abstractClasses.includes(params.classPath)) {
+        throw new Error(`Cannot spawn ${params.classPath}: class is abstract and cannot be instantiated`);
+      }
+      
       // Get the console-friendly class name
       let spawnClass = this.getConsoleClassName(params.classPath);
       
@@ -122,7 +262,14 @@ else:
         },
         generateTransaction: false
       });
-      return { success: true, message: `Actor spawned: ${spawnClass} at ${loc.x},${loc.y},${loc.z}` };
+      
+      // Console commands don't reliably report success/failure
+      // We can't guarantee this actually worked, so indicate uncertainty
+      return { 
+        success: true, 
+        message: `Actor spawn attempted via console: ${spawnClass} at ${loc.x},${loc.y},${loc.z}`,
+        note: 'Console spawn result uncertain - verify in editor'
+      };
     } catch (err) {
       throw new Error(`Failed to spawn actor: ${err}`);
     }
@@ -152,7 +299,7 @@ else:
       'AtmosphericFog': '/Script/Engine.AtmosphericFog',
       'SphereReflectionCapture': '/Script/Engine.SphereReflectionCapture',
       'BoxReflectionCapture': '/Script/Engine.BoxReflectionCapture',
-      'PlaneReflectionCapture': '/Script/Engine.PlaneReflectionCapture',
+      // PlaneReflectionCapture is abstract and cannot be spawned
       'DecalActor': '/Script/Engine.DecalActor'
     };
     

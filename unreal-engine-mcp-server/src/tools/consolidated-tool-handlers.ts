@@ -7,6 +7,11 @@ export async function handleConsolidatedToolCall(
   tools: any
 ) {
   try {
+    // Validate args is not null/undefined
+    if (args === null || args === undefined) {
+      throw new Error('Invalid arguments: null or undefined');
+    }
+    
     let mappedName: string;
     let mappedArgs: any = { ...args };
 
@@ -42,8 +47,21 @@ export async function handleConsolidatedToolCall(
 
       // 2. ACTOR CONTROL
       case 'control_actor':
+        // Validate action exists
+        if (!args.action) {
+          throw new Error('Missing required parameter: action');
+        }
+        
         switch (args.action) {
           case 'spawn':
+            // Validate spawn parameters
+            if (!args.classPath) {
+              throw new Error('Missing required parameter: classPath');
+            }
+            if (typeof args.classPath !== 'string' || args.classPath.trim() === '') {
+              throw new Error('Invalid classPath: must be a non-empty string');
+            }
+            
             mappedName = 'spawn_actor';
             mappedArgs = {
               classPath: args.classPath,
@@ -51,19 +69,49 @@ export async function handleConsolidatedToolCall(
               rotation: args.rotation
             };
             break;
+            
           case 'delete':
+            // Validate delete parameters
+            if (!args.actorName) {
+              throw new Error('Missing required parameter: actorName');
+            }
+            if (typeof args.actorName !== 'string' || args.actorName.trim() === '') {
+              throw new Error('Invalid actorName: must be a non-empty string');
+            }
+            
             mappedName = 'delete_actor';
             mappedArgs = {
               actorName: args.actorName
             };
             break;
+            
           case 'apply_force':
+            // Validate apply_force parameters
+            if (!args.actorName) {
+              throw new Error('Missing required parameter: actorName');
+            }
+            if (typeof args.actorName !== 'string' || args.actorName.trim() === '') {
+              throw new Error('Invalid actorName: must be a non-empty string');
+            }
+            if (!args.force) {
+              throw new Error('Missing required parameter: force');
+            }
+            if (typeof args.force !== 'object' || args.force === null) {
+              throw new Error('Invalid force: must be an object with x, y, z properties');
+            }
+            if (typeof args.force.x !== 'number' || 
+                typeof args.force.y !== 'number' || 
+                typeof args.force.z !== 'number') {
+              throw new Error('Invalid force: x, y, z must all be numbers');
+            }
+            
             mappedName = 'apply_force';
             mappedArgs = {
               actorName: args.actorName,
               force: args.force
             };
             break;
+            
           default:
             throw new Error(`Unknown actor action: ${args.action}`);
         }
@@ -80,7 +128,31 @@ export async function handleConsolidatedToolCall(
             mappedName = 'stop_play_in_editor';
             mappedArgs = {};
             break;
+          case 'pause':
+            mappedName = 'pause_play_in_editor';
+            mappedArgs = {};
+            break;
+          case 'set_game_speed':
+            // Validate game speed parameter
+            if (typeof args.speed !== 'number' || args.speed <= 0) {
+              throw new Error('Invalid speed: must be a positive number');
+            }
+            mappedName = 'set_game_speed';
+            mappedArgs = {
+              speed: args.speed
+            };
+            break;
+          case 'eject':
+            mappedName = 'eject_from_pawn';
+            mappedArgs = {};
+            break;
+          case 'possess':
+            mappedName = 'possess_pawn';
+            mappedArgs = {};
+            break;
           case 'set_camera':
+            // Allow either location or rotation or both
+            // Don't require both to be present
             mappedName = 'set_camera';
             mappedArgs = {
               location: args.location,
@@ -88,9 +160,46 @@ export async function handleConsolidatedToolCall(
             };
             break;
           case 'set_view_mode':
+            // Validate view mode parameter
+            if (!args.viewMode) {
+              throw new Error('Missing required parameter: viewMode');
+            }
+            if (typeof args.viewMode !== 'string' || args.viewMode.trim() === '') {
+              throw new Error('Invalid viewMode: must be a non-empty string');
+            }
+            
+            // Normalize view mode to match what debug.ts expects
+            const validModes = ['lit', 'unlit', 'wireframe', 'detail_lighting', 'lighting_only', 
+                              'light_complexity', 'shader_complexity', 'lightmap_density', 
+                              'stationary_light_overlap', 'reflections', 'visualize_buffer',
+                              'collision_pawn', 'collision_visibility', 'lod_coloration', 'quad_overdraw'];
+            const normalizedMode = args.viewMode.toLowerCase().replace(/_/g, '');
+            
+            // Map to proper case for debug.ts
+            let mappedMode = '';
+            switch(normalizedMode) {
+              case 'lit': mappedMode = 'Lit'; break;
+              case 'unlit': mappedMode = 'Unlit'; break;
+              case 'wireframe': mappedMode = 'Wireframe'; break;
+              case 'detaillighting': mappedMode = 'DetailLighting'; break;
+              case 'lightingonly': mappedMode = 'LightingOnly'; break;
+              case 'lightcomplexity': mappedMode = 'LightComplexity'; break;
+              case 'shadercomplexity': mappedMode = 'ShaderComplexity'; break;
+              case 'lightmapdensity': mappedMode = 'LightmapDensity'; break;
+              case 'stationarylightoverlap': mappedMode = 'StationaryLightOverlap'; break;
+              case 'reflections': mappedMode = 'ReflectionOverride'; break;
+              case 'visualizebuffer': mappedMode = 'VisualizeBuffer'; break;
+              case 'collisionpawn': mappedMode = 'CollisionPawn'; break;
+              case 'collisionvisibility': mappedMode = 'CollisionVisibility'; break;
+              case 'lodcoloration': mappedMode = 'LODColoration'; break;
+              case 'quadoverdraw': mappedMode = 'QuadOverdraw'; break;
+              default:
+                throw new Error(`Invalid viewMode: '${args.viewMode}'. Valid modes are: ${validModes.join(', ')}`);
+            }
+            
             mappedName = 'set_view_mode';
             mappedArgs = {
-              mode: args.viewMode
+              mode: mappedMode
             };
             break;
           default:

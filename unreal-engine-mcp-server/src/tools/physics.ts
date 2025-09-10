@@ -266,59 +266,122 @@ export class PhysicsTools {
       // Use Python to apply physics forces since console commands don't exist for this
       const pythonCode = `
 import unreal
-actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-actors = actor_subsystem.get_all_level_actors()
-found = False
-for actor in actors:
-    if actor:
-        # Check both actor name and label with partial matching
-        actor_name = actor.get_name()
-        actor_label = actor.get_actor_label()
-        if (actor_label == "${params.actorName}" or 
-            actor_label.startswith("${params.actorName}_") or
-            actor_name == "${params.actorName}"):
-            # Get the primitive component if it exists
-            root = actor.get_editor_property('root_component')
-            if root and isinstance(root, unreal.PrimitiveComponent):
-                # Ensure physics is enabled
-                root.set_simulate_physics(True)
-                
-                force = unreal.Vector(${params.vector[0]}, ${params.vector[1]}, ${params.vector[2]})
-                if "${params.forceType}" == "Force":
-                    root.add_force(force, 'None', False)
-                    print(f"Applied Force to {actor_label}: {force}")
-                elif "${params.forceType}" == "Impulse":
-                    root.add_impulse(force, 'None', False)
-                    print(f"Applied Impulse to {actor_label}: {force}")
-                elif "${params.forceType}" == "Velocity":
-                    root.set_physics_linear_velocity(force)
-                    print(f"Set Velocity on {actor_label}: {force}")
-                elif "${params.forceType}" == "Torque":
-                    root.add_torque_in_radians(force, 'None', False)
-                    print(f"Applied Torque to {actor_label}: {force}")
-                found = True
-            else:
-                print(f"Actor {actor_label} doesn't have a physics-enabled component")
-            break
-if not found:
-    print(f"Actor not found: ${params.actorName}")
-    # List actors with physics enabled for debugging
-    physics_actors = []
+import json
+
+result = {"success": False, "message": "", "actor_found": False, "physics_enabled": False}
+
+try:
+    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    actors = actor_subsystem.get_all_level_actors()
+    search_name = "${params.actorName}"
+    
     for actor in actors:
         if actor:
-            root = actor.get_editor_property('root_component')
-            if root and isinstance(root, unreal.PrimitiveComponent) and root.is_simulating_physics():
-                physics_actors.append(actor.get_actor_label())
-    if physics_actors:
-        print(f"Actors with physics: {physics_actors[:5]}")
+            # Check both actor name and label with case-insensitive partial matching
+            actor_name = actor.get_name()
+            actor_label = actor.get_actor_label()
+            
+            if (search_name.lower() in actor_label.lower() or
+                actor_label.lower().startswith(search_name.lower() + "_") or
+                actor_label.lower() == search_name.lower() or
+                actor_name.lower() == search_name.lower()):
+                
+                result["actor_found"] = True
+                # Get the primitive component if it exists
+                root = actor.get_editor_property('root_component')
+                
+                if root and isinstance(root, unreal.PrimitiveComponent):
+                    # Ensure physics is enabled
+                    root.set_simulate_physics(True)
+                    result["physics_enabled"] = True
+                    
+                    force = unreal.Vector(${params.vector[0]}, ${params.vector[1]}, ${params.vector[2]})
+                    
+                    if "${params.forceType}" == "Force":
+                        root.add_force(force, 'None', False)
+                        result["success"] = True
+                        result["message"] = f"Applied Force to {actor_label}: {force}"
+                    elif "${params.forceType}" == "Impulse":
+                        root.add_impulse(force, 'None', False)
+                        result["success"] = True
+                        result["message"] = f"Applied Impulse to {actor_label}: {force}"
+                    elif "${params.forceType}" == "Velocity":
+                        root.set_physics_linear_velocity(force)
+                        result["success"] = True
+                        result["message"] = f"Set Velocity on {actor_label}: {force}"
+                    elif "${params.forceType}" == "Torque":
+                        root.add_torque_in_radians(force, 'None', False)
+                        result["success"] = True
+                        result["message"] = f"Applied Torque to {actor_label}: {force}"
+                else:
+                    result["message"] = f"Actor {actor_label} doesn't have a physics-enabled component"
+                break
+                
+    if not result["actor_found"]:
+        result["message"] = f"Actor not found: {search_name}"
+        # List actors with physics enabled for debugging
+        physics_actors = []
+        for actor in actors[:20]:
+            if actor:
+                label = actor.get_actor_label()
+                if "mesh" in label.lower() or "cube" in label.lower() or "static" in label.lower():
+                    physics_actors.append(label)
+        if physics_actors:
+            result["available_actors"] = physics_actors
+            
+except Exception as e:
+    result["message"] = f"Error applying force: {e}"
+    
+print(f"RESULT:{json.dumps(result)}")
       `.trim();
       
-      await this.bridge.executePython(pythonCode);
+      const response = await this.bridge.executePython(pythonCode);
       
-      return { 
-        success: true, 
-        message: `Applied ${params.forceType} to ${params.actorName}` 
-      };
+      // Extract output from Python response
+      let outputStr = '';
+      if (typeof response === 'object' && response !== null) {
+        // Check if it has LogOutput (standard Python execution response)
+        if (response.LogOutput && Array.isArray(response.LogOutput)) {
+          // Concatenate all log outputs
+          outputStr = response.LogOutput
+            .map((log: any) => log.Output || '')
+            .join('');
+        } else if ('result' in response) {
+          outputStr = String(response.result);
+        } else {
+          outputStr = JSON.stringify(response);
+        }
+      } else {
+        outputStr = String(response || '');
+      }
+      
+      // Parse the result
+      const resultMatch = outputStr.match(/RESULT:(\{.*\})/);
+      if (resultMatch) {
+        try {
+          const forceResult = JSON.parse(resultMatch[1]);
+          if (!forceResult.success) {
+            return { success: false, error: forceResult.message };
+          }
+          return forceResult;
+        } catch (parseErr) {
+          // Fallback
+          if (outputStr.includes('Applied')) {
+            return { success: true, message: outputStr };
+          }
+          return { success: false, error: outputStr || 'Force application failed' };
+        }
+      } else {
+        // Check for error patterns
+        if (outputStr.includes('not found') || outputStr.includes('Error')) {
+          return { success: false, error: outputStr || 'Force application failed' };
+        }
+        // Only return success if we have clear indication of success
+        if (outputStr.includes('Applied')) {
+          return { success: true, message: `Applied ${params.forceType} to ${params.actorName}` };
+        }
+        return { success: false, error: 'No valid result from Python' };
+      }
     } catch (err) {
       return { success: false, error: `Failed to apply force: ${err}` };
     }
