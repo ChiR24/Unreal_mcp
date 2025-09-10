@@ -263,26 +263,57 @@ export class PhysicsTools {
     isLocal?: boolean;
   }) {
     try {
-      let command = '';
-      const vectorStr = `${params.vector[0]} ${params.vector[1]} ${params.vector[2]}`;
-      const localStr = params.isLocal ? 'Local' : 'World';
+      // Use Python to apply physics forces since console commands don't exist for this
+      const pythonCode = `
+import unreal
+actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+actors = actor_subsystem.get_all_level_actors()
+found = False
+for actor in actors:
+    if actor:
+        # Check both actor name and label with partial matching
+        actor_name = actor.get_name()
+        actor_label = actor.get_actor_label()
+        if (actor_label == "${params.actorName}" or 
+            actor_label.startswith("${params.actorName}_") or
+            actor_name == "${params.actorName}"):
+            # Get the primitive component if it exists
+            root = actor.get_editor_property('root_component')
+            if root and isinstance(root, unreal.PrimitiveComponent):
+                # Ensure physics is enabled
+                root.set_simulate_physics(True)
+                
+                force = unreal.Vector(${params.vector[0]}, ${params.vector[1]}, ${params.vector[2]})
+                if "${params.forceType}" == "Force":
+                    root.add_force(force, 'None', False)
+                    print(f"Applied Force to {actor_label}: {force}")
+                elif "${params.forceType}" == "Impulse":
+                    root.add_impulse(force, 'None', False)
+                    print(f"Applied Impulse to {actor_label}: {force}")
+                elif "${params.forceType}" == "Velocity":
+                    root.set_physics_linear_velocity(force)
+                    print(f"Set Velocity on {actor_label}: {force}")
+                elif "${params.forceType}" == "Torque":
+                    root.add_torque_in_radians(force, 'None', False)
+                    print(f"Applied Torque to {actor_label}: {force}")
+                found = True
+            else:
+                print(f"Actor {actor_label} doesn't have a physics-enabled component")
+            break
+if not found:
+    print(f"Actor not found: ${params.actorName}")
+    # List actors with physics enabled for debugging
+    physics_actors = []
+    for actor in actors:
+        if actor:
+            root = actor.get_editor_property('root_component')
+            if root and isinstance(root, unreal.PrimitiveComponent) and root.is_simulating_physics():
+                physics_actors.append(actor.get_actor_label())
+    if physics_actors:
+        print(f"Actors with physics: {physics_actors[:5]}")
+      `.trim();
       
-      switch (params.forceType) {
-        case 'Force':
-          command = `AddForce ${params.actorName} ${vectorStr} ${params.boneName || ''} ${localStr}`;
-          break;
-        case 'Impulse':
-          command = `AddImpulse ${params.actorName} ${vectorStr} ${params.boneName || ''} ${localStr}`;
-          break;
-        case 'Velocity':
-          command = `SetVelocity ${params.actorName} ${vectorStr}`;
-          break;
-        case 'Torque':
-          command = `AddTorque ${params.actorName} ${vectorStr} ${localStr}`;
-          break;
-      }
-      
-      await this.executeCommand(command);
+      await this.bridge.executePython(pythonCode);
       
       return { 
         success: true, 

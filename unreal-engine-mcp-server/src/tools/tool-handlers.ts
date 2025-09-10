@@ -126,19 +126,41 @@ export async function handleToolCall(
         break;
       
       case 'delete_actor':
-        // Try Python EditorLevelLibrary first, fallback to console command
+        // Use EditorActorSubsystem instead of deprecated EditorLevelLibrary
         try {
           const pythonCmd = `
 import unreal
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
+actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+actors = actor_subsystem.get_all_level_actors()
+found = False
+deleted_actors = []
+
 for actor in actors:
-    if actor.get_name() == "${args.actorName}":
-        unreal.EditorLevelLibrary.destroy_actor(actor)
-        print(f"Destroyed {actor.get_name()}")
-        break
+    if actor:
+        # Check both actor name and label
+        actor_name = actor.get_name()
+        actor_label = actor.get_actor_label()
+        
+        # Match exact name, starts with name, or contains name
+        if (actor_label == "${args.actorName}" or 
+            actor_label.startswith("${args.actorName}_") or
+            actor_name == "${args.actorName}"):
+            actor_subsystem.destroy_actor(actor)
+            deleted_actors.append(actor_label)
+            print(f"Destroyed {actor_label}")
+            found = True
+            # Continue to delete all matching actors
+            
+if found:
+    print(f"Deleted {len(deleted_actors)} actor(s): {deleted_actors}")
+else:
+    print(f"No actors found matching: ${args.actorName}")
+    # List available actors for debugging
+    all_labels = [a.get_actor_label() for a in actors[:10] if a]
+    print(f"First 10 actors in level: {all_labels}")
           `.trim();
           result = await tools.bridge.executePython(pythonCmd);
-          message = `Actor deleted via EditorLevelLibrary: ${args.actorName}`;
+          message = `Actor deleted: ${args.actorName}`;
         } catch (pyErr) {
           // Fallback to console command
           result = await tools.bridge.executeConsoleCommand(`DestroyActor ${args.actorName}`);
@@ -191,7 +213,13 @@ for actor in actors:
         break;
       
       case 'apply_force':
-        result = await tools.physicsTools.applyForce(args);
+        // Map the simple force schema to PhysicsTools expected format
+        result = await tools.physicsTools.applyForce({
+          actorName: args.actorName,
+          forceType: 'Force', // Default to 'Force' type
+          vector: [args.force.x, args.force.y, args.force.z],
+          isLocal: false // World space by default
+        });
         message = result.message || `Force applied to ${args.actorName}`;
         break;
 

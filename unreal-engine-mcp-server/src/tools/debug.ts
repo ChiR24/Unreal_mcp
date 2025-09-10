@@ -1,5 +1,5 @@
 // Debug visualization tools for Unreal Engine
-import { UnrealBridge } from '../unreal-bridge';
+import { UnrealBridge } from '../unreal-bridge.js';
 
 export class DebugVisualizationTools {
   constructor(private bridge: UnrealBridge) {}

@@ -1,5 +1,5 @@
 // Lighting tools for Unreal Engine
-import { UnrealBridge } from '../unreal-bridge';
+import { UnrealBridge } from '../unreal-bridge.js';
 
 export class LightingTools {
   constructor(private bridge: UnrealBridge) {}

@@ -1,5 +1,5 @@
 // Performance tools for Unreal Engine
-import { UnrealBridge } from '../unreal-bridge';
+import { UnrealBridge } from '../unreal-bridge.js';
 
 export class PerformanceTools {
   constructor(private bridge: UnrealBridge) {}

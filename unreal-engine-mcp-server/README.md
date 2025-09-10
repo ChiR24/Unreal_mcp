@@ -30,6 +30,8 @@ MCP (Model Context Protocol) server for controlling Unreal Engine via Remote Con
 - Enabled Plugins in UE:
   - Remote Control
   - Web Remote Control
+  - Python Script Plugin (for material creation and advanced features)
+  - Editor Scripting Utilities
 
 ### Installation
 
@@ -38,14 +40,28 @@ npm install
 npm run build
 ```
 
-### Enable Console Commands (REQUIRED)
+### Configuration (REQUIRED)
 
-Add to your project's `Saved/Config/WindowsEditor/RemoteControl.ini`:
+#### 1. Enable Remote Execution
+Add to your project's `Config/DefaultEngine.ini`:
 
 ```ini
-[/Script/RemoteControlCommon.RemoteControlSettings]
-bAllowConsoleCommandRemoteExecution=True
+[/Script/PythonScriptPlugin.PythonScriptPluginSettings]
+bRemoteExecution=True
+bAllowRemotePythonExecution=True
+
+[/Script/RemoteControl.RemoteControlSettings]
+bAllowRemoteExecutionOfConsoleCommands=True
+bEnableRemoteExecution=True
+bAllowPythonExecution=True
++WhitelistedClasses=/Script/Engine.Default__PythonScriptLibrary
++WhitelistedClasses=/Script/EditorScriptingUtilities.Default__EditorAssetLibrary
 ```
+
+#### 2. Enable Python in Project Settings
+- Go to Edit > Project Settings > Plugins > Remote Control
+- Check "Enable Remote Python Execution"
+- Click "Set as Defaults"
 
 Then restart Unreal Engine.
 
@@ -77,13 +93,20 @@ Add to Claude Desktop or Cursor config:
 
 ## 🛠️ Available Tools
 
-### Tool Modes
+### Consolidated Mode (DEFAULT)
 
-The server supports two modes:
-- **Consolidated Mode** (DEFAULT): 10 multi-purpose tools for simplified AI interaction
-- **Individual Mode**: 36+ specific tools for precise control
+The server uses 10 consolidated tools that provide comprehensive control:
 
-See [TOOL_MODES_README.md](TOOL_MODES_README.md) for details on switching modes.
+1. **manage_asset** - List, create materials, import assets
+2. **control_actor** - Spawn, delete actors, apply physics forces
+3. **control_editor** - PIE control, camera, view modes
+4. **manage_level** - Load/save levels, create lights, build lighting
+5. **animation_physics** - Animation blueprints, montages, ragdoll setup
+6. **create_effect** - Particle effects, Niagara systems, debug shapes
+7. **manage_blueprint** - Create blueprints, add components
+8. **build_environment** - Landscapes, terrain sculpting, foliage
+9. **system_control** - Profiling, quality settings, sound, UI
+10. **console_command** - Direct console command execution
 
 ### Console Commands
 Execute any UE console command:
@@ -118,6 +141,26 @@ Execute any UE console command:
 }
 ```
 
+## 🔧 Recent Improvements
+
+### Version 1.2.0 (Latest)
+- ✅ **Connection Improvements**:
+  - Added connection timeout (5 seconds by default)
+  - Server no longer hangs if Unreal Engine isn't running
+  - Automatic retry with configurable attempts
+  - Graceful degradation - server starts even without UE connection
+  - Automatic reconnection attempts every 10 seconds
+- ✅ **Tool 2 (control_actor) Fixes**:
+  - Spawn now uses Python API with proper actor labeling
+  - Delete checks both actor name and label
+  - Apply force enables physics and checks both name/label
+- ✅ Fixed Python execution for multi-line scripts
+- ✅ Fixed deprecated EditorLevelLibrary calls (now uses EditorActorSubsystem)
+- ✅ Fixed apply_force parameter mismatch
+- ✅ Added missing .js extensions for ESM compatibility
+- ✅ Improved material creation with proper validation
+- ✅ Enhanced error handling and retry logic
+
 ## ⚠️ Known Issues
 
 ### Commands to Avoid (Cause Crashes)
@@ -125,11 +168,18 @@ Execute any UE console command:
 - `viewmode visualizeBuffer WorldNormal`
 - Rapid viewmode changes without delays
 
+### Python Operations
+Some advanced features require Python to be enabled. If Python execution fails:
+1. Check Project Settings > Plugins > Remote Control > Enable Remote Python Execution
+2. Restart Unreal Engine after configuration changes
+3. Check Output Log for Python error messages
+
 ### Best Practices
 1. Add 500ms delays between console commands
 2. Clear stats with `stat none` when done
 3. Reset to `viewmode lit` after testing
 4. Use batch operations for multiple commands
+5. Save all assets after material creation (File > Save All)
 
 ## 📊 Supported Asset Types
 

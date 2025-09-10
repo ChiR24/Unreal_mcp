@@ -4,8 +4,104 @@ export class ActorTools {
   constructor(private bridge: UnrealBridge) {}
 
   async spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }) {
-    // Use console-based spawning exclusively to avoid null WorldContext warnings
-    return this.spawnViaConsole(params);
+    // Try Python API first for better control and naming
+    try {
+      return await this.spawnViaPython(params);
+    } catch (pythonErr) {
+      // Fallback to console if Python fails
+      console.log('Python spawn failed, falling back to console:', pythonErr);
+      return this.spawnViaConsole(params);
+    }
+  }
+  
+  async spawnViaPython(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }) {
+    try {
+      const loc = params.location || { x: 0, y: 0, z: 100 };
+      const rot = params.rotation || { pitch: 0, yaw: 0, roll: 0 };
+      
+      // Resolve the class path
+      const fullClassPath = this.resolveActorClass(params.classPath);
+      let className = params.classPath;
+      
+      // Extract simple class name for naming the actor
+      if (fullClassPath.includes('.')) {
+        className = fullClassPath.split('.').pop() || params.classPath;
+      }
+      
+      const pythonCmd = `
+import unreal
+
+# Get the world
+world = unreal.EditorLevelLibrary.get_editor_world()
+
+# Try to spawn the actor based on class type
+if "${params.classPath}" == "StaticMeshActor":
+    # For StaticMeshActor, use a basic approach
+    location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
+    rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
+    actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+        unreal.StaticMeshActor, 
+        location, 
+        rotation
+    )
+    if actor:
+        # Find existing actors to determine counter
+        import time
+        timestamp = int(time.time() * 1000) % 10000
+        actor.set_actor_label(f"StaticMeshActor_{timestamp}")
+        print(f"Spawned StaticMeshActor_{timestamp} at {location}")
+    else:
+        print("Failed to spawn StaticMeshActor")
+elif "${params.classPath}" == "CameraActor":
+    # For CameraActor
+    location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
+    rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
+    actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+        unreal.CameraActor, 
+        location, 
+        rotation
+    )
+    if actor:
+        import time
+        timestamp = int(time.time() * 1000) % 10000
+        actor.set_actor_label(f"CameraActor_{timestamp}")
+        print(f"Spawned CameraActor_{timestamp} at {location}")
+    else:
+        print("Failed to spawn CameraActor")
+else:
+    # Generic spawn for other actor types
+    try:
+        actor_class = None
+        class_name = "${params.classPath}"
+        
+        # Try to get the class
+        if hasattr(unreal, class_name):
+            actor_class = getattr(unreal, class_name)
+        
+        if actor_class:
+            location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
+            rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
+            actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                actor_class, 
+                location, 
+                rotation
+            )
+            if actor:
+                actor.set_actor_label(f"{class_name}")
+                print(f"Spawned {class_name} at {location}")
+            else:
+                print(f"Failed to spawn {class_name}")
+        else:
+            print(f"Class not found: {class_name}")
+    except Exception as e:
+        print(f"Error spawning actor: {e}")
+`.trim();
+      
+      await this.bridge.executePython(pythonCmd);
+      return { success: true, message: `Actor spawned: ${className} at ${loc.x},${loc.y},${loc.z}` };
+    } catch (err) {
+      throw new Error(`Failed to spawn actor via Python: ${err}`);
+    }
   }
   
   async spawnViaConsole(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }) {

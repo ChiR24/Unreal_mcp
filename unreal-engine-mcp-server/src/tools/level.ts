@@ -1,5 +1,5 @@
 // Level management tools for Unreal Engine
-import { UnrealBridge } from '../unreal-bridge';
+import { UnrealBridge } from '../unreal-bridge.js';
 
 export class LevelTools {
   constructor(private bridge: UnrealBridge) {}

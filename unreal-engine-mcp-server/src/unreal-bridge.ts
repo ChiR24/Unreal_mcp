@@ -146,8 +146,36 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
   };
 
   get isConnected() { return this.connected; }
+  
+  /**
+   * Attempt to connect with retries
+   * @param maxAttempts Maximum number of connection attempts
+   * @param timeoutMs Timeout for each connection attempt in milliseconds
+   * @param retryDelayMs Delay between retry attempts in milliseconds
+   * @returns Promise that resolves when connected or rejects after all attempts fail
+   */
+  async tryConnect(maxAttempts: number = 3, timeoutMs: number = 5000, retryDelayMs: number = 2000): Promise<boolean> {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        this.log.info(`Connection attempt ${attempt}/${maxAttempts}`);
+        await this.connect(timeoutMs);
+        return true; // Successfully connected
+      } catch (err) {
+        this.log.warn(`Connection attempt ${attempt} failed:`, err);
+        
+        if (attempt < maxAttempts) {
+          this.log.info(`Retrying in ${retryDelayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+        } else {
+          this.log.error(`All ${maxAttempts} connection attempts failed`);
+          return false; // All attempts failed
+        }
+      }
+    }
+    return false;
+  }
 
-  async connect(): Promise<void> {
+  async connect(timeoutMs: number = 5000): Promise<void> {
     const wsUrl = `ws://${this.env.UE_HOST}:${this.env.UE_RC_WS_PORT}`;
     const httpBase = `http://${this.env.UE_HOST}:${this.env.UE_RC_HTTP_PORT}`;
     this.http = createHttpClient(httpBase);
@@ -157,21 +185,54 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
 
     await new Promise<void>((resolve, reject) => {
       if (!this.ws) return reject(new Error('WS not created'));
-      this.ws.on('open', () => {
+      
+      // Setup timeout
+      const timeout = setTimeout(() => {
+        this.log.warn(`Connection timeout after ${timeoutMs}ms`);
+        if (this.ws) {
+          this.ws.removeAllListeners();
+          this.ws.close();
+          this.ws = undefined;
+        }
+        reject(new Error(`Connection timeout: Unreal Engine may not be running or Remote Control is not enabled`));
+      }, timeoutMs);
+      
+      // Success handler
+      const onOpen = () => {
+        clearTimeout(timeout);
         this.connected = true;
         this.log.info('Connected to Unreal Remote Control');
         this.startCommandProcessor(); // Start command processor on connect
         resolve();
-      });
-      this.ws.on('error', (err) => {
+      };
+      
+      // Error handler
+      const onError = (err: Error) => {
+        clearTimeout(timeout);
         this.log.error('WebSocket error', err);
-      });
-      this.ws.on('close', () => {
-        this.connected = false;
-        this.log.warn('WebSocket closed');
-        this.scheduleReconnect();
-      });
-      this.ws.on('message', (raw: WebSocket.RawData) => {
+        if (this.ws) {
+          this.ws.removeAllListeners();
+          this.ws.close();
+          this.ws = undefined;
+        }
+        reject(new Error(`Failed to connect: ${err.message}`));
+      };
+      
+      // Close handler (if closed before open)
+      const onClose = () => {
+        if (!this.connected) {
+          clearTimeout(timeout);
+          reject(new Error('Connection closed before establishing'));
+        } else {
+          // Normal close after connection was established
+          this.connected = false;
+          this.log.warn('WebSocket closed');
+          this.scheduleReconnect();
+        }
+      };
+      
+      // Message handler
+      const onMessage = (raw: WebSocket.RawData) => {
         try {
           const msg = JSON.parse(String(raw));
           // Route reply messages with RequestId or internal mapping
@@ -185,7 +246,13 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         } catch (e) {
           this.log.error('Failed parsing WS message', e);
         }
-      });
+      };
+      
+      // Attach listeners
+      this.ws.once('open', onOpen);
+      this.ws.once('error', onError);
+      this.ws.on('close', onClose);
+      this.ws.on('message', onMessage);
     });
   }
 
@@ -289,19 +356,52 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
   // Try to execute a Python command via the PythonScriptPlugin, fallback to `py` console command.
   async executePython(command: string): Promise<any> {
     try {
-      // Many UE versions expose ExecutePythonCommand on PythonScriptLibrary
+      // Try the newer ExecutePythonCommandEx which handles multi-line scripts better
       return await this.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary',
-        functionName: 'ExecutePythonCommand',
+        objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary', 
+        functionName: 'ExecutePythonCommandEx',
         parameters: {
-          Command: command
+          PythonCommand: command,
+          ExecutionMode: 'ExecuteFile',
+          FileExecutionScope: 'Private'
         },
         generateTransaction: false
       });
-    } catch (err) {
-      this.log.warn('PythonScriptLibrary not available, falling back to console `py` command');
-      const oneLine = command.replace(/\r?\n/g, ' ').replace(/"/g, '\\"');
-      return this.executeConsoleCommand(`py "${oneLine}"`);
+    } catch (err1) {
+      try {
+        // Fallback to ExecutePythonCommand
+        return await this.httpCall('/remote/object/call', 'PUT', {
+          objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary',
+          functionName: 'ExecutePythonCommand',
+          parameters: {
+            Command: command
+          },
+          generateTransaction: false
+        });
+      } catch (err2) {
+        // Final fallback: execute line by line via console
+        this.log.warn('PythonScriptLibrary not available, falling back to console `py` command');
+        
+        // Split into lines and execute each non-empty line
+        const lines = command.split('\n').filter(line => line.trim().length > 0);
+        let result = null;
+        
+        for (const line of lines) {
+          // Skip comments and imports as they work fine
+          if (line.trim().startsWith('#') || line.trim().startsWith('import ')) {
+            result = await this.executeConsoleCommand(`py ${line.trim()}`);
+          } else {
+            // For other lines, try to execute them
+            const escapedLine = line.replace(/"/g, '\\"').replace(/'/g, "\\'");
+            result = await this.executeConsoleCommand(`py ${escapedLine}`);
+          }
+          
+          // Small delay between commands to ensure execution order
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        
+        return result;
+      }
     }
   }
   

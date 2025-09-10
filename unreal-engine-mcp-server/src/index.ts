@@ -113,15 +113,33 @@ async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
 export async function createServer() {
   const bridge = new UnrealBridge();
   
-  // Connect to UE5 Remote Control
-  try {
-    await bridge.connect();
+  // Connect to UE5 Remote Control with retries and timeout
+  const connected = await bridge.tryConnect(
+    CONFIG.MAX_RETRY_ATTEMPTS,
+    5000, // 5 second timeout per attempt
+    CONFIG.RETRY_DELAY_MS
+  );
+  
+  if (connected) {
     metrics.connectionStatus = 'connected';
-  } catch (err) {
-    log.error('Failed to connect to Unreal Engine:', err);
+    log.info('Successfully connected to Unreal Engine');
+  } else {
+    log.warn('Could not connect to Unreal Engine after retries');
+    log.info('Server will start anyway - connection will be retried periodically');
     log.info('Make sure Unreal Engine is running with Remote Control enabled');
     metrics.connectionStatus = 'disconnected';
-    // Continue anyway - connection can be retried
+    
+    // Schedule automatic reconnection attempts
+    const reconnectInterval = setInterval(async () => {
+      if (!bridge.isConnected) {
+        log.info('Attempting to reconnect to Unreal Engine...');
+        const reconnected = await bridge.tryConnect(1, 5000, 0); // Single attempt
+        if (reconnected) {
+          log.info('Reconnected to Unreal Engine successfully');
+          metrics.connectionStatus = 'connected';
+        }
+      }
+    }, 10000); // Try every 10 seconds
   }
   
   // Start periodic health checks

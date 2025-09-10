@@ -31,13 +31,24 @@ export class ActorResources {
       return cached;
     }
     
+    // Use Python to get actors via EditorActorSubsystem
     try {
-      const res = await this.bridge.call({
-        objectPath: '/Script/UnrealEd.Default__EditorLevelLibrary',
-        functionName: 'GetAllLevelActors',
-        parameters: {}
-      });
-      const result = res?.Result ?? res;
+      const pythonCode = `
+import unreal
+actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+actors = actor_subsystem.get_all_level_actors()
+actor_list = []
+for actor in actors:
+    if actor:
+        actor_list.append({
+            'name': actor.get_name(),
+            'class': actor.get_class().get_name(),
+            'path': actor.get_path_name()
+        })
+print(f"Found {len(actor_list)} actors")
+      `.trim();
+      
+      const result = await this.bridge.executePython(pythonCode);
       this.setCache('listActors', result);
       return result;
     } catch (err) {
@@ -46,16 +57,22 @@ export class ActorResources {
   }
 
   async getActorByName(actorName: string) {
+    // GetActorOfClass expects a class, not a name. Use Python to find by name
     try {
-      const res = await this.bridge.call({
-        objectPath: '/Script/Engine.Default__GameplayStatics',
-        functionName: 'GetActorOfClass',
-        parameters: {
-          WorldContextObject: null,
-          ActorName: actorName
-        }
-      });
-      return res?.Result ?? res;
+      const pythonCode = `
+import unreal
+actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+actors = actor_subsystem.get_all_level_actors()
+for actor in actors:
+    if actor and actor.get_name() == "${actorName}":
+        print(f"Found actor: {actor.get_path_name()}")
+        break
+else:
+    print(f"Actor not found: ${actorName}")
+      `.trim();
+      
+      const result = await this.bridge.executePython(pythonCode);
+      return result;
     } catch (err) {
       return { error: `Failed to get actor: ${err}` };
     }
