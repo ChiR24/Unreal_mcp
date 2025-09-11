@@ -15,7 +15,11 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "clean": "rm -rf dist",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:tool4": "vitest run src/tests/consolidated-tool-4.test.ts"
   },
   "engines": {
     "node": ">=18"
@@ -46,6 +50,8 @@
     "@types/ws": "^8.5.10",
     "eslint": "^8.57.0",
     "typescript": "^5.4.5",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "vitest": "^1.6.0",
+    "@vitest/coverage-v8": "^1.6.0"
   }
 }

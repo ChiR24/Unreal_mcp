@@ -30,7 +30,7 @@ export class DebugVisualizationTools {
     const thickness = params.thickness || 1.0;
     
     const command = `DrawDebugLine ${params.start.join(' ')} ${params.end.join(' ')} ${color.join(' ')} ${duration} ${thickness}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Draw debug box
@@ -48,7 +48,7 @@ export class DebugVisualizationTools {
     const thickness = params.thickness || 1.0;
     
     const command = `DrawDebugBox ${params.center.join(' ')} ${params.extent.join(' ')} ${color.join(' ')} ${rotation.join(' ')} ${duration} ${thickness}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Draw debug sphere
@@ -66,7 +66,7 @@ export class DebugVisualizationTools {
     const thickness = params.thickness || 1.0;
     
     const command = `DrawDebugSphere ${params.center.join(' ')} ${params.radius} ${segments} ${color.join(' ')} ${duration} ${thickness}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Draw debug capsule
@@ -83,7 +83,7 @@ export class DebugVisualizationTools {
     const duration = params.duration || 5.0;
     
     const command = `DrawDebugCapsule ${params.center.join(' ')} ${params.halfHeight} ${params.radius} ${rotation.join(' ')} ${color.join(' ')} ${duration}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Draw debug cone
@@ -102,7 +102,7 @@ export class DebugVisualizationTools {
     const duration = params.duration || 5.0;
     
     const command = `DrawDebugCone ${params.origin.join(' ')} ${params.direction.join(' ')} ${params.length} ${params.angleWidth} ${params.angleHeight} ${numSides} ${color.join(' ')} ${duration}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Draw debug string
@@ -118,7 +118,7 @@ export class DebugVisualizationTools {
     const fontSize = params.fontSize || 1.0;
     
     const command = `DrawDebugString ${params.location.join(' ')} "${params.text}" ${color.join(' ')} ${duration} ${fontSize}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Draw debug arrow
@@ -136,7 +136,7 @@ export class DebugVisualizationTools {
     const thickness = params.thickness || 2.0;
     
     const command = `DrawDebugArrow ${params.start.join(' ')} ${params.end.join(' ')} ${arrowSize} ${color.join(' ')} ${duration} ${thickness}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Draw debug point
@@ -151,7 +151,7 @@ export class DebugVisualizationTools {
     const duration = params.duration || 5.0;
     
     const command = `DrawDebugPoint ${params.location.join(' ')} ${size} ${color.join(' ')} ${duration}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Draw debug coordinate system
@@ -168,7 +168,7 @@ export class DebugVisualizationTools {
     const thickness = params.thickness || 2.0;
     
     const command = `DrawDebugCoordinateSystem ${params.location.join(' ')} ${rotation.join(' ')} ${scale} ${duration} ${thickness}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Draw debug frustum
@@ -189,12 +189,12 @@ export class DebugVisualizationTools {
     const duration = params.duration || 5.0;
     
     const command = `DrawDebugFrustum ${params.origin.join(' ')} ${params.rotation.join(' ')} ${params.fov} ${aspectRatio} ${nearPlane} ${farPlane} ${color.join(' ')} ${duration}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Clear debug drawings
   async clearDebugDrawings() {
-    return this.executeCommand('FlushPersistentDebugLines');
+    return this.bridge.executeConsoleCommand('FlushPersistentDebugLines');
   }
 
   // Show collision
@@ -212,7 +212,7 @@ export class DebugVisualizationTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Collision visualization ${params.enabled ? 'enabled' : 'disabled'}` };
@@ -223,7 +223,7 @@ export class DebugVisualizationTools {
     enabled: boolean;
   }) {
     const command = params.enabled ? 'show Bounds' : 'show Bounds 0';
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Set view mode with crash protection
@@ -242,7 +242,7 @@ export class DebugVisualizationTools {
       
       // Try to ensure we're not in PIE mode first (safer for viewmode changes)
       try {
-        await this.executeCommand('stop');
+        await this.bridge.executeConsoleCommand('stop');
       } catch (e) {
         // Ignore if not in PIE
       }
@@ -253,7 +253,7 @@ export class DebugVisualizationTools {
     
     try {
       const command = `viewmode ${params.mode}`;
-      const result = await this.executeCommand(command);
+      const result = await this.bridge.executeConsoleCommand(command);
       
       // For unsafe modes, immediately switch back to Lit if there's an issue
       if (UNSAFE_VIEWMODES.includes(params.mode)) {
@@ -261,11 +261,11 @@ export class DebugVisualizationTools {
         setTimeout(async () => {
           try {
             // Check if we're still responsive
-            await this.executeCommand('stat unit');
+            await this.bridge.executeConsoleCommand('stat unit');
           } catch (e) {
             // If unresponsive, try to recover
             console.error('Viewmode may have caused an issue, attempting recovery...');
-            await this.executeCommand('viewmode Lit');
+            await this.bridge.executeConsoleCommand('viewmode Lit');
           }
         }, 2000);
       }
@@ -273,7 +273,7 @@ export class DebugVisualizationTools {
       return { ...result, warning: UNSAFE_VIEWMODES.includes(params.mode) ? `Viewmode '${params.mode}' applied. This mode may be unstable.` : undefined };
     } catch (error) {
       // Fallback to Lit mode on error
-      await this.executeCommand('viewmode Lit');
+      await this.bridge.executeConsoleCommand('viewmode Lit');
       throw new Error(`Failed to set viewmode '${params.mode}': ${error}. Reverted to Lit mode.`);
     }
   }
@@ -284,7 +284,7 @@ export class DebugVisualizationTools {
     enabled: boolean;
   }) {
     const command = `showdebug ${params.enabled ? params.category : 'None'}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Show actor names
@@ -292,7 +292,7 @@ export class DebugVisualizationTools {
     enabled: boolean;
   }) {
     const command = params.enabled ? 'show ActorNames' : 'show ActorNames 0';
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Draw debug path
@@ -314,7 +314,7 @@ export class DebugVisualizationTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Debug path drawn with ${params.points.length} points` };
@@ -325,7 +325,7 @@ export class DebugVisualizationTools {
     enabled: boolean;
   }) {
     const command = params.enabled ? 'show Navigation' : 'show Navigation 0';
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Enable on-screen messages
@@ -341,9 +341,9 @@ export class DebugVisualizationTools {
       const duration = params.duration || 5.0;
       const color = params.color || [255, 255, 255, 255];
       const command = `ke * DisplayDebugMessage ${key} "${params.message}" ${duration} ${color.join(' ')}`;
-      return this.executeCommand(command);
+      return this.bridge.executeConsoleCommand(command);
     } else {
-      return this.executeCommand('DisableAllScreenMessages');
+      return this.bridge.executeConsoleCommand('DisableAllScreenMessages');
     }
   }
 
@@ -355,6 +355,6 @@ export class DebugVisualizationTools {
     const command = params.enabled 
       ? `ShowDebugSkelMesh ${params.actorName}` 
       : `HideDebugSkelMesh ${params.actorName}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 }

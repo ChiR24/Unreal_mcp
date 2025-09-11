@@ -379,28 +379,36 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
           generateTransaction: false
         });
       } catch (err2) {
-        // Final fallback: execute line by line via console
+        // Final fallback: execute via console py command
         this.log.warn('PythonScriptLibrary not available, falling back to console `py` command');
         
-        // Split into lines and execute each non-empty line
-        const lines = command.split('\n').filter(line => line.trim().length > 0);
-        let result = null;
-        
-        for (const line of lines) {
-          // Skip comments and imports as they work fine
-          if (line.trim().startsWith('#') || line.trim().startsWith('import ')) {
-            result = await this.executeConsoleCommand(`py ${line.trim()}`);
-          } else {
-            // For other lines, try to execute them
-            const escapedLine = line.replace(/"/g, '\\"').replace(/'/g, "\\'");
-            result = await this.executeConsoleCommand(`py ${escapedLine}`);
-          }
-          
-          // Small delay between commands to ensure execution order
-          await new Promise(resolve => setTimeout(resolve, 50));
+        // For simple single-line commands
+        if (!command.includes('\n')) {
+          return await this.executeConsoleCommand(`py ${command}`);
         }
         
-        return result;
+        // For multi-line scripts, try to execute as a block
+        try {
+          // Try executing as a single exec block
+          const escapedScript = command.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+          return await this.executeConsoleCommand(`py exec("${escapedScript}")`);
+        } catch (err3) {
+          // If that fails, execute line by line
+          const lines = command.split('\n').filter(line => line.trim().length > 0);
+          let result = null;
+          
+          for (const line of lines) {
+            // Skip comments
+            if (line.trim().startsWith('#')) {
+              continue;
+            }
+            result = await this.executeConsoleCommand(`py ${line.trim()}`);
+            // Small delay between commands to ensure execution order
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          
+          return result;
+        }
       }
     }
   }

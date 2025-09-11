@@ -54,7 +54,7 @@ export class NiagaraTools {
       }
       
       for (const cmd of commands) {
-        await this.executeCommand(cmd);
+        await this.bridge.executeConsoleCommand(cmd);
       }
       
       return { 
@@ -140,7 +140,7 @@ export class NiagaraTools {
       }
       
       for (const cmd of commands) {
-        await this.executeCommand(cmd);
+        await this.bridge.executeConsoleCommand(cmd);
       }
       
       return { 
@@ -183,7 +183,7 @@ export class NiagaraTools {
       }
       
       const command = `SetNiagara${paramType}Parameter ${params.systemName} ${params.parameterName} ${params.parameterType} ${valueStr}`;
-      await this.executeCommand(command);
+      await this.bridge.executeConsoleCommand(command);
       
       return { 
         success: true, 
@@ -305,7 +305,7 @@ export class NiagaraTools {
       }
       
       for (const cmd of commands) {
-        await this.executeCommand(cmd);
+        await this.bridge.executeConsoleCommand(cmd);
       }
       
       return { 
@@ -369,7 +369,7 @@ export class NiagaraTools {
       }
       
       for (const cmd of commands) {
-        await this.executeCommand(cmd);
+        await this.bridge.executeConsoleCommand(cmd);
       }
       
       return { 
@@ -425,7 +425,7 @@ export class NiagaraTools {
         command = `SpawnNiagaraAttached ${params.systemPath} ${params.attachToActor} ${locStr} ${rotStr} ${scaleStr}`;
       }
       
-      await this.executeCommand(command);
+      await this.bridge.executeConsoleCommand(command);
       
       return { 
         success: true, 

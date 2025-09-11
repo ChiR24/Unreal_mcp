@@ -28,7 +28,7 @@ export class LevelTools {
       ? `LoadStreamLevel ${params.levelPath}` 
       : `open ${params.levelPath}`;
     
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Save current level
@@ -41,7 +41,7 @@ export class LevelTools {
     // Save level command doesn't exist, using SaveGame
     const command = `SaveGame ${name}`;
     
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Create new level
@@ -54,7 +54,7 @@ export class LevelTools {
     const path = params.savePath || '/Game/Maps';
     const command = `CreateNewLevel ${params.levelName} ${template} ${path}`;
     
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Stream level
@@ -68,7 +68,7 @@ export class LevelTools {
     const visCmd = params.shouldBeVisible ? 'Show' : 'Hide';
     const command = `StreamLevel ${params.levelName} ${loadCmd} ${visCmd}`;
     
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // World composition
@@ -93,7 +93,7 @@ export class LevelTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'World composition configured' };
@@ -110,7 +110,7 @@ export class LevelTools {
     }>;
   }) {
     const command = `OpenLevelBlueprint ${params.eventType}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Sub-levels
@@ -120,7 +120,7 @@ export class LevelTools {
     parent?: string;
   }) {
     const command = `CreateSubLevel ${params.name} ${params.type} ${params.parent || 'None'}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // World settings
@@ -150,7 +150,7 @@ export class LevelTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'World settings updated' };
@@ -162,7 +162,7 @@ export class LevelTools {
     max: [number, number, number];
   }) {
     const command = `SetLevelBounds ${params.min.join(',')} ${params.max.join(',')}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Navigation mesh
@@ -174,7 +174,7 @@ export class LevelTools {
       ? 'RebuildNavigation' 
       : 'BuildPaths';
     
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Level visibility
@@ -183,7 +183,7 @@ export class LevelTools {
     visible: boolean;
   }) {
     const command = `SetLevelVisibility ${params.levelName} ${params.visible}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // World origin
@@ -191,7 +191,7 @@ export class LevelTools {
     location: [number, number, number];
   }) {
     const command = `SetWorldOriginLocation ${params.location.join(' ')}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Level streaming volumes
@@ -202,7 +202,7 @@ export class LevelTools {
     streamingDistance?: number;
   }) {
     const command = `CreateStreamingVolume ${params.levelName} ${params.position.join(' ')} ${params.size.join(' ')} ${params.streamingDistance || 0}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Level LOD
@@ -212,6 +212,6 @@ export class LevelTools {
     distance: number;
   }) {
     const command = `SetLevelLOD ${params.levelName} ${params.lodLevel} ${params.distance}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 }

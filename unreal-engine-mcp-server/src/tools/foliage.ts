@@ -58,7 +58,7 @@ export class FoliageTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Foliage type ${params.name} added` };
@@ -91,7 +91,7 @@ export class FoliageTools {
     commands.push(`PaintFoliage ${params.position.join(' ')}`);
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Foliage painted at position` };
@@ -128,7 +128,7 @@ export class FoliageTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Instanced mesh ${params.name} created with ${params.instances.length} instances` };
@@ -151,7 +151,7 @@ export class FoliageTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Foliage LOD settings updated` };
@@ -185,7 +185,7 @@ export class FoliageTools {
     commands.push(`GenerateProceduralFoliage ${params.volumeName}`);
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Procedural foliage volume ${params.volumeName} created` };
@@ -213,7 +213,7 @@ export class FoliageTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Foliage collision settings updated` };
@@ -250,7 +250,7 @@ export class FoliageTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Grass system ${params.name} created` };
@@ -263,7 +263,7 @@ export class FoliageTools {
     radius: number;
   }) {
     const command = `RemoveFoliageInRadius ${params.foliageType} ${params.position.join(' ')} ${params.radius}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Select foliage instances
@@ -283,7 +283,7 @@ export class FoliageTools {
       command = `SelectFoliageType ${params.foliageType}`;
     }
     
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Update foliage instances
@@ -306,7 +306,7 @@ export class FoliageTools {
     commands.push(`RefreshFoliage ${params.foliageType}`);
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Foliage instances updated` };
@@ -329,7 +329,7 @@ export class FoliageTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Foliage spawner ${params.name} created` };
@@ -360,7 +360,7 @@ export class FoliageTools {
     commands.push('RebuildFoliageTree');
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Foliage optimized' };

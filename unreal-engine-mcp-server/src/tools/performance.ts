@@ -52,7 +52,7 @@ export class PerformanceTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `${params.type} profiling started` };
@@ -66,7 +66,7 @@ export class PerformanceTools {
     ];
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Profiling stopped' };
@@ -83,7 +83,7 @@ export class PerformanceTools {
       ? (params.verbose ? 'stat unit' : 'stat unit')
       : 'stat none';
     
-    await this.executeCommand(command);
+    await this.bridge.executeConsoleCommand(command);
     return { success: true, message: params.enabled ? 'FPS display enabled' : 'FPS display disabled' };
   }
 
@@ -96,7 +96,7 @@ export class PerformanceTools {
       ? `stat ${params.category.toLowerCase()}`
       : 'stat none';
     
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Set scalability settings
@@ -105,7 +105,7 @@ export class PerformanceTools {
     level: 0 | 1 | 2 | 3 | 4; // 0=Low, 1=Medium, 2=High, 3=Epic, 4=Cinematic
   }) {
     const command = `sg.${params.category}Quality ${params.level}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Set resolution scale
@@ -114,7 +114,7 @@ export class PerformanceTools {
   }) {
     const clampedScale = Math.max(0.5, Math.min(2.0, params.scale));
     const command = `r.ScreenPercentage ${clampedScale * 100}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Enable/disable vsync
@@ -122,7 +122,7 @@ export class PerformanceTools {
     enabled: boolean;
   }) {
     const command = `r.VSync ${params.enabled ? 1 : 0}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Set frame rate limit
@@ -130,7 +130,7 @@ export class PerformanceTools {
     maxFPS: number; // 0 for unlimited
   }) {
     const command = `t.MaxFPS ${params.maxFPS}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Enable GPU timing
@@ -138,7 +138,7 @@ export class PerformanceTools {
     enabled: boolean;
   }) {
     const command = `r.GPUStatsEnabled ${params.enabled ? 1 : 0}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Memory report
@@ -159,7 +159,7 @@ export class PerformanceTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Memory report generated' };
@@ -184,7 +184,7 @@ export class PerformanceTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Texture streaming configured' };
@@ -211,7 +211,7 @@ export class PerformanceTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'LOD settings configured' };
@@ -238,7 +238,7 @@ export class PerformanceTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Draw call optimization configured' };
@@ -273,7 +273,7 @@ export class PerformanceTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Occlusion culling configured' };
@@ -300,7 +300,7 @@ export class PerformanceTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Shader optimization configured' };
@@ -325,7 +325,7 @@ export class PerformanceTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Nanite configured' };
@@ -350,7 +350,7 @@ export class PerformanceTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'World Partition configured' };
@@ -375,7 +375,7 @@ export class PerformanceTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Benchmark running for ${duration} seconds` };

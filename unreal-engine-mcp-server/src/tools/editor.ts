@@ -11,22 +11,19 @@ export class EditorTools {
       // Try Python first for proper EditorLevelLibrary access with viewport play
       try {
         // Use EditorLevelLibrary to play in the selected viewport (matches UI behavior)
-        const pythonCmd = `
-          import unreal
-          # Set play settings to match UI play
-          play_settings = unreal.LevelEditorPlaySettings()
-          play_settings.play_in_editor_type = unreal.PlayInEditorType.PIE_PLAY_IN_VIEWPORT
-          play_settings.play_in_viewport_gizmos = True
-          
-          # Start PIE in selected viewport
-          unreal.EditorLevelLibrary.play_in_viewport(
-              simulate_in_editor=False,
-              at_location=unreal.Vector(0, 0, 0),
-              at_rotation=unreal.Rotator(0, 0, 0),
-              viewport_type='SelectedViewport',
-              destination_viewport=''
-          )
-        `.trim();
+        const pythonCmd = [
+          'import unreal',
+          '# Start PIE using EditorLevelLibrary (simpler approach)',
+          'unreal.EditorLevelLibrary.editor_play_simulate()',
+          '# Set viewport play settings if available',
+          'try:',
+          '    play_settings = unreal.get_editor_subsystem(unreal.LevelEditorPlaySettings)',
+          '    if play_settings:',
+          '        play_settings.set_play_mode(unreal.PlayInEditorType.PIE_PLAY_IN_VIEWPORT)',
+          'except:',
+          '    pass  # Settings API may vary by UE version'
+        ].join('\n');
+        
         await this.bridge.executePython(pythonCmd);
         return { success: true, message: 'PIE started in Selected Viewport (matching UI play)' };
       } catch (pythonErr) {
@@ -71,6 +68,11 @@ export class EditorTools {
     } catch (err) {
       return { success: false, error: `Failed to pause PIE: ${err}` };
     }
+  }
+  
+  // Alias for consistency with naming convention
+  async pauseInEditor() {
+    return this.pausePlayInEditor();
   }
 
   async buildLighting() {

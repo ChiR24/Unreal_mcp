@@ -22,7 +22,7 @@ export class BlueprintTools {
       ];
       
       for (const cmd of commands) {
-        await this.executeCommand(cmd);
+        await this.bridge.executeConsoleCommand(cmd);
       }
       
       return { 
@@ -83,7 +83,7 @@ export class BlueprintTools {
       }
       
       for (const cmd of commands) {
-        await this.executeCommand(cmd);
+        await this.bridge.executeConsoleCommand(cmd);
       }
       
       return { 
@@ -137,7 +137,7 @@ export class BlueprintTools {
       }
       
       for (const cmd of commands) {
-        await this.executeCommand(cmd);
+        await this.bridge.executeConsoleCommand(cmd);
       }
       
       return { 
@@ -196,7 +196,7 @@ export class BlueprintTools {
       }
       
       for (const cmd of commands) {
-        await this.executeCommand(cmd);
+        await this.bridge.executeConsoleCommand(cmd);
       }
       
       return { 
@@ -234,7 +234,7 @@ export class BlueprintTools {
       }
       
       for (const cmd of commands) {
-        await this.executeCommand(cmd);
+        await this.bridge.executeConsoleCommand(cmd);
       }
       
       return { 
@@ -263,7 +263,7 @@ export class BlueprintTools {
       }
       
       for (const cmd of commands) {
-        await this.executeCommand(cmd);
+        await this.bridge.executeConsoleCommand(cmd);
       }
       
       return { 

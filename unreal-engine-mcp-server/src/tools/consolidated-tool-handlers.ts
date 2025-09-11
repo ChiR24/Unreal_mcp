@@ -18,28 +18,87 @@ export async function handleConsolidatedToolCall(
     switch (name) {
       // 1. ASSET MANAGER
       case 'manage_asset':
+        // Validate action exists
+        if (!args.action) {
+          throw new Error('Missing required parameter: action');
+        }
+        
         switch (args.action) {
           case 'list':
+            // Directory is optional, recursive is optional
+            if (args.directory !== undefined && args.directory !== null) {
+              if (typeof args.directory !== 'string') {
+                throw new Error('Invalid directory: must be a string');
+              }
+            }
+            if (args.recursive !== undefined && args.recursive !== null) {
+              if (typeof args.recursive !== 'boolean') {
+                throw new Error('Invalid recursive: must be a boolean');
+              }
+            }
+            
             mappedName = 'list_assets';
             mappedArgs = {
               directory: args.directory,
               recursive: args.recursive
             };
             break;
+            
           case 'import':
+            // Validate required parameters
+            if (args.sourcePath === undefined || args.sourcePath === null) {
+              throw new Error('Missing required parameter: sourcePath');
+            }
+            if (typeof args.sourcePath !== 'string') {
+              throw new Error('Invalid sourcePath: must be a string');
+            }
+            if (args.sourcePath.trim() === '') {
+              throw new Error('Invalid sourcePath: cannot be empty');
+            }
+            
+            if (args.destinationPath === undefined || args.destinationPath === null) {
+              throw new Error('Missing required parameter: destinationPath');
+            }
+            if (typeof args.destinationPath !== 'string') {
+              throw new Error('Invalid destinationPath: must be a string');
+            }
+            if (args.destinationPath.trim() === '') {
+              throw new Error('Invalid destinationPath: cannot be empty');
+            }
+            
             mappedName = 'import_asset';
             mappedArgs = {
               sourcePath: args.sourcePath,
               destinationPath: args.destinationPath
             };
             break;
+            
           case 'create_material':
+            // Validate required parameters
+            if (args.name === undefined || args.name === null) {
+              throw new Error('Missing required parameter: name');
+            }
+            if (typeof args.name !== 'string') {
+              throw new Error('Invalid name: must be a string');
+            }
+            if (args.name.trim() === '') {
+              throw new Error('Invalid name: cannot be empty');
+            }
+            
+            // Path is optional
+            if (args.path !== undefined && args.path !== null) {
+              if (typeof args.path !== 'string') {
+                throw new Error('Invalid path: must be a string');
+              }
+            }
+            
             mappedName = 'create_material';
             mappedArgs = {
               name: args.name,
               path: args.path
             };
             break;
+            
           default:
             throw new Error(`Unknown asset action: ${args.action}`);
         }
@@ -119,6 +178,11 @@ export async function handleConsolidatedToolCall(
 
       // 3. EDITOR CONTROL
       case 'control_editor':
+        // Validate action exists
+        if (!args.action) {
+          throw new Error('Missing required parameter: action');
+        }
+        
         switch (args.action) {
           case 'play':
             mappedName = 'play_in_editor';
@@ -134,8 +198,20 @@ export async function handleConsolidatedToolCall(
             break;
           case 'set_game_speed':
             // Validate game speed parameter
-            if (typeof args.speed !== 'number' || args.speed <= 0) {
-              throw new Error('Invalid speed: must be a positive number');
+            if (args.speed === undefined || args.speed === null) {
+              throw new Error('Missing required parameter: speed');
+            }
+            if (typeof args.speed !== 'number') {
+              throw new Error('Invalid speed: must be a number');
+            }
+            if (isNaN(args.speed)) {
+              throw new Error('Invalid speed: cannot be NaN');
+            }
+            if (!isFinite(args.speed)) {
+              throw new Error('Invalid speed: must be finite');
+            }
+            if (args.speed <= 0) {
+              throw new Error('Invalid speed: must be positive');
             }
             mappedName = 'set_game_speed';
             mappedArgs = {
@@ -213,16 +289,20 @@ export async function handleConsolidatedToolCall(
           case 'load':
             mappedName = 'load_level';
             mappedArgs = {
-              levelPath: args.levelPath,
-              streaming: args.streaming
+              levelPath: args.levelPath
             };
+            if (args.streaming !== undefined) {
+              mappedArgs.streaming = args.streaming;
+            }
             break;
           case 'save':
             mappedName = 'save_level';
             mappedArgs = {
-              levelName: args.levelName,
-              savePath: args.savePath
+              levelName: args.levelName
             };
+            if (args.savePath !== undefined) {
+              mappedArgs.savePath = args.savePath;
+            }
             break;
           case 'stream':
             mappedName = 'stream_level';
@@ -233,6 +313,41 @@ export async function handleConsolidatedToolCall(
             };
             break;
           case 'create_light':
+            // Validate light type
+            if (!args.lightType) {
+              throw new Error('Missing required parameter: lightType');
+            }
+            const validLightTypes = ['directional', 'point', 'spot', 'rect'];
+            const normalizedLightType = String(args.lightType).toLowerCase();
+            if (!validLightTypes.includes(normalizedLightType)) {
+              throw new Error(`Invalid lightType: '${args.lightType}'. Valid types are: ${validLightTypes.join(', ')}`);
+            }
+            
+            // Validate name
+            if (!args.name) {
+              throw new Error('Missing required parameter: name');
+            }
+            if (typeof args.name !== 'string' || args.name.trim() === '') {
+              throw new Error('Invalid name: must be a non-empty string');
+            }
+            
+            // Validate intensity if provided
+            if (args.intensity !== undefined) {
+              if (typeof args.intensity !== 'number' || !isFinite(args.intensity)) {
+                throw new Error(`Invalid intensity: must be a finite number, got ${typeof args.intensity}`);
+              }
+              if (args.intensity < 0) {
+                throw new Error('Invalid intensity: must be non-negative');
+              }
+            }
+            
+            // Validate location if provided
+            if (args.location !== undefined && args.location !== null) {
+              if (!Array.isArray(args.location) && typeof args.location !== 'object') {
+                throw new Error('Invalid location: must be an array [x,y,z] or object {x,y,z}');
+              }
+            }
+            
             mappedName = 'create_light';
             mappedArgs = {
               lightType: args.lightType,
@@ -254,8 +369,41 @@ export async function handleConsolidatedToolCall(
 
       // 5. ANIMATION & PHYSICS
       case 'animation_physics':
+        // Validate action exists
+        if (!args.action) {
+          throw new Error('Missing required parameter: action');
+        }
+        
         switch (args.action) {
           case 'create_animation_bp':
+            // Validate required parameters
+            if (args.name === undefined || args.name === null) {
+              throw new Error('Missing required parameter: name');
+            }
+            if (typeof args.name !== 'string') {
+              throw new Error('Invalid name: must be a string');
+            }
+            if (args.name.trim() === '') {
+              throw new Error('Invalid name: cannot be empty');
+            }
+            
+            if (args.skeletonPath === undefined || args.skeletonPath === null) {
+              throw new Error('Missing required parameter: skeletonPath');
+            }
+            if (typeof args.skeletonPath !== 'string') {
+              throw new Error('Invalid skeletonPath: must be a string');
+            }
+            if (args.skeletonPath.trim() === '') {
+              throw new Error('Invalid skeletonPath: cannot be empty');
+            }
+            
+            // Optional savePath validation
+            if (args.savePath !== undefined && args.savePath !== null) {
+              if (typeof args.savePath !== 'string') {
+                throw new Error('Invalid savePath: must be a string');
+              }
+            }
+            
             mappedName = 'create_animation_blueprint';
             mappedArgs = {
               name: args.name,
@@ -263,22 +411,103 @@ export async function handleConsolidatedToolCall(
               savePath: args.savePath
             };
             break;
+            
           case 'play_montage':
+            // Validate required parameters
+            if (args.actorName === undefined || args.actorName === null) {
+              throw new Error('Missing required parameter: actorName');
+            }
+            if (typeof args.actorName !== 'string') {
+              throw new Error('Invalid actorName: must be a string');
+            }
+            if (args.actorName.trim() === '') {
+              throw new Error('Invalid actorName: cannot be empty');
+            }
+            
+            // Check for montagePath or animationPath
+            const montagePath = args.montagePath || args.animationPath;
+            if (montagePath === undefined || montagePath === null) {
+              throw new Error('Missing required parameter: montagePath or animationPath');
+            }
+            if (typeof montagePath !== 'string') {
+              throw new Error('Invalid montagePath: must be a string');
+            }
+            if (montagePath.trim() === '') {
+              throw new Error('Invalid montagePath: cannot be empty');
+            }
+            
+            // Optional playRate validation
+            if (args.playRate !== undefined && args.playRate !== null) {
+              if (typeof args.playRate !== 'number') {
+                throw new Error('Invalid playRate: must be a number');
+              }
+              if (isNaN(args.playRate)) {
+                throw new Error('Invalid playRate: cannot be NaN');
+              }
+              if (!isFinite(args.playRate)) {
+                throw new Error('Invalid playRate: must be finite');
+              }
+            }
+            
             mappedName = 'play_animation_montage';
             mappedArgs = {
               actorName: args.actorName,
-              montagePath: args.montagePath || args.animationPath,
+              montagePath: montagePath,
               playRate: args.playRate
             };
             break;
+            
           case 'setup_ragdoll':
+            // Validate required parameters
+            if (args.skeletonPath === undefined || args.skeletonPath === null) {
+              throw new Error('Missing required parameter: skeletonPath');
+            }
+            if (typeof args.skeletonPath !== 'string') {
+              throw new Error('Invalid skeletonPath: must be a string');
+            }
+            if (args.skeletonPath.trim() === '') {
+              throw new Error('Invalid skeletonPath: cannot be empty');
+            }
+            
+            if (args.physicsAssetName === undefined || args.physicsAssetName === null) {
+              throw new Error('Missing required parameter: physicsAssetName');
+            }
+            if (typeof args.physicsAssetName !== 'string') {
+              throw new Error('Invalid physicsAssetName: must be a string');
+            }
+            if (args.physicsAssetName.trim() === '') {
+              throw new Error('Invalid physicsAssetName: cannot be empty');
+            }
+            
+            // Optional blendWeight validation
+            if (args.blendWeight !== undefined && args.blendWeight !== null) {
+              if (typeof args.blendWeight !== 'number') {
+                throw new Error('Invalid blendWeight: must be a number');
+              }
+              if (isNaN(args.blendWeight)) {
+                throw new Error('Invalid blendWeight: cannot be NaN');
+              }
+              if (!isFinite(args.blendWeight)) {
+                throw new Error('Invalid blendWeight: must be finite');
+              }
+            }
+            
+            // Optional savePath validation
+            if (args.savePath !== undefined && args.savePath !== null) {
+              if (typeof args.savePath !== 'string') {
+                throw new Error('Invalid savePath: must be a string');
+              }
+            }
+            
             mappedName = 'setup_ragdoll';
             mappedArgs = {
               skeletonPath: args.skeletonPath,
               physicsAssetName: args.physicsAssetName,
-              blendWeight: args.blendWeight
+              blendWeight: args.blendWeight,
+              savePath: args.savePath
             };
             break;
+            
           default:
             throw new Error(`Unknown animation/physics action: ${args.action}`);
         }

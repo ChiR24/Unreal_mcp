@@ -53,7 +53,7 @@ export class LandscapeTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Landscape ${params.name} created` };
@@ -90,7 +90,7 @@ export class LandscapeTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Landscape sculpting applied` };
@@ -124,7 +124,7 @@ export class LandscapeTools {
     commands.push(`PaintLandscape ${params.landscapeName} ${params.position.join(' ')}`);
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Landscape painted with ${params.layerName}` };
@@ -150,7 +150,7 @@ export class LandscapeTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Layer ${params.layerName} added to landscape` };
@@ -186,7 +186,7 @@ export class LandscapeTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Landscape spline ${params.splineName} created` };
@@ -201,7 +201,7 @@ export class LandscapeTools {
     const scale = params.scale || [100, 100, 100];
     const command = `ImportLandscapeHeightmap ${params.landscapeName} ${params.heightmapPath} ${scale.join(' ')}`;
     
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Export heightmap
@@ -213,7 +213,7 @@ export class LandscapeTools {
     const format = params.format || 'PNG';
     const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.exportPath} ${format}`;
     
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Set landscape LOD
@@ -238,7 +238,7 @@ export class LandscapeTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Landscape LOD settings updated' };
@@ -270,7 +270,7 @@ export class LandscapeTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Grass type ${params.grassType} created on landscape` };
@@ -295,7 +295,7 @@ export class LandscapeTools {
     commands.push(`UpdateLandscapeCollision ${params.landscapeName}`);
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Landscape collision updated' };
@@ -320,7 +320,7 @@ export class LandscapeTools {
     commands.push(`RetopologizeLandscape ${params.landscapeName}`);
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Landscape retopologized' };
@@ -340,6 +340,6 @@ export class LandscapeTools {
     
     const command = `CreateWaterBody ${params.type} ${params.name} ${loc.join(' ')} ${size.join(' ')} ${depth}`;
     
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 }

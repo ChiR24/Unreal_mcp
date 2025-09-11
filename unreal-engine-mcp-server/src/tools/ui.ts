@@ -27,7 +27,7 @@ export class UITools {
     const type = params.type || 'Custom';
     
     const command = `CreateWidgetBlueprint ${params.name} ${type} ${path}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Add widget component
@@ -62,7 +62,7 @@ export class UITools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Component ${params.componentName} added to widget` };
@@ -94,7 +94,7 @@ export class UITools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Widget text updated' };
@@ -121,7 +121,7 @@ export class UITools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Widget image updated' };
@@ -148,7 +148,7 @@ export class UITools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `HUD ${params.name} created` };
@@ -165,7 +165,7 @@ export class UITools {
       ? `ShowWidget ${params.widgetName} ${playerIndex}`
       : `HideWidget ${params.widgetName} ${playerIndex}`;
     
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Add widget to viewport
@@ -178,7 +178,7 @@ export class UITools {
     const playerIndex = params.playerIndex ?? 0;
     
     const command = `AddWidgetToViewport ${params.widgetClass} ${zOrder} ${playerIndex}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Remove widget from viewport
@@ -188,7 +188,7 @@ export class UITools {
   }) {
     const playerIndex = params.playerIndex ?? 0;
     const command = `RemoveWidgetFromViewport ${params.widgetName} ${playerIndex}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Create menu
@@ -213,7 +213,7 @@ export class UITools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Menu ${params.name} created` };
@@ -249,7 +249,7 @@ export class UITools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Animation ${params.animationName} created` };
@@ -266,7 +266,7 @@ export class UITools {
     const loops = params.loops ?? 1;
     
     const command = `PlayWidgetAnimation ${params.widgetName} ${params.animationName} ${playMode} ${loops}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Set widget style
@@ -304,7 +304,7 @@ export class UITools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Widget style updated' };
@@ -318,7 +318,7 @@ export class UITools {
     functionName: string;
   }) {
     const command = `BindWidgetEvent ${params.widgetName}.${params.componentName} ${params.eventType} ${params.functionName}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Set input mode
@@ -340,7 +340,7 @@ export class UITools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Input mode set to ${params.mode}` };
@@ -355,7 +355,7 @@ export class UITools {
   }) {
     const delay = params.delay ?? 0.5;
     const command = `SetWidgetTooltip ${params.widgetName}.${params.componentName} "${params.text}" ${delay}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Create drag and drop
@@ -380,7 +380,7 @@ export class UITools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: 'Drag and drop configured' };
@@ -398,6 +398,6 @@ export class UITools {
     const position = params.position || 'TopRight';
     
     const command = `ShowNotification "${params.text}" ${duration} ${type} ${position}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 }

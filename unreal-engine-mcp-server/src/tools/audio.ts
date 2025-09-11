@@ -54,7 +54,7 @@ export class AudioTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Sound cue ${params.name} created` };
@@ -73,7 +73,7 @@ export class AudioTools {
     const startTime = params.startTime ?? 0.0;
     
     const command = `PlaySoundAtLocation ${params.soundPath} ${params.location.join(' ')} ${volume} ${pitch} ${startTime}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Play sound 2D
@@ -88,7 +88,7 @@ export class AudioTools {
     const startTime = params.startTime ?? 0.0;
     
     const command = `PlaySound2D ${params.soundPath} ${volume} ${pitch} ${startTime}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Create audio component
@@ -112,7 +112,7 @@ export class AudioTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Audio component ${params.componentName} added to ${params.actorName}` };
@@ -147,7 +147,7 @@ export class AudioTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Attenuation settings ${params.name} configured` };
@@ -185,7 +185,7 @@ export class AudioTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Sound class ${params.name} created` };
@@ -226,7 +226,7 @@ export class AudioTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Sound mix ${params.name} created` };
@@ -237,14 +237,14 @@ export class AudioTools {
     mixName: string;
   }) {
     const command = `PushSoundMix ${params.mixName}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   async popSoundMix(params: {
     mixName: string;
   }) {
     const command = `PopSoundMix ${params.mixName}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Set master volume
@@ -252,7 +252,7 @@ export class AudioTools {
     volume: number; // 0.0 to 1.0
   }) {
     const command = `SetMasterVolume ${params.volume}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Create ambient sound
@@ -281,7 +281,7 @@ export class AudioTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Ambient sound ${params.name} created` };
@@ -313,7 +313,7 @@ export class AudioTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Reverb zone ${params.name} created` };
@@ -338,7 +338,7 @@ export class AudioTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Audio analysis ${params.enabled ? 'enabled' : 'disabled'}` };
@@ -346,7 +346,7 @@ export class AudioTools {
 
   // Stop all sounds
   async stopAllSounds() {
-    return this.executeCommand('StopAllSounds');
+    return this.bridge.executeConsoleCommand('StopAllSounds');
   }
 
   // Fade sound
@@ -358,7 +358,7 @@ export class AudioTools {
   }) {
     const type = params.fadeType || 'FadeTo';
     const command = `${type}Sound ${params.soundName} ${params.targetVolume} ${params.fadeTime}`;
-    return this.executeCommand(command);
+    return this.bridge.executeConsoleCommand(command);
   }
 
   // Set doppler effect
@@ -375,7 +375,7 @@ export class AudioTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Doppler effect ${params.enabled ? 'enabled' : 'disabled'}` };
@@ -400,7 +400,7 @@ export class AudioTools {
     }
     
     for (const cmd of commands) {
-      await this.executeCommand(cmd);
+      await this.bridge.executeConsoleCommand(cmd);
     }
     
     return { success: true, message: `Audio occlusion ${params.enabled ? 'enabled' : 'disabled'}` };
