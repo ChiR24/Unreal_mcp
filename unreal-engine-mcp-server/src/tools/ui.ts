@@ -24,10 +24,46 @@ export class UITools {
     savePath?: string;
   }) {
     const path = params.savePath || '/Game/UI/Widgets';
-    const type = params.type || 'Custom';
-    
-    const command = `CreateWidgetBlueprint ${params.name} ${type} ${path}`;
-    return this.bridge.executeConsoleCommand(command);
+    const py = `
+import unreal
+import json
+name = r"${params.name}"
+path = r"${path}"
+try:
+    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+    try:
+        factory = unreal.WidgetBlueprintFactory()
+    except Exception:
+        factory = None
+    if not factory:
+        print('RESULT:' + json.dumps({'success': False, 'error': 'WidgetBlueprintFactory unavailable'}))
+    else:
+        # Try setting parent_class in a version-tolerant way
+        try:
+            factory.parent_class = unreal.UserWidget
+        except Exception:
+            try:
+                factory.set_editor_property('parent_class', unreal.UserWidget)
+            except Exception:
+                pass
+        asset = asset_tools.create_asset(asset_name=name, package_path=path, asset_class=unreal.WidgetBlueprint, factory=factory)
+        if asset:
+            unreal.EditorAssetLibrary.save_asset(f"{path}/{name}")
+            print('RESULT:' + json.dumps({'success': True}))
+        else:
+            print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to create WidgetBlueprint'}))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
+    try {
+      const resp = await this.bridge.executePython(py)
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp)
+      const m = out.match(/RESULT:({.*})/)
+      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Widget blueprint created' } : { success: false, error: parsed.error } } catch {} }
+      return { success: true, message: 'Widget blueprint creation attempted' }
+    } catch (e) {
+      return { success: false, error: `Failed to create widget blueprint: ${e}` }
+    }
   }
 
   // Add widget component

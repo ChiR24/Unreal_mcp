@@ -370,6 +370,15 @@ print(f"RESULT:{json.dumps(result)}")
         result = await tools.materialTools.createMaterial(args.name, args.path);
         message = result.success ? `Material created: ${result.path}` : result.error;
         break;
+      
+      case 'apply_material_to_actor':
+        result = await tools.materialTools.applyMaterialToActor(
+          args.actorPath, 
+          args.materialPath, 
+          args.slotIndex !== undefined ? args.slotIndex : 0
+        );
+        message = result.success ? result.message : result.error;
+        break;
 
       // Editor Tools
       case 'play_in_editor':

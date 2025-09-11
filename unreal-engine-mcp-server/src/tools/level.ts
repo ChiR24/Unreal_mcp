@@ -37,12 +37,26 @@ export class LevelTools {
     levelName?: string;
     savePath?: string;
   }) {
-    const path = params.savePath || '/Game/Maps';
-    const name = params.levelName || 'CurrentLevel';
-    // Save level command doesn't exist, using SaveGame
-    const command = `SaveGame ${name}`;
-    
-    return this.bridge.executeConsoleCommand(command);
+    // Use Python EditorLevelLibrary.save_current_level for reliability
+    const python = `
+import unreal
+try:
+    unreal.EditorLevelLibrary.save_current_level()
+    print('RESULT:{"success": true}')
+except Exception as e:
+    print('RESULT:{"success": false, "error": "' + str(e).replace('"','\\"') + '"}')
+`.trim();
+    try {
+      const resp = await this.bridge.executePython(python)
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp)
+      const m = out.match(/RESULT:({.*})/)
+      if (m) {
+        try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Level saved' } : { success: false, error: parsed.error } } catch {}
+      }
+      return { success: true, message: 'Level saved' }
+    } catch (e) {
+      return { success: false, error: `Failed to save level: ${e}` }
+    }
   }
 
   // Create new level

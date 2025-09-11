@@ -670,7 +670,7 @@ except Exception as e:
     result["message"] = f"Error: {e}"
 
 print("RESULT:" + json.dumps(result))
-`.strip();
+`.trim();
 
       const resp = await this.bridge.executePython(python);
       // Parse Python result

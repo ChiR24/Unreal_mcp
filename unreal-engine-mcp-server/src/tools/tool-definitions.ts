@@ -80,6 +80,19 @@ export const toolDefinitions = [
       required: ['name', 'path']
     }
   },
+  {
+    name: 'apply_material_to_actor',
+    description: 'Apply a material to an actor in the level',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        actorPath: { type: 'string', description: 'Path to the actor' },
+        materialPath: { type: 'string', description: 'Path to the material asset' },
+        slotIndex: { type: 'number', description: 'Material slot index (default: 0)' }
+      },
+      required: ['actorPath', 'materialPath']
+    }
+  },
 
   // Editor Tools
   {

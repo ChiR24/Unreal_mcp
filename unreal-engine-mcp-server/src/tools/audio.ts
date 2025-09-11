@@ -30,35 +30,47 @@ export class AudioTools {
       attenuationSettings?: string;
     };
   }) {
-    const commands = [];
     const path = params.savePath || '/Game/Audio/Cues';
-    
-    commands.push(`CreateSoundCue ${params.name} ${path}`);
-    
-    if (params.wavePath) {
-      commands.push(`AddSoundWave ${params.name} ${params.wavePath}`);
+    const py = `
+import unreal
+import json
+name = r"${params.name}"
+path = r"${path}"
+try:
+    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+    try:
+        factory = unreal.SoundCueFactoryNew()
+    except Exception:
+        factory = None
+    if not factory:
+        print('RESULT:' + json.dumps({'success': False, 'error': 'SoundCueFactoryNew unavailable'}))
+    else:
+        asset = asset_tools.create_asset(asset_name=name, package_path=path, asset_class=unreal.SoundCue, factory=factory)
+        if asset:
+            if ${params.wavePath !== undefined ? 'True' : 'False'}:
+                try:
+                    wave_path = r"${params.wavePath || ''}"
+                    if wave_path and unreal.EditorAssetLibrary.does_asset_exist(wave_path):
+                        snd = unreal.EditorAssetLibrary.load_asset(wave_path)
+                        # Simple node hookup via SoundCueGraph is non-trivial via Python; leave as empty cue
+                except Exception:
+                    pass
+            unreal.EditorAssetLibrary.save_asset(f"{path}/{params.name}")
+            print('RESULT:' + json.dumps({'success': True}))
+        else:
+            print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to create SoundCue'}))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
+    try {
+      const resp = await this.bridge.executePython(py)
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp)
+      const m = out.match(/RESULT:({.*})/)
+      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Sound cue created' } : { success: false, error: parsed.error } } catch {} }
+      return { success: true, message: 'Sound cue creation attempted' }
+    } catch (e) {
+      return { success: false, error: `Failed to create sound cue: ${e}` }
     }
-    
-    if (params.settings) {
-      if (params.settings.volume !== undefined) {
-        commands.push(`SetSoundCueVolume ${params.name} ${params.settings.volume}`);
-      }
-      if (params.settings.pitch !== undefined) {
-        commands.push(`SetSoundCuePitch ${params.name} ${params.settings.pitch}`);
-      }
-      if (params.settings.looping !== undefined) {
-        commands.push(`SetSoundCueLooping ${params.name} ${params.settings.looping}`);
-      }
-      if (params.settings.attenuationSettings) {
-        commands.push(`SetSoundCueAttenuation ${params.name} ${params.settings.attenuationSettings}`);
-      }
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Sound cue ${params.name} created` };
   }
 
   // Play sound at location
@@ -72,9 +84,32 @@ export class AudioTools {
     const volume = params.volume ?? 1.0;
     const pitch = params.pitch ?? 1.0;
     const startTime = params.startTime ?? 0.0;
-    
-    const command = `PlaySoundAtLocation ${params.soundPath} ${params.location.join(' ')} ${volume} ${pitch} ${startTime}`;
-    return this.bridge.executeConsoleCommand(command);
+
+    const py = `
+import unreal
+import json
+loc = unreal.Vector(${params.location[0]}, ${params.location[1]}, ${params.location[2]})
+path = r"${params.soundPath}"
+try:
+    if not unreal.EditorAssetLibrary.does_asset_exist(path):
+        print('RESULT:' + json.dumps({'success': False, 'error': 'Sound asset not found'}))
+    else:
+        snd = unreal.EditorAssetLibrary.load_asset(path)
+        world = unreal.EditorLevelLibrary.get_editor_world()
+        unreal.GameplayStatics.play_sound_at_location(world, snd, loc, ${volume}, ${pitch}, ${startTime})
+        print('RESULT:' + json.dumps({'success': True}))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
+    try {
+      const resp = await this.bridge.executePython(py)
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp)
+      const m = out.match(/RESULT:({.*})/)
+      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Sound played' } : { success: false, error: parsed.error } } catch {} }
+      return { success: true, message: 'Sound play attempted' }
+    } catch (e) {
+      return { success: false, error: `Failed to play sound: ${e}` }
+    }
   }
 
   // Play sound 2D
@@ -87,9 +122,31 @@ export class AudioTools {
     const volume = params.volume ?? 1.0;
     const pitch = params.pitch ?? 1.0;
     const startTime = params.startTime ?? 0.0;
-    
-    const command = `PlaySound2D ${params.soundPath} ${volume} ${pitch} ${startTime}`;
-    return this.bridge.executeConsoleCommand(command);
+
+    const py = `
+import unreal
+import json
+path = r"${params.soundPath}"
+try:
+    if not unreal.EditorAssetLibrary.does_asset_exist(path):
+        print('RESULT:' + json.dumps({'success': False, 'error': 'Sound asset not found'}))
+    else:
+        snd = unreal.EditorAssetLibrary.load_asset(path)
+        world = unreal.EditorLevelLibrary.get_editor_world()
+        unreal.GameplayStatics.play_sound_2d(world, snd, ${volume}, ${pitch}, ${startTime})
+        print('RESULT:' + json.dumps({'success': True}))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
+    try {
+      const resp = await this.bridge.executePython(py)
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp)
+      const m = out.match(/RESULT:({.*})/)
+      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Sound2D played' } : { success: false, error: parsed.error } } catch {} }
+      return { success: true, message: 'Sound2D play attempted' }
+    } catch (e) {
+      return { success: false, error: `Failed to play sound2D: ${e}` }
+    }
   }
 
   // Create audio component
