@@ -10,6 +10,7 @@ export class LandscapeTools {
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',
       functionName: 'ExecuteConsoleCommand',
       parameters: {
+        WorldContextObject: null,
         Command: command,
         SpecificPlayer: null
       },
@@ -28,35 +29,9 @@ export class LandscapeTools {
     componentCount?: number;
     materialPath?: string;
   }) {
-    const commands = [];
-    const loc = params.location || [0, 0, 0];
-    const sizeX = params.sizeX || 127;
-    const sizeY = params.sizeY || 127;
-    
-    // Landscape creation through console is limited, using echo for now
-    commands.push(`echo Creating landscape ${params.name} at ${loc.join(' ')} size ${sizeX}x${sizeY}`);
-    
-    if (params.quadsPerSection) {
-      commands.push(`SetLandscapeQuadsPerSection ${params.name} ${params.quadsPerSection}`);
-    }
-    
-    if (params.sectionsPerComponent) {
-      commands.push(`SetLandscapeSectionsPerComponent ${params.name} ${params.sectionsPerComponent}`);
-    }
-    
-    if (params.componentCount) {
-      commands.push(`SetLandscapeComponentCount ${params.name} ${params.componentCount}`);
-    }
-    
-    if (params.materialPath) {
-      commands.push(`SetLandscapeMaterial ${params.name} ${params.materialPath}`);
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Landscape ${params.name} created` };
+    // Not implemented: creating landscapes requires LandscapeEditorSubsystem and editor UI context.
+    // To avoid false positives, return an explicit error.
+    return { success: false, error: 'createLandscape not implemented via Remote Control. Requires LandscapeEditorSubsystem and editor scripting.' };
   }
 
   // Sculpt landscape
@@ -68,32 +43,7 @@ export class LandscapeTools {
     strength?: number;
     position?: [number, number, number];
   }) {
-    const commands = [];
-    
-    // Landscape tools are editor-only, using echo
-    commands.push(`echo Selecting landscape tool: ${params.tool}`);
-    
-    if (params.brushSize !== undefined) {
-      commands.push(`SetLandscapeBrushSize ${params.brushSize}`);
-    }
-    
-    if (params.brushFalloff !== undefined) {
-      commands.push(`SetLandscapeBrushFalloff ${params.brushFalloff}`);
-    }
-    
-    if (params.strength !== undefined) {
-      commands.push(`SetLandscapeToolStrength ${params.strength}`);
-    }
-    
-    if (params.position) {
-      commands.push(`ApplyLandscapeTool ${params.landscapeName} ${params.position.join(' ')}`);
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Landscape sculpting applied` };
+    return { success: false, error: 'sculptLandscape not implemented via Remote Control. Requires Landscape editor tools.' };
   }
 
   // Paint landscape
@@ -105,29 +55,7 @@ export class LandscapeTools {
     strength?: number;
     targetValue?: number;
   }) {
-    const commands = [];
-    
-    commands.push(`SelectLandscapeLayer ${params.layerName}`);
-    
-    if (params.brushSize !== undefined) {
-      commands.push(`SetLandscapeBrushSize ${params.brushSize}`);
-    }
-    
-    if (params.strength !== undefined) {
-      commands.push(`SetPaintStrength ${params.strength}`);
-    }
-    
-    if (params.targetValue !== undefined) {
-      commands.push(`SetPaintTargetValue ${params.targetValue}`);
-    }
-    
-    commands.push(`PaintLandscape ${params.landscapeName} ${params.position.join(' ')}`);
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Landscape painted with ${params.layerName}` };
+    return { success: false, error: 'paintLandscape not implemented via Remote Control. Requires Landscape editor tools.' };
   }
 
   // Add landscape layer

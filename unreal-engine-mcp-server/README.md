@@ -32,6 +32,7 @@ MCP (Model Context Protocol) server for controlling Unreal Engine via Remote Con
   - Web Remote Control
   - Python Script Plugin (for material creation and advanced features)
   - Editor Scripting Utilities
+  - Optional: [UnrealEnginePython](https://github.com/20tab/UnrealEnginePython) for enhanced Blueprint component manipulation
 
 ### Installation
 
@@ -154,6 +155,11 @@ Execute any UE console command:
   - Spawn now uses Python API with proper actor labeling
   - Delete checks both actor name and label
   - Apply force enables physics and checks both name/label
+- ✅ **Tool 7 (manage_blueprint) UE 5.6 Enhancements**:
+  - Added multi-tier component addition approach
+  - Fast-path support for UnrealEnginePython plugin
+  - Graceful fallback with manual instructions when API limited
+  - Full compatibility with UE 5.0 - 5.6
 - ✅ Fixed Python execution for multi-line scripts
 - ✅ Fixed deprecated EditorLevelLibrary calls (now uses EditorActorSubsystem)
 - ✅ Fixed apply_force parameter mismatch

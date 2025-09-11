@@ -11,9 +11,12 @@ export class LightingTools {
   }
 
   private ensurePythonSpawnSucceeded(label: string, result: any) {
-    const logs = Array.isArray(result?.LogOutput)
-      ? result.LogOutput.map((l: any) => String(l.Output || '')).join('')
-      : '';
+    let logs = '';
+    if (Array.isArray(result?.LogOutput)) {
+      logs = result.LogOutput.map((l: any) => String(l.Output || '')).join('');
+    } else if (typeof result === 'string') {
+      logs = result;
+    }
 
     // If Python reported a traceback or explicit failure, propagate as error
     if (/Traceback|Error:|Failed to spawn/i.test(logs)) {
@@ -37,6 +40,7 @@ export class LightingTools {
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',
       functionName: 'ExecuteConsoleCommand',
       parameters: {
+        WorldContextObject: null,
         Command: command,
         SpecificPlayer: null
       },
@@ -151,15 +155,8 @@ else:
     print("Failed to spawn directional light '${this.escapePythonString(params.name)}'")
 `;
 
-    // Execute the Python script via Remote Control
-    const result = await this.bridge.httpCall('/remote/object/call', 'PUT', {
-      objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary',
-      functionName: 'ExecutePythonScript',
-      parameters: {
-        PythonScript: pythonScript
-      },
-      generateTransaction: false
-    });
+    // Execute the Python script via bridge (UE 5.6-compatible)
+    const result = await this.bridge.executePython(pythonScript);
 
     this.ensurePythonSpawnSucceeded(params.name, result);
     return { success: true, message: `Directional light '${params.name}' spawned` };
@@ -285,15 +282,8 @@ else:
     print("Failed to spawn point light '${this.escapePythonString(params.name)}'")
 `;
 
-    // Execute the Python script via Remote Control
-    const result = await this.bridge.httpCall('/remote/object/call', 'PUT', {
-      objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary',
-      functionName: 'ExecutePythonScript',
-      parameters: {
-        PythonScript: pythonScript
-      },
-      generateTransaction: false
-    });
+    // Execute the Python script via bridge (UE 5.6-compatible)
+    const result = await this.bridge.executePython(pythonScript);
 
     this.ensurePythonSpawnSucceeded(params.name, result);
     return { success: true, message: `Point light '${params.name}' spawned at ${location.join(', ')}` };
@@ -441,15 +431,8 @@ else:
     print("Failed to spawn spot light '${this.escapePythonString(params.name)}'")
 `;
 
-    // Execute the Python script via Remote Control
-    const result = await this.bridge.httpCall('/remote/object/call', 'PUT', {
-      objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary',
-      functionName: 'ExecutePythonScript',
-      parameters: {
-        PythonScript: pythonScript
-      },
-      generateTransaction: false
-    });
+    // Execute the Python script via bridge (UE 5.6-compatible)
+    const result = await this.bridge.executePython(pythonScript);
 
     this.ensurePythonSpawnSucceeded(params.name, result);
     return { success: true, message: `Spot light '${params.name}' spawned at ${params.location.join(', ')}` };
@@ -580,15 +563,8 @@ else:
     print("Failed to spawn rect light '${this.escapePythonString(params.name)}'")
 `;
 
-    // Execute the Python script via Remote Control
-    const result = await this.bridge.httpCall('/remote/object/call', 'PUT', {
-      objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary',
-      functionName: 'ExecutePythonScript',
-      parameters: {
-        PythonScript: pythonScript
-      },
-      generateTransaction: false
-    });
+    // Execute the Python script via bridge (UE 5.6-compatible)
+    const result = await this.bridge.executePython(pythonScript);
 
     this.ensurePythonSpawnSucceeded(params.name, result);
     return { success: true, message: `Rect light '${params.name}' spawned at ${params.location.join(', ')}` };

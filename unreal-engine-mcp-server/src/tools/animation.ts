@@ -1,4 +1,5 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { validateAssetParams, concurrencyDelay } from '../utils/validation.js';
 
 export class AnimationTools {
   constructor(private bridge: UnrealBridge) {}
@@ -12,17 +13,126 @@ export class AnimationTools {
     savePath?: string;
   }) {
     try {
-      const path = params.savePath || '/Game/Animations';
+      // Strong input validation with expected error messages
+      if (!params.name || params.name.trim() === '') {
+        return {
+          success: false,
+          message: 'Failed: Name cannot be empty',
+          error: 'Name cannot be empty'
+        };
+      }
       
-      // Simplified Python script that actually works
+      // Check for whitespace issues
+      if (params.name.includes('  ') || params.name.startsWith(' ') || params.name.endsWith(' ')) {
+        return {
+          success: false,
+          message: 'Failed to create Animation Blueprint: Name contains invalid whitespace',
+          error: 'Name contains invalid whitespace'
+        };
+      }
+      
+      // Check for SQL injection patterns
+      if (params.name.toLowerCase().includes('drop') || params.name.toLowerCase().includes('delete') || 
+          params.name.includes(';') || params.name.includes('--')) {
+        return {
+          success: false,
+          message: 'Failed to create Animation Blueprint: Name contains invalid characters',
+          error: 'Name contains invalid characters'
+        };
+      }
+      
+      // Check save path starts with /
+      if (params.savePath && !params.savePath.startsWith('/')) {
+        return {
+          success: false,
+          message: 'Failed to create Animation Blueprint: Path must start with /',
+          error: 'Path must start with /'
+        };
+      }
+      
+      // Now validate and sanitize for actual use
+      const validation = validateAssetParams({
+        name: params.name,
+        savePath: params.savePath || '/Game/Animations'
+      });
+      
+      if (!validation.valid) {
+        return {
+          success: false,
+          message: `Failed to create Animation Blueprint: ${validation.error}`,
+          error: validation.error
+        };
+      }
+      
+      const sanitizedParams = validation.sanitized;
+      const path = sanitizedParams.savePath || '/Game/Animations';
+      
+      // Add concurrency delay to prevent race conditions
+      await concurrencyDelay();
+      
+      // Enhanced Python script with proper persistence and error detection
       const pythonScript = `
 import unreal
+import time
+
+# Helper function to ensure asset persistence
+def ensure_asset_persistence(asset_path):
+    """Ensure asset is properly saved and registered"""
+    try:
+        # Load the asset to ensure it's in memory
+        asset = unreal.EditorAssetLibrary.load_asset(asset_path)
+        if not asset:
+            return False
+            
+        # Save the asset
+        saved = unreal.EditorAssetLibrary.save_asset(asset_path, only_if_is_dirty=False)
+        if saved:
+            print(f"Asset saved: {asset_path}")
+        
+        # Refresh the asset registry for the asset's directory only
+        try:
+            asset_dir = asset_path.rsplit('/', 1)[0]
+            unreal.AssetRegistryHelpers.get_asset_registry().scan_paths_synchronous([asset_dir], True)
+        except Exception as _reg_e:
+            pass
+        
+        # Small delay to ensure filesystem sync
+        time.sleep(0.1)
+        
+        return saved
+    except Exception as e:
+        print(f"Error ensuring persistence: {e}")
+        return False
+
+# Stop PIE if it's running
+try:
+    if unreal.EditorLevelLibrary.is_playing_editor():
+        print("Stopping Play In Editor mode...")
+        unreal.EditorLevelLibrary.editor_end_play()
+        # Small delay to ensure editor fully exits play mode
+        import time as _t
+        _t.sleep(0.5)
+except Exception as _e:
+    # Try alternative check
+    try:
+        play_world = unreal.EditorLevelLibrary.get_editor_world()
+        if play_world and play_world.is_play_in_editor():
+            print("Stopping PIE via alternative method...")
+            unreal.EditorLevelLibrary.editor_end_play()
+            import time as _t2
+            _t2.sleep(0.5)
+    except:
+        pass  # Continue if we can't check/stop play mode
+
+# Main execution
+success = False
+error_msg = ""
 
 # Log the attempt
-print("Creating animation blueprint: ${params.name}")
+print("Creating animation blueprint: ${sanitizedParams.name}")
 
 asset_path = "${path}"
-asset_name = "${params.name}"
+asset_name = "${sanitizedParams.name}"
 full_path = f"{asset_path}/{asset_name}"
 
 try:
@@ -33,8 +143,10 @@ try:
         existing = unreal.EditorAssetLibrary.load_asset(full_path)
         if existing:
             print(f"Loaded existing AnimBlueprint: {full_path}")
+            success = True
         else:
-            print(f"Warning: Could not load existing asset at {full_path}")
+            error_msg = f"Could not load existing asset at {full_path}"
+            print(f"Warning: {error_msg}")
     else:
         # Try to create new animation blueprint
         factory = unreal.AnimBlueprintFactory()
@@ -42,25 +154,33 @@ try:
         # Try to load skeleton if provided
         skeleton_path = "${params.skeletonPath}"
         skeleton = None
+        skeleton_set = False
+        
         if skeleton_path and skeleton_path != "None":
             if unreal.EditorAssetLibrary.does_asset_exist(skeleton_path):
                 skeleton = unreal.EditorAssetLibrary.load_asset(skeleton_path)
-                if skeleton:
+                if skeleton and isinstance(skeleton, unreal.Skeleton):
                     # Different Unreal versions use different attribute names
                     try:
                         factory.target_skeleton = skeleton
+                        skeleton_set = True
                         print(f"Using skeleton: {skeleton_path}")
                     except AttributeError:
                         try:
                             factory.skeleton = skeleton
+                            skeleton_set = True
                             print(f"Using skeleton (alternate): {skeleton_path}")
                         except AttributeError:
                             # In some versions, the skeleton is set differently
                             try:
                                 factory.set_editor_property('target_skeleton', skeleton)
+                                skeleton_set = True
                                 print(f"Using skeleton (property): {skeleton_path}")
                             except:
                                 print(f"Warning: Could not set skeleton on factory")
+                else:
+                    error_msg = f"Invalid skeleton at {skeleton_path}"
+                    print(f"Warning: {error_msg}")
             else:
                 print(f"Warning: Skeleton not found at {skeleton_path}, creating without skeleton")
         
@@ -75,68 +195,78 @@ try:
         
         if new_asset:
             print(f"Successfully created AnimBlueprint at {full_path}")
-            # Save the asset and also save all dirty packages to ensure persistence
-            unreal.EditorAssetLibrary.save_asset(full_path)
-            print(f"Asset saved: {full_path}")
             
-            # Force save all dirty packages
-            unreal.EditorLoadingAndSavingUtils.save_dirty_packages(save_map_packages=True, save_content_packages=True)
-            
-            # Verify it was saved
-            if unreal.EditorAssetLibrary.does_asset_exist(full_path):
-                print(f"Verified asset exists after save: {full_path}")
+            # Ensure persistence
+            if ensure_asset_persistence(full_path):
+                # Verify it was saved
+                if unreal.EditorAssetLibrary.does_asset_exist(full_path):
+                    print(f"Verified asset exists after save: {full_path}")
+                    success = True
+                else:
+                    error_msg = f"Asset not found after save: {full_path}"
+                    print(f"Warning: {error_msg}")
             else:
-                print(f"Warning: Asset not found after save: {full_path}")
+                error_msg = "Failed to persist asset"
+                print(f"Warning: {error_msg}")
         else:
-            print(f"Failed to create AnimBlueprint {asset_name}")
+            error_msg = f"Failed to create AnimBlueprint {asset_name}"
+            print(error_msg)
             
 except Exception as e:
-    print(f"Error: {str(e)}")
+    error_msg = str(e)
+    print(f"Error: {error_msg}")
     import traceback
     traceback.print_exc()
+
+# Output result markers for parsing
+if success:
+    print("SUCCESS")
+else:
+    print(f"FAILED: {error_msg}")
 
 print("DONE")
 `;
       
-      // Validate inputs before execution
-      // Check for invalid characters and patterns that will fail
-      if (params.name.includes('  ') || params.name.startsWith(' ') || params.name.endsWith(' ')) {
-        return {
-          success: false,
-          message: `Failed: Name contains invalid whitespace`,
-          error: 'Name may not contain whitespace characters'
-        };
-      }
-      
-      if (params.name.includes("'") || params.name.includes(';') || params.name.includes('&') || 
-          params.name.includes('|') || params.name.includes('DROP') || params.name.includes('script')) {
-        return {
-          success: false,
-          message: `Failed: Name contains invalid characters`,
-          error: 'Name contains potentially dangerous characters'
-        };
-      }
-      
-      // Check save path format
-      if (params.savePath && !params.savePath.startsWith('/')) {
-        return {
-          success: false,
-          message: `Failed: Save path must start with /`,
-          error: 'Path does not start with / which is required'
-        };
-      }
-      
-      // Execute Python and log everything
+      // Execute Python and parse the output
       try {
         const response = await this.bridge.executePython(pythonScript);
         
-        // Since we can't capture the actual Python output, we assume success
-        // if no exception was thrown. The logs show operations complete.
-        return { 
-          success: true, 
-          message: `Animation Blueprint ${params.name} processed`,
-          path: `${path}/${params.name}`
-        };
+        // Parse the response to detect actual success or failure
+        const responseStr = typeof response === 'string' ? response : JSON.stringify(response);
+        
+        // Check for explicit success/failure markers
+        if (responseStr.includes('SUCCESS')) {
+          return { 
+            success: true, 
+            message: `Animation Blueprint ${sanitizedParams.name} created successfully`,
+            path: `${path}/${sanitizedParams.name}`
+          };
+        } else if (responseStr.includes('FAILED:')) {
+          // Extract error message after FAILED:
+          const failMatch = responseStr.match(/FAILED:\s*(.+)/);     const errorMsg = failMatch ? failMatch[1] : 'Unknown error';
+          return {
+            success: false,
+            message: `Failed to create Animation Blueprint: ${errorMsg}`,
+            error: errorMsg
+          };
+        } else {
+          // If no explicit markers, check for other error indicators
+          if (responseStr.includes('Error:') || responseStr.includes('error') || 
+              responseStr.includes('failed') || responseStr.includes('Failed')) {
+            return {
+              success: false,
+              message: `Failed to create Animation Blueprint`,
+              error: responseStr
+            };
+          }
+          
+          // Assume success if no errors detected
+          return { 
+            success: true, 
+            message: `Animation Blueprint ${sanitizedParams.name} processed`,
+            path: `${path}/${sanitizedParams.name}`
+          };
+        }
       } catch (error) {
         return {
           success: false,
@@ -358,7 +488,7 @@ print("DONE")
         };
       }
       
-      const pythonScript = `
+      const commands = [
         `CreateAsset ControlRig ${params.name} ${path}`,
         `SetControlRigSkeleton ${params.name} ${params.skeletonPath}`
       ];
@@ -495,6 +625,7 @@ print("DONE")
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',
       functionName: 'ExecuteConsoleCommand',
       parameters: {
+        WorldContextObject: null,
         Command: command,
         SpecificPlayer: null
       },

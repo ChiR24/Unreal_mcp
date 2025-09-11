@@ -186,32 +186,13 @@ except Exception as e:
             // Continue to fallback
           }
           
-          // Second try: Use EditorAssetLibrary.ListAssets via bridge.call
-          try {
-            const listResult = await tools.bridge.call({
-              objectPath: '/Script/UnrealEd.Default__EditorAssetLibrary',
-              functionName: 'ListAssets',
-              parameters: { 
-                DirectoryPath: args.directory || '/Game',
-                bRecursive: args.recursive !== false,
-                bIncludeFolder: false
-              }
-            });
-            
-            if (listResult?.Result && Array.isArray(listResult.Result)) {
-              result = { assets: listResult.Result };
-              message = `Found ${result.assets.length} assets in ${args.directory || '/Game'}`;
-              break;
-            }
-          } catch (err2) {
-            // Continue to fallback
-          }
           
           // Third try: Use console command to get asset registry
           const assetRegistryCmd = await tools.bridge.httpCall('/remote/object/call', 'PUT', {
             objectPath: '/Script/Engine.Default__KismetSystemLibrary',
             functionName: 'ExecuteConsoleCommand',
             parameters: {
+              WorldContextObject: null,
               Command: `AssetRegistry.DumpAssets ${args.directory || '/Game'}`,
               SpecificPlayer: null
             },

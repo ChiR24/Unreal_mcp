@@ -10,6 +10,7 @@ export class PerformanceTools {
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',
       functionName: 'ExecuteConsoleCommand',
       parameters: {
+        WorldContextObject: null,
         Command: command,
         SpecificPlayer: null
       },

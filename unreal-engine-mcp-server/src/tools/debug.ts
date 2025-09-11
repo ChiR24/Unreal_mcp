@@ -4,12 +4,13 @@ import { UnrealBridge } from '../unreal-bridge.js';
 export class DebugVisualizationTools {
   constructor(private bridge: UnrealBridge) {}
 
-  // Execute console command
+  // Execute console command (kept for legacy operations)
   private async executeCommand(command: string) {
     return this.bridge.httpCall('/remote/object/call', 'PUT', {
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',
       functionName: 'ExecuteConsoleCommand',
       parameters: {
+        WorldContextObject: null,
         Command: command,
         SpecificPlayer: null
       },
@@ -17,7 +18,23 @@ export class DebugVisualizationTools {
     });
   }
 
-  // Draw debug line
+  // Helper to draw via Python SystemLibrary with the editor world
+  private async pyDraw(scriptBody: string) {
+    const script = `
+import unreal
+world = unreal.EditorLevelLibrary.get_editor_world()
+${scriptBody}
+`.trim()
+      .replace(/\r?\n/g, '\n');
+    try {
+      await this.bridge.executePython(script);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: String(e) };
+    }
+  }
+
+  // Draw debug line using Python SystemLibrary
   async drawDebugLine(params: {
     start: [number, number, number];
     end: [number, number, number];
@@ -26,14 +43,21 @@ export class DebugVisualizationTools {
     thickness?: number;
   }) {
     const color = params.color || [255, 0, 0, 255];
-    const duration = params.duration || 5.0;
-    const thickness = params.thickness || 1.0;
-    
-    const command = `DrawDebugLine ${params.start.join(' ')} ${params.end.join(' ')} ${color.join(' ')} ${duration} ${thickness}`;
-    return this.bridge.executeConsoleCommand(command);
+    const duration = params.duration ?? 5.0;
+    const thickness = params.thickness ?? 1.0;
+    const [sr, sg, sb, sa] = color;
+    const [sx, sy, sz] = params.start;
+    const [ex, ey, ez] = params.end;
+    const script = `
+start = unreal.Vector(${sx}, ${sy}, ${sz})
+end = unreal.Vector(${ex}, ${ey}, ${ez})
+color = unreal.LinearColor(${sr}/255.0, ${sg}/255.0, ${sb}/255.0, ${sa}/255.0)
+unreal.SystemLibrary.draw_debug_line(world, start, end, color, ${duration}, ${thickness})
+`;
+    return this.pyDraw(script);
   }
 
-  // Draw debug box
+  // Draw debug box using Python SystemLibrary
   async drawDebugBox(params: {
     center: [number, number, number];
     extent: [number, number, number];
@@ -44,14 +68,23 @@ export class DebugVisualizationTools {
   }) {
     const color = params.color || [0, 255, 0, 255];
     const rotation = params.rotation || [0, 0, 0];
-    const duration = params.duration || 5.0;
-    const thickness = params.thickness || 1.0;
-    
-    const command = `DrawDebugBox ${params.center.join(' ')} ${params.extent.join(' ')} ${color.join(' ')} ${rotation.join(' ')} ${duration} ${thickness}`;
-    return this.bridge.executeConsoleCommand(command);
+    const duration = params.duration ?? 5.0;
+    const thickness = params.thickness ?? 1.0;
+    const [cr, cg, cb, ca] = color;
+    const [cx, cy, cz] = params.center;
+    const [ex, ey, ez] = params.extent;
+    const [rp, ry, rr] = rotation;
+    const script = `
+center = unreal.Vector(${cx}, ${cy}, ${cz})
+extent = unreal.Vector(${ex}, ${ey}, ${ez})
+rot = unreal.Rotator(${rp}, ${ry}, ${rr})
+color = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)
+unreal.SystemLibrary.draw_debug_box(world, center, extent, color, rot, ${duration}, ${thickness})
+`;
+    return this.pyDraw(script);
   }
 
-  // Draw debug sphere
+  // Draw debug sphere using Python SystemLibrary
   async drawDebugSphere(params: {
     center: [number, number, number];
     radius: number;
@@ -60,16 +93,22 @@ export class DebugVisualizationTools {
     duration?: number;
     thickness?: number;
   }) {
-    const segments = params.segments || 12;
+    const segments = params.segments ?? 12;
     const color = params.color || [0, 0, 255, 255];
-    const duration = params.duration || 5.0;
-    const thickness = params.thickness || 1.0;
-    
-    const command = `DrawDebugSphere ${params.center.join(' ')} ${params.radius} ${segments} ${color.join(' ')} ${duration} ${thickness}`;
-    return this.bridge.executeConsoleCommand(command);
+    const duration = params.duration ?? 5.0;
+    const thickness = params.thickness ?? 1.0;
+    const [cr, cg, cb, ca] = color;
+    const [cx, cy, cz] = params.center;
+    const script = `
+center = unreal.Vector(${cx}, ${cy}, ${cz})
+color = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)
+unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segments}, color, ${duration}, ${thickness})
+`;
+    return this.pyDraw(script);
   }
 
-  // Draw debug capsule
+  // The rest keep console-command fallbacks or editor helpers as before
+
   async drawDebugCapsule(params: {
     center: [number, number, number];
     halfHeight: number;
@@ -81,12 +120,10 @@ export class DebugVisualizationTools {
     const rotation = params.rotation || [0, 0, 0];
     const color = params.color || [255, 255, 0, 255];
     const duration = params.duration || 5.0;
-    
     const command = `DrawDebugCapsule ${params.center.join(' ')} ${params.halfHeight} ${params.radius} ${rotation.join(' ')} ${color.join(' ')} ${duration}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Draw debug cone
   async drawDebugCone(params: {
     origin: [number, number, number];
     direction: [number, number, number];
@@ -100,12 +137,10 @@ export class DebugVisualizationTools {
     const numSides = params.numSides || 12;
     const color = params.color || [255, 0, 255, 255];
     const duration = params.duration || 5.0;
-    
     const command = `DrawDebugCone ${params.origin.join(' ')} ${params.direction.join(' ')} ${params.length} ${params.angleWidth} ${params.angleHeight} ${numSides} ${color.join(' ')} ${duration}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Draw debug string
   async drawDebugString(params: {
     location: [number, number, number];
     text: string;
@@ -116,12 +151,10 @@ export class DebugVisualizationTools {
     const color = params.color || [255, 255, 255, 255];
     const duration = params.duration || 5.0;
     const fontSize = params.fontSize || 1.0;
-    
     const command = `DrawDebugString ${params.location.join(' ')} "${params.text}" ${color.join(' ')} ${duration} ${fontSize}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Draw debug arrow
   async drawDebugArrow(params: {
     start: [number, number, number];
     end: [number, number, number];
@@ -134,12 +167,10 @@ export class DebugVisualizationTools {
     const color = params.color || [0, 255, 255, 255];
     const duration = params.duration || 5.0;
     const thickness = params.thickness || 2.0;
-    
     const command = `DrawDebugArrow ${params.start.join(' ')} ${params.end.join(' ')} ${arrowSize} ${color.join(' ')} ${duration} ${thickness}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Draw debug point
   async drawDebugPoint(params: {
     location: [number, number, number];
     size?: number;
@@ -149,12 +180,10 @@ export class DebugVisualizationTools {
     const size = params.size || 10.0;
     const color = params.color || [255, 255, 255, 255];
     const duration = params.duration || 5.0;
-    
     const command = `DrawDebugPoint ${params.location.join(' ')} ${size} ${color.join(' ')} ${duration}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Draw debug coordinate system
   async drawDebugCoordinateSystem(params: {
     location: [number, number, number];
     rotation?: [number, number, number];
@@ -166,12 +195,10 @@ export class DebugVisualizationTools {
     const scale = params.scale || 100.0;
     const duration = params.duration || 5.0;
     const thickness = params.thickness || 2.0;
-    
     const command = `DrawDebugCoordinateSystem ${params.location.join(' ')} ${rotation.join(' ')} ${scale} ${duration} ${thickness}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Draw debug frustum
   async drawDebugFrustum(params: {
     origin: [number, number, number];
     rotation: [number, number, number];
@@ -187,98 +214,64 @@ export class DebugVisualizationTools {
     const farPlane = params.farPlane || 1000.0;
     const color = params.color || [128, 128, 255, 255];
     const duration = params.duration || 5.0;
-    
     const command = `DrawDebugFrustum ${params.origin.join(' ')} ${params.rotation.join(' ')} ${params.fov} ${aspectRatio} ${nearPlane} ${farPlane} ${color.join(' ')} ${duration}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Clear debug drawings
   async clearDebugDrawings() {
     return this.bridge.executeConsoleCommand('FlushPersistentDebugLines');
   }
 
-  // Show collision
   async showCollision(params: {
     enabled: boolean;
     type?: 'Simple' | 'Complex' | 'Both';
   }) {
     const commands = [];
-    
     if (params.enabled) {
       const typeCmd = params.type === 'Simple' ? '1' : params.type === 'Complex' ? '2' : '3';
       commands.push(`show Collision ${typeCmd}`);
     } else {
       commands.push('show Collision 0');
     }
-    
     for (const cmd of commands) {
       await this.bridge.executeConsoleCommand(cmd);
     }
-    
     return { success: true, message: `Collision visualization ${params.enabled ? 'enabled' : 'disabled'}` };
   }
 
-  // Show bounds
-  async showBounds(params: {
-    enabled: boolean;
-  }) {
+  async showBounds(params: { enabled: boolean; }) {
     const command = params.enabled ? 'show Bounds' : 'show Bounds 0';
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Set view mode with crash protection
   async setViewMode(params: {
     mode: 'Lit' | 'Unlit' | 'Wireframe' | 'DetailLighting' | 'LightingOnly' | 'LightComplexity' | 'ShaderComplexity' | 'LightmapDensity' | 'StationaryLightOverlap' | 'ReflectionOverride' | 'CollisionPawn' | 'CollisionVisibility';
   }) {
-    // Known problematic viewmodes that can cause crashes
     const UNSAFE_VIEWMODES = [
       'LightComplexity', 'ShaderComplexity', 'LightmapDensity',
       'StationaryLightOverlap', 'CollisionPawn', 'CollisionVisibility'
     ];
-    
-    // Warn about potentially unsafe viewmodes
     if (UNSAFE_VIEWMODES.includes(params.mode)) {
       console.warn(`⚠️ Viewmode '${params.mode}' may cause crashes in some UE configurations.`);
-      
-      // Try to ensure we're not in PIE mode first (safer for viewmode changes)
-      try {
-        await this.bridge.executeConsoleCommand('stop');
-      } catch (e) {
-        // Ignore if not in PIE
-      }
-      
-      // Add a small delay to let the engine stabilize
+      try { await this.bridge.executeConsoleCommand('stop'); } catch {}
       await new Promise(resolve => setTimeout(resolve, 100));
     }
-    
     try {
       const command = `viewmode ${params.mode}`;
       const result = await this.bridge.executeConsoleCommand(command);
-      
-      // For unsafe modes, immediately switch back to Lit if there's an issue
       if (UNSAFE_VIEWMODES.includes(params.mode)) {
-        // Set a safety timeout to revert to Lit mode
         setTimeout(async () => {
-          try {
-            // Check if we're still responsive
-            await this.bridge.executeConsoleCommand('stat unit');
-          } catch (e) {
-            // If unresponsive, try to recover
-            console.error('Viewmode may have caused an issue, attempting recovery...');
-            await this.bridge.executeConsoleCommand('viewmode Lit');
-          }
+          try { await this.bridge.executeConsoleCommand('stat unit'); }
+          catch { await this.bridge.executeConsoleCommand('viewmode Lit'); }
         }, 2000);
       }
-      
       return { ...result, warning: UNSAFE_VIEWMODES.includes(params.mode) ? `Viewmode '${params.mode}' applied. This mode may be unstable.` : undefined };
     } catch (error) {
-      // Fallback to Lit mode on error
       await this.bridge.executeConsoleCommand('viewmode Lit');
       throw new Error(`Failed to set viewmode '${params.mode}': ${error}. Reverted to Lit mode.`);
     }
   }
 
-  // Show debug info
   async showDebugInfo(params: {
     category: 'AI' | 'Animation' | 'Audio' | 'Collision' | 'Camera' | 'Game' | 'Hitboxes' | 'Input' | 'Net' | 'Physics' | 'Slate' | 'Streaming' | 'Particles' | 'Navigation';
     enabled: boolean;
@@ -287,15 +280,11 @@ export class DebugVisualizationTools {
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Show actor names
-  async showActorNames(params: {
-    enabled: boolean;
-  }) {
+  async showActorNames(params: { enabled: boolean; }) {
     const command = params.enabled ? 'show ActorNames' : 'show ActorNames 0';
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Draw debug path
   async drawDebugPath(params: {
     points: Array<[number, number, number]>;
     color?: [number, number, number, number];
@@ -305,30 +294,19 @@ export class DebugVisualizationTools {
     const color = params.color || [255, 128, 0, 255];
     const duration = params.duration || 5.0;
     const thickness = params.thickness || 2.0;
-    
-    const commands = [];
     for (let i = 0; i < params.points.length - 1; i++) {
       const start = params.points[i];
       const end = params.points[i + 1];
-      commands.push(`DrawDebugLine ${start.join(' ')} ${end.join(' ')} ${color.join(' ')} ${duration} ${thickness}`);
+      await this.drawDebugLine({ start, end, color, duration, thickness });
     }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
     return { success: true, message: `Debug path drawn with ${params.points.length} points` };
   }
 
-  // Show navigation mesh
-  async showNavigationMesh(params: {
-    enabled: boolean;
-  }) {
+  async showNavigationMesh(params: { enabled: boolean; }) {
     const command = params.enabled ? 'show Navigation' : 'show Navigation 0';
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Enable on-screen messages
   async enableOnScreenMessages(params: {
     enabled: boolean;
     key?: number;
@@ -347,14 +325,8 @@ export class DebugVisualizationTools {
     }
   }
 
-  // Show skeletal mesh bones
-  async showSkeletalMeshBones(params: {
-    actorName: string;
-    enabled: boolean;
-  }) {
-    const command = params.enabled 
-      ? `ShowDebugSkelMesh ${params.actorName}` 
-      : `HideDebugSkelMesh ${params.actorName}`;
+  async showSkeletalMeshBones(params: { actorName: string; enabled: boolean; }) {
+    const command = params.enabled ? `ShowDebugSkelMesh ${params.actorName}` : `HideDebugSkelMesh ${params.actorName}`;
     return this.bridge.executeConsoleCommand(command);
   }
 }

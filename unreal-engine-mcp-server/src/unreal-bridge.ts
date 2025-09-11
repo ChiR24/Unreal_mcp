@@ -281,7 +281,14 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
     let lastError: any;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const resp = await this.http.request<T>({ url, method, data: body });
+        // For GET requests, send payload as query parameters (not in body)
+        const config: any = { url, method };
+        if (method === 'GET' && body && typeof body === 'object') {
+          config.params = body;
+        } else if (body !== undefined) {
+          config.data = body;
+        }
+        const resp = await this.http.request<T>(config);
         const ms = Date.now() - started;
         this.log.debug(`[HTTP ${method}] ${url} -> ${ms}ms`);
         return resp.data;
@@ -344,6 +351,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         objectPath: '/Script/Engine.Default__KismetSystemLibrary',
         functionName: 'ExecuteConsoleCommand',
         parameters: {
+          WorldContextObject: null,
           Command: command,
           SpecificPlayer: null
         },
@@ -355,21 +363,22 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
 
   // Try to execute a Python command via the PythonScriptPlugin, fallback to `py` console command.
   async executePython(command: string): Promise<any> {
+    const isMultiLine = /[\r\n]/.test(command) || command.includes(';');
     try {
-      // Try the newer ExecutePythonCommandEx which handles multi-line scripts better
+      // Use ExecutePythonCommandEx with appropriate mode based on content
       return await this.httpCall('/remote/object/call', 'PUT', {
         objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary', 
         functionName: 'ExecutePythonCommandEx',
         parameters: {
           PythonCommand: command,
-          ExecutionMode: 'ExecuteFile',
+          ExecutionMode: isMultiLine ? 'ExecuteFile' : 'ExecuteStatement',
           FileExecutionScope: 'Private'
         },
         generateTransaction: false
       });
     } catch (err1) {
       try {
-        // Fallback to ExecutePythonCommand
+        // Fallback to ExecutePythonCommand (more tolerant for multi-line)
         return await this.httpCall('/remote/object/call', 'PUT', {
           objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary',
           functionName: 'ExecutePythonCommand',
@@ -380,18 +389,18 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         });
       } catch (err2) {
         // Final fallback: execute via console py command
-        this.log.warn('PythonScriptLibrary not available, falling back to console `py` command');
+        this.log.warn('PythonScriptLibrary not available or failed, falling back to console `py` command');
         
         // For simple single-line commands
-        if (!command.includes('\n')) {
+        if (!isMultiLine) {
           return await this.executeConsoleCommand(`py ${command}`);
         }
         
         // For multi-line scripts, try to execute as a block
         try {
           // Try executing as a single exec block
-          const escapedScript = command.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-          return await this.executeConsoleCommand(`py exec("${escapedScript}")`);
+          const escapedScript = command.replace(/\"/g, '\\\"').replace(/\n/g, '\\n');
+          return await this.executeConsoleCommand(`py exec(\"${escapedScript}\")`);
         } catch (err3) {
           // If that fails, execute line by line
           const lines = command.split('\n').filter(line => line.trim().length > 0);
@@ -593,6 +602,7 @@ finally:
         objectPath: '/Script/Engine.Default__KismetSystemLibrary',
         functionName: 'ExecuteConsoleCommand',
         parameters: {
+          WorldContextObject: null,
           Command: `viewmode ${normalizedMode}`,
           SpecificPlayer: null
         },

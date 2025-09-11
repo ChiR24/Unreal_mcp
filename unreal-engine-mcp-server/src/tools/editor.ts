@@ -11,26 +11,48 @@ export class EditorTools {
       // Try Python first for proper EditorLevelLibrary access with viewport play
       try {
         // Use EditorLevelLibrary to play in the selected viewport (matches UI behavior)
-        const pythonCmd = [
-          'import unreal',
-          '# Start PIE using EditorLevelLibrary (simpler approach)',
-          'unreal.EditorLevelLibrary.editor_play_simulate()',
-          '# Set viewport play settings if available',
-          'try:',
-          '    play_settings = unreal.get_editor_subsystem(unreal.LevelEditorPlaySettings)',
-          '    if play_settings:',
-          '        play_settings.set_play_mode(unreal.PlayInEditorType.PIE_PLAY_IN_VIEWPORT)',
-          'except:',
-          '    pass  # Settings API may vary by UE version'
-        ].join('\n');
+        const pythonCmd = `
+import unreal, time
+# Start PIE using EditorLevelLibrary (simpler approach)
+unreal.EditorLevelLibrary.editor_play_simulate()
+# Set viewport play settings if available
+try:
+    play_settings = unreal.get_editor_subsystem(unreal.LevelEditorPlaySettings)
+    if play_settings:
+        play_settings.set_play_mode(unreal.PlayInEditorType.PIE_PLAY_IN_VIEWPORT)
+except:
+    pass  # Settings API may vary by UE version
+# Wait briefly and report state
+time.sleep(0.1)
+is_playing = False
+try:
+    is_playing = bool(unreal.EditorLevelLibrary.is_playing())
+except Exception:
+    try:
+        is_playing = bool(unreal.EditorLevelLibrary.is_playing_in_editor())
+    except Exception:
+        is_playing = False
+print("RESULT:{'success': " + ("True" if is_playing else "False") + "}")
+        `.trim();
         
-        await this.bridge.executePython(pythonCmd);
-        return { success: true, message: 'PIE started in Selected Viewport (matching UI play)' };
+        const resp: any = await this.bridge.executePython(pythonCmd);
+        const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+        const m = out.match(/RESULT:({.*})/);
+        if (m) {
+          try {
+            const parsed = JSON.parse(m[1]);
+            if (parsed.success) {
+              return { success: true, message: 'PIE started in Selected Viewport (verified)' };
+            }
+          } catch {}
+        }
+        // If not verified, fall through to fallback
       } catch (pythonErr) {
-        // Fallback to console command with viewport specification
-        await this.bridge.executeConsoleCommand('PlayInViewport');
-        return { success: true, message: 'PIE started via console command in viewport' };
+        // Ignore and try fallback
       }
+      // Fallback to console command with viewport specification and assume best-effort
+      await this.bridge.executeConsoleCommand('PlayInViewport');
+      return { success: true, message: 'PIE start attempted via console command' };
     } catch (err) {
       return { success: false, error: `Failed to start PIE: ${err}` };
     }
@@ -40,7 +62,7 @@ export class EditorTools {
     try {
       // Try Python first for proper EditorLevelLibrary access
       try {
-        await this.bridge.executePython('import unreal; unreal.EditorLevelLibrary.editor_end_play()');
+        const resp: any = await this.bridge.executePython('import unreal, time; unreal.EditorLevelLibrary.editor_end_play(); time.sleep(0.1); print("RESULT:{\'success\': True}")');
         return { success: true, message: 'PIE stopped via EditorLevelLibrary' };
       } catch (pythonErr) {
         // Fallback to console command
@@ -59,6 +81,7 @@ export class EditorTools {
         objectPath: '/Script/Engine.Default__KismetSystemLibrary',
         functionName: 'ExecuteConsoleCommand',
         parameters: {
+          WorldContextObject: null,
           Command: 'pause',
           SpecificPlayer: null
         },
@@ -207,6 +230,7 @@ unreal.EditorLevelLibrary.set_level_viewport_camera_info(current_location, rotat
         objectPath: '/Script/Engine.Default__KismetSystemLibrary',
         functionName: 'ExecuteConsoleCommand',
         parameters: {
+          WorldContextObject: null,
           Command: `camspeed ${speed}`,
           SpecificPlayer: null
         },
@@ -224,6 +248,7 @@ unreal.EditorLevelLibrary.set_level_viewport_camera_info(current_location, rotat
         objectPath: '/Script/Engine.Default__KismetSystemLibrary',
         functionName: 'ExecuteConsoleCommand',
         parameters: {
+          WorldContextObject: null,
           Command: `fov ${fov}`,
           SpecificPlayer: null
         },

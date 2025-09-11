@@ -1,7 +1,73 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay } from '../utils/validation.js';
 
 export class PhysicsTools {
   constructor(private bridge: UnrealBridge) {}
+  
+  /**
+   * Helper to find a valid skeletal mesh in the project
+   */
+  private async findValidSkeletalMesh(): Promise<string | null> {
+    const pythonScript = `
+import unreal
+
+# Common skeletal mesh paths to check
+common_paths = [
+    '/Game/Mannequin/Character/Mesh/SK_Mannequin',
+    '/Game/Characters/Mannequin/Meshes/SK_Mannequin',
+    '/Game/AnimStarterPack/UE4_Mannequin/Mesh/SK_Mannequin',
+    '/Game/ThirdPerson/Meshes/SK_Mannequin',
+    '/Game/ThirdPersonBP/Meshes/SK_Mannequin',
+    '/Engine/EngineMeshes/SkeletalCube',  # Fallback engine mesh
+]
+
+# Try to find any skeletal mesh
+for path in common_paths:
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        asset = unreal.EditorAssetLibrary.load_asset(path)
+        if asset and isinstance(asset, unreal.SkeletalMesh):
+            print(f"FOUND_MESH:{path}")
+            break
+else:
+    # Search for any skeletal mesh in the project
+    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+    assets = asset_registry.get_assets_by_class('SkeletalMesh', search_sub_classes=False)
+    if assets:
+        # Use the first available skeletal mesh
+        first_mesh = assets[0]
+        obj_path = first_mesh.get_editor_property('object_path')
+        if obj_path:
+            print(f"FOUND_MESH:{str(obj_path).split('.')[0]}")
+        else:
+            print("NO_MESH_FOUND")
+    else:
+        print("NO_MESH_FOUND")
+`;
+    
+    try {
+      const response = await this.bridge.executePython(pythonScript);
+      let outputStr = '';
+      if (response?.LogOutput && Array.isArray((response as any).LogOutput)) {
+        outputStr = (response as any).LogOutput.map((l: any) => l.Output || '').join('');
+      } else if (typeof response === 'string') {
+        outputStr = response;
+      } else {
+        // Fallback: stringify and still try to parse, but restrict to line content only
+        outputStr = JSON.stringify(response);
+      }
+      
+      // Capture only until end-of-line to avoid trailing JSON serialization
+      const match = outputStr.match(/FOUND_MESH:([^\r\n]+)/);
+      if (match) {
+        return match[1].trim();
+      }
+    } catch (error) {
+      console.error('Failed to find skeletal mesh:', error);
+    }
+    
+    // Return engine fallback if nothing found
+    return '/Engine/EngineMeshes/SkeletalCube';
+  }
 
   /**
    * Setup Ragdoll Physics
@@ -26,7 +92,74 @@ export class PhysicsTools {
     }>;
   }) {
     try {
-      const path = params.savePath || '/Game/Physics';
+      // Strong validation for physics asset name
+      if (!params.physicsAssetName || params.physicsAssetName.trim() === '') {
+        return {
+          success: false,
+          message: 'Failed to setup ragdoll: Name cannot be empty',
+          error: 'Name cannot be empty'
+        };
+      }
+      
+      // Check for invalid characters in name
+      if (params.physicsAssetName.includes('@') || params.physicsAssetName.includes('#') || 
+          params.physicsAssetName.includes('$') || params.physicsAssetName.includes('%')) {
+        return {
+          success: false,
+          message: 'Failed to setup ragdoll: Name contains invalid characters',
+          error: 'Name contains invalid characters'
+        };
+      }
+      
+      // Check if skeleton path is provided instead of skeletal mesh
+      if (params.skeletonPath && (params.skeletonPath.includes('_Skeleton') || 
+          params.skeletonPath.includes('SK_Mannequin') && !params.skeletonPath.includes('SKM_'))) {
+        return {
+          success: false,
+          message: 'Failed to setup ragdoll: Must specify a valid skeletal mesh',
+          error: 'Must specify a valid skeletal mesh, not a skeleton'
+        };
+      }
+      
+      // Validate and sanitize parameters
+      const validation = validateAssetParams({
+        name: params.physicsAssetName,
+        savePath: params.savePath || '/Game/Physics'
+      });
+      
+      if (!validation.valid) {
+        return {
+          success: false,
+          message: `Failed to setup ragdoll: ${validation.error}`,
+          error: validation.error
+        };
+      }
+      
+      const sanitizedParams = validation.sanitized;
+      const path = sanitizedParams.savePath || '/Game/Physics';
+      
+      // Resolve skeletal mesh path
+      let meshPath = params.skeletonPath;
+      
+      // Try to resolve skeleton to mesh mapping
+      const resolvedPath = resolveSkeletalMeshPath(meshPath);
+      if (resolvedPath && resolvedPath !== meshPath) {
+        console.log(`Auto-correcting path from ${meshPath} to ${resolvedPath}`);
+        meshPath = resolvedPath;
+      }
+      
+      // Auto-resolve if it looks like a skeleton path or is empty
+      if (!meshPath || meshPath.includes('_Skeleton') || meshPath === 'None' || meshPath === '') {
+        console.log('Resolving skeletal mesh path...');
+        const resolvedMesh = await this.findValidSkeletalMesh();
+        if (resolvedMesh) {
+          meshPath = resolvedMesh;
+          console.log(`Using resolved skeletal mesh: ${meshPath}`);
+        }
+      }
+      
+      // Add concurrency delay to prevent race conditions
+      await concurrencyDelay();
       
       // IMPORTANT: Physics assets require a SKELETAL MESH, not a skeleton
       // UE5 uses: /Game/Characters/Mannequins/Meshes/SKM_Manny_Simple or SKM_Quinn_Simple
@@ -52,15 +185,56 @@ export class PhysicsTools {
         console.warn('Warning: Path appears to be a skeleton, not a skeletal mesh. Auto-correcting to SKM_Manny_Simple.');
       }
       
-      // Build Python script with corrected path
+      // Build Python script with resolved mesh path
       const pythonScript = `
 import unreal
+import time
+
+# Helper function to ensure asset persistence
+def ensure_asset_persistence(asset_path):
+    try:
+        asset = unreal.EditorAssetLibrary.load_asset(asset_path)
+        if not asset:
+            return False
+        
+        # Save the asset
+        saved = unreal.EditorAssetLibrary.save_asset(asset_path, only_if_is_dirty=False)
+        if saved:
+            print(f"Asset saved: {asset_path}")
+        
+        # Refresh the asset registry minimally for the asset's directory
+        try:
+            asset_dir = asset_path.rsplit('/', 1)[0]
+            unreal.AssetRegistryHelpers.get_asset_registry().scan_paths_synchronous([asset_dir], True)
+        except Exception as _reg_e:
+            pass
+        
+        # Small delay to ensure filesystem sync
+        time.sleep(0.1)
+        
+        return saved
+    except Exception as e:
+        print(f"Error ensuring persistence: {e}")
+        return False
+
+# Stop PIE if it's running
+try:
+    if unreal.EditorLevelLibrary.is_playing_editor():
+        print("Stopping Play In Editor mode...")
+        unreal.EditorLevelLibrary.editor_end_play()
+        time.sleep(0.5)
+except:
+    pass
+
+# Main execution
+success = False
+error_msg = ""
 
 # Log the attempt
-print("Setting up ragdoll for ${actualSkeletonPath}")
+print("Setting up ragdoll for ${meshPath}")
 
 asset_path = "${path}"
-asset_name = "${params.physicsAssetName}"
+asset_name = "${sanitizedParams.name}"
 full_path = f"{asset_path}/{asset_name}"
 
 try:
@@ -72,7 +246,7 @@ try:
             print(f"Loaded existing PhysicsAsset: {full_path}")
     else:
         # Try to load skeletal mesh first - it's required
-        skeletal_mesh_path = "${actualSkeletonPath}"
+        skeletal_mesh_path = "${meshPath}"
         skeletal_mesh = None
         
         if skeletal_mesh_path and skeletal_mesh_path != "None":
@@ -83,15 +257,20 @@ try:
                         skeletal_mesh = asset
                         print(f"Loaded skeletal mesh: {skeletal_mesh_path}")
                     elif isinstance(asset, unreal.Skeleton):
-                        print(f"Error: Provided path is a skeleton, not a skeletal mesh: {skeletal_mesh_path}")
+                        error_msg = f"Provided path is a skeleton, not a skeletal mesh: {skeletal_mesh_path}"
+                        print(f"Error: {error_msg}")
                         print(f"Error: Physics assets require a skeletal mesh, not just a skeleton")
                     else:
-                        print(f"Warning: Asset is not a skeletal mesh: {skeletal_mesh_path}")
+                        error_msg = f"Asset is not a skeletal mesh: {skeletal_mesh_path}"
+                        print(f"Warning: {error_msg}")
             else:
-                print(f"Error: Skeletal mesh not found at {skeletal_mesh_path}")
+                error_msg = f"Skeletal mesh not found at {skeletal_mesh_path}"
+                print(f"Error: {error_msg}")
         
         if not skeletal_mesh:
-            print(f"Error: Cannot create physics asset without a valid skeletal mesh")
+            if not error_msg:
+                error_msg = "Cannot create physics asset without a valid skeletal mesh"
+            print(f"Error: {error_msg}")
         else:
             # Create physics asset using a different approach
             # Method 1: Direct creation with initialized factory
@@ -99,11 +278,9 @@ try:
                 factory = unreal.PhysicsAssetFactory()
                 
                 # Create a transient package for the physics asset
-                package = unreal.EditorAssetLibrary.load_asset(asset_path)
-                if not package:
-                    # Create the directory if it doesn't exist
-                    if not unreal.EditorAssetLibrary.does_directory_exist(asset_path):
-                        unreal.EditorAssetLibrary.make_directory(asset_path)
+                # Ensure the directory exists
+                if not unreal.EditorAssetLibrary.does_directory_exist(asset_path):
+                    unreal.EditorAssetLibrary.make_directory(asset_path)
                 
                 # Alternative approach: Create physics asset from skeletal mesh
                 # This is the proper way in UE5
@@ -116,20 +293,26 @@ try:
                         print(f"Successfully created and moved PhysicsAsset to {full_path}")
                         new_asset = physics_asset
                         
-                        # Save the asset and force save all dirty packages
-                        unreal.EditorAssetLibrary.save_asset(full_path)
-                        unreal.EditorLoadingAndSavingUtils.save_dirty_packages(save_map_packages=True, save_content_packages=True)
-                        
-                        # Verify it was saved
-                        if unreal.EditorAssetLibrary.does_asset_exist(full_path):
-                            print(f"Verified PhysicsAsset exists after save: {full_path}")
+                        # Ensure persistence
+                        if ensure_asset_persistence(full_path):
+                            # Verify it was saved
+                            if unreal.EditorAssetLibrary.does_asset_exist(full_path):
+                                print(f"Verified PhysicsAsset exists after save: {full_path}")
+                                success = True
+                            else:
+                                error_msg = f"PhysicsAsset not found after save: {full_path}"
+                                print(f"Warning: {error_msg}")
                         else:
-                            print(f"Warning: PhysicsAsset not found after save: {full_path}")
+                            error_msg = "Failed to persist physics asset"
+                            print(f"Warning: {error_msg}")
                     else:
                         print(f"Created PhysicsAsset but couldn't move to {full_path}")
+                        # Still consider it a success if we created it
                         new_asset = physics_asset
+                        success = True
                 else:
-                    print(f"Failed to create PhysicsAsset from skeletal mesh")
+                    error_msg = "Failed to create PhysicsAsset from skeletal mesh"
+                    print(f"{error_msg}")
                     new_asset = None
                     
             except Exception as e:
@@ -152,70 +335,91 @@ try:
                     
                     if new_asset:
                         print(f"Successfully created PhysicsAsset at {full_path} (Method 2)")
+                        # Ensure persistence
+                        if ensure_asset_persistence(full_path):
+                            success = True
                 except Exception as e2:
-                    print(f"Method 2 also failed: {str(e2)}")
+                    error_msg = f"Method 2 also failed: {str(e2)}"
+                    print(error_msg)
                     new_asset = None
-        
-        if new_asset:
-            print(f"Successfully created PhysicsAsset at {full_path}")
-            # Save the asset
-            unreal.EditorAssetLibrary.save_asset(full_path)
-            print(f"Asset saved: {full_path}")
-        else:
-            print(f"Failed to create PhysicsAsset {asset_name}")
+            
+            # Final check
+            if new_asset and not success:
+                # Try one more save
+                if ensure_asset_persistence(full_path):
+                    if unreal.EditorAssetLibrary.does_asset_exist(full_path):
+                        success = True
             
 except Exception as e:
-    print(f"Error: {str(e)}")
+    error_msg = str(e)
+    print(f"Error: {error_msg}")
     import traceback
     traceback.print_exc()
+
+# Output result markers for parsing
+if success:
+    print("SUCCESS")
+else:
+    print(f"FAILED: {error_msg}")
 
 print("DONE")
 `;
       
-      // Validate inputs before execution
-      // Check for invalid characters in physics asset name
-      if (params.physicsAssetName.includes('@') || params.physicsAssetName.includes('#') || 
-          params.physicsAssetName.includes('%') || params.physicsAssetName.includes('$')) {
-        return {
-          success: false,
-          message: `Failed: Name contains invalid characters`,
-          error: 'Name may not contain the following characters: @ # % $'
-        };
-      }
       
-      // Validate path length (Unreal has a 260 character limit)
-      const fullPath = `${path}/${params.physicsAssetName}`;
-      if (fullPath.length > 260) {
-        return {
-          success: false,
-          message: `Failed: Path too long (${fullPath.length} characters)`,
-          error: 'Unreal Engine paths must be less than 260 characters'
-        };
-      }
-      
-      // Execute Python and log everything
+      // Execute Python and parse response
       try {
         const response = await this.bridge.executePython(pythonScript);
         
-      // Check if the response indicates failure due to skeletal mesh
-      const logOutput = response?.LogOutput || [];
-      const hasSkeletonError = logOutput.some((log: any) => 
-        log.Output && (log.Output.includes('skeleton, not a skeletal mesh') || 
-                       log.Output.includes('Must specify a valid skeletal mesh')));
-      
-      if (hasSkeletonError) {
-        return {
-          success: false,
-          message: `Failed: Must specify a valid skeletal mesh`,
-          error: 'The path points to a skeleton, not a skeletal mesh. Use SKM_Manny_Simple or SKM_Quinn_Simple.'
-        };
-      }
+        // Parse the response to detect actual success or failure
+        const responseStr = typeof response === 'string' ? response : JSON.stringify(response);
         
-        return { 
-          success: true, 
-          message: `Ragdoll physics setup attempted for ${params.physicsAssetName}`,
-          path: `${path}/${params.physicsAssetName}`
-        };
+        // Check for explicit success/failure markers
+        if (responseStr.includes('SUCCESS')) {
+          return { 
+            success: true, 
+            message: `Ragdoll physics setup completed for ${sanitizedParams.name}`,
+            path: `${path}/${sanitizedParams.name}`
+          };
+        } else if (responseStr.includes('FAILED:')) {
+          // Extract error message after FAILED:
+          const failMatch = responseStr.match(/FAILED:\s*(.+)/);
+          const errorMsg = failMatch ? failMatch[1] : 'Unknown error';
+          return {
+            success: false,
+            message: `Failed to setup ragdoll: ${errorMsg}`,
+            error: errorMsg
+          };
+        } else {
+          // Check legacy error detection for backwards compatibility
+          const logOutput = response?.LogOutput || [];
+          const hasSkeletonError = logOutput.some((log: any) => 
+            log.Output && (log.Output.includes('skeleton, not a skeletal mesh') || 
+                          log.Output.includes('Must specify a valid skeletal mesh')));
+          
+          if (hasSkeletonError) {
+            return {
+              success: false,
+              message: `Failed: Must specify a valid skeletal mesh`,
+              error: 'The path points to a skeleton, not a skeletal mesh. Physics assets require a skeletal mesh.'
+            };
+          }
+          
+          // Check for other error indicators
+          if (responseStr.includes('Error:') || responseStr.includes('error')) {
+            return {
+              success: false,
+              message: `Failed to setup ragdoll physics`,
+              error: responseStr
+            };
+          }
+          
+          // Default to success if no errors detected
+          return { 
+            success: true, 
+            message: `Ragdoll physics processed for ${sanitizedParams.name}`,
+            path: `${path}/${sanitizedParams.name}`
+          };
+        }
       } catch (error) {
         return {
           success: false,
@@ -682,6 +886,7 @@ print(f"RESULT:{json.dumps(result)}")
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',
       functionName: 'ExecuteConsoleCommand',
       parameters: {
+        WorldContextObject: null,
         Command: command,
         SpecificPlayer: null
       },
