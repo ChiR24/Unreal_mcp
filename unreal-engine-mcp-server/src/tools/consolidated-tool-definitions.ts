@@ -356,5 +356,30 @@ export const consolidatedToolDefinitions = [
       },
       required: ['command']
     }
+  },
+
+  // 11. VERIFICATION - Read-only verification helpers
+  {
+    name: 'verify_environment',
+    description: 'Verify environment changes (foliage, landscape) to detect false successes',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['foliage_type_exists', 'foliage_instances_near', 'landscape_exists'],
+          description: 'Verification action'
+        },
+        // Common
+        name: { type: 'string', description: 'Name filter (e.g., foliage type name or landscape name)' },
+        // For foliage_instances_near
+        position: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+        },
+        radius: { type: 'number', description: 'Radius for instance counting' }
+      },
+      required: ['action']
+    }
   }
 ];

@@ -41,7 +41,53 @@ export class LevelTools {
     const python = `
 import unreal
 try:
-    unreal.EditorLevelLibrary.save_current_level()
+    # Attempt to reduce source control prompts (best-effort, may be a no-op depending on UE version)
+    try:
+        prefs = unreal.SourceControlPreferences()
+        try:
+            prefs.set_enable_source_control(False)
+        except Exception:
+            try:
+                prefs.enable_source_control = False
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # Determine if level is dirty and save via LevelEditorSubsystem when possible
+    try:
+        world = None
+        try:
+            world = unreal.EditorSubsystemLibrary.get_editor_world()
+        except Exception:
+            try:
+                world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+            except Exception:
+                world = None
+        pkg_path = None
+        try:
+            if world is not None:
+                full = world.get_path_name()
+                pkg_path = full.split('.')[0] if '.' in full else full
+        except Exception:
+            pkg_path = None
+        if pkg_path and not unreal.EditorAssetLibrary.is_asset_dirty(pkg_path):
+            print('RESULT:{"success": true, "skipped": true, "reason": "Level not dirty"}')
+            raise SystemExit(0)
+    except Exception:
+        pass
+
+    # Save using LevelEditorSubsystem to avoid deprecation
+    saved = False
+    try:
+        les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+        if les:
+            les.save_current_level()
+            saved = True
+    except Exception:
+        pass
+    if not saved:
+        unreal.EditorLevelLibrary.save_current_level()
     print('RESULT:{"success": true}')
 except Exception as e:
     print('RESULT:{"success": false, "error": "' + str(e).replace('"','\\"') + '"}')

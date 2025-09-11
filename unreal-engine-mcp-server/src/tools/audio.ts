@@ -55,7 +55,7 @@ try:
                         # Simple node hookup via SoundCueGraph is non-trivial via Python; leave as empty cue
                 except Exception:
                     pass
-            unreal.EditorAssetLibrary.save_asset(f"{path}/{params.name}")
+            unreal.EditorAssetLibrary.save_asset(f"{path}/{name}")
             print('RESULT:' + json.dumps({'success': True}))
         else:
             print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to create SoundCue'}))
@@ -95,8 +95,17 @@ try:
         print('RESULT:' + json.dumps({'success': False, 'error': 'Sound asset not found'}))
     else:
         snd = unreal.EditorAssetLibrary.load_asset(path)
-        world = unreal.EditorLevelLibrary.get_editor_world()
-        unreal.GameplayStatics.play_sound_at_location(world, snd, loc, ${volume}, ${pitch}, ${startTime})
+        # Get editor world via EditorSubsystem first to avoid deprecation
+        try:
+            world = unreal.EditorSubsystemLibrary.get_editor_world()
+        except Exception:
+            try:
+                world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+            except Exception:
+                world = unreal.EditorLevelLibrary.get_editor_world()
+        rot = unreal.Rotator(0.0, 0.0, 0.0)
+        # Use spawn_* variant with explicit rotation before optional floats
+        unreal.GameplayStatics.spawn_sound_at_location(world, snd, loc, rot, ${volume}, ${pitch}, ${startTime})
         print('RESULT:' + json.dumps({'success': True}))
 except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
@@ -132,9 +141,33 @@ try:
         print('RESULT:' + json.dumps({'success': False, 'error': 'Sound asset not found'}))
     else:
         snd = unreal.EditorAssetLibrary.load_asset(path)
-        world = unreal.EditorLevelLibrary.get_editor_world()
-        unreal.GameplayStatics.play_sound_2d(world, snd, ${volume}, ${pitch}, ${startTime})
-        print('RESULT:' + json.dumps({'success': True}))
+        # Get editor world via EditorSubsystem first to avoid deprecation
+        try:
+            world = unreal.EditorSubsystemLibrary.get_editor_world()
+        except Exception:
+            try:
+                world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+            except Exception:
+                world = unreal.EditorLevelLibrary.get_editor_world()
+        ok = False
+        try:
+            unreal.GameplayStatics.spawn_sound_2d(world, snd, ${volume}, ${pitch}, ${startTime})
+            ok = True
+        except AttributeError:
+            try:
+                unreal.GameplayStatics.play_sound_2d(world, snd, ${volume}, ${pitch}, ${startTime})
+                ok = True
+            except AttributeError:
+                # Fallback: play at camera location as 2D substitute
+                try:
+                    info = unreal.EditorLevelLibrary.get_level_viewport_camera_info()
+                    cam_loc = info[0] if isinstance(info, (list, tuple)) and len(info) > 0 else unreal.Vector(0.0, 0.0, 0.0)
+                except Exception:
+                    cam_loc = unreal.Vector(0.0, 0.0, 0.0)
+                rot = unreal.Rotator(0.0, 0.0, 0.0)
+                unreal.GameplayStatics.spawn_sound_at_location(world, snd, cam_loc, rot, ${volume}, ${pitch}, ${startTime})
+                ok = True
+        print('RESULT:' + json.dumps({'success': True} if ok else {'success': False, 'error': 'No suitable 2D playback method found'}))
 except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();

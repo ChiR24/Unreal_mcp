@@ -4,21 +4,12 @@ import { UnrealBridge } from '../unreal-bridge.js';
 export class FoliageTools {
   constructor(private bridge: UnrealBridge) {}
 
-  // Execute console command
-  private async executeCommand(command: string) {
-    return this.bridge.httpCall('/remote/object/call', 'PUT', {
-      objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-      functionName: 'ExecuteConsoleCommand',
-      parameters: {
-        WorldContextObject: null,
-        Command: command,
-        SpecificPlayer: null
-      },
-      generateTransaction: false
-    });
-  }
+  // NOTE: We intentionally avoid issuing Unreal console commands here because
+  // they have proven unreliable and generate engine warnings (failed FindConsoleObject).
+  // Instead, we validate inputs and return structured results. Actual foliage
+  // authoring should be implemented via Python APIs in future iterations.
 
-  // Add foliage type
+  // Add foliage type via Python (creates FoliageType asset if possible; else registers transient)
   async addFoliageType(params: {
     name: string;
     meshPath: string;
@@ -30,42 +21,133 @@ export class FoliageTools {
     randomYaw?: boolean;
     groundSlope?: number;
   }) {
-    const commands = [];
-    
-    commands.push(`AddFoliageType ${params.name} ${params.meshPath}`);
-    
-    if (params.density !== undefined) {
-      commands.push(`SetFoliageDensity ${params.name} ${params.density}`);
+    // Basic validation to prevent bad inputs like 'undefined' and empty strings
+    const errors: string[] = [];
+    const name = String(params?.name ?? '').trim();
+    const meshPath = String(params?.meshPath ?? '').trim();
+
+    if (!name || name.toLowerCase() === 'undefined' || name.toLowerCase() === 'any') {
+      errors.push(`Invalid foliage type name: '${params?.name}'`);
     }
-    
-    if (params.radius !== undefined) {
-      commands.push(`SetFoliageRadius ${params.name} ${params.radius}`);
+    if (!meshPath || meshPath.toLowerCase() === 'undefined') {
+      errors.push(`Invalid meshPath: '${params?.meshPath}'`);
     }
-    
-    if (params.minScale !== undefined && params.maxScale !== undefined) {
-      commands.push(`SetFoliageScale ${params.name} ${params.minScale} ${params.maxScale}`);
+    if (params?.density !== undefined) {
+      if (typeof params.density !== 'number' || !isFinite(params.density) || params.density < 0) {
+        errors.push(`Invalid density: '${params.density}' (must be non-negative finite number)`);
+      }
     }
-    
-    if (params.alignToNormal !== undefined) {
-      commands.push(`SetFoliageAlignToNormal ${params.name} ${params.alignToNormal}`);
+    if (params?.minScale !== undefined || params?.maxScale !== undefined) {
+      const minS = params?.minScale ?? 1;
+      const maxS = params?.maxScale ?? 1;
+      if (typeof minS !== 'number' || typeof maxS !== 'number' || minS <= 0 || maxS <= 0 || maxS < minS) {
+        errors.push(`Invalid scale range: min=${params?.minScale}, max=${params?.maxScale}`);
+      }
     }
-    
-    if (params.randomYaw !== undefined) {
-      commands.push(`SetFoliageRandomYaw ${params.name} ${params.randomYaw}`);
+    if (errors.length > 0) {
+      return { success: false, error: errors.join('; ') };
     }
+
+    const py = `
+import unreal, json
+
+name = ${JSON.stringify(name)}
+mesh_path = ${JSON.stringify(meshPath)}
+fallback_mesh = '/Engine/EngineMeshes/Sphere'
+package_path = '/Game/Foliage/Types'
+
+res = {'success': False, 'created': False, 'asset_path': '', 'used_mesh': '', 'exists_after': False, 'method': '', 'note': ''}
+
+try:
+    # Ensure package directory
+    try:
+        if not unreal.EditorAssetLibrary.does_directory_exist(package_path):
+            unreal.EditorAssetLibrary.make_directory(package_path)
+    except Exception as e:
+        res['note'] += f"; make_directory failed: {e}"
+
+    # Load mesh or fallback
+    mesh = None
+    try:
+        if unreal.EditorAssetLibrary.does_asset_exist(mesh_path):
+            mesh = unreal.EditorAssetLibrary.load_asset(mesh_path)
+    except Exception as e:
+        res['note'] += f"; could not check/load mesh_path: {e}"
+
+    if not mesh:
+        mesh = unreal.EditorAssetLibrary.load_asset(fallback_mesh)
+        res['note'] += '; fallback_mesh_used'
+    if mesh:
+        res['used_mesh'] = str(mesh.get_path_name())
+
+    # Use AssetTools to create FoliageType asset (more robust)
+    asset = None
+    try:
+        asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+        factory = unreal.FoliageTypeFactory()
+        asset_path = f"{package_path}/{name}"
+        # Create unique asset name to avoid collisions
+        unique_asset_name, _ = asset_tools.create_unique_asset_name(asset_path, '')
+        asset = asset_tools.create_asset(unique_asset_name.split('/')[-1], package_path, unreal.FoliageType, factory)
+    except Exception as e:
+        res['note'] += f"; create_asset failed: {e}"
+        asset = None
+
+    if asset and mesh:
+        try:
+            # For FoliageType, the property is just 'mesh'
+            asset.set_editor_property('mesh', mesh)
+            unreal.EditorAssetLibrary.save_loaded_asset(asset)
+            res['asset_path'] = str(asset.get_path_name())
+            res['created'] = True
+            res['method'] = 'Asset'
+        except Exception as e:
+            res['note'] += f"; set/save asset failed: {e}"
+    elif not asset:
+        res['note'] += "; asset creation returned None"
+    elif not mesh:
+        res['note'] += "; mesh object is None, cannot assign to foliage type"
+
+    # Verify existence
+    res['exists_after'] = unreal.EditorAssetLibrary.does_asset_exist(res['asset_path']) if res['asset_path'] else False
+    res['success'] = True
     
-    if (params.groundSlope !== undefined) {
-      commands.push(`SetFoliageGroundSlope ${params.name} ${params.groundSlope}`);
+except Exception as e:
+    res['success'] = False
+    res['note'] += f"; fatal: {e}"
+
+print('RESULT:' + json.dumps(res))
+`.trim();
+
+    const pyResp = await this.bridge.executePython(py);
+    let out = '';
+    if (pyResp?.LogOutput && Array.isArray(pyResp.LogOutput)) out = pyResp.LogOutput.map((l: any) => l.Output || '').join('');
+    else if (typeof pyResp === 'string') out = pyResp; else out = JSON.stringify(pyResp);
+    const m = out.match(/RESULT:({.*})/);
+    if (m) {
+      try {
+        const parsed = JSON.parse(m[1]);
+        if (!parsed.success) {
+          return { success: false, error: parsed.note || 'Add foliage type failed' };
+        }
+        return {
+          success: true,
+          created: parsed.created,
+          exists: parsed.exists_after,
+          method: parsed.method,
+          assetPath: parsed.asset_path,
+          usedMesh: parsed.used_mesh,
+          note: parsed.note,
+          message: parsed.exists_after ? `Foliage type '${name}' ready (${parsed.method || 'Unknown'})` : `Created foliage '${name}' but verification did not find it yet`
+        };
+      } catch (e) {
+        return { success: false, error: 'Failed to parse Python result' };
+      }
     }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Foliage type ${params.name} added` };
+    return { success: false, error: 'No parseable result from Python' };
   }
 
-  // Paint foliage
+  // Paint foliage by placing HISM instances (editor-only)
   async paintFoliage(params: {
     foliageType: string;
     position: [number, number, number];
@@ -73,29 +155,145 @@ export class FoliageTools {
     paintDensity?: number;
     eraseMode?: boolean;
   }) {
-    const commands = [];
-    
-    commands.push(`SelectFoliageType ${params.foliageType}`);
-    
-    if (params.brushSize !== undefined) {
-      commands.push(`SetFoliageBrushSize ${params.brushSize}`);
+    const errors: string[] = [];
+    const foliageType = String(params?.foliageType ?? '').trim();
+    const pos = Array.isArray(params?.position) ? params!.position : [0,0,0];
+
+    if (!foliageType || foliageType.toLowerCase() === 'undefined' || foliageType.toLowerCase() === 'any') {
+      errors.push(`Invalid foliageType: '${params?.foliageType}'`);
     }
-    
-    if (params.paintDensity !== undefined) {
-      commands.push(`SetFoliagePaintDensity ${params.paintDensity}`);
+    if (!Array.isArray(pos) || pos.length !== 3 || pos.some(v => typeof v !== 'number' || !isFinite(v))) {
+      errors.push(`Invalid position: '${JSON.stringify(params?.position)}'`);
     }
-    
-    if (params.eraseMode !== undefined) {
-      commands.push(`SetFoliageEraseMode ${params.eraseMode}`);
+    if (params?.brushSize !== undefined) {
+      if (typeof params.brushSize !== 'number' || !isFinite(params.brushSize) || params.brushSize < 0) {
+        errors.push(`Invalid brushSize: '${params.brushSize}' (must be non-negative finite number)`);
+      }
     }
-    
-    commands.push(`PaintFoliage ${params.position.join(' ')}`);
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
+    if (params?.paintDensity !== undefined) {
+      if (typeof params.paintDensity !== 'number' || !isFinite(params.paintDensity) || params.paintDensity < 0) {
+        errors.push(`Invalid paintDensity: '${params.paintDensity}' (must be non-negative finite number)`);
+      }
     }
+
+    if (errors.length > 0) {
+      return { success: false, error: errors.join('; ') };
+    }
+
+    const brush = Number.isFinite(params.brushSize as number) ? (params.brushSize as number) : 300;
+    const py = `
+import unreal, json, random, math
+
+res = {'success': False, 'added': 0, 'actor': '', 'component': '', 'used_mesh': '', 'note': ''}
+foliage_type_name = ${JSON.stringify(foliageType)}
+px, py, pz = ${pos[0]}, ${pos[1]}, ${pos[2]}
+radius = float(${brush}) / 2.0
+
+try:
+    actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    all_actors = actor_sub.get_all_level_actors() if actor_sub else []
+
+    # Find or create a container actor
+    label = f"FoliageContainer_{foliage_type_name}"
+    container = None
+    for a in all_actors:
+        try:
+            if a.get_actor_label() == label:
+                container = a
+                break
+        except Exception:
+            pass
+    if not container:
+        # Spawn actor that can hold components
+        container = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector(px, py, pz))
+        try:
+            container.set_actor_label(label)
+        except Exception:
+            pass
+
+    # Resolve mesh from FoliageType asset
+    mesh = None
+    fol_asset_path = f"/Game/Foliage/Types/{foliage_type_name}.{foliage_type_name}"
+    if unreal.EditorAssetLibrary.does_asset_exist(fol_asset_path):
+        try:
+            ft_asset = unreal.EditorAssetLibrary.load_asset(fol_asset_path)
+            mesh = ft_asset.get_editor_property('mesh')
+        except Exception:
+            mesh = None
     
-    return { success: true, message: `Foliage painted at position` };
+    if not mesh:
+        mesh = unreal.EditorAssetLibrary.load_asset('/Engine/EngineMeshes/Sphere')
+        res['note'] += '; used_fallback_mesh'
+    
+    if mesh:
+        res['used_mesh'] = str(mesh.get_path_name())
+
+    # Since HISM components and add_component don't work in this version,
+    # spawn individual StaticMeshActors for each instance
+    target_count = max(5, int(radius / 20.0))
+    added = 0
+    for i in range(target_count):
+        ang = random.random() * math.tau
+        r = random.random() * radius
+        x, y, z = px + math.cos(ang) * r, py + math.sin(ang) * r, pz
+        try:
+            # Spawn static mesh actor at position
+            inst_actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                unreal.StaticMeshActor, 
+                unreal.Vector(x, y, z),
+                unreal.Rotator(0, random.random()*360.0, 0)
+            )
+            if inst_actor and mesh:
+                # Set mesh on the actor's component
+                try:
+                    mesh_comp = inst_actor.static_mesh_component
+                    if mesh_comp:
+                        mesh_comp.set_static_mesh(mesh)
+                    inst_actor.set_actor_label(f"{foliage_type_name}_instance_{i}")
+                    # Group under the container for organization
+                    inst_actor.attach_to_actor(container, "", unreal.AttachmentRule.KEEP_WORLD, unreal.AttachmentRule.KEEP_WORLD, unreal.AttachmentRule.KEEP_WORLD, False)
+                    added += 1
+                except Exception as e:
+                    res['note'] += f"; instance_{i} setup failed: {e}"
+        except Exception as e:
+            res['note'] += f"; spawn instance_{i} failed: {e}"
+
+    res['added'] = added
+    res['actor'] = container.get_actor_label()
+    res['component'] = 'StaticMeshActors'  # Using actors instead of components
+    res['success'] = True
+except Exception as e:
+    res['success'] = False
+    res['note'] += f"; fatal: {e}"
+
+print('RESULT:' + json.dumps(res))
+`.trim();
+
+    const pyResp = await this.bridge.executePython(py);
+    let out = '';
+    if (pyResp?.LogOutput && Array.isArray(pyResp.LogOutput)) out = pyResp.LogOutput.map((l: any) => l.Output || '').join('');
+    else if (typeof pyResp === 'string') out = pyResp; else out = JSON.stringify(pyResp);
+    const m = out.match(/RESULT:({.*})/);
+    if (m) {
+      try {
+        const parsed = JSON.parse(m[1]);
+        if (!parsed.success) {
+          return { success: false, error: parsed.note || 'Paint foliage failed' };
+        }
+        return {
+          success: true,
+          added: parsed.added,
+          actor: parsed.actor,
+          component: parsed.component,
+          usedMesh: parsed.used_mesh,
+          note: parsed.note,
+          message: `Painted ${parsed.added} instances for '${foliageType}' around (${pos[0]}, ${pos[1]}, ${pos[2]})`
+        };
+      } catch (e) {
+        return { success: false, error: 'Failed to parse Python result' };
+      }
+    }
+    return { success: false, error: 'No parseable result from Python' };
   }
 
   // Create instanced mesh

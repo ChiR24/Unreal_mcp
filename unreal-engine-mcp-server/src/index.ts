@@ -97,16 +97,24 @@ function trackPerformance(startTime: number, success: boolean) {
 // Health check function
 async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
   try {
-    // Try to get exposed properties as a health check
-    await bridge.getExposed();
+    // Use a robust, whitelisted operation for health check
+    await bridge.executeConsoleCommand('stat none');
     metrics.connectionStatus = 'connected';
     metrics.lastHealthCheck = new Date();
     return true;
-  } catch (err) {
-    metrics.connectionStatus = 'error';
-    metrics.lastHealthCheck = new Date();
-    log.warn('Health check failed:', err);
-    return false;
+  } catch (err1) {
+    // Fallback: minimal Python ping (if Python plugin is enabled)
+    try {
+      await bridge.executePython("import sys; sys.stdout.write('OK')");
+      metrics.connectionStatus = 'connected';
+      metrics.lastHealthCheck = new Date();
+      return true;
+    } catch (err2) {
+      metrics.connectionStatus = 'error';
+      metrics.lastHealthCheck = new Date();
+      log.warn('Health check failed (console and python):', err1, err2);
+      return false;
+    }
   }
 }
 

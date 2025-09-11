@@ -16,6 +16,7 @@ import { DebugVisualizationTools } from './debug.js';
 import { PerformanceTools } from './performance.js';
 import { AudioTools } from './audio.js';
 import { UITools } from './ui.js';
+import { VerificationTools } from './verification.js';
 
 export async function handleToolCall(
   name: string, 
@@ -37,6 +38,7 @@ export async function handleToolCall(
     performanceTools: PerformanceTools,
     audioTools: AudioTools,
     uiTools: UITools,
+    verificationTools?: VerificationTools,
     bridge: UnrealBridge
   }
 ) {
@@ -609,6 +611,32 @@ print(f"RESULT:{json.dumps(result)}")
 
       // Audio Tools
       case 'play_sound':
+        // Check if sound exists first
+        const soundCheckPy = `
+import unreal, json
+path = r"${args.soundPath}"
+try:
+    exists = unreal.EditorAssetLibrary.does_asset_exist(path)
+    print('SOUNDCHECK:' + json.dumps({'exists': bool(exists)}))
+except Exception as e:
+    print('SOUNDCHECK:' + json.dumps({'exists': False, 'error': str(e)}))
+`.trim();
+        
+        let soundExists = false;
+        try {
+          const checkResp = await tools.bridge.executePython(soundCheckPy);
+          const checkOut = typeof checkResp === 'string' ? checkResp : JSON.stringify(checkResp);
+          const checkMatch = checkOut.match(/SOUNDCHECK:({.*})/);
+          if (checkMatch) {
+            const checkParsed = JSON.parse(checkMatch[1]);
+            soundExists = checkParsed.exists === true;
+          }
+        } catch {}
+        
+        if (!soundExists && !args.soundPath.includes('/Engine/')) {
+          throw new Error(`Sound asset not found: ${args.soundPath}`);
+        }
+        
         if (args.is3D !== false && args.location) {
           result = await tools.audioTools.playSoundAtLocation({
             soundPath: args.soundPath,
@@ -656,6 +684,41 @@ print(f"RESULT:{json.dumps(result)}")
         }
         result = await tools.bridge.executeConsoleCommand(command);
         message = `Console command executed: ${command}`;
+        break;
+
+      // Verification tool
+      case 'verify_environment':
+        if (!tools.verificationTools) {
+          // Create verification tools if not provided
+          const { VerificationTools } = await import('./verification.js');
+          tools.verificationTools = new VerificationTools(tools.bridge);
+        }
+        
+        switch (args.action) {
+          case 'foliage_type_exists':
+            result = await tools.verificationTools.foliageTypeExists(args.name || '');
+            message = result.exists ? 
+              `Foliage type '${args.name}' EXISTS (method: ${result.method})` : 
+              `Foliage type '${args.name}' NOT FOUND`;
+            break;
+          case 'foliage_instances_near':
+            const pos: [number, number, number] = args.position ? [args.position.x || 0, args.position.y || 0, args.position.z || 0] as [number, number, number] : [0,0,0];
+            result = await tools.verificationTools.countFoliageInstances({
+              position: pos as [number, number, number],
+              radius: args.radius || 1000,
+              foliageTypeName: args.name
+            });
+            message = `Found ${result.count} foliage instances within radius ${args.radius || 1000}`;
+            break;
+          case 'landscape_exists':
+            result = await tools.verificationTools.landscapeExists(args.name || '');
+            message = result.exists ?
+              `Landscape '${args.name}' EXISTS` :
+              `Landscape '${args.name}' NOT FOUND`;
+            break;
+          default:
+            throw new Error(`Unknown verification action: ${args.action}`);
+        }
         break;
 
       default:

@@ -17,7 +17,12 @@ export async function handleConsolidatedToolCall(
 
     switch (name) {
       // 1. ASSET MANAGER
-      case 'manage_asset':
+      case 'manage_assets':
+        // Validate args is not null/undefined
+        if (args === null || args === undefined) {
+          throw new Error('Invalid arguments: null or undefined');
+        }
+        
         // Validate action exists
         if (!args.action) {
           throw new Error('Missing required parameter: action');
@@ -595,6 +600,18 @@ export async function handleConsolidatedToolCall(
             };
             break;
           case 'add_foliage':
+            // Validate foliage creation parameters to avoid bad console commands / engine warnings
+            if (args.name === undefined || args.name === null || typeof args.name !== 'string' || args.name.trim() === '' || String(args.name).toLowerCase() === 'undefined' || String(args.name).toLowerCase() === 'any') {
+              throw new Error(`Invalid foliage name: '${args.name}'`);
+            }
+            if (args.meshPath === undefined || args.meshPath === null || typeof args.meshPath !== 'string' || args.meshPath.trim() === '' || String(args.meshPath).toLowerCase() === 'undefined') {
+              throw new Error(`Invalid meshPath: '${args.meshPath}'`);
+            }
+            if (args.density !== undefined) {
+              if (typeof args.density !== 'number' || !isFinite(args.density) || args.density < 0) {
+                throw new Error(`Invalid density: '${args.density}' (must be non-negative finite number)`);
+              }
+            }
             mappedName = 'add_foliage_type';
             mappedArgs = {
               name: args.name,
@@ -603,10 +620,36 @@ export async function handleConsolidatedToolCall(
             };
             break;
           case 'paint_foliage':
+            // Validate paint parameters
+            if (args.foliageType === undefined || args.foliageType === null || typeof args.foliageType !== 'string' || args.foliageType.trim() === '' || String(args.foliageType).toLowerCase() === 'undefined' || String(args.foliageType).toLowerCase() === 'any') {
+              throw new Error(`Invalid foliageType: '${args.foliageType}'`);
+            }
+            // Convert position object to array if needed
+            let positionArray;
+            if (args.position) {
+              if (Array.isArray(args.position)) {
+                positionArray = args.position;
+              } else if (typeof args.position === 'object') {
+                positionArray = [args.position.x || 0, args.position.y || 0, args.position.z || 0];
+              } else {
+                positionArray = [0, 0, 0];
+              }
+            } else {
+              positionArray = [0, 0, 0];
+            }
+            // Validate numbers in position
+            if (!Array.isArray(positionArray) || positionArray.length !== 3 || positionArray.some(v => typeof v !== 'number' || !isFinite(v))) {
+              throw new Error(`Invalid position: '${JSON.stringify(args.position)}'`);
+            }
+            if (args.brushSize !== undefined) {
+              if (typeof args.brushSize !== 'number' || !isFinite(args.brushSize) || args.brushSize < 0) {
+                throw new Error(`Invalid brushSize: '${args.brushSize}' (must be non-negative finite number)`);
+              }
+            }
             mappedName = 'paint_foliage';
             mappedArgs = {
               foliageType: args.foliageType,
-              position: args.position,
+              position: positionArray,
               brushSize: args.brushSize
             };
             break;
@@ -617,29 +660,82 @@ export async function handleConsolidatedToolCall(
 
       // 9. SYSTEM CONTROL
       case 'system_control':
+        // Validate args is not null/undefined
+        if (args === null || args === undefined) {
+          throw new Error('Invalid arguments: null or undefined');
+        }
+        if (typeof args !== 'object') {
+          throw new Error('Invalid arguments: must be an object');
+        }
+        // Validate action exists
+        if (!args.action) {
+          throw new Error('Missing required parameter: action');
+        }
+        
         switch (args.action) {
           case 'profile':
+            // Validate profile type
+            const validProfileTypes = ['CPU', 'GPU', 'Memory', 'RenderThread', 'GameThread', 'All'];
+            if (!args.profileType || !validProfileTypes.includes(args.profileType)) {
+              throw new Error(`Invalid profileType: '${args.profileType}'. Valid types: ${validProfileTypes.join(', ')}`);
+            }
             mappedName = 'start_profiling';
             mappedArgs = {
               type: args.profileType,
               duration: args.duration
             };
             break;
+            
           case 'show_fps':
+            // Validate enabled is boolean
+            if (args.enabled !== undefined && typeof args.enabled !== 'boolean') {
+              throw new Error(`Invalid enabled: must be boolean, got ${typeof args.enabled}`);
+            }
             mappedName = 'show_fps';
             mappedArgs = {
               enabled: args.enabled,
               verbose: args.verbose
             };
             break;
+            
           case 'set_quality':
+            // Validate category - normalize PostProcess/PostProcessing
+            const validCategories = ['ViewDistance', 'AntiAliasing', 'PostProcessing', 'PostProcess', 
+                                   'Shadows', 'GlobalIllumination', 'Reflections', 'Textures', 
+                                   'Effects', 'Foliage', 'Shading'];
+            if (!args.category || !validCategories.includes(args.category)) {
+              throw new Error(`Invalid category: '${args.category}'. Valid categories: ${validCategories.join(', ')}`);
+            }
+            // Validate level
+            if (args.level === undefined || args.level === null) {
+              throw new Error('Missing required parameter: level');
+            }
+            if (typeof args.level !== 'number' || !Number.isInteger(args.level) || args.level < 0 || args.level > 4) {
+              throw new Error(`Invalid level: must be integer 0-4, got ${args.level}`);
+            }
+            // Normalize PostProcess to PostProcessing for consistency
+            let categoryName = args.category;
+            if (categoryName === 'PostProcessing') {
+              categoryName = 'PostProcess';  // Unreal uses PostProcess not PostProcessing
+            }
             mappedName = 'set_scalability';
             mappedArgs = {
-              category: args.category,
+              category: categoryName,
               level: args.level
             };
             break;
+            
           case 'play_sound':
+            // Validate sound path
+            if (!args.soundPath || typeof args.soundPath !== 'string') {
+              throw new Error('Invalid soundPath: must be a non-empty string');
+            }
+            // Validate volume if provided
+            if (args.volume !== undefined) {
+              if (typeof args.volume !== 'number' || args.volume < 0 || args.volume > 1) {
+                throw new Error(`Invalid volume: must be 0-1, got ${args.volume}`);
+              }
+            }
             mappedName = 'play_sound';
             mappedArgs = {
               soundPath: args.soundPath,
@@ -648,7 +744,12 @@ export async function handleConsolidatedToolCall(
               is3D: args.is3D
             };
             break;
+            
           case 'create_widget':
+            // Validate widget name
+            if (!args.widgetName || typeof args.widgetName !== 'string' || args.widgetName.trim() === '') {
+              throw new Error('Invalid widgetName: must be a non-empty string');
+            }
             mappedName = 'create_widget';
             mappedArgs = {
               name: args.widgetName,
@@ -656,13 +757,24 @@ export async function handleConsolidatedToolCall(
               savePath: args.savePath
             };
             break;
+            
           case 'show_widget':
+            // Validate widget name
+            if (!args.widgetName || typeof args.widgetName !== 'string') {
+              throw new Error('Invalid widgetName: must be a non-empty string');
+            }
+            // Validate visible is boolean (default to true if not provided)
+            const isVisible = args.visible !== undefined ? args.visible : true;
+            if (typeof isVisible !== 'boolean') {
+              throw new Error(`Invalid visible: must be boolean, got ${typeof isVisible}`);
+            }
             mappedName = 'show_widget';
             mappedArgs = {
               widgetName: args.widgetName,
-              visible: args.visible
+              visible: isVisible
             };
             break;
+            
           default:
             throw new Error(`Unknown system action: ${args.action}`);
         }
@@ -671,6 +783,12 @@ export async function handleConsolidatedToolCall(
       // 10. CONSOLE COMMAND - pass through
       case 'console_command':
         mappedName = 'console_command';
+        mappedArgs = args;
+        break;
+
+      // 11. VERIFICATION - Environment verification
+      case 'verify_environment':
+        mappedName = 'verify_environment';
         mappedArgs = args;
         break;
 
