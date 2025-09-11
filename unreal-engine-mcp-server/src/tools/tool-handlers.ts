@@ -672,7 +672,9 @@ print(f"RESULT:{json.dumps(result)}")
         throw new Error(`Unknown tool: ${name}`);
     }
 
+    // Return the raw result for tests, with MCP format properties added
     return {
+      ...result,  // Include all properties from the tool result
       content: [{
         type: 'text',
         text: message
