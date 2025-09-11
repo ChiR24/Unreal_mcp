@@ -1,0 +1,282 @@
+{
+  "timestamp": "2025-09-11T12:19:44.800Z",
+  "summary": {
+    "total": 40,
+    "passed": 26,
+    "partial": 12,
+    "failed": 2,
+    "passRate": "65.0%",
+    "partialRate": "30.0%",
+    "failRate": "5.0%"
+  },
+  "categories": [
+    {
+      "name": "Blueprint Creation",
+      "tests": 10,
+      "passed": 10,
+      "partial": 0,
+      "failed": 0
+    },
+    {
+      "name": "Component Addition",
+      "tests": 10,
+      "passed": 1,
+      "partial": 9,
+      "failed": 0
+    },
+    {
+      "name": "Duplication & Paths",
+      "tests": 5,
+      "passed": 5,
+      "partial": 0,
+      "failed": 0
+    },
+    {
+      "name": "Edge Cases",
+      "tests": 10,
+      "passed": 7,
+      "partial": 2,
+      "failed": 1
+    },
+    {
+      "name": "Plugin & Advanced",
+      "tests": 5,
+      "passed": 3,
+      "partial": 1,
+      "failed": 1
+    }
+  ],
+  "details": [
+    {
+      "name": "Create Actor Blueprint",
+      "status": "PASS",
+      "details": "Blueprint ActorBP_1757593161936 created"
+    },
+    {
+      "name": "Create Pawn Blueprint",
+      "status": "PASS",
+      "details": "Blueprint PawnBP_1757593161936 created"
+    },
+    {
+      "name": "Create Character Blueprint",
+      "status": "PASS",
+      "details": "Blueprint CharacterBP_1757593161936 created"
+    },
+    {
+      "name": "Create GameMode Blueprint",
+      "status": "PASS",
+      "details": "Blueprint GameModeBP_1757593161936 created"
+    },
+    {
+      "name": "Create PlayerController Blueprint",
+      "status": "PASS",
+      "details": "Blueprint PlayerControllerBP_1757593161936 created"
+    },
+    {
+      "name": "Create HUD Blueprint",
+      "status": "PASS",
+      "details": "Blueprint HUDBP_1757593161936 created"
+    },
+    {
+      "name": "Create ActorComponent Blueprint",
+      "status": "PASS",
+      "details": "Blueprint ActorComponentBP_1757593161936 created"
+    },
+    {
+      "name": "Create Blueprint with Empty Name",
+      "status": "PASS",
+      "details": "Should use default name"
+    },
+    {
+      "name": "Create Blueprint with Special Characters",
+      "status": "PASS",
+      "details": "Should sanitize name"
+    },
+    {
+      "name": "Create Blueprint with Long Name",
+      "status": "PASS",
+      "details": "Should handle or truncate"
+    },
+    {
+      "name": "Add StaticMeshComponent",
+      "status": "PARTIAL",
+      "details": "Component TestStaticMesh added to /Game/Blueprints/ComprehensiveTest/ComponentTestBP_1757593161936"
+    },
+    {
+      "name": "Add SkeletalMeshComponent",
+      "status": "PARTIAL",
+      "details": "Component TestSkeletalMesh added to /Game/Blueprints/ComprehensiveTest/ComponentTestBP_1757593161936"
+    },
+    {
+      "name": "Add BoxComponent",
+      "status": "PARTIAL",
+      "details": "Component TestBox added to /Game/Blueprints/ComprehensiveTest/ComponentTestBP_1757593161936"
+    },
+    {
+      "name": "Add SphereComponent",
+      "status": "PARTIAL",
+      "details": "Component TestSphere added to /Game/Blueprints/ComprehensiveTest/ComponentTestBP_1757593161936"
+    },
+    {
+      "name": "Add CapsuleComponent",
+      "status": "PARTIAL",
+      "details": "Component TestCapsule added to /Game/Blueprints/ComprehensiveTest/ComponentTestBP_1757593161936"
+    },
+    {
+      "name": "Add PointLightComponent",
+      "status": "PARTIAL",
+      "details": "Component TestPointLight added to /Game/Blueprints/ComprehensiveTest/ComponentTestBP_1757593161936"
+    },
+    {
+      "name": "Add CameraComponent",
+      "status": "PARTIAL",
+      "details": "Component TestCamera added to /Game/Blueprints/ComprehensiveTest/ComponentTestBP_1757593161936"
+    },
+    {
+      "name": "Add Component with Special Characters",
+      "status": "PARTIAL",
+      "details": "Should sanitize name"
+    },
+    {
+      "name": "Add Component to Non-Existent Blueprint",
+      "status": "PASS",
+      "details": "Should fail gracefully"
+    },
+    {
+      "name": "Add Unknown Component Type",
+      "status": "PARTIAL",
+      "details": "Should use default or fail gracefully"
+    },
+    {
+      "name": "Create Duplicate Blueprint",
+      "status": "PASS",
+      "details": "Should handle existing blueprint"
+    },
+    {
+      "name": "Create Blueprint in Different Path",
+      "status": "PASS",
+      "details": "Blueprint DifferentPath_1757593161936 created"
+    },
+    {
+      "name": "Create Blueprint with No Path",
+      "status": "PASS",
+      "details": "Should use default path"
+    },
+    {
+      "name": "Create Blueprint with Invalid Path",
+      "status": "PASS",
+      "details": "Should sanitize path"
+    },
+    {
+      "name": "Create Blueprint with Nested Path",
+      "status": "PASS",
+      "details": "Blueprint NestedPath_1757593161936 created"
+    },
+    {
+      "name": "Create Blueprint with Unicode",
+      "status": "PASS",
+      "details": "Should handle or sanitize"
+    },
+    {
+      "name": "Create Blueprint with Numbers Only",
+      "status": "PASS",
+      "details": "Blueprint Asset_123456789_1757593161936 created"
+    },
+    {
+      "name": "Create Blueprint with Underscore Prefix",
+      "status": "PASS",
+      "details": "Blueprint UnderscorePrefix_1757593161936 created"
+    },
+    {
+      "name": "Create Blueprint with Mixed Case",
+      "status": "PASS",
+      "details": "Blueprint MiXeD_CaSe_TeSt_1757593161936 created"
+    },
+    {
+      "name": "Rapid Sequential Creation",
+      "status": "PASS",
+      "details": "Testing concurrency handling"
+    },
+    {
+      "name": "Add Multiple Components",
+      "status": "PARTIAL",
+      "details": "Multiple components to same BP"
+    },
+    {
+      "name": "Create Blueprint with Reserved Keywords",
+      "status": "PASS",
+      "details": "Should handle keywords"
+    },
+    {
+      "name": "Add Component with Transform",
+      "status": "PARTIAL",
+      "details": "With transform parameters"
+    },
+    {
+      "name": "Create Invalid Blueprint Type",
+      "status": "PASS",
+      "details": "Should default to Actor"
+    },
+    {
+      "name": "Blueprint Path Resolution",
+      "status": "FAIL",
+      "details": "Testing path finding logic"
+    },
+    {
+      "name": "UnrealEnginePython Plugin Check",
+      "status": "FAIL",
+      "details": "response.includes is not a function"
+    },
+    {
+      "name": "Component Addition Fallback",
+      "status": "PARTIAL",
+      "details": "Direct addition"
+    },
+    {
+      "name": "Blueprint Compilation",
+      "status": "PASS",
+      "details": "Blueprint /Game/Blueprints/ComprehensiveTest/CompileTest_1757593161936 compiled successfully"
+    },
+    {
+      "name": "Add Variable to Blueprint",
+      "status": "PASS",
+      "details": "Variable TestVariable added to /Game/Blueprints/ComprehensiveTest/VariableTest_1757593161936"
+    },
+    {
+      "name": "Add Function to Blueprint",
+      "status": "PASS",
+      "details": "Function TestFunction added to /Game/Blueprints/ComprehensiveTest/FunctionTest_1757593161936"
+    }
+  ],
+  "config": {
+    "blueprintTypes": [
+      "Actor",
+      "Pawn",
+      "Character",
+      "GameMode",
+      "PlayerController",
+      "HUD",
+      "ActorComponent"
+    ],
+    "componentTypes": [
+      "StaticMeshComponent",
+      "SkeletalMeshComponent",
+      "BoxComponent",
+      "SphereComponent",
+      "CapsuleComponent",
+      "PointLightComponent",
+      "SpotLightComponent",
+      "DirectionalLightComponent",
+      "CameraComponent",
+      "SpringArmComponent",
+      "AudioComponent",
+      "SceneComponent",
+      "ArrowComponent",
+      "TextRenderComponent",
+      "ParticleSystemComponent",
+      "WidgetComponent"
+    ],
+    "testPath": "/Game/Blueprints/ComprehensiveTest",
+    "timestamp": 1757593161936
+  }
+}

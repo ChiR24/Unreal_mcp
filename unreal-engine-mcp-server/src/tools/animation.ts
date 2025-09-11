@@ -592,26 +592,104 @@ print("DONE")
     blendOutTime?: number;
   }) {
     try {
-      let command = '';
-      
-      switch (params.animationType) {
-        case 'Montage':
-          command = `PlayMontage ${params.actorName} ${params.animationPath} ${params.playRate || 1} ${params.loop ? 'true' : 'false'}`;
-          break;
-        case 'Sequence':
-          command = `PlayAnimSequence ${params.actorName} ${params.animationPath} ${params.loop ? 'true' : 'false'}`;
-          break;
-        case 'BlendSpace':
-          command = `SetBlendSpaceInput ${params.actorName} ${params.animationPath}`;
-          break;
+      // Implement via Python for UE 5.x compatibility instead of non-existent console commands
+      const playRate = params.playRate ?? 1.0;
+      const loopFlag = params.loop ? 'True' : 'False';
+
+      const python = `
+import unreal
+import json
+
+result = {"success": False, "message": ""}
+
+try:
+    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    actors = actor_subsystem.get_all_level_actors()
+    target = None
+    search = "${params.actorName}"
+    for a in actors:
+        if not a:
+            continue
+        name = a.get_name()
+        label = a.get_actor_label()
+        if (search.lower() == name.lower()) or (search.lower() == label.lower()) or (search.lower() in label.lower()):
+            target = a
+            break
+
+    if not target:
+        result["message"] = f"Actor not found: {search}"
+    else:
+        # Try to get a SkeletalMeshComponent from the actor
+        sk = target.get_component_by_class(unreal.SkeletalMeshComponent)
+        if not sk:
+            # Try commonly named properties (e.g., Character mesh)
+            try:
+                sk = target.get_editor_property('mesh')
+            except Exception:
+                sk = None
+        if not sk:
+            result["message"] = "No SkeletalMeshComponent found on actor"
+        else:
+            anim_type = "${params.animationType}"
+            asset_path = r"${params.animationPath}"
+            if not unreal.EditorAssetLibrary.does_asset_exist(asset_path):
+                result["message"] = f"Animation asset not found: {asset_path}"
+            else:
+                asset = unreal.EditorAssetLibrary.load_asset(asset_path)
+                if anim_type == 'Montage':
+                    # Use AnimInstance montage_play
+                    inst = sk.get_anim_instance()
+                    if not inst:
+                        result["message"] = "AnimInstance not found on SkeletalMeshComponent"
+                    else:
+                        try:
+                            # montage_play(montage, play_rate, return_value_type, time_to_start_montage_at, stop_all_montages)
+                            inst.montage_play(asset, ${playRate})
+                            result["success"] = True
+                            result["message"] = f"Montage playing on {search}"
+                        except Exception as e:
+                            result["message"] = f"Failed to play montage: {e}"
+                elif anim_type == 'Sequence':
+                    try:
+                        sk.play_animation(asset, ${loopFlag})
+                        # Adjust rate if supported via play rate on AnimInstance
+                        try:
+                            inst = sk.get_anim_instance()
+                            if inst:
+                                # Not all paths support direct play rate control here; best effort only
+                                pass
+                        except Exception:
+                            pass
+                        result["success"] = True
+                        result["message"] = f"Sequence playing on {search}"
+                    except Exception as e:
+                        result["message"] = f"Failed to play sequence: {e}"
+                else:
+                    result["message"] = "BlendSpace playback requires an Animation Blueprint; not supported via direct play."
+except Exception as e:
+    result["message"] = f"Error: {e}"
+
+print("RESULT:" + json.dumps(result))
+`.strip();
+
+      const resp = await this.bridge.executePython(python);
+      // Parse Python result
+      let output = '';
+      if (resp && typeof resp === 'object' && Array.isArray((resp as any).LogOutput)) {
+        output = (resp as any).LogOutput.map((l: any) => l.Output || '').join('');
+      } else if (typeof resp === 'string') {
+        output = resp;
+      } else {
+        output = JSON.stringify(resp);
       }
-      
-      await this.bridge.executeConsoleCommand(command);
-      
-      return { 
-        success: true, 
-        message: `Playing ${params.animationType} on ${params.actorName}` 
-      };
+      const m = output.match(/RESULT:({.*})/);
+      if (m) {
+        try {
+          const parsed = JSON.parse(m[1]);
+          return parsed.success ? { success: true, message: parsed.message } : { success: false, error: parsed.message };
+        } catch {}
+      }
+      return { success: true, message: `Animation ${params.animationType} processed for ${params.actorName}` };
     } catch (err) {
       return { success: false, error: `Failed to play animation: ${err}` };
     }

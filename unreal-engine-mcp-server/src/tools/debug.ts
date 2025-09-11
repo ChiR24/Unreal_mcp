@@ -247,15 +247,32 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
   async setViewMode(params: {
     mode: 'Lit' | 'Unlit' | 'Wireframe' | 'DetailLighting' | 'LightingOnly' | 'LightComplexity' | 'ShaderComplexity' | 'LightmapDensity' | 'StationaryLightOverlap' | 'ReflectionOverride' | 'CollisionPawn' | 'CollisionVisibility';
   }) {
+    // Map non-viewmode requests to appropriate show flags for safety
+    if (params.mode === 'CollisionPawn' || params.mode === 'CollisionVisibility') {
+      // Use collision visualization instead of viewmode (UE doesn't have these as view modes)
+      await this.showCollision({ enabled: true, type: 'Both' });
+      return { success: true, message: `Collision visualization enabled (use show flags, not viewmode)` } as any;
+    }
+
+    const VALID_VIEWMODES = new Set([
+      'Lit', 'Unlit', 'Wireframe', 'DetailLighting', 'LightingOnly', 'LightComplexity', 'ShaderComplexity', 'LightmapDensity', 'StationaryLightOverlap', 'ReflectionOverride'
+    ]);
+
+    if (!VALID_VIEWMODES.has(params.mode)) {
+      // Fallback to Lit if unknown
+      await this.bridge.executeConsoleCommand('viewmode Lit');
+      return { success: false, warning: `Unknown or unsupported viewmode '${params.mode}'. Reverted to Lit.` } as any;
+    }
+
     const UNSAFE_VIEWMODES = [
-      'LightComplexity', 'ShaderComplexity', 'LightmapDensity',
-      'StationaryLightOverlap', 'CollisionPawn', 'CollisionVisibility'
+      'LightComplexity', 'ShaderComplexity', 'LightmapDensity', 'StationaryLightOverlap'
     ];
     if (UNSAFE_VIEWMODES.includes(params.mode)) {
-      console.warn(`⚠️ Viewmode '${params.mode}' may cause crashes in some UE configurations.`);
+      console.warn(`⚠️ Viewmode '${params.mode}' may be unstable in some UE configurations.`);
       try { await this.bridge.executeConsoleCommand('stop'); } catch {}
       await new Promise(resolve => setTimeout(resolve, 100));
     }
+
     try {
       const command = `viewmode ${params.mode}`;
       const result = await this.bridge.executeConsoleCommand(command);

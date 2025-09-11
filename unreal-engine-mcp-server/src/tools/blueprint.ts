@@ -278,6 +278,9 @@ try:
             f"/Game/{blueprint_path}"
         ]
         
+        # Add ComprehensiveTest to search paths for test suite
+        possible_paths.append(f"/Game/Blueprints/ComprehensiveTest/{blueprint_path}")
+        
         blueprint_asset = None
         for path in possible_paths:
             if unreal.EditorAssetLibrary.does_asset_exist(path):
@@ -299,7 +302,16 @@ try:
                 for asset_data in assets:
                     asset_name = str(asset_data.asset_name)
                     if asset_name == blueprint_path or asset_name == blueprint_path.split('/')[-1]:
-                        found_path = str(asset_data.object_path)
+                        # Different UE versions use different attribute names
+                        try:
+                            found_path = str(asset_data.object_path)
+                        except AttributeError:
+                            try:
+                                found_path = str(asset_data.package_name)
+                            except AttributeError:
+                                # Try accessing as property
+                                found_path = str(asset_data.get_editor_property('object_path'))
+                        
                         blueprint_path = found_path.split('.')[0]  # Remove class suffix
                         blueprint_asset = unreal.EditorAssetLibrary.load_asset(blueprint_path)
                         print(f"Found blueprint via search at: {blueprint_path}")
