@@ -793,8 +793,34 @@ export async function handleConsolidatedToolCall(
         }
         break;
 
-      // 10. CONSOLE COMMAND - pass through
+      // 10. CONSOLE COMMAND - handle validation here
       case 'console_command':
+        // Handle empty/invalid commands gracefully
+        if (args.command === undefined || args.command === null || args.command === '' || typeof args.command !== 'string') {
+          return {
+            content: [{
+              type: 'text',
+              text: 'Empty command ignored'
+            }],
+            isError: false,
+            success: true,
+            message: 'Empty command'
+          };
+        }
+        
+        const cmdTrimmed = args.command.trim();
+        if (cmdTrimmed.length === 0) {
+          return {
+            content: [{
+              type: 'text',
+              text: 'Empty command ignored'
+            }],
+            isError: false,
+            success: true,
+            message: 'Empty command'
+          };
+        }
+        
         mappedName = 'console_command';
         mappedArgs = args;
         break;

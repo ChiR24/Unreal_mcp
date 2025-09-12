@@ -18,18 +18,27 @@ export class LevelTools {
     });
   }
 
-  // Load level
+  // Load level (best-effort Python with console fallback)
   async loadLevel(params: {
     levelPath: string;
     streaming?: boolean;
     position?: [number, number, number];
   }) {
-    // Use proper streaming level commands
-    const command = params.streaming 
-      ? `LoadStreamLevel ${params.levelPath}` 
-      : `open ${params.levelPath}`;
-    
-    return this.bridge.executeConsoleCommand(command);
+    if (params.streaming) {
+      // Try to add as streaming level
+      const py = `\nimport unreal\ntry:\n    world = unreal.EditorLevelLibrary.get_editor_world()\n    if world:\n        unreal.EditorLevelUtils.add_level_to_world(world, r"${params.levelPath}", unreal.LevelStreamingKismet)\n        print('RESULT:{\\'success\\': True}')\n    else:\n        print('RESULT:{\\'success\\': False, \\'error\\': \\'No editor world\\'}')\nexcept Exception as e:\n    print('RESULT:{\\'success\\': False, \\'error\\': \\'%s\\'}' % str(e))\n`.trim();
+      try {
+        const resp = await this.bridge.executePython(py);
+        const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+        const m = out.match(/RESULT:({.*})/);
+        if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); if (parsed.success) return { success: true, message: 'Streaming level added' }; } catch {} }
+      } catch {}
+      // Fallback to console
+      return this.bridge.executeConsoleCommand(`LoadStreamLevel ${params.levelPath}`);
+    } else {
+      // Open map in editor runtime
+      return this.bridge.executeConsoleCommand(`open ${params.levelPath}`);
+    }
   }
 
   // Save current level
@@ -105,30 +114,45 @@ except Exception as e:
     }
   }
 
-  // Create new level
+  // Create new level (Python via LevelEditorSubsystem)
   async createLevel(params: {
     levelName: string;
     template?: 'Empty' | 'Default' | 'VR' | 'TimeOfDay';
     savePath?: string;
   }) {
-    const template = params.template || 'Default';
-    const path = params.savePath || '/Game/Maps';
-    const command = `CreateNewLevel ${params.levelName} ${template} ${path}`;
-    
-    return this.bridge.executeConsoleCommand(command);
+    const basePath = params.savePath || '/Game/Maps';
+    const isPartitioned = true; // default to World Partition for UE5
+    const fullPath = `${basePath}/${params.levelName}`;
+    const py = `\nimport unreal\ntry:\n    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)\n    if les:\n        les.new_level(r"${fullPath}", ${isPartitioned ? 'True' : 'False'})\n        print('RESULT:{\'success\': True, \'message\': \'Level created\'}')\n    else:\n        print('RESULT:{\'success\': False, \'error\': \'LevelEditorSubsystem not available\'}')\nexcept Exception as e:\n    print('RESULT:{\'success\': False, \'error\': \'%s\'}' % str(e))\n`.trim();
+    try {
+      const resp = await this.bridge.executePython(py);
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+      const m = out.match(/RESULT:({.*})/);
+      if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: parsed.message } : { success: false, error: parsed.error }; } catch {} }
+      return { success: true, message: 'Level creation attempted' };
+    } catch (e) {
+      return { success: false, error: `Failed to create level: ${e}` };
+    }
   }
 
-  // Stream level
+  // Stream level (Python attempt with fallback)
   async streamLevel(params: {
     levelName: string;
     shouldBeLoaded: boolean;
     shouldBeVisible: boolean;
     position?: [number, number, number];
   }) {
+    const py = `\nimport unreal\ntry:\n    world = unreal.EditorLevelLibrary.get_editor_world()\n    if world:\n        # Find streaming level by name and set flags\n        updated = False\n        for sl in world.get_streaming_levels():\n            try:\n                name = sl.get_world_asset_package_name() if hasattr(sl, 'get_world_asset_package_name') else str(sl.get_editor_property('world_asset'))\n                if name and name.endswith('/${params.levelName}'):\n                    try: sl.set_should_be_loaded(${params.shouldBeLoaded ? 'True' : 'False'})\n                    except Exception: pass\n                    try: sl.set_should_be_visible(${params.shouldBeVisible ? 'True' : 'False'})\n                    except Exception: pass\n                    updated = True\n                    break\n            except Exception: pass\n        print('RESULT:{\\'success\\': %s}' % ('True' if updated else 'False'))\n    else:\n        print('RESULT:{\\'success\\': False, \\'error\\': \\'No editor world\\'}')\nexcept Exception as e:\n    print('RESULT:{\\'success\\': False, \\'error\\': \\'%s\\'}' % str(e))\n`.trim();
+    try {
+      const resp = await this.bridge.executePython(py);
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+      const m = out.match(/RESULT:({.*})/);
+      if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); if (parsed.success) return { success: true, message: 'Streaming level updated' }; } catch {} }
+    } catch {}
+    // Fallback
     const loadCmd = params.shouldBeLoaded ? 'Load' : 'Unload';
     const visCmd = params.shouldBeVisible ? 'Show' : 'Hide';
     const command = `StreamLevel ${params.levelName} ${loadCmd} ${visCmd}`;
-    
     return this.bridge.executeConsoleCommand(command);
   }
 

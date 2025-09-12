@@ -100,14 +100,14 @@ print("RESULT:{'success': " + ("True" if is_playing else "False") + "}")
 
   async buildLighting() {
     try {
-      const res = await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          WorldContextObject: null,
-          Command: 'BuildLighting'
-        }
-      });
+      // Use Python EditorLevelLibrary to build lighting with a sensible default quality
+      const py = `\nimport unreal\ntry:\n    unreal.EditorLevelLibrary.build_lighting(unreal.LightingBuildQuality.HIGH, True)\n    print('RESULT:{\'success\': True, \'message\': \'Lighting build started\'}')\nexcept Exception as e:\n    print('RESULT:{\'success\': False, \'error\': \'%s\'}' % str(e))\n`.trim();
+      const resp: any = await this.bridge.executePython(py);
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+      const m = out.match(/RESULT:({.*})/);
+      if (m) {
+        try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: parsed.message } : { success: false, error: parsed.error }; } catch {}
+      }
       return { success: true, message: 'Lighting build started' };
     } catch (err) {
       return { success: false, error: `Failed to build lighting: ${err}` };

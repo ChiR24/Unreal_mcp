@@ -120,8 +120,11 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const rotation = params.rotation || [0, 0, 0];
     const color = params.color || [255, 255, 0, 255];
     const duration = params.duration || 5.0;
-    const command = `DrawDebugCapsule ${params.center.join(' ')} ${params.halfHeight} ${params.radius} ${rotation.join(' ')} ${color.join(' ')} ${duration}`;
-    return this.bridge.executeConsoleCommand(command);
+    const [cx, cy, cz] = params.center;
+    const [rp, ry, rr] = rotation;
+    const [cr, cg, cb, ca] = color;
+    const script = `\ncenter = unreal.Vector(${cx}, ${cy}, ${cz})\nrot = unreal.Rotator(${rp}, ${ry}, ${rr})\ncolor = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)\nunreal.SystemLibrary.draw_debug_capsule(world, center, ${params.halfHeight}, ${params.radius}, rot, color, ${duration}, 1.0)\n`;
+    return this.pyDraw(script);
   }
 
   async drawDebugCone(params: {
@@ -134,11 +137,13 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     color?: [number, number, number, number];
     duration?: number;
   }) {
-    const numSides = params.numSides || 12;
     const color = params.color || [255, 0, 255, 255];
     const duration = params.duration || 5.0;
-    const command = `DrawDebugCone ${params.origin.join(' ')} ${params.direction.join(' ')} ${params.length} ${params.angleWidth} ${params.angleHeight} ${numSides} ${color.join(' ')} ${duration}`;
-    return this.bridge.executeConsoleCommand(command);
+    const [ox, oy, oz] = params.origin;
+    const [dx, dy, dz] = params.direction;
+    const [cr, cg, cb, ca] = color;
+    const script = `\norigin = unreal.Vector(${ox}, ${oy}, ${oz})\ndir = unreal.Vector(${dx}, ${dy}, ${dz})\ncolor = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)\nunreal.SystemLibrary.draw_debug_cone(world, origin, dir, ${params.length}, ${params.angleWidth}, ${params.angleHeight}, ${params.numSides || 12}, color, ${duration}, 1.0)\n`;
+    return this.pyDraw(script);
   }
 
   async drawDebugString(params: {
@@ -150,9 +155,10 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
   }) {
     const color = params.color || [255, 255, 255, 255];
     const duration = params.duration || 5.0;
-    const fontSize = params.fontSize || 1.0;
-    const command = `DrawDebugString ${params.location.join(' ')} "${params.text}" ${color.join(' ')} ${duration} ${fontSize}`;
-    return this.bridge.executeConsoleCommand(command);
+    const [x, y, z] = params.location;
+    const [r, g, b, a] = color;
+    const script = `\nloc = unreal.Vector(${x}, ${y}, ${z})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_string(world, loc, "${params.text.replace(/"/g, '\\"')}", None, color, ${duration})\n`;
+    return this.pyDraw(script);
   }
 
   async drawDebugArrow(params: {
@@ -163,12 +169,14 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     duration?: number;
     thickness?: number;
   }) {
-    const arrowSize = params.arrowSize || 10.0;
     const color = params.color || [0, 255, 255, 255];
     const duration = params.duration || 5.0;
     const thickness = params.thickness || 2.0;
-    const command = `DrawDebugArrow ${params.start.join(' ')} ${params.end.join(' ')} ${arrowSize} ${color.join(' ')} ${duration} ${thickness}`;
-    return this.bridge.executeConsoleCommand(command);
+    const [sx, sy, sz] = params.start;
+    const [ex, ey, ez] = params.end;
+    const [r, g, b, a] = color;
+    const script = `\nstart = unreal.Vector(${sx}, ${sy}, ${sz})\nend = unreal.Vector(${ex}, ${ey}, ${ez})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_arrow(world, start, end, ${params.arrowSize || 10.0}, color, ${duration}, ${thickness})\n`;
+    return this.pyDraw(script);
   }
 
   async drawDebugPoint(params: {
@@ -180,8 +188,10 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const size = params.size || 10.0;
     const color = params.color || [255, 255, 255, 255];
     const duration = params.duration || 5.0;
-    const command = `DrawDebugPoint ${params.location.join(' ')} ${size} ${color.join(' ')} ${duration}`;
-    return this.bridge.executeConsoleCommand(command);
+    const [x, y, z] = params.location;
+    const [r, g, b, a] = color;
+    const script = `\nloc = unreal.Vector(${x}, ${y}, ${z})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_point(world, loc, ${size}, color, ${duration})\n`;
+    return this.pyDraw(script);
   }
 
   async drawDebugCoordinateSystem(params: {
@@ -214,8 +224,11 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const farPlane = params.farPlane || 1000.0;
     const color = params.color || [128, 128, 255, 255];
     const duration = params.duration || 5.0;
-    const command = `DrawDebugFrustum ${params.origin.join(' ')} ${params.rotation.join(' ')} ${params.fov} ${aspectRatio} ${nearPlane} ${farPlane} ${color.join(' ')} ${duration}`;
-    return this.bridge.executeConsoleCommand(command);
+    const [ox, oy, oz] = params.origin;
+    const [rp, ry, rr] = params.rotation;
+    const [r, g, b, a] = color;
+    const script = `\norigin = unreal.Vector(${ox}, ${oy}, ${oz})\nrot = unreal.Rotator(${rp}, ${ry}, ${rr})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_frustum(world, origin, rot, ${params.fov}, ${aspectRatio}, ${nearPlane}, ${farPlane}, color, ${duration})\n`;
+    return this.pyDraw(script);
   }
 
   async clearDebugDrawings() {

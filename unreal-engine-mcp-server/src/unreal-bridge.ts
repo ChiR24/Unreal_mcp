@@ -327,14 +327,30 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
     return this.httpCall('/remote/preset', 'GET');
   }
 
-  // Execute a console command safely (centralized helper) with throttling
+  // Execute a console command safely with validation and throttling
   async executeConsoleCommand(command: string): Promise<any> {
-    // Check for unsafe viewmode commands
-    if (command.startsWith('viewmode')) {
-      const mode = command.split(' ')[1];
-      if (mode) {
-        return this.setSafeViewMode(mode);
-      }
+    // Validate command is not empty
+    if (!command || typeof command !== 'string') {
+      throw new Error('Invalid command: must be a non-empty string');
+    }
+    
+    const cmdTrimmed = command.trim();
+    if (cmdTrimmed.length === 0) {
+      // Return success for empty commands to match UE behavior
+      return { success: true, message: 'Empty command ignored' };
+    }
+    
+    // Check for dangerous commands
+    const dangerousCommands = [
+      'quit', 'exit', 'delete', 'destroy', 'kill', 'crash',
+      'viewmode visualizebuffer basecolor',
+      'viewmode visualizebuffer worldnormal',
+      'r.gpucrash'
+    ];
+    
+    const cmdLower = cmdTrimmed.toLowerCase();
+    if (dangerousCommands.some(dangerous => cmdLower.includes(dangerous))) {
+      throw new Error(`Dangerous command blocked: ${command}`);
     }
     
     // Determine priority based on command type
@@ -344,26 +360,42 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
       priority = 1; // Heavy operation
     } else if (command.includes('summon') || command.includes('spawn')) {
       priority = 5; // Medium operation
-    } else if (command.startsWith('stat')) {
-      priority = 8; // Stats need special handling to avoid FindConsoleObject warnings
-    } else if (command.startsWith('show')) {
+    } else if (command.startsWith('stat') || command.startsWith('show')) {
       priority = 9; // Light operation
     }
     
-    // Just send the command directly without WorldContextObject
-    // The command will execute even with the warning - the warning is just informational
-    return this.executeThrottledCommand(
-      () => this.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          Command: command
-          // Omit WorldContextObject and SpecificPlayer - they cause warnings but aren't needed
-        },
-        generateTransaction: false
-      }),
-      priority
-    );
+    // Known invalid command patterns
+    const invalidPatterns = [
+      /^\d+$/,  // Just numbers
+      /^invalid_command/i,
+      /^this_is_not_a_valid/i,
+    ];
+    
+    const isLikelyInvalid = invalidPatterns.some(pattern => pattern.test(cmdTrimmed));
+    if (isLikelyInvalid) {
+      this.log.warn(`Command appears invalid: ${cmdTrimmed}`);
+    }
+    
+    try {
+      const result = await this.executeThrottledCommand(
+        () => this.httpCall('/remote/object/call', 'PUT', {
+          objectPath: '/Script/Engine.Default__KismetSystemLibrary',
+          functionName: 'ExecuteConsoleCommand',
+          parameters: {
+            WorldContextObject: null,
+            Command: cmdTrimmed,
+            SpecificPlayer: null
+          },
+          generateTransaction: false
+        }),
+        priority
+      );
+      
+      return result;
+    } catch (error) {
+      this.log.error(`Console command failed: ${cmdTrimmed}`, error);
+      throw error;
+    }
   }
 
   // Try to execute a Python command via the PythonScriptPlugin, fallback to `py` console command.

@@ -95,8 +95,8 @@ try:
 
     if asset and mesh:
         try:
-            # For FoliageType, the property is just 'mesh'
-            asset.set_editor_property('mesh', mesh)
+            # For FoliageType, set the Static Mesh property (Python: 'static_mesh')
+            asset.set_editor_property('static_mesh', mesh)
             unreal.EditorAssetLibrary.save_loaded_asset(asset)
             res['asset_path'] = str(asset.get_path_name())
             res['created'] = True

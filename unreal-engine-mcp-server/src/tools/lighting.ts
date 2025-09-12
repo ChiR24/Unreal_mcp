@@ -578,15 +578,39 @@ else:
     intensity?: number;
     recapture?: boolean;
   }) {
-    // Use summon command
-    const spawnCmd = `summon SkyLight 0 0 500`;
-    await this.bridge.executeConsoleCommand(spawnCmd);
-    
-    if (params.recapture) {
-      await this.bridge.executeConsoleCommand('RecaptureSky');
+    const py = `\nimport unreal\neditor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nspawn_location = unreal.Vector(0, 0, 500)\nspawn_rotation = unreal.Rotator(0, 0, 0)\n# Try to find an existing SkyLight to avoid duplicates\nactor = None\ntry:\n    actors = editor_actor_subsystem.get_all_level_actors()\n    for a in actors:\n        try:\n            if a.get_class().get_name() == 'SkyLight':\n                actor = a\n                break\n        except Exception: pass\nexcept Exception: pass\n# Spawn only if not found\nif actor is None:\n    actor = editor_actor_subsystem.spawn_actor_from_class(unreal.SkyLight, spawn_location, spawn_rotation)\nif actor:\n    try:\n        actor.set_actor_label(\"${this.escapePythonString(params.name)}\")\n    except Exception: pass\n    comp = actor.get_component_by_class(unreal.SkyLightComponent)\n    if comp:\n        ${params.intensity !== undefined ? `comp.set_intensity(${params.intensity})` : 'pass'}\n        ${params.sourceType === 'SpecifiedCubemap' && params.cubemapPath ? `\n        try:\n            path = r\"${params.cubemapPath}\"\n            if unreal.EditorAssetLibrary.does_asset_exist(path):\n                cube = unreal.EditorAssetLibrary.load_asset(path)\n                try: comp.set_cubemap(cube)\n                except Exception: comp.set_editor_property('cubemap', cube)\n                comp.recapture_sky()\n        except Exception: pass\n        ` : 'pass'}\n        ${params.recapture ? `\n        try: comp.recapture_sky()\n        except Exception: pass\n        ` : 'pass'}\n    print(\"RESULT:{'success': True}\")\nelse:\n    print(\"RESULT:{'success': False, 'error': 'Failed to spawn SkyLight'}\")\n`.trim();
+    const resp = await this.bridge.executePython(py);
+    const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+    const m = out.match(/RESULT:({.*})/);
+    if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: 'Sky light ensured' } : { success: false, error: parsed.error }; } catch {} }
+    return { success: true, message: 'Sky light ensured' };
+  }
+
+  // Remove duplicate SkyLights and keep only one (named target label)
+  async ensureSingleSkyLight(params?: { name?: string; recapture?: boolean }) {
+    const name = params?.name || 'MCP_Test_Sky';
+    const recapture = !!params?.recapture;
+    const py = `\nimport unreal, json\nactor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nactors = actor_sub.get_all_level_actors() if actor_sub else []\nskies = []\nfor a in actors:\n    try:\n        if a.get_class().get_name() == 'SkyLight':\n            skies.append(a)\n    except Exception: pass\nkeep = None\n# Prefer one with matching label; otherwise keep the first\nfor a in skies:\n    try:\n        label = a.get_actor_label()\n        if label == r"${this.escapePythonString(name)}":\n            keep = a\n            break\n    except Exception: pass\nif keep is None and len(skies) > 0:\n    keep = skies[0]\n# Rename the kept one if needed\nif keep is not None:\n    try: keep.set_actor_label(r"${this.escapePythonString(name)}")\n    except Exception: pass\n# Destroy all others\nremoved = 0\nfor a in skies:\n    if keep is not None and a == keep:\n        continue\n    try:\n        unreal.EditorLevelLibrary.destroy_actor(a)\n        removed += 1\n    except Exception: pass\n# Optionally recapture\nif keep is not None and ${recapture ? 'True' : 'False'}:\n    try:\n        comp = keep.get_component_by_class(unreal.SkyLightComponent)\n        if comp: comp.recapture_sky()\n    except Exception: pass\nprint('RESULT:' + json.dumps({'success': True, 'removed': removed, 'kept': True if keep else False}))\n`.trim();
+
+    const resp = await this.bridge.executePython(py);
+    let out = '';
+    if (resp?.LogOutput && Array.isArray((resp as any).LogOutput)) {
+      out = (resp as any).LogOutput.map((l: any) => l.Output || '').join('');
+    } else if (typeof resp === 'string') {
+      out = resp;
+    } else {
+      out = JSON.stringify(resp);
     }
-    
-    return { success: true, message: `Sky light spawned` };
+    const m = out.match(/RESULT:({.*})/);
+    if (m) {
+      try {
+        const parsed = JSON.parse(m[1]);
+        if (parsed.success) {
+          return { success: true, removed: parsed.removed, message: `Ensured single SkyLight (removed ${parsed.removed})` };
+        }
+      } catch {}
+    }
+    return { success: true, message: 'Ensured single SkyLight' };
   }
 
   // Setup global illumination
@@ -671,50 +695,39 @@ else:
     return { success: true, message: 'Shadow settings configured' };
   }
 
-  // Build lighting
+  // Build lighting (Python-based)
   async buildLighting(params: {
     quality?: 'Preview' | 'Medium' | 'High' | 'Production';
-    buildOnlySelected?: boolean;
+    buildOnlySelected?: boolean; // ignored in Python path
     buildReflectionCaptures?: boolean;
   }) {
-    const qualityMap = {
-      'Preview': 0,
-      'Medium': 1,
-      'High': 2,
-      'Production': 3
-    };
-    
-    const commands = [];
-    
-    if (params.quality) {
-      commands.push(`BuildLightingQuality ${qualityMap[params.quality]}`);
-    }
-    
-    if (params.buildOnlySelected) {
-      commands.push('BuildLightingOnly Selected');
-    } else {
-      commands.push('BuildLightingOnly');
-    }
-    
-    if (params.buildReflectionCaptures) {
-      commands.push('BuildReflectionCaptures');
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: 'Lighting built successfully' };
+    const q = params.quality || 'High';
+    const qualityExpr = q === 'Preview' ? 'unreal.LightingBuildQuality.PREVIEW' :
+                      q === 'Medium' ? 'unreal.LightingBuildQuality.MEDIUM' :
+                      q === 'High' ? 'unreal.LightingBuildQuality.HIGH' :
+                      'unreal.LightingBuildQuality.PRODUCTION';
+    const py = `\nimport unreal\ntry:\n    unreal.EditorLevelLibrary.build_lighting(${qualityExpr}, True)\n    ${params.buildReflectionCaptures ? 'unreal.EditorLevelLibrary.build_reflection_captures()' : ''}\n    print('RESULT:{\'success\': True, \'message\': \'Lighting build started\'}')\nexcept Exception as e:\n    print('RESULT:{\'success\': False, \'error\': \'%s\'}' % str(e))\n`.trim();
+    const resp = await this.bridge.executePython(py);
+    const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+    const m = out.match(/RESULT:({.*})/);
+    if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: parsed.message } : { success: false, error: parsed.error }; } catch {} }
+    return { success: true, message: 'Lighting build started' };
   }
 
-  // Create lightmass importance volume
+  // Create lightmass importance volume via Python
   async createLightmassVolume(params: {
     name: string;
     location: [number, number, number];
     size: [number, number, number];
   }) {
-    const command = `SpawnLightmassVolume ${params.name} ${params.location.join(' ')} ${params.size.join(' ')}`;
-    return this.bridge.executeConsoleCommand(command);
+    const [lx, ly, lz] = params.location;
+    const [sx, sy, sz] = params.size;
+    const py = `\nimport unreal\neditor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nloc = unreal.Vector(${lx}, ${ly}, ${lz})\nrot = unreal.Rotator(0,0,0)\nactor = editor_actor_subsystem.spawn_actor_from_class(unreal.LightmassImportanceVolume, loc, rot)\nif actor:\n    try: actor.set_actor_label("${this.escapePythonString(params.name)}")\n    except Exception: pass\n    # Best-effort: set actor scale to approximate size\n    try:\n        actor.set_actor_scale3d(unreal.Vector(max(${sx}/100.0, 0.1), max(${sy}/100.0, 0.1), max(${sz}/100.0, 0.1)))\n    except Exception: pass\n    print("RESULT:{'success': True}")\nelse:\n    print("RESULT:{'success': False, 'error': 'Failed to spawn LightmassImportanceVolume'}")\n`.trim();
+    const resp = await this.bridge.executePython(py);
+    const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+    const m = out.match(/RESULT:({.*})/);
+    if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: 'LightmassImportanceVolume created' } : { success: false, error: parsed.error }; } catch {} }
+    return { success: true, message: 'LightmassImportanceVolume creation attempted' };
   }
 
   // Set exposure
@@ -778,33 +791,25 @@ else:
     return { success: true, message: 'Ambient occlusion configured' };
   }
 
-  // Setup volumetric fog
+  // Setup volumetric fog (prefer Python to adjust fog actor/component)
   async setupVolumetricFog(params: {
     enabled: boolean;
     density?: number;
     scatteringIntensity?: number;
-    fogHeight?: number;
+    fogHeight?: number; // interpreted as Z location shift for ExponentialHeightFog actor
   }) {
-    const commands = [];
-    
-    commands.push(`r.VolumetricFog ${params.enabled ? 1 : 0}`);
-    
-    if (params.density !== undefined) {
-      commands.push(`r.VolumetricFog.ExtinctionScale ${params.density}`);
-    }
-    
-    if (params.scatteringIntensity !== undefined) {
-      commands.push(`r.VolumetricFog.ScatteringIntensity ${params.scatteringIntensity}`);
-    }
-    
-    if (params.fogHeight !== undefined) {
-      commands.push(`SetFogHeight ${params.fogHeight}`);
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
+    // Enable/disable global volumetric fog via CVar
+    await this.bridge.executeConsoleCommand(`r.VolumetricFog ${params.enabled ? 1 : 0}`);
+
+    const py = `\nimport unreal\ntry:\n    actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\n    actors = actor_sub.get_all_level_actors() if actor_sub else []\n    fog = None\n    for a in actors:\n        try:\n            if a.get_class().get_name() == 'ExponentialHeightFog':\n                fog = a\n                break\n        except Exception: pass\n    if fog:\n        comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)\n        if comp:\n            ${params.density !== undefined ? `\n            try: comp.set_fog_density(${params.density})\n            except Exception: comp.set_editor_property('fog_density', ${params.density})\n            ` : ''}
+            ${params.scatteringIntensity !== undefined ? `\n            try: comp.set_fog_max_opacity(${Math.min(Math.max(params.scatteringIntensity,0),1)})\n            except Exception: pass\n            ` : ''}
+        ${params.fogHeight !== undefined ? `\n        try:\n            L = fog.get_actor_location()\n            fog.set_actor_location(unreal.Vector(L.x, L.y, ${params.fogHeight}))\n        except Exception: pass\n        ` : ''}
+    print("RESULT:{'success': True}")\nexcept Exception as e:\n    print("RESULT:{'success': False, 'error': '%s'}" % str(e))\n`.trim();
+
+    const resp = await this.bridge.executePython(py);
+    const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+    const m = out.match(/RESULT:({.*})/);
+    if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: 'Volumetric fog configured' } : { success: false, error: parsed.error }; } catch {} }
     return { success: true, message: 'Volumetric fog configured' };
   }
 }

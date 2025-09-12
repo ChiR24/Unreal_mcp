@@ -191,6 +191,11 @@ Some advanced features require Python to be enabled. If Python execution fails:
 3. Reset to `viewmode lit` after testing
 4. Use batch operations for multiple commands
 5. Save all assets after material creation (File > Save All)
+6. Apply quality presets (sg.*) before individual rendering settings (r.*)
+7. Console variable priorities are permanent until editor restart:
+   - Direct commands (r.MotionBlurQuality 4) lock values
+   - Quality presets (sg.PostProcessQuality) cannot override locked values
+   - Setting to -1 does NOT reset priority
 
 ## 📊 Supported Asset Types
 
