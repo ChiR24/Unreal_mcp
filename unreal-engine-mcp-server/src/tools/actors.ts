@@ -29,9 +29,9 @@ export class ActorTools {
       return await this.spawnViaPython(params);
     } catch (pythonErr: any) {
       // Check if this is a known failure that shouldn't fall back
-      const errorStr = String(pythonErr);
-      if (errorStr.includes('abstract') || errorStr.includes('Cannot spawn') || errorStr.includes('Invalid')) {
-        // Don't try console fallback for abstract classes or invalid inputs
+      const errorStr = String(pythonErr).toLowerCase();
+      if (errorStr.includes('abstract') || errorStr.includes('class not found')) {
+        // Don't try console fallback for abstract or non-existent classes
         throw pythonErr;
       }
       
@@ -46,40 +46,29 @@ export class ActorTools {
   
   async spawnViaPython(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }) {
     try {
-      // Validate location - check explicitly for null/undefined as invalid values
-      if (params.location === null) {
+      // Normalize and validate location
+      let loc = params.location ?? { x: 0, y: 0, z: 100 };
+      if (loc === null) {
         throw new Error('Invalid location: null is not allowed');
       }
-      if (params.location === undefined) {
-        throw new Error('Invalid location: undefined is not allowed');
-      }
-      if (params.location) {
-        if (typeof params.location !== 'object' || 
-            typeof params.location.x !== 'number' ||
-            typeof params.location.y !== 'number' ||
-            typeof params.location.z !== 'number') {
-          throw new Error('Invalid location: must have numeric x, y, z properties');
-        }
+      if (typeof loc !== 'object' ||
+          typeof loc.x !== 'number' ||
+          typeof loc.y !== 'number' ||
+          typeof loc.z !== 'number') {
+        throw new Error('Invalid location: must have numeric x, y, z properties');
       }
       
-      // Validate rotation if provided
-      if (params.rotation === null) {
+      // Normalize and validate rotation
+      let rot = params.rotation ?? { pitch: 0, yaw: 0, roll: 0 };
+      if (rot === null) {
         throw new Error('Invalid rotation: null is not allowed');
       }
-      if (params.rotation === undefined) {
-        throw new Error('Invalid rotation: undefined is not allowed');
+      if (typeof rot !== 'object' ||
+          typeof rot.pitch !== 'number' ||
+          typeof rot.yaw !== 'number' ||
+          typeof rot.roll !== 'number') {
+        throw new Error('Invalid rotation: must have numeric pitch, yaw, roll properties');
       }
-      if (params.rotation) {
-        if (typeof params.rotation !== 'object' || 
-            typeof params.rotation.pitch !== 'number' ||
-            typeof params.rotation.yaw !== 'number' ||
-            typeof params.rotation.roll !== 'number') {
-          throw new Error('Invalid rotation: must have numeric pitch, yaw, roll properties');
-        }
-      }
-      
-      const loc = params.location;
-      const rot = params.rotation;
       
       // Resolve the class path
       const fullClassPath = this.resolveActorClass(params.classPath);

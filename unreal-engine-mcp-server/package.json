@@ -14,7 +14,7 @@
     "dev": "ts-node-esm src/index.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
-    "clean": "rm -rf dist",
+    "clean": "rimraf dist",
     "prepare": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -54,6 +54,7 @@
     "eslint": "^8.57.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
+    "rimraf": "^6.0.1",
     "vitest": "^1.6.0"
   }
 }

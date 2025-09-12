@@ -1,7 +1,14 @@
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export class Logger {
-  constructor(private scope: string, private level: LogLevel = 'info') {}
+  private level: LogLevel;
+
+  constructor(private scope: string, level: LogLevel = 'info') {
+    const envLevel = (process.env.LOG_LEVEL || process.env.LOGLEVEL || level).toString().toLowerCase();
+    this.level = (['debug', 'info', 'warn', 'error'] as LogLevel[]).includes(envLevel as LogLevel)
+      ? (envLevel as LogLevel)
+      : 'info';
+  }
 
   private shouldLog(level: LogLevel) {
     const order: LogLevel[] = ['debug', 'info', 'warn', 'error'];

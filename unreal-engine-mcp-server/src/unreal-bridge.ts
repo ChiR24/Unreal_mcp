@@ -35,8 +35,6 @@ export class UnrealBridge {
   private env = loadEnv();
   private log = new Logger('UnrealBridge');
   private connected = false;
-  private seq = 0;
-  private pending = new Map<number, (data: any) => void>();
   private reconnectTimer?: NodeJS.Timeout;
   private reconnectAttempts = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
@@ -51,17 +49,17 @@ export class UnrealBridge {
   private lastCommandTime = 0;
   private lastStatCommandTime = 0; // Track stat commands separately
   
-  // Safe viewmodes that won't cause crashes
+  // Safe viewmodes that won't cause crashes (per docs and testing)
   private readonly SAFE_VIEWMODES = [
-    'Lit', 'Unlit', 'Wireframe', 'DetailLighting', 
-    'LightingOnly', 'ReflectionOverride'
+    'Lit', 'Unlit', 'Wireframe', 'DetailLighting',
+    'LightingOnly', 'ReflectionOverride', 'ShaderComplexity'
   ];
   
-  // Unsafe viewmodes that can cause crashes
+  // Unsafe viewmodes that can cause crashes or instability via visualizeBuffer
   private readonly UNSAFE_VIEWMODES = [
     'BaseColor', 'WorldNormal', 'Metallic', 'Specular',
     'Roughness', 'SubsurfaceColor', 'Opacity',
-    'LightComplexity', 'ShaderComplexity', 'LightmapDensity',
+    'LightComplexity', 'LightmapDensity',
     'StationaryLightOverlap', 'CollisionPawn', 'CollisionVisibility'
   ];
   
@@ -94,14 +92,22 @@ else:
       name: 'delete_actor',
       script: `
 import unreal
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
+import json
+subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+actors = subsys.get_all_level_actors()
+found = False
 for actor in actors:
-    if actor.get_name() == "{actor_name}":
-        unreal.EditorLevelLibrary.destroy_actor(actor)
-        print(f"RESULT:{{'success': True, 'deleted': '{actor_name}'}}")
+    if not actor:
+        continue
+    label = actor.get_actor_label()
+    name = actor.get_name()
+    if label == "{actor_name}" or name == "{actor_name}" or label.lower().startswith("{actor_name}".lower()+"_"):
+        subsys.destroy_actor(actor)
+        print("RESULT:" + json.dumps({'success': True, 'deleted': label}))
+        found = True
         break
-else:
-    print(f"RESULT:{{'success': False, 'error': 'Actor not found'}}")
+if not found:
+    print("RESULT:" + json.dumps({'success': False, 'error': 'Actor not found'}))
       `.trim()
     },
     CREATE_ASSET: {
@@ -233,18 +239,11 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         }
       };
       
-      // Message handler
+      // Message handler (currently best-effort logging)
       const onMessage = (raw: WebSocket.RawData) => {
         try {
           const msg = JSON.parse(String(raw));
-          // Route reply messages with RequestId or internal mapping
-          if (msg?.RequestId && this.pending.has(msg.RequestId)) {
-            const cb = this.pending.get(msg.RequestId)!;
-            this.pending.delete(msg.RequestId);
-            cb(msg);
-          } else {
-            this.log.debug('WS message', msg);
-          }
+          this.log.debug('WS message', msg);
         } catch (e) {
           this.log.error('Failed parsing WS message', e);
         }
@@ -258,22 +257,6 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
     });
   }
 
-  private sendWs<T = any>(message: RcMessage & { RequestId?: number }): Promise<T> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket not connected');
-    }
-    const id = ++this.seq;
-    const msg = { ...message, RequestId: id };
-    return new Promise<T>((resolve, reject) => {
-      this.pending.set(id, (resp) => {
-        if (resp?.Error) return reject(new Error(resp.Error));
-        resolve(resp as T);
-      });
-      this.ws!.send(JSON.stringify(msg), (err) => {
-        if (err) reject(err);
-      });
-    });
-  }
 
   async httpCall<T = any>(path: string, method: 'GET' | 'POST' | 'PUT' = 'POST', body?: any): Promise<T> {
     const url = path.startsWith('/') ? path : `/${path}`;
@@ -592,7 +575,8 @@ finally:
         );
       
       case 'DELETE_ACTOR':
-        return this.executeConsoleCommand(`DestroyActor ${params?.actor_name}`);
+        // Use Python-based deletion to avoid unsafe console command and improve reliability
+        return this.executePythonWithResult(this.PYTHON_TEMPLATES.DELETE_ACTOR.script.replace('{actor_name}', String(params?.actor_name || '')));
       
       case 'BUILD_LIGHTING':
         return this.executeConsoleCommand('BuildLighting');
