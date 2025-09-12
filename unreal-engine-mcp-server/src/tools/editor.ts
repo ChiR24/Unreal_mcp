@@ -101,7 +101,15 @@ print("RESULT:{'success': " + ("True" if is_playing else "False") + "}")
   async buildLighting() {
     try {
       // Use Python EditorLevelLibrary to build lighting with a sensible default quality
-      const py = `\nimport unreal\ntry:\n    unreal.EditorLevelLibrary.build_lighting(unreal.LightingBuildQuality.HIGH, True)\n    print('RESULT:{\'success\': True, \'message\': \'Lighting build started\'}')\nexcept Exception as e:\n    print('RESULT:{\'success\': False, \'error\': \'%s\'}' % str(e))\n`.trim();
+      const py = `
+import unreal
+import json
+try:
+    unreal.EditorLevelLibrary.build_lighting(unreal.LightingBuildQuality.HIGH, True)
+    print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started'}))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
       const resp: any = await this.bridge.executePython(py);
       const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
       const m = out.match(/RESULT:({.*})/);

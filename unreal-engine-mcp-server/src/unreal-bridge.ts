@@ -69,7 +69,9 @@ export class UnrealBridge {
       name: 'get_all_actors',
       script: `
 import unreal
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
+# Use EditorActorSubsystem instead of deprecated EditorLevelLibrary
+subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+actors = subsys.get_all_level_actors()
 result = [{'name': a.get_name(), 'class': a.get_class().get_name(), 'path': a.get_path_name()} for a in actors]
 print(f"RESULT:{result}")
       `.trim()
@@ -82,7 +84,9 @@ location = unreal.Vector({x}, {y}, {z})
 rotation = unreal.Rotator({pitch}, {yaw}, {roll})
 actor_class = unreal.EditorAssetLibrary.load_asset("{class_path}")
 if actor_class:
-    spawned = unreal.EditorLevelLibrary.spawn_actor_from_object(actor_class, location, rotation)
+    # Use EditorActorSubsystem instead of deprecated EditorLevelLibrary
+    subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    spawned = subsys.spawn_actor_from_object(actor_class, location, rotation)
     print(f"RESULT:{{'success': True, 'actor': spawned.get_name()}}")
 else:
     print(f"RESULT:{{'success': False, 'error': 'Failed to load actor class'}}")
@@ -130,6 +134,10 @@ else:
 import unreal
 location = unreal.Vector({x}, {y}, {z})
 rotation = unreal.Rotator({pitch}, {yaw}, {roll})
+# Use LevelEditorSubsystem for viewport operations
+subsys = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+viewport_client = subsys.get_active_viewport_config_key()
+# Alternative approach using viewport
 unreal.EditorLevelLibrary.set_level_viewport_camera_info(location, rotation)
 print(f"RESULT:{{'success': True, 'location': [{x}, {y}, {z}], 'rotation': [{pitch}, {yaw}, {roll}]}}")
       `.trim()

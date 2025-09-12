@@ -18,7 +18,7 @@ export class MaterialTools {
       // Validate name doesn't contain invalid characters
       // Unreal Engine doesn't allow: spaces, dots, slashes, backslashes, pipes, angle brackets, 
       // curly braces, square brackets, parentheses, @, #, etc.
-      const invalidChars = /[\s\.\/<>\|\{\}\[\]\(\)@#\\]/;
+      const invalidChars = /[\s\.\/\<>\|\{\}\[\]\(\)@#\\]/;
       if (invalidChars.test(name)) {
         const foundChars = name.match(invalidChars);
         return { success: false, error: `Material name contains invalid characters: '${foundChars?.[0]}'. Avoid spaces, dots, slashes, backslashes, brackets, and special symbols.` };
@@ -42,40 +42,75 @@ export class MaterialTools {
       // Use the correct Unreal Engine 5 Python API
       const pythonCode = `
 import unreal
+import json
 
 try:
-    # Get the AssetTools
-    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-    
-    # Create a MaterialFactoryNew
-    factory = unreal.MaterialFactoryNew()
-    
-    # Clean up the path - remove trailing slashes
-    clean_path = '${cleanPath}'.rstrip('/')
-    
-    # Create the material asset at the specified path
-    # The path should be: /Game/FolderName and asset name separately
-    asset = asset_tools.create_asset(
-        asset_name='${name}',
-        package_path=clean_path,
-        asset_class=unreal.Material,
-        factory=factory
-    )
-    
-    if asset:
-        print("Material created successfully: ${materialPath}")
-        # Save the package
-        unreal.EditorAssetLibrary.save_asset('${materialPath}')
-        print("Material saved: ${materialPath}")
+    # Check if material already exists
+    material_path = '${materialPath}'
+    if unreal.EditorAssetLibrary.does_asset_exist(material_path):
+        print(json.dumps({"success": True, "exists": True, "path": material_path}))
     else:
-        print("Failed to create material")
+        # Get the AssetTools
+        asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+        
+        # Create a MaterialFactoryNew
+        factory = unreal.MaterialFactoryNew()
+        
+        # Clean up the path - remove trailing slashes
+        clean_path = '${cleanPath}'.rstrip('/')
+        
+        # Create the material asset at the specified path
+        # The path should be: /Game/FolderName and asset name separately
+        asset = asset_tools.create_asset(
+            asset_name='${name}',
+            package_path=clean_path,
+            asset_class=unreal.Material,
+            factory=factory
+        )
+        
+        if asset:
+            # Save the package
+            unreal.EditorAssetLibrary.save_asset(material_path)
+            print(json.dumps({"success": True, "created": True, "path": material_path}))
+        else:
+            print(json.dumps({"success": False, "error": "Failed to create material"}))
 except Exception as e:
-    print(f"Error creating material: {e}")
+    print(json.dumps({"success": False, "error": str(e)}))
 `.trim();
       
       const pyResult = await this.bridge.executePython(pythonCode);
+      
+      // Parse the Python response
+      let responseStr = '';
+      if (pyResult?.LogOutput && Array.isArray(pyResult.LogOutput)) {
+        responseStr = pyResult.LogOutput.map((log: any) => log.Output || '').join('');
+      } else if (typeof pyResult === 'string') {
+        responseStr = pyResult;
+      } else {
+        responseStr = JSON.stringify(pyResult);
+      }
+      
+      // Try to extract JSON response
+      try {
+        // Look for JSON in the output
+        const jsonMatch = responseStr.match(/\{.*\}/s);
+        if (jsonMatch) {
+          const result = JSON.parse(jsonMatch[0]);
+          if (result.success) {
+            if (result.exists) {
+              return { success: true, path: materialPath, message: `Material ${name} already exists at ${path}` };
+            } else if (result.created) {
+              return { success: true, path: materialPath, message: `Material ${name} created at ${path}` };
+            }
+          } else {
+            return { success: false, error: result.error || 'Failed to create material' };
+          }
+        }
+      } catch (parseErr) {
+        // JSON parsing failed, fall back to verification
+      }
 
-      // Verify creation using EditorAssetLibrary
+      // Fallback: Verify creation using EditorAssetLibrary
       let verify: any = {};
       try {
         verify = await this.bridge.call({
@@ -88,10 +123,11 @@ except Exception as e:
       } catch {}
 
       const exists = verify?.ReturnValue === true || verify?.Result === true;
-      if (!exists) {
-        return { success: false, error: `Material not found after creation at ${materialPath}. Check Output Log for Python errors.`, debug: pyResult };
+      if (exists) {
+        return { success: true, path: materialPath, message: `Material ${name} created at ${path}` };
+      } else {
+        return { success: false, error: `Material creation may have failed. Check Output Log for details.`, debug: responseStr };
       }
-      return { success: true, path: materialPath, message: `Material ${name} created at ${path}` };
     } catch (err) {
       return { success: false, error: `Failed to create material: ${err}` };
     }
