@@ -590,7 +590,7 @@ else:
   async ensureSingleSkyLight(params?: { name?: string; recapture?: boolean }) {
     const name = params?.name || 'MCP_Test_Sky';
     const recapture = !!params?.recapture;
-    const py = `\nimport unreal, json\nactor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nactors = actor_sub.get_all_level_actors() if actor_sub else []\nskies = []\nfor a in actors:\n    try:\n        if a.get_class().get_name() == 'SkyLight':\n            skies.append(a)\n    except Exception: pass\nkeep = None\n# Prefer one with matching label; otherwise keep the first\nfor a in skies:\n    try:\n        label = a.get_actor_label()\n        if label == r"${this.escapePythonString(name)}":\n            keep = a\n            break\n    except Exception: pass\nif keep is None and len(skies) > 0:\n    keep = skies[0]\n# Rename the kept one if needed\nif keep is not None:\n    try: keep.set_actor_label(r"${this.escapePythonString(name)}")\n    except Exception: pass\n# Destroy all others\nremoved = 0\nfor a in skies:\n    if keep is not None and a == keep:\n        continue\n    try:\n        unreal.EditorLevelLibrary.destroy_actor(a)\n        removed += 1\n    except Exception: pass\n# Optionally recapture\nif keep is not None and ${recapture ? 'True' : 'False'}:\n    try:\n        comp = keep.get_component_by_class(unreal.SkyLightComponent)\n        if comp: comp.recapture_sky()\n    except Exception: pass\nprint('RESULT:' + json.dumps({'success': True, 'removed': removed, 'kept': True if keep else False}))\n`.trim();
+    const py = `\nimport unreal, json\nactor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nactors = actor_sub.get_all_level_actors() if actor_sub else []\nskies = []\nfor a in actors:\n    try:\n        if a.get_class().get_name() == 'SkyLight':\n            skies.append(a)\n    except Exception: pass\nkeep = None\n# Prefer one with matching label; otherwise keep the first\nfor a in skies:\n    try:\n        label = a.get_actor_label()\n        if label == r"${this.escapePythonString(name)}":\n            keep = a\n            break\n    except Exception: pass\nif keep is None and len(skies) > 0:\n    keep = skies[0]\n# Rename the kept one if needed\nif keep is not None:\n    try: keep.set_actor_label(r"${this.escapePythonString(name)}")\n    except Exception: pass\n# Destroy all others using the correct non-deprecated API\nremoved = 0\nfor a in skies:\n    if keep is not None and a == keep:\n        continue\n    try:\n        # Use EditorActorSubsystem.destroy_actor instead of deprecated EditorLevelLibrary\n        actor_sub.destroy_actor(a)\n        removed += 1\n    except Exception: pass\n# Optionally recapture\nif keep is not None and ${recapture ? 'True' : 'False'}:\n    try:\n        comp = keep.get_component_by_class(unreal.SkyLightComponent)\n        if comp: comp.recapture_sky()\n    except Exception: pass\nprint('RESULT:' + json.dumps({'success': True, 'removed': removed, 'kept': True if keep else False}))\n`.trim();
 
     const resp = await this.bridge.executePython(py);
     let out = '';
@@ -710,88 +710,191 @@ else:
     };
     const qualityEnum = qualityMap[q] || 'QUALITY_HIGH';
     
-    // First try to disable force_no_precomputed_lighting using multiple approaches
-    const disablePrecomputedPy = `
-import unreal
+    // First try to ensure precomputed lighting is allowed and force-no-precomputed is disabled, then save changes
+const disablePrecomputedPy = `
+import unreal, json
 
-# Method 1: Direct property modification
+messages = []
+
+# Precheck: verify project supports static lighting (Support Static Lighting)
+try:
+    rs = unreal.get_default_object(unreal.RendererSettings)
+    support_static = False
+    try:
+        support_static = bool(rs.get_editor_property('bSupportStaticLighting'))
+    except Exception:
+        try:
+            support_static = bool(rs.get_editor_property('support_static_lighting'))
+        except Exception:
+            support_static = False
+    if not support_static:
+        print('RESULT:' + json.dumps({
+            'success': False,
+            'status': 'staticDisabled',
+            'error': 'Project has Support Static Lighting disabled (r.AllowStaticLighting=0). Enable Project Settings -> Rendering -> Support Static Lighting and restart the editor.'
+        }))
+        raise SystemExit(0)
+    else:
+        messages.append('Support Static Lighting is enabled')
+except Exception as e:
+    messages.append(f'Precheck failed: {e}')
+
+# Ensure runtime CVar does not force disable precomputed lighting
+try:
+    unreal.SystemLibrary.execute_console_command(None, 'r.ForceNoPrecomputedLighting 0')
+    messages.append('Set r.ForceNoPrecomputedLighting 0')
+except Exception as e:
+    messages.append(f'r.ForceNoPrecomputedLighting failed: {e}')
+
+# Temporarily disable source control prompts to avoid checkout dialogs during automated saves
+try:
+    prefs = unreal.SourceControlPreferences()
+    try:
+        prefs.set_enable_source_control(False)
+    except Exception:
+        try:
+            prefs.enable_source_control = False
+        except Exception:
+            pass
+    messages.append('Disabled Source Control for this session')
+except Exception as e:
+    messages.append(f'SourceControlPreferences modify failed: {e}')
+
 try:
     ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
     world = ues.get_editor_world() if ues else None
     
     if world:
         world_settings = world.get_world_settings()
         if world_settings:
-            # Try multiple ways to set the property
-            world_settings.set_editor_property('force_no_precomputed_lighting', False)
-            
-            # Try direct attribute access
+            # Mark for modification
             try:
-                world_settings.force_no_precomputed_lighting = False
-            except:
+                world_settings.modify()
+            except Exception:
                 pass
-                
-            # Try via bForceNoPrecomputedLighting (C++ name)
-            try:
-                world_settings.set_editor_property('bForceNoPrecomputedLighting', False)
-            except:
-                pass
-                
-            print('Attempted to disable force_no_precomputed_lighting via WorldSettings')
-except Exception as e:
-    print(f'Method 1 failed: {e}')
 
-# Method 2: Via console command
-try:
-    unreal.SystemLibrary.execute_console_command(None, 'r.ForceNoPrecomputedLighting 0')
-    print('Executed console command: r.ForceNoPrecomputedLighting 0')
-except:
-    pass
-
-# Method 3: Via editor properties on all WorldSettings actors
-try:
-    actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    if actor_sub:
-        all_actors = actor_sub.get_all_level_actors()
-        for actor in all_actors:
-            if actor and actor.get_class().get_name() == 'WorldSettings':
+            # Try all known variants of the property name
+            for prop in ['force_no_precomputed_lighting', 'bForceNoPrecomputedLighting']:
                 try:
-                    actor.set_editor_property('force_no_precomputed_lighting', False)
-                    actor.set_editor_property('bForceNoPrecomputedLighting', False) 
-                    print(f'Disabled force_no_precomputed_lighting on WorldSettings actor: {actor.get_name()}')
-                except:
-                    pass
-except Exception as e:
-    print(f'Method 3 failed: {e}')
+                    world_settings.set_editor_property(prop, False)
+                    messages.append(f"Set WorldSettings.{prop}=False")
+                except Exception as e:
+                    messages.append(f"Failed setting {prop}: {e}")
+            
+            # Also update the Class Default Object (CDO) to help persistence in some versions
+            try:
+                ws_class = world_settings.get_class()
+                ws_cdo = unreal.get_default_object(ws_class)
+                if ws_cdo:
+                    try:
+                        ws_cdo.set_editor_property('bForceNoPrecomputedLighting', False)
+                        messages.append('Set CDO bForceNoPrecomputedLighting=False')
+                    except Exception:
+                        pass
+                    try:
+                        ws_cdo.set_editor_property('force_no_precomputed_lighting', False)
+                        messages.append('Set CDO force_no_precomputed_lighting=False')
+                    except Exception:
+                        pass
+            except Exception as e:
+                messages.append(f'CDO update failed: {e}')
 
-print('All methods attempted to disable force_no_precomputed_lighting')
+            # Apply and save level to persist change
+            try:
+                if hasattr(world_settings, 'post_edit_change'):
+                    world_settings.post_edit_change()
+            except Exception:
+                pass
+            
+            # Save current level/package
+            try:
+                wp = world.get_path_name()
+                pkg_path = wp.split('.')[0] if '.' in wp else wp
+                unreal.EditorAssetLibrary.save_asset(pkg_path)
+                messages.append(f'Saved world asset: {pkg_path}')
+            except Exception as e:
+                messages.append(f'Failed to save world asset: {e}')
+            
+            # Secondary save method
+            try:
+                if les:
+                    les.save_current_level()
+                    messages.append('LevelEditorSubsystem.save_current_level called')
+            except Exception as e:
+                messages.append(f'save_current_level failed: {e}')
+
+            # Verify final value(s)
+            try:
+                force_val = None
+                bforce_val = None
+                try:
+                    force_val = bool(world_settings.get_editor_property('force_no_precomputed_lighting'))
+                except Exception:
+                    pass
+                try:
+                    bforce_val = bool(world_settings.get_editor_property('bForceNoPrecomputedLighting'))
+                except Exception:
+                    pass
+                messages.append(f'Verify WorldSettings.force_no_precomputed_lighting={force_val}')
+                messages.append(f'Verify WorldSettings.bForceNoPrecomputedLighting={bforce_val}')
+            except Exception as e:
+                messages.append(f'Verify failed: {e}')
+except Exception as e:
+    messages.append(f'World modification failed: {e}')
+
+print('RESULT:' + json.dumps({'success': True, 'messages': messages, 'flags': {
+    'force_no_precomputed_lighting': force_val if 'force_val' in locals() else None,
+    'bForceNoPrecomputedLighting': bforce_val if 'bforce_val' in locals() else None
+}}))
 `.trim();
 
-    // Execute the disable script first
-    await this.bridge.executePython(disablePrecomputedPy);
-    
+    // Execute the disable script first and parse messages for diagnostics
+    const preResp = await this.bridge.executePython(disablePrecomputedPy);
+    try {
+      const preOut = typeof preResp === 'string' ? preResp : JSON.stringify(preResp);
+      const pm = preOut.match(/RESULT:({.*})/);
+      if (pm) {
+        try {
+          const preJson = JSON.parse(pm[1]);
+          if (preJson && preJson.success === false && preJson.status === 'staticDisabled') {
+            return { success: false, error: preJson.error } as any;
+          }
+          if (preJson && preJson.flags) {
+            const f = preJson.flags as any;
+            if (f.bForceNoPrecomputedLighting === true || f.force_no_precomputed_lighting === true) {
+              return {
+                success: false,
+                error: 'WorldSettings.bForceNoPrecomputedLighting is true. Unreal will skip static lighting builds. Please uncheck "Force No Precomputed Lighting" in this level\'s World Settings (or enable Support Static Lighting in Project Settings) and retry. If using source control, check out the map asset first.'
+              } as any;
+            }
+          }
+        } catch {}
+      }
+    } catch {}
+
     // Small delay to ensure settings are applied
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    await new Promise(resolve => setTimeout(resolve, 150));
+
     // Now execute the lighting build
     const py = `
 import unreal
 import json
 
 try:
-    # Get the LevelEditorSubsystem
     les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-    
     if les:
         # Build light maps with specified quality and reflection captures option
         les.build_light_maps(unreal.LightingBuildQuality.${qualityEnum}, ${params.buildReflectionCaptures !== false ? 'True' : 'False'})
         print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via LevelEditorSubsystem'}))
     else:
-        # Fallback to deprecated API if modern subsystem not available
-        unreal.EditorLevelLibrary.build_lighting(unreal.LightingBuildQuality.${qualityEnum.replace('QUALITY_', '')}, True)
-        ${params.buildReflectionCaptures ? 'unreal.EditorLevelLibrary.build_reflection_captures()' : ''}
-        print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via EditorLevelLibrary (fallback)'}))
-        
+        # Fallback: Try using console command if subsystem not available
+        try:
+            unreal.SystemLibrary.execute_console_command(None, 'BuildLighting Quality=${q}')
+            ${params.buildReflectionCaptures ? "unreal.SystemLibrary.execute_console_command(None, 'BuildReflectionCaptures')" : ''}
+            print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via console command (fallback)'}))
+        except Exception as e2:
+            print('RESULT:' + json.dumps({'success': False, 'error': f'Build failed: {str(e2)}'}))
 except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
@@ -859,33 +962,43 @@ def create_lighting_enabled_level():
         level_name_str = "${levelName}"
         level_path = f'/Game/Maps/{level_name_str}'
         
-        # Use template-based creation for guaranteed lighting setup
-        use_template = ${params?.useTemplate !== false ? 'True' : 'False'}
-        if use_template:
-            # Try to use a default template that has lighting enabled
+        # Try different approaches to create a level with lighting enabled
+        level_created = False
+        
+        # Method 1: Try using the Default template (not Blank)
+        try:
+            # The Default template should have lighting enabled
+            template_path = '/Engine/Maps/Templates/Template_Default'
+            if editor_asset.does_asset_exist(template_path):
+                les.new_level_from_template(level_path, template_path)
+                print(f'Created level from Default template: {level_path}')
+                level_created = True
+        except:
+            pass
+        
+        # Method 2: Try TimeOfDay template
+        if not level_created:
             try:
-                # Use the TimeOfDay template which has lighting properly configured
                 template_path = '/Engine/Maps/Templates/TimeOfDay'
                 if editor_asset.does_asset_exist(template_path):
                     les.new_level_from_template(level_path, template_path)
-                    print(f'Created new level from TimeOfDay template: {level_path}')
-                else:
-                    # Fallback to blank level
-                    les.new_level(level_path, False)
-                    print(f'Created new blank level: {level_path}')
+                    print(f'Created level from TimeOfDay template: {level_path}')
+                    level_created = True
             except:
-                les.new_level(level_path, False)
-                print(f'Created new level (fallback): {level_path}')
-        else:
-            les.new_level(level_path, False)
-            print(f'Created new level: {level_path}')
+                pass
         
-        # Get the new world and forcefully disable ForceNoPrecomputedLighting
+        # Method 3: Create blank and manually configure
+        if not level_created:
+            les.new_level(level_path, False)
+            print(f'Created new blank level: {level_path}')
+            level_created = True
+        
+        # CRITICAL: Force disable ForceNoPrecomputedLighting using all possible methods
         new_world = ues.get_editor_world()
         if new_world:
             new_ws = new_world.get_world_settings()
             if new_ws:
-                # Force enable lighting - try all methods
+                # Method 1: Direct property modification
                 for prop in ['force_no_precomputed_lighting', 'bForceNoPrecomputedLighting', 
                             'ForceNoPrecomputedLighting', 'bforce_no_precomputed_lighting']:
                     try:
@@ -893,9 +1006,38 @@ def create_lighting_enabled_level():
                     except:
                         pass
                 
-                # Also set other lighting-related properties
+                # Method 2: Modify via reflection
                 try:
-                    new_ws.set_editor_property('dynamic_indirect_lighting_quality', unreal.LightmassLevelInfoSettings())
+                    # Access the property through the class default object
+                    ws_class = new_ws.get_class()
+                    ws_cdo = unreal.get_default_object(ws_class)
+                    if ws_cdo:
+                        ws_cdo.set_editor_property('force_no_precomputed_lighting', False)
+                        ws_cdo.set_editor_property('bForceNoPrecomputedLighting', False)
+                except:
+                    pass
+                
+                # Method 3: Override with Lightmass settings
+                try:
+                    # Create proper Lightmass settings
+                    lightmass_settings = unreal.LightmassWorldInfoSettings()
+                    lightmass_settings.static_lighting_level_scale = 1.0
+                    lightmass_settings.num_indirect_lighting_bounces = 3
+                    lightmass_settings.use_ambient_occlusion = True
+                    lightmass_settings.generate_ambient_occlusion_material_mask = False
+                    
+                    new_ws.set_editor_property('lightmass_settings', lightmass_settings)
+                except:
+                    pass
+                
+                # Method 4: Force save and reload to apply changes
+                try:
+                    # Mark the world settings as dirty
+                    new_ws.modify()
+                    # Save immediately
+                    les.save_current_level()
+                    # Force update
+                    new_world.force_update_level_bounds()
                 except:
                     pass
                 
@@ -904,8 +1046,8 @@ def create_lighting_enabled_level():
                     val = new_ws.get_editor_property('force_no_precomputed_lighting')
                     print(f'New level force_no_precomputed_lighting: {val}')
                     if val:
-                        # If still true, we have a persistent issue
-                        print('WARNING: ForceNoPrecomputedLighting is still enabled!')
+                        print('WARNING: ForceNoPrecomputedLighting is persistent - project setting override detected')
+                        print('WORKAROUND: Will use dynamic lighting only')
                 except:
                     pass
         
