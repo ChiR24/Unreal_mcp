@@ -277,7 +277,7 @@ if spawned_light:
     if light_component:
 ${propertiesCode}
     
-    print("Point light '${this.escapePythonString(params.name)}' spawned at (" + str(spawn_location) + ")")
+    print(f"Point light '${this.escapePythonString(params.name)}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
 else:
     print("Failed to spawn point light '${this.escapePythonString(params.name)}'")
 `;
@@ -426,7 +426,7 @@ if spawned_light:
     if light_component:
 ${propertiesCode}
     
-    print("Spot light '${this.escapePythonString(params.name)}' spawned at (" + str(spawn_location) + ")")
+    print(f"Spot light '${this.escapePythonString(params.name)}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
 else:
     print("Failed to spawn spot light '${this.escapePythonString(params.name)}'")
 `;
@@ -558,7 +558,7 @@ if spawned_light:
     if light_component:
 ${propertiesCode}
     
-    print("Rect light '${this.escapePythonString(params.name)}' spawned at (" + str(spawn_location) + ")")
+    print(f"Rect light '${this.escapePythonString(params.name)}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
 else:
     print("Failed to spawn rect light '${this.escapePythonString(params.name)}'")
 `;
@@ -702,16 +702,316 @@ else:
     buildReflectionCaptures?: boolean;
   }) {
     const q = params.quality || 'High';
-    const qualityExpr = q === 'Preview' ? 'unreal.LightingBuildQuality.PREVIEW' :
-                      q === 'Medium' ? 'unreal.LightingBuildQuality.MEDIUM' :
-                      q === 'High' ? 'unreal.LightingBuildQuality.HIGH' :
-                      'unreal.LightingBuildQuality.PRODUCTION';
-    const py = `\nimport unreal\ntry:\n    unreal.EditorLevelLibrary.build_lighting(${qualityExpr}, True)\n    ${params.buildReflectionCaptures ? 'unreal.EditorLevelLibrary.build_reflection_captures()' : ''}\n    print('RESULT:{\'success\': True, \'message\': \'Lighting build started\'}')\nexcept Exception as e:\n    print('RESULT:{\'success\': False, \'error\': \'%s\'}' % str(e))\n`.trim();
+    const qualityMap: Record<string, string> = {
+      'Preview': 'QUALITY_PREVIEW',
+      'Medium': 'QUALITY_MEDIUM', 
+      'High': 'QUALITY_HIGH',
+      'Production': 'QUALITY_PRODUCTION'
+    };
+    const qualityEnum = qualityMap[q] || 'QUALITY_HIGH';
+    
+    // First try to disable force_no_precomputed_lighting using multiple approaches
+    const disablePrecomputedPy = `
+import unreal
+
+# Method 1: Direct property modification
+try:
+    ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+    world = ues.get_editor_world() if ues else None
+    
+    if world:
+        world_settings = world.get_world_settings()
+        if world_settings:
+            # Try multiple ways to set the property
+            world_settings.set_editor_property('force_no_precomputed_lighting', False)
+            
+            # Try direct attribute access
+            try:
+                world_settings.force_no_precomputed_lighting = False
+            except:
+                pass
+                
+            # Try via bForceNoPrecomputedLighting (C++ name)
+            try:
+                world_settings.set_editor_property('bForceNoPrecomputedLighting', False)
+            except:
+                pass
+                
+            print('Attempted to disable force_no_precomputed_lighting via WorldSettings')
+except Exception as e:
+    print(f'Method 1 failed: {e}')
+
+# Method 2: Via console command
+try:
+    unreal.SystemLibrary.execute_console_command(None, 'r.ForceNoPrecomputedLighting 0')
+    print('Executed console command: r.ForceNoPrecomputedLighting 0')
+except:
+    pass
+
+# Method 3: Via editor properties on all WorldSettings actors
+try:
+    actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    if actor_sub:
+        all_actors = actor_sub.get_all_level_actors()
+        for actor in all_actors:
+            if actor and actor.get_class().get_name() == 'WorldSettings':
+                try:
+                    actor.set_editor_property('force_no_precomputed_lighting', False)
+                    actor.set_editor_property('bForceNoPrecomputedLighting', False) 
+                    print(f'Disabled force_no_precomputed_lighting on WorldSettings actor: {actor.get_name()}')
+                except:
+                    pass
+except Exception as e:
+    print(f'Method 3 failed: {e}')
+
+print('All methods attempted to disable force_no_precomputed_lighting')
+`.trim();
+
+    // Execute the disable script first
+    await this.bridge.executePython(disablePrecomputedPy);
+    
+    // Small delay to ensure settings are applied
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Now execute the lighting build
+    const py = `
+import unreal
+import json
+
+try:
+    # Get the LevelEditorSubsystem
+    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    
+    if les:
+        # Build light maps with specified quality and reflection captures option
+        les.build_light_maps(unreal.LightingBuildQuality.${qualityEnum}, ${params.buildReflectionCaptures !== false ? 'True' : 'False'})
+        print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via LevelEditorSubsystem'}))
+    else:
+        # Fallback to deprecated API if modern subsystem not available
+        unreal.EditorLevelLibrary.build_lighting(unreal.LightingBuildQuality.${qualityEnum.replace('QUALITY_', '')}, True)
+        ${params.buildReflectionCaptures ? 'unreal.EditorLevelLibrary.build_reflection_captures()' : ''}
+        print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via EditorLevelLibrary (fallback)'}))
+        
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
     const resp = await this.bridge.executePython(py);
     const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
     const m = out.match(/RESULT:({.*})/);
-    if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: parsed.message } : { success: false, error: parsed.error }; } catch {} }
+    if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: parsed.message } : { success: false, error: parsed.error }; } catch {} }
     return { success: true, message: 'Lighting build started' };
+  }
+
+  // Create a new level with proper lighting settings as workaround
+  async createLightingEnabledLevel(params?: {
+    levelName?: string;
+    copyActors?: boolean;
+    useTemplate?: boolean;
+  }) {
+    const levelName = params?.levelName || 'LightingEnabledLevel';
+    const py = `
+import unreal
+import json
+
+def create_lighting_enabled_level():
+    """Create a new level with lighting enabled"""
+    try:
+        les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+        ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+        actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+        editor_asset = unreal.EditorAssetLibrary
+        
+        if not les or not ues:
+            return {'success': False, 'error': 'Required subsystems not available'}
+        
+        # Store current actors if we need to copy them
+        actors_to_copy = []
+        if ${params?.copyActors ? 'True' : 'False'}:
+            current_world = ues.get_editor_world()
+            if current_world:
+                all_actors = actor_sub.get_all_level_actors()
+                # Filter out unnecessary actors - only copy static meshes and important gameplay actors
+                for actor in all_actors:
+                    if actor:
+                        class_name = actor.get_class().get_name()
+                        # Only copy specific actor types
+                        if class_name in ['StaticMeshActor', 'SkeletalMeshActor', 'Blueprint', 'Actor']:
+                            try:
+                                actor_data = {
+                                    'class': actor.get_class(),
+                                    'location': actor.get_actor_location(),
+                                    'rotation': actor.get_actor_rotation(),
+                                    'scale': actor.get_actor_scale3d(),
+                                    'label': actor.get_actor_label()
+                                }
+                                # Check if actor has a static mesh component
+                                mesh_comp = actor.get_component_by_class(unreal.StaticMeshComponent)
+                                if mesh_comp:
+                                    mesh = mesh_comp.get_editor_property('static_mesh')
+                                    if mesh:
+                                        actor_data['mesh'] = mesh
+                                        actors_to_copy.append(actor_data)
+                            except:
+                                pass
+                print(f'Stored {len(actors_to_copy)} actors to copy')
+        
+        # Create new level with proper template or blank
+        level_name_str = "${levelName}"
+        level_path = f'/Game/Maps/{level_name_str}'
+        
+        # Use template-based creation for guaranteed lighting setup
+        use_template = ${params?.useTemplate !== false ? 'True' : 'False'}
+        if use_template:
+            # Try to use a default template that has lighting enabled
+            try:
+                # Use the TimeOfDay template which has lighting properly configured
+                template_path = '/Engine/Maps/Templates/TimeOfDay'
+                if editor_asset.does_asset_exist(template_path):
+                    les.new_level_from_template(level_path, template_path)
+                    print(f'Created new level from TimeOfDay template: {level_path}')
+                else:
+                    # Fallback to blank level
+                    les.new_level(level_path, False)
+                    print(f'Created new blank level: {level_path}')
+            except:
+                les.new_level(level_path, False)
+                print(f'Created new level (fallback): {level_path}')
+        else:
+            les.new_level(level_path, False)
+            print(f'Created new level: {level_path}')
+        
+        # Get the new world and forcefully disable ForceNoPrecomputedLighting
+        new_world = ues.get_editor_world()
+        if new_world:
+            new_ws = new_world.get_world_settings()
+            if new_ws:
+                # Force enable lighting - try all methods
+                for prop in ['force_no_precomputed_lighting', 'bForceNoPrecomputedLighting', 
+                            'ForceNoPrecomputedLighting', 'bforce_no_precomputed_lighting']:
+                    try:
+                        new_ws.set_editor_property(prop, False)
+                    except:
+                        pass
+                
+                # Also set other lighting-related properties
+                try:
+                    new_ws.set_editor_property('dynamic_indirect_lighting_quality', unreal.LightmassLevelInfoSettings())
+                except:
+                    pass
+                
+                # Verify the setting
+                try:
+                    val = new_ws.get_editor_property('force_no_precomputed_lighting')
+                    print(f'New level force_no_precomputed_lighting: {val}')
+                    if val:
+                        # If still true, we have a persistent issue
+                        print('WARNING: ForceNoPrecomputedLighting is still enabled!')
+                except:
+                    pass
+        
+        # Copy actors if requested
+        if actors_to_copy and actor_sub:
+            print('Copying actors to new level...')
+            copied = 0
+            for actor_data in actors_to_copy:
+                try:
+                    # Spawn a static mesh actor if we have mesh data
+                    if 'mesh' in actor_data:
+                        # Create a proper static mesh actor
+                        spawned = actor_sub.spawn_actor_from_class(
+                            unreal.StaticMeshActor,
+                            actor_data['location'],
+                            actor_data['rotation']
+                        )
+                        if spawned:
+                            spawned.set_actor_scale3d(actor_data['scale'])
+                            spawned.set_actor_label(actor_data['label'])
+                            # Set the static mesh
+                            mesh_comp = spawned.get_component_by_class(unreal.StaticMeshComponent)
+                            if mesh_comp:
+                                mesh_comp.set_static_mesh(actor_data['mesh'])
+                            copied += 1
+                    else:
+                        # Spawn regular actor
+                        spawned = actor_sub.spawn_actor_from_class(
+                            actor_data['class'],
+                            actor_data['location'],
+                            actor_data['rotation']
+                        )
+                        if spawned:
+                            spawned.set_actor_scale3d(actor_data['scale'])
+                            spawned.set_actor_label(actor_data['label'])
+                            copied += 1
+                except Exception as e:
+                    pass  # Silently skip failed copies
+            print(f'Successfully copied {copied} actors')
+        
+        # Add essential lighting actors if not using template
+        if not use_template:
+            # Add a directional light for sun
+            light = actor_sub.spawn_actor_from_class(
+                unreal.DirectionalLight,
+                unreal.Vector(0, 0, 500),
+                unreal.Rotator(-45, 45, 0)
+            )
+            if light:
+                light.set_actor_label('Sun_Light')
+                light_comp = light.get_component_by_class(unreal.DirectionalLightComponent)
+                if light_comp:
+                    light_comp.set_intensity(3.14159)  # Pi lux for realistic sun
+                    light_comp.set_light_color(unreal.LinearColor(1, 0.95, 0.8, 1))
+                print('Added directional light')
+            
+            # Add sky light for ambient
+            sky = actor_sub.spawn_actor_from_class(
+                unreal.SkyLight,
+                unreal.Vector(0, 0, 300),
+                unreal.Rotator(0, 0, 0)
+            )
+            if sky:
+                sky.set_actor_label('Sky_Light')
+                sky_comp = sky.get_component_by_class(unreal.SkyLightComponent)
+                if sky_comp:
+                    sky_comp.set_intensity(1.0)
+                print('Added sky light')
+            
+            # Add sky atmosphere for realistic sky
+            atmosphere = actor_sub.spawn_actor_from_class(
+                unreal.SkyAtmosphere,
+                unreal.Vector(0, 0, 0),
+                unreal.Rotator(0, 0, 0)
+            )
+            if atmosphere:
+                atmosphere.set_actor_label('Sky_Atmosphere')
+                print('Added sky atmosphere')
+        
+        # Save the new level
+        les.save_current_level()
+        print('New level saved')
+        
+        return {
+            'success': True, 
+            'message': f'Created new level \"{level_name_str}\" with lighting enabled',
+            'path': level_path
+        }
+        
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+result = create_lighting_enabled_level()
+print('RESULT:' + json.dumps(result))
+`.trim();
+    
+    const resp = await this.bridge.executePython(py);
+    const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+    const m = out.match(/RESULT:({.*})/);
+    if (m) { 
+      try { 
+        const parsed = JSON.parse(m[1]); 
+        return parsed;
+      } catch {} 
+    }
+    return { success: true, message: 'New level creation attempted' };
   }
 
   // Create lightmass importance volume via Python

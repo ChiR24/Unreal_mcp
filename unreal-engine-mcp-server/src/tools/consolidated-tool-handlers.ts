@@ -17,7 +17,7 @@ export async function handleConsolidatedToolCall(
 
     switch (name) {
       // 1. ASSET MANAGER
-      case 'manage_assets':
+      case 'manage_asset':
         // Validate args is not null/undefined
         if (args === null || args === undefined) {
           throw new Error('Invalid arguments: null or undefined');
@@ -322,7 +322,7 @@ export async function handleConsolidatedToolCall(
             if (!args.lightType) {
               throw new Error('Missing required parameter: lightType');
             }
-            const validLightTypes = ['directional', 'point', 'spot', 'rect'];
+            const validLightTypes = ['directional', 'point', 'spot', 'rect', 'sky'];
             const normalizedLightType = String(args.lightType).toLowerCase();
             if (!validLightTypes.includes(normalizedLightType)) {
               throw new Error(`Invalid lightType: '${args.lightType}'. Valid types are: ${validLightTypes.join(', ')}`);
@@ -822,12 +822,6 @@ export async function handleConsolidatedToolCall(
         }
         
         mappedName = 'console_command';
-        mappedArgs = args;
-        break;
-
-      // 11. VERIFICATION - Environment verification
-      case 'verify_environment':
-        mappedName = 'verify_environment';
         mappedArgs = args;
         break;
 

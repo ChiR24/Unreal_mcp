@@ -342,8 +342,57 @@ except Exception as e:
   async setMasterVolume(params: {
     volume: number; // 0.0 to 1.0
   }) {
-    const command = `SetMasterVolume ${params.volume}`;
-    return this.bridge.executeConsoleCommand(command);
+    // Clamp volume between 0 and 1
+    const vol = Math.max(0.0, Math.min(1.0, params.volume));
+    
+    // Use the proper Unreal Engine audio command
+    // Note: au.Master.Volume is the correct console variable for master volume
+    const command = `au.Master.Volume ${vol}`;
+    
+    try {
+      await this.bridge.executeConsoleCommand(command);
+      return { success: true, message: `Master volume set to ${vol}` };
+    } catch (e) {
+      // Fallback to Python method if console command fails
+      const py = `
+  import unreal
+  import json
+  try:
+      # Try using AudioMixerBlueprintLibrary if available
+      try:
+          unreal.AudioMixerBlueprintLibrary.set_overall_volume_multiplier(${vol})
+          print('RESULT:' + json.dumps({'success': True}))
+      except AttributeError:
+          # Fallback to GameplayStatics method
+          try:
+              world = unreal.EditorLevelLibrary.get_editor_world()
+              unreal.GameplayStatics.set_global_pitch_modulation(world, 1.0, 0.0)  # Reset pitch
+              unreal.GameplayStatics.set_global_time_dilation(world, 1.0)  # Reset time
+              # Note: There's no direct master volume in GameplayStatics, use sound class
+              print('RESULT:' + json.dumps({'success': False, 'error': 'Master volume control not available, use sound classes instead'}))
+          except Exception as e2:
+              print('RESULT:' + json.dumps({'success': False, 'error': str(e2)}))
+  except Exception as e:
+      print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+  `.trim();
+      
+      try {
+        const resp = await this.bridge.executePython(py);
+        const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+        const m = out.match(/RESULT:({.*})/);
+        if (m) {
+          try {
+            const parsed = JSON.parse(m[1]);
+            return parsed.success 
+              ? { success: true, message: `Master volume set to ${vol}` }
+              : { success: false, error: parsed.error };
+          } catch {}
+        }
+        return { success: true, message: `Master volume set command executed` };
+      } catch (pyError) {
+        return { success: false, error: `Failed to set master volume: ${e}` };
+      }
+    }
   }
 
   // Create ambient sound

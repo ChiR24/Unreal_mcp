@@ -270,6 +270,47 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
     const url = path.startsWith('/') ? path : `/${path}`;
     const started = Date.now();
     
+    // CRITICAL: Intercept and block dangerous console commands at HTTP level
+    if (url === '/remote/object/call' && body?.functionName === 'ExecuteConsoleCommand') {
+      const command = body?.parameters?.Command;
+      if (command && typeof command === 'string') {
+        const cmdLower = command.trim().toLowerCase();
+        
+        // List of commands that cause crashes
+        const crashCommands = [
+          'buildpaths',           // Causes access violation 0x0000000000000060
+          'rebuildnavigation',    // Can crash without nav system
+          'buildhierarchicallod', // Can crash without proper setup
+          'buildlandscapeinfo',   // Can crash without landscape
+          'rebuildselectednavigation' // Nav-related crash
+        ];
+        
+        // Check if this is a crash-inducing command
+        if (crashCommands.some(dangerous => cmdLower === dangerous || cmdLower.startsWith(dangerous + ' '))) {
+          this.log.warn(`BLOCKED dangerous command that causes crashes: ${command}`);
+          // Return a safe error response instead of executing
+          return {
+            success: false,
+            error: `Command '${command}' blocked: This command can cause Unreal Engine to crash. Use the Python API alternatives instead.`
+          } as any;
+        }
+        
+        // Also block other dangerous commands
+        const dangerousPatterns = [
+          'quit', 'exit', 'r.gpucrash', 'debug crash',
+          'viewmode visualizebuffer' // These can crash in certain states
+        ];
+        
+        if (dangerousPatterns.some(pattern => cmdLower.includes(pattern))) {
+          this.log.warn(`BLOCKED potentially dangerous command: ${command}`);
+          return {
+            success: false,
+            error: `Command '${command}' blocked for safety.`
+          } as any;
+        }
+      }
+    }
+    
     // Retry logic with exponential backoff
     let lastError: any;
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -336,7 +377,9 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
       'quit', 'exit', 'delete', 'destroy', 'kill', 'crash',
       'viewmode visualizebuffer basecolor',
       'viewmode visualizebuffer worldnormal',
-      'r.gpucrash'
+      'r.gpucrash',
+      'buildpaths', // Can cause access violation if nav system not initialized
+      'rebuildnavigation' // Can also crash without proper nav setup
     ];
     
     const cmdLower = cmdTrimmed.toLowerCase();

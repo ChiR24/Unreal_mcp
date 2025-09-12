@@ -12,6 +12,25 @@ export const toolDefinitions = [
         recursive: { type: 'boolean', description: 'List recursively' }
       },
       required: ['directory']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        assets: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              Name: { type: 'string' },
+              Path: { type: 'string' },
+              Class: { type: 'string' },
+              PackagePath: { type: 'string' }
+            }
+          }
+        },
+        error: { type: 'string' },
+        note: { type: 'string' }
+      }
     }
   },
   {
@@ -24,6 +43,15 @@ export const toolDefinitions = [
         destinationPath: { type: 'string', description: 'Project path to import to' }
       },
       required: ['sourcePath', 'destinationPath']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        paths: { type: 'array', items: { type: 'string' } },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
     }
   },
 
@@ -53,6 +81,14 @@ export const toolDefinitions = [
         }
       },
       required: ['classPath']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        actor: { type: 'string' },
+        error: { type: 'string' }
+      }
     }
   },
   {
@@ -64,6 +100,14 @@ export const toolDefinitions = [
         actorName: { type: 'string', description: 'Name of the actor to delete' }
       },
       required: ['actorName']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        deleted: { type: 'string' },
+        error: { type: 'string' }
+      }
     }
   },
 
@@ -78,6 +122,15 @@ export const toolDefinitions = [
         path: { type: 'string', description: 'Path to create material' }
       },
       required: ['name', 'path']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        materialPath: { type: 'string' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
     }
   },
   {
@@ -91,6 +144,13 @@ export const toolDefinitions = [
         slotIndex: { type: 'number', description: 'Material slot index (default: 0)' }
       },
       required: ['actorPath', 'materialPath']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
 
@@ -101,6 +161,14 @@ export const toolDefinitions = [
     inputSchema: {
       type: 'object',
       properties: {}
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        playing: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -109,6 +177,14 @@ export const toolDefinitions = [
     inputSchema: {
       type: 'object',
       properties: {}
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        playing: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -135,6 +211,14 @@ export const toolDefinitions = [
         }
       },
       required: ['location']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        location: { type: 'array', items: { type: 'number' } },
+        rotation: { type: 'array', items: { type: 'number' } }
+      }
     }
   },
 
@@ -150,6 +234,14 @@ export const toolDefinitions = [
         savePath: { type: 'string', description: 'Save location' }
       },
       required: ['name', 'skeletonPath']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        blueprintPath: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -163,6 +255,14 @@ export const toolDefinitions = [
         playRate: { type: 'number', description: 'Playback rate' }
       },
       required: ['actorName', 'montagePath']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        playing: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
 
@@ -178,6 +278,14 @@ export const toolDefinitions = [
         blendWeight: { type: 'number', description: 'Blend weight (0-1)' }
       },
       required: ['skeletonPath', 'physicsAssetName']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        ragdollActive: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -197,6 +305,15 @@ export const toolDefinitions = [
         }
       },
       required: ['actorName', 'force']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        physicsEnabled: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
     }
   },
 
@@ -219,6 +336,15 @@ export const toolDefinitions = [
         }
       },
       required: ['effectType', 'name', 'location']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        effectName: { type: 'string' },
+        effectPath: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -239,6 +365,14 @@ export const toolDefinitions = [
         scale: { type: 'number', description: 'Scale factor' }
       },
       required: ['systemPath', 'location']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        spawned: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
 
@@ -254,6 +388,14 @@ export const toolDefinitions = [
         savePath: { type: 'string', description: 'Save location' }
       },
       required: ['name', 'blueprintType']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        blueprintPath: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -267,6 +409,15 @@ export const toolDefinitions = [
         componentName: { type: 'string', description: 'Component name' }
       },
       required: ['blueprintName', 'componentType', 'componentName']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        componentAdded: { type: 'string' },
+        message: { type: 'string' },
+        warning: { type: 'string' }
+      }
     }
   },
 
@@ -281,6 +432,14 @@ export const toolDefinitions = [
         streaming: { type: 'boolean', description: 'Use streaming' }
       },
       required: ['levelPath']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        levelName: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -291,6 +450,14 @@ export const toolDefinitions = [
       properties: {
         levelName: { type: 'string', description: 'Level name' },
         savePath: { type: 'string', description: 'Save path' }
+      }
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        saved: { type: 'boolean' },
+        message: { type: 'string' }
       }
     }
   },
@@ -305,6 +472,15 @@ export const toolDefinitions = [
         shouldBeVisible: { type: 'boolean', description: 'Make visible' }
       },
       required: ['levelName', 'shouldBeLoaded', 'shouldBeVisible']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        loaded: { type: 'boolean' },
+        visible: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
 
@@ -328,6 +504,14 @@ export const toolDefinitions = [
         intensity: { type: 'number', description: 'Light intensity' }
       },
       required: ['lightType', 'name']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        lightName: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -337,6 +521,14 @@ export const toolDefinitions = [
       type: 'object',
       properties: {
         quality: { type: 'string', description: 'Quality (Preview, Medium, High, Production)' }
+      }
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        quality: { type: 'string' },
+        message: { type: 'string' }
       }
     }
   },
@@ -354,6 +546,14 @@ export const toolDefinitions = [
         materialPath: { type: 'string', description: 'Material path' }
       },
       required: ['name']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        landscapeName: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -368,6 +568,13 @@ export const toolDefinitions = [
         strength: { type: 'number', description: 'Tool strength' }
       },
       required: ['landscapeName', 'tool']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
 
@@ -383,6 +590,14 @@ export const toolDefinitions = [
         density: { type: 'number', description: 'Density' }
       },
       required: ['name', 'meshPath']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        foliageTypeName: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -403,6 +618,14 @@ export const toolDefinitions = [
         brushSize: { type: 'number', description: 'Brush size' }
       },
       required: ['foliageType', 'position']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        instancesPlaced: { type: 'number' },
+        message: { type: 'string' }
+      }
     }
   },
 
@@ -431,6 +654,13 @@ export const toolDefinitions = [
         duration: { type: 'number', description: 'Duration in seconds' }
       },
       required: ['shape', 'position']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -442,6 +672,14 @@ export const toolDefinitions = [
         mode: { type: 'string', description: 'View mode (Lit, Unlit, Wireframe, etc.)' }
       },
       required: ['mode']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        viewMode: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   },
 
@@ -456,6 +694,14 @@ export const toolDefinitions = [
         duration: { type: 'number', description: 'Duration in seconds' }
       },
       required: ['type']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        profiling: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -468,6 +714,14 @@ export const toolDefinitions = [
         verbose: { type: 'boolean', description: 'Show verbose stats' }
       },
       required: ['enabled']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        fpsVisible: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -480,6 +734,14 @@ export const toolDefinitions = [
         level: { type: 'number', description: 'Quality level (0-4)' }
       },
       required: ['category', 'level']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        qualityLevel: { type: 'number' },
+        message: { type: 'string' }
+      }
     }
   },
 
@@ -503,6 +765,14 @@ export const toolDefinitions = [
         is3D: { type: 'boolean', description: '3D or 2D sound' }
       },
       required: ['soundPath']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        soundPlaying: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -524,6 +794,14 @@ export const toolDefinitions = [
         radius: { type: 'number', description: 'Sound radius' }
       },
       required: ['name', 'soundPath', 'location']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        soundName: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   },
 
@@ -539,6 +817,14 @@ export const toolDefinitions = [
         savePath: { type: 'string', description: 'Save location' }
       },
       required: ['name']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        widgetPath: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -551,6 +837,14 @@ export const toolDefinitions = [
         visible: { type: 'boolean', description: 'Show or hide' }
       },
       required: ['widgetName', 'visible']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        widgetVisible: { type: 'boolean' },
+        message: { type: 'string' }
+      }
     }
   },
   {
@@ -575,6 +869,14 @@ export const toolDefinitions = [
         }
       },
       required: ['name']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        hudPath: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   },
 
@@ -588,6 +890,18 @@ export const toolDefinitions = [
         command: { type: 'string', description: 'Console command to execute' }
       },
       required: ['command']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        command: { type: 'string' },
+        result: { type: 'object' },
+        warning: { type: 'string' },
+        info: { type: 'string' },
+        error: { type: 'string' },
+        message: { type: 'string' }
+      }
     }
   }
 ];

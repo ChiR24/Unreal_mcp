@@ -213,8 +213,68 @@ except Exception as e:
     const zOrder = params.zOrder ?? 0;
     const playerIndex = params.playerIndex ?? 0;
     
-    const command = `AddWidgetToViewport ${params.widgetClass} ${zOrder} ${playerIndex}`;
-    return this.bridge.executeConsoleCommand(command);
+    // Use Python API to create and add widget to viewport
+    const py = `
+import unreal
+import json
+widget_path = r"${params.widgetClass}"
+z_order = ${zOrder}
+player_index = ${playerIndex}
+try:
+    # Load the widget blueprint class
+    if not unreal.EditorAssetLibrary.does_asset_exist(widget_path):
+        print('RESULT:' + json.dumps({'success': False, 'error': f'Widget class not found: {widget_path}'}))
+    else:
+        widget_bp = unreal.EditorAssetLibrary.load_asset(widget_path)
+        if not widget_bp:
+            print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to load widget blueprint'}))
+        else:
+            # Get the generated class from the widget blueprint
+            widget_class = widget_bp.generated_class() if hasattr(widget_bp, 'generated_class') else widget_bp
+            
+            # Get the world and player controller
+            world = unreal.EditorLevelLibrary.get_editor_world()
+            if not world:
+                print('RESULT:' + json.dumps({'success': False, 'error': 'No editor world available'}))
+            else:
+                # Try to get player controller
+                try:
+                    player_controller = unreal.GameplayStatics.get_player_controller(world, player_index)
+                except Exception:
+                    player_controller = None
+                
+                if not player_controller:
+                    # If no player controller in PIE, try to get the first one or create a dummy
+                    print('RESULT:' + json.dumps({'success': False, 'error': 'No player controller available. Run in PIE mode first.'}))
+                else:
+                    # Create the widget
+                    widget = unreal.WidgetBlueprintLibrary.create(world, widget_class, player_controller)
+                    if widget:
+                        # Add to viewport
+                        widget.add_to_viewport(z_order)
+                        print('RESULT:' + json.dumps({'success': True}))
+                    else:
+                        print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to create widget instance'}))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
+    
+    try {
+      const resp = await this.bridge.executePython(py);
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+      const m = out.match(/RESULT:({.*})/);
+      if (m) {
+        try {
+          const parsed = JSON.parse(m[1]);
+          return parsed.success 
+            ? { success: true, message: `Widget added to viewport with z-order ${zOrder}` }
+            : { success: false, error: parsed.error };
+        } catch {}
+      }
+      return { success: true, message: 'Widget add to viewport attempted' };
+    } catch (e) {
+      return { success: false, error: `Failed to add widget to viewport: ${e}` };
+    }
   }
 
   // Remove widget from viewport

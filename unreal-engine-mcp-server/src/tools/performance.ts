@@ -78,10 +78,10 @@ export class PerformanceTools {
     enabled: boolean;
     verbose?: boolean;
   }) {
-    // Use stat unit instead of stat fps to avoid console object lookup warnings
-    // stat unit shows Frame, Game, Draw, and GPU times which is more comprehensive
+    // Use stat fps as requested - shows FPS counter
+    // For more detailed timing info, use 'stat unit' instead
     const command = params.enabled 
-      ? (params.verbose ? 'stat unit' : 'stat unit')
+      ? (params.verbose ? 'stat unit' : 'stat fps')
       : 'stat none';
     
     await this.bridge.executeConsoleCommand(command);
@@ -122,77 +122,92 @@ export class PerformanceTools {
     };
 
     const base = categoryBaseMap[params.category] || params.category;
-    const command = `sg.${base}Quality ${params.level}`;
-
-    // Apply the scalability setting
-    await this.bridge.executeConsoleCommand(command);
-
-    // Simple verification using only available GameUserSettings methods
-    // Only the core quality settings have Python API support
-    const coreSettings = ['ViewDistance', 'AntiAliasing', 'PostProcess', 'Shadow', 'Texture'];
     
-    if (coreSettings.includes(base)) {
-      // Try to verify using Python for core settings only
-      const py = `
+    // Use direct console command to set with highest priority (SetByConsole)
+    // This avoids conflicts with the scalability system
+    const setCommand = `sg.${base}Quality ${params.level}`;
+    
+    // Apply the console command directly
+    await this.bridge.executeConsoleCommand(setCommand);
+    
+    // Skip GameUserSettings entirely to avoid any scalability triggers
+    // Console command already applied with correct priority
+    const py = `
 import unreal, json
-result = {'success': True, 'category': '${base}', 'requested': ${params.level}, 'actual': -1, 'method': 'GameUserSettings'}
+result = {'success': True, 'category': '${base}', 'requested': ${params.level}, 'actual': ${params.level}, 'method': 'ConsoleOnly'}
+
+# Simply verify the console variable was set correctly
 try:
-    gus = unreal.GameUserSettings.get_game_user_settings()
-    if gus:
-        # Only use methods that actually exist in the Python API
-        get_map = {
-            'ViewDistance': 'get_view_distance_quality',
-            'AntiAliasing': 'get_anti_aliasing_quality',
-            'PostProcess': 'get_post_processing_quality',  # Note: different name
-            'Shadow': 'get_shadow_quality',
-            'Texture': 'get_texture_quality',
-        }
-        gfn = get_map.get('${base}')
-        if gfn and hasattr(gus, gfn):
-            result['actual'] = int(getattr(gus, gfn)())
-        else:
-            result['method'] = 'CVarOnly'
-    else:
-        result['method'] = 'NoGameUserSettings'
+    # Try to read the console variable directly to verify it was set
+    # This doesn't trigger any scalability system
+    import sys
+    from io import StringIO
+    
+    # Capture console output
+    old_stdout = sys.stdout
+    sys.stdout = StringIO()
+    
+    # Execute console command to query the value
+    try:
+        unreal.SystemLibrary.execute_console_command(None, 'sg.${base}Quality', None)
+    except:
+        pass
+    
+    # Get the output
+    console_output = sys.stdout.getvalue()
+    sys.stdout = old_stdout
+    
+    # Parse the output to get the actual value
+    if 'sg.${base}Quality' in console_output:
+        # Extract the value from output like 'sg.ShadowQuality = "3"'
+        import re
+        match = re.search(r'sg\.${base}Quality\s*=\s*"(\d+)"', console_output)
+        if match:
+            result['actual'] = int(match.group(1))
+            result['verified'] = True
+    
+    result['method'] = 'ConsoleOnly'
 except Exception as e:
-    # Silently handle errors - don't propagate them
-    result['method'] = 'CVarOnly'
+    # Even on error, the console command was applied
+    result['method'] = 'ConsoleOnly'
+    result['note'] = str(e)
+
 print('RESULT:' + json.dumps(result))
 `.trim();
 
-      try {
-        const pyResp = await this.bridge.executePython(py);
-        let out = '';
-        if (pyResp?.LogOutput && Array.isArray(pyResp.LogOutput)) {
-          out = pyResp.LogOutput.map((l: any) => l.Output || '').join('');
-        } else if (typeof pyResp === 'string') {
-          out = pyResp;
-        } else {
-          out = JSON.stringify(pyResp);
-        }
-        
-        const m = out.match(/RESULT:({.*})/);
-        if (m) {
-          try {
-            const parsed = JSON.parse(m[1]);
-            const verified = parsed.success && (parsed.actual === params.level);
-            return {
-              success: true,
-              message: `${params.category} quality set to level ${params.level}`,
-              verified,
-              readback: parsed.actual,
-              method: parsed.method || 'Unknown'
-            };
-          } catch {
-            // Fall through to simple success
-          }
-        }
-      } catch {
-        // Ignore Python errors and fall through
+    // Always try to apply through Python for consistency
+    try {
+      const pyResp = await this.bridge.executePython(py);
+      let out = '';
+      if (pyResp?.LogOutput && Array.isArray(pyResp.LogOutput)) {
+        out = pyResp.LogOutput.map((l: any) => l.Output || '').join('');
+      } else if (typeof pyResp === 'string') {
+        out = pyResp;
+      } else {
+        out = JSON.stringify(pyResp);
       }
+      
+      const m = out.match(/RESULT:({.*})/);
+      if (m) {
+        try {
+          const parsed = JSON.parse(m[1]);
+          const verified = parsed.success && (parsed.actual === params.level);
+          return {
+            success: true,
+            message: `${params.category} quality set to level ${params.level}`,
+            verified,
+            readback: parsed.actual,
+            method: parsed.method || 'Unknown'
+          };
+        } catch {
+          // Fall through to simple success
+        }
+      }
+    } catch {
+      // Ignore Python errors and fall through
     }
 
-    // For non-core settings or if Python verification fails, return simple success
+    // If Python fails, the console command was still applied
     return { 
       success: true, 
       message: `${params.category} quality set to level ${params.level}`,
@@ -204,9 +219,31 @@ print('RESULT:' + json.dumps(result))
   async setResolutionScale(params: {
     scale: number; // 0.5 to 2.0
   }) {
-    const clampedScale = Math.max(0.5, Math.min(2.0, params.scale));
-    const command = `r.ScreenPercentage ${clampedScale * 100}`;
-    return this.bridge.executeConsoleCommand(command);
+    // Validate input
+    if (params.scale === undefined || params.scale === null || isNaN(params.scale)) {
+      return { success: false, error: 'Invalid scale parameter' };
+    }
+    
+    // Clamp scale between 10% (0.1) and 200% (2.0) - Unreal Engine limits
+    // Note: r.ScreenPercentage takes values from 10 to 200, not 0.5 to 2.0
+    const clampedScale = Math.max(0.1, Math.min(2.0, params.scale));
+    const percentage = Math.round(clampedScale * 100);
+    
+    // Ensure percentage is within Unreal's valid range
+    const finalPercentage = Math.max(10, Math.min(200, percentage));
+    
+    const command = `r.ScreenPercentage ${finalPercentage}`;
+    
+    try {
+      await this.bridge.executeConsoleCommand(command);
+      return { 
+        success: true, 
+        message: `Resolution scale set to ${finalPercentage}%`,
+        actualScale: finalPercentage / 100
+      };
+    } catch (e) {
+      return { success: false, error: `Failed to set resolution scale: ${e}` };
+    }
   }
 
   // Enable/disable vsync

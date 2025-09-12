@@ -24,6 +24,29 @@ export const consolidatedToolDefinitions = [
         path: { type: 'string', description: 'Save path' }
       },
       required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded' },
+        assets: { 
+          type: 'array', 
+          description: 'List of assets (for list action)',
+          items: {
+            type: 'object',
+            properties: {
+              Name: { type: 'string' },
+              Path: { type: 'string' },
+              Class: { type: 'string' },
+              PackagePath: { type: 'string' }
+            }
+          }
+        },
+        paths: { type: 'array', items: { type: 'string' }, description: 'Imported asset paths (for import)' },
+        materialPath: { type: 'string', description: 'Created material path (for create_material)' },
+        message: { type: 'string', description: 'Status message' },
+        error: { type: 'string', description: 'Error message if failed' }
+      }
     }
   },
 
@@ -70,6 +93,17 @@ export const consolidatedToolDefinitions = [
         }
       },
       required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded' },
+        actor: { type: 'string', description: 'Spawned actor name (for spawn)' },
+        deleted: { type: 'string', description: 'Deleted actor name (for delete)' },
+        physicsEnabled: { type: 'boolean', description: 'Physics state (for apply_force)' },
+        message: { type: 'string', description: 'Status message' },
+        error: { type: 'string', description: 'Error message if failed' }
+      }
     }
   },
 
@@ -109,6 +143,25 @@ export const consolidatedToolDefinitions = [
         }
       },
       required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded' },
+        playing: { type: 'boolean', description: 'PIE play state' },
+        location: { 
+          type: 'array', 
+          items: { type: 'number' },
+          description: 'Camera location [x, y, z]'
+        },
+        rotation: { 
+          type: 'array', 
+          items: { type: 'number' },
+          description: 'Camera rotation [pitch, yaw, roll]'
+        },
+        viewMode: { type: 'string', description: 'Current view mode' },
+        message: { type: 'string', description: 'Status message' }
+      }
     }
   },
 
@@ -153,6 +206,18 @@ export const consolidatedToolDefinitions = [
         }
       },
       required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded' },
+        levelName: { type: 'string', description: 'Level name' },
+        loaded: { type: 'boolean', description: 'Level loaded state' },
+        visible: { type: 'boolean', description: 'Level visibility' },
+        lightName: { type: 'string', description: 'Created light name' },
+        buildQuality: { type: 'string', description: 'Lighting build quality used' },
+        message: { type: 'string', description: 'Status message' }
+      }
     }
   },
 
@@ -182,6 +247,17 @@ export const consolidatedToolDefinitions = [
         savePath: { type: 'string', description: 'Save location' }
       },
       required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded' },
+        blueprintPath: { type: 'string', description: 'Created animation blueprint path' },
+        playing: { type: 'boolean', description: 'Montage playing state' },
+        playRate: { type: 'number', description: 'Current play rate' },
+        ragdollActive: { type: 'boolean', description: 'Ragdoll activation state' },
+        message: { type: 'string', description: 'Status message' }
+      }
     }
   },
 
@@ -228,6 +304,21 @@ export const consolidatedToolDefinitions = [
         duration: { type: 'number', description: 'Duration' }
       },
       required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded' },
+        effectName: { type: 'string', description: 'Created effect name' },
+        effectPath: { type: 'string', description: 'Effect asset path' },
+        spawned: { type: 'boolean', description: 'Whether effect was spawned in level' },
+        location: { 
+          type: 'array', 
+          items: { type: 'number' },
+          description: 'Effect location [x, y, z]'
+        },
+        message: { type: 'string', description: 'Status message' }
+      }
     }
   },
 
@@ -253,6 +344,16 @@ export const consolidatedToolDefinitions = [
         savePath: { type: 'string', description: 'Save location' }
       },
       required: ['action', 'name']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded' },
+        blueprintPath: { type: 'string', description: 'Blueprint asset path' },
+        componentAdded: { type: 'string', description: 'Added component name' },
+        message: { type: 'string', description: 'Status message' },
+        warning: { type: 'string', description: 'Warning if manual steps needed' }
+      }
     }
   },
 
@@ -294,6 +395,16 @@ export const consolidatedToolDefinitions = [
         strength: { type: 'number', description: 'Tool strength' }
       },
       required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded' },
+        landscapeName: { type: 'string', description: 'Landscape actor name' },
+        foliageTypeName: { type: 'string', description: 'Foliage type name' },
+        instancesPlaced: { type: 'number', description: 'Number of foliage instances placed' },
+        message: { type: 'string', description: 'Status message' }
+      }
     }
   },
 
@@ -342,6 +453,19 @@ export const consolidatedToolDefinitions = [
         visible: { type: 'boolean', description: 'Visibility' }
       },
       required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded' },
+        profiling: { type: 'boolean', description: 'Profiling active state' },
+        fpsVisible: { type: 'boolean', description: 'FPS display state' },
+        qualityLevel: { type: 'number', description: 'Current quality level' },
+        soundPlaying: { type: 'boolean', description: 'Sound playback state' },
+        widgetPath: { type: 'string', description: 'Created widget path' },
+        widgetVisible: { type: 'boolean', description: 'Widget visibility state' },
+        message: { type: 'string', description: 'Status message' }
+      }
     }
   },
 
@@ -355,33 +479,17 @@ export const consolidatedToolDefinitions = [
         command: { type: 'string', description: 'Console command to execute' }
       },
       required: ['command']
-    }
-  },
-
-  // 11. VERIFICATION - Read-only verification helpers
-  {
-    name: 'verify_environment',
-    description: 'Verify environment changes (foliage, landscape, scalability) to detect false successes',
-    inputSchema: {
+    },
+    outputSchema: {
       type: 'object',
       properties: {
-        action: {
-          type: 'string',
-          enum: ['foliage_type_exists', 'foliage_instances_near', 'landscape_exists', 'quality_level'],
-          description: 'Verification action'
-        },
-        // Common
-        name: { type: 'string', description: 'Name filter (e.g., foliage type name or landscape name)' },
-        // For foliage_instances_near
-        position: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
-        },
-        radius: { type: 'number', description: 'Radius for instance counting' },
-        // For quality_level
-        category: { type: 'string', description: 'Quality category to read back (e.g., Shadows, PostProcess, Texture, etc.)' }
-      },
-      required: ['action']
+        success: { type: 'boolean', description: 'Whether the command executed' },
+        command: { type: 'string', description: 'The command that was executed' },
+        result: { type: 'object', description: 'Command execution result' },
+        warning: { type: 'string', description: 'Warning if command may be unrecognized' },
+        info: { type: 'string', description: 'Additional information' },
+        error: { type: 'string', description: 'Error message if failed' }
+      }
     }
   }
 ];

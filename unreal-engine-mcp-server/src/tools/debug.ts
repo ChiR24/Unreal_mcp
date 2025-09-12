@@ -22,7 +22,13 @@ export class DebugVisualizationTools {
   private async pyDraw(scriptBody: string) {
     const script = `
 import unreal
-world = unreal.EditorLevelLibrary.get_editor_world()
+# Use modern UnrealEditorSubsystem instead of deprecated EditorLevelLibrary
+ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+if ues:
+    world = ues.get_editor_world()
+else:
+    # Fallback to deprecated API if subsystem not available
+    world = unreal.EditorLevelLibrary.get_editor_world()
 ${scriptBody}
 `.trim()
       .replace(/\r?\n/g, '\n');

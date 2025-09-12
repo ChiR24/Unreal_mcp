@@ -38,31 +38,67 @@ export class LandscapeTools {
     try {
       const pythonScript = `
 import unreal
+import json
 
-# UE 5.6 World Partition support
-world = unreal.EditorLevelLibrary.get_editor_world()
+# Get the editor world using the proper subsystem
+try:
+    editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+    world = editor_subsystem.get_editor_world() if hasattr(editor_subsystem, 'get_editor_world') else None
+except:
+    # Fallback for older API
+    try:
+        world = unreal.EditorLevelLibrary.get_editor_world()
+    except:
+        world = None
+
 is_world_partition = False
 data_layer_manager = None
 
-try:
-    # Check if World Partition is enabled (UE 5.6)
-    world_partition = world.get_world_partition()
-    is_world_partition = world_partition is not None
-    if is_world_partition:
-        # Get Data Layer Manager for UE 5.6
-        data_layer_manager = unreal.WorldPartitionBlueprintLibrary.get_data_layer_manager(world)
-except:
-    pass
+if world:
+    try:
+        # Check if World Partition is enabled (UE 5.6)
+        world_partition = world.get_world_partition()
+        is_world_partition = world_partition is not None
+        if is_world_partition:
+            # Get Data Layer Manager for UE 5.6
+            data_layer_manager = unreal.WorldPartitionBlueprintLibrary.get_data_layer_manager(world)
+    except:
+        pass
 
-# Creating landscapes requires LandscapeEditorSubsystem
+# Try to create a basic landscape using available API
 try:
-    landscape_subsystem = unreal.get_editor_subsystem(unreal.LandscapeEditorSubsystem)
+    # Use EditorLevelLibrary to spawn a landscape actor
+    location = unreal.Vector(${params.location?.[0] || 0}, ${params.location?.[1] || 0}, ${params.location?.[2] || 0})
+    rotation = unreal.Rotator(0, 0, 0)
+    
+    # Check if LandscapeSubsystem is available (not LandscapeEditorSubsystem)
+    landscape_subsystem = None
+    try:
+        landscape_subsystem = unreal.get_editor_subsystem(unreal.LandscapeSubsystem)
+    except:
+        pass
+    
     if landscape_subsystem:
-        # Note: Full landscape creation requires editor UI context
-        # This is a placeholder for the proper API call when available
-        print('RESULT:{"success": false, "error": "LandscapeEditorSubsystem API limited via Python", "world_partition": ' + str(is_world_partition).lower() + '}')
+        # Use subsystem if available
+        result = {"success": False, "error": "LandscapeSubsystem API limited via Python", "world_partition": is_world_partition}
     else:
-        print('RESULT:{"success": false, "error": "LandscapeEditorSubsystem not available"}')
+        # Landscape actors cannot be properly spawned via Python API
+        # The component registration issues are inherent to how landscapes work
+        # Direct users to the proper workflow
+        result = {
+            "success": False, 
+            "error": "Landscape creation is not supported via Python API",
+            "suggestion": "Please use Landscape Mode in the Unreal Editor toolbar:",
+            "steps": [
+                "1. Click 'Modes' dropdown in toolbar",
+                "2. Select 'Landscape'",
+                "3. Configure size and materials",
+                "4. Click 'Create' to generate landscape"
+            ],
+            "world_partition": is_world_partition
+        }
+    
+    print(f'RESULT:{json.dumps(result)}')
 except Exception as e:
     print(f'RESULT:{{"success": false, "error": "{str(e)}"}}')
 `.trim();
@@ -87,8 +123,9 @@ except Exception as e:
     // Fallback message with World Partition info
     return { 
       success: false, 
-      error: 'createLandscape requires LandscapeEditorSubsystem. For UE 5.6 with World Partition, use editor UI.',
-      worldPartitionSupport: params.enableWorldPartition ? 'Requested' : 'Not requested'
+      error: 'Landscape creation via API is limited. Please use the Unreal Editor UI to create landscapes.',
+      worldPartitionSupport: params.enableWorldPartition ? 'Requested' : 'Not requested',
+      suggestion: 'Use the Landscape Mode in the editor toolbar to create and configure landscapes'
     };
   }
 

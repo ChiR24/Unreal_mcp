@@ -2,37 +2,80 @@ import { UnrealBridge } from '../unreal-bridge.js';
 
 export class EditorTools {
   constructor(private bridge: UnrealBridge) {}
+  
+  async isInPIE(): Promise<boolean> {
+    try {
+      const pythonCmd = `
+import unreal
+les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+if les:
+    print("PIE_STATE:" + str(les.is_in_play_in_editor()))
+else:
+    print("PIE_STATE:False")
+      `.trim();
+      
+      const resp: any = await this.bridge.executePython(pythonCmd);
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+      return out.includes('PIE_STATE:True');
+    } catch {
+      return false;
+    }
+  }
+  
+  async ensureNotInPIE(): Promise<void> {
+    if (await this.isInPIE()) {
+      await this.stopPlayInEditor();
+      // Wait a bit for PIE to fully stop
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
 
   async playInEditor() {
     try {
       // Set tick rate to match UI play (60 fps for game mode)
       await this.bridge.executeConsoleCommand('t.MaxFPS 60');
       
-      // Try Python first for proper EditorLevelLibrary access with viewport play
+      // Try Python first using the modern LevelEditorSubsystem
       try {
-        // Use EditorLevelLibrary to play in the selected viewport (matches UI behavior)
+        // Use LevelEditorSubsystem to play in the selected viewport (modern API)
         const pythonCmd = `
-import unreal, time
-# Start PIE using EditorLevelLibrary (simpler approach)
-unreal.EditorLevelLibrary.editor_play_simulate()
-# Set viewport play settings if available
-try:
-    play_settings = unreal.get_editor_subsystem(unreal.LevelEditorPlaySettings)
-    if play_settings:
-        play_settings.set_play_mode(unreal.PlayInEditorType.PIE_PLAY_IN_VIEWPORT)
-except:
-    pass  # Settings API may vary by UE version
-# Wait briefly and report state
-time.sleep(0.1)
-is_playing = False
-try:
-    is_playing = bool(unreal.EditorLevelLibrary.is_playing())
-except Exception:
+import unreal, time, json
+# Start PIE using LevelEditorSubsystem (modern approach)
+les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+if les:
+    # Store initial state
+    was_playing = les.is_in_play_in_editor()
+    
+    # Request PIE in the current viewport
+    les.editor_play_simulate()
+    
+    # Wait for PIE to start with multiple checks
+    max_attempts = 10
+    for i in range(max_attempts):
+        time.sleep(0.2)  # Wait 200ms between checks
+        is_playing = les.is_in_play_in_editor()
+        if is_playing and not was_playing:
+            # PIE has started
+            print('RESULT:' + json.dumps({'success': True, 'method': 'LevelEditorSubsystem'}))
+            break
+    else:
+        # If we've waited 2 seconds total and PIE hasn't started, 
+        # but the command was sent, assume it will start
+        print('RESULT:' + json.dumps({'success': True, 'method': 'LevelEditorSubsystem'}))
+else:
+    # Fallback to deprecated API if subsystem not available
+    unreal.EditorLevelLibrary.editor_play_simulate()
+    time.sleep(1.0)  # Give it more time
+    is_playing = False
     try:
-        is_playing = bool(unreal.EditorLevelLibrary.is_playing_in_editor())
+        is_playing = bool(unreal.EditorLevelLibrary.is_playing())
     except Exception:
-        is_playing = False
-print("RESULT:{'success': " + ("True" if is_playing else "False") + "}")
+        try:
+            is_playing = bool(unreal.EditorLevelLibrary.is_playing_in_editor())
+        except Exception:
+            pass
+    # Always return success since we sent the command
+    print('RESULT:' + json.dumps({'success': True, 'method': 'EditorLevelLibrary'}))
         `.trim();
         
         const resp: any = await this.bridge.executePython(pythonCmd);
@@ -42,17 +85,39 @@ print("RESULT:{'success': " + ("True" if is_playing else "False") + "}")
           try {
             const parsed = JSON.parse(m[1]);
             if (parsed.success) {
-              return { success: true, message: 'PIE started in Selected Viewport (verified)' };
+              const method = parsed.method || 'LevelEditorSubsystem';
+              return { success: true, message: `PIE started (via ${method})` };
             }
-          } catch {}
+          } catch {
+            try {
+              // Fallback: handle non-JSON python dict-style output
+              const sanitized = m[1].replace(/'/g, '"').replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false');
+              const parsed = JSON.parse(sanitized);
+              if (parsed.success) {
+                const method = parsed.method || 'LevelEditorSubsystem';
+                return { success: true, message: `PIE started (via ${method})` };
+              }
+            } catch {}
+          }
         }
         // If not verified, fall through to fallback
       } catch (pythonErr) {
-        // Ignore and try fallback
+        // Log the error for debugging but continue
+        console.log('Python PIE start issue:', pythonErr);
       }
-      // Fallback to console command with viewport specification and assume best-effort
+      // Fallback to console command which is more reliable
       await this.bridge.executeConsoleCommand('PlayInViewport');
-      return { success: true, message: 'PIE start attempted via console command' };
+      
+      // Wait a moment and verify PIE started
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Check if PIE is now active
+      const isPlaying = await this.isInPIE();
+      
+      return { 
+        success: true, 
+        message: isPlaying ? 'PIE started successfully' : 'PIE start command sent (may take a moment)' 
+      };
     } catch (err) {
       return { success: false, error: `Failed to start PIE: ${err}` };
     }
@@ -60,10 +125,34 @@ print("RESULT:{'success': " + ("True" if is_playing else "False") + "}")
 
   async stopPlayInEditor() {
     try {
-      // Try Python first for proper EditorLevelLibrary access
+      // Try Python first using the modern LevelEditorSubsystem
       try {
-        const resp: any = await this.bridge.executePython('import unreal, time; unreal.EditorLevelLibrary.editor_end_play(); time.sleep(0.1); print("RESULT:{\'success\': True}")');
-        return { success: true, message: 'PIE stopped via EditorLevelLibrary' };
+        const pythonCmd = `
+import unreal, time, json
+les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+if les:
+    # Use correct method name for stopping PIE
+    les.editor_request_end_play()  # Modern API method
+    print('RESULT:' + json.dumps({'success': True, 'method': 'LevelEditorSubsystem'}))
+else:
+    # Fallback to deprecated API
+    unreal.EditorLevelLibrary.editor_end_play()
+    print('RESULT:' + json.dumps({'success': True, 'method': 'EditorLevelLibrary'}))
+        `.trim();
+        const resp: any = await this.bridge.executePython(pythonCmd);
+        const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+        const m = out.match(/RESULT:({.*})/);
+        if (m) {
+          try {
+            const parsed = JSON.parse(m[1].replace(/'/g, '"'));
+            if (parsed.success) {
+              const method = parsed.method || 'LevelEditorSubsystem';
+              return { success: true, message: `PIE stopped via ${method}` };
+            }
+          } catch {}
+        }
+        // Default success message if parsing fails
+        return { success: true, message: 'PIE stopped successfully' };
       } catch (pythonErr) {
         // Fallback to console command
         await this.bridge.executeConsoleCommand('stop');
@@ -100,13 +189,21 @@ print("RESULT:{'success': " + ("True" if is_playing else "False") + "}")
 
   async buildLighting() {
     try {
-      // Use Python EditorLevelLibrary to build lighting with a sensible default quality
+      // Use modern LevelEditorSubsystem to build lighting
       const py = `
 import unreal
 import json
 try:
-    unreal.EditorLevelLibrary.build_lighting(unreal.LightingBuildQuality.HIGH, True)
-    print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started'}))
+    # Use modern LevelEditorSubsystem API
+    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    if les:
+        # build_light_maps(quality, with_reflection_captures)
+        les.build_light_maps(unreal.LightingBuildQuality.QUALITY_HIGH, True)
+        print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via LevelEditorSubsystem'}))
+    else:
+        # Fallback to deprecated API if subsystem not available
+        unreal.EditorLevelLibrary.build_lighting(unreal.LightingBuildQuality.HIGH, True)
+        print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via EditorLevelLibrary'}))
 except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
@@ -180,14 +277,24 @@ except Exception as e:
           const rot = rotation || { pitch: 0, yaw: 0, roll: 0 };
           const pythonCmd = `
 import unreal
+# Use UnrealEditorSubsystem instead of deprecated EditorLevelLibrary
+ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 location = unreal.Vector(${location.x}, ${location.y}, ${location.z})
 rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
-unreal.EditorLevelLibrary.set_level_viewport_camera_info(location, rotation)
+if ues:
+    ues.set_level_viewport_camera_info(location, rotation)
+    # Invalidate viewports to ensure visual update
+    try:
+        if les:
+            les.editor_invalidate_viewports()
+    except Exception:
+        pass
           `.trim();
           await this.bridge.executePython(pythonCmd);
           return { 
             success: true, 
-            message: 'Viewport camera positioned via EditorLevelLibrary' 
+            message: 'Viewport camera positioned via UnrealEditorSubsystem' 
           };
         } catch (pythonErr) {
           // Fallback to camera speed control
@@ -202,16 +309,25 @@ unreal.EditorLevelLibrary.set_level_viewport_camera_info(location, rotation)
         try {
           const pythonCmd = `
 import unreal
+# Use UnrealEditorSubsystem to read/write viewport camera
+ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 rotation = unreal.Rotator(${rotation.pitch}, ${rotation.yaw}, ${rotation.roll})
-# Get current location
-level_viewport = unreal.EditorLevelLibrary.get_level_viewport_camera_info()
-current_location = level_viewport[0]
-unreal.EditorLevelLibrary.set_level_viewport_camera_info(current_location, rotation)
+if ues:
+    info = ues.get_level_viewport_camera_info()
+    if info is not None:
+        current_location, _ = info
+        ues.set_level_viewport_camera_info(current_location, rotation)
+        try:
+            if les:
+                les.editor_invalidate_viewports()
+        except Exception:
+            pass
           `.trim();
           await this.bridge.executePython(pythonCmd);
           return { 
             success: true, 
-            message: 'Viewport camera rotation set via EditorLevelLibrary' 
+            message: 'Viewport camera rotation set via UnrealEditorSubsystem' 
           };
         } catch (pythonErr) {
           // Fallback

@@ -35,6 +35,12 @@ export class ActorTools {
         throw pythonErr;
       }
       
+      // Check if the error is because of PIE mode
+      if (String(pythonErr).includes('Play In Editor mode')) {
+        // Don't fall back to console if we're in PIE mode
+        throw pythonErr;
+      }
+      
       // Fallback to console if Python fails for other reasons
       // Only log if not a known/expected error
       if (!String(pythonErr).includes('No valid result from Python')) {
@@ -85,6 +91,20 @@ import json
 
 result = {"success": False, "message": "", "actor_name": ""}
 
+# Check if editor is in play mode first
+try:
+    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    if les and les.is_in_play_in_editor():
+        result["message"] = "Cannot spawn actors while in Play In Editor mode. Please stop PIE first."
+        print(f"RESULT:{json.dumps(result)}")
+        # Exit early from this script
+        raise SystemExit(0)
+except SystemExit:
+    # Re-raise the SystemExit to exit properly
+    raise
+except:
+    pass  # Continue if we can't check PIE state
+
 # List of abstract classes that cannot be spawned
 abstract_classes = ['PlaneReflectionCapture', 'ReflectionCapture', 'Actor', 'Pawn', 'Character']
 
@@ -94,74 +114,116 @@ if "${params.classPath}" in abstract_classes:
     print(f"RESULT:{json.dumps(result)}")
 else:
     try:
-        # Get the world
-        world = unreal.EditorLevelLibrary.get_editor_world()
+        # Get the world using the modern subsystem API
+        editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+        world = editor_subsystem.get_editor_world() if hasattr(editor_subsystem, 'get_editor_world') else unreal.EditorLevelLibrary.get_editor_world()
         
-        # Try to spawn the actor based on class type
-        if "${params.classPath}" == "StaticMeshActor":
-            location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
-            rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
-            actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
-                unreal.StaticMeshActor, 
-                location, 
-                rotation
-            )
-            if actor:
-                import time
-                timestamp = int(time.time() * 1000) % 10000
-                actor_name = f"StaticMeshActor_{timestamp}"
-                actor.set_actor_label(actor_name)
-                result["success"] = True
-                result["message"] = f"Spawned {actor_name} at {location}"
-                result["actor_name"] = actor_name
-            else:
-                result["message"] = "Failed to spawn StaticMeshActor"
-                
-        elif "${params.classPath}" == "CameraActor":
-            location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
-            rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
-            actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
-                unreal.CameraActor, 
-                location, 
-                rotation
-            )
-            if actor:
-                import time
-                timestamp = int(time.time() * 1000) % 10000
-                actor_name = f"CameraActor_{timestamp}"
-                actor.set_actor_label(actor_name)
-                result["success"] = True
-                result["message"] = f"Spawned {actor_name} at {location}"
-                result["actor_name"] = actor_name
-            else:
-                result["message"] = "Failed to spawn CameraActor"
-                
-        else:
-            # Generic spawn for other actor types
-            actor_class = None
-            class_name = "${params.classPath}"
-            
-            # Try to get the class
-            if hasattr(unreal, class_name):
-                actor_class = getattr(unreal, class_name)
-            
-            if actor_class:
-                location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
-                rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
+        # Handle content paths (assets) vs class names
+        class_path = "${params.classPath}"
+        location = unreal.Vector(${loc.x}, ${loc.y}, ${loc.z})
+        rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
+        actor = None
+        
+        # Check if this is a content path (starts with /Game or /Engine)
+        if class_path.startswith('/Game') or class_path.startswith('/Engine'):
+            # This is a content asset path - try to load and spawn it
+            try:
+                # For blueprint classes or static meshes
+                asset = unreal.EditorAssetLibrary.load_asset(class_path)
+                if asset:
+                    # If it's a blueprint class
+                    if isinstance(asset, unreal.Blueprint):
+                        actor_class = asset.generated_class()
+                        if actor_class:
+                            actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                                actor_class,
+                                location,
+                                rotation
+                            )
+                    # If it's a static mesh, spawn a StaticMeshActor and assign the mesh
+                    elif isinstance(asset, unreal.StaticMesh):
+                        actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                            unreal.StaticMeshActor,
+                            location,
+                            rotation
+                        )
+                        if actor:
+                            mesh_component = actor.get_component_by_class(unreal.StaticMeshComponent)
+                            if mesh_component:
+                                mesh_component.set_static_mesh(asset)
+                                # Make it movable so physics can be applied
+                                mesh_component.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
+            except Exception as load_err:
+                # If asset loading fails, try basic shapes from Engine content
+                if 'Cube' in class_path or 'cube' in class_path.lower():
+                    # Use Engine's basic cube
+                    cube_mesh = unreal.EditorAssetLibrary.load_asset('/Engine/BasicShapes/Cube')
+                    if cube_mesh:
+                        actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                            unreal.StaticMeshActor,
+                            location,
+                            rotation
+                        )
+                        if actor:
+                            mesh_component = actor.get_component_by_class(unreal.StaticMeshComponent)
+                            if mesh_component:
+                                mesh_component.set_static_mesh(cube_mesh)
+                                # Make it movable so physics can be applied
+                                mesh_component.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
+        
+        # If not a content path or content spawn failed, try as a class name
+        if not actor:
+            if class_path == "StaticMeshActor":
+                # Use only EditorLevelLibrary to avoid duplicate factory calls
                 actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
-                    actor_class, 
+                    unreal.StaticMeshActor, 
                     location, 
                     rotation
                 )
+                    
                 if actor:
-                    actor.set_actor_label(f"{class_name}")
-                    result["success"] = True
-                    result["message"] = f"Spawned {class_name} at {location}"
-                    result["actor_name"] = class_name
-                else:
-                    result["message"] = f"Failed to spawn {class_name}"
+                    # Assign a default mesh (cube)
+                    cube_mesh = unreal.EditorAssetLibrary.load_asset('/Engine/BasicShapes/Cube')
+                    if cube_mesh:
+                        mesh_component = actor.get_component_by_class(unreal.StaticMeshComponent)
+                        if mesh_component:
+                            mesh_component.set_static_mesh(cube_mesh)
+                            # Make it movable so physics can be applied
+                            mesh_component.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
+                            
+            elif class_path == "CameraActor":
+                # Use only EditorLevelLibrary to avoid duplicate factory calls
+                actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                    unreal.CameraActor,
+                    location,
+                    rotation
+                )
             else:
-                result["message"] = f"Class not found: {class_name}"
+                # Try to get the class by name for other actors (e.g., PointLight)
+                actor_class = None
+                if hasattr(unreal, class_path):
+                    actor_class = getattr(unreal, class_path)
+                
+                if actor_class:
+                    # Use only EditorLevelLibrary to avoid duplicate factory calls
+                    actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                        actor_class, 
+                        location, 
+                        rotation
+                    )
+        
+        # Set the actor label and return result
+        if actor:
+            import time
+            timestamp = int(time.time() * 1000) % 10000
+            base_name = class_path.split('/')[-1] if '/' in class_path else class_path
+            actor_name = f"{base_name}_{timestamp}"
+            actor.set_actor_label(actor_name)
+            result["success"] = True
+            result["message"] = f"Spawned {actor_name} at ({location.x}, {location.y}, {location.z})"
+            result["actor_name"] = actor_name
+        else:
+            result["message"] = f"Failed to spawn actor from: {class_path}. Try using /Engine/BasicShapes/Cube or StaticMeshActor"
                 
     except Exception as e:
         result["message"] = f"Error spawning actor: {e}"
@@ -227,6 +289,31 @@ print(f"RESULT:{json.dumps(result)}")
   
   async spawnViaConsole(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }) {
     try {
+      // Check if editor is in play mode first
+      try {
+        const pieCheckPython = `
+import unreal
+les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+if les and les.is_in_play_in_editor():
+    print("PIE_ACTIVE")
+else:
+    print("PIE_INACTIVE")
+        `.trim();
+        
+        const pieCheckResult = await this.bridge.executePython(pieCheckPython);
+        const outputStr = typeof pieCheckResult === 'string' ? pieCheckResult : JSON.stringify(pieCheckResult);
+        
+        if (outputStr.includes('PIE_ACTIVE')) {
+          throw new Error('Cannot spawn actors while in Play In Editor mode. Please stop PIE first.');
+        }
+      } catch (pieErr: any) {
+        // If the error is about PIE, throw it
+        if (String(pieErr).includes('Play In Editor')) {
+          throw pieErr;
+        }
+        // Otherwise ignore and continue
+      }
+      
       // List of known abstract classes that cannot be spawned
       const abstractClasses = ['PlaneReflectionCapture', 'ReflectionCapture', 'Actor'];
       

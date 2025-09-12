@@ -167,36 +167,6 @@ Execute any UE console command:
 - ✅ Improved material creation with proper validation
 - ✅ Enhanced error handling and retry logic
 
-## ⚠️ Known Issues
-
-### WorldContext Warnings (Normal Behavior)
-- Console commands show "Deserialization error" warnings for WorldContextObject
-- **These warnings are informational only - commands still execute successfully**
-- This is expected behavior and does not affect functionality
-
-### Commands to Avoid (Cause Crashes)
-- `viewmode visualizeBuffer BaseColor`
-- `viewmode visualizeBuffer WorldNormal`
-- Rapid viewmode changes without delays
-
-### Python Operations
-Some advanced features require Python to be enabled. If Python execution fails:
-1. Check Project Settings > Plugins > Remote Control > Enable Remote Python Execution
-2. Restart Unreal Engine after configuration changes
-3. Check Output Log for Python error messages
-
-### Best Practices
-1. Add 500ms delays between console commands
-2. Clear stats with `stat none` when done
-3. Reset to `viewmode lit` after testing
-4. Use batch operations for multiple commands
-5. Save all assets after material creation (File > Save All)
-6. Apply quality presets (sg.*) before individual rendering settings (r.*)
-7. Console variable priorities are permanent until editor restart:
-   - Direct commands (r.MotionBlurQuality 4) lock values
-   - Quality presets (sg.PostProcessQuality) cannot override locked values
-   - Setting to -1 does NOT reset priority
-
 ## 📊 Supported Asset Types
 
 - Blueprints (`/Script/Engine.Blueprint`)

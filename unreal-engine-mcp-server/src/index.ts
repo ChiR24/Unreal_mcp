@@ -34,6 +34,8 @@ import {
   ListPromptsRequestSchema,
   GetPromptRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
+import { responseValidator } from './utils/response-validator.js';
+import { ErrorHandler } from './utils/error-handler.js';
 
 const log = new Logger('UE-MCP');
 
@@ -120,6 +122,16 @@ async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
 
 export async function createServer() {
   const bridge = new UnrealBridge();
+  
+  // Initialize response validation with schemas
+  log.info('Initializing response validation...');
+  const toolDefs = CONFIG.USE_CONSOLIDATED_TOOLS ? consolidatedToolDefinitions : toolDefinitions;
+  toolDefs.forEach((tool: any) => {
+    if (tool.outputSchema) {
+      responseValidator.registerSchema(tool.name, tool.outputSchema);
+    }
+  });
+  log.info(`Registered ${responseValidator.getStats().totalSchemas} output schemas for validation`);
   
   // Connect to UE5 Remote Control with retries and timeout
   const connected = await bridge.tryConnect(
@@ -365,12 +377,27 @@ export async function createServer() {
       } else {
         result = await handleToolCall(name, args, tools);
       }
+      
+      // Validate and enhance response
+      result = responseValidator.wrapResponse(name, result);
+      
       trackPerformance(startTime, true);
       return result;
     } catch (error) {
       trackPerformance(startTime, false);
-      log.error(`Tool execution failed: ${name}`, error);
-      throw error;
+      
+      // Use consistent error handling
+      const errorResponse = ErrorHandler.createErrorResponse(error, name, args);
+      log.error(`Tool execution failed: ${name}`, errorResponse);
+      
+      return {
+        content: [{
+          type: 'text',
+          text: errorResponse.message || `Failed to execute ${name}`
+        }],
+        isError: true,
+        ...errorResponse
+      };
     }
   });
 

@@ -80,15 +80,32 @@ try:
     if mesh:
         res['used_mesh'] = str(mesh.get_path_name())
 
-    # Use AssetTools to create FoliageType asset (more robust)
+    # Create FoliageType asset using alternative approach since FoliageTypeFactory doesn't exist
     asset = None
     try:
-        asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-        factory = unreal.FoliageTypeFactory()
+        # Try to create or load existing foliage type
         asset_path = f"{package_path}/{name}"
-        # Create unique asset name to avoid collisions
-        unique_asset_name, _ = asset_tools.create_unique_asset_name(asset_path, '')
-        asset = asset_tools.create_asset(unique_asset_name.split('/')[-1], package_path, unreal.FoliageType, factory)
+        
+        # Check if asset already exists
+        if unreal.EditorAssetLibrary.does_asset_exist(asset_path):
+            asset = unreal.EditorAssetLibrary.load_asset(asset_path)
+            res['note'] += '; loaded_existing'
+        else:
+            # Try to create FoliageType using new approach
+            try:
+                # Create a foliage type by duplicating a template if available
+                template_path = '/Engine/Foliage/FoliageType_Default'
+                if unreal.EditorAssetLibrary.does_asset_exist(template_path):
+                    asset = unreal.EditorAssetLibrary.duplicate_asset(template_path, asset_path)
+                    res['note'] += '; duplicated_from_template'
+                else:
+                    # As fallback, try direct creation (may not work in all UE versions)
+                    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+                    asset = asset_tools.create_asset(name, package_path, unreal.FoliageType, None)
+                    res['note'] += '; direct_creation_attempted'
+            except Exception as inner_e:
+                res['note'] += f"; creation_method_failed: {inner_e}"
+                asset = None
     except Exception as e:
         res['note'] += f"; create_asset failed: {e}"
         asset = None

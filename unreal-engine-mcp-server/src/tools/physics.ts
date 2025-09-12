@@ -643,6 +643,20 @@ import json
 
 result = {"success": False, "message": "", "actor_found": False, "physics_enabled": False}
 
+# Check if editor is in play mode first
+try:
+    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    if les and les.is_in_play_in_editor():
+        result["message"] = "Cannot apply physics while in Play In Editor mode. Please stop PIE first."
+        print(f"RESULT:{json.dumps(result)}")
+        # Exit early from this script
+        raise SystemExit(0)
+except SystemExit:
+    # Re-raise the SystemExit to exit properly
+    raise
+except:
+    pass  # Continue if we can't check PIE state
+
 try:
     actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     actors = actor_subsystem.get_all_level_actors()
@@ -664,9 +678,23 @@ try:
                 root = actor.get_editor_property('root_component')
                 
                 if root and isinstance(root, unreal.PrimitiveComponent):
+                    # Check if the component is static or movable
+                    mobility = root.get_editor_property('mobility')
+                    if mobility == unreal.ComponentMobility.STATIC:
+                        # Try to set to movable first
+                        try:
+                            root.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
+                        except:
+                            result["message"] = f"Actor {actor_label} has static mobility and cannot simulate physics"
+                            break
+                    
                     # Ensure physics is enabled
-                    root.set_simulate_physics(True)
-                    result["physics_enabled"] = True
+                    try:
+                        root.set_simulate_physics(True)
+                        result["physics_enabled"] = True
+                    except Exception as physics_err:
+                        # If we can't enable physics, try applying force anyway (some actors respond without physics sim)
+                        result["physics_enabled"] = False
                     
                     force = unreal.Vector(${params.vector[0]}, ${params.vector[1]}, ${params.vector[2]})
                     
