@@ -361,13 +361,13 @@ export const consolidatedToolDefinitions = [
   // 11. VERIFICATION - Read-only verification helpers
   {
     name: 'verify_environment',
-    description: 'Verify environment changes (foliage, landscape) to detect false successes',
+    description: 'Verify environment changes (foliage, landscape, scalability) to detect false successes',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['foliage_type_exists', 'foliage_instances_near', 'landscape_exists'],
+          enum: ['foliage_type_exists', 'foliage_instances_near', 'landscape_exists', 'quality_level'],
           description: 'Verification action'
         },
         // Common
@@ -377,7 +377,9 @@ export const consolidatedToolDefinitions = [
           type: 'object',
           properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
         },
-        radius: { type: 'number', description: 'Radius for instance counting' }
+        radius: { type: 'number', description: 'Radius for instance counting' },
+        // For quality_level
+        category: { type: 'string', description: 'Quality category to read back (e.g., Shadows, PostProcess, Texture, etc.)' }
       },
       required: ['action']
     }

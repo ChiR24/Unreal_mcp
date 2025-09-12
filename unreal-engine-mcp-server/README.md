@@ -169,6 +169,11 @@ Execute any UE console command:
 
 ## ⚠️ Known Issues
 
+### WorldContext Warnings (Normal Behavior)
+- Console commands show "Deserialization error" warnings for WorldContextObject
+- **These warnings are informational only - commands still execute successfully**
+- This is expected behavior and does not affect functionality
+
 ### Commands to Avoid (Cause Crashes)
 - `viewmode visualizeBuffer BaseColor`
 - `viewmode visualizeBuffer WorldNormal`

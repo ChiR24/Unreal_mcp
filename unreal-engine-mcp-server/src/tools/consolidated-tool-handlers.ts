@@ -699,9 +699,9 @@ export async function handleConsolidatedToolCall(
             break;
             
           case 'set_quality':
-            // Validate category - normalize PostProcess/PostProcessing
+            // Validate category - normalize aliases and singular forms used by sg.*Quality
             const validCategories = ['ViewDistance', 'AntiAliasing', 'PostProcessing', 'PostProcess', 
-                                   'Shadows', 'GlobalIllumination', 'Reflections', 'Textures', 
+                                   'Shadows', 'Shadow', 'GlobalIllumination', 'Reflections', 'Reflection', 'Textures', 'Texture', 
                                    'Effects', 'Foliage', 'Shading'];
             if (!args.category || !validCategories.includes(args.category)) {
               throw new Error(`Invalid category: '${args.category}'. Valid categories: ${validCategories.join(', ')}`);
@@ -713,11 +713,24 @@ export async function handleConsolidatedToolCall(
             if (typeof args.level !== 'number' || !Number.isInteger(args.level) || args.level < 0 || args.level > 4) {
               throw new Error(`Invalid level: must be integer 0-4, got ${args.level}`);
             }
-            // Normalize PostProcess to PostProcessing for consistency
-            let categoryName = args.category;
-            if (categoryName === 'PostProcessing') {
-              categoryName = 'PostProcess';  // Unreal uses PostProcess not PostProcessing
-            }
+            // Normalize category to sg.<Base>Quality base (singular where needed)
+            const map: Record<string, string> = {
+              ViewDistance: 'ViewDistance',
+              AntiAliasing: 'AntiAliasing',
+              PostProcessing: 'PostProcess',
+              PostProcess: 'PostProcess',
+              Shadows: 'Shadow',
+              Shadow: 'Shadow',
+              GlobalIllumination: 'GlobalIllumination',
+              Reflections: 'Reflection',
+              Reflection: 'Reflection',
+              Textures: 'Texture',
+              Texture: 'Texture',
+              Effects: 'Effects',
+              Foliage: 'Foliage',
+              Shading: 'Shading',
+            };
+            const categoryName = map[String(args.category)] || args.category;
             mappedName = 'set_scalability';
             mappedArgs = {
               category: categoryName,

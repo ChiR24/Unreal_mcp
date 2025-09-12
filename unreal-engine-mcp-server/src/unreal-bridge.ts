@@ -45,9 +45,11 @@ export class UnrealBridge {
   // Command queue for throttling
   private commandQueue: CommandQueueItem[] = [];
   private isProcessing = false;
-  private readonly MIN_COMMAND_DELAY = 50; // Minimum delay between commands (ms)
+  private readonly MIN_COMMAND_DELAY = 100; // Increased to prevent console spam
   private readonly MAX_COMMAND_DELAY = 500; // Maximum delay for heavy operations
+  private readonly STAT_COMMAND_DELAY = 300; // Special delay for stat commands to avoid warnings
   private lastCommandTime = 0;
+  private lastStatCommandTime = 0; // Track stat commands separately
   
   // Safe viewmodes that won't cause crashes
   private readonly SAFE_VIEWMODES = [
@@ -342,18 +344,21 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
       priority = 1; // Heavy operation
     } else if (command.includes('summon') || command.includes('spawn')) {
       priority = 5; // Medium operation
-    } else if (command.startsWith('stat') || command.startsWith('show')) {
+    } else if (command.startsWith('stat')) {
+      priority = 8; // Stats need special handling to avoid FindConsoleObject warnings
+    } else if (command.startsWith('show')) {
       priority = 9; // Light operation
     }
     
+    // Just send the command directly without WorldContextObject
+    // The command will execute even with the warning - the warning is just informational
     return this.executeThrottledCommand(
       () => this.httpCall('/remote/object/call', 'PUT', {
         objectPath: '/Script/Engine.Default__KismetSystemLibrary',
         functionName: 'ExecuteConsoleCommand',
         parameters: {
-          WorldContextObject: null,
-          Command: command,
-          SpecificPlayer: null
+          Command: command
+          // Omit WorldContextObject and SpecificPlayer - they cause warnings but aren't needed
         },
         generateTransaction: false
       }),
@@ -712,7 +717,7 @@ finally:
   /**
    * Calculate appropriate delay based on command priority and type
    */
-  private calculateDelay(priority: number): number {
+  private calculateDelay(priority: number, command?: any): number {
     // Priority 1-3: Heavy operations (asset creation, lighting build)
     if (priority <= 3) {
       return this.MAX_COMMAND_DELAY;
@@ -721,7 +726,17 @@ finally:
     else if (priority <= 6) {
       return 200;
     }
-    // Priority 7-10: Light operations (console commands, queries)
+    // Priority 8: Stat commands - need special handling
+    else if (priority === 8) {
+      // Check time since last stat command to avoid FindConsoleObject warnings
+      const timeSinceLastStat = Date.now() - this.lastStatCommandTime;
+      if (timeSinceLastStat < this.STAT_COMMAND_DELAY) {
+        return this.STAT_COMMAND_DELAY;
+      }
+      this.lastStatCommandTime = Date.now();
+      return 150;
+    }
+    // Priority 7,9-10: Light operations (console commands, queries)
     else {
       return this.MIN_COMMAND_DELAY;
     }

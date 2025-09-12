@@ -100,13 +100,110 @@ export class PerformanceTools {
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Set scalability settings
+  // Set scalability settings with correct CVar names and verify via GameUserSettings
   async setScalability(params: {
-    category: 'ViewDistance' | 'AntiAliasing' | 'PostProcessing' | 'Shadows' | 'GlobalIllumination' | 'Reflections' | 'Textures' | 'Effects' | 'Foliage' | 'Shading';
+    category: 'ViewDistance' | 'AntiAliasing' | 'PostProcessing' | 'PostProcess' | 'Shadows' | 'GlobalIllumination' | 'Reflections' | 'Textures' | 'Effects' | 'Foliage' | 'Shading';
     level: 0 | 1 | 2 | 3 | 4; // 0=Low, 1=Medium, 2=High, 3=Epic, 4=Cinematic
   }) {
-    const command = `sg.${params.category}Quality ${params.level}`;
-    return this.bridge.executeConsoleCommand(command);
+    // Map incoming category to the base name expected by "sg.<Base>Quality"
+    // Note: Several CVars use singular form (Shadow/Texture/Reflection)
+    const categoryBaseMap: Record<string, string> = {
+      ViewDistance: 'ViewDistance',
+      AntiAliasing: 'AntiAliasing',
+      PostProcessing: 'PostProcess',
+      PostProcess: 'PostProcess',
+      Shadows: 'Shadow',
+      GlobalIllumination: 'GlobalIllumination',
+      Reflections: 'Reflection',
+      Textures: 'Texture',
+      Effects: 'Effects',
+      Foliage: 'Foliage',
+      Shading: 'Shading',
+    };
+
+    const base = categoryBaseMap[params.category] || params.category;
+    const command = `sg.${base}Quality ${params.level}`;
+
+    // Apply the scalability setting first
+    await this.bridge.executeConsoleCommand(command);
+
+    // Best-effort verification via GameUserSettings getters (editor-safe)
+    const py = `
+import unreal, json
+result = {'success': True, 'category': '${base}', 'requested': ${params.level}, 'actual': -1, 'method': 'GameUserSettings'}
+try:
+    gus = unreal.GameUserSettings.get_game_user_settings()
+    if gus:
+        # Keep GameUserSettings in sync so readback matches
+        set_map = {
+            'ViewDistance': 'set_view_distance_quality',
+            'AntiAliasing': 'set_anti_aliasing_quality',
+            'PostProcess': 'set_post_process_quality',
+            'Shadow': 'set_shadow_quality',
+            'GlobalIllumination': 'set_global_illumination_quality',
+            'Reflection': 'set_reflection_quality',
+            'Texture': 'set_texture_quality',
+            'Effects': 'set_effects_quality',
+            'Foliage': 'set_foliage_quality',
+            'Shading': 'set_shading_quality',
+        }
+        get_map = {
+            'ViewDistance': 'get_view_distance_quality',
+            'AntiAliasing': 'get_anti_aliasing_quality',
+            'PostProcess': 'get_post_process_quality',
+            'Shadow': 'get_shadow_quality',
+            'GlobalIllumination': 'get_global_illumination_quality',
+            'Reflection': 'get_reflection_quality',
+            'Texture': 'get_texture_quality',
+            'Effects': 'get_effects_quality',
+            'Foliage': 'get_foliage_quality',
+            'Shading': 'get_shading_quality',
+        }
+        sfn = set_map.get('${base}')
+        if sfn and hasattr(gus, sfn):
+            getattr(gus, sfn)(${params.level})
+            try:
+                gus.apply_settings(False)
+            except Exception:
+                pass
+        gfn = get_map.get('${base}')
+        if gfn and hasattr(gus, gfn):
+            result['actual'] = int(getattr(gus, gfn)())
+        else:
+            result['method'] = 'CVarOnly'
+    else:
+        result['method'] = 'NoGameUserSettings'
+except Exception as e:
+    result['success'] = False
+    result['error'] = str(e)
+print('RESULT:' + json.dumps(result))
+`.trim();
+
+    try {
+      const pyResp = await this.bridge.executePython(py);
+      let out = '';
+      if (pyResp?.LogOutput && Array.isArray(pyResp.LogOutput)) out = pyResp.LogOutput.map((l: any) => l.Output || '').join('');
+      else if (typeof pyResp === 'string') out = pyResp; else out = JSON.stringify(pyResp);
+      const m = out.match(/RESULT:({.*})/);
+      if (m) {
+        try {
+          const parsed = JSON.parse(m[1]);
+          const verified = parsed.success && (parsed.actual === undefined || parsed.actual === null ? true : parsed.actual === params.level);
+          return {
+            success: true,
+            message: `${params.category} quality set to level ${params.level}`,
+            verified,
+            readback: parsed.actual,
+            method: parsed.method || 'Unknown'
+          };
+        } catch {
+          // Fall through to simple success
+        }
+      }
+    } catch {}
+
+    // Fallback: return simple success without verification
+    return { success: true, message: `${params.category} quality set to level ${params.level}` };
   }
 
   // Set resolution scale

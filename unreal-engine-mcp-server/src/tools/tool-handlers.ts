@@ -695,6 +695,16 @@ except Exception as e:
         }
         
         switch (args.action) {
+          case 'quality_level': {
+            // Normalize category aliases for readback
+            const valid = ['ViewDistance','AntiAliasing','PostProcessing','PostProcess','Shadows','Shadow','GlobalIllumination','Reflections','Reflection','Textures','Texture','Effects','Foliage','Shading'];
+            if (!args.category || typeof args.category !== 'string' || !valid.includes(args.category)) {
+              throw new Error(`Invalid category: '${args.category}'. Valid categories: ${valid.join(', ')}`);
+            }
+            result = await tools.verificationTools.getQualityLevel(args.category);
+            message = result.success ? `Quality readback for ${args.category}: ${result.actual}` : (result.error || 'Quality readback failed');
+            break;
+          }
           case 'foliage_type_exists':
             result = await tools.verificationTools.foliageTypeExists(args.name || '');
             message = result.exists ? 

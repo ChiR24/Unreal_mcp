@@ -3,6 +3,72 @@ import { UnrealBridge } from '../unreal-bridge.js';
 export class VerificationTools {
   constructor(private bridge: UnrealBridge) {}
 
+  // Read back a scalability quality level via GameUserSettings (preferred) with safe category mapping
+  async getQualityLevel(category: string) {
+    // Normalize common aliases to correct base names used by GameUserSettings getters
+    const map: Record<string, string> = {
+      ViewDistance: 'ViewDistance',
+      AntiAliasing: 'AntiAliasing',
+      PostProcessing: 'PostProcess',
+      PostProcess: 'PostProcess',
+      Shadows: 'Shadow',
+      Shadow: 'Shadow',
+      GlobalIllumination: 'GlobalIllumination',
+      Reflections: 'Reflection',
+      Reflection: 'Reflection',
+      Textures: 'Texture',
+      Texture: 'Texture',
+      Effects: 'Effects',
+      Foliage: 'Foliage',
+      Shading: 'Shading',
+    };
+    const base = map[category] || category;
+
+    const py = `
+import unreal, json
+result = {'success': True, 'category': '${base}', 'actual': -1, 'method': 'GameUserSettings'}
+try:
+    gus = unreal.GameUserSettings.get_game_user_settings()
+    if gus:
+        mapping = {
+            'ViewDistance': 'get_view_distance_quality',
+            'AntiAliasing': 'get_anti_aliasing_quality',
+            'PostProcess': 'get_post_process_quality',
+            'Shadow': 'get_shadow_quality',
+            'GlobalIllumination': 'get_global_illumination_quality',
+            'Reflection': 'get_reflection_quality',
+            'Texture': 'get_texture_quality',
+            'Effects': 'get_effects_quality',
+            'Foliage': 'get_foliage_quality',
+            'Shading': 'get_shading_quality',
+        }
+        fn = mapping.get('${base}')
+        if fn and hasattr(gus, fn):
+            result['actual'] = int(getattr(gus, fn)())
+        else:
+            result['method'] = 'CVarOnly'
+    else:
+        result['method'] = 'NoGameUserSettings'
+except Exception as e:
+    result['success'] = False
+    result['error'] = str(e)
+print('RESULT:' + json.dumps(result))
+    `.trim();
+
+    const resp = await this.bridge.executePython(py);
+    let out = '';
+    if (resp?.LogOutput && Array.isArray(resp.LogOutput)) out = resp.LogOutput.map((l: any) => l.Output || '').join('');
+    else if (typeof resp === 'string') out = resp; else out = JSON.stringify(resp);
+    const m = out.match(/RESULT:({.*})/);
+    if (m) {
+      try {
+        const parsed = JSON.parse(m[1]);
+        return parsed;
+      } catch {}
+    }
+    return { success: false, error: 'No parseable result' };
+  }
+
   // Verify if a foliage type exists in the editor (by name)
   async foliageTypeExists(name: string) {
     // Check if the foliage type asset actually exists
