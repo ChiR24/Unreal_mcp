@@ -16,6 +16,11 @@ import { DebugVisualizationTools } from './debug.js';
 import { PerformanceTools } from './performance.js';
 import { AudioTools } from './audio.js';
 import { UITools } from './ui.js';
+import { RcTools } from './rc.js';
+import { SequenceTools } from './sequence.js';
+import { IntrospectionTools } from './introspection.js';
+import { VisualTools } from './visual.js';
+import { EngineTools } from './engine.js';
 import { Logger } from '../utils/logger.js';
 import { toVec3Object, toRotObject, toVec3Array } from '../utils/normalize.js';
 
@@ -41,6 +46,11 @@ export async function handleToolCall(
     performanceTools: PerformanceTools,
     audioTools: AudioTools,
     uiTools: UITools,
+    rcTools: RcTools,
+    sequenceTools: SequenceTools,
+    introspectionTools: IntrospectionTools,
+    visualTools: VisualTools,
+    engineTools: EngineTools,
     bridge: UnrealBridge
   }
 ) {
@@ -786,6 +796,72 @@ except Exception as e:
           };
           message = `Console command attempted: ${command} (may have failed)`;
         }
+        break;
+
+      // New tools implemented here (also used by consolidated handler)
+      case 'rc_create_preset':
+        result = await tools.rcTools.createPreset({ name: args.name, path: args.path });
+        message = result.message || (result.success ? `Preset created at ${result.presetPath}` : result.error);
+        break;
+      case 'rc_expose_actor':
+        result = await tools.rcTools.exposeActor({ presetPath: args.presetPath, actorName: args.actorName });
+        message = result.message || (result.success ? 'Actor exposed' : result.error);
+        break;
+      case 'rc_expose_property':
+        result = await tools.rcTools.exposeProperty({ presetPath: args.presetPath, objectPath: args.objectPath, propertyName: args.propertyName });
+        message = result.message || (result.success ? 'Property exposed' : result.error);
+        break;
+      case 'rc_list_fields':
+        result = await tools.rcTools.listFields({ presetPath: args.presetPath });
+        message = result.message || (result.success ? `Found ${(result.fields||[]).length} fields` : result.error);
+        break;
+      case 'rc_set_property':
+        result = await tools.rcTools.setProperty({ objectPath: args.objectPath, propertyName: args.propertyName, value: args.value });
+        message = result.message || (result.success ? 'Property set' : result.error);
+        break;
+      case 'rc_get_property':
+        result = await tools.rcTools.getProperty({ objectPath: args.objectPath, propertyName: args.propertyName });
+        message = result.message || (result.success ? 'Property retrieved' : result.error);
+        break;
+
+      case 'seq_create':
+        result = await tools.sequenceTools.create({ name: args.name, path: args.path });
+        message = result.message || (result.success ? `Sequence created at ${result.sequencePath}` : result.error);
+        break;
+      case 'seq_open':
+        result = await tools.sequenceTools.open({ path: args.path });
+        message = result.message || (result.success ? 'Sequence opened' : result.error);
+        break;
+      case 'seq_add_camera':
+        result = await tools.sequenceTools.addCamera({ spawnable: args.spawnable });
+        message = result.message || (result.success ? 'Camera added to sequence' : result.error);
+        break;
+      case 'seq_add_actor':
+        result = await tools.sequenceTools.addActor({ actorName: args.actorName });
+        message = result.message || (result.success ? 'Actor added to sequence' : result.error);
+        break;
+
+      case 'inspect_object':
+        result = await tools.introspectionTools.inspectObject({ objectPath: args.objectPath });
+        message = result.message || (result.success ? 'Object inspected' : result.error);
+        break;
+      case 'inspect_set_property':
+        result = await tools.introspectionTools.setProperty({ objectPath: args.objectPath, propertyName: args.propertyName, value: args.value });
+        message = result.message || (result.success ? 'Property set' : result.error);
+        break;
+
+      case 'take_screenshot':
+        result = await tools.visualTools.takeScreenshot({ resolution: args.resolution });
+        message = result.message || (result.success ? 'Screenshot captured' : result.error);
+        break;
+
+      case 'launch_editor':
+        result = await tools.engineTools.launchEditor({ editorExe: args.editorExe, projectPath: args.projectPath });
+        message = result.message || (result.success ? 'Launch requested' : result.error);
+        break;
+      case 'quit_editor':
+        result = await tools.engineTools.quitEditor();
+        message = result.message || (result.success ? 'Quit requested' : result.error);
         break;
 
       default:

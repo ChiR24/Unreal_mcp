@@ -411,13 +411,13 @@ export const consolidatedToolDefinitions = [
   // 9. PERFORMANCE & AUDIO - System settings
   {
     name: 'system_control',
-    description: 'Control performance, audio, and UI systems',
+    description: 'Control performance, audio, UI, screenshots, and engine lifecycle',
     inputSchema: {
       type: 'object',
       properties: {
         action: { 
           type: 'string', 
-          enum: ['profile', 'show_fps', 'set_quality', 'play_sound', 'create_widget', 'show_widget'],
+          enum: ['profile', 'show_fps', 'set_quality', 'play_sound', 'create_widget', 'show_widget', 'screenshot', 'engine_start', 'engine_quit'],
           description: 'System action'
         },
         // Performance
@@ -450,7 +450,12 @@ export const consolidatedToolDefinitions = [
           type: 'string',
           description: 'Widget type (HUD, Menu, etc.)'
         },
-        visible: { type: 'boolean', description: 'Visibility' }
+        visible: { type: 'boolean', description: 'Visibility' },
+        // Screenshot
+        resolution: { type: 'string', description: 'e.g. 1920x1080' },
+        // Engine lifecycle
+        projectPath: { type: 'string', description: 'Path to .uproject (for engine_start, optional if UE_PROJECT_PATH env set)' },
+        editorExe: { type: 'string', description: 'Path to UE Editor executable (optional if UE_EDITOR_EXE env set)' }
       },
       required: ['action']
     },
@@ -464,7 +469,11 @@ export const consolidatedToolDefinitions = [
         soundPlaying: { type: 'boolean', description: 'Sound playback state' },
         widgetPath: { type: 'string', description: 'Created widget path' },
         widgetVisible: { type: 'boolean', description: 'Widget visibility state' },
-        message: { type: 'string', description: 'Status message' }
+        imagePath: { type: 'string', description: 'Saved screenshot path' },
+        imageBase64: { type: 'string', description: 'Screenshot image base64 (truncated)' },
+        pid: { type: 'number', description: 'Process ID for launched editor' },
+        message: { type: 'string', description: 'Status message' },
+        error: { type: 'string', description: 'Error message if failed' }
       }
     }
   },
@@ -489,6 +498,93 @@ export const consolidatedToolDefinitions = [
         warning: { type: 'string', description: 'Warning if command may be unrecognized' },
         info: { type: 'string', description: 'Additional information' },
         error: { type: 'string', description: 'Error message if failed' }
+      }
+    }
+  },
+
+  // 11. REMOTE CONTROL PRESETS
+  {
+    name: 'manage_rc',
+    description: 'Manage Remote Control presets: create, expose, list fields, set/get values',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['create_preset', 'expose_actor', 'expose_property', 'list_fields', 'set_property', 'get_property'],
+          description: 'RC action'
+        },
+        name: { type: 'string', description: 'Preset or entity name' },
+        path: { type: 'string', description: 'Preset save path (e.g. /Game/RCPresets)' },
+        presetPath: { type: 'string', description: 'Preset asset path (e.g. /Game/RCPresets/MyPreset)' },
+        actorName: { type: 'string', description: 'Actor label/name to expose' },
+        objectPath: { type: 'string', description: 'Object path for property get/set' },
+        propertyName: { type: 'string', description: 'Property name for remote property set/get' },
+        value: { description: 'Value for property set (JSON-serializable)' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        presetPath: { type: 'string' },
+        fields: { type: 'array', items: { type: 'object' } },
+        value: {},
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 12. SEQUENCER / CINEMATICS
+  {
+    name: 'manage_sequence',
+    description: 'Create/open sequences, add camera, add actors to sequence',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['create', 'open', 'add_camera', 'add_actor'], description: 'Sequence action' },
+        name: { type: 'string', description: 'Sequence name (for create)' },
+        path: { type: 'string', description: 'Save path (for create), or asset path (for open)' },
+        actorName: { type: 'string', description: 'Actor name to add as possessable' },
+        spawnable: { type: 'boolean', description: 'If true, camera is spawnable' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        sequencePath: { type: 'string' },
+        cameraBindingId: { type: 'string' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 13. INTROSPECTION
+  {
+    name: 'inspect',
+    description: 'Inspect objects and set properties safely',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['inspect_object', 'set_property'], description: 'Inspection action' },
+        objectPath: { type: 'string', description: 'Object path' },
+        propertyName: { type: 'string', description: 'Property to set/get' },
+        value: { description: 'Value to set (JSON-serializable)' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        info: { type: 'object' },
+        message: { type: 'string' },
+        error: { type: 'string' }
       }
     }
   }

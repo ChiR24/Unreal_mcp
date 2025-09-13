@@ -787,6 +787,21 @@ export async function handleConsolidatedToolCall(
               visible: isVisible
             };
             break;
+
+          case 'screenshot':
+            mappedName = 'take_screenshot';
+            mappedArgs = { resolution: args.resolution };
+            break;
+
+          case 'engine_start':
+            mappedName = 'launch_editor';
+            mappedArgs = { editorExe: args.editorExe, projectPath: args.projectPath };
+            break;
+
+          case 'engine_quit':
+            mappedName = 'quit_editor';
+            mappedArgs = {};
+            break;
             
           default:
             throw new Error(`Unknown system action: ${args.action}`);
@@ -823,6 +838,81 @@ export async function handleConsolidatedToolCall(
         
         mappedName = 'console_command';
         mappedArgs = args;
+        break;
+
+      // 11. REMOTE CONTROL PRESETS
+      case 'manage_rc':
+        if (!args.action) throw new Error('Missing required parameter: action');
+        switch (args.action) {
+          case 'create_preset':
+            mappedName = 'rc_create_preset';
+            mappedArgs = { name: args.name, path: args.path };
+            break;
+          case 'expose_actor':
+            mappedName = 'rc_expose_actor';
+            mappedArgs = { presetPath: args.presetPath, actorName: args.actorName };
+            break;
+          case 'expose_property':
+            mappedName = 'rc_expose_property';
+            mappedArgs = { presetPath: args.presetPath, objectPath: args.objectPath, propertyName: args.propertyName };
+            break;
+          case 'list_fields':
+            mappedName = 'rc_list_fields';
+            mappedArgs = { presetPath: args.presetPath };
+            break;
+          case 'set_property':
+            mappedName = 'rc_set_property';
+            mappedArgs = { objectPath: args.objectPath, propertyName: args.propertyName, value: args.value };
+            break;
+          case 'get_property':
+            mappedName = 'rc_get_property';
+            mappedArgs = { objectPath: args.objectPath, propertyName: args.propertyName };
+            break;
+          default:
+            throw new Error(`Unknown RC action: ${args.action}`);
+        }
+        break;
+
+      // 12. SEQUENCER / CINEMATICS
+      case 'manage_sequence':
+        if (!args.action) throw new Error('Missing required parameter: action');
+        switch (args.action) {
+          case 'create':
+            mappedName = 'seq_create';
+            mappedArgs = { name: args.name, path: args.path };
+            break;
+          case 'open':
+            mappedName = 'seq_open';
+            mappedArgs = { path: args.path };
+            break;
+          case 'add_camera':
+            mappedName = 'seq_add_camera';
+            mappedArgs = { spawnable: args.spawnable !== false };
+            break;
+          case 'add_actor':
+            mappedName = 'seq_add_actor';
+            mappedArgs = { actorName: args.actorName };
+            break;
+          default:
+            throw new Error(`Unknown sequence action: ${args.action}`);
+        }
+        break;
+
+      // 13. INTROSPECTION
+      case 'inspect':
+        if (!args.action) throw new Error('Missing required parameter: action');
+        switch (args.action) {
+          case 'inspect_object':
+            mappedName = 'inspect_object';
+            mappedArgs = { objectPath: args.objectPath };
+            break;
+          case 'set_property':
+            mappedName = 'inspect_set_property';
+            mappedArgs = { objectPath: args.objectPath, propertyName: args.propertyName, value: args.value };
+            break;
+          default:
+            throw new Error(`Unknown inspect action: ${args.action}`);
+        }
         break;
 
       default:

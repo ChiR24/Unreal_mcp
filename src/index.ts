@@ -22,6 +22,11 @@ import { DebugVisualizationTools } from './tools/debug.js';
 import { PerformanceTools } from './tools/performance.js';
 import { AudioTools } from './tools/audio.js';
 import { UITools } from './tools/ui.js';
+import { RcTools } from './tools/rc.js';
+import { SequenceTools } from './tools/sequence.js';
+import { IntrospectionTools } from './tools/introspection.js';
+import { VisualTools } from './tools/visual.js';
+import { EngineTools } from './tools/engine.js';
 import { toolDefinitions } from './tools/tool-definitions.js';
 import { handleToolCall } from './tools/tool-handlers.js';
 import { consolidatedToolDefinitions } from './tools/consolidated-tool-definitions.js';
@@ -192,6 +197,11 @@ export async function createServer() {
   const performanceTools = new PerformanceTools(bridge);
   const audioTools = new AudioTools(bridge);
   const uiTools = new UITools(bridge);
+  const rcTools = new RcTools(bridge);
+  const sequenceTools = new SequenceTools(bridge);
+  const introspectionTools = new IntrospectionTools(bridge);
+  const visualTools = new VisualTools(bridge);
+  const engineTools = new EngineTools(bridge);
 
   const server = new Server(
     {
@@ -398,6 +408,11 @@ export async function createServer() {
       performanceTools,
       audioTools,
       uiTools,
+      rcTools,
+      sequenceTools,
+      introspectionTools,
+      visualTools,
+      engineTools,
       bridge
     };
     
