@@ -227,15 +227,6 @@ MCP Resources available:
 - `ue://level` - Current level info
 - `ue://exposed` - Remote Control exposed items
 
-## 🎯 Success Rate: 95%+
-
-All features work except:
-- EditorLevelLibrary functions (use console commands instead)
-- visualizeBuffer viewmodes (cause crashes)
-
-The MCP server is production-ready for AI assistant integration!
-
----
 
 ## ⚙️ Environment (.env)
 
