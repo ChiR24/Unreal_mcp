@@ -96,7 +96,7 @@ Add to Claude Desktop or Cursor config:
 
 ### Consolidated Mode (DEFAULT)
 
-The server uses 10 consolidated tools that provide comprehensive control:
+The server provides 13 consolidated tools that offer comprehensive control:
 
 1. **manage_asset** - List, create materials, import assets
 2. **control_actor** - Spawn, delete actors, apply physics forces
@@ -106,8 +106,11 @@ The server uses 10 consolidated tools that provide comprehensive control:
 6. **create_effect** - Particle effects, Niagara systems, debug shapes
 7. **manage_blueprint** - Create blueprints, add components
 8. **build_environment** - Landscapes, terrain sculpting, foliage
-9. **system_control** - Profiling, quality settings, sound, UI
+9. **system_control** - Profiling, quality settings, sound, UI, screenshots, engine lifecycle
 10. **console_command** - Direct console command execution
+11. **manage_rc** - Remote Control presets (create, expose, list fields, set/get values)
+12. **manage_sequence** - Sequencer/cinematics (create/open sequences, add cameras/actors)
+13. **inspect** - Introspection (inspect objects, safe property get/set)
 
 ### Console Commands
 Execute any UE console command:
@@ -238,7 +241,7 @@ UE_HOST=127.0.0.1
 UE_RC_HTTP_PORT=30010
 UE_RC_WS_PORT=30020
 
-# Tool mode: true = 10 consolidated tools, false = individual tools
+# Tool mode: true = consolidated tools (13), false = individual tools (37)
 USE_CONSOLIDATED_TOOLS=true
 
 # Asset listing cache TTL (ms)

@@ -110,7 +110,7 @@ abstract_classes = ['PlaneReflectionCapture', 'ReflectionCapture', 'Actor', 'Paw
 
 # Check for abstract classes
 if "${params.classPath}" in abstract_classes:
-    result["message"] = f"Cannot spawn {params.classPath}: class is abstract"
+    result["message"] = f"Cannot spawn ${params.classPath}: class is abstract and cannot be instantiated"
     print(f"RESULT:{json.dumps(result)}")
 else:
     try:
@@ -135,14 +135,18 @@ else:
                     if isinstance(asset, unreal.Blueprint):
                         actor_class = asset.generated_class()
                         if actor_class:
-                            actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                            # Use modern EditorActorSubsystem API
+                            actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+                            actor = actor_subsys.spawn_actor_from_class(
                                 actor_class,
                                 location,
                                 rotation
                             )
                     # If it's a static mesh, spawn a StaticMeshActor and assign the mesh
                     elif isinstance(asset, unreal.StaticMesh):
-                        actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                        # Use modern EditorActorSubsystem API
+                        actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+                        actor = actor_subsys.spawn_actor_from_class(
                             unreal.StaticMeshActor,
                             location,
                             rotation
@@ -159,7 +163,9 @@ else:
                     # Use Engine's basic cube
                     cube_mesh = unreal.EditorAssetLibrary.load_asset('/Engine/BasicShapes/Cube')
                     if cube_mesh:
-                        actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                        # Use modern EditorActorSubsystem API
+                        actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+                        actor = actor_subsys.spawn_actor_from_class(
                             unreal.StaticMeshActor,
                             location,
                             rotation
@@ -174,8 +180,9 @@ else:
         # If not a content path or content spawn failed, try as a class name
         if not actor:
             if class_path == "StaticMeshActor":
-                # Use only EditorLevelLibrary to avoid duplicate factory calls
-                actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                # Use modern EditorActorSubsystem API
+                actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+                actor = actor_subsys.spawn_actor_from_class(
                     unreal.StaticMeshActor, 
                     location, 
                     rotation
@@ -192,8 +199,9 @@ else:
                             mesh_component.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
                             
             elif class_path == "CameraActor":
-                # Use only EditorLevelLibrary to avoid duplicate factory calls
-                actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                # Use modern EditorActorSubsystem API
+                actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+                actor = actor_subsys.spawn_actor_from_class(
                     unreal.CameraActor,
                     location,
                     rotation
@@ -205,8 +213,9 @@ else:
                     actor_class = getattr(unreal, class_path)
                 
                 if actor_class:
-                    # Use only EditorLevelLibrary to avoid duplicate factory calls
-                    actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                    # Use modern EditorActorSubsystem API
+                    actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+                    actor = actor_subsys.spawn_actor_from_class(
                         actor_class, 
                         location, 
                         rotation

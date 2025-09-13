@@ -95,7 +95,8 @@ recursive = ${args.recursive !== false ? 'True' : 'False'}
 try:
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
     
-    # Create filter using proper constructor parameters
+    # Create filter - ARFilter properties must be set in constructor
+    # or use the filter after creation without modifying properties
     filter = unreal.ARFilter(
         package_paths=[directory],
         recursive_paths=recursive
