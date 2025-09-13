@@ -357,7 +357,6 @@ Examples:
 
 - Build: `npm run build`
 - Lint: `npm run lint` / `npm run lint:fix`
-- Tests: `npm test` (Vitest configured; add tests under `src/tests/`)
 
 Suggested CI (GitHub Actions):
 - Run `npm ci`, `npm run build`, `npm run lint`, and `npm test` on pull requests.
