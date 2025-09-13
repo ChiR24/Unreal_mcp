@@ -578,7 +578,50 @@ else:
     intensity?: number;
     recapture?: boolean;
   }) {
-    const py = `\nimport unreal\neditor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nspawn_location = unreal.Vector(0, 0, 500)\nspawn_rotation = unreal.Rotator(0, 0, 0)\n# Try to find an existing SkyLight to avoid duplicates\nactor = None\ntry:\n    actors = editor_actor_subsystem.get_all_level_actors()\n    for a in actors:\n        try:\n            if a.get_class().get_name() == 'SkyLight':\n                actor = a\n                break\n        except Exception: pass\nexcept Exception: pass\n# Spawn only if not found\nif actor is None:\n    actor = editor_actor_subsystem.spawn_actor_from_class(unreal.SkyLight, spawn_location, spawn_rotation)\nif actor:\n    try:\n        actor.set_actor_label(\"${this.escapePythonString(params.name)}\")\n    except Exception: pass\n    comp = actor.get_component_by_class(unreal.SkyLightComponent)\n    if comp:\n        ${params.intensity !== undefined ? `comp.set_intensity(${params.intensity})` : 'pass'}\n        ${params.sourceType === 'SpecifiedCubemap' && params.cubemapPath ? `\n        try:\n            path = r\"${params.cubemapPath}\"\n            if unreal.EditorAssetLibrary.does_asset_exist(path):\n                cube = unreal.EditorAssetLibrary.load_asset(path)\n                try: comp.set_cubemap(cube)\n                except Exception: comp.set_editor_property('cubemap', cube)\n                comp.recapture_sky()\n        except Exception: pass\n        ` : 'pass'}\n        ${params.recapture ? `\n        try: comp.recapture_sky()\n        except Exception: pass\n        ` : 'pass'}\n    print(\"RESULT:{'success': True}\")\nelse:\n    print(\"RESULT:{'success': False, 'error': 'Failed to spawn SkyLight'}\")\n`.trim();
+    const py = `
+import unreal
+editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+spawn_location = unreal.Vector(0, 0, 500)
+spawn_rotation = unreal.Rotator(0, 0, 0)
+# Try to find an existing SkyLight to avoid duplicates
+actor = None
+try:
+    actors = editor_actor_subsystem.get_all_level_actors()
+    for a in actors:
+        try:
+            if a.get_class().get_name() == 'SkyLight':
+                actor = a
+                break
+        except Exception: pass
+except Exception: pass
+# Spawn only if not found
+if actor is None:
+    actor = editor_actor_subsystem.spawn_actor_from_class(unreal.SkyLight, spawn_location, spawn_rotation)
+if actor:
+    try:
+        actor.set_actor_label("${this.escapePythonString(params.name)}")
+    except Exception: pass
+    comp = actor.get_component_by_class(unreal.SkyLightComponent)
+    if comp:
+        ${params.intensity !== undefined ? `comp.set_intensity(${params.intensity})` : 'pass'}
+        ${params.sourceType === 'SpecifiedCubemap' && params.cubemapPath ? `
+        try:
+            path = r"${params.cubemapPath}"
+            if unreal.EditorAssetLibrary.does_asset_exist(path):
+                cube = unreal.EditorAssetLibrary.load_asset(path)
+                try: comp.set_cubemap(cube)
+                except Exception: comp.set_editor_property('cubemap', cube)
+                comp.recapture_sky()
+        except Exception: pass
+        ` : 'pass'}
+        ${params.recapture ? `
+        try: comp.recapture_sky()
+        except Exception: pass
+        ` : 'pass'}
+    print("RESULT:{'success': True}")
+else:
+    print("RESULT:{'success': False, 'error': 'Failed to spawn SkyLight'}")
+`.trim();
     const resp = await this.bridge.executePython(py);
     const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
     const m = out.match(/RESULT:({.*})/);
@@ -1133,7 +1176,7 @@ def create_lighting_enabled_level():
         
         return {
             'success': True, 
-            'message': f'Created new level \"{level_name_str}\" with lighting enabled',
+            'message': f'Created new level "{level_name_str}" with lighting enabled',
             'path': level_path
         }
         
@@ -1164,7 +1207,23 @@ print('RESULT:' + json.dumps(result))
   }) {
     const [lx, ly, lz] = params.location;
     const [sx, sy, sz] = params.size;
-    const py = `\nimport unreal\neditor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nloc = unreal.Vector(${lx}, ${ly}, ${lz})\nrot = unreal.Rotator(0,0,0)\nactor = editor_actor_subsystem.spawn_actor_from_class(unreal.LightmassImportanceVolume, loc, rot)\nif actor:\n    try: actor.set_actor_label("${this.escapePythonString(params.name)}")\n    except Exception: pass\n    # Best-effort: set actor scale to approximate size\n    try:\n        actor.set_actor_scale3d(unreal.Vector(max(${sx}/100.0, 0.1), max(${sy}/100.0, 0.1), max(${sz}/100.0, 0.1)))\n    except Exception: pass\n    print("RESULT:{'success': True}")\nelse:\n    print("RESULT:{'success': False, 'error': 'Failed to spawn LightmassImportanceVolume'}")\n`.trim();
+    const py = `
+import unreal
+editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+loc = unreal.Vector(${lx}, ${ly}, ${lz})
+rot = unreal.Rotator(0,0,0)
+actor = editor_actor_subsystem.spawn_actor_from_class(unreal.LightmassImportanceVolume, loc, rot)
+if actor:
+    try: actor.set_actor_label("${this.escapePythonString(params.name)}")
+    except Exception: pass
+    # Best-effort: set actor scale to approximate size
+    try:
+        actor.set_actor_scale3d(unreal.Vector(max(${sx}/100.0, 0.1), max(${sy}/100.0, 0.1), max(${sz}/100.0, 0.1)))
+    except Exception: pass
+    print("RESULT:{'success': True}")
+else:
+    print("RESULT:{'success': False, 'error': 'Failed to spawn LightmassImportanceVolume'}")
+`.trim();
     const resp = await this.bridge.executePython(py);
     const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
     const m = out.match(/RESULT:({.*})/);

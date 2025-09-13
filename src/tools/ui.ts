@@ -56,13 +56,13 @@ except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
     try {
-      const resp = await this.bridge.executePython(py)
-      const out = typeof resp === 'string' ? resp : JSON.stringify(resp)
-      const m = out.match(/RESULT:({.*})/)
-      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Widget blueprint created' } : { success: false, error: parsed.error } } catch {} }
-      return { success: true, message: 'Widget blueprint creation attempted' }
+      const resp = await this.bridge.executePython(py);
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+      const m = out.match(/RESULT:({.*})/);
+      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Widget blueprint created' } : { success: false, error: parsed.error }; } catch {} }
+      return { success: true, message: 'Widget blueprint creation attempted' };
     } catch (e) {
-      return { success: false, error: `Failed to create widget blueprint: ${e}` }
+      return { success: false, error: `Failed to create widget blueprint: ${e}` };
     }
   }
 

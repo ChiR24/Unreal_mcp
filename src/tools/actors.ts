@@ -53,7 +53,7 @@ export class ActorTools {
   async spawnViaPython(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }) {
     try {
       // Normalize and validate location
-      let loc = params.location ?? { x: 0, y: 0, z: 100 };
+      const loc = params.location ?? { x: 0, y: 0, z: 100 };
       if (loc === null) {
         throw new Error('Invalid location: null is not allowed');
       }
@@ -65,7 +65,7 @@ export class ActorTools {
       }
       
       // Normalize and validate rotation
-      let rot = params.rotation ?? { pitch: 0, yaw: 0, roll: 0 };
+      const rot = params.rotation ?? { pitch: 0, yaw: 0, roll: 0 };
       if (rot === null) {
         throw new Error('Invalid rotation: null is not allowed');
       }
@@ -262,7 +262,7 @@ print(f"RESULT:{json.dumps(result)}")
             throw new Error(result.message || 'Spawn failed');
           }
           return result;
-        } catch (parseErr) {
+        } catch {
           // If we can't parse, check for common success patterns
           if (outputStr.includes('Spawned')) {
             return { success: true, message: outputStr };
@@ -323,13 +323,13 @@ else:
       }
       
       // Get the console-friendly class name
-      let spawnClass = this.getConsoleClassName(params.classPath);
+      const spawnClass = this.getConsoleClassName(params.classPath);
       
       // Use summon command with location if provided
       const loc = params.location || { x: 0, y: 0, z: 100 };
       const command = `summon ${spawnClass} ${loc.x} ${loc.y} ${loc.z}`;
       
-      const res = await this.bridge.httpCall('/remote/object/call', 'PUT', {
+      await this.bridge.httpCall('/remote/object/call', 'PUT', {
         objectPath: '/Script/Engine.Default__KismetSystemLibrary',
         functionName: 'ExecuteConsoleCommand',
         parameters: {
@@ -405,7 +405,7 @@ else:
   
   private getConsoleClassName(classPath: string): string {
     // Normalize class path for console 'summon'
-    let input = classPath;
+    const input = classPath;
 
     // Engine classes: reduce '/Script/Engine.ClassName' to 'ClassName'
     if (input.startsWith('/Script/Engine.')) {

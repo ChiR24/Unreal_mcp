@@ -23,7 +23,7 @@ export class EngineTools {
   async quitEditor() {
     try {
       // Use Python SystemLibrary.quit_editor if available
-      await this.bridge.executePython("import unreal; unreal.SystemLibrary.quit_editor()");
+      await this.bridge.executePython('import unreal; unreal.SystemLibrary.quit_editor()');
       return { success: true, message: 'Quit command sent' };
     } catch (err: any) {
       return { success: false, error: String(err?.message || err) };

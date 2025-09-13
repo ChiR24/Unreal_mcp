@@ -255,7 +255,7 @@ print("DONE")
               responseStr.includes('failed') || responseStr.includes('Failed')) {
             return {
               success: false,
-              message: `Failed to create Animation Blueprint`,
+              message: 'Failed to create Animation Blueprint',
               error: responseStr
             };
           }
@@ -270,7 +270,7 @@ print("DONE")
       } catch (error) {
         return {
           success: false,
-          message: `Failed to create Animation Blueprint`,
+          message: 'Failed to create Animation Blueprint',
           error: String(error)
         };
       }

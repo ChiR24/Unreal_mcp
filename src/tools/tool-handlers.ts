@@ -108,20 +108,20 @@ try:
     asset_list = []
     for asset in assets:
         asset_info = {
-            'Name': asset.asset_name,
-            'Path': str(asset.package_path) + '/' + str(asset.asset_name),
-            'Class': str(asset.asset_class_path.asset_name if hasattr(asset.asset_class_path, 'asset_name') else asset.asset_class),
-            'PackagePath': str(asset.package_path)
+            "Name": str(asset.asset_name),
+            "Path": str(asset.package_path) + "/" + str(asset.asset_name),
+            "Class": str(asset.asset_class_path.asset_name if hasattr(asset.asset_class_path, "asset_name") else asset.asset_class),
+            "PackagePath": str(asset.package_path)
         }
         asset_list.append(asset_info)
-        print(f"Asset: {asset_info['Path']}")
+        print("Asset: " + asset_info["Path"])
     
     result = {
-        'success': True,
-        'count': len(asset_list),
-        'assets': asset_list
+        "success": True,
+        "count": len(asset_list),
+        "assets": asset_list
     }
-    print(f"RESULT:{json.dumps(result)}")
+    print("RESULT:" + json.dumps(result))
 except Exception as e:
     # Fallback to EditorAssetLibrary if ARFilter fails
     try:
@@ -130,20 +130,20 @@ except Exception as e:
         asset_list = []
         for path in asset_paths:
             asset_list.append({
-                'Name': path.split('/')[-1].split('.')[0],
-                'Path': path,
-                'PackagePath': '/'.join(path.split('/')[:-1])
+                "Name": path.split("/")[-1].split(".")[0],
+                "Path": path,
+                "PackagePath": "/".join(path.split("/")[:-1])
             })
         result = {
-            'success': True,
-            'count': len(asset_list),
-            'assets': asset_list,
-            'method': 'EditorAssetLibrary'
+            "success": True,
+            "count": len(asset_list),
+            "assets": asset_list,
+            "method": "EditorAssetLibrary"
         }
-        print(f"RESULT:{json.dumps(result)}")
+        print("RESULT:" + json.dumps(result))
     except Exception as e2:
-        print(f"Error listing assets: {e} | Fallback error: {e2}")
-        print(f"RESULT:{json.dumps({'success': False, 'error': str(e), 'assets': []})}")
+        print("Error listing assets: " + str(e) + " | Fallback error: " + str(e2))
+        print("RESULT:" + json.dumps({"success": False, "error": str(e), "assets": []}))
 `.trim();
           
           const pyResponse = await tools.bridge.executePython(pythonCode);
@@ -172,7 +172,7 @@ except Exception as e:
                 message = `Found ${listResult.count} assets in ${args.directory || '/Game'}`;
                 break;
               }
-            } catch (parseErr) {
+            } catch {
               // Fall through to HTTP method
             }
           }
@@ -196,13 +196,13 @@ except Exception as e:
               message = `Found ${result.assets.length} assets in ${args.directory || '/Game'}`;
               break;
             }
-          } catch (err1) {
+          } catch {
             // Continue to fallback
           }
           
           
           // Third try: Use console command to get asset registry
-          const assetRegistryCmd = await tools.bridge.httpCall('/remote/object/call', 'PUT', {
+          await tools.bridge.httpCall('/remote/object/call', 'PUT', {
             objectPath: '/Script/Engine.Default__KismetSystemLibrary',
             functionName: 'ExecuteConsoleCommand',
             parameters: {
@@ -347,7 +347,7 @@ print(f"RESULT:{json.dumps(result)}")
               }
               result = deleteResult;
               message = deleteResult.message;
-            } catch (parseErr) {
+            } catch {
               // Fallback to checking output
               if (outputStr.includes('Deleted')) {
                 result = { success: true, message: outputStr };
@@ -473,7 +473,7 @@ print(f"RESULT:{json.dumps(result)}")
           location: args.location,
           scale: args.scale ? [args.scale, args.scale, args.scale] : undefined
         });
-        message = result.message || `Niagara system spawned`;
+        message = result.message || 'Niagara system spawned';
         break;
 
       // Blueprint Tools
@@ -500,7 +500,7 @@ print(f"RESULT:{json.dumps(result)}")
       
       case 'stream_level':
         result = await tools.levelTools.streamLevel(args);
-        message = result.message || `Level streaming updated`;
+        message = result.message || 'Level streaming updated';
         break;
 
       // Lighting Tools
@@ -713,7 +713,7 @@ except Exception as e:
           throw new Error('Invalid command: must be a non-empty string');
         }
         
-        let command = args.command.trim();
+        const command = args.command.trim();
         if (command.length === 0) {
           // Handle empty command gracefully
           result = { success: true, message: 'Empty command ignored' };
@@ -759,7 +759,7 @@ except Exception as e:
             const results = [];
             for (const cmd of commands) {
               try {
-                const r = await tools.bridge.executeConsoleCommand(cmd);
+                await tools.bridge.executeConsoleCommand(cmd);
                 results.push({ command: cmd, success: true });
               } catch (e: any) {
                 results.push({ command: cmd, success: false, error: e.message });

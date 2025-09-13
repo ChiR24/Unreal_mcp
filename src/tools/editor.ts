@@ -102,9 +102,9 @@ else:
           }
         }
         // If not verified, fall through to fallback
-      } catch (pythonErr) {
+      } catch (err) {
         // Log the error for debugging but continue
-        console.log('Python PIE start issue:', pythonErr);
+        console.log('Python PIE start issue:', err);
       }
       // Fallback to console command which is more reliable
       await this.bridge.executeConsoleCommand('PlayInViewport');
@@ -154,7 +154,7 @@ else:
         }
         // Default success message if parsing fails
         return { success: true, message: 'PIE stopped successfully' };
-      } catch (pythonErr) {
+      } catch {
         // Fallback to console command
         await this.bridge.executeConsoleCommand('stop');
         return { success: true, message: 'PIE stopped via console command' };
@@ -167,7 +167,7 @@ else:
   async pausePlayInEditor() {
     try {
       // Pause/Resume PIE
-      const res = await this.bridge.httpCall('/remote/object/call', 'PUT', {
+      await this.bridge.httpCall('/remote/object/call', 'PUT', {
         objectPath: '/Script/Engine.Default__KismetSystemLibrary',
         functionName: 'ExecuteConsoleCommand',
         parameters: {
@@ -283,7 +283,7 @@ if ues:
             success: true, 
             message: 'Viewport camera positioned via UnrealEditorSubsystem' 
           };
-        } catch (pythonErr) {
+        } catch {
           // Fallback to camera speed control
           await this.bridge.executeConsoleCommand('camspeed 4');
           return { 
@@ -316,7 +316,7 @@ if ues:
             success: true, 
             message: 'Viewport camera rotation set via UnrealEditorSubsystem' 
           };
-        } catch (pythonErr) {
+        } catch {
           // Fallback
           return { 
             success: true, 
@@ -337,7 +337,7 @@ if ues:
   
   async setCameraSpeed(speed: number) {
     try {
-      const res = await this.bridge.httpCall('/remote/object/call', 'PUT', {
+      await this.bridge.httpCall('/remote/object/call', 'PUT', {
         objectPath: '/Script/Engine.Default__KismetSystemLibrary',
         functionName: 'ExecuteConsoleCommand',
         parameters: {
@@ -355,7 +355,7 @@ if ues:
   
   async setFOV(fov: number) {
     try {
-      const res = await this.bridge.httpCall('/remote/object/call', 'PUT', {
+      await this.bridge.httpCall('/remote/object/call', 'PUT', {
         objectPath: '/Script/Engine.Default__KismetSystemLibrary',
         functionName: 'ExecuteConsoleCommand',
         parameters: {

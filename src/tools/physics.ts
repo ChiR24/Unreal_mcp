@@ -399,7 +399,7 @@ print("DONE")
           if (hasSkeletonError) {
             return {
               success: false,
-              message: `Failed: Must specify a valid skeletal mesh`,
+              message: 'Failed: Must specify a valid skeletal mesh',
               error: 'The path points to a skeleton, not a skeletal mesh. Physics assets require a skeletal mesh.'
             };
           }
@@ -408,7 +408,7 @@ print("DONE")
           if (responseStr.includes('Error:') || responseStr.includes('error')) {
             return {
               success: false,
-              message: `Failed to setup ragdoll physics`,
+              message: 'Failed to setup ragdoll physics',
               error: responseStr
             };
           }
@@ -423,7 +423,7 @@ print("DONE")
       } catch (error) {
         return {
           success: false,
-          message: `Failed to setup ragdoll physics`,
+          message: 'Failed to setup ragdoll physics',
           error: String(error)
         };
       }
@@ -765,7 +765,7 @@ print(f"RESULT:{json.dumps(result)}")
             return { success: false, error: forceResult.message };
           }
           return forceResult;
-        } catch (parseErr) {
+        } catch {
           // Fallback
           if (outputStr.includes('Applied')) {
             return { success: true, message: outputStr };

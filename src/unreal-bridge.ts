@@ -3,10 +3,11 @@ import { createHttpClient } from './utils/http.js';
 import { Logger } from './utils/logger.js';
 import { loadEnv } from './types/env.js';
 
-interface RcMessage {
-  MessageName: string;
-  Parameters?: any;
-}
+// RcMessage interface reserved for future WebSocket message handling
+// interface RcMessage {
+//   MessageName: string;
+//   Parameters?: any;
+// }
 
 interface RcCallBody {
   objectPath: string; // e.g. "/Script/UnrealEd.Default__EditorAssetLibrary"
@@ -227,7 +228,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
           this.ws.close();
           this.ws = undefined;
         }
-        reject(new Error(`Connection timeout: Unreal Engine may not be running or Remote Control is not enabled`));
+        reject(new Error('Connection timeout: Unreal Engine may not be running or Remote Control is not enabled'));
       }, timeoutMs);
       
       // Success handler
@@ -464,7 +465,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         },
         generateTransaction: false
       });
-    } catch (err1) {
+    } catch {
       try {
         // Fallback to ExecutePythonCommand (more tolerant for multi-line)
         return await this.httpCall('/remote/object/call', 'PUT', {
@@ -475,7 +476,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
           },
           generateTransaction: false
         });
-      } catch (err2) {
+      } catch {
         // Final fallback: execute via console py command
         this.log.warn('PythonScriptLibrary not available or failed, falling back to console `py` command');
         
@@ -487,9 +488,9 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         // For multi-line scripts, try to execute as a block
         try {
           // Try executing as a single exec block
-          const escapedScript = command.replace(/\"/g, '\\\"').replace(/\n/g, '\\n');
-          return await this.executeConsoleCommand(`py exec(\"${escapedScript}\")`);
-        } catch (err3) {
+          const escapedScript = command.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+          return await this.executeConsoleCommand(`py exec("${escapedScript}")`);
+        } catch {
           // If that fails, execute line by line
           const lines = command.split('\n').filter(line => line.trim().length > 0);
           let result = null;
@@ -654,7 +655,7 @@ finally:
 
       // If no RESULT: marker, return the best-effort textual output or original response
       return typeof response !== 'undefined' ? response : out;
-    } catch (error) {
+    } catch {
       this.log.warn('Python execution failed, trying direct execution');
       return this.executePython(script);
     }
@@ -855,7 +856,8 @@ print('RESULT:' + json.dumps(flags))
     this.isProcessing = true;
     
     while (this.commandQueue.length > 0) {
-      const item = this.commandQueue.shift()!;
+      const item = this.commandQueue.shift();
+      if (!item) continue; // Skip if undefined
       
       // Calculate delay based on time since last command
       const timeSinceLastCommand = Date.now() - this.lastCommandTime;
@@ -880,8 +882,11 @@ print('RESULT:' + json.dumps(flags))
           
           // Re-add to queue with increased priority
           this.commandQueue.unshift({
-            ...item,
-            priority: Math.max(1, item.priority - 1)
+            command: item.command,
+            resolve: item.resolve,
+            reject: item.reject,
+            priority: Math.max(1, item.priority - 1),
+            retryCount: item.retryCount
           });
           
           // Add extra delay before retry
@@ -900,7 +905,7 @@ print('RESULT:' + json.dumps(flags))
   /**
    * Calculate appropriate delay based on command priority and type
    */
-  private calculateDelay(priority: number, command?: any): number {
+  private calculateDelay(priority: number): number {
     // Priority 1-3: Heavy operations (asset creation, lighting build)
     if (priority <= 3) {
       return this.MAX_COMMAND_DELAY;

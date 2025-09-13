@@ -30,7 +30,7 @@ export class BlueprintTools {
       
       const sanitizedParams = validation.sanitized;
       const path = sanitizedParams.savePath || '/Game/Blueprints';
-      const baseClass = params.parentClass || this.getDefaultParentClass(params.blueprintType);
+      // baseClass derived from blueprintType in Python code
       
       // Add concurrency delay
       await concurrencyDelay();
@@ -207,7 +207,7 @@ print("DONE")
           if (responseStr.includes('Error:') || responseStr.includes('error')) {
             return {
               success: false,
-              message: `Failed to create blueprint`,
+              message: 'Failed to create blueprint',
               error: responseStr
             };
           }
@@ -222,7 +222,7 @@ print("DONE")
       } catch (error) {
         return {
           success: false,
-          message: `Failed to create blueprint`,
+          message: 'Failed to create blueprint',
           error: String(error)
         };
       }
@@ -497,7 +497,7 @@ print("DONE")
           if (responseStr.includes('Error:') || responseStr.includes('error')) {
             return {
               success: false,
-              message: `Failed to add component`,
+              message: 'Failed to add component',
               error: responseStr
             };
           }
@@ -511,7 +511,7 @@ print("DONE")
       } catch (error) {
         return {
           success: false,
-          message: `Failed to add component`,
+          message: 'Failed to add component',
           error: String(error)
         };
       }
@@ -643,7 +643,7 @@ print("DONE")
     parameters?: Array<{ name: string; type: string }>;
   }) {
     try {
-      const eventName = params.eventType === 'Custom' ? params.customEventName! : params.eventType;
+      const eventName = params.eventType === 'Custom' ? (params.customEventName || 'CustomEvent') : params.eventType;
       
       const commands = [
         `AddBlueprintEvent ${params.blueprintName} ${params.eventType} ${eventName}`

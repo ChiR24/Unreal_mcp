@@ -270,7 +270,7 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     if (params.mode === 'CollisionPawn' || params.mode === 'CollisionVisibility') {
       // Use collision visualization instead of viewmode (UE doesn't have these as view modes)
       await this.showCollision({ enabled: true, type: 'Both' });
-      return { success: true, message: `Collision visualization enabled (use show flags, not viewmode)` } as any;
+      return { success: true, message: 'Collision visualization enabled (use show flags, not viewmode)' } as any;
     }
 
     const VALID_VIEWMODES = new Set([

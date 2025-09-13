@@ -54,7 +54,7 @@ try:
     else:
         print('RESULT:{"success": false, "error": "LevelEditorSubsystem not available"}')
 except Exception as e:
-    print('RESULT:{"success": false, "error": "' + str(e).replace('"',\'\\"\') + '"}')
+    print('RESULT:{"success": false, "error": "' + str(e).replace('"','\\"'
 `.trim();
       
       try {
@@ -78,7 +78,7 @@ except Exception as e:
   }
 
   // Save current level
-  async saveLevel(params: {
+  async saveLevel(_params: {
     levelName?: string;
     savePath?: string;
   }) {
@@ -138,15 +138,15 @@ except Exception as e:
     print('RESULT:{"success": false, "error": "' + str(e).replace('"','\\"') + '"}')
 `.trim();
     try {
-      const resp = await this.bridge.executePython(python)
-      const out = typeof resp === 'string' ? resp : JSON.stringify(resp)
-      const m = out.match(/RESULT:({.*})/)
+      const resp = await this.bridge.executePython(python);
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+      const m = out.match(/RESULT:({.*})/);
       if (m) {
-        try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Level saved' } : { success: false, error: parsed.error } } catch {}
+        try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Level saved' } : { success: false, error: parsed.error }; } catch {}
       }
-      return { success: true, message: 'Level saved' }
+      return { success: true, message: 'Level saved' };
     } catch (e) {
-      return { success: false, error: `Failed to save level: ${e}` }
+      return { success: false, error: `Failed to save level: ${e}` };
     }
   }
 
@@ -159,7 +159,18 @@ except Exception as e:
     const basePath = params.savePath || '/Game/Maps';
     const isPartitioned = true; // default to World Partition for UE5
     const fullPath = `${basePath}/${params.levelName}`;
-    const py = `\nimport unreal\ntry:\n    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)\n    if les:\n        les.new_level(r"${fullPath}", ${isPartitioned ? 'True' : 'False'})\n        print('RESULT:{\'success\': True, \'message\': \'Level created\'}')\n    else:\n        print('RESULT:{\'success\': False, \'error\': \'LevelEditorSubsystem not available\'}')\nexcept Exception as e:\n    print('RESULT:{\'success\': False, \'error\': \'%s\'}' % str(e))\n`.trim();
+    const py = `
+import unreal
+try:
+    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    if les:
+        les.new_level(r"${fullPath}", ${isPartitioned ? 'True' : 'False'})
+        print('RESULT:{"success": True, "message": "Level created"}')
+    else:
+        print('RESULT:{"success": False, "error": "LevelEditorSubsystem not available"}')
+except Exception as e:
+    print('RESULT:{"success": False, "error": "' + str(e) + '"}')
+`.trim();
     try {
       const resp = await this.bridge.executePython(py);
       const out = typeof resp === 'string' ? resp : JSON.stringify(resp);

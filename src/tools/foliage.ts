@@ -157,7 +157,7 @@ print('RESULT:' + json.dumps(res))
           note: parsed.note,
           message: parsed.exists_after ? `Foliage type '${name}' ready (${parsed.method || 'Unknown'})` : `Created foliage '${name}' but verification did not find it yet`
         };
-      } catch (e) {
+      } catch {
         return { success: false, error: 'Failed to parse Python result' };
       }
     }
@@ -174,7 +174,7 @@ print('RESULT:' + json.dumps(res))
   }) {
     const errors: string[] = [];
     const foliageType = String(params?.foliageType ?? '').trim();
-    const pos = Array.isArray(params?.position) ? params!.position : [0,0,0];
+    const pos = Array.isArray(params?.position) ? params.position : [0,0,0];
 
     if (!foliageType || foliageType.toLowerCase() === 'undefined' || foliageType.toLowerCase() === 'any') {
       errors.push(`Invalid foliageType: '${params?.foliageType}'`);
@@ -306,7 +306,7 @@ print('RESULT:' + json.dumps(res))
           note: parsed.note,
           message: `Painted ${parsed.added} instances for '${foliageType}' around (${pos[0]}, ${pos[1]}, ${pos[2]})`
         };
-      } catch (e) {
+      } catch {
         return { success: false, error: 'Failed to parse Python result' };
       }
     }
@@ -370,7 +370,7 @@ print('RESULT:' + json.dumps(res))
       await this.bridge.executeConsoleCommand(cmd);
     }
     
-    return { success: true, message: `Foliage LOD settings updated` };
+    return { success: true, message: 'Foliage LOD settings updated' };
   }
 
   // Create procedural foliage
@@ -432,7 +432,7 @@ print('RESULT:' + json.dumps(res))
       await this.bridge.executeConsoleCommand(cmd);
     }
     
-    return { success: true, message: `Foliage collision settings updated` };
+    return { success: true, message: 'Foliage collision settings updated' };
   }
 
   // Create grass system
@@ -525,7 +525,7 @@ print('RESULT:' + json.dumps(res))
       await this.bridge.executeConsoleCommand(cmd);
     }
     
-    return { success: true, message: `Foliage instances updated` };
+    return { success: true, message: 'Foliage instances updated' };
   }
 
   // Create foliage spawner

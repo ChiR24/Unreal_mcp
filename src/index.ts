@@ -158,7 +158,7 @@ export async function createServer() {
     metrics.connectionStatus = 'disconnected';
     
     // Schedule automatic reconnection attempts
-    const reconnectInterval = setInterval(async () => {
+    setInterval(async () => {
       if (!bridge.isConnected) {
         log.info('Attempting to reconnect to Unreal Engine...');
         const reconnected = await bridge.tryConnect(1, 5000, 0); // Single attempt
@@ -309,7 +309,7 @@ export async function createServer() {
             text: JSON.stringify(exposed, null, 2)
           }]
         };
-      } catch (err) {
+      } catch {
         return {
           contents: [{
             uri,

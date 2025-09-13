@@ -116,7 +116,7 @@ except Exception as e:
           return result;
         } catch {}
       }
-    } catch (err) {
+    } catch {
       // Continue to fallback
     }
     
@@ -130,7 +130,7 @@ except Exception as e:
   }
 
   // Sculpt landscape
-  async sculptLandscape(params: {
+  async sculptLandscape(_params: {
     landscapeName: string;
     tool: 'Sculpt' | 'Smooth' | 'Flatten' | 'Ramp' | 'Erosion' | 'Hydro' | 'Noise' | 'Retopologize';
     brushSize?: number;
@@ -142,7 +142,7 @@ except Exception as e:
   }
 
   // Paint landscape
-  async paintLandscape(params: {
+  async paintLandscape(_params: {
     landscapeName: string;
     layerName: string;
     position: [number, number, number];

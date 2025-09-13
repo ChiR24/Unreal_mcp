@@ -11,6 +11,7 @@ const MAX_PATH_LENGTH = 260;
  * Invalid characters for Unreal Engine asset names
  * Note: Dashes are allowed in Unreal asset names
  */
+// eslint-disable-next-line no-useless-escape
 const INVALID_CHARS = /[@#%$&*()+=\[\]{}<>?|\\;:'"`,~!\s]/g;
 
 /**

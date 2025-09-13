@@ -18,7 +18,7 @@ export class MaterialTools {
       // Validate name doesn't contain invalid characters
       // Unreal Engine doesn't allow: spaces, dots, slashes, backslashes, pipes, angle brackets, 
       // curly braces, square brackets, parentheses, @, #, etc.
-      const invalidChars = /[\s\.\/\<>\|\{\}\[\]\(\)@#\\]/;
+      const invalidChars = /[\s./<>|{}[\]()@#\\]/;
       if (invalidChars.test(name)) {
         const foundChars = name.match(invalidChars);
         return { success: false, error: `Material name contains invalid characters: '${foundChars?.[0]}'. Avoid spaces, dots, slashes, backslashes, brackets, and special symbols.` };
@@ -106,7 +106,7 @@ except Exception as e:
             return { success: false, error: result.error || 'Failed to create material' };
           }
         }
-      } catch (parseErr) {
+      } catch {
         // JSON parsing failed, fall back to verification
       }
 
@@ -126,7 +126,7 @@ except Exception as e:
       if (exists) {
         return { success: true, path: materialPath, message: `Material ${name} created at ${path}` };
       } else {
-        return { success: false, error: `Material creation may have failed. Check Output Log for details.`, debug: responseStr };
+        return { success: false, error: 'Material creation may have failed. Check Output Log for details.', debug: responseStr };
       }
     } catch (err) {
       return { success: false, error: `Failed to create material: ${err}` };
@@ -135,7 +135,7 @@ except Exception as e:
 
   async applyMaterialToActor(actorPath: string, materialPath: string, slotIndex = 0) {
     try {
-      const res = await this.bridge.httpCall('/remote/object/property', 'PUT', {
+      await this.bridge.httpCall('/remote/object/property', 'PUT', {
         objectPath: actorPath,
         propertyName: `StaticMeshComponent.Materials[${slotIndex}]`,
         propertyValue: materialPath

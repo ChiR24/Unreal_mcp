@@ -63,13 +63,13 @@ except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
     try {
-      const resp = await this.bridge.executePython(py)
-      const out = typeof resp === 'string' ? resp : JSON.stringify(resp)
-      const m = out.match(/RESULT:({.*})/)
-      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Sound cue created' } : { success: false, error: parsed.error } } catch {} }
-      return { success: true, message: 'Sound cue creation attempted' }
+      const resp = await this.bridge.executePython(py);
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+      const m = out.match(/RESULT:({.*})/);
+      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Sound cue created' } : { success: false, error: parsed.error }; } catch {} }
+      return { success: true, message: 'Sound cue creation attempted' };
     } catch (e) {
-      return { success: false, error: `Failed to create sound cue: ${e}` }
+      return { success: false, error: `Failed to create sound cue: ${e}` };
     }
   }
 
@@ -111,13 +111,13 @@ except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
     try {
-      const resp = await this.bridge.executePython(py)
-      const out = typeof resp === 'string' ? resp : JSON.stringify(resp)
-      const m = out.match(/RESULT:({.*})/)
-      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Sound played' } : { success: false, error: parsed.error } } catch {} }
-      return { success: true, message: 'Sound play attempted' }
+      const resp = await this.bridge.executePython(py);
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+      const m = out.match(/RESULT:({.*})/);
+      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Sound played' } : { success: false, error: parsed.error }; } catch {} }
+      return { success: true, message: 'Sound play attempted' };
     } catch (e) {
-      return { success: false, error: `Failed to play sound: ${e}` }
+      return { success: false, error: `Failed to play sound: ${e}` };
     }
   }
 
@@ -172,13 +172,13 @@ except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
     try {
-      const resp = await this.bridge.executePython(py)
-      const out = typeof resp === 'string' ? resp : JSON.stringify(resp)
-      const m = out.match(/RESULT:({.*})/)
-      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Sound2D played' } : { success: false, error: parsed.error } } catch {} }
-      return { success: true, message: 'Sound2D play attempted' }
+      const resp = await this.bridge.executePython(py);
+      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+      const m = out.match(/RESULT:({.*})/);
+      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Sound2D played' } : { success: false, error: parsed.error }; } catch {} }
+      return { success: true, message: 'Sound2D play attempted' };
     } catch (e) {
-      return { success: false, error: `Failed to play sound2D: ${e}` }
+      return { success: false, error: `Failed to play sound2D: ${e}` };
     }
   }
 
@@ -388,8 +388,8 @@ except Exception as e:
               : { success: false, error: parsed.error };
           } catch {}
         }
-        return { success: true, message: `Master volume set command executed` };
-      } catch (pyError) {
+        return { success: true, message: 'Master volume set command executed' };
+      } catch {
         return { success: false, error: `Failed to set master volume: ${e}` };
       }
     }

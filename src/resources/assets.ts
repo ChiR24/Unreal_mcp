@@ -38,7 +38,7 @@ export class AssetResources {
         try { this.cache.set(this.makeKey(dir, recursive), { timestamp: Date.now(), data: searchResult.Assets }); } catch {}
         return searchResult.Assets;
       }
-    } catch (err) {
+      } catch {
       // Continue to fallback
     }
     
@@ -97,7 +97,7 @@ except Exception as e:
           }
         } catch {}
       }
-    } catch (err) {
+      } catch {
       // Continue to fallback
     }
     
@@ -114,7 +114,7 @@ except Exception as e:
         try { this.cache.set(this.makeKey(dir, recursive), { timestamp: Date.now(), data: contentResult.Result }); } catch {}
         return contentResult.Result;
       }
-    } catch (err) {
+    } catch {
       // Continue
     }
     

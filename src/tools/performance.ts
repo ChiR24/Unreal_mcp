@@ -132,6 +132,7 @@ export class PerformanceTools {
     
     // Skip GameUserSettings entirely to avoid any scalability triggers
     // Console command already applied with correct priority
+    /* eslint-disable no-useless-escape */
     const py = `
 import unreal, json
 result = {'success': True, 'category': '${base}', 'requested': ${params.level}, 'actual': ${params.level}, 'method': 'ConsoleOnly'}
@@ -161,7 +162,7 @@ try:
     if 'sg.${base}Quality' in console_output:
         # Extract the value from output like 'sg.ShadowQuality = "3"'
         import re
-        match = re.search(r'sg\.${base}Quality\s*=\s*"(\d+)"', console_output)
+        match = re.search(r'sg\.${base}Quality\\s*=\\s*"(\\d+)"', console_output)
         if match:
             result['actual'] = int(match.group(1))
             result['verified'] = True
@@ -174,6 +175,7 @@ except Exception as e:
 
 print('RESULT:' + json.dumps(result))
 `.trim();
+    /* eslint-enable no-useless-escape */
 
     // Always try to apply through Python for consistency
     try {

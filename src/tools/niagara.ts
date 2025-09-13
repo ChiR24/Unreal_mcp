@@ -20,8 +20,8 @@ export class NiagaraTools {
     }>;
   }) {
     try {
-      const path = params.savePath || '/Game/Effects/Niagara';
-      const fullPath = `${path}/${params.name}`;
+    const path = params.savePath || '/Game/Effects/Niagara';
+    // const fullPath = `${path}/${params.name}`; // Currently unused
       const python = `
 import unreal
 path = r"${path}"
