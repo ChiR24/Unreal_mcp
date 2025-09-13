@@ -26,7 +26,7 @@ MCP (Model Context Protocol) server for controlling Unreal Engine via Remote Con
 
 ### Prerequisites
 - Node.js >= 18
-- Unreal Engine (5.3+)
+- Unreal Engine (5.0 - 5.6)
 - Enabled Plugins in UE:
   - Remote Control
   - Web Remote Control
@@ -234,3 +234,138 @@ All features work except:
 - visualizeBuffer viewmodes (cause crashes)
 
 The MCP server is production-ready for AI assistant integration!
+
+---
+
+## ⚙️ Environment (.env)
+
+Create a .env file in the project root to configure connection and behavior:
+
+```env
+# Unreal Remote Control connection (defaults shown)
+UE_HOST=127.0.0.1
+UE_RC_HTTP_PORT=30010
+UE_RC_WS_PORT=30020
+
+# Tool mode: true = 10 consolidated tools, false = individual tools
+USE_CONSOLIDATED_TOOLS=true
+
+# Asset listing cache TTL (ms)
+ASSET_LIST_TTL_MS=10000
+
+# Logging level: debug | info | warn | error
+LOG_LEVEL=info
+```
+
+Notes:
+- You must enable Remote Control and Python Script Plugin in Unreal for full functionality.
+- See the Configuration section above for the required project settings to allow remote Python execution.
+
+## 🩺 Health & Diagnostics
+
+The server exposes a health resource that includes connection, performance, and feature information:
+
+- Resource: `ue://health`
+- Example payload:
+
+```json
+{
+  "status": "connected",
+  "uptime": 1234,
+  "performance": {
+    "totalRequests": 42,
+    "successfulRequests": 40,
+    "failedRequests": 2,
+    "successRate": "95.24%",
+    "averageResponseTime": "12ms"
+  },
+  "lastHealthCheck": "2025-09-13T06:31:15.000Z",
+  "unrealConnection": {
+    "status": "connected",
+    "host": "127.0.0.1",
+    "httpPort": 30010,
+    "wsPort": 30020,
+    "engineVersion": {
+      "version": "5.6.1-44394996+++UE5+Release-5.6",
+      "major": 5,
+      "minor": 6,
+      "patch": 1,
+      "isUE56OrAbove": true
+    },
+    "features": {
+      "pythonEnabled": true,
+      "subsystems": {
+        "unrealEditor": true,
+        "levelEditor": true,
+        "editorActor": true
+      },
+      "rcHttpReachable": true
+    }
+  },
+  "recentErrors": [
+    {
+      "time": "2025-09-13T06:30:00.000Z",
+      "scope": "tool-call/list_assets",
+      "type": "CONNECTION",
+      "message": "HTTP timeout",
+      "retriable": true
+    }
+  ]
+}
+```
+
+Also available: `ue://version` returns the same engine version structure.
+
+## 📦 Asset Listing Cache
+
+- Asset listing now uses an in-memory cache keyed by `directory + recursive` with a TTL.
+- Configure TTL via `ASSET_LIST_TTL_MS` (default 10000 ms).
+- First call fills the cache; subsequent calls within TTL return instantly.
+
+## 🎛️ Input Normalization (Vectors & Rotators)
+
+Most tools that accept vectors and rotations now accept either object or array shapes:
+
+- Vector: `{ x, y, z }` or `[x, y, z]`
+- Rotator: `{ pitch, yaw, roll }` or `[pitch, yaw, roll]`
+
+Examples:
+```json
+{
+  "tool": "spawn_actor",
+  "classPath": "/Engine/BasicShapes/Cube.Cube_C",
+  "location": [0, 0, 100],
+  "rotation": { "pitch": 0, "yaw": 45, "roll": 0 }
+}
+```
+
+```json
+{
+  "tool": "create_light",
+  "lightType": "Directional",
+  "name": "KeyLight",
+  "rotation": [ -45, 30, 0 ]
+}
+```
+
+## 🧰 Logging & Safety
+
+- Adjust verbosity via `LOG_LEVEL` (`debug`, `info`, `warn`, `error`).
+- The server blocks known dangerous console commands (e.g., `buildpaths`, `rebuildnavigation`, certain `visualizeBuffer` modes) to prevent UE crashes.
+
+## 🧪 Development
+
+- Build: `npm run build`
+- Lint: `npm run lint` / `npm run lint:fix`
+- Tests: `npm test` (Vitest configured; add tests under `src/tests/`)
+
+Suggested CI (GitHub Actions):
+- Run `npm ci`, `npm run build`, `npm run lint`, and `npm test` on pull requests.
+
+## 🤝 Contributing
+
+Issues and PRs are welcome! Please include reproduction steps for bugs. For new tools or UE features, prefer small, focused PRs.
+
+## 📄 License
+
+MIT © Unreal Engine MCP Team. See `LICENSE` for details.
