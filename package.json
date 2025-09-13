@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:tool4": "vitest run src/tests/consolidated-tool-4.test.ts",
+    "test:tool4": "vitest run src/tests/consolidated-tool-4.test.ts"
   },
   "engines": {
     "node": ">=18"
