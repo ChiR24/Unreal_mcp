@@ -134,21 +134,38 @@ else:
 import unreal
 location = unreal.Vector({x}, {y}, {z})
 rotation = unreal.Rotator({pitch}, {yaw}, {roll})
-# Use LevelEditorSubsystem for viewport operations
-subsys = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-viewport_client = subsys.get_active_viewport_config_key()
-# Alternative approach using viewport
-unreal.EditorLevelLibrary.set_level_viewport_camera_info(location, rotation)
-print(f"RESULT:{{'success': True, 'location': [{x}, {y}, {z}], 'rotation': [{pitch}, {yaw}, {roll}]}}")
+# Use UnrealEditorSubsystem for viewport operations (UE5.1+)
+ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+if ues:
+    ues.set_level_viewport_camera_info(location, rotation)
+    try:
+        if les:
+            les.editor_invalidate_viewports()
+    except Exception:
+        pass
+else:
+    # Fallback to deprecated API
+    unreal.EditorLevelLibrary.set_level_viewport_camera_info(location, rotation)
+print(f"RESULT:{'success': True, 'location': [{x}, {y}, {z}], 'rotation': [{pitch}, {yaw}, {roll}]}")
       `.trim()
     },
     BUILD_LIGHTING: {
       name: 'build_lighting',
       script: `
 import unreal
-quality = unreal.LightingBuildQuality.{quality}
-unreal.EditorLevelLibrary.build_lighting(quality, True)
-print(f"RESULT:{{'success': True, 'quality': '{quality}'}}")
+try:
+    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    if les:
+        q = unreal.LightingBuildQuality.{quality}
+        les.build_light_maps(q, True)
+        print(f"RESULT:{{'success': True, 'quality': '{quality}', 'method': 'LevelEditorSubsystem'}}")
+    else:
+        raise Exception('No LevelEditorSubsystem')
+except Exception:
+    quality = unreal.LightingBuildQuality.{quality}
+    unreal.EditorLevelLibrary.build_lighting(quality, True)
+    print(f"RESULT:{{'success': True, 'quality': '{quality}', 'method': 'EditorLevelLibrary'}}")
       `.trim()
     },
     SAVE_ALL_DIRTY_PACKAGES: {
@@ -579,7 +596,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
    */
   private async executePythonWithResult(script: string): Promise<any> {
     try {
-      // Wrap script to capture output
+      // Wrap script to capture output so we can parse RESULT: lines reliably
       const wrappedScript = `
 import sys
 import io
@@ -592,26 +609,125 @@ finally:
     sys.stdout = old_stdout
     if output:
         print(output)
-      `.trim();
+      `.trim()
+        .replace(/\r?\n/g, '\n');
 
       const response = await this.executePython(wrappedScript);
-      
-      // Parse result from output
-      if (response && typeof response === 'string') {
-        const resultMatch = response.match(/RESULT:(.+)/);
-        if (resultMatch) {
-          try {
-            return JSON.parse(resultMatch[1].replace(/'/g, '"'));
-          } catch {
-            return { raw: resultMatch[1] };
+
+      // Extract textual output from various response shapes
+      let out = '';
+      try {
+        if (response && typeof response === 'string') {
+          out = response;
+        } else if (response && typeof response === 'object') {
+          // Common RC Python response contains LogOutput array entries with .Output strings
+          if (Array.isArray((response as any).LogOutput)) {
+            out = (response as any).LogOutput.map((l: any) => l.Output || '').join('');
+          } else if (typeof (response as any).Output === 'string') {
+            out = (response as any).Output;
+          } else if (typeof (response as any).result === 'string') {
+            out = (response as any).result;
+          } else {
+            // Fallback to stringifying object (may still include RESULT in nested fields)
+            out = JSON.stringify(response);
           }
         }
+      } catch {
+        out = String(response || '');
       }
-      
-      return response;
+
+      // Find the last RESULT: JSON block in the output for robustness
+      const matches = Array.from(out.matchAll(/RESULT:({[\s\S]*?})/g));
+      if (matches.length > 0) {
+        const last = matches[matches.length - 1][1];
+        try {
+          // Accept single quotes and True/False from Python repr if present
+          const normalized = last
+            .replace(/'/g, '"')
+            .replace(/\bTrue\b/g, 'true')
+            .replace(/\bFalse\b/g, 'false');
+          return JSON.parse(normalized);
+        } catch {
+          return { raw: last };
+        }
+      }
+
+      // If no RESULT: marker, return the best-effort textual output or original response
+      return typeof response !== 'undefined' ? response : out;
     } catch (error) {
       this.log.warn('Python execution failed, trying direct execution');
       return this.executePython(script);
+    }
+  }
+
+  /**
+   * Get the Unreal Engine version via Python and parse major/minor/patch.
+   */
+  async getEngineVersion(): Promise<{ version: string; major: number; minor: number; patch: number; isUE56OrAbove: boolean; }> {
+    try {
+      const script = `
+import unreal, json, re
+ver = str(unreal.SystemLibrary.get_engine_version())
+m = re.match(r'^(\\d+)\\.(\\d+)\\.(\\d+)', ver)
+major = int(m.group(1)) if m else 0
+minor = int(m.group(2)) if m else 0
+patch = int(m.group(3)) if m else 0
+print('RESULT:' + json.dumps({'version': ver, 'major': major, 'minor': minor, 'patch': patch}))
+      `.trim();
+      const result = await this.executePythonWithResult(script);
+      const version = String(result?.version ?? 'unknown');
+      const major = Number(result?.major ?? 0) || 0;
+      const minor = Number(result?.minor ?? 0) || 0;
+      const patch = Number(result?.patch ?? 0) || 0;
+      const isUE56OrAbove = major > 5 || (major === 5 && minor >= 6);
+      return { version, major, minor, patch, isUE56OrAbove };
+    } catch (error) {
+      this.log.warn('Failed to get engine version via Python', error);
+      return { version: 'unknown', major: 0, minor: 0, patch: 0, isUE56OrAbove: false };
+    }
+  }
+
+  /**
+   * Query feature flags (Python availability, editor subsystems) via Python.
+   */
+  async getFeatureFlags(): Promise<{ pythonEnabled: boolean; subsystems: { unrealEditor: boolean; levelEditor: boolean; editorActor: boolean; } }> {
+    try {
+      const script = `
+import unreal, json
+flags = {}
+# Python plugin availability (class exists)
+try:
+    _ = unreal.PythonScriptLibrary
+    flags['pythonEnabled'] = True
+except Exception:
+    flags['pythonEnabled'] = False
+# Editor subsystems
+try:
+    flags['unrealEditor'] = bool(unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem))
+except Exception:
+    flags['unrealEditor'] = False
+try:
+    flags['levelEditor'] = bool(unreal.get_editor_subsystem(unreal.LevelEditorSubsystem))
+except Exception:
+    flags['levelEditor'] = False
+try:
+    flags['editorActor'] = bool(unreal.get_editor_subsystem(unreal.EditorActorSubsystem))
+except Exception:
+    flags['editorActor'] = False
+print('RESULT:' + json.dumps(flags))
+      `.trim();
+      const res = await this.executePythonWithResult(script);
+      return {
+        pythonEnabled: Boolean(res?.pythonEnabled),
+        subsystems: {
+          unrealEditor: Boolean(res?.unrealEditor),
+          levelEditor: Boolean(res?.levelEditor),
+          editorActor: Boolean(res?.editorActor)
+        }
+      };
+    } catch (e) {
+      this.log.warn('Failed to get feature flags via Python', e);
+      return { pythonEnabled: false, subsystems: { unrealEditor: false, levelEditor: false, editorActor: false } };
     }
   }
 

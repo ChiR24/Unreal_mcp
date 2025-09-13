@@ -1,4 +1,5 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { toVec3Object, toRotObject } from '../utils/normalize.js';
 
 export class EditorTools {
   constructor(private bridge: UnrealBridge) {}
@@ -219,7 +220,7 @@ except Exception as e:
     }
   }
 
-  async setViewportCamera(location?: { x: number; y: number; z: number } | null | undefined, rotation?: { pitch: number; yaw: number; roll: number } | null | undefined) {
+  async setViewportCamera(location?: { x: number; y: number; z: number } | [number, number, number] | null | undefined, rotation?: { pitch: number; yaw: number; roll: number } | [number, number, number] | null | undefined) {
     // Special handling for when both location and rotation are missing/invalid
     // Allow rotation-only updates
     if (location === null) {
@@ -227,23 +228,16 @@ except Exception as e:
       throw new Error('Invalid location: null is not allowed');
     }
     if (location !== undefined && location !== null) {
-      if (typeof location !== 'object' || Array.isArray(location)) {
-        throw new Error('Invalid location: must be an object with x, y, z properties');
-      }
-      if (!('x' in location) || !('y' in location) || !('z' in location)) {
-        throw new Error('Invalid location: missing required properties x, y, or z');
-      }
-      if (typeof location.x !== 'number' || typeof location.y !== 'number' || typeof location.z !== 'number') {
-        throw new Error('Invalid location: x, y, z must all be numbers');
-      }
-      if (!isFinite(location.x) || !isFinite(location.y) || !isFinite(location.z)) {
-        throw new Error('Invalid location: x, y, z must be finite numbers');
+      const locObj = toVec3Object(location);
+      if (!locObj) {
+        throw new Error('Invalid location: must be {x,y,z} or [x,y,z]');
       }
       // Clamp extreme values to reasonable limits for Unreal Engine
       const MAX_COORD = 1000000; // 1 million units is a reasonable max for UE
-      location.x = Math.max(-MAX_COORD, Math.min(MAX_COORD, location.x));
-      location.y = Math.max(-MAX_COORD, Math.min(MAX_COORD, location.y));
-      location.z = Math.max(-MAX_COORD, Math.min(MAX_COORD, location.z));
+      locObj.x = Math.max(-MAX_COORD, Math.min(MAX_COORD, locObj.x));
+      locObj.y = Math.max(-MAX_COORD, Math.min(MAX_COORD, locObj.y));
+      locObj.z = Math.max(-MAX_COORD, Math.min(MAX_COORD, locObj.z));
+      location = locObj as any;
     }
     
     // Validate rotation if provided
@@ -251,22 +245,15 @@ except Exception as e:
       if (rotation === null) {
         throw new Error('Invalid rotation: null is not allowed');
       }
-      if (typeof rotation !== 'object' || Array.isArray(rotation)) {
-        throw new Error('Invalid rotation: must be an object with pitch, yaw, roll properties');
-      }
-      if (!('pitch' in rotation) || !('yaw' in rotation) || !('roll' in rotation)) {
-        throw new Error('Invalid rotation: missing required properties pitch, yaw, or roll');
-      }
-      if (typeof rotation.pitch !== 'number' || typeof rotation.yaw !== 'number' || typeof rotation.roll !== 'number') {
-        throw new Error('Invalid rotation: pitch, yaw, roll must all be numbers');
-      }
-      if (!isFinite(rotation.pitch) || !isFinite(rotation.yaw) || !isFinite(rotation.roll)) {
-        throw new Error('Invalid rotation: pitch, yaw, roll must be finite numbers');
+      const rotObj = toRotObject(rotation);
+      if (!rotObj) {
+        throw new Error('Invalid rotation: must be {pitch,yaw,roll} or [pitch,yaw,roll]');
       }
       // Normalize rotation values to 0-360 range
-      rotation.pitch = ((rotation.pitch % 360) + 360) % 360;
-      rotation.yaw = ((rotation.yaw % 360) + 360) % 360;
-      rotation.roll = ((rotation.roll % 360) + 360) % 360;
+      rotObj.pitch = ((rotObj.pitch % 360) + 360) % 360;
+      rotObj.yaw = ((rotObj.yaw % 360) + 360) % 360;
+      rotObj.roll = ((rotObj.roll % 360) + 360) % 360;
+      rotation = rotObj as any;
     }
     
     try {
@@ -274,13 +261,13 @@ except Exception as e:
       // Only proceed if we have a valid location
       if (location) {
         try {
-          const rot = rotation || { pitch: 0, yaw: 0, roll: 0 };
+          const rot = (rotation as any) || { pitch: 0, yaw: 0, roll: 0 };
           const pythonCmd = `
 import unreal
 # Use UnrealEditorSubsystem instead of deprecated EditorLevelLibrary
 ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-location = unreal.Vector(${location.x}, ${location.y}, ${location.z})
+location = unreal.Vector(${(location as any).x}, ${(location as any).y}, ${(location as any).z})
 rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
 if ues:
     ues.set_level_viewport_camera_info(location, rotation)
@@ -312,7 +299,7 @@ import unreal
 # Use UnrealEditorSubsystem to read/write viewport camera
 ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-rotation = unreal.Rotator(${rotation.pitch}, ${rotation.yaw}, ${rotation.roll})
+rotation = unreal.Rotator(${(rotation as any).pitch}, ${(rotation as any).yaw}, ${(rotation as any).roll})
 if ues:
     info = ues.get_level_viewport_camera_info()
     if info is not None:

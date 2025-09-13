@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Logger } from './utils/logger.js';
@@ -49,6 +50,7 @@ interface PerformanceMetrics {
   connectionStatus: 'connected' | 'disconnected' | 'error';
   lastHealthCheck: Date;
   uptime: number;
+  recentErrors: Array<{ time: string; scope: string; type: string; message: string; retriable: boolean }>;
 }
 
 const metrics: PerformanceMetrics = {
@@ -59,7 +61,8 @@ const metrics: PerformanceMetrics = {
   responseTimes: [],
   connectionStatus: 'disconnected',
   lastHealthCheck: new Date(),
-  uptime: Date.now()
+  uptime: Date.now(),
+  recentErrors: []
 };
 
 // Configuration
@@ -71,7 +74,7 @@ const CONFIG = {
   RETRY_DELAY_MS: 2000,
   // Server info
   SERVER_NAME: 'unreal-engine-mcp',
-  SERVER_VERSION: '1.0.0',
+  SERVER_VERSION: '1.2.0',
   // Monitoring
   HEALTH_CHECK_INTERVAL_MS: 30000 // 30 seconds
 };
@@ -238,6 +241,12 @@ export async function createServer() {
           name: 'Health Status',
           description: 'Server health and performance metrics',
           mimeType: 'application/json'
+        },
+        {
+          uri: 'ue://version',
+          name: 'Engine Version',
+          description: 'Unreal Engine version and compatibility info',
+          mimeType: 'application/json'
         }
       ]
     };
@@ -303,6 +312,11 @@ export async function createServer() {
     
     if (uri === 'ue://health') {
       const uptimeMs = Date.now() - metrics.uptime;
+      // Query engine version and feature flags (best-effort)
+      let versionInfo: any = {};
+      let featureFlags: any = {};
+      try { versionInfo = await bridge.getEngineVersion(); } catch {}
+      try { featureFlags = await bridge.getFeatureFlags(); } catch {}
       const health = {
         status: metrics.connectionStatus,
         uptime: Math.floor(uptimeMs / 1000),
@@ -319,8 +333,15 @@ export async function createServer() {
           status: bridge.isConnected ? 'connected' : 'disconnected',
           host: process.env.UE_HOST || 'localhost',
           httpPort: process.env.UE_RC_HTTP_PORT || 30010,
-          wsPort: process.env.UE_RC_WS_PORT || 30020
-        }
+          wsPort: process.env.UE_RC_WS_PORT || 30020,
+          engineVersion: versionInfo,
+          features: {
+            pythonEnabled: featureFlags.pythonEnabled === true,
+            subsystems: featureFlags.subsystems || {},
+            rcHttpReachable: bridge.isConnected
+          }
+        },
+        recentErrors: metrics.recentErrors.slice(-5)
       };
       
       return {
@@ -328,6 +349,17 @@ export async function createServer() {
           uri,
           mimeType: 'application/json',
           text: JSON.stringify(health, null, 2)
+        }]
+      };
+    }
+
+    if (uri === 'ue://version') {
+      const info = await bridge.getEngineVersion();
+      return {
+        contents: [{
+          uri,
+          mimeType: 'application/json',
+          text: JSON.stringify(info, null, 2)
         }]
       };
     }
@@ -387,8 +419,19 @@ export async function createServer() {
       trackPerformance(startTime, false);
       
       // Use consistent error handling
-      const errorResponse = ErrorHandler.createErrorResponse(error, name, args);
+      const errorResponse = ErrorHandler.createErrorResponse(error, name, { ...args, scope: `tool-call/${name}` });
       log.error(`Tool execution failed: ${name}`, errorResponse);
+      // Record error for health diagnostics
+      try {
+        metrics.recentErrors.push({
+          time: new Date().toISOString(),
+          scope: (errorResponse as any).scope || `tool-call/${name}`,
+          type: (errorResponse as any)._debug?.errorType || 'UNKNOWN',
+          message: (errorResponse as any).error || (errorResponse as any).message || 'Unknown error',
+          retriable: Boolean((errorResponse as any).retriable)
+        });
+        if (metrics.recentErrors.length > 20) metrics.recentErrors.splice(0, metrics.recentErrors.length - 20);
+      } catch {}
       
       return {
         content: [{

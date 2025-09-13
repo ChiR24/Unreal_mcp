@@ -45,10 +45,14 @@ export class ErrorHandler {
   ): BaseToolResponse {
     const errorType = this.categorizeError(error);
     const userMessage = this.getUserFriendlyMessage(errorType, error);
+    const retriable = this.isRetriable(error);
+    const scope = context?.scope || `tool-call/${toolName}`;
     
     log.error(`Tool ${toolName} failed:`, {
       type: errorType,
       message: error.message || error,
+      retriable,
+      scope,
       context
     });
 
@@ -56,16 +60,20 @@ export class ErrorHandler {
       success: false,
       error: userMessage,
       message: `Failed to execute ${toolName}: ${userMessage}`,
+      retriable: retriable as any,
+      scope: scope as any,
       // Add debug info in development
       ...(process.env.NODE_ENV === 'development' && {
         _debug: {
           errorType,
           originalError: error.message || String(error),
           stack: error.stack,
-          context
+          context,
+          retriable,
+          scope
         }
       })
-    };
+    } as any;
   }
 
   /**
@@ -186,6 +194,19 @@ export class ErrorHandler {
       default:
         return originalMessage;
     }
+  }
+
+  /** Determine if an error is likely retriable */
+  private static isRetriable(error: any): boolean {
+    try {
+      const code = (error?.code || '').toString().toUpperCase();
+      const msg = (error?.message || String(error) || '').toLowerCase();
+      const status = Number((error?.response?.status));
+      if (['ECONNRESET','ECONNREFUSED','ETIMEDOUT','EPIPE'].includes(code)) return true;
+      if (/timeout|timed out|network|connection|closed|unavailable|busy|temporar/.test(msg)) return true;
+      if (!isNaN(status) && (status === 429 || (status >= 500 && status < 600))) return true;
+    } catch {}
+    return false;
   }
 
   /**

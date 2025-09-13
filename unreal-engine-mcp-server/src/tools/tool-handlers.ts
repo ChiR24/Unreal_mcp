@@ -17,6 +17,7 @@ import { PerformanceTools } from './performance.js';
 import { AudioTools } from './audio.js';
 import { UITools } from './ui.js';
 import { Logger } from '../utils/logger.js';
+import { toVec3Object, toRotObject, toVec3Array } from '../utils/normalize.js';
 
 const log = new Logger('ToolHandler');
 
@@ -246,6 +247,17 @@ except Exception as e:
 
       // Actor Tools
       case 'spawn_actor':
+        // Normalize transforms: accept object or array
+        if (args.location !== undefined && args.location !== null) {
+          const loc = toVec3Object(args.location);
+          if (!loc) throw new Error('Invalid location: expected {x,y,z} or [x,y,z]');
+          args.location = loc;
+        }
+        if (args.rotation !== undefined && args.rotation !== null) {
+          const rot = toRotObject(args.rotation);
+          if (!rot) throw new Error('Invalid rotation: expected {pitch,yaw,roll} or [pitch,yaw,roll]');
+          args.rotation = rot;
+        }
         result = await tools.actorTools.spawn(args);
         message = `Actor spawned: ${JSON.stringify(result)}`;
         break;
@@ -422,11 +434,14 @@ print(f"RESULT:{json.dumps(result)}")
         break;
       
       case 'apply_force':
+        // Normalize force vector
+        const forceVec = toVec3Array(args.force);
+        if (!forceVec) throw new Error('Invalid force: expected {x,y,z} or [x,y,z]');
         // Map the simple force schema to PhysicsTools expected format
         result = await tools.physicsTools.applyForce({
           actorName: args.actorName,
           forceType: 'Force', // Default to 'Force' type
-          vector: [args.force.x, args.force.y, args.force.z],
+          vector: forceVec,
           isLocal: false // World space by default
         });
         // Check if the result indicates an error
@@ -480,13 +495,11 @@ print(f"RESULT:{json.dumps(result)}")
 
       // Lighting Tools
       case 'create_light':
-        // Convert location object to array if needed
-        const lightLoc = args.location ? 
-          (Array.isArray(args.location) ? args.location : [args.location.x || 0, args.location.y || 0, args.location.z || 0]) : 
-          [0, 0, 0];
-        const lightRot = args.rotation ? 
-          (Array.isArray(args.rotation) ? args.rotation : [args.rotation.pitch || 0, args.rotation.yaw || 0, args.rotation.roll || 0]) : 
-          [0, 0, 0];
+        // Normalize transforms
+        const lightLocObj = args.location ? (toVec3Object(args.location) || { x: 0, y: 0, z: 0 }) : { x: 0, y: 0, z: 0 };
+        const lightLoc = [lightLocObj.x, lightLocObj.y, lightLocObj.z] as [number, number, number];
+        const lightRotObj = args.rotation ? (toRotObject(args.rotation) || { pitch: 0, yaw: 0, roll: 0 }) : { pitch: 0, yaw: 0, roll: 0 };
+        const lightRot = [lightRotObj.pitch, lightRotObj.yaw, lightRotObj.roll] as [number, number, number];
         
         switch (args.lightType?.toLowerCase()) {
           case 'directional':

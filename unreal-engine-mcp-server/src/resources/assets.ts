@@ -3,7 +3,21 @@ import { UnrealBridge } from '../unreal-bridge.js';
 export class AssetResources {
   constructor(private bridge: UnrealBridge) {}
 
+  // Simple in-memory cache for asset listing
+  private cache = new Map<string, { timestamp: number; data: any }>();
+  private get ttlMs(): number { return Number(process.env.ASSET_LIST_TTL_MS || 10000); }
+  private makeKey(dir: string, recursive: boolean) { return `${dir}::${recursive ? 1 : 0}`; }
+
   async list(dir = '/Game', recursive = true) {
+    // Cache fast-path
+    try {
+      const key = this.makeKey(dir, recursive);
+      const entry = this.cache.get(key);
+      const now = Date.now();
+      if (entry && (now - entry.timestamp) < this.ttlMs) {
+        return entry.data;
+      }
+    } catch {}
     // Try multiple methods to get assets
     
     // Method 1: Try the search API endpoint (fast path)
@@ -21,6 +35,7 @@ export class AssetResources {
       });
       
       if (searchResult?.Assets && searchResult.Assets.length > 0) {
+        try { this.cache.set(this.makeKey(dir, recursive), { timestamp: Date.now(), data: searchResult.Assets }); } catch {}
         return searchResult.Assets;
       }
     } catch (err) {
@@ -76,7 +91,10 @@ except Exception as e:
       if (m) {
         try {
           const parsed = JSON.parse(m[1]);
-          if (parsed.success) return parsed.assets;
+          if (parsed.success) {
+            try { this.cache.set(this.makeKey(dir, recursive), { timestamp: Date.now(), data: parsed.assets }); } catch {}
+            return parsed.assets;
+          }
         } catch {}
       }
     } catch (err) {
@@ -93,6 +111,7 @@ except Exception as e:
       });
       
       if (contentResult?.Result) {
+        try { this.cache.set(this.makeKey(dir, recursive), { timestamp: Date.now(), data: contentResult.Result }); } catch {}
         return contentResult.Result;
       }
     } catch (err) {
@@ -100,10 +119,12 @@ except Exception as e:
     }
     
     // If all methods fail, return empty array with info
-    return { 
+    const empty = { 
       assets: [], 
       note: 'Asset listing requires proper Remote Control setup. Ensure HTTP API is enabled and asset registry is accessible.' 
     };
+    try { this.cache.set(this.makeKey(dir, recursive), { timestamp: Date.now(), data: empty }); } catch {}
+    return empty;
   }
 
   async find(assetPath: string) {
