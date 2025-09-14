@@ -1,49 +1,44 @@
 # Unreal Engine MCP Server
 
-MCP (Model Context Protocol) server for controlling Unreal Engine via Remote Control API. Enables AI assistants (Claude, Cursor, etc.) to interact with Unreal Engine projects.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
+[![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.6-orange)](https://www.unrealengine.com/)
 
-## ✅ Features
+A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via Remote Control API. Built with TypeScript and designed for game development automation.
 
-### Core Features
-- **Asset Management**: Search, filter, and browse all project assets
-- **Console Commands**: Execute any UE console command (stats, rendering, gameplay) 
-- **PIE Control**: Start, stop, pause Play-In-Editor sessions
-- **Actor Spawning**: Spawn actors and blueprints in levels
-- **Object Inspection**: Query functions and properties of UE objects
-- **Remote Control**: Full HTTP and WebSocket API access
+## Features
 
-### 🚀 Advanced Features
-- **Animation System**: Create animation blueprints, state machines, montages, blend spaces
-- **Physics Simulation**: Chaos physics, ragdolls, constraints, destruction, vehicles
-- **Niagara Effects**: Particle systems, GPU simulations, preset effects (fire, water, explosions)
-- **Blueprint Visual Scripting**: Create and manage blueprints programmatically
-- **Audio System**: 3D spatial audio, sound cues, reverb zones
-- **UI/UMG Widgets**: Create and manage UI elements
-- **Level Sequences**: Cinematics and camera animations
-- **Control Rig**: Advanced skeletal control
+### Core Capabilities
+- **Asset Management** - Browse, import, and create materials
+- **Actor Control** - Spawn, delete, and manipulate actors with physics
+- **Editor Control** - PIE sessions, camera, and viewport management
+- **Level Management** - Load/save levels, lighting, and environment building
+- **Animation & Physics** - Blueprints, state machines, ragdolls, constraints
+- **Visual Effects** - Niagara particles, GPU simulations, procedural effects
+- **Sequencer** - Cinematics, camera animations, and timeline control
+- **Console Commands** - Safe execution with dangerous command filtering
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
-- Node.js >= 18
-- Unreal Engine (5.0 - 5.6)
-- Enabled Plugins in UE:
+- Node.js 18+
+- Unreal Engine 5.0-5.6
+- Required UE Plugins:
   - Remote Control
   - Web Remote Control
-  - Python Script Plugin (for material creation and advanced features)
+  - Python Script Plugin
   - Editor Scripting Utilities
-  - Optional: [UnrealEnginePython](https://github.com/20tab/UnrealEnginePython) for enhanced Blueprint component manipulation
 
 ### Installation
 
 ```bash
 npm install
 npm run build
+node dist/cli.js
 ```
 
-### Configuration (REQUIRED)
+### Unreal Engine Configuration
 
-#### 1. Enable Remote Execution
 Add to your project's `Config/DefaultEngine.ini`:
 
 ```ini
@@ -55,26 +50,13 @@ bAllowRemotePythonExecution=True
 bAllowRemoteExecutionOfConsoleCommands=True
 bEnableRemoteExecution=True
 bAllowPythonExecution=True
-+WhitelistedClasses=/Script/Engine.Default__PythonScriptLibrary
-+WhitelistedClasses=/Script/EditorScriptingUtilities.Default__EditorAssetLibrary
 ```
 
-#### 2. Enable Python in Project Settings
-- Go to Edit > Project Settings > Plugins > Remote Control
-- Check "Enable Remote Python Execution"
-- Click "Set as Defaults"
+Then enable Python execution in: Edit > Project Settings > Plugins > Remote Control
 
-Then restart Unreal Engine.
+## MCP Client Configuration
 
-### Run Server
-
-```bash
-node dist/cli.js
-```
-
-## 📋 MCP Configuration
-
-Add to Claude Desktop or Cursor config:
+### Claude Desktop / Cursor
 
 ```json
 {
@@ -92,218 +74,78 @@ Add to Claude Desktop or Cursor config:
 }
 ```
 
-## 🛠️ Available Tools
+## Available Tools (13 Consolidated)
 
-### Consolidated Mode (DEFAULT)
+| Tool | Description |
+|------|-------------|
+| `manage_asset` | List, create materials, import assets |
+| `control_actor` | Spawn, delete actors, apply physics |
+| `control_editor` | PIE control, camera, view modes |
+| `manage_level` | Load/save levels, lighting |
+| `animation_physics` | Animation blueprints, ragdolls |
+| `create_effect` | Particles, Niagara, debug shapes |
+| `manage_blueprint` | Create blueprints, add components |
+| `build_environment` | Landscapes, terrain, foliage |
+| `system_control` | Profiling, quality, UI, screenshots |
+| `console_command` | Direct console command execution |
+| `manage_rc` | Remote Control presets |
+| `manage_sequence` | Sequencer/cinematics |
+| `inspect` | Object introspection |
 
-The server provides 13 consolidated tools that offer comprehensive control:
+## Key Features
 
-1. **manage_asset** - List, create materials, import assets
-2. **control_actor** - Spawn, delete actors, apply physics forces
-3. **control_editor** - PIE control, camera, view modes
-4. **manage_level** - Load/save levels, create lights, build lighting
-5. **animation_physics** - Animation blueprints, montages, ragdoll setup
-6. **create_effect** - Particle effects, Niagara systems, debug shapes
-7. **manage_blueprint** - Create blueprints, add components
-8. **build_environment** - Landscapes, terrain sculpting, foliage
-9. **system_control** - Profiling, quality settings, sound, UI, screenshots, engine lifecycle
-10. **console_command** - Direct console command execution
-11. **manage_rc** - Remote Control presets (create, expose, list fields, set/get values)
-12. **manage_sequence** - Sequencer/cinematics (create/open sequences, add cameras/actors)
-13. **inspect** - Introspection (inspect objects, safe property get/set)
+- **Graceful Degradation** - Server starts even without UE connection
+- **Auto-Reconnection** - Attempts reconnection every 10 seconds
+- **Connection Timeout** - 5-second timeout with configurable retries
+- **Command Safety** - Blocks dangerous console commands
+- **Input Flexibility** - Vectors/rotators accept object or array format
+- **Asset Caching** - 10-second TTL for improved performance
 
-### Console Commands
-Execute any UE console command:
-```javascript
-// Examples:
-"stat fps"              // Show FPS
-"viewmode wireframe"    // Wireframe view
-"play"                  // Start PIE
-"stop"                  // Stop PIE
-"pause"                 // Pause game
-"slomo 0.5"            // Half speed
-"fov 90"               // Set FOV
-"camspeed 4"           // Camera speed
-```
+## Supported Asset Types
 
-### Asset Management
-```javascript
-// Search assets
-{
-  "tool": "search_assets",
-  "query": "BP_",
-  "classNames": ["/Script/Engine.Blueprint"]
-}
-```
+Blueprints, Materials, Textures, Static/Skeletal Meshes, Levels, Sounds, Particles, Niagara Systems
 
-### Actor Spawning
-```javascript
-{
-  "tool": "spawn_actor",
-  "classPath": "/Engine/BasicShapes/Cube.Cube_C",
-  "location": { "x": 0, "y": 0, "z": 100 }
-}
-```
+## Example Console Commands
 
-## 🔧 Recent Improvements
+- **Statistics**: `stat fps`, `stat gpu`, `stat memory`
+- **View Modes**: `viewmode wireframe`, `viewmode unlit`
+- **Gameplay**: `slomo 0.5`, `god`, `fly`
+- **Rendering**: `r.screenpercentage 50`, `r.vsync 0`
 
-### Version 1.2.0 (Latest)
-- ✅ **Connection Improvements**:
-  - Added connection timeout (5 seconds by default)
-  - Server no longer hangs if Unreal Engine isn't running
-  - Automatic retry with configurable attempts
-  - Graceful degradation - server starts even without UE connection
-  - Automatic reconnection attempts every 10 seconds
-- ✅ **Tool 2 (control_actor) Fixes**:
-  - Spawn now uses Python API with proper actor labeling
-  - Delete checks both actor name and label
-  - Apply force enables physics and checks both name/label
-- ✅ **Tool 7 (manage_blueprint) UE 5.6 Enhancements**:
-  - Added multi-tier component addition approach
-  - Fast-path support for UnrealEnginePython plugin
-  - Graceful fallback with manual instructions when API limited
-  - Full compatibility with UE 5.0 - 5.6
-- ✅ Fixed Python execution for multi-line scripts
-- ✅ Fixed deprecated EditorLevelLibrary calls (now uses EditorActorSubsystem)
-- ✅ Fixed apply_force parameter mismatch
-- ✅ Added missing .js extensions for ESM compatibility
-- ✅ Improved material creation with proper validation
-- ✅ Enhanced error handling and retry logic
+## Configuration
 
-## 📊 Supported Asset Types
-
-- Blueprints (`/Script/Engine.Blueprint`)
-- Materials (`/Script/Engine.Material`)
-- Textures (`/Script/Engine.Texture2D`)
-- Static Meshes (`/Script/Engine.StaticMesh`)
-- Skeletal Meshes (`/Script/Engine.SkeletalMesh`)
-- Levels/Maps (`/Script/Engine.World`)
-- Sounds (`/Script/Engine.SoundWave`)
-- Particles (`/Script/Engine.ParticleSystem`)
-- Niagara (`/Script/Niagara.NiagaraSystem`)
-
-## 🔧 Available Console Commands
-
-### Statistics
-- `stat fps` - FPS counter
-- `stat unit` - Frame timing
-- `stat game` - Game stats
-- `stat gpu` - GPU stats
-- `stat memory` - Memory usage
-- `stat engine` - Engine stats
-- `stat physics` - Physics stats
-- `stat none` - Clear all stats
-
-### View Modes (Safe)
-- `viewmode lit` - Default lit
-- `viewmode unlit` - Unlit
-- `viewmode wireframe` - Wireframe
-- `viewmode detaillighting` - Detail lighting
-- `viewmode lightingonly` - Lighting only
-- `viewmode shadercomplexity` - Shader complexity
-
-### Show Flags
-- `show collision` - Toggle collision
-- `show bounds` - Object bounds
-- `show grid` - Grid display
-- `show fog` - Fog
-- `show particles` - Particles
-
-### Rendering
-- `r.screenpercentage 100` - Render scale
-- `r.tonemapper.sharpen 0.5` - Sharpening
-- `r.motionblurquality 0` - Motion blur
-- `r.vsync 0` - VSync
-
-### Gameplay
-- `slomo 1` - Time speed (0.1-10)
-- `god` - God mode
-- `ghost` - No-clip
-- `fly` - Fly mode
-- `walk` - Walk mode
-
-## 📝 Resources
-
-MCP Resources available:
-- `ue://assets` - List all project assets
-- `ue://actors` - List level actors
-- `ue://level` - Current level info
-- `ue://exposed` - Remote Control exposed items
-
-
-## ⚙️ Environment (.env)
-
-Create a .env file in the project root to configure connection and behavior:
+### Environment Variables
 
 ```env
-# Unreal Remote Control connection (defaults shown)
-UE_HOST=127.0.0.1
-UE_RC_HTTP_PORT=30010
-UE_RC_WS_PORT=30020
-
-# Tool mode: true = consolidated tools (13), false = individual tools (37)
-USE_CONSOLIDATED_TOOLS=true
-
-# Asset listing cache TTL (ms)
-ASSET_LIST_TTL_MS=10000
-
-# Logging level: debug | info | warn | error
-LOG_LEVEL=info
+UE_HOST=127.0.0.1              # Unreal Engine host
+UE_RC_HTTP_PORT=30010          # Remote Control HTTP port
+UE_RC_WS_PORT=30020            # Remote Control WebSocket port
+USE_CONSOLIDATED_TOOLS=true    # Use 13 consolidated tools (false = 37 individual)
+LOG_LEVEL=info                 # debug | info | warn | error
 ```
 
-Notes:
-- You must enable Remote Control and Python Script Plugin in Unreal for full functionality.
-- See the Configuration section above for the required project settings to allow remote Python execution.
+### Docker
 
-## 📦 Asset Listing Cache
-
-- Asset listing now uses an in-memory cache keyed by `directory + recursive` with a TTL.
-- Configure TTL via `ASSET_LIST_TTL_MS` (default 10000 ms).
-- First call fills the cache; subsequent calls within TTL return instantly.
-
-## 🎛️ Input Normalization (Vectors & Rotators)
-
-Most tools that accept vectors and rotations now accept either object or array shapes:
-
-- Vector: `{ x, y, z }` or `[x, y, z]`
-- Rotator: `{ pitch, yaw, roll }` or `[pitch, yaw, roll]`
-
-Examples:
-```json
-{
-  "tool": "spawn_actor",
-  "classPath": "/Engine/BasicShapes/Cube.Cube_C",
-  "location": [0, 0, 100],
-  "rotation": { "pitch": 0, "yaw": 45, "roll": 0 }
-}
+```bash
+docker build -t unreal-mcp .
+docker run -it --rm unreal-mcp
 ```
 
-```json
-{
-  "tool": "create_light",
-  "lightType": "Directional",
-  "name": "KeyLight",
-  "rotation": [ -45, 30, 0 ]
-}
+## Development
+
+```bash
+npm run build          # Build TypeScript
+npm run lint           # Run ESLint
+npm run lint:fix       # Fix linting issues
 ```
 
-## 🧰 Logging & Safety
+## Contributing
 
-- Adjust verbosity via `LOG_LEVEL` (`debug`, `info`, `warn`, `error`).
-- The server blocks known dangerous console commands (e.g., `buildpaths`, `rebuildnavigation`, certain `visualizeBuffer` modes) to prevent UE crashes.
+Contributions welcome! Please:
+- Include reproduction steps for bugs
+- Keep PRs focused and small
+- Follow existing code style
 
-## 🧪 Development
+## License
 
-- Build: `npm run build`
-- Lint: `npm run lint` / `npm run lint:fix`
-
-Suggested CI (GitHub Actions):
-- Run `npm ci`, `npm run build`, `npm run lint`, and `npm test` on pull requests.
-
-## 🤝 Contributing
-
-Issues and PRs are welcome! Please include reproduction steps for bugs. For new tools or UE features, prefer small, focused PRs.
-
-## 📄 License
-
-MIT © Unreal Engine MCP Team. See `LICENSE` for details.
+MIT - See [LICENSE](LICENSE) file
