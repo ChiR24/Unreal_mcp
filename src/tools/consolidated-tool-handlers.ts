@@ -988,28 +988,67 @@ export async function handleConsolidatedToolCall(
       // 12. SEQUENCER / CINEMATICS
       case 'manage_sequence':
         if (!args.action) throw new Error('Missing required parameter: action');
-        switch (args.action) {
-          case 'create':
-            mappedName = 'seq_create';
-            mappedArgs = { name: args.name, path: args.path };
-            break;
-          case 'open':
-            mappedName = 'seq_open';
-            mappedArgs = { path: args.path };
-            break;
-          case 'add_camera':
-            mappedName = 'seq_add_camera';
-            mappedArgs = { spawnable: args.spawnable !== false };
-            break;
-          case 'add_actor':
-            mappedName = 'seq_add_actor';
-            mappedArgs = { actorName: args.actorName };
-            break;
-          default:
-            throw new Error(`Unknown sequence action: ${args.action}`);
-        }
-        break;
-
+        
+        // Direct handling for sequence operations
+        const seqResult = await (async () => {
+          const sequenceTools = tools.sequenceTools;
+          if (!sequenceTools) throw new Error('Sequence tools not available');
+          
+          switch (args.action) {
+            case 'create':
+              return await sequenceTools.create({ name: args.name, path: args.path });
+            case 'open':
+              return await sequenceTools.open({ path: args.path });
+            case 'add_camera':
+              return await sequenceTools.addCamera({ spawnable: args.spawnable !== false });
+            case 'add_actor':
+              return await sequenceTools.addActor({ actorName: args.actorName });
+            case 'add_actors':
+              if (!args.actorNames) throw new Error('Missing required parameter: actorNames');
+              return await sequenceTools.addActors({ actorNames: args.actorNames });
+            case 'remove_actors':
+              if (!args.actorNames) throw new Error('Missing required parameter: actorNames');
+              return await sequenceTools.removeActors({ actorNames: args.actorNames });
+            case 'get_bindings':
+              return await sequenceTools.getBindings({ path: args.path });
+            case 'add_spawnable_from_class':
+              if (!args.className) throw new Error('Missing required parameter: className');
+              return await sequenceTools.addSpawnableFromClass({ className: args.className, path: args.path });
+            case 'play':
+              return await sequenceTools.play({ loopMode: args.loopMode });
+            case 'pause':
+              return await sequenceTools.pause();
+            case 'stop':
+              return await sequenceTools.stop();
+            case 'set_properties':
+              return await sequenceTools.setSequenceProperties({
+                path: args.path,
+                frameRate: args.frameRate,
+                lengthInFrames: args.lengthInFrames,
+                playbackStart: args.playbackStart,
+                playbackEnd: args.playbackEnd
+              });
+            case 'get_properties':
+              return await sequenceTools.getSequenceProperties({ path: args.path });
+            case 'set_playback_speed':
+              if (args.speed === undefined) throw new Error('Missing required parameter: speed');
+              return await sequenceTools.setPlaybackSpeed({ speed: args.speed });
+            default:
+              throw new Error(`Unknown sequence action: ${args.action}`);
+          }
+        })();
+        
+        // Return result with consistent structure
+        return {
+          ...seqResult,
+          content: [{
+            type: 'text',
+            text: seqResult.message || (seqResult.success ? 
+              `Sequence action '${args.action}' completed successfully` : 
+              seqResult.error || 'Operation failed')
+          }],
+          isError: !seqResult.success
+        };
       // 13. INTROSPECTION
       case 'inspect':
         if (!args.action) throw new Error('Missing required parameter: action');

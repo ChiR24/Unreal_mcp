@@ -540,15 +540,31 @@ export const consolidatedToolDefinitions = [
   // 12. SEQUENCER / CINEMATICS
   {
     name: 'manage_sequence',
-    description: 'Create/open sequences, add camera, add actors to sequence',
+    description: 'Create/open sequences, add cameras/actors, manage bindings, control playback, and set properties',
     inputSchema: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['create', 'open', 'add_camera', 'add_actor'], description: 'Sequence action' },
+        action: { 
+          type: 'string', 
+          enum: [
+            'create', 'open', 'add_camera', 'add_actor', 'add_actors', 
+            'remove_actors', 'get_bindings', 'add_spawnable_from_class',
+            'play', 'pause', 'stop', 'set_properties', 'get_properties', 'set_playback_speed'
+          ], 
+          description: 'Sequence action' 
+        },
         name: { type: 'string', description: 'Sequence name (for create)' },
-        path: { type: 'string', description: 'Save path (for create), or asset path (for open)' },
+        path: { type: 'string', description: 'Save path (for create), or asset path (for open/operations)' },
         actorName: { type: 'string', description: 'Actor name to add as possessable' },
-        spawnable: { type: 'boolean', description: 'If true, camera is spawnable' }
+        actorNames: { type: 'array', items: { type: 'string' }, description: 'Multiple actor names for batch operations' },
+        className: { type: 'string', description: 'Class name for spawnable (e.g. StaticMeshActor, CineCameraActor)' },
+        spawnable: { type: 'boolean', description: 'If true, camera is spawnable' },
+        frameRate: { type: 'number', description: 'Frame rate for sequence' },
+        lengthInFrames: { type: 'number', description: 'Total length in frames' },
+        playbackStart: { type: 'number', description: 'Playback start frame' },
+        playbackEnd: { type: 'number', description: 'Playback end frame' },
+        speed: { type: 'number', description: 'Playback speed multiplier' },
+        loopMode: { type: 'string', enum: ['once', 'loop', 'pingpong'], description: 'Playback loop mode' }
       },
       required: ['action']
     },
@@ -558,6 +574,16 @@ export const consolidatedToolDefinitions = [
         success: { type: 'boolean' },
         sequencePath: { type: 'string' },
         cameraBindingId: { type: 'string' },
+        bindings: { type: 'array', items: { type: 'object' } },
+        actorsAdded: { type: 'array', items: { type: 'string' } },
+        removedActors: { type: 'array', items: { type: 'string' } },
+        notFound: { type: 'array', items: { type: 'string' } },
+        spawnableId: { type: 'string' },
+        frameRate: { type: 'object' },
+        playbackStart: { type: 'number' },
+        playbackEnd: { type: 'number' },
+        duration: { type: 'number' },
+        playbackSpeed: { type: 'number' },
         message: { type: 'string' },
         error: { type: 'string' }
       }

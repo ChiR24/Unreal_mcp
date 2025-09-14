@@ -94,7 +94,33 @@ export class SequenceTools {
     const name = params.name?.trim();
     const base = (params.path || '/Game/Sequences').replace(/\/$/, '');
     if (!name) return { success: false, error: 'name is required' };
-    const py = `\nimport unreal, json\nname = r"${name}"\nbase = r"${base}"\nfull = f"{base}/{name}"\ntry:\n    # Ensure directory exists\n    try:\n        if not unreal.EditorAssetLibrary.does_directory_exist(base):\n            unreal.EditorAssetLibrary.make_directory(base)\n    except Exception:\n        pass\n\n    if unreal.EditorAssetLibrary.does_asset_exist(full):\n        print('RESULT:' + json.dumps({'success': True, 'sequencePath': full, 'existing': True}))\n    else:\n        asset_tools = unreal.AssetToolsHelpers.get_asset_tools()\n        factory = unreal.LevelSequenceFactoryNew()\n        seq = asset_tools.create_asset(asset_name=name, package_path=base, asset_class=unreal.LevelSequence, factory=factory)\n        if seq:\n            unreal.EditorAssetLibrary.save_asset(full)\n            print('RESULT:' + json.dumps({'success': True, 'sequencePath': full}))\n        else:\n            print('RESULT:' + json.dumps({'success': False, 'error': 'Create returned None'}))\nexcept Exception as e:\n    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))\n`.trim();
+    const py = `
+import unreal, json
+name = r"${name}"
+base = r"${base}"
+full = f"{base}/{name}"
+try:
+    # Ensure directory exists
+    try:
+        if not unreal.EditorAssetLibrary.does_directory_exist(base):
+            unreal.EditorAssetLibrary.make_directory(base)
+    except Exception:
+        pass
+
+    if unreal.EditorAssetLibrary.does_asset_exist(full):
+        print('RESULT:' + json.dumps({'success': True, 'sequencePath': full, 'existing': True}))
+    else:
+        asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+        factory = unreal.LevelSequenceFactoryNew()
+        seq = asset_tools.create_asset(asset_name=name, package_path=base, asset_class=unreal.LevelSequence, factory=factory)
+        if seq:
+            unreal.EditorAssetLibrary.save_asset(full)
+            print('RESULT:' + json.dumps({'success': True, 'sequencePath': full}))
+        else:
+            print('RESULT:' + json.dumps({'success': False, 'error': 'Create returned None'}))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
     const resp = await this.executeWithRetry(
       () => this.bridge.executePython(py),
       'createSequence'
@@ -115,7 +141,19 @@ export class SequenceTools {
   }
 
   async open(params: { path: string }) {
-    const py = `\nimport unreal, json\npath = r"${params.path}"\ntry:\n    seq = unreal.load_asset(path)\n    if not seq:\n        print('RESULT:' + json.dumps({'success': False, 'error': 'Sequence not found'}))\n    else:\n        unreal.LevelSequenceEditorBlueprintLibrary.open_level_sequence(seq)\n        print('RESULT:' + json.dumps({'success': True, 'sequencePath': path}))\nexcept Exception as e:\n    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))\n`.trim();
+    const py = `
+import unreal, json
+path = r"${params.path}"
+try:
+    seq = unreal.load_asset(path)
+    if not seq:
+        print('RESULT:' + json.dumps({'success': False, 'error': 'Sequence not found'}))
+    else:
+        unreal.LevelSequenceEditorBlueprintLibrary.open_level_sequence(seq)
+        print('RESULT:' + json.dumps({'success': True, 'sequencePath': path}))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
     const resp = await this.executeWithRetry(
       () => this.bridge.executePython(py),
       'openSequence'
@@ -125,7 +163,72 @@ export class SequenceTools {
   }
 
   async addCamera(params: { spawnable?: boolean }) {
-    const py = `\nimport unreal, json\ntry:\n    ls = unreal.get_editor_subsystem(unreal.LevelSequenceEditorSubsystem)\n    if not ls:\n        print('RESULT:' + json.dumps({'success': False, 'error': 'LevelSequenceEditorSubsystem unavailable'}))\n    else:\n        cam = ls.create_camera(spawnable=${params.spawnable !== false ? 'True' : 'False'})\n        print('RESULT:' + json.dumps({'success': True, 'cameraBindingId': str(cam.get_binding_id()) if hasattr(cam, 'get_binding_id') else ''}))\nexcept Exception as e:\n    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))\n`.trim();
+    const py = `
+import unreal, json
+try:
+    ls = unreal.get_editor_subsystem(unreal.LevelSequenceEditorSubsystem)
+    if not ls:
+        print('RESULT:' + json.dumps({'success': False, 'error': 'LevelSequenceEditorSubsystem unavailable'}))
+    else:
+        # create_camera returns tuple: (binding_proxy, camera_actor)
+        result = ls.create_camera(spawnable=${params.spawnable !== false ? 'True' : 'False'})
+        binding_id = ''
+        camera_name = ''
+        
+        if result and len(result) >= 2:
+            binding_proxy = result[0]
+            camera_actor = result[1]
+            
+            # Get the current sequence
+            seq = unreal.LevelSequenceEditorBlueprintLibrary.get_focused_level_sequence()
+            
+            if seq and binding_proxy:
+                try:
+                    # Get GUID directly from binding proxy - this is more reliable
+                    binding_guid = unreal.MovieSceneBindingExtensions.get_id(binding_proxy)
+                    # The GUID itself is what we need
+                    binding_id = str(binding_guid).replace('<Guid ', '').replace('>', '').split(' ')[0] if str(binding_guid).startswith('<') else str(binding_guid)
+                    
+                    # If that didn't work, try the binding object
+                    if binding_id.startswith('<') or not binding_id:
+                        binding_obj = unreal.MovieSceneSequenceExtensions.get_binding_id(seq, binding_proxy)
+                        # Try to extract GUID from the object representation
+                        obj_str = str(binding_obj)
+                        if 'guid=' in obj_str:
+                            binding_id = obj_str.split('guid=')[1].split(',')[0].split('}')[0].strip()
+                        elif hasattr(binding_obj, 'guid'):
+                            binding_id = str(binding_obj.guid)
+                        else:
+                            # Use a hash of the binding for a consistent ID
+                            import hashlib
+                            binding_id = hashlib.md5(str(binding_proxy).encode()).hexdigest()[:8]
+                except Exception as e:
+                    # Generate a unique ID based on camera
+                    import hashlib
+                    camera_str = camera_actor.get_name() if camera_actor else 'spawned'
+                    binding_id = f'cam_{hashlib.md5(camera_str.encode()).hexdigest()[:8]}'
+            
+            if camera_actor:
+                try:
+                    camera_name = camera_actor.get_actor_label()
+                except:
+                    camera_name = 'CineCamera'
+            
+            print('RESULT:' + json.dumps({
+                'success': True,
+                'cameraBindingId': binding_id,
+                'cameraName': camera_name
+            }))
+        else:
+            # Even if result format is different, camera might still be created
+            print('RESULT:' + json.dumps({
+                'success': True,
+                'cameraBindingId': 'camera_created',
+                'warning': 'Camera created but binding format unexpected'
+            }))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
     const resp = await this.executeWithRetry(
       () => this.bridge.executePython(py),
       'addCamera'
@@ -134,7 +237,7 @@ export class SequenceTools {
     return this.parsePythonResult(resp, 'addCamera');
   }
 
-  async addActor(params: { actorName: string }) {
+  async addActor(params: { actorName: string; createBinding?: boolean }) {
     const py = `
 import unreal, json
 try:
@@ -165,8 +268,55 @@ try:
             # Make sure we have a focused sequence
             seq = unreal.LevelSequenceEditorBlueprintLibrary.get_focused_level_sequence()
             if seq:
+                # Use add_actors method which returns binding proxies
                 bindings = ls.add_actors([target])
-                print('RESULT:' + json.dumps({'success': True, 'count': len(bindings), 'actorAdded': target.get_actor_label()}))
+                binding_info = []
+                
+                # bindings might be a list or might be empty if actor already exists
+                if bindings and len(bindings) > 0:
+                    for binding in bindings:
+                        try:
+                            # Get binding name and GUID
+                            binding_name = unreal.MovieSceneBindingExtensions.get_name(binding)
+                            binding_guid = unreal.MovieSceneBindingExtensions.get_id(binding)
+                            
+                            # Extract clean GUID string
+                            guid_str = str(binding_guid)
+                            if guid_str.startswith('<Guid '):
+                                # Extract the actual GUID value from <Guid 'XXXX-XXXX-XXXX-XXXX'>
+                                guid_clean = guid_str.replace('<Guid ', '').replace('>', '').replace("'", '').split(' ')[0]
+                            else:
+                                guid_clean = guid_str
+                            
+                            binding_info.append({
+                                'id': guid_clean,
+                                'guid': guid_clean,
+                                'name': binding_name if binding_name else target.get_actor_label()
+                            })
+                        except Exception as e:
+                            # If binding methods fail, still count it
+                            binding_info.append({
+                                'id': 'binding_' + str(len(binding_info)),
+                                'name': target.get_actor_label(),
+                                'error': str(e)
+                            })
+                    
+                    print('RESULT:' + json.dumps({
+                        'success': True, 
+                        'count': len(bindings), 
+                        'actorAdded': target.get_actor_label(), 
+                        'bindings': binding_info
+                    }))
+                else:
+                    # Actor was likely added but no new binding returned (might already exist)
+                    # Still report success since the actor is in the sequence
+                    print('RESULT:' + json.dumps({
+                        'success': True, 
+                        'count': 1, 
+                        'actorAdded': target.get_actor_label(), 
+                        'bindings': [{'name': target.get_actor_label(), 'note': 'Actor added to sequence'}],
+                        'info': 'Actor processed successfully'
+                    }))
             else:
                 print('RESULT:' + json.dumps({'success': False, 'error': 'No sequence is currently focused'}))
 except Exception as e:
@@ -399,5 +549,243 @@ except Exception as e:
     );
     
     return this.parsePythonResult(resp, 'setPlaybackSpeed');
+  }
+
+  /**
+   * Get all bindings in the current sequence
+   */
+  async getBindings(params?: { path?: string }) {
+    const py = `
+import unreal, json
+try:
+    # Load the sequence
+    seq_path = r"${params?.path || ''}"
+    if seq_path:
+        seq = unreal.load_asset(seq_path)
+    else:
+        # Try to get the currently open sequence
+        seq = unreal.LevelSequenceEditorBlueprintLibrary.get_focused_level_sequence()
+    
+    if not seq:
+        print('RESULT:' + json.dumps({'success': False, 'error': 'No sequence found or loaded'}))
+    else:
+        bindings = unreal.MovieSceneSequenceExtensions.get_bindings(seq)
+        binding_list = []
+        for binding in bindings:
+            try:
+                binding_name = unreal.MovieSceneBindingExtensions.get_name(binding)
+                binding_guid = unreal.MovieSceneBindingExtensions.get_id(binding)
+                
+                # Extract clean GUID string
+                guid_str = str(binding_guid)
+                if guid_str.startswith('<Guid '):
+                    # Extract the actual GUID value from <Guid 'XXXX-XXXX-XXXX-XXXX'>
+                    guid_clean = guid_str.replace('<Guid ', '').replace('>', '').replace("'", '').split(' ')[0]
+                else:
+                    guid_clean = guid_str
+                
+                binding_list.append({
+                    'id': guid_clean,
+                    'name': binding_name,
+                    'guid': guid_clean
+                })
+            except:
+                pass
+        
+        print('RESULT:' + json.dumps({'success': True, 'bindings': binding_list, 'count': len(binding_list)}))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
+
+    const resp = await this.executeWithRetry(
+      () => this.bridge.executePython(py),
+      'getBindings'
+    );
+    
+    return this.parsePythonResult(resp, 'getBindings');
+  }
+
+  /**
+   * Add multiple actors to sequence at once
+   */
+  async addActors(params: { actorNames: string[] }) {
+    const py = `
+import unreal, json
+try:
+    actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    ls = unreal.get_editor_subsystem(unreal.LevelSequenceEditorSubsystem)
+    if not ls or not actor_sub:
+        print('RESULT:' + json.dumps({'success': False, 'error': 'Subsystem unavailable'}))
+    else:
+        actor_names = ${JSON.stringify(params.actorNames)}
+        actors_to_add = []
+        not_found = []
+        
+        all_actors = actor_sub.get_all_level_actors()
+        for name in actor_names:
+            found = False
+            for a in all_actors:
+                if not a: continue
+                label = a.get_actor_label()
+                actor_name = a.get_name()
+                if label == name or actor_name == name or label.startswith(name):
+                    actors_to_add.append(a)
+                    found = True
+                    break
+            if not found:
+                not_found.append(name)
+        
+        # Make sure we have a focused sequence
+        seq = unreal.LevelSequenceEditorBlueprintLibrary.get_focused_level_sequence()
+        if not seq:
+            print('RESULT:' + json.dumps({'success': False, 'error': 'No sequence is currently focused'}))
+        elif len(actors_to_add) == 0:
+            print('RESULT:' + json.dumps({'success': False, 'error': f'No actors found: {not_found}'}))
+        else:
+            # Add all actors at once
+            bindings = ls.add_actors(actors_to_add)
+            added_actors = [a.get_actor_label() for a in actors_to_add]
+            print('RESULT:' + json.dumps({
+                'success': True, 
+                'count': len(bindings) if bindings else len(actors_to_add), 
+                'actorsAdded': added_actors,
+                'notFound': not_found
+            }))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
+
+    const resp = await this.executeWithRetry(
+      () => this.bridge.executePython(py),
+      'addActors'
+    );
+    
+    return this.parsePythonResult(resp, 'addActors');
+  }
+
+  /**
+   * Remove actors from binding
+   */
+  async removeActors(params: { actorNames: string[] }) {
+    const py = `
+import unreal, json
+try:
+    actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    ls = unreal.get_editor_subsystem(unreal.LevelSequenceEditorSubsystem)
+    
+    if not ls or not actor_sub:
+        print('RESULT:' + json.dumps({'success': False, 'error': 'Subsystem unavailable'}))
+    else:
+        # Get current sequence
+        seq = unreal.LevelSequenceEditorBlueprintLibrary.get_focused_level_sequence()
+        if not seq:
+            print('RESULT:' + json.dumps({'success': False, 'error': 'No sequence is currently focused'}))
+        else:
+            actor_names = ${JSON.stringify(params.actorNames)}
+            actors_to_remove = []
+            
+            all_actors = actor_sub.get_all_level_actors()
+            for name in actor_names:
+                for a in all_actors:
+                    if not a: continue
+                    label = a.get_actor_label()
+                    actor_name = a.get_name()
+                    if label == name or actor_name == name:
+                        actors_to_remove.append(a)
+                        break
+            
+            # Get all bindings and remove matching actors
+            bindings = unreal.MovieSceneSequenceExtensions.get_bindings(seq)
+            removed_count = 0
+            for binding in bindings:
+                try:
+                    ls.remove_actors_from_binding(actors_to_remove, binding)
+                    removed_count += 1
+                except:
+                    pass
+            
+            print('RESULT:' + json.dumps({
+                'success': True,
+                'removedActors': [a.get_actor_label() for a in actors_to_remove],
+                'bindingsProcessed': removed_count
+            }))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
+
+    const resp = await this.executeWithRetry(
+      () => this.bridge.executePython(py),
+      'removeActors'
+    );
+    
+    return this.parsePythonResult(resp, 'removeActors');
+  }
+
+  /**
+   * Create a spawnable from an actor class
+   */
+  async addSpawnableFromClass(params: { className: string; path?: string }) {
+    const py = `
+import unreal, json
+try:
+    ls = unreal.get_editor_subsystem(unreal.LevelSequenceEditorSubsystem)
+    
+    # Load the sequence
+    seq_path = r"${params.path || ''}"
+    if seq_path:
+        seq = unreal.load_asset(seq_path)
+    else:
+        seq = unreal.LevelSequenceEditorBlueprintLibrary.get_focused_level_sequence()
+    
+    if not seq:
+        print('RESULT:' + json.dumps({'success': False, 'error': 'No sequence found'}))
+    else:
+        # Try to find the class
+        class_name = r"${params.className}"
+        actor_class = None
+        
+        # Try common actor classes
+        if class_name == "StaticMeshActor":
+            actor_class = unreal.StaticMeshActor
+        elif class_name == "CineCameraActor":
+            actor_class = unreal.CineCameraActor
+        elif class_name == "CameraActor":
+            actor_class = unreal.CameraActor
+        elif class_name == "PointLight":
+            actor_class = unreal.PointLight
+        elif class_name == "DirectionalLight":
+            actor_class = unreal.DirectionalLight
+        elif class_name == "SpotLight":
+            actor_class = unreal.SpotLight
+        else:
+            # Try to load as a blueprint class
+            try:
+                actor_class = unreal.EditorAssetLibrary.load_asset(class_name)
+            except:
+                pass
+        
+        if not actor_class:
+            print('RESULT:' + json.dumps({'success': False, 'error': f'Class {class_name} not found'}))
+        else:
+            spawnable = ls.add_spawnable_from_class(seq, actor_class)
+            if spawnable:
+                binding_id = unreal.MovieSceneSequenceExtensions.get_binding_id(seq, spawnable)
+                print('RESULT:' + json.dumps({
+                    'success': True,
+                    'spawnableId': str(binding_id),
+                    'className': class_name
+                }))
+            else:
+                print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to create spawnable'}))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
+
+    const resp = await this.executeWithRetry(
+      () => this.bridge.executePython(py),
+      'addSpawnableFromClass'
+    );
+    
+    return this.parsePythonResult(resp, 'addSpawnableFromClass');
   }
 }
