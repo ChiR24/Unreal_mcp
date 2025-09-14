@@ -5,7 +5,7 @@ export class AudioTools {
   constructor(private bridge: UnrealBridge) {}
 
   // Execute console command
-  private async executeCommand(command: string) {
+  private async _executeCommand(command: string) {
     return this.bridge.httpCall('/remote/object/call', 'PUT', {
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',
       functionName: 'ExecuteConsoleCommand',

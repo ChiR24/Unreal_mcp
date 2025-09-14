@@ -18,7 +18,18 @@
     "es2022": true
   },
   "rules": {
-    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_|^err|^e$|^error$" }],
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "args": "all",
+        "argsIgnorePattern": "^_",
+        "caughtErrors": "all",
+        "caughtErrorsIgnorePattern": "^_",
+        "destructuredArrayIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "ignoreRestSiblings": true
+      }
+    ],
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "@typescript-eslint/no-non-null-assertion": "warn",
@@ -28,13 +39,16 @@
     "no-empty": ["error", { "allowEmptyCatch": true }],
     "no-useless-escape": "warn",
     "no-case-declarations": "off",
-    "prefer-const": "warn"
+    "prefer-const": "warn",
+    "no-unused-vars": "off"
   },
   "ignorePatterns": [
     "dist/",
     "node_modules/",
     "*.js",
     "*.d.ts",
-    "vitest.config.ts"
+    "*.cjs",
+    "vitest.config.ts",
+    "test-*.js"
   ]
 }

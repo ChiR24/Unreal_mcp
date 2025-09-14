@@ -41,18 +41,17 @@ editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem
   }
 
   /**
-   * Get a safe way to access actors with fallback
-   * @returns Python code with both modern and legacy API fallback
+   * Get a safe way to access actors
+   * @returns Python code with modern API
    */
   static getSafeActorAccess(): string {
     return `
-# Try modern API first, fallback to legacy if needed
+# Use modern API
 try:
     editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    actors = editor_actor_subsystem.get_all_level_actors()
+    actors = editor_actor_subsystem.get_all_level_actors() if editor_actor_subsystem else []
 except:
-    # Fallback to deprecated API if modern one fails
-    actors = unreal.EditorLevelLibrary.get_all_level_actors()
+    actors = []
 `.trim();
   }
 }

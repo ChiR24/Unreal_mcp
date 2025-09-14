@@ -116,7 +116,12 @@ else:
     try:
         # Get the world using the modern subsystem API
         editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-        world = editor_subsystem.get_editor_world() if hasattr(editor_subsystem, 'get_editor_world') else unreal.EditorLevelLibrary.get_editor_world()
+        world = editor_subsystem.get_editor_world() if hasattr(editor_subsystem, 'get_editor_world') else None
+        if not world:
+            # Try LevelEditorSubsystem as fallback
+            level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+            if hasattr(level_subsystem, 'get_editor_world'):
+                world = level_subsystem.get_editor_world()
         
         # Handle content paths (assets) vs class names
         class_path = "${params.classPath}"

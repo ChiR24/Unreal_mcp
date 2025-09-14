@@ -5,7 +5,7 @@ export class LevelTools {
   constructor(private bridge: UnrealBridge) {}
 
   // Execute console command
-  private async executeCommand(command: string) {
+  private async _executeCommand(command: string) {
     return this.bridge.httpCall('/remote/object/call', 'PUT', {
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',
       functionName: 'ExecuteConsoleCommand',
@@ -26,7 +26,7 @@ export class LevelTools {
   }) {
     if (params.streaming) {
       // Try to add as streaming level
-      const py = `\nimport unreal\ntry:\n    world = unreal.EditorLevelLibrary.get_editor_world()\n    if world:\n        unreal.EditorLevelUtils.add_level_to_world(world, r"${params.levelPath}", unreal.LevelStreamingKismet)\n        print('RESULT:{\\'success\\': True}')\n    else:\n        print('RESULT:{\\'success\\': False, \\'error\\': \\'No editor world\\'}')\nexcept Exception as e:\n    print('RESULT:{\\'success\\': False, \\'error\\': \\'%s\\'}' % str(e))\n`.trim();
+      const py = `\nimport unreal\ntry:\n    # Use UnrealEditorSubsystem to get editor world\n    ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)\n    world = ues.get_editor_world() if ues else None\n    if world:\n        unreal.EditorLevelUtils.add_level_to_world(world, r"${params.levelPath}", unreal.LevelStreamingKismet)\n        print('RESULT:{\\'success\\': True}')\n    else:\n        print('RESULT:{\\'success\\': False, \\'error\\': \\'No editor world\\'}')\nexcept Exception as e:\n    print('RESULT:{\\'success\\': False, \\'error\\': \\'%s\\'}' % str(e))\n`.trim();
       try {
         const resp = await this.bridge.executePython(py);
         const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
@@ -132,7 +132,8 @@ try:
     except Exception:
         pass
     if not saved:
-        unreal.EditorLevelLibrary.save_current_level()
+        # No fallback available - LevelEditorSubsystem is required
+        raise Exception('LevelEditorSubsystem not available')
     print('RESULT:{"success": true}')
 except Exception as e:
     print('RESULT:{"success": false, "error": "' + str(e).replace('"','\\"') + '"}')
@@ -189,7 +190,7 @@ except Exception as e:
     shouldBeVisible: boolean;
     position?: [number, number, number];
   }) {
-    const py = `\nimport unreal\ntry:\n    world = unreal.EditorLevelLibrary.get_editor_world()\n    if world:\n        # Find streaming level by name and set flags\n        updated = False\n        for sl in world.get_streaming_levels():\n            try:\n                name = sl.get_world_asset_package_name() if hasattr(sl, 'get_world_asset_package_name') else str(sl.get_editor_property('world_asset'))\n                if name and name.endswith('/${params.levelName}'):\n                    try: sl.set_should_be_loaded(${params.shouldBeLoaded ? 'True' : 'False'})\n                    except Exception: pass\n                    try: sl.set_should_be_visible(${params.shouldBeVisible ? 'True' : 'False'})\n                    except Exception: pass\n                    updated = True\n                    break\n            except Exception: pass\n        print('RESULT:{\\'success\\': %s}' % ('True' if updated else 'False'))\n    else:\n        print('RESULT:{\\'success\\': False, \\'error\\': \\'No editor world\\'}')\nexcept Exception as e:\n    print('RESULT:{\\'success\\': False, \\'error\\': \\'%s\\'}' % str(e))\n`.trim();
+    const py = `\nimport unreal\ntry:\n    # Use UnrealEditorSubsystem to get editor world\n    ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)\n    world = ues.get_editor_world() if ues else None\n    if world:\n        # Find streaming level by name and set flags\n        updated = False\n        for sl in world.get_streaming_levels():\n            try:\n                name = sl.get_world_asset_package_name() if hasattr(sl, 'get_world_asset_package_name') else str(sl.get_editor_property('world_asset'))\n                if name and name.endswith('/${params.levelName}'):\n                    try: sl.set_should_be_loaded(${params.shouldBeLoaded ? 'True' : 'False'})\n                    except Exception: pass\n                    try: sl.set_should_be_visible(${params.shouldBeVisible ? 'True' : 'False'})\n                    except Exception: pass\n                    updated = True\n                    break\n            except Exception: pass\n        print('RESULT:{\\'success\\': %s}' % ('True' if updated else 'False'))\n    else:\n        print('RESULT:{\\'success\\': False, \\'error\\': \\'No editor world\\'}')\nexcept Exception as e:\n    print('RESULT:{\\'success\\': False, \\'error\\': \\'%s\\'}' % str(e))\n`.trim();
     try {
       const resp = await this.bridge.executePython(py);
       const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
@@ -311,7 +312,10 @@ try:
     nav_system = unreal.EditorSubsystemLibrary.get_editor_subsystem(unreal.NavigationSystemV1)
     if not nav_system:
         # Try alternative method
-        nav_system = unreal.NavigationSystemV1.get_navigation_system(unreal.EditorLevelLibrary.get_editor_world())
+        # Try to get world via UnrealEditorSubsystem
+        ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+        world = ues.get_editor_world() if ues else None
+        nav_system = unreal.NavigationSystemV1.get_navigation_system(world) if world else None
     
     if nav_system:
         # Use the safe Python API method instead of console commands
@@ -321,7 +325,9 @@ try:
             print('RESULT:' + json.dumps({'success': True, 'message': 'Navigation rebuild started'}))
         else:
             # Update navigation for selected actors only
-            selected_actors = unreal.EditorLevelLibrary.get_selected_level_actors()
+            # Use EditorActorSubsystem to get selected actors
+            actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+            selected_actors = actor_subsystem.get_selected_level_actors() if actor_subsystem else []
             if selected_actors:
                 for actor in selected_actors:
                     nav_system.update_nav_octree(actor)

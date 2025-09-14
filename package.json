@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/cli.js",
+    "start": "node dist/index.js",
+    "test:live": "node test-introspection-live.js",
     "dev": "ts-node-esm src/index.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",

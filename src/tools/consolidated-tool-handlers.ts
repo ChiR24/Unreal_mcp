@@ -840,38 +840,150 @@ export async function handleConsolidatedToolCall(
         mappedArgs = args;
         break;
 
-      // 11. REMOTE CONTROL PRESETS
+      // 11. REMOTE CONTROL PRESETS - Direct implementation
       case 'manage_rc':
         if (!args.action) throw new Error('Missing required parameter: action');
+        
+        // Handle RC operations directly through RcTools
+        let rcResult: any;
+        
         switch (args.action) {
+          // Support both 'create_preset' and 'create' for compatibility
           case 'create_preset':
-            mappedName = 'rc_create_preset';
-            mappedArgs = { name: args.name, path: args.path };
+          case 'create':
+            // Support both 'name' and 'presetName' parameter names
+            const presetName = args.name || args.presetName;
+            if (!presetName) throw new Error('Missing required parameter: name or presetName');
+            rcResult = await tools.rcTools.createPreset({ 
+              name: presetName, 
+              path: args.path 
+            });
+            // Return consistent output with presetId for tests
+            if (rcResult.success) {
+              rcResult.message = `Remote Control preset created: ${presetName}`;
+              // Ensure presetId is set (for test compatibility)
+              if (rcResult.presetPath && !rcResult.presetId) {
+                rcResult.presetId = rcResult.presetPath;
+              }
+            }
             break;
+            
+          case 'list':
+            // List all presets - implement via RcTools
+            rcResult = await tools.rcTools.listPresets();
+            break;
+            
+          case 'delete':
+            if (!args.presetId) throw new Error('Missing required parameter: presetId');
+            rcResult = await tools.rcTools.deletePreset(args.presetId);
+            if (rcResult.success) {
+              rcResult.message = 'Preset deleted successfully';
+            }
+            break;
+            
           case 'expose_actor':
-            mappedName = 'rc_expose_actor';
-            mappedArgs = { presetPath: args.presetPath, actorName: args.actorName };
+            if (!args.presetPath) throw new Error('Missing required parameter: presetPath');
+            if (!args.actorName) throw new Error('Missing required parameter: actorName');
+            
+            rcResult = await tools.rcTools.exposeActor({ 
+              presetPath: args.presetPath,
+              actorName: args.actorName
+            });
+            if (rcResult.success) {
+              rcResult.message = `Actor '${args.actorName}' exposed to preset`;
+            }
             break;
+            
           case 'expose_property':
-            mappedName = 'rc_expose_property';
-            mappedArgs = { presetPath: args.presetPath, objectPath: args.objectPath, propertyName: args.propertyName };
+          case 'expose':  // Support simplified name from tests
+            // Support both presetPath and presetId
+            const presetPathExp = args.presetPath || args.presetId;
+            if (!presetPathExp) throw new Error('Missing required parameter: presetPath or presetId');
+            if (!args.objectPath) throw new Error('Missing required parameter: objectPath');
+            if (!args.propertyName) throw new Error('Missing required parameter: propertyName');
+            
+            rcResult = await tools.rcTools.exposeProperty({ 
+              presetPath: presetPathExp,
+              objectPath: args.objectPath, 
+              propertyName: args.propertyName 
+            });
+            if (rcResult.success) {
+              rcResult.message = `Property '${args.propertyName}' exposed to preset`;
+            }
             break;
+            
           case 'list_fields':
-            mappedName = 'rc_list_fields';
-            mappedArgs = { presetPath: args.presetPath };
+          case 'get_exposed':  // Support test naming
+            const presetPathList = args.presetPath || args.presetId;
+            if (!presetPathList) throw new Error('Missing required parameter: presetPath or presetId');
+            
+            rcResult = await tools.rcTools.listFields({ 
+              presetPath: presetPathList 
+            });
+            // Map 'fields' to 'exposedProperties' for test compatibility
+            if (rcResult.success && rcResult.fields) {
+              rcResult.exposedProperties = rcResult.fields;
+            }
             break;
+            
           case 'set_property':
-            mappedName = 'rc_set_property';
-            mappedArgs = { objectPath: args.objectPath, propertyName: args.propertyName, value: args.value };
+          case 'set_value':  // Support test naming
+            // Support both patterns
+            const objPathSet = args.objectPath || args.presetId;
+            const propNameSet = args.propertyName || args.propertyLabel;
+            
+            if (!objPathSet) throw new Error('Missing required parameter: objectPath or presetId');
+            if (!propNameSet) throw new Error('Missing required parameter: propertyName or propertyLabel');
+            if (args.value === undefined) throw new Error('Missing required parameter: value');
+            
+            rcResult = await tools.rcTools.setProperty({ 
+              objectPath: objPathSet,
+              propertyName: propNameSet,
+              value: args.value 
+            });
+            if (rcResult.success) {
+              rcResult.message = `Property '${propNameSet}' value updated`;
+            }
             break;
+            
           case 'get_property':
-            mappedName = 'rc_get_property';
-            mappedArgs = { objectPath: args.objectPath, propertyName: args.propertyName };
+          case 'get_value':  // Support test naming
+            const objPathGet = args.objectPath || args.presetId;
+            const propNameGet = args.propertyName || args.propertyLabel;
+            
+            if (!objPathGet) throw new Error('Missing required parameter: objectPath or presetId');
+            if (!propNameGet) throw new Error('Missing required parameter: propertyName or propertyLabel');
+            
+            rcResult = await tools.rcTools.getProperty({ 
+              objectPath: objPathGet,
+              propertyName: propNameGet 
+            });
             break;
+            
+          case 'call_function':
+            if (!args.presetId) throw new Error('Missing required parameter: presetId');
+            if (!args.functionLabel) throw new Error('Missing required parameter: functionLabel');
+            
+            // For now, return not implemented
+            rcResult = { 
+              success: false, 
+              error: 'Function calls not yet implemented' 
+            };
+            break;
+            
           default:
-            throw new Error(`Unknown RC action: ${args.action}`);
+            throw new Error(`Unknown RC action: ${args.action}. Valid actions are: create_preset, expose_actor, expose_property, list_fields, set_property, get_property, or their simplified versions: create, list, delete, expose, get_exposed, set_value, get_value, call_function`);
         }
-        break;
+        
+        // Return the RC result directly with consistent structure
+        return {
+          ...rcResult,
+          content: [{
+            type: 'text',
+            text: rcResult.message || (rcResult.success ? 'Operation completed' : rcResult.error || 'Operation failed')
+          }],
+          isError: !rcResult.success
+        };
 
       // 12. SEQUENCER / CINEMATICS
       case 'manage_sequence':
@@ -922,11 +1034,15 @@ export async function handleConsolidatedToolCall(
     // Call the original handler with mapped name and args
     return await handleToolCall(mappedName, mappedArgs, tools);
 
-  } catch (err) {
+  } catch (err: any) {
+    // Return consistent error structure
+    const errorMessage = err?.message || String(err);
     return {
+      success: false,
+      error: errorMessage,
       content: [{
         type: 'text',
-        text: `Failed to execute ${name}: ${err}`
+        text: `Failed to execute ${name}: ${errorMessage}`
       }],
       isError: true
     };

@@ -5,7 +5,7 @@ export class DebugVisualizationTools {
   constructor(private bridge: UnrealBridge) {}
 
   // Execute console command (kept for legacy operations)
-  private async executeCommand(command: string) {
+  private async _executeCommand(command: string) {
     return this.bridge.httpCall('/remote/object/call', 'PUT', {
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',
       functionName: 'ExecuteConsoleCommand',

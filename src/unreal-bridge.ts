@@ -51,7 +51,7 @@ export class UnrealBridge {
   private lastStatCommandTime = 0; // Track stat commands separately
   
   // Safe viewmodes that won't cause crashes (per docs and testing)
-  private readonly SAFE_VIEWMODES = [
+  private readonly _SAFE_VIEWMODES = [
     'Lit', 'Unlit', 'Wireframe', 'DetailLighting',
     'LightingOnly', 'ReflectionOverride', 'ShaderComplexity'
   ];
@@ -145,10 +145,9 @@ if ues:
             les.editor_invalidate_viewports()
     except Exception:
         pass
+    print(f"RESULT:{{'success': True, 'location': [{x}, {y}, {z}], 'rotation': [{pitch}, {yaw}, {roll}]}}")
 else:
-    # Fallback to deprecated API
-    unreal.EditorLevelLibrary.set_level_viewport_camera_info(location, rotation)
-print(f"RESULT:{'success': True, 'location': [{x}, {y}, {z}], 'rotation': [{pitch}, {yaw}, {roll}]}")
+    print(f"RESULT:{{'success': False, 'error': 'UnrealEditorSubsystem not available'}}")
       `.trim()
     },
     BUILD_LIGHTING: {
@@ -162,11 +161,9 @@ try:
         les.build_light_maps(q, True)
         print(f"RESULT:{{'success': True, 'quality': '{quality}', 'method': 'LevelEditorSubsystem'}}")
     else:
-        raise Exception('No LevelEditorSubsystem')
-except Exception:
-    quality = unreal.LightingBuildQuality.{quality}
-    unreal.EditorLevelLibrary.build_lighting(quality, True)
-    print(f"RESULT:{{'success': True, 'quality': '{quality}', 'method': 'EditorLevelLibrary'}}")
+        print(f"RESULT:{{'success': False, 'error': 'LevelEditorSubsystem not available'}}")
+except Exception as e:
+    print(f"RESULT:{{'success': False, 'error': str(e)}}")
       `.trim()
     },
     SAVE_ALL_DIRTY_PACKAGES: {
@@ -287,6 +284,11 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
   async httpCall<T = any>(path: string, method: 'GET' | 'POST' | 'PUT' = 'POST', body?: any): Promise<T> {
     const url = path.startsWith('/') ? path : `/${path}`;
     const started = Date.now();
+    
+    // Fix Content-Length header issue - ensure body is properly handled
+    if (body === undefined || body === null) {
+      body = method === 'GET' ? undefined : {};
+    }
     
     // CRITICAL: Intercept and block dangerous console commands at HTTP level
     if (url === '/remote/object/call' && body?.functionName === 'ExecuteConsoleCommand') {
@@ -488,24 +490,60 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         // For multi-line scripts, try to execute as a block
         try {
           // Try executing as a single exec block
-          const escapedScript = command.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+          // Properly escape the script for Python exec
+          const escapedScript = command
+            .replace(/\\/g, '\\\\')
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '');
           return await this.executeConsoleCommand(`py exec("${escapedScript}")`);
         } catch {
-          // If that fails, execute line by line
-          const lines = command.split('\n').filter(line => line.trim().length > 0);
-          let result = null;
-          
-          for (const line of lines) {
-            // Skip comments
-            if (line.trim().startsWith('#')) {
-              continue;
+          // If that fails, break into smaller chunks
+          try {
+            // First ensure unreal is imported
+            await this.executeConsoleCommand('py import unreal');
+            
+            // For complex multi-line scripts, execute in logical chunks
+            const commandWithoutImport = command.replace(/^\s*import\s+unreal\s*;?\s*/m, '');
+            
+            // Split by semicolons first, then by newlines
+            const statements = commandWithoutImport
+              .split(/[;\n]/)  
+              .map(s => s.trim())
+              .filter(s => s.length > 0 && !s.startsWith('#'));
+            
+            let result = null;
+            for (const stmt of statements) {
+              // Skip if statement is too long for console
+              if (stmt.length > 200) {
+                // Try to execute as a single exec block
+                const miniScript = `exec("""${stmt.replace(/"/g, '\\"')}""")`;
+                result = await this.executeConsoleCommand(`py ${miniScript}`);
+              } else {
+                result = await this.executeConsoleCommand(`py ${stmt}`);
+              }
+              // Small delay between commands
+              await new Promise(resolve => setTimeout(resolve, 30));
             }
-            result = await this.executeConsoleCommand(`py ${line.trim()}`);
-            // Small delay between commands to ensure execution order
-            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            return result;
+          } catch {
+            // Final fallback: execute line by line
+            const lines = command.split('\n').filter(line => line.trim().length > 0);
+            let result = null;
+            
+            for (const line of lines) {
+              // Skip comments
+              if (line.trim().startsWith('#')) {
+                continue;
+              }
+              result = await this.executeConsoleCommand(`py ${line.trim()}`);
+              // Small delay between commands to ensure execution order
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            
+            return result;
           }
-          
-          return result;
         }
       }
     }
@@ -561,8 +599,8 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
   }
   
   /**
-   * SOLUTION 1: Enhanced EditorLevelLibrary Access
-   * Use Python scripting as a bridge to access EditorLevelLibrary functions
+   * Enhanced Editor Function Access
+   * Use Python scripting as a bridge to access modern Editor Subsystem functions
    */
   async executeEditorFunction(functionName: string, params?: Record<string, any>): Promise<any> {
     const template = this.PYTHON_TEMPLATES[functionName];

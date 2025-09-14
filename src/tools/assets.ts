@@ -15,7 +15,7 @@ export class AssetTools {
         // Create the file outside of Python, before import
         try {
           this.createTestFBX(sourcePath);
-        } catch (err) {
+      } catch (_err) {
           // If we can't create the file, we'll handle it in Python
         }
       }

@@ -698,7 +698,7 @@ print("RESULT:" + json.dumps(result))
   /**
    * Helper function to execute console commands
    */
-  private async executeCommand(command: string) {
+  private async _executeCommand(command: string) {
     return this.bridge.httpCall('/remote/object/call', 'PUT', {
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',
       functionName: 'ExecuteConsoleCommand',

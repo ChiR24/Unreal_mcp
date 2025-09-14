@@ -64,19 +64,8 @@ if les:
         # but the command was sent, assume it will start
         print('RESULT:' + json.dumps({'success': True, 'method': 'LevelEditorSubsystem'}))
 else:
-    # Fallback to deprecated API if subsystem not available
-    unreal.EditorLevelLibrary.editor_play_simulate()
-    time.sleep(1.0)  # Give it more time
-    is_playing = False
-    try:
-        is_playing = bool(unreal.EditorLevelLibrary.is_playing())
-    except Exception:
-        try:
-            is_playing = bool(unreal.EditorLevelLibrary.is_playing_in_editor())
-        except Exception:
-            pass
-    # Always return success since we sent the command
-    print('RESULT:' + json.dumps({'success': True, 'method': 'EditorLevelLibrary'}))
+    # If subsystem not available, report error
+    print('RESULT:' + json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'}))
         `.trim();
         
         const resp: any = await this.bridge.executePython(pythonCmd);
@@ -136,9 +125,8 @@ if les:
     les.editor_request_end_play()  # Modern API method
     print('RESULT:' + json.dumps({'success': True, 'method': 'LevelEditorSubsystem'}))
 else:
-    # Fallback to deprecated API
-    unreal.EditorLevelLibrary.editor_end_play()
-    print('RESULT:' + json.dumps({'success': True, 'method': 'EditorLevelLibrary'}))
+    # If subsystem not available, report error
+    print('RESULT:' + json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'}))
         `.trim();
         const resp: any = await this.bridge.executePython(pythonCmd);
         const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
@@ -202,9 +190,8 @@ try:
         les.build_light_maps(unreal.LightingBuildQuality.QUALITY_HIGH, True)
         print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via LevelEditorSubsystem'}))
     else:
-        # Fallback to deprecated API if subsystem not available
-        unreal.EditorLevelLibrary.build_lighting(unreal.LightingBuildQuality.HIGH, True)
-        print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via EditorLevelLibrary'}))
+        # If subsystem not available, report error
+        print('RESULT:' + json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'}))
 except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();

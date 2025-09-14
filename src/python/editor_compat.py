@@ -8,10 +8,9 @@ import unreal
 def get_editor_world():
     """
     Get the current editor world using the recommended API.
-    Falls back to deprecated method if new API is not available.
     """
     try:
-        # Try new recommended API
+        # Use new recommended API
         if hasattr(unreal, 'UnrealEditorSubsystem'):
             subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
             if hasattr(subsystem, 'get_editor_world'):
@@ -19,19 +18,14 @@ def get_editor_world():
     except:
         pass
     
-    # Fallback to deprecated but working method
-    if hasattr(unreal, 'EditorLevelLibrary'):
-        return unreal.EditorLevelLibrary.get_editor_world()
-    
     return None
 
 def get_all_level_actors():
     """
     Get all actors in the current level using the recommended API.
-    Falls back to deprecated method if new API is not available.
     """
     try:
-        # Try new recommended API - EditorActorSubsystem
+        # Use new recommended API - EditorActorSubsystem
         if hasattr(unreal, 'EditorActorSubsystem'):
             subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
             if hasattr(subsystem, 'get_all_level_actors'):
@@ -39,19 +33,14 @@ def get_all_level_actors():
     except:
         pass
     
-    # Fallback to deprecated but working method
-    if hasattr(unreal, 'EditorLevelLibrary'):
-        return unreal.EditorLevelLibrary.get_all_level_actors()
-    
     return []
 
 def spawn_actor_from_class(actor_class, location, rotation):
     """
     Spawn an actor in the level using the recommended API.
-    Falls back to deprecated method if new API is not available.
     """
     try:
-        # Try new recommended API
+        # Use new recommended API
         if hasattr(unreal, 'EditorActorSubsystem'):
             subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
             if hasattr(subsystem, 'spawn_actor_from_class'):
@@ -59,19 +48,14 @@ def spawn_actor_from_class(actor_class, location, rotation):
     except:
         pass
     
-    # Fallback to deprecated but working method
-    if hasattr(unreal, 'EditorLevelLibrary'):
-        return unreal.EditorLevelLibrary.spawn_actor_from_class(actor_class, location, rotation)
-    
     return None
 
 def destroy_actor(actor):
     """
     Destroy an actor in the level using the recommended API.
-    Falls back to deprecated method if new API is not available.
     """
     try:
-        # Try new recommended API
+        # Use new recommended API
         if hasattr(unreal, 'EditorActorSubsystem'):
             subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
             if hasattr(subsystem, 'destroy_actor'):
@@ -79,49 +63,35 @@ def destroy_actor(actor):
     except:
         pass
     
-    # Fallback to deprecated but working method
-    if hasattr(unreal, 'EditorLevelLibrary'):
-        return unreal.EditorLevelLibrary.destroy_actor(actor)
-    
     return False
 
 def save_current_level():
     """
     Save the current level using the recommended API.
-    Falls back to deprecated method if new API is not available.
     """
     try:
-        # Try new recommended API
-        if hasattr(unreal, 'UnrealEditorSubsystem'):
-            subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+        # Use new recommended API - LevelEditorSubsystem
+        if hasattr(unreal, 'LevelEditorSubsystem'):
+            subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
             if hasattr(subsystem, 'save_current_level'):
                 return subsystem.save_current_level()
     except:
         pass
-    
-    # Fallback to deprecated but working method
-    if hasattr(unreal, 'EditorLevelLibrary'):
-        return unreal.EditorLevelLibrary.save_current_level()
     
     return False
 
 def get_level_viewport_camera_info():
     """
     Get level viewport camera information using the recommended API.
-    Falls back to deprecated method if new API is not available.
     """
     try:
-        # Try new recommended API
+        # Use new recommended API
         if hasattr(unreal, 'UnrealEditorSubsystem'):
             subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
             if hasattr(subsystem, 'get_level_viewport_camera_info'):
                 return subsystem.get_level_viewport_camera_info()
     except:
         pass
-    
-    # Fallback to deprecated but working method
-    if hasattr(unreal, 'EditorLevelLibrary'):
-        return unreal.EditorLevelLibrary.get_level_viewport_camera_info()
     
     return None
 

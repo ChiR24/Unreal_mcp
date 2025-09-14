@@ -703,7 +703,7 @@ print("DONE")
   /**
    * Get default parent class for blueprint type
    */
-  private getDefaultParentClass(blueprintType: string): string {
+  private _getDefaultParentClass(blueprintType: string): string {
     const parentClasses: { [key: string]: string } = {
       'Actor': '/Script/Engine.Actor',
       'Pawn': '/Script/Engine.Pawn',
@@ -720,7 +720,7 @@ print("DONE")
   /**
    * Helper function to execute console commands
    */
-  private async executeCommand(command: string) {
+  private async _executeCommand(command: string) {
     // Many blueprint operations require editor scripting; prefer Python-based flows above.
     return this.bridge.httpCall('/remote/object/call', 'PUT', {
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',

@@ -9,7 +9,7 @@ export class FoliageTools {
   // Instead, we validate inputs and return structured results. Actual foliage
   // authoring should be implemented via Python APIs in future iterations.
 
-  // Add foliage type via Python (creates FoliageType asset if possible; else registers transient)
+  // Add foliage type via Python (creates FoliageType asset properly)
   async addFoliageType(params: {
     name: string;
     meshPath: string;
@@ -80,10 +80,9 @@ try:
     if mesh:
         res['used_mesh'] = str(mesh.get_path_name())
 
-    # Create FoliageType asset using alternative approach since FoliageTypeFactory doesn't exist
+    # Create FoliageType asset using proper UE5 API
     asset = None
     try:
-        # Try to create or load existing foliage type
         asset_path = f"{package_path}/{name}"
         
         # Check if asset already exists
@@ -91,20 +90,81 @@ try:
             asset = unreal.EditorAssetLibrary.load_asset(asset_path)
             res['note'] += '; loaded_existing'
         else:
-            # Try to create FoliageType using new approach
+            # Create FoliageType_InstancedStaticMesh using proper API
             try:
-                # Create a foliage type by duplicating a template if available
-                template_path = '/Engine/Foliage/FoliageType_Default'
-                if unreal.EditorAssetLibrary.does_asset_exist(template_path):
-                    asset = unreal.EditorAssetLibrary.duplicate_asset(template_path, asset_path)
-                    res['note'] += '; duplicated_from_template'
+                asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+                
+                # Try to create factory and set mesh property
+                factory = None
+                try:
+                    factory = unreal.FoliageType_InstancedStaticMeshFactory()
+                    # Try different property names for different UE versions
+                    try:
+                        factory.set_editor_property('mesh', mesh)
+                    except:
+                        try:
+                            factory.set_editor_property('static_mesh', mesh)
+                        except:
+                            try:
+                                factory.set_editor_property('source_mesh', mesh)
+                            except:
+                                pass  # Factory will use default or no mesh
+                except:
+                    res['note'] += '; factory_creation_failed'
+                    factory = None
+                
+                # Create the asset with or without factory
+                if factory:
+                    asset = asset_tools.create_asset(
+                        asset_name=name,
+                        package_path=package_path,
+                        asset_class=unreal.FoliageType_InstancedStaticMesh,
+                        factory=factory
+                    )
                 else:
-                    # As fallback, try direct creation (may not work in all UE versions)
-                    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-                    asset = asset_tools.create_asset(name, package_path, unreal.FoliageType, None)
-                    res['note'] += '; direct_creation_attempted'
-            except Exception as inner_e:
-                res['note'] += f"; creation_method_failed: {inner_e}"
+                    # Try without factory
+                    asset = asset_tools.create_asset(
+                        asset_name=name,
+                        package_path=package_path,
+                        asset_class=unreal.FoliageType_InstancedStaticMesh,
+                        factory=None
+                    )
+                
+                if asset:
+                    # Configure foliage properties
+                    asset.set_editor_property('mesh', mesh)
+                    if ${params.density !== undefined ? params.density : 1.0} >= 0:
+                        asset.set_editor_property('density', ${params.density !== undefined ? params.density : 1.0})
+                    if ${params.randomYaw === false ? 'False' : 'True'}:
+                        asset.set_editor_property('random_yaw', True)
+                    if ${params.alignToNormal === false ? 'False' : 'True'}:
+                        asset.set_editor_property('align_to_normal', True)
+                    
+                    # Set scale range
+                    min_scale = ${params.minScale || 0.8}
+                    max_scale = ${params.maxScale || 1.2}
+                    asset.set_editor_property('scale_x', (min_scale, max_scale))
+                    asset.set_editor_property('scale_y', (min_scale, max_scale))
+                    asset.set_editor_property('scale_z', (min_scale, max_scale))
+                    
+                    res['note'] += '; created_with_factory'
+                else:
+                    res['note'] += '; factory_creation_failed'
+            except AttributeError:
+                # Fallback if factory doesn't exist - use base FoliageType
+                try:
+                    asset = asset_tools.create_asset(
+                        asset_name=name,
+                        package_path=package_path,
+                        asset_class=unreal.FoliageType,
+                        factory=None
+                    )
+                    if asset:
+                        res['note'] += '; created_base_foliage_type'
+                except Exception as e2:
+                    res['note'] += f"; base_creation_failed: {e2}"
+            except Exception as e:
+                res['note'] += f"; factory_creation_failed: {e}"
                 asset = None
     except Exception as e:
         res['note'] += f"; create_asset failed: {e}"
@@ -112,12 +172,20 @@ try:
 
     if asset and mesh:
         try:
-            # For FoliageType, set the Static Mesh property (Python: 'static_mesh')
-            asset.set_editor_property('static_mesh', mesh)
-            unreal.EditorAssetLibrary.save_loaded_asset(asset)
+            # Set the mesh property (different property names in different UE versions)
+            try:
+                asset.set_editor_property('mesh', mesh)
+            except:
+                try:
+                    asset.set_editor_property('static_mesh', mesh)
+                except:
+                    pass
+            
+            # Save the asset
+            unreal.EditorAssetLibrary.save_asset(asset.get_path_name())
             res['asset_path'] = str(asset.get_path_name())
             res['created'] = True
-            res['method'] = 'Asset'
+            res['method'] = 'FoliageType_InstancedStaticMesh'
         except Exception as e:
             res['note'] += f"; set/save asset failed: {e}"
     elif not asset:
@@ -127,7 +195,7 @@ try:
 
     # Verify existence
     res['exists_after'] = unreal.EditorAssetLibrary.does_asset_exist(res['asset_path']) if res['asset_path'] else False
-    res['success'] = True
+    res['success'] = res['exists_after'] or res['created']
     
 except Exception as e:
     res['success'] = False
