@@ -222,7 +222,14 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         this.log.warn(`Connection timeout after ${timeoutMs}ms`);
         if (this.ws) {
           this.ws.removeAllListeners();
-          this.ws.close();
+          // Only close if the websocket is in CONNECTING state
+          if (this.ws.readyState === WebSocket.CONNECTING) {
+            try {
+              this.ws.terminate(); // Use terminate instead of close for immediate cleanup
+            } catch (e) {
+              // Ignore close errors
+            }
+          }
           this.ws = undefined;
         }
         reject(new Error('Connection timeout: Unreal Engine may not be running or Remote Control is not enabled'));
@@ -243,7 +250,13 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         this.log.error('WebSocket error', err);
         if (this.ws) {
           this.ws.removeAllListeners();
-          this.ws.close();
+          try {
+            if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+              this.ws.terminate();
+            }
+          } catch (e) {
+            // Ignore close errors
+          }
           this.ws = undefined;
         }
         reject(new Error(`Failed to connect: ${err.message}`));
@@ -290,6 +303,9 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
       body = method === 'GET' ? undefined : {};
     }
     
+    // Add timeout wrapper to prevent hanging
+    const CALL_TIMEOUT = 10000; // 10 seconds timeout
+    
     // CRITICAL: Intercept and block dangerous console commands at HTTP level
     if (url === '/remote/object/call' && body?.functionName === 'ExecuteConsoleCommand') {
       const command = body?.parameters?.Command;
@@ -331,18 +347,27 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
       }
     }
     
-    // Retry logic with exponential backoff
+    // Retry logic with exponential backoff and timeout
     let lastError: any;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         // For GET requests, send payload as query parameters (not in body)
-        const config: any = { url, method };
+        const config: any = { url, method, timeout: CALL_TIMEOUT };
         if (method === 'GET' && body && typeof body === 'object') {
           config.params = body;
         } else if (body !== undefined) {
           config.data = body;
         }
-        const resp = await this.http.request<T>(config);
+        
+        // Wrap with timeout promise to ensure we don't hang
+        const requestPromise = this.http.request<T>(config);
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Request timeout after ${CALL_TIMEOUT}ms`));
+          }, CALL_TIMEOUT);
+        });
+        
+        const resp = await Promise.race([requestPromise, timeoutPromise]);
         const ms = Date.now() - started;
         this.log.debug(`[HTTP ${method}] ${url} -> ${ms}ms`);
         return resp.data;
@@ -350,12 +375,17 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         lastError = error;
         const delay = Math.min(1000 * Math.pow(2, attempt), 5000); // Exponential backoff with 5s max
         
+        // Log timeout errors specifically
+        if (error.message?.includes('timeout')) {
+          this.log.warn(`HTTP request timed out (attempt ${attempt + 1}/3): ${url}`);
+        }
+        
         if (attempt < 2) {
           this.log.warn(`HTTP request failed (attempt ${attempt + 1}/3), retrying in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           
           // If connection error, try to reconnect
-          if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+          if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
             this.scheduleReconnect();
           }
         }
@@ -1039,6 +1069,9 @@ print('RESULT:' + json.dumps(flags))
    */
   getSafeCommands(): Record<string, string> {
     return {
+      // Health check (safe, no side effects)
+      'HealthCheck': 'echo MCP Server Health Check',
+      
       // Performance monitoring (safe)
       'ShowFPS': 'stat unit',  // Use 'stat unit' instead of 'stat fps'
       'ShowMemory': 'stat memory',

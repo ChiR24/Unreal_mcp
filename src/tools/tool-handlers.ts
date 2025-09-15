@@ -23,6 +23,7 @@ import { VisualTools } from './visual.js';
 import { EngineTools } from './engine.js';
 import { Logger } from '../utils/logger.js';
 import { toVec3Object, toRotObject, toVec3Array } from '../utils/normalize.js';
+import { cleanObject } from '../utils/safe-json.js';
 
 const log = new Logger('ToolHandler');
 
@@ -869,14 +870,17 @@ except Exception as e:
         throw new Error(`Unknown tool: ${name}`);
     }
 
-    // Return the raw result for tests, with MCP format properties added
+    // Clean the result to prevent circular references
+    const cleanedResult = result && typeof result === 'object' ? cleanObject(result) : result;
+    
+    // Return MCP-compliant response format
     return {
-      ...result,  // Include all properties from the tool result
       content: [{
         type: 'text',
         text: message
       }],
-      isError: false
+      // Include result data as metadata for debugging
+      ...(cleanedResult && typeof cleanedResult === 'object' ? cleanedResult : {})
     };
 
   } catch (err) {

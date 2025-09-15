@@ -1,11 +1,15 @@
 // Consolidated tool handlers - maps 10 tools to all 36 operations
 import { handleToolCall } from './tool-handlers.js';
+import { cleanObject } from '../utils/safe-json.js';
 
 export async function handleConsolidatedToolCall(
   name: string,
   args: any,
   tools: any
 ) {
+  const startTime = Date.now();
+  console.log(`[ConsolidatedToolHandler] Starting execution of ${name} at ${new Date().toISOString()}`);
+  
   try {
     // Validate args is not null/undefined
     if (args === null || args === undefined) {
@@ -975,15 +979,9 @@ export async function handleConsolidatedToolCall(
             throw new Error(`Unknown RC action: ${args.action}. Valid actions are: create_preset, expose_actor, expose_property, list_fields, set_property, get_property, or their simplified versions: create, list, delete, expose, get_exposed, set_value, get_value, call_function`);
         }
         
-        // Return the RC result directly with consistent structure
-        return {
-          ...rcResult,
-          content: [{
-            type: 'text',
-            text: rcResult.message || (rcResult.success ? 'Operation completed' : rcResult.error || 'Operation failed')
-          }],
-          isError: !rcResult.success
-        };
+        // Return result directly - MCP formatting will be handled by response validator
+        // Clean to prevent circular references
+        return cleanObject(rcResult);
 
       // 12. SEQUENCER / CINEMATICS
       case 'manage_sequence':
@@ -1038,17 +1036,9 @@ export async function handleConsolidatedToolCall(
           }
         })();
         
-        // Return result with consistent structure
-        return {
-          ...seqResult,
-          content: [{
-            type: 'text',
-            text: seqResult.message || (seqResult.success ? 
-              `Sequence action '${args.action}' completed successfully` : 
-              seqResult.error || 'Operation failed')
-          }],
-          isError: !seqResult.success
-        };
+        // Return result directly - MCP formatting will be handled by response validator
+        // Clean to prevent circular references
+        return cleanObject(seqResult);
       // 13. INTROSPECTION
       case 'inspect':
         if (!args.action) throw new Error('Missing required parameter: action');
@@ -1070,18 +1060,37 @@ export async function handleConsolidatedToolCall(
         throw new Error(`Unknown consolidated tool: ${name}`);
     }
 
-    // Call the original handler with mapped name and args
-    return await handleToolCall(mappedName, mappedArgs, tools);
+    // Call the original handler with mapped name and args with timeout
+    const TOOL_TIMEOUT = 15000; // 15 seconds timeout for tool execution
+    
+    const toolPromise = handleToolCall(mappedName, mappedArgs, tools);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Tool execution timeout after ${TOOL_TIMEOUT}ms`));
+      }, TOOL_TIMEOUT);
+    });
+    
+    const result = await Promise.race([toolPromise, timeoutPromise]);
+    const duration = Date.now() - startTime;
+    console.log(`[ConsolidatedToolHandler] Completed execution of ${name} in ${duration}ms`);
+    
+    // Clean the result to prevent circular reference errors
+    return cleanObject(result);
 
   } catch (err: any) {
-    // Return consistent error structure
+    const duration = Date.now() - startTime;
+    console.log(`[ConsolidatedToolHandler] Failed execution of ${name} after ${duration}ms: ${err?.message || String(err)}`);
+    
+    // Return consistent error structure matching regular tool handlers
     const errorMessage = err?.message || String(err);
+    const isTimeout = errorMessage.includes('timeout');
+    
     return {
-      success: false,
-      error: errorMessage,
       content: [{
         type: 'text',
-        text: `Failed to execute ${name}: ${errorMessage}`
+        text: isTimeout 
+          ? `Tool ${name} timed out. Please check Unreal Engine connection.`
+          : `Failed to execute ${name}: ${errorMessage}`
       }],
       isError: true
     };

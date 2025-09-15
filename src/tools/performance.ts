@@ -78,14 +78,32 @@ export class PerformanceTools {
     enabled: boolean;
     verbose?: boolean;
   }) {
-    // Use stat fps as requested - shows FPS counter
-    // For more detailed timing info, use 'stat unit' instead
-    const command = params.enabled 
-      ? (params.verbose ? 'stat unit' : 'stat fps')
-      : 'stat none';
+    const startTime = Date.now();
+    console.log(`[PerformanceTools] Starting showFPS with params:`, params);
     
-    await this.bridge.executeConsoleCommand(command);
-    return { success: true, message: params.enabled ? 'FPS display enabled' : 'FPS display disabled' };
+    try {
+      // Use stat fps as requested - shows FPS counter
+      // For more detailed timing info, use 'stat unit' instead
+      const command = params.enabled 
+        ? (params.verbose ? 'stat unit' : 'stat fps')
+        : 'stat none';
+      
+      console.log(`[PerformanceTools] Executing command: ${command}`);
+      await this.bridge.executeConsoleCommand(command);
+      console.log(`[PerformanceTools] Command completed in ${Date.now() - startTime}ms`);
+      return { 
+        success: true, 
+        message: params.enabled ? 'FPS display enabled' : 'FPS display disabled',
+        fpsVisible: params.enabled,
+        command: command
+      };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: `Failed to ${params.enabled ? 'enable' : 'disable'} FPS display: ${error}`,
+        fpsVisible: false
+      };
+    }
   }
 
   // Show performance stats

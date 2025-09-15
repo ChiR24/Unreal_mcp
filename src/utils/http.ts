@@ -148,7 +148,7 @@ export async function requestWithRetry<T = any>(
 
       // Calculate delay and wait
       const delay = calculateBackoff(attempt, retry);
-      console.info(`[HTTP] Retry attempt ${attempt}/${retry.maxRetries} after ${Math.round(delay)}ms`);
+      console.error(`[HTTP] Retry attempt ${attempt}/${retry.maxRetries} after ${Math.round(delay)}ms`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }

@@ -42,8 +42,13 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { responseValidator } from './utils/response-validator.js';
 import { ErrorHandler } from './utils/error-handler.js';
+import { routeStdoutLogsToStderr } from './utils/stdio-redirect.js';
+import { sanitizeResponse, cleanObject } from './utils/safe-json.js';
 
 const log = new Logger('UE-MCP');
+
+// Ensure stdout remains JSON-only for MCP by routing logs to stderr unless opted out.
+routeStdoutLogsToStderr();
 
 // Performance metrics
 interface PerformanceMetrics {
@@ -107,8 +112,8 @@ function trackPerformance(startTime: number, success: boolean) {
 // Health check function
 async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
   try {
-    // Use a robust, whitelisted operation for health check
-    await bridge.executeConsoleCommand('stat none');
+    // Use a safe echo command that doesn't affect any settings
+    await bridge.executeConsoleCommand('echo MCP Server Health Check');
     metrics.connectionStatus = 'connected';
     metrics.lastHealthCheck = new Date();
     return true;
@@ -418,6 +423,8 @@ export async function createServer() {
     
     // Use consolidated or individual handler based on configuration
     try {
+      log.debug(`Executing tool: ${name}`);
+      
       let result;
       if (CONFIG.USE_CONSOLIDATED_TOOLS) {
         result = await handleConsolidatedToolCall(name, args, tools);
@@ -425,10 +432,22 @@ export async function createServer() {
         result = await handleToolCall(name, args, tools);
       }
       
+      log.debug(`Tool ${name} returned result`);
+      
+      // Clean the result to remove circular references
+      result = cleanObject(result);
+      
       // Validate and enhance response
       result = responseValidator.wrapResponse(name, result);
       
       trackPerformance(startTime, true);
+      
+      log.info(`Tool ${name} completed successfully in ${Date.now() - startTime}ms`);
+      
+      // Log that we're returning the response
+      const responsePreview = JSON.stringify(result).substring(0, 100);
+      log.debug(`Returning response to MCP client: ${responsePreview}...`);
+      
       return result;
     } catch (error) {
       trackPerformance(startTime, false);
@@ -453,7 +472,6 @@ export async function createServer() {
           type: 'text',
           text: errorResponse.message || `Failed to execute ${name}`
         }],
-        isError: true,
         ...errorResponse
       };
     }
@@ -501,6 +519,25 @@ export async function createServer() {
 export async function startStdioServer() {
   const { server } = await createServer();
   const transport = new StdioServerTransport();
+  
+  // Add debugging for transport messages
+  const originalWrite = process.stdout.write;
+  process.stdout.write = function(...args: any[]) {
+    const message = args[0];
+    if (typeof message === 'string' && message.includes('jsonrpc')) {
+      log.debug(`Sending to client: ${message.substring(0, 200)}...`);
+    }
+    return originalWrite.apply(process.stdout, args as any);
+  } as any;
+  
   await server.connect(transport);
   log.info('Unreal Engine MCP Server started on stdio');
+}
+
+// Start the server when run directly
+if (import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}`) {
+  startStdioServer().catch(error => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  });
 }

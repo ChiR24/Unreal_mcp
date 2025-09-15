@@ -287,7 +287,7 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
       'LightComplexity', 'ShaderComplexity', 'LightmapDensity', 'StationaryLightOverlap'
     ];
     if (UNSAFE_VIEWMODES.includes(params.mode)) {
-      console.warn(`⚠️ Viewmode '${params.mode}' may be unstable in some UE configurations.`);
+      console.error(`⚠️ Viewmode '${params.mode}' may be unstable in some UE configurations.`);
       try { await this.bridge.executeConsoleCommand('stop'); } catch {}
       await new Promise(resolve => setTimeout(resolve, 100));
     }

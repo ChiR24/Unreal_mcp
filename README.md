@@ -97,6 +97,7 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 - **Graceful Degradation** - Server starts even without UE connection
 - **Auto-Reconnection** - Attempts reconnection every 10 seconds
 - **Connection Timeout** - 5-second timeout with configurable retries
+- **Non-Intrusive Health Checks** - Uses echo commands every 30 seconds
 - **Command Safety** - Blocks dangerous console commands
 - **Input Flexibility** - Vectors/rotators accept object or array format
 - **Asset Caching** - 10-second TTL for improved performance

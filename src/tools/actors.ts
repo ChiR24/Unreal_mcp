@@ -9,14 +9,11 @@ export class ActorTools {
       throw new Error(`Invalid classPath: ${params.classPath}`);
     }
     
-    // Reject asset paths that are commonly mistaken for class paths
-    if (params.classPath.includes('/Engine/BasicShapes/') || 
-        params.classPath.includes('/Engine/Content/') ||
-        (params.classPath.includes('/Engine/') && !params.classPath.includes('/Script/'))) {
-      throw new Error(`Invalid classPath: "${params.classPath}" appears to be an asset path, not an actor class. Use class names like 'StaticMeshActor', 'CameraActor', etc.`);
-    }
+    // Auto-detect and handle asset paths (like /Engine/BasicShapes/Cube)
+    // The Python code will automatically spawn a StaticMeshActor and assign the mesh
+    // So we don't reject asset paths anymore - let Python handle them intelligently
     
-    // Reject known invalid patterns
+    // Only reject obviously invalid patterns
     if (params.classPath === 'InvalidActorClass' || 
         params.classPath === 'NoSlash' ||
         params.classPath.startsWith('/Invalid/') ||

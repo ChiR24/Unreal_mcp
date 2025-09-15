@@ -144,17 +144,17 @@ else:
       // Try to resolve skeleton to mesh mapping
       const resolvedPath = resolveSkeletalMeshPath(meshPath);
       if (resolvedPath && resolvedPath !== meshPath) {
-        console.log(`Auto-correcting path from ${meshPath} to ${resolvedPath}`);
+        console.error(`Auto-correcting path from ${meshPath} to ${resolvedPath}`);
         meshPath = resolvedPath;
       }
       
       // Auto-resolve if it looks like a skeleton path or is empty
       if (!meshPath || meshPath.includes('_Skeleton') || meshPath === 'None' || meshPath === '') {
-        console.log('Resolving skeletal mesh path...');
+        console.error('Resolving skeletal mesh path...');
         const resolvedMesh = await this.findValidSkeletalMesh();
         if (resolvedMesh) {
           meshPath = resolvedMesh;
-          console.log(`Using resolved skeletal mesh: ${meshPath}`);
+          console.error(`Using resolved skeletal mesh: ${meshPath}`);
         }
       }
       
@@ -176,13 +176,13 @@ else:
       // Auto-fix common incorrect paths
       let actualSkeletonPath = params.skeletonPath;
       if (actualSkeletonPath && skeletonToMeshMap[actualSkeletonPath]) {
-        console.log(`Auto-correcting path from ${actualSkeletonPath} to ${skeletonToMeshMap[actualSkeletonPath]}`);
+        console.error(`Auto-correcting path from ${actualSkeletonPath} to ${skeletonToMeshMap[actualSkeletonPath]}`);
         actualSkeletonPath = skeletonToMeshMap[actualSkeletonPath];
       }
       
       if (actualSkeletonPath && (actualSkeletonPath.includes('_Skeleton') || actualSkeletonPath.includes('SK_Mannequin'))) {
         // This is likely a skeleton path, not a skeletal mesh
-        console.warn('Warning: Path appears to be a skeleton, not a skeletal mesh. Auto-correcting to SKM_Manny_Simple.');
+        console.error('Warning: Path appears to be a skeleton, not a skeletal mesh. Auto-correcting to SKM_Manny_Simple.');
       }
       
       // Build Python script with resolved mesh path

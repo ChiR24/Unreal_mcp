@@ -1,5 +1,6 @@
 import Ajv from 'ajv';
 import { Logger } from './logger.js';
+import { cleanObject } from './safe-json.js';
 
 const log = new Logger('ResponseValidator');
 
@@ -96,6 +97,18 @@ export class ResponseValidator {
    * Wrap a tool response with validation
    */
   wrapResponse(toolName: string, response: any): any {
+    // Ensure response is safe to serialize first
+    try {
+      // The response should already be cleaned, but double-check
+      if (response && typeof response === 'object') {
+        // Make sure we can serialize it
+        JSON.stringify(response);
+      }
+    } catch (error) {
+      log.error(`Response for ${toolName} contains circular references, cleaning...`);
+      response = cleanObject(response);
+    }
+    
     const validation = this.validateResponse(toolName, response);
     
     // Add validation metadata
@@ -111,11 +124,9 @@ export class ResponseValidator {
       }
     }
 
-    // Add structured content if available
-    if (validation.structuredContent && response) {
-      response.structuredContent = validation.structuredContent;
-    }
-
+    // Don't add structuredContent to the response - it's for internal validation only
+    // Adding it can cause circular references
+    
     return response;
   }
 
