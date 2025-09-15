@@ -44,7 +44,7 @@ export class ActorTools {
       // Fallback to console if Python fails for other reasons
       // Only log if not a known/expected error
       if (!String(pythonErr).includes('No valid result from Python')) {
-        console.log('Python spawn failed, falling back to console:', pythonErr);
+        console.error('Python spawn failed, falling back to console:', pythonErr);
       }
       return this.spawnViaConsole(params);
     }

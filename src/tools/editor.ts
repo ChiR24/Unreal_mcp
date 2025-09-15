@@ -93,7 +93,7 @@ else:
         // If not verified, fall through to fallback
       } catch (err) {
         // Log the error for debugging but continue
-        console.log('Python PIE start issue:', err);
+        console.error('Python PIE start issue:', err);
       }
       // Fallback to console command which is more reliable
       await this.bridge.executeConsoleCommand('PlayInViewport');
