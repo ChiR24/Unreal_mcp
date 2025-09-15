@@ -53,7 +53,7 @@ export const consolidatedToolDefinitions = [
   // 2. ACTOR CONTROL - Combines actor operations
   {
     name: 'control_actor',
-    description: 'Control actors - spawn, delete, apply physics',
+    description: 'Control actors - spawn, delete, apply physics. For spawning, supports both actor classes (e.g., StaticMeshActor, CameraActor) and asset paths (e.g., /Engine/BasicShapes/Cube) which will auto-spawn as StaticMeshActor',
     inputSchema: {
       type: 'object',
       properties: {
@@ -63,8 +63,11 @@ export const consolidatedToolDefinitions = [
           description: 'Action to perform'
         },
         // Common
-        actorName: { type: 'string', description: 'Actor name' },
-        classPath: { type: 'string', description: 'Blueprint/class path' },
+        actorName: { type: 'string', description: 'Actor name (optional for spawn, auto-generated if not provided)' },
+        classPath: { 
+          type: 'string', 
+          description: 'Actor class (e.g., "StaticMeshActor", "CameraActor") OR asset path (e.g., "/Engine/BasicShapes/Cube", "/Game/MyMesh"). Asset paths will automatically spawn as StaticMeshActor with the mesh applied'
+        },
         // Transform
         location: {
           type: 'object',

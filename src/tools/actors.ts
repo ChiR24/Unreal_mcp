@@ -9,6 +9,24 @@ export class ActorTools {
       throw new Error(`Invalid classPath: ${params.classPath}`);
     }
     
+    // Auto-map common shape names to proper asset paths
+    const shapeMapping: { [key: string]: string } = {
+      'cube': '/Engine/BasicShapes/Cube',
+      'sphere': '/Engine/BasicShapes/Sphere',
+      'cylinder': '/Engine/BasicShapes/Cylinder',
+      'cone': '/Engine/BasicShapes/Cone',
+      'plane': '/Engine/BasicShapes/Plane',
+      'torus': '/Engine/BasicShapes/Torus',
+      'box': '/Engine/BasicShapes/Cube',  // Common alias
+      'ball': '/Engine/BasicShapes/Sphere',  // Common alias
+    };
+    
+    // Check if classPath is just a simple shape name (case-insensitive)
+    const lowerPath = params.classPath.toLowerCase();
+    if (shapeMapping[lowerPath]) {
+      params.classPath = shapeMapping[lowerPath];
+    }
+    
     // Auto-detect and handle asset paths (like /Engine/BasicShapes/Cube)
     // The Python code will automatically spawn a StaticMeshActor and assign the mesh
     // So we don't reject asset paths anymore - let Python handle them intelligently
@@ -161,10 +179,27 @@ else:
                                 mesh_component.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
             except Exception as load_err:
                 # If asset loading fails, try basic shapes from Engine content
-                if 'Cube' in class_path or 'cube' in class_path.lower():
-                    # Use Engine's basic cube
-                    cube_mesh = unreal.EditorAssetLibrary.load_asset('/Engine/BasicShapes/Cube')
-                    if cube_mesh:
+                shape_map = {
+                    'cube': '/Engine/BasicShapes/Cube',
+                    'sphere': '/Engine/BasicShapes/Sphere',
+                    'cylinder': '/Engine/BasicShapes/Cylinder',
+                    'cone': '/Engine/BasicShapes/Cone',
+                    'plane': '/Engine/BasicShapes/Plane',
+                    'torus': '/Engine/BasicShapes/Torus'
+                }
+                
+                # Check if it's a basic shape name or path
+                mesh_path = None
+                lower_path = class_path.lower()
+                for shape_name, shape_path in shape_map.items():
+                    if shape_name in lower_path:
+                        mesh_path = shape_path
+                        break
+                
+                if mesh_path:
+                    # Use Engine's basic shape
+                    shape_mesh = unreal.EditorAssetLibrary.load_asset(mesh_path)
+                    if shape_mesh:
                         # Use modern EditorActorSubsystem API
                         actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
                         actor = actor_subsys.spawn_actor_from_class(
@@ -175,7 +210,7 @@ else:
                         if actor:
                             mesh_component = actor.get_component_by_class(unreal.StaticMeshComponent)
                             if mesh_component:
-                                mesh_component.set_static_mesh(cube_mesh)
+                                mesh_component.set_static_mesh(shape_mesh)
                                 # Make it movable so physics can be applied
                                 mesh_component.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
         
