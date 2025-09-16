@@ -62,6 +62,9 @@ export async function handleToolCall(
     switch (name) {
       // Asset Tools
       case 'list_assets':
+        // Initialize message variable
+        message = '';
+        
         // Validate directory argument
         if (args.directory === null) {
           result = { assets: [], error: 'Directory cannot be null' };
@@ -85,26 +88,30 @@ export async function handleToolCall(
         
         // Try multiple approaches to list assets
         try {
+          console.log('[list_assets] Starting asset listing for directory:', args.directory);
+          
           // First try: Use Python for most reliable listing
           const pythonCode = `
 import unreal
 import json
 
 directory = '${args.directory || '/Game'}'
-recursive = ${args.recursive !== false ? 'True' : 'False'}
+# Use recursive for /Game to find assets in subdirectories, but limit depth
+recursive = True if directory == '/Game' else False
 
 try:
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
     
     # Create filter - ARFilter properties must be set in constructor
-    # or use the filter after creation without modifying properties
     filter = unreal.ARFilter(
         package_paths=[directory],
         recursive_paths=recursive
     )
     
-    # Get all assets in the directory
-    assets = asset_registry.get_assets(filter)
+    # Get all assets in the directory (limit to prevent timeout)
+    all_assets = asset_registry.get_assets(filter)
+    # Limit results to prevent timeout
+    assets = all_assets[:100] if len(all_assets) > 100 else all_assets
     
     # Format asset information
     asset_list = []
@@ -128,7 +135,9 @@ except Exception as e:
     # Fallback to EditorAssetLibrary if ARFilter fails
     try:
         import unreal
-        asset_paths = unreal.EditorAssetLibrary.list_assets(directory, recursive, False)
+        # For /Game, use recursive to find assets in subdirectories
+        recursive_fallback = True if directory == '/Game' else False
+        asset_paths = unreal.EditorAssetLibrary.list_assets(directory, recursive_fallback, False)
         asset_list = []
         for path in asset_paths:
             asset_list.append({
@@ -148,7 +157,9 @@ except Exception as e:
         print("RESULT:" + json.dumps({"success": False, "error": str(e), "assets": []}))
 `.trim();
           
+          console.log('[list_assets] Executing Python code...');
           const pyResponse = await tools.bridge.executePython(pythonCode);
+          console.log('[list_assets] Python response type:', typeof pyResponse);
           
           // Parse Python output
           let outputStr = '';
@@ -165,83 +176,118 @@ except Exception as e:
           }
           
           // Extract result from Python output
+          console.log('[list_assets] Python output sample:', outputStr.substring(0, 200));
           const resultMatch = outputStr.match(/RESULT:({.*})/);
           if (resultMatch) {
+            console.log('[list_assets] Found RESULT in Python output');
             try {
               const listResult = JSON.parse(resultMatch[1]);
               if (listResult.success && listResult.assets) {
                 result = { assets: listResult.assets };
-                message = `Found ${listResult.count} assets in ${args.directory || '/Game'}`;
-                break;
+                // Success - skip fallback methods
               }
             } catch {
               // Fall through to HTTP method
             }
           }
           
-          // Fallback: Use the search API (this also works!)
-          try {
-            const searchResult = await tools.bridge.httpCall('/remote/search/assets', 'PUT', {
-              Query: '',  // Empty query to match all (wildcard doesn't work)
-              Filter: {
-                PackagePaths: [args.directory || '/Game'],
-                RecursivePaths: args.recursive !== false,
-                ClassNames: [],  // Empty to get all types
-                RecursiveClasses: true
-              },
-              Limit: 1000,  // Increase limit
-              Start: 0
-            });
-            
-            if (searchResult?.Assets && Array.isArray(searchResult.Assets)) {
-              result = { assets: searchResult.Assets };
-              message = `Found ${result.assets.length} assets in ${args.directory || '/Game'}`;
-              break;
+          // Fallback: Use the search API if Python didn't succeed
+          if (!result || !result.assets) {
+            try {
+              const searchResult = await tools.bridge.httpCall('/remote/search/assets', 'PUT', {
+                Query: '',  // Empty query to match all (wildcard doesn't work)
+                Filter: {
+                  PackagePaths: [args.directory || '/Game'],
+                  RecursivePaths: false,  // Always non-recursive
+                  ClassNames: [],  // Empty to get all types
+                  RecursiveClasses: true
+                },
+                Limit: 1000,  // Increase limit
+                Start: 0
+              });
+              
+              if (searchResult?.Assets && Array.isArray(searchResult.Assets)) {
+                result = { assets: searchResult.Assets };
+              }
+            } catch {
+              // Continue to next fallback
             }
-          } catch {
-            // Continue to fallback
           }
           
-          
-          // Third try: Use console command to get asset registry
-          await tools.bridge.httpCall('/remote/object/call', 'PUT', {
-            objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-            functionName: 'ExecuteConsoleCommand',
-            parameters: {
-              WorldContextObject: null,
-              Command: `AssetRegistry.DumpAssets ${args.directory || '/Game'}`,
-              SpecificPlayer: null
-            },
-            generateTransaction: false
-          });
-          
-          // If all else fails, at least report the attempt
-          result = { assets: [], note: 'Asset listing requires proper Remote Control configuration' };
-          message = `Asset listing attempted for ${args.directory || '/Game'}. Check Remote Control settings.`;
+          // Third try: Use console command to get asset registry (only if still no results)
+          if (!result || !result.assets || result.assets.length === 0) {
+            try {
+              await tools.bridge.httpCall('/remote/object/call', 'PUT', {
+                objectPath: '/Script/Engine.Default__KismetSystemLibrary',
+                functionName: 'ExecuteConsoleCommand',
+                parameters: {
+                  WorldContextObject: null,
+                  Command: `AssetRegistry.DumpAssets ${args.directory || '/Game'}`,
+                  SpecificPlayer: null
+                },
+                generateTransaction: false
+              });
+            } catch {
+              // Console command attempt failed, continue
+            }
+            
+            // If all else fails, set empty result
+            if (!result || !result.assets) {
+              result = { assets: [], note: 'Asset listing requires proper Remote Control configuration' };
+            }
+          }
           
         } catch (err) {
           result = { assets: [], error: String(err) };
           message = `Failed to list assets: ${err}`;
         }
         
-        // Format the message to include asset details
+        // Include full asset list with details in the message
+        console.log('[list_assets] Formatting message - result has assets?', !!(result && result.assets), 'count:', result?.assets?.length);
         if (result && result.assets && result.assets.length > 0) {
-          const assetList = result.assets.map((asset: any) => {
-            if (typeof asset === 'string') {
-              return asset;
-            } else if (asset.Path) {
-              return asset.Path;
-            } else if (asset.Name && asset.PackagePath) {
-              return `${asset.PackagePath}/${asset.Name}`;
-            } else if (asset.Name) {
-              return asset.Name;
-            } else if (asset.ObjectPath) {
-              return asset.ObjectPath;
-            } else {
-              return JSON.stringify(asset);
+          // Group assets by type for better organization
+          const assetsByType: { [key: string]: any[] } = {};
+          
+          result.assets.forEach((asset: any) => {
+            const type = asset.Class || asset.class || 'Unknown';
+            if (!assetsByType[type]) {
+              assetsByType[type] = [];
             }
+            assetsByType[type].push(asset);
           });
-          message = `Found ${result.assets.length} assets in ${args.directory || '/Game'}:\n${assetList.join('\n')}`;
+          
+          // Format output with proper structure
+          let assetDetails = `📁 Asset Directory: ${args.directory || '/Game'}\n`;
+          assetDetails += `📊 Total Assets: ${result.assets.length}\n\n`;
+          
+          // Sort types alphabetically
+          const sortedTypes = Object.keys(assetsByType).sort();
+          
+          sortedTypes.forEach((type, typeIndex) => {
+            const assets = assetsByType[type];
+            assetDetails += `${typeIndex + 1}. ${type} (${assets.length} items)\n`;
+            
+            assets.forEach((asset: any, index: number) => {
+              const name = asset.Name || asset.name || 'Unknown';
+              const path = asset.Path || asset.path || asset.PackagePath || '';
+              const packagePath = asset.PackagePath || '';
+              
+              assetDetails += `   ${index + 1}. ${name}\n`;
+              if (path !== packagePath && packagePath) {
+                assetDetails += `      📍 Path: ${path}\n`;
+                assetDetails += `      📦 Package: ${packagePath}\n`;
+              } else {
+                assetDetails += `      📍 ${path}\n`;
+              }
+            });
+            assetDetails += '\n';
+          });
+          
+          message = assetDetails;
+          
+          // Also keep the structured data in the result for programmatic access
+        } else {
+          message = `No assets found in ${args.directory || '/Game'}`;
         }
         break;
       

@@ -14,8 +14,7 @@ export const consolidatedToolDefinitions = [
           description: 'Action to perform'
         },
         // For list
-        directory: { type: 'string', description: 'Directory path for listing' },
-        recursive: { type: 'boolean', description: 'List recursively' },
+        directory: { type: 'string', description: 'Directory path to list (shows immediate children only)' },
         // For import
         sourcePath: { type: 'string', description: 'Source file path' },
         destinationPath: { type: 'string', description: 'Destination path' },

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.chir24/unreal-engine-mcp",
+  "description": "Production-ready MCP server for Unreal Engine with comprehensive game development tools",
+  "version": "1.2.0",
+  "packages": [
+    {
+      "registry_type": "npm",
+      "registry_base_url": "https://registry.npmjs.org",
+      "identifier": "@unrealengine/mcp-server",
+      "version": "1.2.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environment_variables": [
+        {
+          "name": "UE_HOST",
+          "description": "Unreal Engine host address",
+          "is_required": false,
+          "value": "127.0.0.1"
+        },
+        {
+          "name": "UE_RC_HTTP_PORT",
+          "description": "Remote Control HTTP port",
+          "is_required": false,
+          "value": "30010"
+        },
+        {
+          "name": "UE_RC_WS_PORT",
+          "description": "Remote Control WebSocket port",
+          "is_required": false,
+          "value": "30020"
+        }
+      ]
+    }
+  ],
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol", 
+    "unreal-engine",
+    "ue5",
+    "game-development",
+    "remote-control",
+    "automation",
+    "3d",
+    "gamedev",
+    "cinematics"
+  ],
+  "author": "ChiR24",
+  "homepage": "https://github.com/ChiR24/Unreal_mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ChiR24/Unreal_mcp.git",
+    "source": "github"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

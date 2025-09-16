@@ -34,22 +34,17 @@ export async function handleConsolidatedToolCall(
         
         switch (args.action) {
           case 'list':
-            // Directory is optional, recursive is optional
+            // Directory is optional
             if (args.directory !== undefined && args.directory !== null) {
               if (typeof args.directory !== 'string') {
                 throw new Error('Invalid directory: must be a string');
               }
             }
-            if (args.recursive !== undefined && args.recursive !== null) {
-              if (typeof args.recursive !== 'boolean') {
-                throw new Error('Invalid recursive: must be a boolean');
-              }
-            }
             
             mappedName = 'list_assets';
             mappedArgs = {
-              directory: args.directory,
-              recursive: args.recursive
+              directory: args.directory
+              // recursive removed - always false internally
             };
             break;
             

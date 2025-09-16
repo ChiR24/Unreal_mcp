@@ -6,78 +6,173 @@ export class AssetResources {
   // Simple in-memory cache for asset listing
   private cache = new Map<string, { timestamp: number; data: any }>();
   private get ttlMs(): number { return Number(process.env.ASSET_LIST_TTL_MS || 10000); }
-  private makeKey(dir: string, recursive: boolean) { return `${dir}::${recursive ? 1 : 0}`; }
+  private makeKey(dir: string, recursive: boolean, page?: number) { 
+    return page !== undefined ? `${dir}::${recursive ? 1 : 0}::${page}` : `${dir}::${recursive ? 1 : 0}`; 
+  }
 
-  async list(dir = '/Game', recursive = true) {
+  async list(dir = '/Game', recursive = false, limit = 50) {
+    // ALWAYS use non-recursive listing to show only immediate children
+    // This prevents timeouts and makes navigation clearer
+    recursive = false; // Force non-recursive
+    
     // Cache fast-path
     try {
-      const key = this.makeKey(dir, recursive);
+      const key = this.makeKey(dir, false);
       const entry = this.cache.get(key);
       const now = Date.now();
       if (entry && (now - entry.timestamp) < this.ttlMs) {
         return entry.data;
       }
     } catch {}
-    // Try multiple methods to get assets
     
-    // Method 1: Try the search API endpoint (fast path)
-    try {
-      const searchResult = await this.bridge.httpCall('/remote/search/assets', 'PUT', {
-        Query: '',  // Empty query works, wildcard doesn't
-        Filter: {
-          PackagePaths: [dir],
-          RecursivePaths: recursive,
-          ClassNames: [],
-          RecursiveClasses: true
-        },
-        Limit: 1000,
-        Start: 0
-      });
-      
-      if (searchResult?.Assets && searchResult.Assets.length > 0) {
-        try { this.cache.set(this.makeKey(dir, recursive), { timestamp: Date.now(), data: searchResult.Assets }); } catch {}
-        return searchResult.Assets;
-      }
-      } catch {
-      // Continue to fallback
+    // Check if bridge is connected
+    if (!this.bridge.isConnected) {
+      return {
+        assets: [],
+        warning: 'Unreal Engine is not connected. Please ensure Unreal Engine is running with Remote Control enabled.',
+        connectionStatus: 'disconnected'
+      };
     }
     
-    // Method 2: Python-based listing via AssetRegistry (most reliable)
+    // Always use directory-only listing (immediate children)
+    return this.listDirectoryOnly(dir, false, limit);
+    // End of list method - all logic is now in listDirectoryOnly
+  }
+
+  /**
+   * List assets with pagination support
+   * @param dir Directory to list assets from
+   * @param page Page number (0-based)
+   * @param pageSize Number of assets per page (max 50 to avoid socket failures)
+   */
+  async listPaged(dir = '/Game', page = 0, pageSize = 30, recursive = false) {
+    // Ensure pageSize doesn't exceed safe limit
+    const safePageSize = Math.min(pageSize, 50);
+    const offset = page * safePageSize;
+    
+    // Check cache for this specific page
+    const cacheKey = this.makeKey(dir, recursive, page);
+    const cached = this.cache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < this.ttlMs) {
+      return cached.data;
+    }
+    
+    if (!this.bridge.isConnected) {
+      return {
+        assets: [],
+        page,
+        pageSize: safePageSize,
+        warning: 'Unreal Engine is not connected.',
+        connectionStatus: 'disconnected'
+      };
+    }
+    
+    try {
+      // Use search API with pagination
+      // Use the same directory listing approach but with pagination
+      const allAssets = await this.listDirectoryOnly(dir, false, 1000);
+      
+      // Paginate the results
+      const start = offset;
+      const end = offset + safePageSize;
+      const pagedAssets = allAssets.assets ? allAssets.assets.slice(start, end) : [];
+      
+      const result = {
+        assets: pagedAssets,
+        page,
+        pageSize: safePageSize,
+        count: pagedAssets.length,
+        totalCount: allAssets.assets ? allAssets.assets.length : 0,
+        hasMore: end < (allAssets.assets ? allAssets.assets.length : 0),
+        method: 'directory_listing_paged'
+      };
+      
+      this.cache.set(cacheKey, { timestamp: Date.now(), data: result });
+      return result;
+    } catch (err: any) {
+      console.warn(`Asset listing page ${page} failed:`, err.message);
+    }
+    
+    return {
+      assets: [],
+      page,
+      pageSize: safePageSize,
+      error: 'Failed to fetch page'
+    };
+  }
+
+  /**
+   * Directory-based listing for paths with too many assets
+   * Shows only immediate children (folders and files) to avoid timeouts
+   */
+  private async listDirectoryOnly(dir: string, recursive: boolean, limit: number) {
+    // Always return only immediate children to avoid timeout and improve navigation
     try {
       const py = `
 import unreal
 import json
 
-# Inputs
-_directory = r"${dir}"
-_recursive = ${recursive ? 'True' : 'False'}
+_dir = r"${dir}"
 
 try:
-    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
-    filter = unreal.ARFilter(package_paths=[_directory], recursive_paths=_recursive)
-    assets = asset_registry.get_assets(filter)
-    out = []
-    for a in assets:
-        try:
-            cls = a.asset_class_path.asset_name if hasattr(a, 'asset_class_path') else a.asset_class
-        except Exception:
-            cls = str(a.asset_class)
-        out.append({
-            'Name': str(a.asset_name),
-            'Path': str(a.package_path) + '/' + str(a.asset_name),
-            'Class': str(cls),
-            'PackagePath': str(a.package_path)
+    # ALWAYS non-recursive - get only immediate children
+    all_paths = unreal.EditorAssetLibrary.list_assets(_dir, False, False)
+    
+    # Organize into immediate children only
+    immediate_folders = set()
+    immediate_assets = []
+    
+    for path in all_paths:
+        # Remove the base directory to get relative path
+        relative = path.replace(_dir, '').strip('/')
+        if not relative:
+            continue
+            
+        # Split to check depth
+        parts = relative.split('/')
+        
+        if len(parts) == 1:
+            # This is an immediate child asset
+            immediate_assets.append(path)
+        elif len(parts) > 1:
+            # This indicates a subfolder exists
+            immediate_folders.add(parts[0])
+    
+    result = []
+    
+    # Add folders first
+    for folder in sorted(immediate_folders):
+        result.append({
+            'n': folder,
+            'p': _dir + '/' + folder,
+            'c': 'Folder',
+            'isFolder': True
         })
-    print("RESULT:" + json.dumps({'success': True, 'assets': out, 'count': len(out)}))
+    
+    # Add immediate assets (limit to prevent socket issues)
+    for asset_path in immediate_assets[:min(${limit}, len(immediate_assets))]:
+        name = asset_path.split('/')[-1].split('.')[0]
+        result.append({
+            'n': name,
+            'p': asset_path,
+            'c': 'Asset'
+        })
+    
+    # Always showing immediate children only
+    note = f'Showing immediate children of {_dir} ({len(immediate_folders)} folders, {len(immediate_assets)} files)'
+    
+    print("RESULT:" + json.dumps({
+        'success': True, 
+        'assets': result, 
+        'count': len(result),
+        'folders': len(immediate_folders),
+        'files': len(immediate_assets),
+        'note': note
+    }))
 except Exception as e:
-    try:
-        # Fallback: EditorAssetLibrary.list_assets
-        paths = unreal.EditorAssetLibrary.list_assets(_directory, _recursive, False)
-        out = [{'Name': p.split('/')[-1].split('.')[0], 'Path': p, 'PackagePath': '/'.join(p.split('/')[:-1])} for p in paths]
-        print("RESULT:" + json.dumps({'success': True, 'assets': out, 'count': len(out), 'method': 'EditorAssetLibrary'}))
-    except Exception as e2:
-        print("RESULT:" + json.dumps({'success': False, 'error': str(e2), 'assets': []}))
+    print("RESULT:" + json.dumps({'success': False, 'error': str(e), 'assets': []}))
 `.trim();
+
       const resp = await this.bridge.executePython(py);
       let output = '';
       if (resp?.LogOutput && Array.isArray(resp.LogOutput)) {
@@ -87,44 +182,42 @@ except Exception as e:
       } else {
         output = JSON.stringify(resp);
       }
+      
       const m = output.match(/RESULT:({.*})/);
       if (m) {
         try {
           const parsed = JSON.parse(m[1]);
           if (parsed.success) {
-            try { this.cache.set(this.makeKey(dir, recursive), { timestamp: Date.now(), data: parsed.assets }); } catch {}
-            return parsed.assets;
+            // Transform to standard format
+            const assets = parsed.assets.map((a: any) => ({
+              Name: a.n,
+              Path: a.p,
+              Class: a.c,
+              isFolder: a.isFolder || false
+            }));
+            
+            return {
+              assets,
+              count: parsed.count,
+              folders: parsed.folders,
+              files: parsed.files,
+              note: parsed.note,
+              method: 'directory_listing'
+            };
           }
         } catch {}
       }
-      } catch {
-      // Continue to fallback
+    } catch (err: any) {
+      console.warn('Engine asset listing failed:', err.message);
     }
     
-    // Method 3: Try to get content browser assets (best-effort)
-    try {
-      const contentResult = await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/ContentBrowser.Default__ContentBrowserFunctionLibrary',
-        functionName: 'GetAssetRegistry',
-        parameters: {},
-        generateTransaction: false
-      });
-      
-      if (contentResult?.Result) {
-        try { this.cache.set(this.makeKey(dir, recursive), { timestamp: Date.now(), data: contentResult.Result }); } catch {}
-        return contentResult.Result;
-      }
-    } catch {
-      // Continue
-    }
-    
-    // If all methods fail, return empty array with info
-    const empty = { 
-      assets: [], 
-      note: 'Asset listing requires proper Remote Control setup. Ensure HTTP API is enabled and asset registry is accessible.' 
+    // Fallback: return empty with explanation
+    return {
+      assets: [],
+      warning: 'Directory contains too many assets. Showing immediate children only.',
+      suggestion: 'Navigate to specific subdirectories for detailed listings.',
+      method: 'directory_timeout_fallback'
     };
-    try { this.cache.set(this.makeKey(dir, recursive), { timestamp: Date.now(), data: empty }); } catch {}
-    return empty;
   }
 
   async find(assetPath: string) {

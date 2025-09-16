@@ -79,7 +79,7 @@ export class PerformanceTools {
     verbose?: boolean;
   }) {
     const startTime = Date.now();
-    console.log(`[PerformanceTools] Starting showFPS with params:`, params);
+    console.log('[PerformanceTools] Starting showFPS with params:', params);
     
     try {
       // Use stat fps as requested - shows FPS counter
