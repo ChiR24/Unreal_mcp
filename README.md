@@ -1,6 +1,7 @@
 # Unreal Engine MCP Server
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![NPM Package](https://img.shields.io/npm/v/unreal-engine-mcp-server)](https://www.npmjs.com/package/unreal-engine-mcp-server)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.6-orange)](https://www.unrealengine.com/)
 
@@ -31,9 +32,28 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ### Installation
 
+#### Option 1: NPM Package (Recommended)
+
 ```bash
+# Install globally
+npm install -g unreal-engine-mcp-server
+
+# Or install locally in your project
+npm install unreal-engine-mcp-server
+```
+
+#### Option 2: Clone and Build
+
+```bash
+# Clone the repository
+git clone https://github.com/ChiR24/Unreal_mcp.git
+cd Unreal_mcp
+
+# Install dependencies and build
 npm install
 npm run build
+
+# Run directly
 node dist/cli.js
 ```
 
@@ -58,12 +78,49 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 
 ### Claude Desktop / Cursor
 
+#### For NPM Installation (Global)
+
+```json
+{
+  "mcpServers": {
+    "unreal-engine": {
+      "command": "unreal-engine-mcp-server",
+      "env": {
+        "UE_HOST": "127.0.0.1",
+        "UE_RC_HTTP_PORT": "30010",
+        "UE_RC_WS_PORT": "30020"
+      }
+    }
+  }
+}
+```
+
+#### For NPM Installation (Local)
+
+```json
+{
+  "mcpServers": {
+    "unreal-engine": {
+      "command": "npx",
+      "args": ["unreal-engine-mcp-server"],
+      "env": {
+        "UE_HOST": "127.0.0.1",
+        "UE_RC_HTTP_PORT": "30010",
+        "UE_RC_WS_PORT": "30020"
+      }
+    }
+  }
+}
+```
+
+#### For Clone/Build Installation
+
 ```json
 {
   "mcpServers": {
     "unreal-engine": {
       "command": "node",
-      "args": ["path/to/unreal-engine-mcp-server/dist/cli.js"],
+      "args": ["path/to/Unreal_mcp/dist/cli.js"],
       "env": {
         "UE_HOST": "127.0.0.1",
         "UE_RC_HTTP_PORT": "30010",
