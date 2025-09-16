@@ -72,4 +72,4 @@ jobs:
         run: |
           echo "Waiting for registry to update..."
           sleep 30
-          curl -s "https://registry.modelcontextprotocol.io/v0/servers?search=io.github.chir24/unreal-engine-mcp" | jq '.'
+          curl -s "https://registry.modelcontextprotocol.io/v0/servers?search=io.github.ChiR24/unreal-engine-mcp" | jq '.'

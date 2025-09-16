@@ -37,7 +37,7 @@
   ],
   "author": "Unreal Engine MCP Team",
   "license": "MIT",
-  "mcpName": "io.github.chir24/unreal-engine-mcp",
+  "mcpName": "io.github.ChiR24/unreal-engine-mcp",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.4.0",
     "ajv": "^8.12.0",
