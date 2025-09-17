@@ -1,4 +1,4 @@
-// Consolidated tool handlers - maps 10 tools to all 36 operations
+// Consolidated tool handlers - maps 13 tools to all 36 operations
 import { handleToolCall } from './tool-handlers.js';
 import { cleanObject } from '../utils/safe-json.js';
 

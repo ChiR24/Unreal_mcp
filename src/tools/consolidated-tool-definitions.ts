@@ -1,4 +1,4 @@
-// Consolidated tool definitions - reduced from 36 to 10 multi-purpose tools
+// Consolidated tool definitions - reduced from 36 to 13 multi-purpose tools
 
 export const consolidatedToolDefinitions = [
   // 1. ASSET MANAGER - Combines asset operations

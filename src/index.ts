@@ -77,7 +77,7 @@ const metrics: PerformanceMetrics = {
 
 // Configuration
 const CONFIG = {
-  // Tool mode: true = consolidated (10 tools), false = individual (36+ tools)
+  // Tool mode: true = consolidated (13 tools), false = individual (36+ tools)
   USE_CONSOLIDATED_TOOLS: process.env.USE_CONSOLIDATED_TOOLS !== 'false',
   // Connection retry settings
   MAX_RETRY_ATTEMPTS: 3,
@@ -382,7 +382,7 @@ export async function createServer() {
     throw new Error(`Unknown resource: ${uri}`);
   });
 
-  // Handle tool listing - switch between consolidated (10) or individual (36) tools
+  // Handle tool listing - switch between consolidated (13) or individual (36) tools
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     log.info(`Serving ${CONFIG.USE_CONSOLIDATED_TOOLS ? 'consolidated' : 'individual'} tools`);
     return {
@@ -390,7 +390,7 @@ export async function createServer() {
     };
   });
 
-  // Handle tool calls - switch between consolidated (10) or individual (36) tools
+  // Handle tool calls - switch between consolidated (13) or individual (36) tools
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     const startTime = Date.now();
