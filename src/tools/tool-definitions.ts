@@ -572,7 +572,7 @@ Example:
     description: `Stream in/out a sublevel and set visibility.
 
 Example:
-- {'levelName':'Sublevel_A','shouldBeLoaded':true,'shouldBeVisible':true}`,
+- {"levelName":"Sublevel_A","shouldBeLoaded":true,"shouldBeVisible":true}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -599,8 +599,8 @@ Example:
     description: `Create a light (Directional/Point/Spot/Rect/Sky) with optional transform/intensity.
 
 Examples:
-- {'lightType':'Directional','name':'KeyLight','intensity':5.0}
-- {'lightType':'Point','name':'Fill','location':{'x':0,'y':100,'z':200},'intensity':2000}`,
+- {"lightType":"Directional","name":"KeyLight","intensity":5.0}
+- {"lightType":"Point","name":"Fill","location":{"x":0,"y":100,"z":200},"intensity":2000}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -629,7 +629,13 @@ Examples:
   },
   {
     name: 'build_lighting',
-    description: 'Start a lighting build at an optional quality level (Preview/Medium/High/Production).',
+    description: `Start a lighting build.
+
+When to use:
+- Bake lights for preview or final output (choose quality).
+
+Example:
+- {"quality":"High"}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -649,7 +655,13 @@ Examples:
   // Landscape Tools
   {
     name: 'create_landscape',
-    description: 'Attempt to create a landscape. Native Python APIs are limited; you may receive a guidance message to use Landscape Mode in the editor.',
+    description: `Attempt to create a landscape.
+
+Notes:
+- Native Python APIs are limited; you may be guided to use Landscape Mode in the editor.
+
+Example:
+- {"name":"Landscape_Basic","sizeX":1024,"sizeY":1024}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -671,7 +683,10 @@ Examples:
   },
   {
     name: 'sculpt_landscape',
-    description: 'Sculpt a landscape using editor tools (best-effort; some operations may require manual Landscape Mode).',
+    description: `Sculpt a landscape using editor tools (best-effort; some operations may require manual Landscape Mode).
+
+Example:
+- {"landscapeName":"Landscape_Basic","tool":"Smooth","brushSize":300,"strength":0.5}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -697,7 +712,7 @@ Examples:
     description: `Create or load a FoliageType asset for instanced foliage workflows.
 
 Example:
-- {'name':'FT_Grass','meshPath':'/Game/Foliage/SM_Grass','density':300}`,
+- {"name":"FT_Grass","meshPath":"/Game/Foliage/SM_Grass","density":300}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -718,7 +733,13 @@ Example:
   },
   {
     name: 'paint_foliage',
-    description: 'Paint foliage on landscape',
+    description: `Paint foliage onto the world.
+
+When to use:
+- Scatter instances using an existing FoliageType.
+
+Example:
+- {"foliageType":"/Game/Foliage/Types/FT_Grass","position":{"x":0,"y":0,"z":0},"brushSize":300}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -748,7 +769,10 @@ Example:
   // Debug Visualization Tools
   {
     name: 'draw_debug_shape',
-    description: 'Draw a debug shape',
+    description: `Draw a debug shape.
+
+Example:
+- {"shape":"Sphere","position":{"x":0,"y":0,"z":0},"size":100,"color":[255,0,0,255],"duration":3}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -781,7 +805,10 @@ Example:
   },
   {
     name: 'set_view_mode',
-    description: 'Set the viewport view mode',
+    description: `Set the viewport view mode.
+
+Example:
+- {"mode":"Wireframe"}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -802,7 +829,10 @@ Example:
   // Performance Tools
   {
     name: 'start_profiling',
-    description: 'Start performance profiling',
+    description: `Start performance profiling.
+
+Example:
+- {"type":"GPU","duration":10}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -822,7 +852,10 @@ Example:
   },
   {
     name: 'show_fps',
-    description: 'Show FPS counter',
+    description: `Show/hide the FPS counter.
+
+Example:
+- {"enabled":true,"verbose":false}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -842,7 +875,10 @@ Example:
   },
   {
     name: 'set_scalability',
-    description: 'Set scalability settings',
+    description: `Set scalability/quality levels.
+
+Example:
+- {"category":"Shadows","level":2}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -864,7 +900,10 @@ Example:
   // Audio Tools
   {
     name: 'play_sound',
-    description: 'Play a sound',
+    description: `Play a sound.
+
+Example:
+- {"soundPath":"/Game/Audio/SFX/Click","volume":0.5,"is3D":true}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -893,7 +932,10 @@ Example:
   },
   {
     name: 'create_ambient_sound',
-    description: 'Create an ambient sound',
+    description: `Create an ambient sound actor.
+
+Example:
+- {"name":"Amb_Wind","soundPath":"/Game/Audio/Amb/AMB_Wind","location":{"x":0,"y":0,"z":0},"radius":1000}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -924,7 +966,10 @@ Example:
   // UI Tools
   {
     name: 'create_widget',
-    description: 'Create a UI widget',
+    description: `Create a UI widget.
+
+Example:
+- {"name":"HUDMain","type":"HUD","savePath":"/Game/UI"}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -945,7 +990,10 @@ Example:
   },
   {
     name: 'show_widget',
-    description: 'Show or hide a widget',
+    description: `Show or hide a widget.
+
+Example:
+- {"widgetName":"HUDMain","visible":true}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -965,7 +1013,10 @@ Example:
   },
   {
     name: 'create_hud',
-    description: 'Create a HUD',
+    description: `Create a HUD description/layout.
+
+Example:
+- {"name":"GameHUD","elements":[{"type":"Text","position":[10,10]}]}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -999,7 +1050,14 @@ Example:
   // Console command (universal tool)
   {
     name: 'console_command',
-    description: 'Execute any console command in Unreal Engine',
+    description: `Execute a console command.
+
+When to use:
+- Quick toggles like "stat fps", "viewmode wireframe", or r.* cvars.
+
+Examples:
+- {"command":"stat fps"}
+- {"command":"r.ScreenPercentage 75"}`,
     inputSchema: {
       type: 'object',
       properties: {
