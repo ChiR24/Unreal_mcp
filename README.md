@@ -32,7 +32,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ### Installation
 
-#### Option 1: NPM Package (Recommended) *Coming Soon*
+#### Option 1: NPM Package (Recommended)
 
 ```bash
 # Install globally
