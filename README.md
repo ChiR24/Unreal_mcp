@@ -78,23 +78,6 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 
 ### Claude Desktop / Cursor
 
-#### For NPM Installation (Global)
-
-```json
-{
-  "mcpServers": {
-    "unreal-engine": {
-      "command": "unreal-engine-mcp-server",
-      "env": {
-        "UE_HOST": "127.0.0.1",
-        "UE_RC_HTTP_PORT": "30010",
-        "UE_RC_WS_PORT": "30020"
-      }
-    }
-  }
-}
-```
-
 #### For NPM Installation (Local)
 
 ```json
