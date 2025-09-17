@@ -4,7 +4,18 @@ export const toolDefinitions = [
   // Asset Tools
   {
     name: 'list_assets',
-    description: 'List all assets in a directory',
+    description: `List assets in a folder of the project.
+
+When to use:
+- Browse project content (use /Game; /Content is auto-mapped by the server).
+- Get a quick inventory of assets in a subfolder to refine subsequent actions.
+
+Notes:
+- For /Game, the server may limit results for performance; prefer subfolders (e.g., /Game/ThirdPerson).
+- Returns a structured list with Name/Path/Class/PackagePath when available.
+
+Example:
+- {"directory":"/Game/ThirdPerson","recursive":false}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -35,7 +46,17 @@ export const toolDefinitions = [
   },
   {
     name: 'import_asset',
-    description: 'Import an asset from file system',
+    description: `Import a file from disk into the project (e.g., FBX, PNG, WAV, EXR).
+
+When to use:
+- Bring external content into /Game at a specific destination path.
+
+Notes:
+- destinationPath is a package path like /Game/Environment/Trees.
+- Keep file names simple (avoid spaces and special characters).
+
+Example:
+- {"sourcePath":"C:/Temp/Tree.fbx","destinationPath":"/Game/Environment/Trees"}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -58,7 +79,17 @@ export const toolDefinitions = [
   // Actor Tools
   {
     name: 'spawn_actor',
-    description: 'Spawn a new actor in the level',
+    description: `Spawn a new actor in the current level.
+
+When to use:
+- Place a class (e.g., StaticMeshActor, CameraActor) or spawn from an asset path (e.g., /Engine/BasicShapes/Cube).
+
+Notes:
+- If an asset path is provided, a StaticMeshActor is auto-spawned with the mesh set.
+- location/rotation are optional; defaults are used if omitted.
+
+Example:
+- {"classPath":"/Engine/BasicShapes/Cube","location":{"x":0,"y":0,"z":100}}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -93,7 +124,13 @@ export const toolDefinitions = [
   },
   {
     name: 'delete_actor',
-    description: 'Delete an actor from the level',
+    description: `Delete one or more actors by name/label.
+
+When to use:
+- Remove actors matching a label/name (case-insensitive).
+
+Example:
+- {"actorName":"Cube_1"}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -114,7 +151,13 @@ export const toolDefinitions = [
   // Material Tools
   {
     name: 'create_material',
-    description: 'Create a new material asset',
+    description: `Create a simple Material asset at a path.
+
+When to use:
+- Quickly scaffold a basic material you can edit later.
+
+Example:
+- {"name":"M_Mask","path":"/Game/Materials"}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -135,7 +178,13 @@ export const toolDefinitions = [
   },
   {
     name: 'apply_material_to_actor',
-    description: 'Apply a material to an actor in the level',
+    description: `Assign a material to an actor's mesh component.
+
+When to use:
+- Swap an actor's material by path; slotIndex defaults to 0.
+
+Example:
+- {"actorPath":"/Game/LevelActors/Cube_1","materialPath":"/Game/Materials/M_Mask","slotIndex":0}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -157,7 +206,10 @@ export const toolDefinitions = [
   // Editor Tools
   {
     name: 'play_in_editor',
-    description: 'Start Play In Editor (PIE) mode',
+    description: `Start a Play-In-Editor (PIE) session.
+
+When to use:
+- Begin simulating the level in the editor.`,
     inputSchema: {
       type: 'object',
       properties: {}
@@ -173,7 +225,10 @@ export const toolDefinitions = [
   },
   {
     name: 'stop_play_in_editor',
-    description: 'Stop Play In Editor (PIE) mode',
+    description: `Stop the active PIE session.
+
+When to use:
+- End simulation and return to the editor.`,
     inputSchema: {
       type: 'object',
       properties: {}
@@ -189,7 +244,16 @@ export const toolDefinitions = [
   },
   {
     name: 'set_camera',
-    description: 'Set viewport camera position and rotation',
+    description: `Reposition the editor viewport camera.
+
+When to use:
+- Move/aim the camera in the editor for framing.
+
+Notes:
+- Accepts object or array formats; values are normalized.
+
+Example:
+- {"location":{"x":0,"y":-600,"z":250},"rotation":{"pitch":0,"yaw":0,"roll":0}}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -225,7 +289,13 @@ export const toolDefinitions = [
   // Animation Tools
   {
     name: 'create_animation_blueprint',
-    description: 'Create an animation blueprint',
+    description: `Create an Animation Blueprint for a skeleton.
+
+When to use:
+- Generate a starter Anim BP for a given skeleton.
+
+Example:
+- {"name":"ABP_Hero","skeletonPath":"/Game/Characters/Hero/SK_Hero_Skeleton","savePath":"/Game/Characters/Hero"}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -246,7 +316,13 @@ export const toolDefinitions = [
   },
   {
     name: 'play_animation_montage',
-    description: 'Play an animation montage on an actor',
+    description: `Play a Montage/Animation on an actor.
+
+When to use:
+- Trigger a montage on a possessed or editor actor.
+
+Example:
+- {"actorName":"Hero","montagePath":"/Game/Anim/MT_Attack","playRate":1.0}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -269,7 +345,13 @@ export const toolDefinitions = [
   // Physics Tools
   {
     name: 'setup_ragdoll',
-    description: 'Setup ragdoll physics for a skeletal mesh',
+    description: `Enable simple ragdoll using a physics asset.
+
+When to use:
+- Toggle ragdoll behavior on a character skeleton.
+
+Example:
+- {"skeletonPath":"/Game/Characters/Hero/SK_Hero_Skeleton","physicsAssetName":"PHYS_Hero","blendWeight":1.0}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -290,7 +372,10 @@ export const toolDefinitions = [
   },
   {
     name: 'apply_force',
-    description: 'Apply force to an actor',
+    description: `Apply a world-space force vector to an actor with physics enabled.
+
+Example:
+- {"actorName":"PhysicsBox","force":{"x":0,"y":0,"z":5000}}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -320,7 +405,13 @@ export const toolDefinitions = [
   // Niagara Tools
   {
     name: 'create_particle_effect',
-    description: 'Create a Niagara particle effect',
+    description: `Create a simple particle/FX by tag.
+
+When to use:
+- Quickly drop a generic Fire/Smoke/Water effect for previews.
+
+Example:
+- {"effectType":"Smoke","name":"SMK1","location":{"x":100,"y":0,"z":50}}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -349,7 +440,10 @@ export const toolDefinitions = [
   },
   {
     name: 'spawn_niagara_system',
-    description: 'Spawn a Niagara system in the level',
+    description: `Spawn a Niagara system at a location.
+
+Example:
+- {"systemPath":"/Game/FX/NS_Explosion","location":{"x":0,"y":0,"z":200},"scale":1.0}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -379,7 +473,10 @@ export const toolDefinitions = [
   // Blueprint Tools
   {
     name: 'create_blueprint',
-    description: 'Create a new blueprint',
+    description: `Create a new Blueprint asset at a path.
+
+Example:
+- {"name":"BP_Switch","blueprintType":"Actor","savePath":"/Game/Blueprints"}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -400,7 +497,10 @@ export const toolDefinitions = [
   },
   {
     name: 'add_blueprint_component',
-    description: 'Add a component to a blueprint',
+    description: `Add a component to an existing Blueprint.
+
+Example:
+- {"blueprintName":"BP_Switch","componentType":"PointLightComponent","componentName":"KeyLight"}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -424,7 +524,10 @@ export const toolDefinitions = [
   // Level Tools
   {
     name: 'load_level',
-    description: 'Load a level',
+    description: `Load a level by path (e.g., /Game/Maps/Lobby).
+
+Example:
+- {"levelPath":"/Game/Maps/Lobby","streaming":false}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -444,7 +547,10 @@ export const toolDefinitions = [
   },
   {
     name: 'save_level',
-    description: 'Save the current level',
+    description: `Save the current level to a path or by name.
+
+Example:
+- {"levelName":"Lobby","savePath":"/Game/Maps"}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -463,7 +569,10 @@ export const toolDefinitions = [
   },
   {
     name: 'stream_level',
-    description: 'Stream a level in or out',
+    description: `Stream in/out a sublevel and set visibility.
+
+Example:
+- {"levelName":"Sublevel_A","shouldBeLoaded":true,"shouldBeVisible":true}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -487,7 +596,11 @@ export const toolDefinitions = [
   // Lighting Tools
   {
     name: 'create_light',
-    description: 'Create a light in the level',
+    description: `Create a light (Directional/Point/Spot/Rect/Sky) with optional transform/intensity.
+
+Examples:
+- {"lightType":"Directional","name":"KeyLight","intensity":5.0}
+- {"lightType":"Point","name":"Fill","location":{"x":0,"y":100,"z":200},"intensity":2000}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -516,7 +629,7 @@ export const toolDefinitions = [
   },
   {
     name: 'build_lighting',
-    description: 'Build lighting for the current level',
+    description: `Start a lighting build at an optional quality level (Preview/Medium/High/Production).`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -536,7 +649,7 @@ export const toolDefinitions = [
   // Landscape Tools
   {
     name: 'create_landscape',
-    description: 'Create a new landscape',
+    description: `Attempt to create a landscape. Native Python APIs are limited; you may receive a guidance message to use Landscape Mode in the editor.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -558,7 +671,7 @@ export const toolDefinitions = [
   },
   {
     name: 'sculpt_landscape',
-    description: 'Sculpt the landscape',
+    description: `Sculpt a landscape using editor tools (best-effort; some operations may require manual Landscape Mode).`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -581,7 +694,10 @@ export const toolDefinitions = [
   // Foliage Tools
   {
     name: 'add_foliage_type',
-    description: 'Add a foliage type',
+    description: `Create or load a FoliageType asset for instanced foliage workflows.
+
+Example:
+- {"name":"FT_Grass","meshPath":"/Game/Foliage/SM_Grass","density":300}`,
     inputSchema: {
       type: 'object',
       properties: {

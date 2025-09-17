@@ -86,16 +86,24 @@ export async function handleToolCall(
           break;
         }
         
+        // Normalize virtual content path: map /Content -> /Game (case-insensitive)
+        const rawDir: string = String(args.directory).trim();
+        let normDir = rawDir.replace(/^\/?content(\/|$)/i, '/Game$1');
+        // Ensure leading slash
+        if (!normDir.startsWith('/')) normDir = '/' + normDir;
+        // Collapse duplicate slashes
+        normDir = normDir.replace(/\\+/g, '/').replace(/\/+/g, '/');
+        
         // Try multiple approaches to list assets
         try {
-          console.log('[list_assets] Starting asset listing for directory:', args.directory);
+          console.log('[list_assets] Starting asset listing for directory:', normDir);
           
-          // First try: Use Python for most reliable listing
+          // First try: Use Python for most reliable listing (recursive if /Game)
           const pythonCode = `
 import unreal
 import json
 
-directory = '${args.directory || '/Game'}'
+directory = '${normDir || '/Game'}'
 # Use recursive for /Game to find assets in subdirectories, but limit depth
 recursive = True if directory == '/Game' else False
 
@@ -197,8 +205,9 @@ except Exception as e:
               const searchResult = await tools.bridge.httpCall('/remote/search/assets', 'PUT', {
                 Query: '',  // Empty query to match all (wildcard doesn't work)
                 Filter: {
-                  PackagePaths: [args.directory || '/Game'],
-                  RecursivePaths: false,  // Always non-recursive
+                  PackagePaths: [normDir || '/Game'],
+                  // Recursively search so we actually find assets in subfolders
+                  RecursivePaths: true,
                   ClassNames: [],  // Empty to get all types
                   RecursiveClasses: true
                 },
@@ -222,7 +231,7 @@ except Exception as e:
                 functionName: 'ExecuteConsoleCommand',
                 parameters: {
                   WorldContextObject: null,
-                  Command: `AssetRegistry.DumpAssets ${args.directory || '/Game'}`,
+                  Command: `AssetRegistry.DumpAssets ${normDir || '/Game'}`,
                   SpecificPlayer: null
                 },
                 generateTransaction: false
@@ -245,6 +254,24 @@ except Exception as e:
         // Include full asset list with details in the message
         console.log('[list_assets] Formatting message - result has assets?', !!(result && result.assets), 'count:', result?.assets?.length);
         if (result && result.assets && result.assets.length > 0) {
+          // If Python/HTTP gives only paths, generate Name from path
+          result.assets = result.assets.map((asset: any) => {
+            if (!asset.Name && asset.Path) {
+              const base = String(asset.Path).split('/').pop() || '';
+              const name = base.includes('.') ? base.split('.').pop() : base;
+              return { ...asset, Name: name };
+            }
+            return asset;
+          });
+          // Group assets by type for better organization
+          result.assets = result.assets.map((a: any) => {
+            if (a && !a.Path && a.AssetPath) {
+              return { ...a, Path: a.AssetPath, PackagePath: a.AssetPath.split('/').slice(0, -1).join('/') };
+            }
+            return a;
+          });
+        }
+        if (result && result.assets && result.assets.length > 0) {
           // Group assets by type for better organization
           const assetsByType: { [key: string]: any[] } = {};
           
@@ -257,7 +284,7 @@ except Exception as e:
           });
           
           // Format output with proper structure
-          let assetDetails = `📁 Asset Directory: ${args.directory || '/Game'}\n`;
+          let assetDetails = `📁 Asset Directory: ${normDir || '/Game'}\n`;
           assetDetails += `📊 Total Assets: ${result.assets.length}\n\n`;
           
           // Sort types alphabetically
@@ -287,7 +314,7 @@ except Exception as e:
           
           // Also keep the structured data in the result for programmatic access
         } else {
-          message = `No assets found in ${args.directory || '/Game'}`;
+          message = `No assets found in ${normDir || '/Game'}`;
         }
         break;
       
@@ -611,7 +638,12 @@ print(f"RESULT:{json.dumps(result)}")
       // Landscape Tools
       case 'create_landscape':
         result = await tools.landscapeTools.createLandscape(args);
-        message = result.message || `Landscape ${args.name} created`;
+        // Never claim success unless the tool says so; prefer error/message from UE/Python
+        if (result && typeof result === 'object') {
+          message = result.message || result.error || (result.success ? `Landscape ${args.name} created` : `Failed to create landscape ${args.name}`);
+        } else {
+          message = `Failed to create landscape ${args.name}`;
+        }
         break;
       
       case 'sculpt_landscape':
