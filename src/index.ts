@@ -43,7 +43,7 @@ import {
 import { responseValidator } from './utils/response-validator.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import { routeStdoutLogsToStderr } from './utils/stdio-redirect.js';
-import { sanitizeResponse, cleanObject } from './utils/safe-json.js';
+import { cleanObject } from './utils/safe-json.js';
 
 const log = new Logger('UE-MCP');
 

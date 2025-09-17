@@ -33,7 +33,7 @@ export class ResponseValidator {
       const validator = this.ajv.compile(outputSchema);
       this.validators.set(toolName, validator);
       log.info(`Registered output schema for tool: ${toolName}`);
-    } catch (error) {
+    } catch (_error) {
       log.error(`Failed to compile output schema for ${toolName}:`, error);
     }
   }
@@ -104,7 +104,7 @@ export class ResponseValidator {
         // Make sure we can serialize it
         JSON.stringify(response);
       }
-    } catch (error) {
+    } catch (_error) {
       log.error(`Response for ${toolName} contains circular references, cleaning...`);
       response = cleanObject(response);
     }

@@ -10,7 +10,7 @@ export class AssetResources {
     return page !== undefined ? `${dir}::${recursive ? 1 : 0}::${page}` : `${dir}::${recursive ? 1 : 0}`; 
   }
 
-  async list(dir = '/Game', recursive = false, limit = 50) {
+  async list(dir = '/Game', _recursive = false, limit = 50) {
     // ALWAYS use non-recursive listing to show only immediate children
     // This prevents timeouts and makes navigation clearer
     recursive = false; // Force non-recursive
@@ -105,7 +105,7 @@ export class AssetResources {
    * Directory-based listing for paths with too many assets
    * Shows only immediate children (folders and files) to avoid timeouts
    */
-  private async listDirectoryOnly(dir: string, recursive: boolean, limit: number) {
+  private async listDirectoryOnly(dir: string, _recursive: boolean, limit: number) {
     // Always return only immediate children to avoid timeout and improve navigation
     try {
       const py = `

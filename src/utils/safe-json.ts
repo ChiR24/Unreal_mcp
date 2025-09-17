@@ -2,7 +2,7 @@
 export function safeStringify(obj: any, space?: number): string {
   const seen = new WeakSet();
   
-  return JSON.stringify(obj, (key, value) => {
+  return JSON.stringify(obj, (_key, value) => {
     // Handle undefined, functions, symbols
     if (value === undefined || typeof value === 'function' || typeof value === 'symbol') {
       return undefined;

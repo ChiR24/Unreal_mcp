@@ -226,7 +226,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
           if (this.ws.readyState === WebSocket.CONNECTING) {
             try {
               this.ws.terminate(); // Use terminate instead of close for immediate cleanup
-            } catch (e) {
+} catch (_e) {
               // Ignore close errors
             }
           }
@@ -254,7 +254,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
             if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
               this.ws.terminate();
             }
-          } catch (e) {
+} catch (_e) {
             // Ignore close errors
           }
           this.ws = undefined;

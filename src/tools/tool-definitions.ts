@@ -572,7 +572,7 @@ Example:
     description: `Stream in/out a sublevel and set visibility.
 
 Example:
-- {"levelName":"Sublevel_A","shouldBeLoaded":true,"shouldBeVisible":true}`,
+- {'levelName':'Sublevel_A','shouldBeLoaded':true,'shouldBeVisible':true}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -599,8 +599,8 @@ Example:
     description: `Create a light (Directional/Point/Spot/Rect/Sky) with optional transform/intensity.
 
 Examples:
-- {"lightType":"Directional","name":"KeyLight","intensity":5.0}
-- {"lightType":"Point","name":"Fill","location":{"x":0,"y":100,"z":200},"intensity":2000}`,
+- {'lightType':'Directional','name':'KeyLight','intensity':5.0}
+- {'lightType':'Point','name':'Fill','location':{'x':0,'y':100,'z':200},'intensity':2000}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -629,7 +629,7 @@ Examples:
   },
   {
     name: 'build_lighting',
-    description: `Start a lighting build at an optional quality level (Preview/Medium/High/Production).`,
+    description: 'Start a lighting build at an optional quality level (Preview/Medium/High/Production).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -649,7 +649,7 @@ Examples:
   // Landscape Tools
   {
     name: 'create_landscape',
-    description: `Attempt to create a landscape. Native Python APIs are limited; you may receive a guidance message to use Landscape Mode in the editor.`,
+    description: 'Attempt to create a landscape. Native Python APIs are limited; you may receive a guidance message to use Landscape Mode in the editor.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -671,7 +671,7 @@ Examples:
   },
   {
     name: 'sculpt_landscape',
-    description: `Sculpt a landscape using editor tools (best-effort; some operations may require manual Landscape Mode).`,
+    description: 'Sculpt a landscape using editor tools (best-effort; some operations may require manual Landscape Mode).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -697,7 +697,7 @@ Examples:
     description: `Create or load a FoliageType asset for instanced foliage workflows.
 
 Example:
-- {"name":"FT_Grass","meshPath":"/Game/Foliage/SM_Grass","density":300}`,
+- {'name':'FT_Grass','meshPath':'/Game/Foliage/SM_Grass','density':300}`,
     inputSchema: {
       type: 'object',
       properties: {
