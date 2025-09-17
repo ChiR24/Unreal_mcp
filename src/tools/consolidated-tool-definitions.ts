@@ -74,17 +74,27 @@ Examples:
     description: `Spawn, delete, and apply physics to actors in the level.
 
 When to use this tool:
-- You need to place an actor or mesh in the level, remove an actor, or nudge an actor with a physics force.
+- Place an actor/mesh, remove an actor, or nudge an actor with a physics force.
+
+Supported actions:
+- spawn
+- delete
+- apply_force
 
 Spawning:
 - classPath can be a class name (e.g., StaticMeshActor, CameraActor) OR an asset path (e.g., /Engine/BasicShapes/Cube, /Game/Meshes/SM_Rock).
-- If an asset path is provided, a StaticMeshActor is auto-spawned with the mesh assigned.
+- Asset paths auto-spawn StaticMeshActor with the mesh assigned.
 
 Deleting:
-- Finds actors by label/name (case-insensitive). Deletes matching actors.
+- Finds actors by label/name (case-insensitive) and deletes matches.
 
 Apply force:
 - Applies a world-space force vector to an actor with physics enabled.
+
+Tips:
+- classPath accepts classes or asset paths; simple names like Cube auto-resolve to engine assets.
+- location/rotation are optional; defaults are used if omitted.
+- For delete/apply_force, provide actorName.
 
 Examples:
 - {"action":"spawn","classPath":"/Engine/BasicShapes/Cube","location":{"x":0,"y":0,"z":100}}
@@ -154,9 +164,15 @@ Examples:
 When to use this tool:
 - Start/stop a PIE session, move the viewport camera, or change viewmode (Lit/Unlit/Wireframe/etc.).
 
+Supported actions:
+- play
+- stop
+- set_camera
+- set_view_mode
+
 Notes:
-- View modes are validated and unsafe modes are blocked.
-- Camera accepts location and/or rotation (both optional). Values are normalized.
+- View modes are validated; unsafe modes are blocked.
+- Camera accepts location/rotation (optional); values normalized.
 
 Examples:
 - {"action":"play"}
@@ -225,6 +241,18 @@ Examples:
 When to use this tool:
 - Switch to a level, save the current level, stream sublevels, add a light, or start a lighting build.
 
+Supported actions:
+- load
+- save
+- stream
+- create_light
+- build_lighting
+
+Tips:
+- Use /Game paths for levels (e.g., /Game/Maps/Level).
+- For streaming, set shouldBeLoaded and shouldBeVisible accordingly.
+- For lights, provide lightType and optional location/intensity.
+
 Examples:
 - {"action":"load","levelPath":"/Game/Maps/Lobby"}
 - {"action":"stream","levelName":"Sublevel_A","shouldBeLoaded":true,"shouldBeVisible":true}
@@ -290,6 +318,16 @@ Examples:
 When to use this tool:
 - Generate an Anim Blueprint for a skeleton, play a Montage/Animation on an actor, or enable ragdoll.
 
+Supported actions:
+- create_animation_bp
+- play_montage
+- setup_ragdoll
+
+Tips:
+- Ensure the montage/animation is compatible with the target actor/skeleton.
+- setup_ragdoll requires a valid physicsAssetName on the skeleton.
+- Use savePath when creating new assets.
+
 Examples:
 - {"action":"create_animation_bp","name":"ABP_Hero","skeletonPath":"/Game/Characters/Hero/SK_Hero_Skeleton","savePath":"/Game/Characters/Hero"}
 - {"action":"play_montage","actorName":"Hero","montagePath":"/Game/Anim/MT_Attack"}
@@ -337,6 +375,15 @@ Examples:
 
 When to use this tool:
 - Spawn a Niagara system at a location, create a particle effect by type tag, or draw debug geometry for planning.
+
+Supported actions:
+- particle
+- niagara
+- debug_shape
+
+Tips:
+- Set color as RGBA [r,g,b,a]; scale defaults to 1 if omitted.
+- Use debug shapes for quick layout planning and measurements.
 
 Examples:
 - {"action":"niagara","systemPath":"/Game/FX/NS_Explosion","location":{"x":0,"y":0,"z":200},"scale":1.0}
@@ -407,6 +454,14 @@ Examples:
 When to use this tool:
 - Quickly scaffold a Blueprint asset or add a component to an existing Blueprint.
 
+Supported actions:
+- create
+- add_component
+
+Tips:
+- blueprintType can be Actor, Pawn, Character, etc.
+- Component names should be unique within the Blueprint.
+
 Examples:
 - {"action":"create","name":"BP_Switch","blueprintType":"Actor","savePath":"/Game/Blueprints"}
 - {"action":"add_component","name":"BP_Switch","componentType":"PointLightComponent","componentName":"KeyLight"}`,
@@ -449,9 +504,18 @@ Examples:
 When to use this tool:
 - Create a procedural terrain alternative, add/paint foliage, or attempt a landscape workflow.
 
+Supported actions:
+- create_landscape
+- sculpt
+- add_foliage
+- paint_foliage
+
 Important:
 - Native Landscape creation via Python is limited and may return a helpful error suggesting Landscape Mode in the editor.
 - Foliage helpers create FoliageType assets and support simple placement.
+
+Tips:
+- Adjust brushSize and strength to tune sculpting results.
 
 Examples:
 - {"action":"create_landscape","name":"Landscape_Basic","sizeX":1024,"sizeY":1024}
@@ -511,6 +575,21 @@ Examples:
 
 When to use this tool:
 - Toggle profiling and FPS stats, adjust quality (sg.*), play a sound, create/show a basic widget, take a screenshot, or launch/quit the editor.
+
+Supported actions:
+- profile
+- show_fps
+- set_quality
+- play_sound
+- create_widget
+- show_widget
+- screenshot
+- engine_start
+- engine_quit
+
+Tips:
+- Screenshot resolution format: 1920x1080.
+- engine_start can read UE project path from env; provide editorExe/projectPath if needed.
 
 Examples:
 - {"action":"show_fps","enabled":true}
@@ -595,6 +674,9 @@ Safety:
 - Dangerous commands are blocked (quit/exit, GPU crash triggers, unsafe visualizebuffer modes, etc.).
 - Unknown commands will return a warning instead of crashing.
 
+Tips:
+- Prefer dedicated tools (system_control, control_editor) when available for structured control.
+
 Examples:
 - {"command":"stat fps"}
 - {"command":"viewmode wireframe"}
@@ -626,6 +708,18 @@ Examples:
 
 When to use this tool:
 - Automate Remote Control (RC) preset authoring and interaction from the assistant.
+
+Supported actions:
+- create_preset
+- expose_actor
+- expose_property
+- list_fields
+- set_property
+- get_property
+
+Tips:
+- value must be JSON-serializable.
+- Use objectPath/presetPath with full asset/object paths.
 
 Examples:
 - {"action":"create_preset","name":"LivePreset","path":"/Game/RCPresets"}
@@ -671,6 +765,26 @@ Examples:
 
 When to use this tool:
 - Build quick cinematics: create/open a sequence, add a camera or actors, tweak properties, and play.
+
+Supported actions:
+- create
+- open
+- add_camera
+- add_actor
+- add_actors
+- remove_actors
+- get_bindings
+- add_spawnable_from_class
+- play
+- pause
+- stop
+- set_properties
+- get_properties
+- set_playback_speed
+
+Tips:
+- Set spawnable=true to auto-create a camera actor.
+- Use frameRate/lengthInFrames to define timing; use playbackStart/End to trim.
 
 Examples:
 - {"action":"create","name":"Intro","path":"/Game/Cinematics"}
@@ -734,6 +848,14 @@ Examples:
 
 When to use this tool:
 - Inspect an object by path (class default object or actor/component) and optionally modify properties.
+
+Supported actions:
+- inspect_object
+- set_property
+
+Tips:
+- propertyName is case-sensitive; ensure it exists on the target object.
+- For class default objects (CDOs), use the /Script/...Default__Class path.
 
 Examples:
 - {"action":"inspect_object","objectPath":"/Script/Engine.Default__Engine"}
