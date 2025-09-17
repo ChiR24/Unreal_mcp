@@ -34,7 +34,7 @@ export class ResponseValidator {
       this.validators.set(toolName, validator);
       log.info(`Registered output schema for tool: ${toolName}`);
     } catch (_error) {
-      log.error(`Failed to compile output schema for ${toolName}:`, error);
+      log.error(`Failed to compile output schema for ${toolName}:`, _error);
     }
   }
 

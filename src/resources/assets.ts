@@ -13,7 +13,7 @@ export class AssetResources {
   async list(dir = '/Game', _recursive = false, limit = 50) {
     // ALWAYS use non-recursive listing to show only immediate children
     // This prevents timeouts and makes navigation clearer
-    recursive = false; // Force non-recursive
+    _recursive = false; // Force non-recursive
     
     // Cache fast-path
     try {
