@@ -1,6 +1,6 @@
 {
   "name": "unreal-engine-mcp-server",
-  "version": "0.2.1",
+"version": "0.3.0",
   "description": "Production-ready MCP server for Unreal Engine integration with consolidated and individual tool modes",
   "type": "module",
   "main": "dist/index.js",
@@ -11,16 +11,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "test:live": "node test-introspection-live.js",
     "dev": "ts-node-esm src/index.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "clean": "rimraf dist",
-    "prepare": "npm run build",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:tool4": "vitest run src/tests/consolidated-tool-4.test.ts"
+    "prepare": "npm run build"
   },
   "engines": {
     "node": ">=18"
@@ -52,12 +47,10 @@
     "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^8.43.0",
     "@typescript-eslint/parser": "^8.43.0",
-    "@vitest/coverage-v8": "^1.6.0",
     "cross-env": "^10.0.0",
     "eslint": "^8.57.0",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5",
-    "vitest": "^1.6.0"
+    "typescript": "^5.4.5"
   }
 }
