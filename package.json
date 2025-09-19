@@ -1,6 +1,6 @@
 {
   "name": "unreal-engine-mcp-server",
-"version": "0.3.0",
+  "version": "0.3.1",
   "description": "Production-ready MCP server for Unreal Engine integration with consolidated and individual tool modes",
   "type": "module",
   "main": "dist/index.js",
