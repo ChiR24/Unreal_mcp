@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
 import http from 'http';
 import https from 'https';
+import { Logger } from './logger.js';
 
 // Connection pooling configuration for better performance
 const httpAgent = new http.Agent({
@@ -28,6 +29,8 @@ interface RetryConfig {
   retryableStatuses: number[];
   retryableErrors: string[];
 }
+
+const log = new Logger('HTTP');
 
 const defaultRetryConfig: RetryConfig = {
   maxRetries: 3,
@@ -99,8 +102,8 @@ export function createHttpClient(baseURL: string): AxiosInstance {
   client.interceptors.response.use(
     (response) => {
       const duration = Date.now() - ((response.config as any).metadata?.startTime || 0);
-      if (duration > 5000) {
-        console.warn(`[HTTP] Slow request: ${response.config.url} took ${duration}ms`);
+if (duration > 5000) {
+        log.warn(`[HTTP] Slow request: ${response.config.url} took ${duration}ms`);
       }
       return response;
     },
@@ -147,8 +150,8 @@ export async function requestWithRetry<T = any>(
       }
 
       // Calculate delay and wait
-      const delay = calculateBackoff(attempt, retry);
-      console.error(`[HTTP] Retry attempt ${attempt}/${retry.maxRetries} after ${Math.round(delay)}ms`);
+const delay = calculateBackoff(attempt, retry);
+      log.debug(`[HTTP] Retry attempt ${attempt}/${retry.maxRetries} after ${Math.round(delay)}ms`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }

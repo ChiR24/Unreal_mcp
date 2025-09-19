@@ -40,6 +40,7 @@ export class UnrealBridge {
   private reconnectAttempts = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
   private readonly BASE_RECONNECT_DELAY = 1000;
+  private autoReconnectEnabled = false; // disabled by default to prevent looping retries
   
   // Command queue for throttling
   private commandQueue: CommandQueueItem[] = [];
@@ -185,54 +186,100 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
    * @param retryDelayMs Delay between retry attempts in milliseconds
    * @returns Promise that resolves when connected or rejects after all attempts fail
    */
+  private connectPromise?: Promise<void>;
+
   async tryConnect(maxAttempts: number = 3, timeoutMs: number = 5000, retryDelayMs: number = 2000): Promise<boolean> {
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (this.connected) return true;
+
+    if (this.connectPromise) {
       try {
-        this.log.info(`Connection attempt ${attempt}/${maxAttempts}`);
-        await this.connect(timeoutMs);
-        return true; // Successfully connected
-      } catch (err) {
-        this.log.warn(`Connection attempt ${attempt} failed:`, err);
-        
-        if (attempt < maxAttempts) {
-          this.log.info(`Retrying in ${retryDelayMs}ms...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelayMs));
-        } else {
-          this.log.error(`All ${maxAttempts} connection attempts failed`);
-          return false; // All attempts failed
+        await this.connectPromise;
+      } catch {
+        // swallow, we'll return connected flag
+      }
+      return this.connected;
+    }
+
+    this.connectPromise = (async () => {
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        // Early exit if another concurrent attempt already connected
+        if (this.connected) {
+          this.log.debug('Already connected; skipping remaining retry attempts');
+          return;
+        }
+        try {
+          this.log.debug(`Connection attempt ${attempt}/${maxAttempts}`);
+          await this.connect(timeoutMs);
+          return; // Successfully connected
+        } catch (err: any) {
+          const msg = (err?.message || String(err));
+          this.log.debug(`Connection attempt ${attempt} failed: ${msg}`);
+          if (attempt < maxAttempts) {
+            this.log.debug(`Retrying in ${retryDelayMs}ms...`);
+            // Sleep, but allow early break if we became connected during the wait
+            const start = Date.now();
+            while (Date.now() - start < retryDelayMs) {
+              if (this.connected) return; // someone else connected
+              await new Promise(r => setTimeout(r, 50));
+            }
+          } else {
+            // Keep this at warn (not error) and avoid stack spam
+            this.log.warn(`All ${maxAttempts} connection attempts failed`);
+            return; // exit, connected remains false
+          }
         }
       }
+    })();
+
+    try {
+      await this.connectPromise;
+    } finally {
+      this.connectPromise = undefined;
     }
-    return false;
+
+    return this.connected;
   }
 
   async connect(timeoutMs: number = 5000): Promise<void> {
+    // If already connected and socket is open, do nothing
+    if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.log.debug('connect() called but already connected; skipping');
+      return;
+    }
+
     const wsUrl = `ws://${this.env.UE_HOST}:${this.env.UE_RC_WS_PORT}`;
     const httpBase = `http://${this.env.UE_HOST}:${this.env.UE_RC_HTTP_PORT}`;
     this.http = createHttpClient(httpBase);
 
-    this.log.info(`Connecting to UE Remote Control: ${wsUrl}`);
+    this.log.debug(`Connecting to UE Remote Control: ${wsUrl}`);
     this.ws = new WebSocket(wsUrl);
 
     await new Promise<void>((resolve, reject) => {
       if (!this.ws) return reject(new Error('WS not created'));
       
+      // Guard against double-resolution/rejection
+      let settled = false;
+      const safeResolve = () => { if (!settled) { settled = true; resolve(); } };
+      const safeReject = (err: Error) => { if (!settled) { settled = true; reject(err); } };
+      
       // Setup timeout
       const timeout = setTimeout(() => {
         this.log.warn(`Connection timeout after ${timeoutMs}ms`);
         if (this.ws) {
-          this.ws.removeAllListeners();
-          // Only close if the websocket is in CONNECTING state
-          if (this.ws.readyState === WebSocket.CONNECTING) {
-            try {
-              this.ws.terminate(); // Use terminate instead of close for immediate cleanup
-} catch (_e) {
-              // Ignore close errors
+          try {
+            // Attach a temporary error handler to avoid unhandled 'error' events on abort
+            this.ws.on('error', () => {});
+            // Prefer graceful close; terminate as a fallback
+            if (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN) {
+              try { this.ws.close(); } catch {}
+              try { this.ws.terminate(); } catch {}
             }
+          } finally {
+            try { this.ws.removeAllListeners(); } catch {}
+            this.ws = undefined;
           }
-          this.ws = undefined;
         }
-        reject(new Error('Connection timeout: Unreal Engine may not be running or Remote Control is not enabled'));
+        safeReject(new Error('Connection timeout: Unreal Engine may not be running or Remote Control is not enabled'));
       }, timeoutMs);
       
       // Success handler
@@ -241,37 +288,43 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         this.connected = true;
         this.log.info('Connected to Unreal Remote Control');
         this.startCommandProcessor(); // Start command processor on connect
-        resolve();
+        safeResolve();
       };
       
       // Error handler
       const onError = (err: Error) => {
         clearTimeout(timeout);
-        this.log.error('WebSocket error', err);
+        // Keep error logs concise to avoid stack spam when UE is not running
+        this.log.debug(`WebSocket error during connect: ${(err && (err as any).code) || ''} ${err.message}`);
         if (this.ws) {
-          this.ws.removeAllListeners();
           try {
+            // Attach a temporary error handler to avoid unhandled 'error' events while aborting
+            this.ws.on('error', () => {});
             if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
-              this.ws.terminate();
+              try { this.ws.close(); } catch {}
+              try { this.ws.terminate(); } catch {}
             }
-} catch (_e) {
-            // Ignore close errors
+          } finally {
+            try { this.ws.removeAllListeners(); } catch {}
+            this.ws = undefined;
           }
-          this.ws = undefined;
         }
-        reject(new Error(`Failed to connect: ${err.message}`));
+        safeReject(new Error(`Failed to connect: ${err.message}`));
       };
       
       // Close handler (if closed before open)
       const onClose = () => {
         if (!this.connected) {
           clearTimeout(timeout);
-          reject(new Error('Connection closed before establishing'));
+          safeReject(new Error('Connection closed before establishing'));
         } else {
           // Normal close after connection was established
           this.connected = false;
+          this.ws = undefined;
           this.log.warn('WebSocket closed');
-          this.scheduleReconnect();
+          if (this.autoReconnectEnabled) {
+            this.scheduleReconnect();
+          }
         }
       };
       
@@ -280,8 +333,8 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         try {
           const msg = JSON.parse(String(raw));
           this.log.debug('WS message', msg);
-        } catch (e) {
-          this.log.error('Failed parsing WS message', e);
+        } catch (_e) {
+          // Noise reduction: keep at debug and do nothing on parse errors
         }
       };
       
@@ -295,6 +348,11 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
 
 
   async httpCall<T = any>(path: string, method: 'GET' | 'POST' | 'PUT' = 'POST', body?: any): Promise<T> {
+    // Guard: if not connected, do not attempt HTTP
+    if (!this.connected) {
+      throw new Error('Not connected to Unreal Engine');
+    }
+
     const url = path.startsWith('/') ? path : `/${path}`;
     const started = Date.now();
     
@@ -377,16 +435,18 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         
         // Log timeout errors specifically
         if (error.message?.includes('timeout')) {
-          this.log.warn(`HTTP request timed out (attempt ${attempt + 1}/3): ${url}`);
+          this.log.debug(`HTTP request timed out (attempt ${attempt + 1}/3): ${url}`);
         }
         
         if (attempt < 2) {
-          this.log.warn(`HTTP request failed (attempt ${attempt + 1}/3), retrying in ${delay}ms...`);
+          this.log.debug(`HTTP request failed (attempt ${attempt + 1}/3), retrying in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           
           // If connection error, try to reconnect
           if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
-            this.scheduleReconnect();
+            if (this.autoReconnectEnabled) {
+              this.scheduleReconnect();
+            }
           }
         }
       }
@@ -397,6 +457,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
 
   // Generic function call via Remote Control HTTP API
   async call(body: RcCallBody): Promise<any> {
+    if (!this.connected) throw new Error('Not connected to Unreal Engine');
     // Using HTTP endpoint /remote/object/call
     const result = await this.httpCall<any>('/remote/object/call', 'PUT', {
       generateTransaction: false,
@@ -406,11 +467,15 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
   }
 
   async getExposed(): Promise<any> {
+    if (!this.connected) throw new Error('Not connected to Unreal Engine');
     return this.httpCall('/remote/preset', 'GET');
   }
 
   // Execute a console command safely with validation and throttling
   async executeConsoleCommand(command: string): Promise<any> {
+    if (!this.connected) {
+      throw new Error('Not connected to Unreal Engine');
+    }
     // Validate command is not empty
     if (!command || typeof command !== 'string') {
       throw new Error('Invalid command: must be a non-empty string');
@@ -484,6 +549,9 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
 
   // Try to execute a Python command via the PythonScriptPlugin, fallback to `py` console command.
   async executePython(command: string): Promise<any> {
+    if (!this.connected) {
+      throw new Error('Not connected to Unreal Engine');
+    }
     const isMultiLine = /[\r\n]/.test(command) || command.includes(';');
     try {
       // Use ExecutePythonCommandEx with appropriate mode based on content
@@ -579,8 +647,17 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
     }
   }
   
+  // Allow callers to enable/disable auto-reconnect behavior
+  setAutoReconnectEnabled(enabled: boolean): void {
+    this.autoReconnectEnabled = enabled;
+  }
+
   // Connection recovery
   private scheduleReconnect(): void {
+    if (!this.autoReconnectEnabled) {
+      this.log.info('Auto-reconnect disabled; not scheduling reconnection');
+      return;
+    }
     if (this.reconnectTimer || this.connected) {
       return;
     }
@@ -596,7 +673,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
       30000 // Max 30 seconds
     );
     
-    this.log.info(`Scheduling reconnection attempt ${this.reconnectAttempts + 1}/${this.MAX_RECONNECT_ATTEMPTS} in ${Math.round(delay)}ms`);
+    this.log.debug(`Scheduling reconnection attempt ${this.reconnectAttempts + 1}/${this.MAX_RECONNECT_ATTEMPTS} in ${Math.round(delay)}ms`);
     
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = undefined;
@@ -607,7 +684,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         this.reconnectAttempts = 0;
         this.log.info('Successfully reconnected to Unreal Engine');
       } catch (err) {
-        this.log.error('Reconnection attempt failed:', err);
+        this.log.warn('Reconnection attempt failed:', err);
         this.scheduleReconnect();
       }
     }, delay);
@@ -621,8 +698,15 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
     }
     
     if (this.ws) {
-      this.ws.close();
-      this.ws = undefined;
+      try {
+        // Avoid unhandled error during shutdown
+        this.ws.on('error', () => {});
+        try { this.ws.close(); } catch {}
+        try { this.ws.terminate(); } catch {}
+      } finally {
+        try { this.ws.removeAllListeners(); } catch {}
+        this.ws = undefined;
+      }
     }
     
     this.connected = false;
@@ -663,7 +747,8 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
   /**
    * Execute Python script and parse the result
    */
-  private async executePythonWithResult(script: string): Promise<any> {
+  // Expose for internal consumers (resources) that want parsed RESULT blocks
+  public async executePythonWithResult(script: string): Promise<any> {
     try {
       // Wrap script to capture output so we can parse RESULT: lines reliably
       const wrappedScript = `
@@ -689,7 +774,6 @@ finally:
         if (response && typeof response === 'string') {
           out = response;
         } else if (response && typeof response === 'object') {
-          // Common RC Python response contains LogOutput array entries with .Output strings
           if (Array.isArray((response as any).LogOutput)) {
             out = (response as any).LogOutput.map((l: any) => l.Output || '').join('');
           } else if (typeof (response as any).Output === 'string') {
@@ -697,7 +781,6 @@ finally:
           } else if (typeof (response as any).result === 'string') {
             out = (response as any).result;
           } else {
-            // Fallback to stringifying object (may still include RESULT in nested fields)
             out = JSON.stringify(response);
           }
         }
@@ -705,20 +788,38 @@ finally:
         out = String(response || '');
       }
 
-      // Find the last RESULT: JSON block in the output for robustness
-      const matches = Array.from(out.matchAll(/RESULT:({[\s\S]*?})/g));
+      // Robust RESULT parsing with bracket matching (handles nested objects)
+      const marker = 'RESULT:';
+      const idx = out.lastIndexOf(marker);
+      if (idx !== -1) {
+        // Find first '{' after the marker
+        let i = idx + marker.length;
+        while (i < out.length && out[i] !== '{') i++;
+        if (i < out.length && out[i] === '{') {
+          let depth = 0;
+          let inStr = false;
+          let esc = false;
+          let j = i;
+          for (; j < out.length; j++) {
+            const ch = out[j];
+            if (esc) { esc = false; continue; }
+            if (ch === '\\') { esc = true; continue; }
+            if (ch === '"') { inStr = !inStr; continue; }
+            if (!inStr) {
+              if (ch === '{') depth++;
+              else if (ch === '}') { depth--; if (depth === 0) { j++; break; } }
+            }
+          }
+          const jsonStr = out.slice(i, j);
+          try { return JSON.parse(jsonStr); } catch {}
+        }
+      }
+
+      // Fallback to previous regex approach (best-effort)
+      const matches = Array.from(out.matchAll(/RESULT:({[\s\S]*})/g));
       if (matches.length > 0) {
         const last = matches[matches.length - 1][1];
-        try {
-          // Accept single quotes and True/False from Python repr if present
-          const normalized = last
-            .replace(/'/g, '"')
-            .replace(/\bTrue\b/g, 'true')
-            .replace(/\bFalse\b/g, 'false');
-          return JSON.parse(normalized);
-        } catch {
-          return { raw: last };
-        }
+        try { return JSON.parse(last); } catch { return { raw: last }; }
       }
 
       // If no RESULT: marker, return the best-effort textual output or original response
@@ -938,13 +1039,15 @@ print('RESULT:' + json.dumps(flags))
       try {
         const result = await item.command();
         item.resolve(result);
-      } catch (error) {
+      } catch (error: any) {
         // Retry logic for transient failures
+        const msg = (error?.message || String(error)).toLowerCase();
+        const notConnected = msg.includes('not connected to unreal');
         if (item.retryCount === undefined) {
           item.retryCount = 0;
         }
         
-        if (item.retryCount < 3) {
+        if (!notConnected && item.retryCount < 3) {
           item.retryCount++;
           this.log.warn(`Command failed, retrying (${item.retryCount}/3)`);
           

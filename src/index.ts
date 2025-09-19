@@ -75,6 +75,10 @@ const metrics: PerformanceMetrics = {
   recentErrors: []
 };
 
+// Health check timer and last success tracking (stop pings after inactivity)
+let healthCheckTimer: NodeJS.Timeout | undefined;
+let lastHealthSuccessAt = 0;
+
 // Configuration
 const CONFIG = {
   // Tool mode: true = consolidated (13 tools), false = individual (36+ tools)
@@ -111,11 +115,16 @@ function trackPerformance(startTime: number, success: boolean) {
 
 // Health check function
 async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
+  // If not connected, do not attempt any ping (stay quiet)
+  if (!bridge.isConnected) {
+    return false;
+  }
   try {
     // Use a safe echo command that doesn't affect any settings
     await bridge.executeConsoleCommand('echo MCP Server Health Check');
     metrics.connectionStatus = 'connected';
     metrics.lastHealthCheck = new Date();
+    lastHealthSuccessAt = Date.now();
     return true;
   } catch (err1) {
     // Fallback: minimal Python ping (if Python plugin is enabled)
@@ -123,11 +132,13 @@ async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
       await bridge.executePython("import sys; sys.stdout.write('OK')");
       metrics.connectionStatus = 'connected';
       metrics.lastHealthCheck = new Date();
+      lastHealthSuccessAt = Date.now();
       return true;
     } catch (err2) {
       metrics.connectionStatus = 'error';
       metrics.lastHealthCheck = new Date();
-      log.warn('Health check failed (console and python):', err1, err2);
+      // Avoid noisy warnings when engine may be shutting down; log at debug
+      log.debug('Health check failed (console and python):', err1, err2);
       return false;
     }
   }
@@ -135,50 +146,68 @@ async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
 
 export async function createServer() {
   const bridge = new UnrealBridge();
+  // Disable auto-reconnect loops; connect only on-demand
+  bridge.setAutoReconnectEnabled(false);
   
   // Initialize response validation with schemas
-  log.info('Initializing response validation...');
+  log.debug('Initializing response validation...');
   const toolDefs = CONFIG.USE_CONSOLIDATED_TOOLS ? consolidatedToolDefinitions : toolDefinitions;
   toolDefs.forEach((tool: any) => {
     if (tool.outputSchema) {
       responseValidator.registerSchema(tool.name, tool.outputSchema);
     }
   });
-  log.info(`Registered ${responseValidator.getStats().totalSchemas} output schemas for validation`);
-  
-  // Connect to UE5 Remote Control with retries and timeout
-  const connected = await bridge.tryConnect(
-    CONFIG.MAX_RETRY_ATTEMPTS,
-    5000, // 5 second timeout per attempt
-    CONFIG.RETRY_DELAY_MS
-  );
-  
-  if (connected) {
-    metrics.connectionStatus = 'connected';
-    log.info('Successfully connected to Unreal Engine');
-  } else {
-    log.warn('Could not connect to Unreal Engine after retries');
-    log.info('Server will start anyway - connection will be retried periodically');
-    log.info('Make sure Unreal Engine is running with Remote Control enabled');
-    metrics.connectionStatus = 'disconnected';
-    
-    // Schedule automatic reconnection attempts
-    setInterval(async () => {
+  // Summary at debug level to avoid repeated noisy blocks in some shells
+  log.debug(`Registered ${responseValidator.getStats().totalSchemas} output schemas for validation`);
+
+  // Do NOT connect to Unreal at startup; connect on demand
+  log.debug('Server starting without connecting to Unreal Engine');
+  metrics.connectionStatus = 'disconnected';
+
+  // Health checks manager (only active when connected)
+  const startHealthChecks = () => {
+    if (healthCheckTimer) return;
+    lastHealthSuccessAt = Date.now();
+    healthCheckTimer = setInterval(async () => {
+      // Only attempt health pings while connected; stay silent otherwise
       if (!bridge.isConnected) {
-        log.info('Attempting to reconnect to Unreal Engine...');
-        const reconnected = await bridge.tryConnect(1, 5000, 0); // Single attempt
-        if (reconnected) {
-          log.info('Reconnected to Unreal Engine successfully');
-          metrics.connectionStatus = 'connected';
+        // Optionally pause fully after 5 minutes of no success
+        const FIVE_MIN_MS = 5 * 60 * 1000;
+        if (!lastHealthSuccessAt || Date.now() - lastHealthSuccessAt > FIVE_MIN_MS) {
+          if (healthCheckTimer) {
+            clearInterval(healthCheckTimer);
+            healthCheckTimer = undefined;
+          }
+          log.info('Health checks paused after 5 minutes without a successful response');
+        }
+        return;
+      }
+
+      await performHealthCheck(bridge);
+      // Stop sending echoes if we haven't had a successful response in > 5 minutes
+      const FIVE_MIN_MS = 5 * 60 * 1000;
+      if (!lastHealthSuccessAt || Date.now() - lastHealthSuccessAt > FIVE_MIN_MS) {
+        if (healthCheckTimer) {
+          clearInterval(healthCheckTimer);
+          healthCheckTimer = undefined;
+          log.info('Health checks paused after 5 minutes without a successful response');
         }
       }
-    }, 10000); // Try every 10 seconds
-  }
-  
-  // Start periodic health checks
-  setInterval(() => {
-    performHealthCheck(bridge);
-  }, CONFIG.HEALTH_CHECK_INTERVAL_MS);
+    }, CONFIG.HEALTH_CHECK_INTERVAL_MS);
+  };
+
+  // On-demand connection helper
+  const ensureConnectedOnDemand = async (): Promise<boolean> => {
+    if (bridge.isConnected) return true;
+    const ok = await bridge.tryConnect(3, 5000, 1000);
+    if (ok) {
+      metrics.connectionStatus = 'connected';
+      startHealthChecks();
+    } else {
+      metrics.connectionStatus = 'disconnected';
+    }
+    return ok;
+  };
 
   // Resources
   const assetResources = new AssetResources(bridge);
@@ -272,6 +301,10 @@ export async function createServer() {
     const uri = request.params.uri;
     
     if (uri === 'ue://assets') {
+      const ok = await ensureConnectedOnDemand();
+      if (!ok) {
+        return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
+      }
       const list = await assetResources.list('/Game', true);
       return {
         contents: [{
@@ -283,6 +316,10 @@ export async function createServer() {
     }
     
     if (uri === 'ue://actors') {
+      const ok = await ensureConnectedOnDemand();
+      if (!ok) {
+        return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
+      }
       const list = await actorResources.listActors();
       return {
         contents: [{
@@ -294,6 +331,10 @@ export async function createServer() {
     }
     
     if (uri === 'ue://level') {
+      const ok = await ensureConnectedOnDemand();
+      if (!ok) {
+        return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
+      }
       const level = await levelResources.getCurrentLevel();
       return {
         contents: [{
@@ -305,6 +346,10 @@ export async function createServer() {
     }
     
     if (uri === 'ue://exposed') {
+      const ok = await ensureConnectedOnDemand();
+      if (!ok) {
+        return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
+      }
       try {
         const exposed = await bridge.getExposed();
         return {
@@ -327,11 +372,13 @@ export async function createServer() {
     
     if (uri === 'ue://health') {
       const uptimeMs = Date.now() - metrics.uptime;
-      // Query engine version and feature flags (best-effort)
+      // Query engine version and feature flags only when connected
       let versionInfo: any = {};
       let featureFlags: any = {};
-      try { versionInfo = await bridge.getEngineVersion(); } catch {}
-      try { featureFlags = await bridge.getFeatureFlags(); } catch {}
+      if (bridge.isConnected) {
+        try { versionInfo = await bridge.getEngineVersion(); } catch {}
+        try { featureFlags = await bridge.getFeatureFlags(); } catch {}
+      }
       const health = {
         status: metrics.connectionStatus,
         uptime: Math.floor(uptimeMs / 1000),
@@ -369,6 +416,10 @@ export async function createServer() {
     }
 
     if (uri === 'ue://version') {
+      const ok = await ensureConnectedOnDemand();
+      if (!ok) {
+        return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
+      }
       const info = await bridge.getEngineVersion();
       return {
         contents: [{
@@ -394,6 +445,20 @@ export async function createServer() {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     const startTime = Date.now();
+
+    // Ensure connection only when needed, with 3 attempts
+    const connected = await ensureConnectedOnDemand();
+    if (!connected) {
+      const notConnected = {
+        content: [{ type: 'text', text: 'Unreal Engine is not connected (after 3 attempts). Please open UE and try again.' }],
+        success: false,
+        error: 'UE_NOT_CONNECTED',
+        retriable: false,
+        scope: `tool-call/${name}`
+      } as any;
+      trackPerformance(startTime, false);
+      return notConnected;
+    }
     
     // Create tools object for handler
     const tools = {

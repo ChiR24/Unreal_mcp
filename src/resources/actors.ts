@@ -34,25 +34,63 @@ export class ActorResources {
     // Use Python to get actors via EditorActorSubsystem
     try {
       const pythonCode = `
-import unreal
+import unreal, json
 actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-actors = actor_subsystem.get_all_level_actors()
+actors = actor_subsystem.get_all_level_actors() if actor_subsystem else []
 actor_list = []
 for actor in actors:
-    if actor:
-        actor_list.append({
-            'name': actor.get_name(),
-            'class': actor.get_class().get_name(),
-            'path': actor.get_path_name()
-        })
-print(f"Found {len(actor_list)} actors")
+    try:
+        if actor:
+            actor_list.append({
+                'name': actor.get_name(),
+                'class': actor.get_class().get_name(),
+                'path': actor.get_path_name()
+            })
+    except Exception:
+        pass
+print('RESULT:' + json.dumps({'success': True, 'count': len(actor_list), 'actors': actor_list}))
       `.trim();
       
-      const result = await this.bridge.executePython(pythonCode);
-      this.setCache('listActors', result);
-      return result;
+      const resp = await this.bridge.executePythonWithResult(pythonCode);
+      if (resp && typeof resp === 'object' && resp.success === true && Array.isArray((resp as any).actors)) {
+        this.setCache('listActors', resp);
+        return resp;
+      }
+
+      // Fallback manual extraction with bracket matching
+      const raw = await this.bridge.executePython(pythonCode);
+      let output = '';
+      if (raw?.LogOutput && Array.isArray(raw.LogOutput)) output = raw.LogOutput.map((l: any) => l.Output || '').join('');
+      else if (typeof raw === 'string') output = raw; else output = JSON.stringify(raw);
+      const marker = 'RESULT:';
+      const idx = output.lastIndexOf(marker);
+      if (idx !== -1) {
+        let i = idx + marker.length;
+        while (i < output.length && output[i] !== '{') i++;
+        if (i < output.length) {
+          let depth = 0, inStr = false, esc = false, j = i;
+          for (; j < output.length; j++) {
+            const ch = output[j];
+            if (esc) { esc = false; continue; }
+            if (ch === '\\') { esc = true; continue; }
+            if (ch === '"') { inStr = !inStr; continue; }
+            if (!inStr) {
+              if (ch === '{') depth++;
+              else if (ch === '}') { depth--; if (depth === 0) { j++; break; } }
+            }
+          }
+          const jsonStr = output.slice(i, j);
+          try {
+            const parsed = JSON.parse(jsonStr);
+            this.setCache('listActors', parsed);
+            return parsed;
+          } catch {}
+        }
+      }
+
+      return { success: false, error: 'Failed to parse actors list' };
     } catch (err) {
-      return { error: `Failed to list actors: ${err}` };
+      return { success: false, error: `Failed to list actors: ${err}` };
     }
   }
 

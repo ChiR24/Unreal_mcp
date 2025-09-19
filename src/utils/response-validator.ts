@@ -32,7 +32,8 @@ export class ResponseValidator {
     try {
       const validator = this.ajv.compile(outputSchema);
       this.validators.set(toolName, validator);
-      log.info(`Registered output schema for tool: ${toolName}`);
+      // Demote per-tool schema registration to debug to reduce log noise
+      log.debug(`Registered output schema for tool: ${toolName}`);
     } catch (_error) {
       log.error(`Failed to compile output schema for ${toolName}:`, _error);
     }

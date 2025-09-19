@@ -1,6 +1,9 @@
 // Consolidated tool handlers - maps 13 tools to all 36 operations
 import { handleToolCall } from './tool-handlers.js';
 import { cleanObject } from '../utils/safe-json.js';
+import { Logger } from '../utils/logger.js';
+
+const log = new Logger('ConsolidatedToolHandler');
 
 export async function handleConsolidatedToolCall(
   name: string,
@@ -8,7 +11,8 @@ export async function handleConsolidatedToolCall(
   tools: any
 ) {
   const startTime = Date.now();
-  console.log(`[ConsolidatedToolHandler] Starting execution of ${name} at ${new Date().toISOString()}`);
+  // Use scoped logger (stderr) to avoid polluting stdout JSON
+  log.debug(`Starting execution of ${name} at ${new Date().toISOString()}`);
   
   try {
     // Validate args is not null/undefined
