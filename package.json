@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "unreal-mcp-server": "dist/cli.js"
+    "unreal-engine-mcp-server": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
