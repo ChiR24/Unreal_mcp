@@ -526,7 +526,7 @@ Examples:
       properties: {
         action: { 
           type: 'string', 
-          enum: ['create_landscape', 'sculpt', 'add_foliage', 'paint_foliage'],
+          enum: ['create_landscape', 'sculpt', 'add_foliage', 'paint_foliage', 'create_procedural_terrain', 'create_procedural_foliage', 'add_foliage_instances', 'create_landscape_grass_type'],
           description: 'Environment action'
         },
         // Common
@@ -538,9 +538,52 @@ Examples:
           type: 'string',
           description: 'Sculpt tool (Sculpt, Smooth, Flatten, etc.)'
         },
-        // Foliage
+        // Advanced: procedural terrain
+        location: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+        },
+        subdivisions: { type: 'number' },
+        heightFunction: { type: 'string' },
+        materialPath: { type: 'string' },
+        // Advanced: procedural foliage
+        bounds: {
+          type: 'object',
+          properties: {
+            location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+            size: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
+          }
+        },
+        foliageTypes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              meshPath: { type: 'string' },
+              density: { type: 'number' },
+              minScale: { type: 'number' },
+              maxScale: { type: 'number' },
+              alignToNormal: { type: 'boolean' },
+              randomYaw: { type: 'boolean' }
+            }
+          }
+        },
+        seed: { type: 'number' },
+        // Advanced: direct foliage instances
+        foliageType: { type: 'string' },
+        transforms: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+              rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } } },
+              scale: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
+            }
+          }
+        },
+        // Foliage (for add_foliage)
         meshPath: { type: 'string', description: 'Mesh path' },
-        foliageType: { type: 'string', description: 'Foliage type' },
         density: { type: 'number', description: 'Density' },
         // Painting
         position: {

@@ -114,7 +114,7 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 }
 ```
 
-## Available Tools (13 Consolidated)
+## Available Tools (13)
 
 | Tool | Description |
 |------|-------------|
@@ -161,7 +161,6 @@ Blueprints, Materials, Textures, Static/Skeletal Meshes, Levels, Sounds, Particl
 UE_HOST=127.0.0.1              # Unreal Engine host
 UE_RC_HTTP_PORT=30010          # Remote Control HTTP port
 UE_RC_WS_PORT=30020            # Remote Control WebSocket port
-USE_CONSOLIDATED_TOOLS=true    # Use 13 consolidated tools (false = 37 individual)
 LOG_LEVEL=info                 # debug | info | warn | error
 ```
 

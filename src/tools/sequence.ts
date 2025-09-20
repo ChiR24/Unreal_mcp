@@ -334,12 +334,31 @@ except Exception as e:
    * Play the current level sequence
    */
   async play(params?: { startTime?: number; loopMode?: 'once' | 'loop' | 'pingpong' }) {
+    const loop = params?.loopMode || '';
     const py = `
 import unreal, json
+
+# Helper to resolve SequencerLoopMode from a friendly string
+def _resolve_loop_mode(mode_str):
+    try:
+        m = str(mode_str).lower()
+        slm = unreal.SequencerLoopMode
+        if m in ('once','noloop','no_loop'):
+            return getattr(slm, 'SLM_NoLoop', getattr(slm, 'NoLoop'))
+        if m in ('loop',):
+            return getattr(slm, 'SLM_Loop', getattr(slm, 'Loop'))
+        if m in ('pingpong','ping_pong'):
+            return getattr(slm, 'SLM_PingPong', getattr(slm, 'PingPong'))
+    except Exception:
+        pass
+    return None
+
 try:
     unreal.LevelSequenceEditorBlueprintLibrary.play()
-    ${params?.loopMode ? `unreal.LevelSequenceEditorBlueprintLibrary.set_loop_mode('${params.loopMode}')` : ''}
-    print('RESULT:' + json.dumps({'success': True, 'playing': True}))
+    loop_mode = _resolve_loop_mode('${loop}')
+    if loop_mode is not None:
+        unreal.LevelSequenceEditorBlueprintLibrary.set_loop_mode(loop_mode)
+    print('RESULT:' + json.dumps({'success': True, 'playing': True, 'loopMode': '${loop || 'default'}'}))
 except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();

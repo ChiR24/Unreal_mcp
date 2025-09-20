@@ -53,17 +53,8 @@ try:
         proc_mesh_comp = proc_actor.get_component_by_class(unreal.ProceduralMeshComponent)
     except:
         # Fallback: Create empty actor and add ProceduralMeshComponent
-        proc_actor = subsys.spawn_actor_from_class(
-            unreal.Actor,
-            location,
-            unreal.Rotator(0, 0, 0)
-        )
-        proc_actor.set_actor_label(f"{name}_ProceduralTerrain")
-        
-        # Add procedural mesh component
-        proc_mesh_comp = unreal.ProceduralMeshComponent()
-        proc_actor.add_instance_component(proc_mesh_comp)
-        proc_mesh_comp.register_component()
+        # If spawning ProceduralMeshActor failed, surface a clear error about the plugin requirement
+        raise Exception("Failed to spawn ProceduralMeshActor. Ensure the 'Procedural Mesh Component' plugin is enabled and available.")
     
     if proc_mesh_comp:
         # Generate terrain mesh
@@ -193,6 +184,10 @@ try:
     subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
     
+    # Validate Procedural Foliage plugin/classes are available
+    if not hasattr(unreal, 'ProceduralFoliageVolume') or not hasattr(unreal, 'ProceduralFoliageSpawner'):
+        raise Exception("Procedural Foliage plugin not available. Please enable the 'Procedural Foliage' plugin and try again.")
+    
     # Create ProceduralFoliageVolume
     volume_actor = subsys.spawn_actor_from_class(
         unreal.ProceduralFoliageVolume,
@@ -200,7 +195,7 @@ try:
         unreal.Rotator(0, 0, 0)
     )
     volume_actor.set_actor_label(f"{name}_ProceduralFoliageVolume")
-    volume_actor.set_actor_scale3d(bounds_size / 100)  # Scale is in meters
+    volume_actor.set_actor_scale3d(unreal.Vector(bounds_size.x/100.0, bounds_size.y/100.0, bounds_size.z/100.0))  # Scale is in meters
     
     # Get the procedural component
     proc_comp = volume_actor.procedural_component
@@ -231,13 +226,14 @@ try:
             )
         
         if spawner:
-            # Configure spawner
-            spawner.random_seed = seed
-            spawner.tile_size = max(bounds_size.x, bounds_size.y)
+            # Configure spawner (use set_editor_property for read-only attributes)
+            spawner.set_editor_property('random_seed', seed)
+            spawner.set_editor_property('tile_size', max(bounds_size.x, bounds_size.y))
             
             # Create foliage types
             foliage_types = []
-            for ft_params in ${JSON.stringify(params.foliageTypes)}:
+            ft_input = json.loads(r'''${JSON.stringify(params.foliageTypes)}''')
+            for ft_params in ft_input:
                 # Load mesh
                 mesh = unreal.EditorAssetLibrary.load_asset(ft_params['meshPath'])
                 if mesh:
@@ -256,26 +252,26 @@ try:
                         ft_asset = unreal.FoliageType_InstancedStaticMesh()
                     
                     if ft_asset:
-                        # Configure foliage type
-                        ft_asset.mesh = mesh
-                        ft_asset.density = ft_params.get('density', 1.0)
-                        ft_asset.random_yaw = ft_params.get('randomYaw', True)
-                        ft_asset.align_to_normal = ft_params.get('alignToNormal', True)
+                        # Configure foliage type (use set_editor_property)
+                        ft_asset.set_editor_property('mesh', mesh)
+                        ft_asset.set_editor_property('density', ft_params.get('density', 1.0))
+                        ft_asset.set_editor_property('random_yaw', ft_params.get('randomYaw', True))
+                        ft_asset.set_editor_property('align_to_normal', ft_params.get('alignToNormal', True))
                         
                         min_scale = ft_params.get('minScale', 0.8)
                         max_scale = ft_params.get('maxScale', 1.2)
-                        ft_asset.scale_x = unreal.FloatInterval(min_scale, max_scale)
-                        ft_asset.scale_y = unreal.FloatInterval(min_scale, max_scale)
-                        ft_asset.scale_z = unreal.FloatInterval(min_scale, max_scale)
+                        ft_asset.set_editor_property('scale_x', unreal.FloatInterval(min_scale, max_scale))
+                        ft_asset.set_editor_property('scale_y', unreal.FloatInterval(min_scale, max_scale))
+                        ft_asset.set_editor_property('scale_z', unreal.FloatInterval(min_scale, max_scale))
                         
-                        ft_obj.foliage_type_object = ft_asset
+                        ft_obj.set_editor_property('foliage_type_object', ft_asset)
                         foliage_types.append(ft_obj)
             
             # Set foliage types on spawner
-            spawner.foliage_types = foliage_types
+            spawner.set_editor_property('foliage_types', foliage_types)
             
             # Assign spawner to component
-            proc_comp.foliage_spawner = spawner
+            proc_comp.set_editor_property('foliage_spawner', spawner)
             
             # Save spawner asset
             unreal.EditorAssetLibrary.save_asset(spawner.get_path_name())
@@ -455,23 +451,31 @@ try:
             # Load mesh
             mesh = unreal.EditorAssetLibrary.load_asset(mesh_path)
             if mesh:
-                # Configure grass type
+                # Configure grass type (use set_editor_property)
                 grass_variety = unreal.GrassVariety()
-                grass_variety.grass_mesh = mesh
-                grass_variety.grass_density = density * 100  # Convert to per square meter
-                grass_variety.use_grid = True
-                grass_variety.placement_jitter = 1.0
-                grass_variety.start_cull_distance = 10000
-                grass_variety.end_cull_distance = 20000
-                grass_variety.min_lod = -1
-                grass_variety.scaling = unreal.GrassScaling.UNIFORM
-                grass_variety.scale_x = unreal.FloatInterval(min_scale, max_scale)
-                grass_variety.scale_y = unreal.FloatInterval(min_scale, max_scale)
-                grass_variety.scale_z = unreal.FloatInterval(min_scale, max_scale)
-                grass_variety.random_rotation = True
-                grass_variety.align_to_surface = True
+                grass_variety.set_editor_property('grass_mesh', mesh)
+                # GrassDensity is PerPlatformFloat in UE5+; set via struct instance
+                pp_density = unreal.PerPlatformFloat()
+                pp_density.set_editor_property('Default', float(density * 100.0))
+                grass_variety.set_editor_property('grass_density', pp_density)
+                grass_variety.set_editor_property('use_grid', True)
+                grass_variety.set_editor_property('placement_jitter', 1.0)
+                # Set cull distances as PerPlatformInt and LOD as int (engine uses mixed types here)
+                pp_start = unreal.PerPlatformInt()
+                pp_start.set_editor_property('Default', 10000)
+                grass_variety.set_editor_property('start_cull_distance', pp_start)
+                pp_end = unreal.PerPlatformInt()
+                pp_end.set_editor_property('Default', 20000)
+                grass_variety.set_editor_property('end_cull_distance', pp_end)
+                grass_variety.set_editor_property('min_lod', -1)
+                grass_variety.set_editor_property('scaling', unreal.GrassScaling.UNIFORM)
+                grass_variety.set_editor_property('scale_x', unreal.FloatInterval(min_scale, max_scale))
+                grass_variety.set_editor_property('scale_y', unreal.FloatInterval(min_scale, max_scale))
+                grass_variety.set_editor_property('scale_z', unreal.FloatInterval(min_scale, max_scale))
+                grass_variety.set_editor_property('random_rotation', True)
+                grass_variety.set_editor_property('align_to_surface', True)
                 
-                grass_type.grass_varieties = [grass_variety]
+                grass_type.set_editor_property('grass_varieties', [grass_variety])
                 
                 # Save asset
                 unreal.EditorAssetLibrary.save_asset(grass_type.get_path_name())

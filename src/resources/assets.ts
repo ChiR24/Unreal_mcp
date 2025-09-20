@@ -10,11 +10,35 @@ export class AssetResources {
     return page !== undefined ? `${dir}::${recursive ? 1 : 0}::${page}` : `${dir}::${recursive ? 1 : 0}`; 
   }
 
+  // Normalize UE content paths:
+  // - Map '/Content' -> '/Game'
+  // - Ensure forward slashes
+  private normalizeDir(dir: string): string {
+    try {
+      if (!dir || typeof dir !== 'string') return '/Game';
+      let d = dir.replace(/\\/g, '/');
+      if (!d.startsWith('/')) d = '/' + d;
+      if (d.toLowerCase().startsWith('/content')) {
+        d = '/Game' + d.substring('/Content'.length);
+      }
+      // Collapse multiple slashes
+      d = d.replace(/\/+/g, '/');
+      // Remove trailing slash except root
+      if (d.length > 1) d = d.replace(/\/$/, '');
+      return d;
+    } catch {
+      return '/Game';
+    }
+  }
+
   async list(dir = '/Game', _recursive = false, limit = 50) {
     // ALWAYS use non-recursive listing to show only immediate children
     // This prevents timeouts and makes navigation clearer
     _recursive = false; // Force non-recursive
     
+    // Normalize directory first
+    dir = this.normalizeDir(dir);
+
     // Cache fast-path
     try {
       const key = this.makeKey(dir, false);
@@ -50,7 +74,8 @@ export class AssetResources {
     const safePageSize = Math.min(pageSize, 50);
     const offset = page * safePageSize;
     
-    // Check cache for this specific page
+    // Normalize directory and check cache for this specific page
+    dir = this.normalizeDir(dir);
     const cacheKey = this.makeKey(dir, recursive, page);
     const cached = this.cache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < this.ttlMs) {
@@ -102,8 +127,8 @@ export class AssetResources {
   }
 
   /**
-   * Directory-based listing for paths with too many assets
-   * Shows only immediate children (folders and files) to avoid timeouts
+   * Directory-based listing of immediate children using AssetRegistry.
+   * Returns both subfolders and assets at the given path.
    */
   private async listDirectoryOnly(dir: string, _recursive: boolean, limit: number) {
     // Always return only immediate children to avoid timeout and improve navigation
@@ -112,65 +137,43 @@ export class AssetResources {
 import unreal
 import json
 
-_dir = r"${dir}"
+_dir = r"${this.normalizeDir(dir)}"
 
 try:
-    # ALWAYS non-recursive - get only immediate children
-    all_paths = unreal.EditorAssetLibrary.list_assets(_dir, False, False)
-    
-    # Organize into immediate children only
-    immediate_folders = set()
-    immediate_assets = []
-    
-    for path in all_paths:
-        # Remove the base directory to get relative path
-        relative = path.replace(_dir, '').strip('/')
-        if not relative:
-            continue
-            
-        # Split to check depth
-        parts = relative.split('/')
-        
-        if len(parts) == 1:
-            # This is an immediate child asset
-            immediate_assets.append(path)
-        elif len(parts) > 1:
-            # This indicates a subfolder exists
-            immediate_folders.add(parts[0])
-    
-    result = []
-    
-    # Add folders first
-    for folder in sorted(immediate_folders):
-        result.append({
-            'n': folder,
-            'p': _dir + '/' + folder,
-            'c': 'Folder',
-            'isFolder': True
-        })
-    
-    # Add immediate assets (limit to prevent socket issues)
-    for asset_path in immediate_assets[:min(${limit}, len(immediate_assets))]:
-        name = asset_path.split('/')[-1].split('.')[0]
-        result.append({
-            'n': name,
-            'p': asset_path,
-            'c': 'Asset'
-        })
-    
-    # Always showing immediate children only
-    note = f'Showing immediate children of {_dir} ({len(immediate_folders)} folders, {len(immediate_assets)} files)'
-    
+    ar = unreal.AssetRegistryHelpers.get_asset_registry()
+    # Immediate subfolders
+    sub_paths = ar.get_sub_paths(_dir, False)
+    folders_list = []
+    for p in sub_paths:
+        try:
+            name = p.split('/')[-1]
+            folders_list.append({'n': name, 'p': p})
+        except Exception:
+            pass
+
+    # Immediate assets at this path
+    assets_data = ar.get_assets_by_path(_dir, False)
+    assets = []
+    for a in assets_data[:${limit}]:
+        try:
+            assets.append({
+                'n': str(a.asset_name),
+                'p': str(a.object_path),
+                'c': str(a.asset_class)
+            })
+        except Exception:
+            pass
+
     print("RESULT:" + json.dumps({
-        'success': True, 
-        'assets': result, 
-        'count': len(result),
-        'folders': len(immediate_folders),
-        'files': len(immediate_assets),
-        'note': note
+        'success': True,
+        'path': _dir,
+        'folders': len(folders_list),
+        'files': len(assets),
+        'folders_list': folders_list,
+        'assets': assets
     }))
 except Exception as e:
-    print("RESULT:" + json.dumps({'success': False, 'error': str(e), 'assets': []}))
+    print("RESULT:" + json.dumps({'success': False, 'error': str(e), 'path': _dir}))
 `.trim();
 
       const resp = await this.bridge.executePython(py);
@@ -188,21 +191,37 @@ except Exception as e:
         try {
           const parsed = JSON.parse(m[1]);
           if (parsed.success) {
-            // Transform to standard format
-            const assets = parsed.assets.map((a: any) => ({
+            // Map folders and assets to a clear response
+            const foldersArr = Array.isArray(parsed.folders_list) ? parsed.folders_list.map((f: any) => ({
+              Name: f.n,
+              Path: f.p,
+              Class: 'Folder',
+              isFolder: true
+            })) : [];
+
+            const assetsArr = Array.isArray(parsed.assets) ? parsed.assets.map((a: any) => ({
               Name: a.n,
               Path: a.p,
-              Class: a.c,
-              isFolder: a.isFolder || false
-            }));
-            
+              Class: a.c || 'Asset',
+              isFolder: false
+            })) : [];
+
+            const total = foldersArr.length + assetsArr.length;
+            const summary = {
+              total,
+              folders: foldersArr.length,
+              assets: assetsArr.length
+            };
+
             return {
-              assets,
-              count: parsed.count,
-              folders: parsed.folders,
-              files: parsed.files,
-              note: parsed.note,
-              method: 'directory_listing'
+              success: true,
+              path: parsed.path || this.normalizeDir(dir),
+              summary,
+              foldersList: foldersArr,
+              assets: assetsArr,
+              count: total,
+              note: `Immediate children of ${parsed.path || this.normalizeDir(dir)}: ${foldersArr.length} folder(s), ${assetsArr.length} asset(s)`,
+              method: 'asset_registry_listing'
             };
           }
         } catch {}
@@ -213,10 +232,13 @@ except Exception as e:
     
     // Fallback: return empty with explanation
     return {
+      success: true,
+      path: this.normalizeDir(dir),
+      summary: { total: 0, folders: 0, assets: 0 },
+      foldersList: [],
       assets: [],
-      warning: 'Directory contains too many assets. Showing immediate children only.',
-      suggestion: 'Navigate to specific subdirectories for detailed listings.',
-      method: 'directory_timeout_fallback'
+      warning: 'No items at this path or failed to query AssetRegistry.',
+      method: 'asset_registry_fallback'
     };
   }
 
@@ -226,9 +248,11 @@ except Exception as e:
       return false;
     }
 
+    // Normalize asset path (support users passing /Content/...)
+    const ap = this.normalizeDir(assetPath);
     const py = `
 import unreal
-apath = r"${assetPath}"
+apath = r"${ap}"
 try:
     exists = unreal.EditorAssetLibrary.does_asset_exist(apath)
     print("RESULT:{'success': True, 'exists': %s}" % ('True' if exists else 'False'))

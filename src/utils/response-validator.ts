@@ -95,40 +95,68 @@ export class ResponseValidator {
   }
 
   /**
-   * Wrap a tool response with validation
+   * Wrap a tool response with validation and MCP-compliant content shape.
+   *
+   * MCP tools/call responses must contain a `content` array. Many internal
+   * handlers return structured JSON objects (e.g., { success, message, ... }).
+   * This wrapper serializes such objects into a single text block while keeping
+   * existing `content` responses intact.
    */
   wrapResponse(toolName: string, response: any): any {
     // Ensure response is safe to serialize first
     try {
-      // The response should already be cleaned, but double-check
       if (response && typeof response === 'object') {
-        // Make sure we can serialize it
         JSON.stringify(response);
       }
     } catch (_error) {
       log.error(`Response for ${toolName} contains circular references, cleaning...`);
       response = cleanObject(response);
     }
-    
-    const validation = this.validateResponse(toolName, response);
-    
-    // Add validation metadata
+
+    // If handler already returned MCP content, keep it as-is (still validate)
+    const alreadyMcpShaped = response && typeof response === 'object' && Array.isArray(response.content);
+
+    // Choose the payload to validate: if already MCP-shaped, validate the
+    // structured content extracted from text; otherwise validate the object directly.
+    const validationTarget = alreadyMcpShaped ? response : response;
+    const validation = this.validateResponse(toolName, validationTarget);
+
     if (!validation.valid) {
       log.warn(`Tool ${toolName} response validation failed:`, validation.errors);
-      
-      // Add warning to response but don't fail
-      if (response && typeof response === 'object') {
-        response._validation = {
-          valid: false,
-          errors: validation.errors
-        };
-      }
     }
 
-    // Don't add structuredContent to the response - it's for internal validation only
-    // Adding it can cause circular references
-    
-    return response;
+    // If it's already MCP-shaped, return as-is (optionally append validation meta)
+    if (alreadyMcpShaped) {
+      if (!validation.valid) {
+        try {
+          (response as any)._validation = { valid: false, errors: validation.errors };
+        } catch {}
+      }
+      return response;
+    }
+
+    // Otherwise, wrap structured result into MCP content
+    let text: string;
+    try {
+      // Pretty-print small objects for readability
+      text = typeof response === 'string'
+        ? response
+        : JSON.stringify(response ?? { success: true }, null, 2);
+    } catch (_e) {
+      text = String(response);
+    }
+
+    const wrapped = {
+      content: [
+        { type: 'text', text }
+      ]
+    } as any;
+
+    if (!validation.valid) {
+      wrapped._validation = { valid: false, errors: validation.errors };
+    }
+
+    return wrapped;
   }
 
   /**

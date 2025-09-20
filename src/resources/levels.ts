@@ -56,9 +56,9 @@ export class LevelResources {
   }
 
   async saveCurrentLevel() {
-    // Prefer Python save (or LevelEditorSubsystem) then fallback
+    // Strict modern API: require LevelEditorSubsystem
     try {
-      const py = '\nimport unreal, json\ntry:\n    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)\n    if les: les.save_current_level()\n    else: unreal.EditorLevelLibrary.save_current_level()\n    print(\'RESULT:\' + json.dumps({\'success\': True}))\nexcept Exception as e:\n    print(\'RESULT:\' + json.dumps({\'success\': False, \'error\': str(e)}))\n'.trim();
+      const py = '\nimport unreal, json\ntry:\n    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)\n    if not les:\n        print(\'RESULT:\' + json.dumps({\'success\': False, \'error\': \'LevelEditorSubsystem not available\'}))\n    else:\n        les.save_current_level()\n        print(\'RESULT:\' + json.dumps({\'success\': True}))\nexcept Exception as e:\n    print(\'RESULT:\' + json.dumps({\'success\': False, \'error\': str(e)}))\n'.trim();
       const resp: any = await this.bridge.executePython(py);
       // Handle LogOutput format from executePython
       let out = '';

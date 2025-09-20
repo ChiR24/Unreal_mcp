@@ -17,6 +17,7 @@ import { BlueprintTools } from './tools/blueprint.js';
 import { LevelTools } from './tools/level.js';
 import { LightingTools } from './tools/lighting.js';
 import { LandscapeTools } from './tools/landscape.js';
+import { BuildEnvironmentAdvanced } from './tools/build_environment_advanced.js';
 import { FoliageTools } from './tools/foliage.js';
 import { DebugVisualizationTools } from './tools/debug.js';
 import { PerformanceTools } from './tools/performance.js';
@@ -27,8 +28,6 @@ import { SequenceTools } from './tools/sequence.js';
 import { IntrospectionTools } from './tools/introspection.js';
 import { VisualTools } from './tools/visual.js';
 import { EngineTools } from './tools/engine.js';
-import { toolDefinitions } from './tools/tool-definitions.js';
-import { handleToolCall } from './tools/tool-handlers.js';
 import { consolidatedToolDefinitions } from './tools/consolidated-tool-definitions.js';
 import { handleConsolidatedToolCall } from './tools/consolidated-tool-handlers.js';
 import { prompts } from './prompts/index.js';
@@ -81,8 +80,7 @@ let lastHealthSuccessAt = 0;
 
 // Configuration
 const CONFIG = {
-  // Tool mode: true = consolidated (13 tools), false = individual (36+ tools)
-  USE_CONSOLIDATED_TOOLS: process.env.USE_CONSOLIDATED_TOOLS !== 'false',
+  // Tooling: use consolidated tools only (13 tools)
   // Connection retry settings
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY_MS: 2000,
@@ -149,9 +147,9 @@ export async function createServer() {
   // Disable auto-reconnect loops; connect only on-demand
   bridge.setAutoReconnectEnabled(false);
   
-  // Initialize response validation with schemas
+// Initialize response validation with schemas
   log.debug('Initializing response validation...');
-  const toolDefs = CONFIG.USE_CONSOLIDATED_TOOLS ? consolidatedToolDefinitions : toolDefinitions;
+  const toolDefs = consolidatedToolDefinitions;
   toolDefs.forEach((tool: any) => {
     if (tool.outputSchema) {
       responseValidator.registerSchema(tool.name, tool.outputSchema);
@@ -227,6 +225,7 @@ export async function createServer() {
   const lightingTools = new LightingTools(bridge);
   const landscapeTools = new LandscapeTools(bridge);
   const foliageTools = new FoliageTools(bridge);
+  const buildEnvAdvanced = new BuildEnvironmentAdvanced(bridge);
   const debugTools = new DebugVisualizationTools(bridge);
   const performanceTools = new PerformanceTools(bridge);
   const audioTools = new AudioTools(bridge);
@@ -433,15 +432,15 @@ export async function createServer() {
     throw new Error(`Unknown resource: ${uri}`);
   });
 
-  // Handle tool listing - switch between consolidated (13) or individual (36) tools
+// Handle tool listing - consolidated tools only
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    log.info(`Serving ${CONFIG.USE_CONSOLIDATED_TOOLS ? 'consolidated' : 'individual'} tools`);
+    log.info('Serving consolidated tools');
     return {
-      tools: CONFIG.USE_CONSOLIDATED_TOOLS ? consolidatedToolDefinitions : toolDefinitions
+      tools: consolidatedToolDefinitions
     };
   });
 
-  // Handle tool calls - switch between consolidated (13) or individual (36) tools
+  // Handle tool calls - consolidated tools only (13)
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     const startTime = Date.now();
@@ -460,7 +459,7 @@ export async function createServer() {
       return notConnected;
     }
     
-    // Create tools object for handler
+// Create tools object for handler
     const tools = {
       actorTools,
       assetTools,
@@ -474,6 +473,7 @@ export async function createServer() {
       lightingTools,
       landscapeTools,
       foliageTools,
+      buildEnvAdvanced,
       debugTools,
       performanceTools,
       audioTools,
@@ -483,19 +483,18 @@ export async function createServer() {
       introspectionTools,
       visualTools,
       engineTools,
+      // Resources for listing and info
+      assetResources,
+      actorResources,
+      levelResources,
       bridge
     };
     
-    // Use consolidated or individual handler based on configuration
+// Execute consolidated tool handler
     try {
       log.debug(`Executing tool: ${name}`);
       
-      let result;
-      if (CONFIG.USE_CONSOLIDATED_TOOLS) {
-        result = await handleConsolidatedToolCall(name, args, tools);
-      } else {
-        result = await handleToolCall(name, args, tools);
-      }
+      let result = await handleConsolidatedToolCall(name, args, tools);
       
       log.debug(`Tool ${name} returned result`);
       

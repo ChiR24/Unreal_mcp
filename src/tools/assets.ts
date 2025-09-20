@@ -7,8 +7,12 @@ export class AssetTools {
 
   async importAsset(sourcePath: string, destinationPath: string) {
     try {
-      // Sanitize destination path (remove trailing slash)
-      const cleanDest = destinationPath.replace(/\/$/, '');
+      // Sanitize destination path (remove trailing slash) and normalize UE path
+      let cleanDest = destinationPath.replace(/\/$/, '');
+      // Map /Content -> /Game for UE asset destinations
+      if (/^\/?content(\/|$)/i.test(cleanDest)) {
+        cleanDest = '/Game' + cleanDest.replace(/^\/?content/i, '');
+      }
 
       // Create test FBX file if it's a test file
       if (sourcePath.includes('test_model.fbx')) {
