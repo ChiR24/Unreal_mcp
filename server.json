@@ -1,35 +1,41 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-16/server.schema.json",
   "name": "io.github.ChiR24/unreal-engine-mcp",
-  "description": "A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via Remote Control API. Built with TypeScript and designed for game development automation.",
+  "description": "Comprehensive MCP server for Unreal Engine automation with 13 tools for asset management, actor control, and game development.",
   "version": "0.4.0",
   "packages": [
     {
-      "registry_type": "npm",
-      "registry_base_url": "https://registry.npmjs.org",
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "unreal-engine-mcp-server",
       "version": "0.4.0",
       "transport": {
         "type": "stdio"
       },
-      "environment_variables": [
+      "environmentVariables": [
         {
           "name": "UE_HOST",
-          "description": "Unreal Engine host address",
-          "is_required": false,
+          "description": "Unreal Engine host address (default: 127.0.0.1)",
+          "isRequired": false,
           "value": "127.0.0.1"
         },
         {
           "name": "UE_RC_HTTP_PORT",
-          "description": "Remote Control HTTP port",
-          "is_required": false,
+          "description": "Remote Control HTTP port (default: 30010)",
+          "isRequired": false,
           "value": "30010"
         },
         {
           "name": "UE_RC_WS_PORT",
-          "description": "Remote Control WebSocket port",
-          "is_required": false,
+          "description": "Remote Control WebSocket port (default: 30020)",
+          "isRequired": false,
           "value": "30020"
+        },
+        {
+          "name": "LOG_LEVEL",
+          "description": "Logging level: debug, info, warn, error (default: info)",
+          "isRequired": false,
+          "value": "info"
         }
       ]
     }
@@ -37,15 +43,29 @@
   "license": "MIT",
   "keywords": [
     "mcp",
-    "modelcontextprotocol", 
+    "modelcontextprotocol",
     "unreal-engine",
     "ue5",
+    "ue6",
     "game-development",
     "remote-control",
     "automation",
     "3d",
     "gamedev",
-    "cinematics"
+    "cinematics",
+    "level-design",
+    "animation",
+    "physics",
+    "niagara",
+    "vfx",
+    "blueprint",
+    "lighting",
+    "rendering",
+    "play-in-editor",
+    "asset-management",
+    "actor-control",
+    "sequencer",
+    "production"
   ],
   "author": "ChiR24",
   "homepage": "https://github.com/ChiR24/Unreal_mcp",
@@ -53,6 +73,9 @@
     "type": "git",
     "url": "https://github.com/ChiR24/Unreal_mcp.git",
     "source": "github"
+  },
+  "bugs": {
+    "url": "https://github.com/ChiR24/Unreal_mcp/issues"
   },
   "engines": {
     "node": ">=18"

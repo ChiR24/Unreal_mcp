@@ -1,13 +1,14 @@
 {
   "name": "unreal-engine-mcp-server",
   "version": "0.4.0",
-  "description": "Production-ready MCP server for Unreal Engine integration using consolidated tools only",
+  "description": "Production-ready MCP server for Unreal Engine integration with 13 tools",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
     "unreal-engine-mcp-server": "dist/cli.js"
   },
+  "mcpName": "io.github.ChiR24/unreal-engine-mcp",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
@@ -32,10 +33,10 @@
   ],
   "author": "Unreal Engine MCP Team",
   "license": "MIT",
-  "mcpName": "io.github.ChiR24/unreal-engine-mcp",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.1",
-    "ajv": "^8.12.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "axios": "^1.12.2",
     "dotenv": "^16.4.5",
     "ws": "^8.18.0",

@@ -62,3 +62,8 @@ Desktop.ini
 .cache/
 .eslintcache
 package-lock.json
+.mcpregistry_registry_token
+.mcpregistry_github_token
+mcp-publisher.exe
+PUBLISH.md
+validate-server.js
