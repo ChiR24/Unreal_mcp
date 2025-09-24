@@ -40,39 +40,67 @@ export class BlueprintTools {
 import unreal
 import time
 
-# Helper function to ensure asset persistence
+# Helper function to ensure asset persistence using modern UE APIs
 def ensure_asset_persistence(asset_path):
     try:
-        asset = unreal.EditorAssetLibrary.load_asset(asset_path)
+        # Use modern EditorActorSubsystem instead of deprecated EditorAssetLibrary
+        asset_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+
+        # Load the asset to ensure it's in memory
+        asset = asset_subsystem.get_asset(asset_path) if hasattr(asset_subsystem, 'get_asset') else None
+        if not asset:
+            # Fallback to old method if new API not available
+            asset = unreal.EditorAssetLibrary.load_asset(asset_path)
         if not asset:
             return False
-        
-        # Save the asset
-        saved = unreal.EditorAssetLibrary.save_asset(asset_path, only_if_is_dirty=False)
+
+        # Save the asset using modern subsystem
+        if hasattr(asset_subsystem, 'save_asset'):
+            saved = asset_subsystem.save_asset(asset_path, only_if_is_dirty=False)
+        else:
+            # Fallback to old method
+            saved = unreal.EditorAssetLibrary.save_asset(asset_path, only_if_is_dirty=False)
+
         if saved:
             print(f"Asset saved: {asset_path}")
-        
-        # Refresh the asset registry for the asset's directory only
+
+        # Refresh the asset registry for the asset's directory only using modern API
         try:
             asset_dir = asset_path.rsplit('/', 1)[0]
-            unreal.AssetRegistryHelpers.get_asset_registry().scan_paths_synchronous([asset_dir], True)
+            if hasattr(unreal, 'AssetRegistryHelpers'):
+                registry = unreal.AssetRegistryHelpers.get_asset_registry()
+                if hasattr(registry, 'scan_paths_synchronous'):
+                    registry.scan_paths_synchronous([asset_dir], True)
         except Exception as _reg_e:
             pass
-        
+
         # Small delay to ensure filesystem sync
         time.sleep(0.1)
-        
+
         return saved
     except Exception as e:
         print(f"Error ensuring persistence: {e}")
         return False
 
-# Stop PIE if running
+# Stop PIE if running using modern subsystems
 try:
-    if unreal.EditorLevelLibrary.is_playing_editor():
-        print("Stopping Play In Editor mode...")
-        unreal.EditorLevelLibrary.editor_end_play()
-        time.sleep(0.5)
+    # Use LevelEditorSubsystem instead of deprecated EditorLevelLibrary
+    level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    if level_subsystem and hasattr(level_subsystem, 'is_in_play_in_editor'):
+        if level_subsystem.is_in_play_in_editor():
+            print("Stopping Play In Editor mode...")
+            if hasattr(level_subsystem, 'editor_request_end_play'):
+                level_subsystem.editor_request_end_play()
+            else:
+                # Fallback to old method
+                unreal.EditorLevelLibrary.editor_end_play()
+            time.sleep(0.5)
+    else:
+        # Fallback to old method if new subsystem not available
+        if unreal.EditorLevelLibrary.is_playing_editor():
+            print("Stopping Play In Editor mode (fallback)...")
+            unreal.EditorLevelLibrary.editor_end_play()
+            time.sleep(0.5)
 except:
     pass
 
@@ -88,11 +116,29 @@ asset_name = "${sanitizedParams.name}"
 full_path = f"{asset_path}/{asset_name}"
 
 try:
-    # Check if already exists
-    if unreal.EditorAssetLibrary.does_asset_exist(full_path):
+    # Check if already exists using modern subsystem
+    asset_exists = False
+    try:
+        asset_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+        if hasattr(asset_subsystem, 'does_asset_exist'):
+            asset_exists = asset_subsystem.does_asset_exist(full_path)
+        else:
+            asset_exists = unreal.EditorAssetLibrary.does_asset_exist(full_path)
+    except:
+        asset_exists = unreal.EditorAssetLibrary.does_asset_exist(full_path)
+        
+    if asset_exists:
         print(f"Blueprint already exists at {full_path}")
-        # Load and return existing
-        existing = unreal.EditorAssetLibrary.load_asset(full_path)
+        # Load and return existing using modern subsystem
+        existing = None
+        try:
+            if hasattr(asset_subsystem, 'get_asset'):
+                existing = asset_subsystem.get_asset(full_path)
+            else:
+                existing = unreal.EditorAssetLibrary.load_asset(full_path)
+        except:
+            existing = unreal.EditorAssetLibrary.load_asset(full_path)
+            
         if existing:
             print(f"Loaded existing Blueprint: {full_path}")
             success = True
@@ -136,22 +182,53 @@ try:
                     # Last resort: try the original UE4 name
                     factory.ParentClass = parent_class
         
-        # Create the asset
-        asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-        new_asset = asset_tools.create_asset(
-            asset_name=asset_name,
-            package_path=asset_path,
-            asset_class=unreal.Blueprint,
-            factory=factory
-        )
+        # Create the asset using modern EditorAssetSubsystem if available
+        try:
+            # Try modern EditorAssetSubsystem first
+            try:
+                asset_subsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
+                if hasattr(asset_subsystem, 'create_asset'):
+                    new_asset = asset_subsystem.create_asset(
+                        asset_name=asset_name,
+                        package_path=asset_path,
+                        asset_class=unreal.Blueprint,
+                        factory=factory
+                    )
+                else:
+                    # Fallback to AssetToolsHelpers
+                    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+                    new_asset = asset_tools.create_asset(
+                        asset_name=asset_name,
+                        package_path=asset_path,
+                        asset_class=unreal.Blueprint,
+                        factory=factory
+                    )
+            except:
+                # Final fallback to AssetToolsHelpers
+                asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+                new_asset = asset_tools.create_asset(
+                    asset_name=asset_name,
+                    package_path=asset_path,
+                    asset_class=unreal.Blueprint,
+                    factory=factory
+                )
+        except Exception as e:
+            print(f"Asset creation failed: {str(e)}")
+            new_asset = None
         
         if new_asset:
             print(f"Successfully created Blueprint at {full_path}")
             
-            # Ensure persistence
+            # Ensure persistence using modern subsystem
             if ensure_asset_persistence(full_path):
-                # Verify it was saved
-                if unreal.EditorAssetLibrary.does_asset_exist(full_path):
+                # Verify it was saved using modern subsystem
+                try:
+                    if hasattr(asset_subsystem, 'does_asset_exist'):
+                        asset_verified = asset_subsystem.does_asset_exist(full_path)
+                    else:
+                        asset_verified = unreal.EditorAssetLibrary.does_asset_exist(full_path)
+                except:
+                    asset_verified = unreal.EditorAssetLibrary.does_asset_exist(full_path)
                     print(f"Verified blueprint exists after save: {full_path}")
                     success = True
                 else:
@@ -283,22 +360,57 @@ try:
         
         blueprint_asset = None
         for path in possible_paths:
-            if unreal.EditorAssetLibrary.does_asset_exist(path):
+            # Check if blueprint exists using modern subsystem
+            try:
+                asset_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+                if hasattr(asset_subsystem, 'does_asset_exist'):
+                    path_exists = asset_subsystem.does_asset_exist(path)
+                else:
+                    path_exists = unreal.EditorAssetLibrary.does_asset_exist(path)
+            except:
+                path_exists = unreal.EditorAssetLibrary.does_asset_exist(path)
+                
+            if path_exists:
                 blueprint_path = path
-                blueprint_asset = unreal.EditorAssetLibrary.load_asset(path)
+                # Load blueprint using modern subsystem
+                try:
+                    if hasattr(asset_subsystem, 'get_asset'):
+                        blueprint_asset = asset_subsystem.get_asset(path)
+                    else:
+                        blueprint_asset = unreal.EditorAssetLibrary.load_asset(path)
+                except:
+                    blueprint_asset = unreal.EditorAssetLibrary.load_asset(path)
                 print(f"Found blueprint at: {path}")
                 break
         
         if not blueprint_asset:
-            # Last resort: search for the blueprint using a filter
+            # Last resort: search for the blueprint using modern AssetRegistrySubsystem
             try:
-                asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
-                # Create a filter to find blueprints
-                filter = unreal.ARFilter(
-                    class_names=['Blueprint'],
-                    recursive_classes=True
-                )
-                assets = asset_registry.get_assets(filter)
+                # Try modern AssetRegistrySubsystem first
+                try:
+                    registry_subsystem = unreal.get_editor_subsystem(unreal.AssetRegistrySubsystem)
+                    if hasattr(registry_subsystem, 'get_assets_by_class'):
+                        # Create a filter to find blueprints
+                        filter_obj = unreal.ARFilter()
+                        filter_obj.class_names = ['Blueprint']
+                        filter_obj.recursive_classes = True
+                        assets = registry_subsystem.get_assets(filter_obj)
+                    else:
+                        # Fallback to deprecated AssetRegistryHelpers
+                        asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+                        filter_obj = unreal.ARFilter(
+                            class_names=['Blueprint'],
+                            recursive_classes=True
+                        )
+                        assets = asset_registry.get_assets(filter_obj)
+                except:
+                    # Final fallback to deprecated API
+                    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+                    filter_obj = unreal.ARFilter(
+                        class_names=['Blueprint'],
+                        recursive_classes=True
+                    )
+                    assets = asset_registry.get_assets(filter_obj)
                 for asset_data in assets:
                     asset_name = str(asset_data.asset_name)
                     if asset_name == blueprint_path or asset_name == blueprint_path.split('/')[-1]:
@@ -435,12 +547,24 @@ try:
                 if new_node:
                     print(f"Successfully added {component_type} component '{sanitizedComponentName}' to blueprint")
                     
-                    # Try to compile the blueprint to apply changes
+                    # Try to compile the blueprint to apply changes using modern BlueprintEditorSubsystem
                     try:
-                        unreal.BlueprintEditorLibrary.compile_blueprint(blueprint_asset)
-                        print("Blueprint compiled successfully")
-                    except:
-                        print("Warning: Could not compile blueprint")
+                        # Try modern BlueprintEditorSubsystem first
+                        try:
+                            blueprint_editor = unreal.get_editor_subsystem(unreal.BlueprintEditorSubsystem)
+                            if hasattr(blueprint_editor, 'compile_blueprint'):
+                                blueprint_editor.compile_blueprint(blueprint_asset)
+                                print("Blueprint compiled successfully via BlueprintEditorSubsystem")
+                            else:
+                                # Fallback to BlueprintEditorLibrary
+                                unreal.BlueprintEditorLibrary.compile_blueprint(blueprint_asset)
+                                print("Blueprint compiled successfully via BlueprintEditorLibrary")
+                        except:
+                            # Final fallback to BlueprintEditorLibrary
+                            unreal.BlueprintEditorLibrary.compile_blueprint(blueprint_asset)
+                            print("Blueprint compiled successfully via BlueprintEditorLibrary")
+                    except Exception as compile_error:
+                        print(f"Warning: Could not compile blueprint: {compile_error}")
                     
                     # Save the blueprint
                     saved = unreal.EditorAssetLibrary.save_asset(blueprint_path, only_if_is_dirty=False)

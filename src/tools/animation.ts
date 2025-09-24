@@ -70,57 +70,90 @@ export class AnimationTools {
       // Add concurrency delay to prevent race conditions
       await concurrencyDelay();
       
-      // Enhanced Python script with proper persistence and error detection
+      // Enhanced Python script with proper persistence and error detection - UPDATED FOR UE 5.x
       const pythonScript = `
 import unreal
 import time
 
-# Helper function to ensure asset persistence
+# Helper function to ensure asset persistence using modern UE APIs
 def ensure_asset_persistence(asset_path):
-    """Ensure asset is properly saved and registered"""
+    """Ensure asset is properly saved and registered using EditorActorSubsystem"""
     try:
+        # Use modern EditorActorSubsystem instead of deprecated EditorAssetLibrary
+        asset_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+
         # Load the asset to ensure it's in memory
-        asset = unreal.EditorAssetLibrary.load_asset(asset_path)
+        asset = asset_subsystem.get_asset(asset_path) if hasattr(asset_subsystem, 'get_asset') else None
+        if not asset:
+            # Fallback to old method if new API not available
+            asset = unreal.EditorAssetLibrary.load_asset(asset_path)
         if not asset:
             return False
-            
-        # Save the asset
-        saved = unreal.EditorAssetLibrary.save_asset(asset_path, only_if_is_dirty=False)
+
+        # Save the asset using modern subsystem
+        if hasattr(asset_subsystem, 'save_asset'):
+            saved = asset_subsystem.save_asset(asset_path, only_if_is_dirty=False)
+        else:
+            # Fallback to old method
+            saved = unreal.EditorAssetLibrary.save_asset(asset_path, only_if_is_dirty=False)
+
         if saved:
             print(f"Asset saved: {asset_path}")
-        
-        # Refresh the asset registry for the asset's directory only
+
+        # Refresh the asset registry for the asset's directory only using modern API
         try:
             asset_dir = asset_path.rsplit('/', 1)[0]
-            unreal.AssetRegistryHelpers.get_asset_registry().scan_paths_synchronous([asset_dir], True)
+            if hasattr(unreal, 'AssetRegistryHelpers'):
+                registry = unreal.AssetRegistryHelpers.get_asset_registry()
+                if hasattr(registry, 'scan_paths_synchronous'):
+                    registry.scan_paths_synchronous([asset_dir], True)
         except Exception as _reg_e:
             pass
-        
+
         # Small delay to ensure filesystem sync
         time.sleep(0.1)
-        
+
         return saved
     except Exception as e:
         print(f"Error ensuring persistence: {e}")
         return False
 
-# Stop PIE if it's running
+# Stop PIE if it's running using modern subsystems
 try:
-    if unreal.EditorLevelLibrary.is_playing_editor():
-        print("Stopping Play In Editor mode...")
-        unreal.EditorLevelLibrary.editor_end_play()
-        # Small delay to ensure editor fully exits play mode
-        import time as _t
-        _t.sleep(0.5)
-except Exception as _e:
-    # Try alternative check
-    try:
-        play_world = unreal.EditorLevelLibrary.get_editor_world()
-        if play_world and play_world.is_play_in_editor():
-            print("Stopping PIE via alternative method...")
+    # Use LevelEditorSubsystem instead of deprecated EditorLevelLibrary
+    level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    if level_subsystem and hasattr(level_subsystem, 'is_in_play_in_editor'):
+        if level_subsystem.is_in_play_in_editor():
+            print("Stopping Play In Editor mode...")
+            if hasattr(level_subsystem, 'editor_request_end_play'):
+                level_subsystem.editor_request_end_play()
+            else:
+                # Fallback to old method
+                unreal.EditorLevelLibrary.editor_end_play()
+            # Small delay to ensure editor fully exits play mode
+            import time as _t
+            _t.sleep(0.5)
+    else:
+        # Fallback to old method if new subsystem not available
+        if unreal.EditorLevelLibrary.is_playing_editor():
+            print("Stopping Play In Editor mode (fallback)...")
             unreal.EditorLevelLibrary.editor_end_play()
-            import time as _t2
-            _t2.sleep(0.5)
+            import time as _t
+            _t.sleep(0.5)
+except Exception as _e:
+    # Try alternative check using UnrealEditorSubsystem
+    try:
+        editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+        if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
+            play_world = editor_subsystem.get_editor_world()
+            if play_world and play_world.is_play_in_editor():
+                print("Stopping PIE via UnrealEditorSubsystem...")
+                if hasattr(editor_subsystem, 'request_end_play'):
+                    editor_subsystem.request_end_play()
+                else:
+                    unreal.EditorLevelLibrary.editor_end_play()
+                import time as _t2
+                _t2.sleep(0.5)
     except:
         pass  # Continue if we can't check/stop play mode
 
@@ -136,11 +169,30 @@ asset_name = "${sanitizedParams.name}"
 full_path = f"{asset_path}/{asset_name}"
 
 try:
-    # Check if already exists
-    if unreal.EditorAssetLibrary.does_asset_exist(full_path):
+    # Check if already exists using modern subsystem
+    asset_exists = False
+    try:
+        asset_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+        if hasattr(asset_subsystem, 'does_asset_exist'):
+            asset_exists = asset_subsystem.does_asset_exist(full_path)
+        else:
+            # Fallback to old method
+            asset_exists = unreal.EditorAssetLibrary.does_asset_exist(full_path)
+    except:
+        asset_exists = unreal.EditorAssetLibrary.does_asset_exist(full_path)
+        
+    if asset_exists:
         print(f"Asset already exists at {full_path}")
-        # Load and return existing
-        existing = unreal.EditorAssetLibrary.load_asset(full_path)
+        # Load and return existing using modern subsystem
+        existing = None
+        try:
+            if hasattr(asset_subsystem, 'get_asset'):
+                existing = asset_subsystem.get_asset(full_path)
+            else:
+                existing = unreal.EditorAssetLibrary.load_asset(full_path)
+        except:
+            existing = unreal.EditorAssetLibrary.load_asset(full_path)
+            
         if existing:
             print(f"Loaded existing AnimBlueprint: {full_path}")
             success = True
@@ -157,8 +209,24 @@ try:
         skeleton_set = False
         
         if skeleton_path and skeleton_path != "None":
-            if unreal.EditorAssetLibrary.does_asset_exist(skeleton_path):
-                skeleton = unreal.EditorAssetLibrary.load_asset(skeleton_path)
+            # Check skeleton exists using modern subsystem
+            skeleton_exists = False
+            try:
+                if hasattr(asset_subsystem, 'does_asset_exist'):
+                    skeleton_exists = asset_subsystem.does_asset_exist(skeleton_path)
+                else:
+                    skeleton_exists = unreal.EditorAssetLibrary.does_asset_exist(skeleton_path)
+            except:
+                skeleton_exists = unreal.EditorAssetLibrary.does_asset_exist(skeleton_path)
+                
+            if skeleton_exists:
+                try:
+                    if hasattr(asset_subsystem, 'get_asset'):
+                        skeleton = asset_subsystem.get_asset(skeleton_path)
+                    else:
+                        skeleton = unreal.EditorAssetLibrary.load_asset(skeleton_path)
+                except:
+                    skeleton = unreal.EditorAssetLibrary.load_asset(skeleton_path)
                 if skeleton and isinstance(skeleton, unreal.Skeleton):
                     # Different Unreal versions use different attribute names
                     try:
@@ -184,22 +252,53 @@ try:
             else:
                 print(f"Warning: Skeleton not found at {skeleton_path}, creating without skeleton")
         
-        # Create the asset
-        asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-        new_asset = asset_tools.create_asset(
-            asset_name=asset_name,
-            package_path=asset_path,
-            asset_class=unreal.AnimBlueprint,
-            factory=factory
-        )
+        # Create the asset using modern EditorAssetSubsystem if available
+        try:
+            # Try modern EditorAssetSubsystem first
+            try:
+                asset_subsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
+                if hasattr(asset_subsystem, 'create_asset'):
+                    new_asset = asset_subsystem.create_asset(
+                        asset_name=asset_name,
+                        package_path=asset_path,
+                        asset_class=unreal.AnimBlueprint,
+                        factory=factory
+                    )
+                else:
+                    # Fallback to AssetToolsHelpers
+                    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+                    new_asset = asset_tools.create_asset(
+                        asset_name=asset_name,
+                        package_path=asset_path,
+                        asset_class=unreal.AnimBlueprint,
+                        factory=factory
+                    )
+            except:
+                # Final fallback to AssetToolsHelpers
+                asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+                new_asset = asset_tools.create_asset(
+                    asset_name=asset_name,
+                    package_path=asset_path,
+                    asset_class=unreal.AnimBlueprint,
+                    factory=factory
+                )
+        except Exception as e:
+            print(f"Asset creation failed: {str(e)}")
+            new_asset = None
         
         if new_asset:
             print(f"Successfully created AnimBlueprint at {full_path}")
             
-            # Ensure persistence
+            # Ensure persistence using modern subsystem
             if ensure_asset_persistence(full_path):
-                # Verify it was saved
-                if unreal.EditorAssetLibrary.does_asset_exist(full_path):
+                # Verify it was saved using modern subsystem
+                try:
+                    if hasattr(asset_subsystem, 'does_asset_exist'):
+                        asset_verified = asset_subsystem.does_asset_exist(full_path)
+                    else:
+                        asset_verified = unreal.EditorAssetLibrary.does_asset_exist(full_path)
+                except:
+                    asset_verified = unreal.EditorAssetLibrary.does_asset_exist(full_path)
                     print(f"Verified asset exists after save: {full_path}")
                     success = True
                 else:

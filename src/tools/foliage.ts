@@ -278,19 +278,56 @@ try:
     actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     all_actors = actor_sub.get_all_level_actors() if actor_sub else []
 
-    # Find or create a container actor
+    # Find or create a container actor using modern EditorActorSubsystem
     label = f"FoliageContainer_{foliage_type_name}"
     container = None
-    for a in all_actors:
-        try:
-            if a.get_actor_label() == label:
-                container = a
-                break
-        except Exception:
-            pass
-    if not container:
-        # Spawn actor that can hold components
-        container = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector(px, py, pz))
+    try:
+        # Try modern EditorActorSubsystem first
+        actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+        if actor_subsystem:
+            all_actors = actor_subsystem.get_all_level_actors()
+            for a in all_actors:
+                try:
+                    if a.get_actor_label() == label:
+                        container = a
+                        break
+                except Exception:
+                    pass
+            if not container:
+                # Spawn actor using modern subsystem
+                container = actor_subsystem.spawn_actor_from_class(
+                    unreal.StaticMeshActor,
+                    unreal.Vector(px, py, pz)
+                )
+                try:
+                    container.set_actor_label(label)
+                except Exception:
+                    pass
+        else:
+            # Fallback to old method
+            all_actors = unreal.EditorLevelLibrary.get_all_level_actors()
+            for a in all_actors:
+                try:
+                    if a.get_actor_label() == label:
+                        container = a
+                        break
+                except Exception:
+                    pass
+            if not container:
+                container = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                    unreal.StaticMeshActor,
+                    unreal.Vector(px, py, pz)
+                )
+                try:
+                    container.set_actor_label(label)
+                except Exception:
+                    pass
+    except Exception as e:
+        # Final fallback
+        container = unreal.EditorLevelLibrary.spawn_actor_from_class(
+            unreal.StaticMeshActor,
+            unreal.Vector(px, py, pz)
+        )
         try:
             container.set_actor_label(label)
         except Exception:
@@ -322,12 +359,27 @@ try:
         r = random.random() * radius
         x, y, z = px + math.cos(ang) * r, py + math.sin(ang) * r, pz
         try:
-            # Spawn static mesh actor at position
-            inst_actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
-                unreal.StaticMeshActor, 
-                unreal.Vector(x, y, z),
-                unreal.Rotator(0, random.random()*360.0, 0)
-            )
+            # Spawn static mesh actor at position using modern subsystem
+            try:
+                actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+                if actor_subsystem:
+                    inst_actor = actor_subsystem.spawn_actor_from_class(
+                        unreal.StaticMeshActor,
+                        unreal.Vector(x, y, z),
+                        unreal.Rotator(0, random.random()*360.0, 0)
+                    )
+                else:
+                    inst_actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                        unreal.StaticMeshActor,
+                        unreal.Vector(x, y, z),
+                        unreal.Rotator(0, random.random()*360.0, 0)
+                    )
+            except:
+                inst_actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+                    unreal.StaticMeshActor,
+                    unreal.Vector(x, y, z),
+                    unreal.Rotator(0, random.random()*360.0, 0)
+                )
             if inst_actor and mesh:
                 # Set mesh on the actor's component
                 try:

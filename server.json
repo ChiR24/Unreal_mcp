@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
   "name": "io.github.ChiR24/unreal-engine-mcp",
-  "description": "Production-ready MCP server for Unreal Engine with comprehensive game development tools",
+  "description": "A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via Remote Control API. Built with TypeScript and designed for game development automation.",
   "version": "0.4.0",
   "packages": [
     {

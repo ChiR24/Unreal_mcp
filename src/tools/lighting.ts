@@ -607,8 +607,26 @@ if actor:
         ${params.sourceType === 'SpecifiedCubemap' && params.cubemapPath ? `
         try:
             path = r"${params.cubemapPath}"
-            if unreal.EditorAssetLibrary.does_asset_exist(path):
-                cube = unreal.EditorAssetLibrary.load_asset(path)
+            # Check if asset exists using modern subsystem
+            asset_exists = False
+            try:
+                asset_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+                if hasattr(asset_subsystem, 'does_asset_exist'):
+                    asset_exists = asset_subsystem.does_asset_exist(path)
+                else:
+                    asset_exists = unreal.EditorAssetLibrary.does_asset_exist(path)
+            except:
+                asset_exists = unreal.EditorAssetLibrary.does_asset_exist(path)
+                
+            if asset_exists:
+                # Load asset using modern subsystem
+                try:
+                    if hasattr(asset_subsystem, 'get_asset'):
+                        cube = asset_subsystem.get_asset(path)
+                    else:
+                        cube = unreal.EditorAssetLibrary.load_asset(path)
+                except:
+                    cube = unreal.EditorAssetLibrary.load_asset(path)
                 try: comp.set_cubemap(cube)
                 except Exception: comp.set_editor_property('cubemap', cube)
                 comp.recapture_sky()

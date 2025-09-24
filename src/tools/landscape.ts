@@ -379,8 +379,15 @@ except Exception as e:
 import unreal
 
 try:
-    # Get the landscape actor
-    actors = unreal.EditorLevelLibrary.get_all_level_actors()
+    # Get the landscape actor using modern EditorActorSubsystem
+    try:
+        actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+        if hasattr(actor_subsystem, 'get_all_level_actors'):
+            actors = actor_subsystem.get_all_level_actors()
+        else:
+            actors = unreal.EditorLevelLibrary.get_all_level_actors()
+    except:
+        actors = unreal.EditorLevelLibrary.get_all_level_actors()
     landscape = None
     
     for actor in actors:
@@ -413,7 +420,15 @@ try:
         # Configure data layers (UE 5.6)
         if ${params.dataLayers ? 'True' : 'False'}:
             try:
-                world = unreal.EditorLevelLibrary.get_editor_world()
+                # Try modern subsystem first
+                try:
+                    editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+                    if hasattr(editor_subsystem, 'get_editor_world'):
+                        world = editor_subsystem.get_editor_world()
+                    else:
+                        world = unreal.EditorLevelLibrary.get_editor_world()
+                except Exception:
+                    world = unreal.EditorLevelLibrary.get_editor_world()
                 data_layer_manager = unreal.WorldPartitionBlueprintLibrary.get_data_layer_manager(world)
                 if data_layer_manager:
                     # Note: Full data layer API requires additional setup

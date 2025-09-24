@@ -43,6 +43,7 @@ import { responseValidator } from './utils/response-validator.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import { routeStdoutLogsToStderr } from './utils/stdio-redirect.js';
 import { cleanObject } from './utils/safe-json.js';
+import { createElicitationHelper } from './utils/elicitation.js';
 
 const log = new Logger('UE-MCP');
 
@@ -251,6 +252,9 @@ export async function createServer() {
     }
   );
 
+  // Optional elicitation helper – used only if client supports it.
+  const elicitation = createElicitationHelper(server as any, log);
+
   // Handle resource listing
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
     return {
@@ -442,7 +446,8 @@ export async function createServer() {
 
   // Handle tool calls - consolidated tools only (13)
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
+    const { name } = request.params;
+    let args: any = request.params.arguments || {};
     const startTime = Date.now();
 
     // Ensure connection only when needed, with 3 attempts
@@ -483,6 +488,9 @@ export async function createServer() {
       introspectionTools,
       visualTools,
       engineTools,
+      // Elicitation (client-optional)
+      elicit: elicitation.elicit,
+      supportsElicitation: elicitation.supports,
       // Resources for listing and info
       assetResources,
       actorResources,
@@ -494,6 +502,61 @@ export async function createServer() {
     try {
       log.debug(`Executing tool: ${name}`);
       
+      // Opportunistic generic elicitation for missing primitive required fields
+      try {
+        const toolDef: any = (consolidatedToolDefinitions as any[]).find(t => t.name === name);
+        const inputSchema: any = toolDef?.inputSchema;
+        const elicitFn: any = (tools as any).elicit;
+        if (inputSchema && typeof elicitFn === 'function') {
+          const props = inputSchema.properties || {};
+          const required: string[] = Array.isArray(inputSchema.required) ? inputSchema.required : [];
+          const missing = required.filter((k: string) => {
+            const v = (args as any)[k];
+            if (v === undefined || v === null) return true;
+            if (typeof v === 'string' && v.trim() === '') return true;
+            return false;
+          });
+
+          // Build a flat primitive-only schema subset per MCP Elicitation rules
+          const primitiveProps: any = {};
+          for (const k of missing) {
+            const p = props[k];
+            if (!p || typeof p !== 'object') continue;
+            const t = (p.type || '').toString();
+            const isEnum = Array.isArray(p.enum);
+            if (t === 'string' || t === 'number' || t === 'integer' || t === 'boolean' || isEnum) {
+              primitiveProps[k] = {
+                type: t || (isEnum ? 'string' : undefined),
+                title: p.title,
+                description: p.description,
+                enum: p.enum,
+                enumNames: p.enumNames,
+                minimum: p.minimum,
+                maximum: p.maximum,
+                minLength: p.minLength,
+                maxLength: p.maxLength,
+                pattern: p.pattern,
+                format: p.format,
+                default: p.default
+              };
+            }
+          }
+
+          if (Object.keys(primitiveProps).length > 0) {
+            const elicitRes = await elicitFn(
+              `Provide missing parameters for ${name}`,
+              { type: 'object', properties: primitiveProps, required: Object.keys(primitiveProps) },
+              { fallback: async () => ({ ok: false, error: 'missing-params' }) }
+            );
+            if (elicitRes && elicitRes.ok && elicitRes.value) {
+              args = { ...args, ...elicitRes.value };
+            }
+          }
+        }
+      } catch (e) {
+        log.debug('Generic elicitation prefill skipped', { err: (e as any)?.message || String(e) });
+      }
+
       let result = await handleConsolidatedToolCall(name, args, tools);
       
       log.debug(`Tool ${name} returned result`);

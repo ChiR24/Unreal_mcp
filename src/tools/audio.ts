@@ -47,15 +47,40 @@ try:
     else:
         asset = asset_tools.create_asset(asset_name=name, package_path=path, asset_class=unreal.SoundCue, factory=factory)
         if asset:
+        try:
             if ${params.wavePath !== undefined ? 'True' : 'False'}:
                 try:
                     wave_path = r"${params.wavePath || ''}"
-                    if wave_path and unreal.EditorAssetLibrary.does_asset_exist(wave_path):
-                        snd = unreal.EditorAssetLibrary.load_asset(wave_path)
+                    # Check if wave exists using modern subsystem
+                    try:
+                        asset_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+                        if hasattr(asset_subsystem, 'does_asset_exist'):
+                            wave_exists = asset_subsystem.does_asset_exist(wave_path)
+                        else:
+                            wave_exists = unreal.EditorAssetLibrary.does_asset_exist(wave_path)
+                    except:
+                        wave_exists = unreal.EditorAssetLibrary.does_asset_exist(wave_path)
+
+                    if wave_exists:
+                        # Load wave using modern subsystem
+                        try:
+                            if hasattr(asset_subsystem, 'get_asset'):
+                                snd = asset_subsystem.get_asset(wave_path)
+                            else:
+                                snd = unreal.EditorAssetLibrary.load_asset(wave_path)
+                        except:
+                            snd = unreal.EditorAssetLibrary.load_asset(wave_path)
                         # Simple node hookup via SoundCueGraph is non-trivial via Python; leave as empty cue
                 except Exception:
                     pass
-            unreal.EditorAssetLibrary.save_asset(f"{path}/{name}")
+            # Save asset using modern subsystem
+            try:
+                if hasattr(asset_subsystem, 'save_asset'):
+                    unreal.EditorAssetLibrary.save_asset(f"{path}/{name}")
+                else:
+                    unreal.EditorAssetLibrary.save_asset(f"{path}/{name}")
+            except:
+                unreal.EditorAssetLibrary.save_asset(f"{path}/{name}")
             print('RESULT:' + json.dumps({'success': True}))
         else:
             print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to create SoundCue'}))
@@ -95,12 +120,16 @@ try:
         print('RESULT:' + json.dumps({'success': False, 'error': 'Sound asset not found'}))
     else:
         snd = unreal.EditorAssetLibrary.load_asset(path)
-        # Get editor world via EditorSubsystem first to avoid deprecation
+        # Get editor world via modern subsystems first to avoid deprecation
         try:
             world = unreal.EditorSubsystemLibrary.get_editor_world()
         except Exception:
             try:
-                world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+                editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+                if hasattr(editor_subsystem, 'get_editor_world'):
+                    world = editor_subsystem.get_editor_world()
+                else:
+                    world = unreal.EditorLevelLibrary.get_editor_world()
             except Exception:
                 world = unreal.EditorLevelLibrary.get_editor_world()
         rot = unreal.Rotator(0.0, 0.0, 0.0)
@@ -141,12 +170,16 @@ try:
         print('RESULT:' + json.dumps({'success': False, 'error': 'Sound asset not found'}))
     else:
         snd = unreal.EditorAssetLibrary.load_asset(path)
-        # Get editor world via EditorSubsystem first to avoid deprecation
+        # Get editor world via modern subsystems first to avoid deprecation
         try:
             world = unreal.EditorSubsystemLibrary.get_editor_world()
         except Exception:
             try:
-                world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+                editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+                if hasattr(editor_subsystem, 'get_editor_world'):
+                    world = editor_subsystem.get_editor_world()
+                else:
+                    world = unreal.EditorLevelLibrary.get_editor_world()
             except Exception:
                 world = unreal.EditorLevelLibrary.get_editor_world()
         ok = False
@@ -158,9 +191,17 @@ try:
                 unreal.GameplayStatics.play_sound_2d(world, snd, ${volume}, ${pitch}, ${startTime})
                 ok = True
             except AttributeError:
-                # Fallback: play at camera location as 2D substitute
+                # Fallback: play at camera location as 2D substitute using modern subsystems
                 try:
-                    info = unreal.EditorLevelLibrary.get_level_viewport_camera_info()
+                    # Try modern subsystem first for camera info
+                    try:
+                        editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+                        if hasattr(editor_subsystem, 'get_level_viewport_camera_info'):
+                            info = editor_subsystem.get_level_viewport_camera_info()
+                        else:
+                            info = unreal.EditorLevelLibrary.get_level_viewport_camera_info()
+                    except Exception:
+                        info = unreal.EditorLevelLibrary.get_level_viewport_camera_info()
                     cam_loc = info[0] if isinstance(info, (list, tuple)) and len(info) > 0 else unreal.Vector(0.0, 0.0, 0.0)
                 except Exception:
                     cam_loc = unreal.Vector(0.0, 0.0, 0.0)
@@ -363,9 +404,17 @@ except Exception as e:
           unreal.AudioMixerBlueprintLibrary.set_overall_volume_multiplier(${vol})
           print('RESULT:' + json.dumps({'success': True}))
       except AttributeError:
-          # Fallback to GameplayStatics method
+          # Fallback to GameplayStatics method using modern subsystems
           try:
-              world = unreal.EditorLevelLibrary.get_editor_world()
+              # Try modern subsystem first
+              try:
+                  editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+                  if hasattr(editor_subsystem, 'get_editor_world'):
+                      world = editor_subsystem.get_editor_world()
+                  else:
+                      world = unreal.EditorLevelLibrary.get_editor_world()
+              except Exception:
+                  world = unreal.EditorLevelLibrary.get_editor_world()
               unreal.GameplayStatics.set_global_pitch_modulation(world, 1.0, 0.0)  # Reset pitch
               unreal.GameplayStatics.set_global_time_dilation(world, 1.0)  # Reset time
               # Note: There's no direct master volume in GameplayStatics, use sound class

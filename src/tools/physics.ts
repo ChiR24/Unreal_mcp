@@ -217,12 +217,25 @@ def ensure_asset_persistence(asset_path):
         print(f"Error ensuring persistence: {e}")
         return False
 
-# Stop PIE if it's running
+# Stop PIE if running using modern subsystems
 try:
-    if unreal.EditorLevelLibrary.is_playing_editor():
-        print("Stopping Play In Editor mode...")
-        unreal.EditorLevelLibrary.editor_end_play()
-        time.sleep(0.5)
+    # Use LevelEditorSubsystem instead of deprecated EditorLevelLibrary
+    level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    if level_subsystem and hasattr(level_subsystem, 'is_in_play_in_editor'):
+        if level_subsystem.is_in_play_in_editor():
+            print("Stopping Play In Editor mode...")
+            if hasattr(level_subsystem, 'editor_request_end_play'):
+                level_subsystem.editor_request_end_play()
+            else:
+                # Fallback to old method
+                unreal.EditorLevelLibrary.editor_end_play()
+            time.sleep(0.5)
+    else:
+        # Fallback to old method if new subsystem not available
+        if unreal.EditorLevelLibrary.is_playing_editor():
+            print("Stopping Play In Editor mode (fallback)...")
+            unreal.EditorLevelLibrary.editor_end_play()
+            time.sleep(0.5)
 except:
     pass
 
@@ -284,7 +297,25 @@ try:
                 
                 # Alternative approach: Create physics asset from skeletal mesh
                 # This is the proper way in UE5
-                physics_asset = unreal.EditorSkeletalMeshLibrary.create_physics_asset(skeletal_mesh)
+                try:
+                    # Try modern physics asset creation methods first
+                    try:
+                        # Method 1: Try using SkeletalMesh editor utilities if available
+                        if hasattr(unreal, 'SkeletalMeshEditorSubsystem'):
+                            skel_subsystem = unreal.get_editor_subsystem(unreal.SkeletalMeshEditorSubsystem)
+                            if hasattr(skel_subsystem, 'create_physics_asset'):
+                                physics_asset = skel_subsystem.create_physics_asset(skeletal_mesh)
+                            else:
+                                # Fallback to deprecated EditorSkeletalMeshLibrary
+                                physics_asset = unreal.EditorSkeletalMeshLibrary.create_physics_asset(skeletal_mesh)
+                        else:
+                            physics_asset = unreal.EditorSkeletalMeshLibrary.create_physics_asset(skeletal_mesh)
+                    except:
+                        # Final fallback to deprecated API
+                        physics_asset = unreal.EditorSkeletalMeshLibrary.create_physics_asset(skeletal_mesh)
+                except Exception as e:
+                    print(f"Physics asset creation failed: {str(e)}")
+                    physics_asset = None
                 
                 if physics_asset:
                     # Move/rename the physics asset to desired location
