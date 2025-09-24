@@ -1,6 +1,7 @@
 {
   "name": "unreal-engine-mcp-server",
   "version": "0.4.0",
+  "mcpName": "io.github.ChiR24/unreal-engine-mcp",
   "description": "Production-ready MCP server for Unreal Engine integration with 13 tools",
   "type": "module",
   "main": "dist/index.js",
@@ -8,7 +9,7 @@
   "bin": {
     "unreal-engine-mcp-server": "dist/cli.js"
   },
-  "mcpName": "io.github.ChiR24/unreal-engine-mcp",
+  
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
