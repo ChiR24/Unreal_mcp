@@ -120,6 +120,7 @@ export class ResponseValidator {
     // structured content extracted from text; otherwise validate the object directly.
     const validationTarget = alreadyMcpShaped ? response : response;
     const validation = this.validateResponse(toolName, validationTarget);
+    const structuredPayload = validation.structuredContent;
 
     if (!validation.valid) {
       log.warn(`Tool ${toolName} response validation failed:`, validation.errors);
@@ -127,6 +128,13 @@ export class ResponseValidator {
 
     // If it's already MCP-shaped, return as-is (optionally append validation meta)
     if (alreadyMcpShaped) {
+      if (structuredPayload !== undefined && response && typeof response === 'object' && response.structuredContent === undefined) {
+        try {
+          (response as any).structuredContent = structuredPayload && typeof structuredPayload === 'object'
+            ? cleanObject(structuredPayload)
+            : structuredPayload;
+        } catch {}
+      }
       if (!validation.valid) {
         try {
           (response as any)._validation = { valid: false, errors: validation.errors };
@@ -151,6 +159,22 @@ export class ResponseValidator {
         { type: 'text', text }
       ]
     } as any;
+
+    if (structuredPayload !== undefined) {
+      try {
+        wrapped.structuredContent = structuredPayload && typeof structuredPayload === 'object'
+          ? cleanObject(structuredPayload)
+          : structuredPayload;
+      } catch {
+        wrapped.structuredContent = structuredPayload;
+      }
+    } else if (response && typeof response === 'object') {
+      try {
+        wrapped.structuredContent = cleanObject(response);
+      } catch {
+        wrapped.structuredContent = response;
+      }
+    }
 
     if (!validation.valid) {
       wrapped._validation = { valid: false, errors: validation.errors };

@@ -454,14 +454,17 @@ export async function createServer() {
     const connected = await ensureConnectedOnDemand();
     if (!connected) {
       const notConnected = {
-        content: [{ type: 'text', text: 'Unreal Engine is not connected (after 3 attempts). Please open UE and try again.' }],
         success: false,
         error: 'UE_NOT_CONNECTED',
+        message: 'Unreal Engine is not connected (after 3 attempts). Please open UE and try again.',
         retriable: false,
         scope: `tool-call/${name}`
       } as any;
       trackPerformance(startTime, false);
-      return notConnected;
+      return responseValidator.wrapResponse(name, {
+        ...notConnected,
+        content: [{ type: 'text', text: JSON.stringify(notConnected, null, 2) }]
+      });
     }
     
 // Create tools object for handler
@@ -593,14 +596,25 @@ export async function createServer() {
         });
         if (metrics.recentErrors.length > 20) metrics.recentErrors.splice(0, metrics.recentErrors.length - 20);
       } catch {}
-      
-      return {
+
+      const sanitizedError = cleanObject(errorResponse);
+      let errorText = '';
+      try {
+        errorText = JSON.stringify(sanitizedError, null, 2);
+      } catch {
+        errorText = sanitizedError.message || errorResponse.message || `Failed to execute ${name}`;
+      }
+
+      const wrappedError = {
+        ...sanitizedError,
+        isError: true,
         content: [{
           type: 'text',
-          text: errorResponse.message || `Failed to execute ${name}`
-        }],
-        ...errorResponse
+          text: errorText
+        }]
       };
+
+      return responseValidator.wrapResponse(name, wrappedError);
     }
   });
 
