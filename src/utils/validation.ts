@@ -209,11 +209,19 @@ export function resolveSkeletalMeshPath(input: string): string | null {
   if (input.includes('_Skeleton')) {
     // Try common replacements
     let meshPath = input.replace('_Skeleton', '');
-    meshPath = meshPath.replace('/SK_', '/SKM_');
-    meshPath = meshPath.replace('UE4_Mannequin', 'SKM_Manny');
-    meshPath = meshPath.replace('UE5_Mannequin', 'SKM_Manny');
-    meshPath = meshPath.replace('UE5_Manny', 'SKM_Manny');
-    meshPath = meshPath.replace('UE5_Quinn', 'SKM_Quinn');
+    // Mapping for replacements
+    const replacements: { [key: string]: string } = {
+      '/SK_': '/SKM_',
+      'UE4_Mannequin': 'SKM_Manny',
+      'UE5_Mannequin': 'SKM_Manny',
+      'UE5_Manny': 'SKM_Manny',
+      'UE5_Quinn': 'SKM_Quinn'
+    };
+    // Apply all replacements using regex
+    meshPath = meshPath.replace(
+      new RegExp(Object.keys(replacements).join('|'), 'g'),
+      match => replacements[match]
+    );
     return meshPath;
   }
   
