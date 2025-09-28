@@ -1,14 +1,10 @@
 // Lighting tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
+import { parseStandardResult } from '../utils/python-output.js';
+import { escapePythonString } from '../utils/python.js';
 
 export class LightingTools {
   constructor(private bridge: UnrealBridge) {}
-
-  // Helper to safely escape strings for Python
-  private escapePythonString(str: string): string {
-    // Escape backslashes first, then quotes
-    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  }
 
   private ensurePythonSpawnSucceeded(label: string, result: any) {
     let logs = '';
@@ -34,18 +30,22 @@ export class LightingTools {
     throw new Error(`Uncertain spawn result for '${label}'. Engine logs:\n${logs}`);
   }
 
-  // Execute console command
-  private async _executeCommand(command: string) {
-    return this.bridge.httpCall('/remote/object/call', 'PUT', {
-      objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-      functionName: 'ExecuteConsoleCommand',
-      parameters: {
-        WorldContextObject: null,
-        Command: command,
-        SpecificPlayer: null
-      },
-      generateTransaction: false
-    });
+  private normalizeName(value: unknown, fallback?: string): string {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+
+    if (typeof fallback === 'string') {
+      const trimmedFallback = fallback.trim();
+      if (trimmedFallback.length > 0) {
+        return trimmedFallback;
+      }
+    }
+
+    throw new Error('Invalid name: must be a non-empty string');
   }
 
   // Create directional light
@@ -57,10 +57,8 @@ export class LightingTools {
     castShadows?: boolean;
     temperature?: number;
   }) {
-    // Validate name
-    if (!params.name || typeof params.name !== 'string' || params.name.trim() === '') {
-      throw new Error('Invalid name: must be a non-empty string');
-    }
+    const name = this.normalizeName(params.name);
+    const escapedName = escapePythonString(name);
     
     // Validate numeric parameters
     if (params.intensity !== undefined) {
@@ -135,31 +133,31 @@ spawn_rotation = unreal.Rotator(${rot[0]}, ${rot[1]}, ${rot[2]})
 
 # Spawn the actor
 spawned_light = editor_actor_subsystem.spawn_actor_from_class(
-    directional_light_class, 
-    spawn_location, 
-    spawn_rotation
+  directional_light_class, 
+  spawn_location, 
+  spawn_rotation
 )
 
 if spawned_light:
-    # Set the label/name
-    spawned_light.set_actor_label("${this.escapePythonString(params.name)}")
+  # Set the label/name
+  spawned_light.set_actor_label("${escapedName}")
     
-    # Get the light component
-    light_component = spawned_light.get_component_by_class(unreal.DirectionalLightComponent)
+  # Get the light component
+  light_component = spawned_light.get_component_by_class(unreal.DirectionalLightComponent)
     
-    if light_component:
+  if light_component:
 ${propertiesCode}
     
-    print("Directional light '${this.escapePythonString(params.name)}' spawned")
+  print("Directional light '${escapedName}' spawned")
 else:
-    print("Failed to spawn directional light '${this.escapePythonString(params.name)}'")
+  print("Failed to spawn directional light '${escapedName}'")
 `;
 
     // Execute the Python script via bridge (UE 5.6-compatible)
     const result = await this.bridge.executePython(pythonScript);
 
-    this.ensurePythonSpawnSucceeded(params.name, result);
-    return { success: true, message: `Directional light '${params.name}' spawned` };
+    this.ensurePythonSpawnSucceeded(name, result);
+    return { success: true, message: `Directional light '${name}' spawned` };
   }
 
   // Create point light
@@ -172,10 +170,8 @@ else:
     falloffExponent?: number;
     castShadows?: boolean;
   }) {
-    // Validate name
-    if (!params.name || typeof params.name !== 'string' || params.name.trim() === '') {
-      throw new Error('Invalid name: must be a non-empty string');
-    }
+    const name = this.normalizeName(params.name);
+    const escapedName = escapePythonString(name);
     
     // Validate location array
     if (params.location !== undefined) {
@@ -262,31 +258,31 @@ spawn_rotation = unreal.Rotator(0, 0, 0)
 
 # Spawn the actor
 spawned_light = editor_actor_subsystem.spawn_actor_from_class(
-    point_light_class, 
-    spawn_location, 
-    spawn_rotation
+  point_light_class, 
+  spawn_location, 
+  spawn_rotation
 )
 
 if spawned_light:
-    # Set the label/name
-    spawned_light.set_actor_label("${this.escapePythonString(params.name)}")
+  # Set the label/name
+  spawned_light.set_actor_label("${escapedName}")
     
-    # Get the light component
-    light_component = spawned_light.get_component_by_class(unreal.PointLightComponent)
+  # Get the light component
+  light_component = spawned_light.get_component_by_class(unreal.PointLightComponent)
     
-    if light_component:
+  if light_component:
 ${propertiesCode}
     
-    print(f"Point light '${this.escapePythonString(params.name)}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
+  print(f"Point light '${escapedName}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
 else:
-    print("Failed to spawn point light '${this.escapePythonString(params.name)}'")
+  print("Failed to spawn point light '${escapedName}'")
 `;
 
     // Execute the Python script via bridge (UE 5.6-compatible)
     const result = await this.bridge.executePython(pythonScript);
 
-    this.ensurePythonSpawnSucceeded(params.name, result);
-    return { success: true, message: `Point light '${params.name}' spawned at ${location.join(', ')}` };
+    this.ensurePythonSpawnSucceeded(name, result);
+    return { success: true, message: `Point light '${name}' spawned at ${location.join(', ')}` };
   }
 
   // Create spot light
@@ -301,10 +297,8 @@ else:
     color?: [number, number, number];
     castShadows?: boolean;
   }) {
-    // Validate name
-    if (!params.name || typeof params.name !== 'string' || params.name.trim() === '') {
-      throw new Error('Invalid name: must be a non-empty string');
-    }
+    const name = this.normalizeName(params.name);
+    const escapedName = escapePythonString(name);
     
     // Validate required location and rotation arrays
     if (!params.location || !Array.isArray(params.location) || params.location.length !== 3) {
@@ -418,7 +412,7 @@ spawned_light = editor_actor_subsystem.spawn_actor_from_class(
 
 if spawned_light:
     # Set the label/name
-    spawned_light.set_actor_label("${this.escapePythonString(params.name)}")
+    spawned_light.set_actor_label("${escapedName}")
     
     # Get the light component
     light_component = spawned_light.get_component_by_class(unreal.SpotLightComponent)
@@ -426,16 +420,16 @@ if spawned_light:
     if light_component:
 ${propertiesCode}
     
-    print(f"Spot light '${this.escapePythonString(params.name)}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
+    print(f"Spot light '${escapedName}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
 else:
-    print("Failed to spawn spot light '${this.escapePythonString(params.name)}'")
+    print("Failed to spawn spot light '${escapedName}'")
 `;
 
     // Execute the Python script via bridge (UE 5.6-compatible)
-    const result = await this.bridge.executePython(pythonScript);
+  const result = await this.bridge.executePython(pythonScript);
 
-    this.ensurePythonSpawnSucceeded(params.name, result);
-    return { success: true, message: `Spot light '${params.name}' spawned at ${params.location.join(', ')}` };
+  this.ensurePythonSpawnSucceeded(name, result);
+  return { success: true, message: `Spot light '${name}' spawned at ${params.location.join(', ')}` };
   }
 
   // Create rect light
@@ -448,11 +442,9 @@ else:
     intensity?: number;
     color?: [number, number, number];
   }) {
-    // Validate name
-    if (!params.name || typeof params.name !== 'string' || params.name.trim() === '') {
-      throw new Error('Invalid name: must be a non-empty string');
-    }
-    
+    const name = this.normalizeName(params.name);
+    const escapedName = escapePythonString(name);
+
     // Validate required location and rotation arrays
     if (!params.location || !Array.isArray(params.location) || params.location.length !== 3) {
       throw new Error('Invalid location: must be an array [x,y,z]');
@@ -549,25 +541,25 @@ spawned_light = editor_actor_subsystem.spawn_actor_from_class(
 )
 
 if spawned_light:
-    # Set the label/name
-    spawned_light.set_actor_label("${this.escapePythonString(params.name)}")
+  # Set the label/name
+  spawned_light.set_actor_label("${escapedName}")
     
-    # Get the light component
-    light_component = spawned_light.get_component_by_class(unreal.RectLightComponent)
+  # Get the light component
+  light_component = spawned_light.get_component_by_class(unreal.RectLightComponent)
     
-    if light_component:
+  if light_component:
 ${propertiesCode}
     
-    print(f"Rect light '${this.escapePythonString(params.name)}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
+  print(f"Rect light '${escapedName}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
 else:
-    print("Failed to spawn rect light '${this.escapePythonString(params.name)}'")
+  print("Failed to spawn rect light '${escapedName}'")
 `;
 
     // Execute the Python script via bridge (UE 5.6-compatible)
     const result = await this.bridge.executePython(pythonScript);
 
-    this.ensurePythonSpawnSucceeded(params.name, result);
-    return { success: true, message: `Rect light '${params.name}' spawned at ${params.location.join(', ')}` };
+    this.ensurePythonSpawnSucceeded(name, result);
+    return { success: true, message: `Rect light '${name}' spawned at ${params.location.join(', ')}` };
   }
 
   // Create sky light
@@ -578,80 +570,189 @@ else:
     intensity?: number;
     recapture?: boolean;
   }) {
-    const py = `
+    const name = this.normalizeName(params.name);
+    const escapedName = escapePythonString(name);
+    const sourceTypeRaw = typeof params.sourceType === 'string' ? params.sourceType.trim() : undefined;
+    const normalizedSourceType = sourceTypeRaw
+      ? sourceTypeRaw.toLowerCase() === 'specifiedcubemap'
+        ? 'SpecifiedCubemap'
+        : sourceTypeRaw.toLowerCase() === 'capturedscene'
+          ? 'CapturedScene'
+          : undefined
+      : undefined;
+    const cubemapPath = typeof params.cubemapPath === 'string' ? params.cubemapPath.trim() : undefined;
+
+    if (normalizedSourceType === 'SpecifiedCubemap' && (!cubemapPath || cubemapPath.length === 0)) {
+      const message = 'cubemapPath is required when sourceType is SpecifiedCubemap';
+      return { success: false, error: message, message };
+    }
+    const escapedCubemapPath = cubemapPath ? escapePythonString(cubemapPath) : '';
+    const python = `
 import unreal
-editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-spawn_location = unreal.Vector(0, 0, 500)
-spawn_rotation = unreal.Rotator(0, 0, 0)
-# Try to find an existing SkyLight to avoid duplicates
-actor = None
+import json
+
+result = {
+  "success": False,
+  "message": "",
+  "error": "",
+  "warnings": []
+}
+
+def add_warning(text):
+  if text:
+    result["warnings"].append(str(text))
+
+def finish():
+  if result["success"]:
+    if not result["message"]:
+      result["message"] = "Sky light ensured"
+    result.pop("error", None)
+  else:
+    if not result["error"]:
+      result["error"] = result["message"] or "Failed to ensure sky light"
+    if not result["message"]:
+      result["message"] = result["error"]
+  if not result["warnings"]:
+    result.pop("warnings", None)
+  print('RESULT:' + json.dumps(result))
+
 try:
-    actors = editor_actor_subsystem.get_all_level_actors()
-    for a in actors:
-        try:
-            if a.get_class().get_name() == 'SkyLight':
-                actor = a
-                break
-        except Exception: pass
-except Exception: pass
-# Spawn only if not found
-if actor is None:
-    actor = editor_actor_subsystem.spawn_actor_from_class(unreal.SkyLight, spawn_location, spawn_rotation)
-if actor:
+  actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+  if not actor_sub:
+    result["error"] = "EditorActorSubsystem unavailable"
+    finish()
+    raise SystemExit(0)
+
+  spawn_location = unreal.Vector(0.0, 0.0, 500.0)
+  spawn_rotation = unreal.Rotator(0.0, 0.0, 0.0)
+
+  actor = None
+  try:
+    for candidate in actor_sub.get_all_level_actors():
+      try:
+        if candidate.get_class().get_name() == 'SkyLight':
+          actor = candidate
+          break
+      except Exception:
+        continue
+  except Exception:
+    pass
+
+  if actor is None:
+    actor = actor_sub.spawn_actor_from_class(unreal.SkyLight, spawn_location, spawn_rotation)
+
+  if not actor:
+    result["error"] = "Failed to spawn SkyLight actor"
+    finish()
+    raise SystemExit(0)
+
+  try:
+    actor.set_actor_label("${escapedName}")
+  except Exception:
+    pass
+
+  comp = actor.get_component_by_class(unreal.SkyLightComponent)
+  if not comp:
+    result["error"] = "SkyLight component missing"
+    finish()
+    raise SystemExit(0)
+
+  ${params.intensity !== undefined ? `
+  try:
+    comp.set_intensity(${params.intensity})
+  except Exception:
     try:
-        actor.set_actor_label("${this.escapePythonString(params.name)}")
-    except Exception: pass
-    comp = actor.get_component_by_class(unreal.SkyLightComponent)
-    if comp:
-        ${params.intensity !== undefined ? `comp.set_intensity(${params.intensity})` : 'pass'}
-        ${params.sourceType === 'SpecifiedCubemap' && params.cubemapPath ? `
-        try:
-            path = r"${params.cubemapPath}"
-            # Check if asset exists using modern subsystem
-            asset_exists = False
-            try:
-                asset_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-                if hasattr(asset_subsystem, 'does_asset_exist'):
-                    asset_exists = asset_subsystem.does_asset_exist(path)
-                else:
-                    asset_exists = unreal.EditorAssetLibrary.does_asset_exist(path)
-            except:
-                asset_exists = unreal.EditorAssetLibrary.does_asset_exist(path)
-                
-            if asset_exists:
-                # Load asset using modern subsystem
-                try:
-                    if hasattr(asset_subsystem, 'get_asset'):
-                        cube = asset_subsystem.get_asset(path)
-                    else:
-                        cube = unreal.EditorAssetLibrary.load_asset(path)
-                except:
-                    cube = unreal.EditorAssetLibrary.load_asset(path)
-                try: comp.set_cubemap(cube)
-                except Exception: comp.set_editor_property('cubemap', cube)
-                comp.recapture_sky()
-        except Exception: pass
-        ` : 'pass'}
-        ${params.recapture ? `
-        try: comp.recapture_sky()
-        except Exception: pass
-        ` : 'pass'}
-    print("RESULT:{'success': True}")
-else:
-    print("RESULT:{'success': False, 'error': 'Failed to spawn SkyLight'}")
+      comp.set_editor_property('intensity', ${params.intensity})
+    except Exception:
+      add_warning('Unable to set intensity property')
+  ` : ''}
+
+  source_type = ${normalizedSourceType ? `'${normalizedSourceType}'` : 'None'}
+  if source_type:
+    try:
+      comp.set_editor_property('source_type', getattr(unreal.SkyLightSourceType, source_type))
+    except Exception:
+      try:
+        comp.source_type = getattr(unreal.SkyLightSourceType, source_type)
+      except Exception:
+        add_warning(f"Unable to set source type {source_type}")
+
+  if source_type == 'SpecifiedCubemap':
+    path = "${escapedCubemapPath}"
+    if not path:
+      result["error"] = "cubemapPath is required when sourceType is SpecifiedCubemap"
+      finish()
+      raise SystemExit(0)
+    try:
+      exists = unreal.EditorAssetLibrary.does_asset_exist(path)
+    except Exception:
+      exists = False
+    if not exists:
+      result["error"] = f"Cubemap asset not found: {path}"
+      finish()
+      raise SystemExit(0)
+    try:
+      cube = unreal.EditorAssetLibrary.load_asset(path)
+    except Exception as load_err:
+      result["error"] = f"Failed to load cubemap asset: {load_err}"
+      finish()
+      raise SystemExit(0)
+    if not cube:
+      result["error"] = f"Cubemap asset could not be loaded: {path}"
+      finish()
+      raise SystemExit(0)
+    try:
+      if hasattr(comp, 'set_cubemap'):
+        comp.set_cubemap(cube)
+      else:
+        comp.set_editor_property('cubemap', cube)
+    except Exception as assign_err:
+      result["error"] = f"Failed to assign cubemap: {assign_err}"
+      finish()
+      raise SystemExit(0)
+
+  if ${params.recapture ? 'True' : 'False'}:
+    try:
+      comp.recapture_sky()
+    except Exception as recapture_err:
+      add_warning(f"Recapture failed: {recapture_err}")
+
+  result["success"] = True
+  result["message"] = "Sky light ensured"
+  finish()
+
+except SystemExit:
+  pass
+except Exception as run_err:
+  result["error"] = str(run_err)
+  finish()
 `.trim();
-    const resp = await this.bridge.executePython(py);
-    const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-    const m = out.match(/RESULT:({.*})/);
-    if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: 'Sky light ensured' } : { success: false, error: parsed.error }; } catch {} }
-    return { success: true, message: 'Sky light ensured' };
+  const resp = await this.bridge.executePython(python);
+  const parsed = parseStandardResult(resp).data;
+  if (parsed) {
+    if (parsed.success) {
+      return {
+        success: true,
+        message: parsed.message ?? 'Sky light ensured',
+        warnings: Array.isArray(parsed.warnings) && parsed.warnings.length > 0 ? parsed.warnings : undefined
+      };
+    }
+    return {
+      success: false,
+      error: parsed.error ?? parsed.message ?? 'Failed to ensure sky light',
+      warnings: Array.isArray(parsed.warnings) && parsed.warnings.length > 0 ? parsed.warnings : undefined
+    };
+  }
+  return { success: true, message: 'Sky light ensured' };
   }
 
   // Remove duplicate SkyLights and keep only one (named target label)
   async ensureSingleSkyLight(params?: { name?: string; recapture?: boolean }) {
-    const name = params?.name || 'MCP_Test_Sky';
+  const fallbackName = 'MCP_Test_Sky';
+  const name = this.normalizeName(params?.name, fallbackName);
+    const escapedName = escapePythonString(name);
     const recapture = !!params?.recapture;
-    const py = `\nimport unreal, json\nactor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nactors = actor_sub.get_all_level_actors() if actor_sub else []\nskies = []\nfor a in actors:\n    try:\n        if a.get_class().get_name() == 'SkyLight':\n            skies.append(a)\n    except Exception: pass\nkeep = None\n# Prefer one with matching label; otherwise keep the first\nfor a in skies:\n    try:\n        label = a.get_actor_label()\n        if label == r"${this.escapePythonString(name)}":\n            keep = a\n            break\n    except Exception: pass\nif keep is None and len(skies) > 0:\n    keep = skies[0]\n# Rename the kept one if needed\nif keep is not None:\n    try: keep.set_actor_label(r"${this.escapePythonString(name)}")\n    except Exception: pass\n# Destroy all others using the correct non-deprecated API\nremoved = 0\nfor a in skies:\n    if keep is not None and a == keep:\n        continue\n    try:\n        # Use EditorActorSubsystem.destroy_actor instead of deprecated EditorLevelLibrary\n        actor_sub.destroy_actor(a)\n        removed += 1\n    except Exception: pass\n# Optionally recapture\nif keep is not None and ${recapture ? 'True' : 'False'}:\n    try:\n        comp = keep.get_component_by_class(unreal.SkyLightComponent)\n        if comp: comp.recapture_sky()\n    except Exception: pass\nprint('RESULT:' + json.dumps({'success': True, 'removed': removed, 'kept': True if keep else False}))\n`.trim();
+    const py = `\nimport unreal, json\nactor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nactors = actor_sub.get_all_level_actors() if actor_sub else []\nskies = []\nfor a in actors:\n    try:\n        if a.get_class().get_name() == 'SkyLight':\n            skies.append(a)\n    except Exception: pass\nkeep = None\n# Prefer one with matching label; otherwise keep the first\nfor a in skies:\n    try:\n        label = a.get_actor_label()\n        if label == "${escapedName}":\n            keep = a\n            break\n    except Exception: pass\nif keep is None and len(skies) > 0:\n    keep = skies[0]\n# Rename the kept one if needed\nif keep is not None:\n    try: keep.set_actor_label("${escapedName}")\n    except Exception: pass\n# Destroy all others using the correct non-deprecated API\nremoved = 0\nfor a in skies:\n    if keep is not None and a == keep:\n        continue\n    try:\n        # Use EditorActorSubsystem.destroy_actor instead of deprecated EditorLevelLibrary\n        actor_sub.destroy_actor(a)\n        removed += 1\n    except Exception: pass\n# Optionally recapture\nif keep is not None and ${recapture ? 'True' : 'False'}:\n    try:\n        comp = keep.get_component_by_class(unreal.SkyLightComponent)\n        if comp: comp.recapture_sky()\n    except Exception: pass\nprint('RESULT:' + json.dumps({'success': True, 'removed': removed, 'kept': True if keep else False}))\n`.trim();
 
     const resp = await this.bridge.executePython(py);
     let out = '';
@@ -1223,6 +1324,8 @@ print('RESULT:' + json.dumps(result))
     location: [number, number, number];
     size: [number, number, number];
   }) {
+    const name = this.normalizeName(params.name);
+    const escapedName = escapePythonString(name);
     const [lx, ly, lz] = params.location;
     const [sx, sy, sz] = params.size;
     const py = `
@@ -1232,7 +1335,7 @@ loc = unreal.Vector(${lx}, ${ly}, ${lz})
 rot = unreal.Rotator(0,0,0)
 actor = editor_actor_subsystem.spawn_actor_from_class(unreal.LightmassImportanceVolume, loc, rot)
 if actor:
-    try: actor.set_actor_label("${this.escapePythonString(params.name)}")
+  try: actor.set_actor_label("${escapedName}")
     except Exception: pass
     # Best-effort: set actor scale to approximate size
     try:
@@ -1245,7 +1348,7 @@ else:
     const resp = await this.bridge.executePython(py);
     const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
     const m = out.match(/RESULT:({.*})/);
-    if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: 'LightmassImportanceVolume created' } : { success: false, error: parsed.error }; } catch {} }
+  if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: `LightmassImportanceVolume '${name}' created` } : { success: false, error: parsed.error }; } catch {} }
     return { success: true, message: 'LightmassImportanceVolume creation attempted' };
   }
 

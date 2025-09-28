@@ -1,5 +1,6 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { sanitizeAssetName, validateAssetParams } from '../utils/validation.js';
+import { interpretStandardResult, coerceString } from '../utils/result-helpers.js';
 
 export class NiagaraTools {
   constructor(private bridge: UnrealBridge) {}
@@ -21,54 +22,50 @@ export class NiagaraTools {
   }) {
     try {
     const path = params.savePath || '/Game/Effects/Niagara';
-    // const fullPath = `${path}/${params.name}`; // Currently unused
-      const python = `
+    const python = `
 import unreal
+import json
+
 path = r"${path}"
 name = r"${params.name}"
 full_path = f"{path}/{name}"
-# If already exists, just report success
+
 if unreal.EditorAssetLibrary.does_asset_exist(full_path):
-    print("RESULT:{'success': True, 'path': '" + full_path + "', 'existing': True}")
+    print('RESULT:' + json.dumps({'success': True, 'path': full_path, 'existing': True}))
 else:
     asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
     factory = None
     try:
         factory = unreal.NiagaraSystemFactoryNew()
-    except Exception as e:
+    except Exception:
         factory = None
+
     if factory is None:
-        print("RESULT:{'success': False, 'error': 'NiagaraSystemFactoryNew unavailable'}")
+        print('RESULT:' + json.dumps({'success': False, 'error': 'NiagaraSystemFactoryNew unavailable'}))
     else:
         asset = asset_tools.create_asset(asset_name=name, package_path=path, asset_class=unreal.NiagaraSystem, factory=factory)
         if asset:
             unreal.EditorAssetLibrary.save_asset(full_path)
-            print("RESULT:{'success': True, 'path': '" + full_path + "'}")
+            print('RESULT:' + json.dumps({'success': True, 'path': full_path}))
         else:
-            print("RESULT:{'success': False, 'error': 'AssetTools create_asset failed'}")
+            print('RESULT:' + json.dumps({'success': False, 'error': 'AssetTools create_asset failed'}))
 `.trim();
       const resp = await this.bridge.executePython(python);
-      let output = '';
-      if (resp?.LogOutput && Array.isArray(resp.LogOutput)) {
-        output = resp.LogOutput.map((l: any) => l.Output || '').join('');
-      } else if (typeof resp === 'string') {
-        output = resp;
-      } else {
-        output = JSON.stringify(resp);
+      const interpreted = interpretStandardResult(resp, {
+        successMessage: `Niagara system ${params.name} created`,
+        failureMessage: `Failed to create Niagara system ${params.name}`
+      });
+
+      if (!interpreted.success) {
+        return { success: false, error: interpreted.error ?? interpreted.message };
       }
-      const m = output.match(/RESULT:({.*})/);
-      if (m) {
-        try {
-          const parsed = JSON.parse(m[1].replace(/'/g, '"'));
-          if (parsed.success) {
-            return { success: true, path: parsed.path, message: `Niagara system ${params.name} created` };
-          }
-          return { success: false, error: parsed.error || 'Unknown error creating Niagara system' };
-        } catch {
-          // fallthrough
-        }
-      }
-      return { success: false, error: 'No RESULT from Python when creating Niagara system' };
+
+      const pathFromPayload = coerceString(interpreted.payload.path) ?? `${path}/${params.name}`;
+      return {
+        success: true,
+        path: pathFromPayload,
+        message: interpreted.message
+      };
     } catch (err) {
       return { success: false, error: `Failed to create Niagara system: ${err}` };
     }
@@ -122,9 +119,7 @@ else:
           commands.push(`SetEmitterMesh ${params.systemName} ${params.emitterName} ${props.mesh}`);
         }
       }
-      for (const cmd of commands) {
-        await this.bridge.executeConsoleCommand(cmd);
-      }
+      await this.bridge.executeConsoleCommands(commands);
       return { success: true, message: `Emitter ${params.emitterName} added to ${params.systemName}` };
     } catch (err) {
       return { success: false, error: `Failed to add emitter: ${err}` };
@@ -192,21 +187,24 @@ else:
       // Verify existence via Python to avoid RC EditorAssetLibrary issues
       const verifyPy = `
 import unreal
+import json
+
 p = r"${fullPath}"
-print("RESULT:{'success': True, 'exists': %s}" % ('True' if unreal.EditorAssetLibrary.does_asset_exist(p) else 'False'))
+exists = bool(unreal.EditorAssetLibrary.does_asset_exist(p))
+print('RESULT:' + json.dumps({'success': True, 'exists': exists}))
 `.trim();
       const verifyResp = await this.bridge.executePython(verifyPy);
-      let vout = '';
-      if (verifyResp?.LogOutput && Array.isArray(verifyResp.LogOutput)) vout = verifyResp.LogOutput.map((l: any) => l.Output || '').join('');
-      else if (typeof verifyResp === 'string') vout = verifyResp; else vout = JSON.stringify(verifyResp);
-      const m = vout.match(/RESULT:({.*})/);
-      if (m) {
-        try {
-          const parsed = JSON.parse(m[1].replace(/'/g, '"'));
-          if (!parsed.exists) {
-            return { success: false, error: `Asset not found after creation: ${fullPath}` };
-          }
-        } catch {}
+      const verifyResult = interpretStandardResult(verifyResp, {
+        successMessage: 'Niagara asset verification complete',
+        failureMessage: `Failed to verify Niagara asset at ${fullPath}`
+      });
+
+      if (!verifyResult.success) {
+        return { success: false, error: verifyResult.error ?? verifyResult.message };
+      }
+
+      if (verifyResult.payload.exists === false) {
+        return { success: false, error: `Asset not found after creation: ${fullPath}` };
       }
 
       return { success: true, message: `${params.effectType} effect ${safeName} created`, path: fullPath };
@@ -237,7 +235,7 @@ print("RESULT:{'success': True, 'exists': %s}" % ('True' if unreal.EditorAssetLi
         if (s.gridResolution) { const r = s.gridResolution; commands.push(`SetGPUGridResolution ${params.name} ${r[0]} ${r[1]} ${r[2]}`); }
         if (s.iterations !== undefined) commands.push(`SetGPUIterations ${params.name} ${s.iterations}`);
       }
-      for (const cmd of commands) await this.bridge.executeConsoleCommand(cmd);
+  await this.bridge.executeConsoleCommands(commands);
       return { success: true, message: `GPU simulation ${params.name} created`, path: `${path}/${params.name}` };
     } catch (err) {
       return { success: false, error: `Failed to create GPU simulation: ${err}` };
@@ -259,54 +257,62 @@ print("RESULT:{'success': True, 'exists': %s}" % ('True' if unreal.EditorAssetLi
       const loc = Array.isArray(params.location) ? { x: params.location[0], y: params.location[1], z: params.location[2] } : params.location;
       const rot = params.rotation || [0, 0, 0];
       const scl = Array.isArray(params.scale) ? params.scale : (typeof params.scale === 'number' ? [params.scale, params.scale, params.scale] : [1, 1, 1]);
-      const py = `
+    const py = `
 import unreal
+import json
+
 loc = unreal.Vector(${loc.x || 0}, ${loc.y || 0}, ${loc.z || 0})
 rot = unreal.Rotator(${rot[0]}, ${rot[1]}, ${rot[2]})
 scale = unreal.Vector(${scl[0]}, ${scl[1]}, ${scl[2]})
 sys_path = r"${params.systemPath}"
+
 if unreal.EditorAssetLibrary.does_asset_exist(sys_path):
-    sys = unreal.EditorAssetLibrary.load_asset(sys_path)
-    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    actor = actor_subsystem.spawn_actor_from_class(unreal.NiagaraActor, loc, rot)
-    if actor:
-        comp = actor.get_niagara_component()
-        try:
-            comp.set_asset(sys)
-        except Exception:
-            try:
-                comp.set_editor_property('asset', sys)
-            except Exception:
-                pass
-        comp.set_world_scale3d(scale)
-        comp.activate(True)
-        actor.set_actor_label(f"Niagara_{unreal.SystemLibrary.get_game_time_in_seconds(actor.get_world()):.0f}")
-        print("RESULT:{'success': True, 'actor': '" + actor.get_actor_label() + "'}")
-    else:
-        print("RESULT:{'success': False, 'error': 'Failed to spawn NiagaraActor'}")
+  sys = unreal.EditorAssetLibrary.load_asset(sys_path)
+  actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+  actor = actor_subsystem.spawn_actor_from_class(unreal.NiagaraActor, loc, rot)
+  if actor:
+    comp = actor.get_niagara_component()
+    try:
+      comp.set_asset(sys)
+    except Exception:
+      try:
+        comp.set_editor_property('asset', sys)
+      except Exception:
+        pass
+    comp.set_world_scale3d(scale)
+    comp.activate(True)
+    actor.set_actor_label(f"Niagara_{unreal.SystemLibrary.get_game_time_in_seconds(actor.get_world()):.0f}")
+    print('RESULT:' + json.dumps({'success': True, 'actor': actor.get_actor_label()}))
+  else:
+    print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to spawn NiagaraActor'}))
 else:
-    print("RESULT:{'success': False, 'error': 'System asset not found'}")
+  print('RESULT:' + json.dumps({'success': False, 'error': 'System asset not found'}))
 `.trim();
-      const resp = await this.bridge.executePython(py);
-      let output = '';
-      if (resp?.LogOutput && Array.isArray(resp.LogOutput)) output = resp.LogOutput.map((l: any) => l.Output || '').join('');
-      else if (typeof resp === 'string') output = resp; else output = JSON.stringify(resp);
-      const m = output.match(/RESULT:({.*})/);
-      if (m) {
-        try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: 'Niagara effect spawned' } : { success: false, error: parsed.error || 'Spawn failed' }; } catch {}
-      }
-      return { success: true, message: 'Niagara effect spawn attempted' };
+    const resp = await this.bridge.executePython(py);
+    const interpreted = interpretStandardResult(resp, {
+      successMessage: 'Niagara effect spawned',
+      failureMessage: 'Failed to spawn Niagara effect'
+    });
+
+    const actorLabel = coerceString(interpreted.payload.actor);
+
+    if (!interpreted.success) {
+      return { success: false, error: interpreted.error ?? interpreted.message };
+    }
+
+    const outcome: { success: true; message: string; actor?: string } = {
+      success: true,
+      message: interpreted.message
+    };
+
+    if (actorLabel) {
+      outcome.actor = actorLabel;
+    }
+
+    return outcome;
     } catch (err) {
       return { success: false, error: `Failed to spawn effect: ${err}` };
     }
   }
 
-  private async _executeCommand(command: string) {
-    return this.bridge.httpCall('/remote/object/call', 'PUT', {
-      objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-      functionName: 'ExecuteConsoleCommand',
-      parameters: { WorldContextObject: null, Command: command, SpecificPlayer: null },
-      generateTransaction: false
-    });
-  }
 }
