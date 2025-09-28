@@ -1,5 +1,6 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { toVec3Object, toRotObject } from '../utils/normalize.js';
+import { bestEffortInterpretedText, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
 
 export class EditorTools {
   constructor(private bridge: UnrealBridge) {}
@@ -69,26 +70,13 @@ else:
         `.trim();
         
         const resp: any = await this.bridge.executePython(pythonCmd);
-        const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-        const m = out.match(/RESULT:({.*})/);
-        if (m) {
-          try {
-            const parsed = JSON.parse(m[1]);
-            if (parsed.success) {
-              const method = parsed.method || 'LevelEditorSubsystem';
-              return { success: true, message: `PIE started (via ${method})` };
-            }
-          } catch {
-            try {
-              // Fallback: handle non-JSON python dict-style output
-              const sanitized = m[1].replace(/'/g, '"').replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false');
-              const parsed = JSON.parse(sanitized);
-              if (parsed.success) {
-                const method = parsed.method || 'LevelEditorSubsystem';
-                return { success: true, message: `PIE started (via ${method})` };
-              }
-            } catch {}
-          }
+        const interpreted = interpretStandardResult(resp, {
+          successMessage: 'PIE started',
+          failureMessage: 'Failed to start PIE'
+        });
+        if (interpreted.success) {
+          const method = coerceString(interpreted.payload.method) ?? 'LevelEditorSubsystem';
+          return { success: true, message: `PIE started (via ${method})` };
         }
         // If not verified, fall through to fallback
       } catch (err) {
@@ -129,19 +117,21 @@ else:
     print('RESULT:' + json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'}))
         `.trim();
         const resp: any = await this.bridge.executePython(pythonCmd);
-        const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-        const m = out.match(/RESULT:({.*})/);
-        if (m) {
-          try {
-            const parsed = JSON.parse(m[1].replace(/'/g, '"'));
-            if (parsed.success) {
-              const method = parsed.method || 'LevelEditorSubsystem';
-              return { success: true, message: `PIE stopped via ${method}` };
-            }
-          } catch {}
+        const interpreted = interpretStandardResult(resp, {
+          successMessage: 'PIE stopped successfully',
+          failureMessage: 'Failed to stop PIE'
+        });
+
+        if (interpreted.success) {
+          const method = coerceString(interpreted.payload.method) ?? 'LevelEditorSubsystem';
+          return { success: true, message: `PIE stopped via ${method}` };
         }
-        // Default success message if parsing fails
-        return { success: true, message: 'PIE stopped successfully' };
+
+        if (interpreted.error) {
+          return { success: false, error: interpreted.error };
+        }
+
+        return { success: false, error: 'Failed to stop PIE' };
       } catch {
         // Fallback to console command
         await this.bridge.executeConsoleCommand('stop');
@@ -196,12 +186,20 @@ except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
       const resp: any = await this.bridge.executePython(py);
-      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-      const m = out.match(/RESULT:({.*})/);
-      if (m) {
-        try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: parsed.message } : { success: false, error: parsed.error }; } catch {}
+      const interpreted = interpretStandardResult(resp, {
+        successMessage: 'Lighting build started',
+        failureMessage: 'Failed to build lighting'
+      });
+
+      if (interpreted.success) {
+        return { success: true, message: interpreted.message };
       }
-      return { success: true, message: 'Lighting build started' };
+
+      return {
+        success: false,
+        error: interpreted.error ?? 'Failed to build lighting',
+        details: bestEffortInterpretedText(interpreted)
+      };
     } catch (err) {
       return { success: false, error: `Failed to build lighting: ${err}` };
     }

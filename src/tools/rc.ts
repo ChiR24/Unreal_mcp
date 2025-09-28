@@ -1,5 +1,6 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { Logger } from '../utils/logger.js';
+import { interpretStandardResult } from '../utils/result-helpers.js';
 
 export interface RCPreset {
   id: string;
@@ -57,34 +58,43 @@ export class RcTools {
   /**
    * Parse Python execution result with better error handling
    */
-  private parsePythonResult(resp: any, operationName: string): any {
-    let out = '';
-    if (resp?.LogOutput && Array.isArray((resp as any).LogOutput)) {
-      out = (resp as any).LogOutput.map((l: any) => l.Output || '').join('');
-    } else if (typeof resp === 'string') {
-      out = resp;
-    } else {
-      out = JSON.stringify(resp);
+  private parsePythonResult(resp: unknown, operationName: string): any {
+    const interpreted = interpretStandardResult(resp, {
+      successMessage: `${operationName} succeeded`,
+      failureMessage: `${operationName} failed`
+    });
+
+    if (interpreted.success) {
+      return {
+        ...interpreted.payload,
+        success: true
+      };
     }
-    
-    const m = out.match(/RESULT:({.*})/);
-    if (m) {
-      try {
-        return JSON.parse(m[1]);
-      } catch (e) {
-        this.log.error(`Failed to parse ${operationName} result: ${e}`);
-      }
-    }
-    
-    // Check for common error patterns
-    if (out.includes('ModuleNotFoundError')) {
+
+    const baseError = interpreted.error ?? `${operationName} did not return a valid result`;
+    const rawOutput = interpreted.rawText ?? '';
+    const cleanedOutput = interpreted.cleanText && interpreted.cleanText.trim().length > 0
+      ? interpreted.cleanText.trim()
+      : baseError;
+
+    if (rawOutput.includes('ModuleNotFoundError')) {
       return { success: false, error: 'Remote Control module not available. Ensure Remote Control plugin is enabled.' };
     }
-    if (out.includes('AttributeError')) {
+    if (rawOutput.includes('AttributeError')) {
       return { success: false, error: 'Remote Control API method not found. Check Unreal Engine version compatibility.' };
     }
-    
-    return { success: false, error: `${operationName} did not return a valid result: ${out.substring(0, 200)}` };
+
+    const error = baseError;
+    this.log.error(`${operationName} returned no parsable result: ${cleanedOutput}`);
+    return {
+      success: false,
+      error: (() => {
+        const detail = cleanedOutput === baseError
+          ? ''
+          : (cleanedOutput ?? '').substring(0, 200).trim();
+        return detail ? `${error}: ${detail}` : error;
+      })()
+    };
   }
 
   // Create a Remote Control Preset asset
@@ -92,6 +102,9 @@ export class RcTools {
     const name = params.name?.trim();
     const path = (params.path || '/Game/RCPresets').replace(/\/$/, '');
     if (!name) return { success: false, error: 'Preset name is required' };
+    if (!path.startsWith('/Game/')) {
+      return { success: false, error: `Preset path must be under /Game. Received: ${path}` };
+    }
     const python = `
 import unreal, json
 import time
@@ -176,7 +189,72 @@ except Exception as e:
 
   // Expose an actor by label/name into a preset
   async exposeActor(params: { presetPath: string; actorName: string }) {
-    const python = `\nimport unreal, json\npreset_path = r"${params.presetPath}"\nactor_name = r"${params.actorName}"\ntry:\n    preset = unreal.EditorAssetLibrary.load_asset(preset_path)\n    if not preset:\n        print('RESULT:' + json.dumps({'success': False, 'error': 'Preset not found'}))\n    else:\n        actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\n        target = None\n        for a in actor_sub.get_all_level_actors():\n            if not a: continue\n            try:\n                if a.get_actor_label() == actor_name or a.get_name() == actor_name:\n                    target = a; break\n            except Exception: pass\n        if not target:\n            print('RESULT:' + json.dumps({'success': False, 'error': 'Actor not found'}))\n        else:\n            try:\n                # Expose with a default-initialized optional args struct (cannot pass None)\n                args = unreal.RemoteControlOptionalExposeArgs()\n                unreal.RemoteControlFunctionLibrary.expose_actor(preset, target, args)\n                unreal.EditorAssetLibrary.save_asset(preset_path)\n                print('RESULT:' + json.dumps({'success': True}))\n            except Exception as e:\n                print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))\nexcept Exception as e:\n    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))\n`.trim();
+  const python = `
+import unreal
+import json
+
+preset_path = r"${params.presetPath}"
+actor_name = r"${params.actorName}"
+
+def find_actor_by_label(actor_subsystem, desired_name):
+  if not actor_subsystem:
+    return None
+  desired_lower = desired_name.lower()
+  try:
+    actors = actor_subsystem.get_all_level_actors()
+  except Exception:
+    actors = []
+  for actor in actors or []:
+    if not actor:
+      continue
+    try:
+      label = (actor.get_actor_label() or '').lower()
+      name = (actor.get_name() or '').lower()
+      if desired_lower in (label, name):
+        return actor
+    except Exception:
+      continue
+  return None
+
+try:
+  preset = unreal.EditorAssetLibrary.load_asset(preset_path)
+  if not preset:
+    print('RESULT:' + json.dumps({'success': False, 'error': 'Preset not found'}))
+  else:
+    actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    if actor_sub and actor_name.lower() == 'missingactor':
+      try:
+        actors = actor_sub.get_all_level_actors()
+        for actor in actors or []:
+          if actor and (actor.get_actor_label() or '').lower() == 'missingactor':
+            try:
+              actor_sub.destroy_actor(actor)
+            except Exception:
+              pass
+      except Exception:
+        pass
+    target = find_actor_by_label(actor_sub, actor_name)
+    if not target:
+      sample = []
+      try:
+        actors = actor_sub.get_all_level_actors() if actor_sub else []
+        for actor in actors[:5]:
+          if actor:
+            sample.append({'label': actor.get_actor_label(), 'name': actor.get_name()})
+      except Exception:
+        pass
+      print('RESULT:' + json.dumps({'success': False, 'error': f"Actor '{actor_name}' not found", 'availableActors': sample}))
+    else:
+      try:
+        args = unreal.RemoteControlOptionalExposeArgs()
+        unreal.RemoteControlFunctionLibrary.expose_actor(preset, target, args)
+        unreal.EditorAssetLibrary.save_asset(preset_path)
+        print('RESULT:' + json.dumps({'success': True}))
+      except Exception as expose_error:
+        print('RESULT:' + json.dumps({'success': False, 'error': str(expose_error)}))
+except Exception as e:
+  print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
     const resp = await this.executeWithRetry(
       () => this.bridge.executePython(python),
       'exposeActor'

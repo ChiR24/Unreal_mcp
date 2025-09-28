@@ -1,29 +1,16 @@
 // Performance tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
+import { coerceBoolean, coerceNumber, interpretStandardResult } from '../utils/result-helpers.js';
 
 export class PerformanceTools {
   constructor(private bridge: UnrealBridge) {}
-
-  // Execute console command
-  private async _executeCommand(command: string) {
-    return this.bridge.httpCall('/remote/object/call', 'PUT', {
-      objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-      functionName: 'ExecuteConsoleCommand',
-      parameters: {
-        WorldContextObject: null,
-        Command: command,
-        SpecificPlayer: null
-      },
-      generateTransaction: false
-    });
-  }
 
   // Start profiling
   async startProfiling(params: {
     type: 'CPU' | 'GPU' | 'Memory' | 'RenderThread' | 'GameThread' | 'All';
     duration?: number;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     switch (params.type) {
       case 'CPU':
@@ -52,9 +39,7 @@ export class PerformanceTools {
       commands.push(`stat stopfile ${params.duration}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: `${params.type} profiling started` };
   }
@@ -66,9 +51,7 @@ export class PerformanceTools {
       'stat none'
     ];
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Profiling stopped' };
   }
@@ -138,12 +121,19 @@ export class PerformanceTools {
       Foliage: 'Foliage',
       Shading: 'Shading',
     };
+    const requestedLevel = Number(params.level);
+    if (!Number.isInteger(requestedLevel) || requestedLevel < 0 || requestedLevel > 4) {
+      return {
+        success: false,
+        error: 'Invalid scalability level. Expected integer between 0 and 4.'
+      };
+    }
 
     const base = categoryBaseMap[params.category] || params.category;
     
     // Use direct console command to set with highest priority (SetByConsole)
     // This avoids conflicts with the scalability system
-    const setCommand = `sg.${base}Quality ${params.level}`;
+    const setCommand = `sg.${base}Quality ${requestedLevel}`;
     
     // Apply the console command directly
     await this.bridge.executeConsoleCommand(setCommand);
@@ -153,7 +143,7 @@ export class PerformanceTools {
     /* eslint-disable no-useless-escape */
     const py = `
 import unreal, json
-result = {'success': True, 'category': '${base}', 'requested': ${params.level}, 'actual': ${params.level}, 'method': 'ConsoleOnly'}
+result = {'success': True, 'category': '${base}', 'requested': ${requestedLevel}, 'actual': ${requestedLevel}, 'method': 'ConsoleOnly'}
 
 # Simply verify the console variable was set correctly
 try:
@@ -198,30 +188,21 @@ print('RESULT:' + json.dumps(result))
     // Always try to apply through Python for consistency
     try {
       const pyResp = await this.bridge.executePython(py);
-      let out = '';
-      if (pyResp?.LogOutput && Array.isArray(pyResp.LogOutput)) {
-        out = pyResp.LogOutput.map((l: any) => l.Output || '').join('');
-      } else if (typeof pyResp === 'string') {
-        out = pyResp;
-      } else {
-        out = JSON.stringify(pyResp);
-      }
-      
-      const m = out.match(/RESULT:({.*})/);
-      if (m) {
-        try {
-          const parsed = JSON.parse(m[1]);
-          const verified = parsed.success && (parsed.actual === params.level);
-          return {
-            success: true,
-            message: `${params.category} quality set to level ${params.level}`,
-            verified,
-            readback: parsed.actual,
-            method: parsed.method || 'Unknown'
-          };
-        } catch {
-          // Fall through to simple success
-        }
+      const interpreted = interpretStandardResult(pyResp, {
+        successMessage: `${params.category} quality set to level ${requestedLevel}`,
+        failureMessage: `Failed to set ${params.category} quality`
+      });
+
+      if (interpreted.success) {
+        const actual = coerceNumber(interpreted.payload.actual) ?? requestedLevel;
+        const verified = coerceBoolean(interpreted.payload.success, true) === true && actual === requestedLevel;
+        return {
+          success: true,
+          message: interpreted.message,
+          verified,
+          readback: actual,
+          method: (interpreted.payload.method as string) || 'ConsoleOnly'
+        };
       }
     } catch {
       // Ignore Python errors and fall through
@@ -230,7 +211,7 @@ print('RESULT:' + json.dumps(result))
     // If Python fails, the console command was still applied
     return { 
       success: true, 
-      message: `${params.category} quality set to level ${params.level}`,
+      message: `${params.category} quality set to level ${requestedLevel}`,
       method: 'CVarOnly'
     };
   }
@@ -295,7 +276,7 @@ print('RESULT:' + json.dumps(result))
     detailed?: boolean;
     outputPath?: string;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     if (params.detailed) {
       commands.push('memreport -full');
@@ -307,9 +288,7 @@ print('RESULT:' + json.dumps(result))
       commands.push(`obj savepackage ${params.outputPath}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Memory report generated' };
   }
@@ -320,7 +299,7 @@ print('RESULT:' + json.dumps(result))
     poolSize?: number; // MB
     boostPlayerLocation?: boolean;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`r.TextureStreaming ${params.enabled ? 1 : 0}`);
     
@@ -332,9 +311,7 @@ print('RESULT:' + json.dumps(result))
       commands.push(`r.Streaming.UseFixedPoolSize ${params.boostPlayerLocation ? 1 : 0}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Texture streaming configured' };
   }
@@ -345,7 +322,7 @@ print('RESULT:' + json.dumps(result))
     lodBias?: number; // skeletal LOD bias (int)
     distanceScale?: number; // distance scale (float) applied to both static and skeletal
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     if (params.forceLOD !== undefined) {
       commands.push(`r.ForceLOD ${params.forceLOD}`);
@@ -362,9 +339,7 @@ print('RESULT:' + json.dumps(result))
       commands.push(`r.SkeletalMeshLODDistanceScale ${params.distanceScale}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'LOD settings configured' };
   }
@@ -394,9 +369,7 @@ print('RESULT:' + json.dumps(result))
       `t.MaxFPS ${p.maxFPS}`,
     ];
 
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
 
     return { success: true, message: 'Baseline performance settings applied', params: p };
   }
@@ -407,7 +380,7 @@ print('RESULT:' + json.dumps(result))
     enableBatching?: boolean; // no-op (deprecated internal toggle)
     mergeActors?: boolean;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     if (params.enableInstancing !== undefined) {
       commands.push(`r.MeshDrawCommands.DynamicInstancing ${params.enableInstancing ? 1 : 0}`);
@@ -419,9 +392,7 @@ print('RESULT:' + json.dumps(result))
       commands.push('MergeActors');
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Draw call optimization configured' };
   }
@@ -432,7 +403,7 @@ print('RESULT:' + json.dumps(result))
     method?: 'Hardware' | 'Software' | 'Hierarchical';
     freezeRendering?: boolean;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     // Enable/disable HZB occlusion (boolean)
     commands.push(`r.HZBOcclusion ${params.enabled ? 1 : 0}`);
@@ -442,9 +413,7 @@ print('RESULT:' + json.dumps(result))
       commands.push(`FreezeRendering ${params.freezeRendering ? 1 : 0}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Occlusion culling configured' };
   }
@@ -455,7 +424,7 @@ print('RESULT:' + json.dumps(result))
     cacheShaders?: boolean;
     reducePermutations?: boolean;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     if (params.compileOnDemand !== undefined) {
       commands.push(`r.ShaderDevelopmentMode ${params.compileOnDemand ? 1 : 0}`);
@@ -469,9 +438,7 @@ print('RESULT:' + json.dumps(result))
       commands.push('RecompileShaders changed');
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Shader optimization configured' };
   }
@@ -482,7 +449,7 @@ print('RESULT:' + json.dumps(result))
     maxPixelsPerEdge?: number;
     streamingPoolSize?: number;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`r.Nanite ${params.enabled ? 1 : 0}`);
     
@@ -494,9 +461,7 @@ print('RESULT:' + json.dumps(result))
       commands.push(`r.Nanite.StreamingPoolSize ${params.streamingPoolSize}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Nanite configured' };
   }
@@ -507,7 +472,7 @@ print('RESULT:' + json.dumps(result))
     streamingDistance?: number;
     cellSize?: number;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`wp.Runtime.EnableStreaming ${params.enabled ? 1 : 0}`);
     
@@ -519,9 +484,7 @@ print('RESULT:' + json.dumps(result))
       commands.push(`wp.Runtime.CellSize ${params.cellSize}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'World Partition configured' };
   }
@@ -533,16 +496,14 @@ print('RESULT:' + json.dumps(result))
   }) {
     const duration = params.duration || 60;
     
-    // Start recording and GPU profiling
-    await this.bridge.executeConsoleCommand('stat startfile');
-    await this.bridge.executeConsoleCommand('profilegpu');
+  // Start recording and GPU profiling
+  await this.bridge.executeConsoleCommands(['stat startfile', 'profilegpu']);
     
     // Wait for the requested duration
     await new Promise(resolve => setTimeout(resolve, duration * 1000));
     
     // Stop recording and clear stats
-    await this.bridge.executeConsoleCommand('stat stopfile');
-    await this.bridge.executeConsoleCommand('stat none');
+    await this.bridge.executeConsoleCommands(['stat stopfile', 'stat none']);
     
     return { success: true, message: `Benchmark completed for ${duration} seconds` };
   }
