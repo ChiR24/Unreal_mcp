@@ -1,5 +1,6 @@
 // Foliage tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
+import { bestEffortInterpretedText, coerceBoolean, coerceNumber, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
 
 export class FoliageTools {
   constructor(private bridge: UnrealBridge) {}
@@ -205,31 +206,39 @@ print('RESULT:' + json.dumps(res))
 `.trim();
 
     const pyResp = await this.bridge.executePython(py);
-    let out = '';
-    if (pyResp?.LogOutput && Array.isArray(pyResp.LogOutput)) out = pyResp.LogOutput.map((l: any) => l.Output || '').join('');
-    else if (typeof pyResp === 'string') out = pyResp; else out = JSON.stringify(pyResp);
-    const m = out.match(/RESULT:({.*})/);
-    if (m) {
-      try {
-        const parsed = JSON.parse(m[1]);
-        if (!parsed.success) {
-          return { success: false, error: parsed.note || 'Add foliage type failed' };
-        }
-        return {
-          success: true,
-          created: parsed.created,
-          exists: parsed.exists_after,
-          method: parsed.method,
-          assetPath: parsed.asset_path,
-          usedMesh: parsed.used_mesh,
-          note: parsed.note,
-          message: parsed.exists_after ? `Foliage type '${name}' ready (${parsed.method || 'Unknown'})` : `Created foliage '${name}' but verification did not find it yet`
-        };
-      } catch {
-        return { success: false, error: 'Failed to parse Python result' };
-      }
+    const interpreted = interpretStandardResult(pyResp, {
+      successMessage: `Foliage type '${name}' processed`,
+      failureMessage: 'Add foliage type failed'
+    });
+
+    if (!interpreted.success) {
+      return {
+        success: false,
+        error: coerceString(interpreted.payload.note) ?? interpreted.error ?? 'Add foliage type failed',
+  note: coerceString(interpreted.payload.note) ?? bestEffortInterpretedText(interpreted)
+      };
     }
-    return { success: false, error: 'No parseable result from Python' };
+
+    const payload = interpreted.payload as Record<string, unknown>;
+    const created = coerceBoolean(payload.created, false) ?? false;
+    const exists = coerceBoolean(payload.exists_after, false) ?? created;
+    const method = coerceString(payload.method) ?? 'Unknown';
+    const assetPath = coerceString(payload.asset_path);
+    const usedMesh = coerceString(payload.used_mesh);
+    const note = coerceString(payload.note);
+
+    return {
+      success: true,
+      created,
+      exists,
+      method,
+      assetPath,
+      usedMesh,
+      note,
+      message: exists
+        ? `Foliage type '${name}' ready (${method})`
+        : `Created foliage '${name}' but verification did not find it yet`
+    };
   }
 
   // Paint foliage by placing HISM instances (editor-only)
@@ -275,26 +284,34 @@ px, py, pz = ${pos[0]}, ${pos[1]}, ${pos[2]}
 radius = float(${brush}) / 2.0
 
 try:
-    actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    all_actors = actor_sub.get_all_level_actors() if actor_sub else []
+  actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+  if not actor_subsystem:
+    raise RuntimeError('EditorActorSubsystem unavailable. Enable Editor Scripting Utilities plugin.')
 
-    # Find or create a container actor
-    label = f"FoliageContainer_{foliage_type_name}"
-    container = None
-    for a in all_actors:
-        try:
-            if a.get_actor_label() == label:
-                container = a
-                break
-        except Exception:
-            pass
+  all_actors = actor_subsystem.get_all_level_actors()
+
+  # Find or create a container actor using modern EditorActorSubsystem
+  label = f"FoliageContainer_{foliage_type_name}"
+  container = None
+  for a in all_actors:
+    try:
+      if a and a.get_actor_label() == label:
+        container = a
+        break
+    except Exception:
+      pass
+
+  if not container:
+    container = actor_subsystem.spawn_actor_from_class(
+      unreal.StaticMeshActor,
+      unreal.Vector(px, py, pz)
+    )
     if not container:
-        # Spawn actor that can hold components
-        container = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector(px, py, pz))
-        try:
-            container.set_actor_label(label)
-        except Exception:
-            pass
+      raise RuntimeError('Failed to spawn foliage container actor via EditorActorSubsystem')
+    try:
+      container.set_actor_label(label)
+    except Exception:
+      pass
 
     # Resolve mesh from FoliageType asset
     mesh = None
@@ -322,12 +339,12 @@ try:
         r = random.random() * radius
         x, y, z = px + math.cos(ang) * r, py + math.sin(ang) * r, pz
         try:
-            # Spawn static mesh actor at position
-            inst_actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
-                unreal.StaticMeshActor, 
-                unreal.Vector(x, y, z),
-                unreal.Rotator(0, random.random()*360.0, 0)
-            )
+      # Spawn static mesh actor at position using modern subsystem
+      inst_actor = actor_subsystem.spawn_actor_from_class(
+        unreal.StaticMeshActor,
+        unreal.Vector(x, y, z),
+        unreal.Rotator(0, random.random()*360.0, 0)
+      )
             if inst_actor and mesh:
                 # Set mesh on the actor's component
                 try:
@@ -355,30 +372,35 @@ print('RESULT:' + json.dumps(res))
 `.trim();
 
     const pyResp = await this.bridge.executePython(py);
-    let out = '';
-    if (pyResp?.LogOutput && Array.isArray(pyResp.LogOutput)) out = pyResp.LogOutput.map((l: any) => l.Output || '').join('');
-    else if (typeof pyResp === 'string') out = pyResp; else out = JSON.stringify(pyResp);
-    const m = out.match(/RESULT:({.*})/);
-    if (m) {
-      try {
-        const parsed = JSON.parse(m[1]);
-        if (!parsed.success) {
-          return { success: false, error: parsed.note || 'Paint foliage failed' };
-        }
-        return {
-          success: true,
-          added: parsed.added,
-          actor: parsed.actor,
-          component: parsed.component,
-          usedMesh: parsed.used_mesh,
-          note: parsed.note,
-          message: `Painted ${parsed.added} instances for '${foliageType}' around (${pos[0]}, ${pos[1]}, ${pos[2]})`
-        };
-      } catch {
-        return { success: false, error: 'Failed to parse Python result' };
-      }
+    const interpreted = interpretStandardResult(pyResp, {
+      successMessage: `Painted foliage for '${foliageType}'`,
+      failureMessage: 'Paint foliage failed'
+    });
+
+    if (!interpreted.success) {
+      return {
+        success: false,
+        error: coerceString(interpreted.payload.note) ?? interpreted.error ?? 'Paint foliage failed',
+  note: coerceString(interpreted.payload.note) ?? bestEffortInterpretedText(interpreted)
+      };
     }
-    return { success: false, error: 'No parseable result from Python' };
+
+    const payload = interpreted.payload as Record<string, unknown>;
+    const added = coerceNumber(payload.added) ?? 0;
+    const actor = coerceString(payload.actor);
+    const component = coerceString(payload.component);
+    const usedMesh = coerceString(payload.used_mesh);
+    const note = coerceString(payload.note);
+
+    return {
+      success: true,
+      added,
+      actor,
+      component,
+      usedMesh,
+      note,
+      message: `Painted ${added} instances for '${foliageType}' around (${pos[0]}, ${pos[1]}, ${pos[2]})`
+    };
   }
 
   // Create instanced mesh
@@ -393,7 +415,7 @@ print('RESULT:' + json.dumps(res))
     enableCulling?: boolean;
     cullDistance?: number;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`CreateInstancedStaticMesh ${params.name} ${params.meshPath}`);
     
@@ -411,9 +433,7 @@ print('RESULT:' + json.dumps(res))
       commands.push(`SetInstanceCullDistance ${params.name} ${params.cullDistance}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: `Instanced mesh ${params.name} created with ${params.instances.length} instances` };
   }
@@ -424,7 +444,7 @@ print('RESULT:' + json.dumps(res))
     lodDistances?: number[];
     screenSize?: number[];
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     if (params.lodDistances) {
       commands.push(`SetFoliageLODDistances ${params.foliageType} ${params.lodDistances.join(' ')}`);
@@ -434,9 +454,7 @@ print('RESULT:' + json.dumps(res))
       commands.push(`SetFoliageLODScreenSize ${params.foliageType} ${params.screenSize.join(' ')}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Foliage LOD settings updated' };
   }
@@ -450,7 +468,7 @@ print('RESULT:' + json.dumps(res))
     seed?: number;
     tileSize?: number;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`CreateProceduralFoliageVolume ${params.volumeName} ${params.position.join(' ')} ${params.size.join(' ')}`);
     
@@ -468,9 +486,7 @@ print('RESULT:' + json.dumps(res))
     
     commands.push(`GenerateProceduralFoliage ${params.volumeName}`);
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: `Procedural foliage volume ${params.volumeName} created` };
   }
@@ -482,7 +498,7 @@ print('RESULT:' + json.dumps(res))
     collisionProfile?: string;
     generateOverlapEvents?: boolean;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     if (params.collisionEnabled !== undefined) {
       commands.push(`SetFoliageCollision ${params.foliageType} ${params.collisionEnabled}`);
@@ -496,9 +512,7 @@ print('RESULT:' + json.dumps(res))
       commands.push(`SetFoliageOverlapEvents ${params.foliageType} ${params.generateOverlapEvents}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Foliage collision settings updated' };
   }
@@ -515,7 +529,7 @@ print('RESULT:' + json.dumps(res))
     windStrength?: number;
     windSpeed?: number;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`CreateGrassSystem ${params.name}`);
     
@@ -533,9 +547,7 @@ print('RESULT:' + json.dumps(res))
       commands.push(`SetGrassWindSpeed ${params.name} ${params.windSpeed}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: `Grass system ${params.name} created` };
   }
@@ -577,7 +589,7 @@ print('RESULT:' + json.dumps(res))
     updateMesh?: boolean;
     newMeshPath?: string;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     if (params.updateTransforms) {
       commands.push(`UpdateFoliageTransforms ${params.foliageType}`);
@@ -589,9 +601,7 @@ print('RESULT:' + json.dumps(res))
     
     commands.push(`RefreshFoliage ${params.foliageType}`);
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Foliage instances updated' };
   }
@@ -602,7 +612,7 @@ print('RESULT:' + json.dumps(res))
     spawnArea: 'Landscape' | 'StaticMesh' | 'BSP' | 'Foliage' | 'All';
     excludeAreas?: Array<[number, number, number, number]>; // [x, y, z, radius]
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`CreateFoliageSpawner ${params.name} ${params.spawnArea}`);
     
@@ -612,9 +622,7 @@ print('RESULT:' + json.dumps(res))
       }
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: `Foliage spawner ${params.name} created` };
   }
@@ -643,9 +651,7 @@ print('RESULT:' + json.dumps(res))
     
     commands.push('RebuildFoliageTree');
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Foliage optimized' };
   }

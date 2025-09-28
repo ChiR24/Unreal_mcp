@@ -1,21 +1,9 @@
 // UI tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
+import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
 
 export class UITools {
   constructor(private bridge: UnrealBridge) {}
-
-  // Execute console command
-  private async _executeCommand(command: string) {
-    return this.bridge.httpCall('/remote/object/call', 'PUT', {
-      objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-      functionName: 'ExecuteConsoleCommand',
-      parameters: {
-        Command: command,
-        SpecificPlayer: null
-      },
-      generateTransaction: false
-    });
-  }
 
   // Create widget blueprint
   async createWidget(params: {
@@ -57,10 +45,20 @@ except Exception as e:
 `.trim();
     try {
       const resp = await this.bridge.executePython(py);
-      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-      const m = out.match(/RESULT:({.*})/);
-      if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: 'Widget blueprint created' } : { success: false, error: parsed.error }; } catch {} }
-      return { success: true, message: 'Widget blueprint creation attempted' };
+      const interpreted = interpretStandardResult(resp, {
+        successMessage: 'Widget blueprint created',
+        failureMessage: 'Failed to create WidgetBlueprint'
+      });
+
+      if (interpreted.success) {
+        return { success: true, message: interpreted.message };
+      }
+
+      return {
+        success: false,
+        error: interpreted.error ?? 'Failed to create widget blueprint',
+        details: bestEffortInterpretedText(interpreted)
+      };
     } catch (e) {
       return { success: false, error: `Failed to create widget blueprint: ${e}` };
     }
@@ -78,7 +76,7 @@ except Exception as e:
       alignment?: [number, number];
     };
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`AddWidgetComponent ${params.widgetName} ${params.componentType} ${params.componentName}`);
     
@@ -97,9 +95,7 @@ except Exception as e:
       }
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: `Component ${params.componentName} added to widget` };
   }
@@ -113,7 +109,7 @@ except Exception as e:
     color?: [number, number, number, number];
     fontFamily?: string;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`SetWidgetText ${params.widgetName}.${params.componentName} "${params.text}"`);
     
@@ -129,9 +125,7 @@ except Exception as e:
       commands.push(`SetWidgetFont ${params.widgetName}.${params.componentName} ${params.fontFamily}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Widget text updated' };
   }
@@ -144,7 +138,7 @@ except Exception as e:
     tint?: [number, number, number, number];
     sizeToContent?: boolean;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`SetWidgetImage ${params.widgetName}.${params.componentName} ${params.imagePath}`);
     
@@ -156,9 +150,7 @@ except Exception as e:
       commands.push(`SetWidgetSizeToContent ${params.widgetName}.${params.componentName} ${params.sizeToContent}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Widget image updated' };
   }
@@ -172,7 +164,7 @@ except Exception as e:
       size?: [number, number];
     }>;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`CreateHUDClass ${params.name}`);
     
@@ -183,9 +175,7 @@ except Exception as e:
       }
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: `HUD ${params.name} created` };
   }
@@ -197,11 +187,49 @@ except Exception as e:
     playerIndex?: number;
   }) {
     const playerIndex = params.playerIndex ?? 0;
+    const widgetName = params.widgetName?.trim();
+    if (!widgetName) {
+      return { success: false, error: 'widgetName is required' };
+    }
+
+    const verifyScript = `
+import unreal, json
+name = r"${widgetName}"
+candidates = []
+if name.startswith('/Game/'):
+    candidates.append(name)
+else:
+    candidates.append(f"/Game/UI/Widgets/{name}")
+    candidates.append(f"/Game/{name}")
+
+found_path = ''
+for path in candidates:
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        found_path = path
+        break
+
+print('RESULT:' + json.dumps({'success': bool(found_path), 'path': found_path, 'candidates': candidates}))
+`.trim();
+
+    const verify = await this.bridge.executePythonWithResult(verifyScript);
+    if (!verify?.success) {
+      return { success: false, error: `Widget asset not found for ${widgetName}` };
+    }
+
     const command = params.visible 
-      ? `ShowWidget ${params.widgetName} ${playerIndex}`
-      : `HideWidget ${params.widgetName} ${playerIndex}`;
-    
-    return this.bridge.executeConsoleCommand(command);
+      ? `ShowWidget ${widgetName} ${playerIndex}`
+      : `HideWidget ${widgetName} ${playerIndex}`;
+
+    const raw = await this.bridge.executeConsoleCommand(command);
+    const summary = this.bridge.summarizeConsoleCommand(command, raw);
+
+    return {
+      success: true,
+      message: params.visible ? `Widget ${widgetName} show command issued` : `Widget ${widgetName} hide command issued`,
+      command: summary.command,
+      output: summary.output || undefined,
+      logLines: summary.logLines?.length ? summary.logLines : undefined
+    };
   }
 
   // Add widget to viewport
@@ -232,10 +260,20 @@ try:
             # Get the generated class from the widget blueprint
             widget_class = widget_bp.generated_class() if hasattr(widget_bp, 'generated_class') else widget_bp
             
-            # Get the world and player controller
-            world = unreal.EditorLevelLibrary.get_editor_world()
-            if not world:
-                print('RESULT:' + json.dumps({'success': False, 'error': 'No editor world available'}))
+      # Get the world and player controller via modern subsystems
+      world = None
+      try:
+        world = unreal.EditorUtilityLibrary.get_editor_world()
+      except Exception:
+        pass
+
+      if not world:
+        editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+        if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
+          world = editor_subsystem.get_editor_world()
+
+      if not world:
+        print('RESULT:' + json.dumps({'success': False, 'error': 'No editor world available. Start a PIE session or enable Editor Scripting Utilities.'}))
             else:
                 # Try to get player controller
                 try:
@@ -261,17 +299,20 @@ except Exception as e:
     
     try {
       const resp = await this.bridge.executePython(py);
-      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-      const m = out.match(/RESULT:({.*})/);
-      if (m) {
-        try {
-          const parsed = JSON.parse(m[1]);
-          return parsed.success 
-            ? { success: true, message: `Widget added to viewport with z-order ${zOrder}` }
-            : { success: false, error: parsed.error };
-        } catch {}
+      const interpreted = interpretStandardResult(resp, {
+        successMessage: `Widget added to viewport with z-order ${zOrder}`,
+        failureMessage: 'Failed to add widget to viewport'
+      });
+
+      if (interpreted.success) {
+        return { success: true, message: interpreted.message };
       }
-      return { success: true, message: 'Widget add to viewport attempted' };
+
+      return {
+        success: false,
+        error: interpreted.error ?? 'Failed to add widget to viewport',
+        details: bestEffortInterpretedText(interpreted)
+      };
     } catch (e) {
       return { success: false, error: `Failed to add widget to viewport: ${e}` };
     }
@@ -297,7 +338,7 @@ except Exception as e:
       position?: [number, number];
     }>;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`CreateMenuWidget ${params.name} ${params.menuType}`);
     
@@ -308,9 +349,7 @@ except Exception as e:
       }
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: `Menu ${params.name} created` };
   }
@@ -329,7 +368,7 @@ except Exception as e:
       }>;
     }>;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`CreateWidgetAnimation ${params.widgetName} ${params.animationName} ${params.duration}`);
     
@@ -344,9 +383,7 @@ except Exception as e:
       }
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: `Animation ${params.animationName} created` };
   }
@@ -377,7 +414,7 @@ except Exception as e:
       margin?: [number, number, number, number];
     };
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     if (params.style.backgroundColor) {
       commands.push(`SetWidgetBackgroundColor ${params.widgetName}.${params.componentName} ${params.style.backgroundColor.join(' ')}`);
@@ -399,9 +436,7 @@ except Exception as e:
       commands.push(`SetWidgetMargin ${params.widgetName}.${params.componentName} ${params.style.margin.join(' ')}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Widget style updated' };
   }
@@ -423,7 +458,7 @@ except Exception as e:
     showCursor?: boolean;
     lockCursor?: boolean;
   }) {
-    const commands = [];
+  const commands: string[] = [];
     
     commands.push(`SetInputMode ${params.mode}`);
     
@@ -435,9 +470,7 @@ except Exception as e:
       commands.push(`SetMouseLockMode ${params.lockCursor}`);
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: `Input mode set to ${params.mode}` };
   }
@@ -475,9 +508,7 @@ except Exception as e:
       }
     }
     
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     
     return { success: true, message: 'Drag and drop configured' };
   }

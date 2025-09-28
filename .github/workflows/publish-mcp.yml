@@ -49,7 +49,7 @@ jobs:
       - name: Update server.json version
         run: |
           VERSION=${{ steps.version.outputs.version }}
-          jq --arg v "$VERSION" '.version = $v | .packages[] |= if .registry_type == "npm" then .version = $v else . end' server.json > tmp && mv tmp server.json
+          jq --arg v "$VERSION" '.version = $v | .packages[] |= if .registryType == "npm" then .version = $v else . end' server.json > tmp && mv tmp server.json
           echo "Updated server.json:"
           cat server.json
 

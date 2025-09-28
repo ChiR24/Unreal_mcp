@@ -1,4 +1,5 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { interpretStandardResult, coerceBoolean, coerceNumber, coerceString, coerceStringArray } from '../utils/result-helpers.js';
 
 /**
  * Advanced Build Environment Tools
@@ -137,19 +138,85 @@ except Exception as e:
 print(f"RESULT:{json.dumps(result)}")
 `.trim();
 
-    const response = await this.bridge.executePython(pythonScript);
-    const output = this.parseResponse(response);
-    const match = output.match(/RESULT:({.*})/);
-    
-    if (match) {
-      try {
-        return JSON.parse(match[1]);
-      } catch (_e) {
-        return { success: false, error: 'Failed to parse result', details: output };
-      }
-    }
-    
-    return { success: false, error: 'No result found', output };
+        const response = await this.bridge.executePython(pythonScript);
+        const interpreted = interpretStandardResult(response, {
+            successMessage: `Created procedural terrain '${params.name}'`,
+            failureMessage: `Failed to create procedural terrain '${params.name}'`
+        });
+
+        if (!interpreted.success) {
+            const failure: {
+                success: false;
+                error: string;
+                message: string;
+                warnings?: string[];
+                details?: string[];
+                payload?: Record<string, unknown>;
+            } = {
+                success: false,
+                error: interpreted.error ?? interpreted.message,
+                message: interpreted.message
+            };
+
+            if (interpreted.warnings) {
+                failure.warnings = interpreted.warnings;
+            }
+            if (interpreted.details) {
+                failure.details = interpreted.details;
+            }
+            if (interpreted.payload && Object.keys(interpreted.payload).length > 0) {
+                failure.payload = interpreted.payload;
+            }
+
+            return failure;
+        }
+
+        const payload = { ...interpreted.payload } as Record<string, unknown>;
+        const actorName = coerceString(payload.actor_name) ?? coerceString(payload.actorName);
+        const vertices = coerceNumber(payload.vertices);
+        const triangles = coerceNumber(payload.triangles);
+        const subdivisions = coerceNumber(payload.subdivisions);
+        const sizeArray = Array.isArray(payload.size)
+            ? (payload.size as unknown[]).map(entry => {
+                    if (typeof entry === 'number' && Number.isFinite(entry)) {
+                        return entry;
+                    }
+                    if (typeof entry === 'string') {
+                        const parsed = Number(entry);
+                        return Number.isFinite(parsed) ? parsed : undefined;
+                    }
+                    return undefined;
+                }).filter((entry): entry is number => typeof entry === 'number')
+            : undefined;
+
+        payload.success = true;
+        payload.message = interpreted.message;
+
+        if (actorName) {
+            payload.actor_name = actorName;
+            payload.actorName = actorName;
+        }
+        if (typeof vertices === 'number') {
+            payload.vertices = vertices;
+        }
+        if (typeof triangles === 'number') {
+            payload.triangles = triangles;
+        }
+        if (typeof subdivisions === 'number') {
+            payload.subdivisions = subdivisions;
+        }
+        if (sizeArray && sizeArray.length === 2) {
+            payload.size = sizeArray;
+        }
+
+        if (interpreted.warnings) {
+            payload.warnings = interpreted.warnings;
+        }
+        if (interpreted.details) {
+            payload.details = interpreted.details;
+        }
+
+        return payload as any;
   }
 
   /**
@@ -305,19 +372,80 @@ except Exception as e:
 print(f"RESULT:{json.dumps(result)}")
 `.trim();
 
-    const response = await this.bridge.executePython(pythonScript);
-    const output = this.parseResponse(response);
-    const match = output.match(/RESULT:({.*})/);
-    
-    if (match) {
-      try {
-        return JSON.parse(match[1]);
-      } catch (_e) {
-        return { success: false, error: 'Failed to parse result', details: output };
-      }
-    }
-    
-    return { success: false, error: 'No result found', output };
+        const response = await this.bridge.executePython(pythonScript);
+        const interpreted = interpretStandardResult(response, {
+            successMessage: `Created procedural foliage volume '${params.name}'`,
+            failureMessage: `Failed to create procedural foliage volume '${params.name}'`
+        });
+
+        if (!interpreted.success) {
+            const failure: {
+                success: false;
+                error: string;
+                message: string;
+                warnings?: string[];
+                details?: string[];
+                payload?: Record<string, unknown>;
+            } = {
+                success: false,
+                error: interpreted.error ?? interpreted.message,
+                message: interpreted.message
+            };
+
+            if (interpreted.warnings) {
+                failure.warnings = interpreted.warnings;
+            }
+            if (interpreted.details) {
+                failure.details = interpreted.details;
+            }
+            if (interpreted.payload && Object.keys(interpreted.payload).length > 0) {
+                failure.payload = interpreted.payload;
+            }
+
+            return failure;
+        }
+
+        const payload = { ...interpreted.payload } as Record<string, unknown>;
+        const volumeActor = coerceString(payload.volume_actor) ?? coerceString(payload.volumeActor);
+        const spawnerPath = coerceString(payload.spawner_path) ?? coerceString(payload.spawnerPath);
+        const foliageCount = coerceNumber(payload.foliage_types_count) ?? coerceNumber(payload.foliageTypesCount);
+        const resimulated = coerceBoolean(payload.resimulated);
+        const note = coerceString(payload.note);
+        const messages = coerceStringArray(payload.messages);
+
+        payload.success = true;
+        payload.message = interpreted.message;
+
+        if (volumeActor) {
+            payload.volume_actor = volumeActor;
+            payload.volumeActor = volumeActor;
+        }
+        if (spawnerPath) {
+            payload.spawner_path = spawnerPath;
+            payload.spawnerPath = spawnerPath;
+        }
+        if (typeof foliageCount === 'number') {
+            payload.foliage_types_count = foliageCount;
+            payload.foliageTypesCount = foliageCount;
+        }
+        if (typeof resimulated === 'boolean') {
+            payload.resimulated = resimulated;
+        }
+        if (note) {
+            payload.note = note;
+        }
+        if (messages && messages.length > 0) {
+            payload.messages = messages;
+        }
+
+        if (interpreted.warnings) {
+            payload.warnings = interpreted.warnings;
+        }
+        if (interpreted.details) {
+            payload.details = interpreted.details;
+        }
+
+        return payload as any;
   }
 
   /**
@@ -389,19 +517,59 @@ except Exception as e:
 print(f"RESULT:{json.dumps(result)}")
 `.trim();
 
-    const response = await this.bridge.executePython(pythonScript);
-    const output = this.parseResponse(response);
-    const match = output.match(/RESULT:({.*})/);
-    
-    if (match) {
-      try {
-        return JSON.parse(match[1]);
-    } catch (_e) {
-        return { success: false, error: 'Failed to parse result', details: output };
-      }
-    }
-    
-    return { success: false, error: 'No result found', output };
+        const response = await this.bridge.executePython(pythonScript);
+        const interpreted = interpretStandardResult(response, {
+            successMessage: 'Foliage instances added',
+            failureMessage: 'Failed to add foliage instances'
+        });
+
+        if (!interpreted.success) {
+            const failure: {
+                success: false;
+                error: string;
+                message: string;
+                warnings?: string[];
+                details?: string[];
+                payload?: Record<string, unknown>;
+            } = {
+                success: false,
+                error: interpreted.error ?? interpreted.message,
+                message: interpreted.message
+            };
+
+            if (interpreted.warnings) {
+                failure.warnings = interpreted.warnings;
+            }
+            if (interpreted.details) {
+                failure.details = interpreted.details;
+            }
+            if (interpreted.payload && Object.keys(interpreted.payload).length > 0) {
+                failure.payload = interpreted.payload;
+            }
+
+            return failure;
+        }
+
+        const payload = { ...interpreted.payload } as Record<string, unknown>;
+        const count = coerceNumber(payload.instances_count) ?? coerceNumber(payload.instancesCount);
+        const message = coerceString(payload.message) ?? interpreted.message;
+
+        payload.success = true;
+        payload.message = message;
+
+        if (typeof count === 'number') {
+            payload.instances_count = count;
+            payload.instancesCount = count;
+        }
+
+        if (interpreted.warnings) {
+            payload.warnings = interpreted.warnings;
+        }
+        if (interpreted.details) {
+            payload.details = interpreted.details;
+        }
+
+        return payload as any;
   }
 
   /**
@@ -500,31 +668,65 @@ except Exception as e:
 print(f"RESULT:{json.dumps(result)}")
 `.trim();
 
-    const response = await this.bridge.executePython(pythonScript);
-    const output = this.parseResponse(response);
-    const match = output.match(/RESULT:({.*})/);
-    
-    if (match) {
-      try {
-        return JSON.parse(match[1]);
-    } catch (_e) {
-        return { success: false, error: 'Failed to parse result', details: output };
-      }
-    }
-    
-    return { success: false, error: 'No result found', output };
-  }
+        const response = await this.bridge.executePython(pythonScript);
+        const interpreted = interpretStandardResult(response, {
+            successMessage: `Created landscape grass type '${params.name}'`,
+            failureMessage: `Failed to create landscape grass type '${params.name}'`
+        });
 
-  private parseResponse(response: any): string {
-    if (response && typeof response === 'object') {
-      if (response.LogOutput && Array.isArray(response.LogOutput)) {
-        return response.LogOutput.map((log: any) => log.Output || '').join('');
-      } else if (response.CommandResult) {
-        return response.CommandResult;
-      } else if (response.ReturnValue) {
-        return JSON.stringify(response);
-      }
-    }
-    return typeof response === 'string' ? response : JSON.stringify(response);
+        if (!interpreted.success) {
+            const failure: {
+                success: false;
+                error: string;
+                message: string;
+                warnings?: string[];
+                details?: string[];
+                payload?: Record<string, unknown>;
+            } = {
+                success: false,
+                error: interpreted.error ?? interpreted.message,
+                message: interpreted.message
+            };
+
+            if (interpreted.warnings) {
+                failure.warnings = interpreted.warnings;
+            }
+            if (interpreted.details) {
+                failure.details = interpreted.details;
+            }
+            if (interpreted.payload && Object.keys(interpreted.payload).length > 0) {
+                failure.payload = interpreted.payload;
+            }
+
+            return failure;
+        }
+
+        const payload = { ...interpreted.payload } as Record<string, unknown>;
+        const assetPath = coerceString(payload.asset_path) ?? coerceString(payload.assetPath);
+        const note = coerceString(payload.note);
+        const messages = coerceStringArray(payload.messages);
+
+        payload.success = true;
+        payload.message = interpreted.message;
+
+        if (assetPath) {
+            payload.asset_path = assetPath;
+            payload.assetPath = assetPath;
+        }
+        if (note) {
+            payload.note = note;
+        }
+        if (messages && messages.length > 0) {
+            payload.messages = messages;
+        }
+
+        if (interpreted.warnings) {
+            payload.warnings = interpreted.warnings;
+        }
+        if (interpreted.details) {
+            payload.details = interpreted.details;
+        }
+
+        return payload as any;
   }
 }

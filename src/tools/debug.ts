@@ -1,40 +1,95 @@
 // Debug visualization tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
+import { bestEffortInterpretedText, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
+import { parseStandardResult } from '../utils/python-output.js';
 
 export class DebugVisualizationTools {
   constructor(private bridge: UnrealBridge) {}
 
-  // Execute console command (kept for legacy operations)
-  private async _executeCommand(command: string) {
-    return this.bridge.httpCall('/remote/object/call', 'PUT', {
-      objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-      functionName: 'ExecuteConsoleCommand',
-      parameters: {
-        WorldContextObject: null,
-        Command: command,
-        SpecificPlayer: null
-      },
-      generateTransaction: false
-    });
-  }
-
   // Helper to draw via Python SystemLibrary with the editor world
-  private async pyDraw(scriptBody: string) {
+  private async pyDraw(scriptBody: string, meta?: { action: string; params?: Record<string, unknown> }) {
+    const action = (meta?.action || 'debug_draw').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const payloadObject = meta?.params ?? {};
+    const payloadJson = JSON.stringify(payloadObject).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const indentedBody = scriptBody
+      .split(/\r?\n/)
+      .map(line => `    ${line}`)
+      .join('\n');
+
     const script = `
 import unreal
-# Strict modern API: require UnrealEditorSubsystem (UE 5.1+)
+import json
+
+payload = json.loads('${payloadJson}')
 ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 if not ues:
     raise Exception('UnrealEditorSubsystem not available')
 world = ues.get_editor_world()
-${scriptBody}
+if not world:
+    raise Exception('Editor world unavailable')
+try:
+${indentedBody}
+    print('DEBUG_DRAW:' + json.dumps({'action': '${action}', 'params': payload}))
+    print('RESULT:' + json.dumps({'success': True, 'action': '${action}', 'params': payload}))
+except Exception as e:
+    print('DEBUG_DRAW_ERROR:' + str(e))
+    print('RESULT:' + json.dumps({'success': False, 'action': '${action}', 'error': str(e)}))
 `.trim()
       .replace(/\r?\n/g, '\n');
+
     try {
-      await this.bridge.executePython(script);
-      return { success: true };
+      const response = await this.bridge.executePython(script);
+      let interpreted = interpretStandardResult(response, {
+        successMessage: `${action} executed`,
+        failureMessage: `${action} failed`
+      });
+
+      const parsed = parseStandardResult(response);
+      const parsedPayload = parsed.data ?? {};
+      const parsedSuccessValue = (parsedPayload as any).success;
+      const normalizedSuccess = typeof parsedSuccessValue === 'string'
+        ? ['true', '1', 'yes'].includes(parsedSuccessValue.toLowerCase())
+        : parsedSuccessValue === true;
+
+      if (!interpreted.success && normalizedSuccess) {
+        interpreted = {
+          ...interpreted,
+          success: true,
+          error: undefined,
+          message: interpreted.message || `${action} executed`,
+          payload: { ...parsedPayload }
+        };
+      }
+
+      const finalSuccess = interpreted.success || normalizedSuccess;
+
+  const resolvedAction = coerceString(interpreted.payload.action) ?? action;
+  const fallbackOutput = typeof parsed.text === 'string' ? parsed.text : '';
+  const rawOutput = bestEffortInterpretedText(interpreted) ?? (fallbackOutput ? fallbackOutput : undefined);
+
+      if (finalSuccess) {
+        return {
+          ...interpreted.payload,
+          success: true,
+          action: resolvedAction,
+          warnings: interpreted.warnings,
+          details: interpreted.details,
+          rawOutput,
+          raw: parsed.raw ?? interpreted.raw
+        };
+      }
+
+      return {
+        success: false,
+        action: resolvedAction,
+        error: interpreted.error ?? `${resolvedAction} failed`,
+        warnings: interpreted.warnings,
+        details: interpreted.details,
+        rawOutput,
+        raw: parsed.raw ?? interpreted.raw
+      };
     } catch (e) {
-      return { success: false, error: String(e) };
+      return { success: false, error: String(e), action: meta?.action || 'debug_draw' };
     }
   }
 
@@ -58,7 +113,16 @@ end = unreal.Vector(${ex}, ${ey}, ${ez})
 color = unreal.LinearColor(${sr}/255.0, ${sg}/255.0, ${sb}/255.0, ${sa}/255.0)
 unreal.SystemLibrary.draw_debug_line(world, start, end, color, ${duration}, ${thickness})
 `;
-    return this.pyDraw(script);
+    return this.pyDraw(script, {
+      action: 'debug_line',
+      params: {
+        start: params.start,
+        end: params.end,
+        color,
+        duration,
+        thickness
+      }
+    });
   }
 
   // Draw debug box using Python SystemLibrary
@@ -85,7 +149,17 @@ rot = unreal.Rotator(${rp}, ${ry}, ${rr})
 color = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)
 unreal.SystemLibrary.draw_debug_box(world, center, extent, color, rot, ${duration}, ${thickness})
 `;
-    return this.pyDraw(script);
+    return this.pyDraw(script, {
+      action: 'debug_box',
+      params: {
+        center: params.center,
+        extent: params.extent,
+        rotation,
+        color,
+        duration,
+        thickness
+      }
+    });
   }
 
   // Draw debug sphere using Python SystemLibrary
@@ -108,7 +182,17 @@ center = unreal.Vector(${cx}, ${cy}, ${cz})
 color = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)
 unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segments}, color, ${duration}, ${thickness})
 `;
-    return this.pyDraw(script);
+    return this.pyDraw(script, {
+      action: 'debug_sphere',
+      params: {
+        center: params.center,
+        radius: params.radius,
+        segments,
+        color,
+        duration,
+        thickness
+      }
+    });
   }
 
   // The rest keep console-command fallbacks or editor helpers as before
@@ -128,7 +212,17 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const [rp, ry, rr] = rotation;
     const [cr, cg, cb, ca] = color;
     const script = `\ncenter = unreal.Vector(${cx}, ${cy}, ${cz})\nrot = unreal.Rotator(${rp}, ${ry}, ${rr})\ncolor = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)\nunreal.SystemLibrary.draw_debug_capsule(world, center, ${params.halfHeight}, ${params.radius}, rot, color, ${duration}, 1.0)\n`;
-    return this.pyDraw(script);
+    return this.pyDraw(script, {
+      action: 'debug_capsule',
+      params: {
+        center: params.center,
+        halfHeight: params.halfHeight,
+        radius: params.radius,
+        rotation,
+        color,
+        duration
+      }
+    });
   }
 
   async drawDebugCone(params: {
@@ -147,7 +241,19 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const [dx, dy, dz] = params.direction;
     const [cr, cg, cb, ca] = color;
     const script = `\norigin = unreal.Vector(${ox}, ${oy}, ${oz})\ndir = unreal.Vector(${dx}, ${dy}, ${dz})\ncolor = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)\nunreal.SystemLibrary.draw_debug_cone(world, origin, dir, ${params.length}, ${params.angleWidth}, ${params.angleHeight}, ${params.numSides || 12}, color, ${duration}, 1.0)\n`;
-    return this.pyDraw(script);
+    return this.pyDraw(script, {
+      action: 'debug_cone',
+      params: {
+        origin: params.origin,
+        direction: params.direction,
+        length: params.length,
+        angleWidth: params.angleWidth,
+        angleHeight: params.angleHeight,
+        numSides: params.numSides || 12,
+        color,
+        duration
+      }
+    });
   }
 
   async drawDebugString(params: {
@@ -162,7 +268,16 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const [x, y, z] = params.location;
     const [r, g, b, a] = color;
     const script = `\nloc = unreal.Vector(${x}, ${y}, ${z})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_string(world, loc, "${params.text.replace(/"/g, '\\"')}", None, color, ${duration})\n`;
-    return this.pyDraw(script);
+    return this.pyDraw(script, {
+      action: 'debug_string',
+      params: {
+        location: params.location,
+        text: params.text,
+        color,
+        duration,
+        fontSize: params.fontSize
+      }
+    });
   }
 
   async drawDebugArrow(params: {
@@ -180,7 +295,17 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const [ex, ey, ez] = params.end;
     const [r, g, b, a] = color;
     const script = `\nstart = unreal.Vector(${sx}, ${sy}, ${sz})\nend = unreal.Vector(${ex}, ${ey}, ${ez})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_arrow(world, start, end, ${params.arrowSize || 10.0}, color, ${duration}, ${thickness})\n`;
-    return this.pyDraw(script);
+    return this.pyDraw(script, {
+      action: 'debug_arrow',
+      params: {
+        start: params.start,
+        end: params.end,
+        arrowSize: params.arrowSize || 10.0,
+        color,
+        duration,
+        thickness
+      }
+    });
   }
 
   async drawDebugPoint(params: {
@@ -195,7 +320,15 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const [x, y, z] = params.location;
     const [r, g, b, a] = color;
     const script = `\nloc = unreal.Vector(${x}, ${y}, ${z})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_point(world, loc, ${size}, color, ${duration})\n`;
-    return this.pyDraw(script);
+    return this.pyDraw(script, {
+      action: 'debug_point',
+      params: {
+        location: params.location,
+        size,
+        color,
+        duration
+      }
+    });
   }
 
   async drawDebugCoordinateSystem(params: {
@@ -232,7 +365,19 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const [rp, ry, rr] = params.rotation;
     const [r, g, b, a] = color;
     const script = `\norigin = unreal.Vector(${ox}, ${oy}, ${oz})\nrot = unreal.Rotator(${rp}, ${ry}, ${rr})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_frustum(world, origin, rot, ${params.fov}, ${aspectRatio}, ${nearPlane}, ${farPlane}, color, ${duration})\n`;
-    return this.pyDraw(script);
+    return this.pyDraw(script, {
+      action: 'debug_frustum',
+      params: {
+        origin: params.origin,
+        rotation: params.rotation,
+        fov: params.fov,
+        aspectRatio,
+        nearPlane,
+        farPlane,
+        color,
+        duration
+      }
+    });
   }
 
   async clearDebugDrawings() {
@@ -243,16 +388,14 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     enabled: boolean;
     type?: 'Simple' | 'Complex' | 'Both';
   }) {
-    const commands = [];
+  const commands: string[] = [];
     if (params.enabled) {
       const typeCmd = params.type === 'Simple' ? '1' : params.type === 'Complex' ? '2' : '3';
       commands.push(`show Collision ${typeCmd}`);
     } else {
       commands.push('show Collision 0');
     }
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
+    await this.bridge.executeConsoleCommands(commands);
     return { success: true, message: `Collision visualization ${params.enabled ? 'enabled' : 'disabled'}` };
   }
 

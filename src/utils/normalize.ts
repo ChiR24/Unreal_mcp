@@ -1,7 +1,8 @@
-export type Vec3Array = [number, number, number];
-export type Rot3Array = [number, number, number];
 export interface Vec3Obj { x: number; y: number; z: number; }
 export interface Rot3Obj { pitch: number; yaw: number; roll: number; }
+
+export type Vec3Tuple = [number, number, number];
+export type Rot3Tuple = [number, number, number];
 
 export function toVec3Object(input: any): Vec3Obj | null {
   try {
@@ -21,11 +22,6 @@ export function toVec3Object(input: any): Vec3Obj | null {
     }
   } catch {}
   return null;
-}
-
-export function toVec3Array(input: any): Vec3Array | null {
-  const obj = toVec3Object(input);
-  return obj ? [obj.x, obj.y, obj.z] : null;
 }
 
 export function toRotObject(input: any): Rot3Obj | null {
@@ -48,7 +44,21 @@ export function toRotObject(input: any): Rot3Obj | null {
   return null;
 }
 
-export function toRotArray(input: any): Rot3Array | null {
-  const obj = toRotObject(input);
-  return obj ? [obj.pitch, obj.yaw, obj.roll] : null;
+export function toVec3Tuple(input: any): Vec3Tuple | null {
+  const vec = toVec3Object(input);
+  if (!vec) {
+    return null;
+  }
+  const { x, y, z } = vec;
+  return [x, y, z];
 }
+
+export function toRotTuple(input: any): Rot3Tuple | null {
+  const rot = toRotObject(input);
+  if (!rot) {
+    return null;
+  }
+  const { pitch, yaw, roll } = rot;
+  return [pitch, yaw, roll];
+}
+

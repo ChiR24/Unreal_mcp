@@ -332,12 +332,3 @@ export type GetToolResponse<T extends ToolName> = ToolResponseMap[T];
 // Helper type for getting parameters by tool name
 export type GetToolParams<T extends keyof ConsolidatedToolParams> = ConsolidatedToolParams[T];
 
-// Export a type guard to check if a response is successful
-export function isSuccessResponse(response: BaseToolResponse): response is BaseToolResponse & { success: true } {
-  return response.success === true;
-}
-
-// Export a type guard to check if a response has an error
-export function isErrorResponse(response: BaseToolResponse): response is BaseToolResponse & { error: string } {
-  return response.success === false && typeof response.error === 'string';
-}

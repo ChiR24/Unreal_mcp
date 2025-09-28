@@ -5,8 +5,8 @@
       "args": ["PATH_TO/unreal-engine-mcp-server/dist/cli.js"],
       "env": {
         "UE_HOST": "127.0.0.1",
-        "UE_RC_WS_PORT": "30010",
-        "UE_RC_HTTP_PORT": "30020",
+        "UE_RC_HTTP_PORT": "30010",
+        "UE_RC_WS_PORT": "30020",
         "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject"
       }
     }

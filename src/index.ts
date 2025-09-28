@@ -43,6 +43,7 @@ import { responseValidator } from './utils/response-validator.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import { routeStdoutLogsToStderr } from './utils/stdio-redirect.js';
 import { cleanObject } from './utils/safe-json.js';
+import { createElicitationHelper } from './utils/elicitation.js';
 
 const log = new Logger('UE-MCP');
 
@@ -245,11 +246,38 @@ export async function createServer() {
       capabilities: {
         resources: {},
         tools: {},
-        prompts: {},
-        logging: {}
+        prompts: {
+          listChanged: false
+        },
+        logging: {},
+        elicitation: {}
       }
     }
   );
+
+  // Optional elicitation helper – used only if client supports it.
+  const elicitation = createElicitationHelper(server as any, log);
+  const defaultElicitationTimeoutMs = elicitation.getDefaultTimeoutMs();
+
+  const createNotConnectedResponse = (toolName: string) => {
+    const payload = {
+      success: false,
+      error: 'UE_NOT_CONNECTED',
+      message: 'Unreal Engine is not connected (after 3 attempts). Please open UE and try again.',
+      retriable: false,
+      scope: `tool-call/${toolName}`
+    } as const;
+
+    return responseValidator.wrapResponse(toolName, {
+      ...payload,
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(payload, null, 2)
+        }
+      ]
+    });
+  };
 
   // Handle resource listing
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
@@ -442,21 +470,15 @@ export async function createServer() {
 
   // Handle tool calls - consolidated tools only (13)
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
+    const { name } = request.params;
+    let args: any = request.params.arguments || {};
     const startTime = Date.now();
 
     // Ensure connection only when needed, with 3 attempts
     const connected = await ensureConnectedOnDemand();
     if (!connected) {
-      const notConnected = {
-        content: [{ type: 'text', text: 'Unreal Engine is not connected (after 3 attempts). Please open UE and try again.' }],
-        success: false,
-        error: 'UE_NOT_CONNECTED',
-        retriable: false,
-        scope: `tool-call/${name}`
-      } as any;
       trackPerformance(startTime, false);
-      return notConnected;
+      return createNotConnectedResponse(name);
     }
     
 // Create tools object for handler
@@ -483,6 +505,10 @@ export async function createServer() {
       introspectionTools,
       visualTools,
       engineTools,
+      // Elicitation (client-optional)
+      elicit: elicitation.elicit,
+      supportsElicitation: elicitation.supports,
+  elicitationTimeoutMs: defaultElicitationTimeoutMs,
       // Resources for listing and info
       assetResources,
       actorResources,
@@ -494,6 +520,65 @@ export async function createServer() {
     try {
       log.debug(`Executing tool: ${name}`);
       
+      // Opportunistic generic elicitation for missing primitive required fields
+      try {
+        const toolDef: any = (consolidatedToolDefinitions as any[]).find(t => t.name === name);
+        const inputSchema: any = toolDef?.inputSchema;
+        const elicitFn: any = (tools as any).elicit;
+        if (inputSchema && typeof elicitFn === 'function') {
+          const props = inputSchema.properties || {};
+          const required: string[] = Array.isArray(inputSchema.required) ? inputSchema.required : [];
+          const missing = required.filter((k: string) => {
+            const v = (args as any)[k];
+            if (v === undefined || v === null) return true;
+            if (typeof v === 'string' && v.trim() === '') return true;
+            return false;
+          });
+
+          // Build a flat primitive-only schema subset per MCP Elicitation rules
+          const primitiveProps: any = {};
+          for (const k of missing) {
+            const p = props[k];
+            if (!p || typeof p !== 'object') continue;
+            const t = (p.type || '').toString();
+            const isEnum = Array.isArray(p.enum);
+            if (t === 'string' || t === 'number' || t === 'integer' || t === 'boolean' || isEnum) {
+              primitiveProps[k] = {
+                type: t || (isEnum ? 'string' : undefined),
+                title: p.title,
+                description: p.description,
+                enum: p.enum,
+                enumNames: p.enumNames,
+                minimum: p.minimum,
+                maximum: p.maximum,
+                minLength: p.minLength,
+                maxLength: p.maxLength,
+                pattern: p.pattern,
+                format: p.format,
+                default: p.default
+              };
+            }
+          }
+
+          if (Object.keys(primitiveProps).length > 0) {
+            const elicitOptions: any = { fallback: async () => ({ ok: false, error: 'missing-params' }) };
+            if (typeof (tools as any).elicitationTimeoutMs === 'number' && Number.isFinite((tools as any).elicitationTimeoutMs)) {
+              elicitOptions.timeoutMs = (tools as any).elicitationTimeoutMs;
+            }
+            const elicitRes = await elicitFn(
+              `Provide missing parameters for ${name}`,
+              { type: 'object', properties: primitiveProps, required: Object.keys(primitiveProps) },
+              elicitOptions
+            );
+            if (elicitRes && elicitRes.ok && elicitRes.value) {
+              args = { ...args, ...elicitRes.value };
+            }
+          }
+        }
+      } catch (e) {
+        log.debug('Generic elicitation prefill skipped', { err: (e as any)?.message || String(e) });
+      }
+
       let result = await handleConsolidatedToolCall(name, args, tools);
       
       log.debug(`Tool ${name} returned result`);
@@ -530,14 +615,25 @@ export async function createServer() {
         });
         if (metrics.recentErrors.length > 20) metrics.recentErrors.splice(0, metrics.recentErrors.length - 20);
       } catch {}
-      
-      return {
+
+      const sanitizedError = cleanObject(errorResponse);
+      let errorText = '';
+      try {
+        errorText = JSON.stringify(sanitizedError, null, 2);
+      } catch {
+        errorText = sanitizedError.message || errorResponse.message || `Failed to execute ${name}`;
+      }
+
+      const wrappedError = {
+        ...sanitizedError,
+        isError: true,
         content: [{
           type: 'text',
-          text: errorResponse.message || `Failed to execute ${name}`
-        }],
-        ...errorResponse
+          text: errorText
+        }]
       };
+
+      return responseValidator.wrapResponse(name, wrappedError);
     }
   });
 
@@ -547,11 +643,18 @@ export async function createServer() {
       prompts: prompts.map(p => ({
         name: p.name,
         description: p.description,
-        arguments: Object.entries(p.arguments || {}).map(([name, schema]) => ({
-          name,
-          description: schema.description,
-          required: schema.required || false
-        }))
+        arguments: Object.entries(p.arguments || {}).map(([name, schema]) => {
+          const meta: Record<string, unknown> = {};
+          if (schema.type) meta.type = schema.type;
+          if (schema.enum) meta.enum = schema.enum;
+          if (schema.default !== undefined) meta.default = schema.default;
+          return {
+            name,
+            description: schema.description,
+            required: schema.required ?? false,
+            ...(Object.keys(meta).length ? { _meta: meta } : {})
+          };
+        })
       }))
     };
   });
@@ -562,18 +665,12 @@ export async function createServer() {
     if (!prompt) {
       throw new Error(`Unknown prompt: ${request.params.name}`);
     }
-    
-    // Return a template for the lighting setup
+
+    const args = (request.params.arguments || {}) as Record<string, unknown>;
+    const messages = prompt.build(args);
     return {
-      messages: [
-        {
-          role: 'user',
-          content: {
-            type: 'text',
-            text: `Set up three-point lighting with ${request.params.arguments?.intensity || 'medium'} intensity`
-          }
-        }
-      ]
+      description: prompt.description,
+      messages
     };
   });
 

@@ -1,5 +1,6 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { Logger } from '../utils/logger.js';
+import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
 
 export interface ObjectInfo {
   class: string;
@@ -76,33 +77,34 @@ export class IntrospectionTools {
    * Parse Python execution result with better error handling
    */
   private parsePythonResult(resp: any, operationName: string): any {
-    let out = '';
-    if (resp?.LogOutput && Array.isArray((resp as any).LogOutput)) {
-      out = (resp as any).LogOutput.map((l: any) => l.Output || '').join('');
-    } else if (typeof resp === 'string') {
-      out = resp;
-    } else {
-      out = JSON.stringify(resp);
+        const interpreted = interpretStandardResult(resp, {
+            successMessage: `${operationName} succeeded`,
+            failureMessage: `${operationName} failed`
+        });
+
+        if (interpreted.success) {
+            return {
+                ...interpreted.payload,
+                success: true
+            };
+        }
+
+    const output = bestEffortInterpretedText(interpreted) ?? '';
+    if (output) {
+      this.log.error(`Failed to parse ${operationName} result: ${output}`);
     }
-    
-    const m = out.match(/RESULT:({.*})/);
-    if (m) {
-      try {
-        return JSON.parse(m[1]);
-      } catch (e) {
-        this.log.error(`Failed to parse ${operationName} result: ${e}`);
-      }
-    }
-    
-    // Check for common error patterns
-    if (out.includes('ModuleNotFoundError')) {
+
+    if (output.includes('ModuleNotFoundError')) {
       return { success: false, error: 'Reflection module not available.' };
     }
-    if (out.includes('AttributeError')) {
+    if (output.includes('AttributeError')) {
       return { success: false, error: 'Reflection API method not found. Check Unreal Engine version compatibility.' };
     }
-    
-    return { success: false, error: `${operationName} did not return a valid result: ${out.substring(0, 200)}` };
+
+    return {
+      success: false,
+            error: `${interpreted.error ?? `${operationName} did not return a valid result`}: ${output.substring(0, 200)}`
+    };
   }
 
   /**

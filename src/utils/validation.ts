@@ -2,6 +2,8 @@
  * Validation and sanitization utilities for Unreal Engine assets
  */
 
+import { toRotTuple, toVec3Tuple } from './normalize.js';
+
 /**
  * Maximum path length allowed in Unreal Engine
  */
@@ -78,13 +80,27 @@ export function sanitizePath(path: string): string {
     return '/Game';
   }
   
+  // Normalize slashes
+  path = path.replace(/\\/g, '/');
+
   // Ensure path starts with /
   if (!path.startsWith('/')) {
     path = `/${path}`;
   }
   
   // Split path into segments and sanitize each
-  const segments = path.split('/').filter(s => s.length > 0);
+  let segments = path.split('/').filter(s => s.length > 0);
+
+  if (segments.length === 0) {
+    return '/Game';
+  }
+
+  // Ensure the first segment is a valid root (Game, Engine, Script, Temp)
+  const ROOTS = new Set(['Game', 'Engine', 'Script', 'Temp']);
+  if (!ROOTS.has(segments[0])) {
+    segments = ['Game', ...segments];
+  }
+
   const sanitizedSegments = segments.map(segment => {
     // Don't sanitize Game, Engine, or other root folders
     if (['Game', 'Engine', 'Script', 'Temp'].includes(segment)) {
@@ -174,10 +190,14 @@ export function resolveSkeletalMeshPath(input: string): string | null {
   
   // Common skeleton to mesh mappings
   const skeletonToMeshMap: { [key: string]: string } = {
-    '/Game/Mannequin/Character/Mesh/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny',
-    '/Game/Characters/Mannequins/Meshes/SK_Mannequin': '/Game/Characters/Mannequins/Meshes/SKM_Manny',
-    '/Game/Mannequin/Character/Mesh/SK_Mannequin': '/Game/Characters/Mannequins/Meshes/SKM_Manny',
-    '/Game/Characters/Mannequin_UE4/Meshes/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn',
+    '/Game/Mannequin/Character/Mesh/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
+    '/Game/Characters/Mannequins/Meshes/SK_Mannequin': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
+    '/Game/Mannequin/Character/Mesh/SK_Mannequin': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
+    '/Game/Characters/Mannequin_UE4/Meshes/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple',
+    '/Game/Characters/Mannequins/Skeletons/UE5_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
+    '/Game/Characters/Mannequins/Skeletons/UE5_Female_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple',
+    '/Game/Characters/Mannequins/Skeletons/UE5_Manny_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
+    '/Game/Characters/Mannequins/Skeletons/UE5_Quinn_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple'
   };
   
   // Check if this is a known skeleton path
@@ -189,8 +209,19 @@ export function resolveSkeletalMeshPath(input: string): string | null {
   if (input.includes('_Skeleton')) {
     // Try common replacements
     let meshPath = input.replace('_Skeleton', '');
-    meshPath = meshPath.replace('/SK_', '/SKM_');
-    meshPath = meshPath.replace('UE4_Mannequin', 'SKM_Manny');
+    // Mapping for replacements
+    const replacements: { [key: string]: string } = {
+      '/SK_': '/SKM_',
+      'UE4_Mannequin': 'SKM_Manny',
+      'UE5_Mannequin': 'SKM_Manny',
+      'UE5_Manny': 'SKM_Manny',
+      'UE5_Quinn': 'SKM_Quinn'
+    };
+    // Apply all replacements using regex
+    meshPath = meshPath.replace(
+      new RegExp(Object.keys(replacements).join('|'), 'g'),
+      match => replacements[match]
+    );
     return meshPath;
   }
   
@@ -209,4 +240,60 @@ export function resolveSkeletalMeshPath(input: string): string | null {
  */
 export async function concurrencyDelay(ms: number = 100): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Ensure the provided value is a finite number within optional bounds.
+ * @throws if the value is not a finite number or violates bounds
+ */
+export function validateNumber(
+  value: unknown,
+  label: string,
+  {
+    min,
+    max,
+    allowZero = true
+  }: { min?: number; max?: number; allowZero?: boolean } = {}
+): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`Invalid ${label}: expected a finite number`);
+  }
+
+  if (!allowZero && value === 0) {
+    throw new Error(`Invalid ${label}: zero is not allowed`);
+  }
+
+  if (typeof min === 'number' && value < min) {
+    throw new Error(`Invalid ${label}: must be >= ${min}`);
+  }
+
+  if (typeof max === 'number' && value > max) {
+    throw new Error(`Invalid ${label}: must be <= ${max}`);
+  }
+
+  return value;
+}
+
+/**
+ * Validate an array (tuple) of finite numbers, preserving the original shape.
+ * @throws if the tuple has the wrong length or contains invalid values
+ */
+export function ensureVector3(value: unknown, label: string): [number, number, number] {
+  const tuple = toVec3Tuple(value);
+  if (!tuple) {
+    throw new Error(`Invalid ${label}: expected an object with x,y,z or an array of 3 numbers`);
+  }
+  return tuple;
+}
+
+export function ensureColorRGB(value: unknown, label: string): [number, number, number] {
+  return ensureVector3(value, label);
+}
+
+export function ensureRotation(value: unknown, label: string): [number, number, number] {
+  const tuple = toRotTuple(value);
+  if (!tuple) {
+    throw new Error(`Invalid ${label}: expected an object with pitch,yaw,roll or an array of 3 numbers`);
+  }
+  return tuple;
 }

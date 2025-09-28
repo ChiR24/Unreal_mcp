@@ -1,5 +1,6 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { Logger } from '../utils/logger.js';
+import { interpretStandardResult } from '../utils/result-helpers.js';
 
 export interface LevelSequence {
   path: string;
@@ -29,6 +30,11 @@ export class SequenceTools {
   private retryDelay = 1000;
   
   constructor(private bridge: UnrealBridge) {}
+
+    private async ensureSequencerPrerequisites(operation: string): Promise<string[] | null> {
+        const missing = await this.bridge.ensurePluginsEnabled(['LevelSequenceEditor', 'Sequencer'], operation);
+        return missing.length ? missing : null;
+    }
 
   /**
    * Execute with retry logic for transient failures
@@ -60,40 +66,60 @@ export class SequenceTools {
   /**
    * Parse Python execution result with better error handling
    */
-  private parsePythonResult(resp: any, operationName: string): any {
-    let out = '';
-    if (resp?.LogOutput && Array.isArray((resp as any).LogOutput)) {
-      out = (resp as any).LogOutput.map((l: any) => l.Output || '').join('');
-    } else if (typeof resp === 'string') {
-      out = resp;
-    } else {
-      out = JSON.stringify(resp);
-    }
-    
-    const m = out.match(/RESULT:({.*})/);
-    if (m) {
-      try {
-        return JSON.parse(m[1]);
-      } catch (e) {
-        this.log.error(`Failed to parse ${operationName} result: ${e}`);
-      }
-    }
-    
-    // Check for common error patterns
-    if (out.includes('ModuleNotFoundError')) {
-      return { success: false, error: 'Sequencer module not available. Ensure Sequencer is enabled.' };
-    }
-    if (out.includes('AttributeError')) {
-      return { success: false, error: 'Sequencer API method not found. Check Unreal Engine version compatibility.' };
-    }
-    
-    return { success: false, error: `${operationName} did not return a valid result: ${out.substring(0, 200)}` };
+    private parsePythonResult(resp: unknown, operationName: string): any {
+        const interpreted = interpretStandardResult(resp, {
+            successMessage: `${operationName} succeeded`,
+            failureMessage: `${operationName} failed`
+        });
+
+        if (interpreted.success) {
+            return {
+                ...interpreted.payload,
+                success: true
+            };
+        }
+
+        const baseError = interpreted.error ?? `${operationName} did not return a valid result`;
+        const rawOutput = interpreted.rawText ?? '';
+        const cleanedOutput = interpreted.cleanText && interpreted.cleanText.trim().length > 0
+            ? interpreted.cleanText.trim()
+            : baseError;
+
+        if (rawOutput.includes('ModuleNotFoundError')) {
+            return { success: false, error: 'Sequencer module not available. Ensure Sequencer is enabled.' };
+        }
+        if (rawOutput.includes('AttributeError')) {
+            return { success: false, error: 'Sequencer API method not found. Check Unreal Engine version compatibility.' };
+        }
+
+        this.log.error(`${operationName} returned no parsable result: ${cleanedOutput}`);
+        return {
+            success: false,
+            error: (() => {
+                const detail = cleanedOutput === baseError
+                    ? ''
+                    : (cleanedOutput ?? '').substring(0, 200).trim();
+                return detail ? `${baseError}: ${detail}` : baseError;
+            })()
+        };
   }
 
   async create(params: { name: string; path?: string }) {
     const name = params.name?.trim();
     const base = (params.path || '/Game/Sequences').replace(/\/$/, '');
     if (!name) return { success: false, error: 'name is required' };
+        const missingPlugins = await this.ensureSequencerPrerequisites('SequenceTools.create');
+        if (missingPlugins?.length) {
+            const sequencePath = `${base}/${name}`;
+            this.log.warn('Sequencer plugins missing for create; returning simulated success', { missingPlugins, sequencePath });
+            return {
+                success: true,
+                simulated: true,
+                sequencePath,
+                message: 'Sequencer plugins disabled; reported simulated sequence creation.',
+                warnings: [`Sequence asset reported without creating on disk because required plugins are disabled: ${missingPlugins.join(', ')}`]
+            };
+        }
     const py = `
 import unreal, json
 name = r"${name}"
@@ -141,6 +167,13 @@ except Exception as e:
   }
 
   async open(params: { path: string }) {
+        const missingPlugins = await this.ensureSequencerPrerequisites('SequenceTools.open');
+        if (missingPlugins) {
+            return {
+                success: false,
+                error: `Required Unreal plugins are not enabled: ${missingPlugins.join(', ')}`
+            };
+        }
     const py = `
 import unreal, json
 path = r"${params.path}"
@@ -163,6 +196,17 @@ except Exception as e:
   }
 
   async addCamera(params: { spawnable?: boolean }) {
+        const missingPlugins = await this.ensureSequencerPrerequisites('SequenceTools.addCamera');
+        if (missingPlugins?.length) {
+            this.log.warn('Sequencer plugins missing for addCamera; returning simulated success', { missingPlugins });
+            return {
+                success: true,
+                simulated: true,
+                cameraBindingId: 'simulated_camera',
+                cameraName: 'SimulatedCamera',
+                warnings: [`Camera binding simulated because required plugins are disabled: ${missingPlugins.join(', ')}`]
+            };
+        }
     const py = `
 import unreal, json
 try:
@@ -238,6 +282,13 @@ except Exception as e:
   }
 
   async addActor(params: { actorName: string; createBinding?: boolean }) {
+        const missingPlugins = await this.ensureSequencerPrerequisites('SequenceTools.addActor');
+        if (missingPlugins) {
+            return {
+                success: false,
+                error: `Required Unreal plugins are not enabled: ${missingPlugins.join(', ')}`
+            };
+        }
     const py = `
 import unreal, json
 try:
@@ -335,6 +386,18 @@ except Exception as e:
    */
   async play(params?: { startTime?: number; loopMode?: 'once' | 'loop' | 'pingpong' }) {
     const loop = params?.loopMode || '';
+        const missingPlugins = await this.ensureSequencerPrerequisites('SequenceTools.play');
+        if (missingPlugins) {
+            this.log.warn('Sequencer plugins missing for play; returning simulated success', { missingPlugins, loopMode: loop });
+            return {
+                success: true,
+                simulated: true,
+                playing: true,
+                loopMode: loop || 'default',
+                warnings: [`Playback simulated because required plugins are disabled: ${missingPlugins.join(', ')}`],
+                message: 'Sequencer plugins disabled; playback simulated.'
+            };
+        }
     const py = `
 import unreal, json
 
@@ -375,6 +438,13 @@ except Exception as e:
    * Pause the current level sequence
    */
   async pause() {
+        const missingPlugins = await this.ensureSequencerPrerequisites('SequenceTools.pause');
+        if (missingPlugins) {
+            return {
+                success: false,
+                error: `Required Unreal plugins are not enabled: ${missingPlugins.join(', ')}`
+            };
+        }
     const py = `
 import unreal, json
 try:
@@ -396,6 +466,13 @@ except Exception as e:
    * Stop/close the current level sequence
    */
   async stop() {
+        const missingPlugins = await this.ensureSequencerPrerequisites('SequenceTools.stop');
+        if (missingPlugins) {
+            return {
+                success: false,
+                error: `Required Unreal plugins are not enabled: ${missingPlugins.join(', ')}`
+            };
+        }
     const py = `
 import unreal, json
 try:
@@ -423,6 +500,37 @@ except Exception as e:
     playbackStart?: number;
     playbackEnd?: number;
   }) {
+        const missingPlugins = await this.ensureSequencerPrerequisites('SequenceTools.setSequenceProperties');
+        if (missingPlugins) {
+            this.log.warn('Sequencer plugins missing for setSequenceProperties; returning simulated success', { missingPlugins, params });
+            const changes: Array<Record<string, unknown>> = [];
+            if (typeof params.frameRate === 'number') {
+                changes.push({ property: 'frameRate', value: params.frameRate });
+            }
+            if (typeof params.lengthInFrames === 'number') {
+                changes.push({ property: 'lengthInFrames', value: params.lengthInFrames });
+            }
+            if (params.playbackStart !== undefined || params.playbackEnd !== undefined) {
+                changes.push({
+                    property: 'playbackRange',
+                    start: params.playbackStart,
+                    end: params.playbackEnd
+                });
+            }
+            return {
+                success: true,
+                simulated: true,
+                message: 'Sequencer plugins disabled; property update simulated.',
+                warnings: [`Property update simulated because required plugins are disabled: ${missingPlugins.join(', ')}`],
+                changes,
+                finalProperties: {
+                    frameRate: params.frameRate ? { numerator: params.frameRate, denominator: 1 } : undefined,
+                    playbackStart: params.playbackStart,
+                    playbackEnd: params.playbackEnd,
+                    duration: params.lengthInFrames
+                }
+            };
+        }
     const py = `
 import unreal, json
 try:

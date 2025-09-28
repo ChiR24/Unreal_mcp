@@ -41,6 +41,8 @@ export class UnrealBridge {
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
   private readonly BASE_RECONNECT_DELAY = 1000;
   private autoReconnectEnabled = false; // disabled by default to prevent looping retries
+  private engineVersionCache?: { value: { version: string; major: number; minor: number; patch: number; isUE56OrAbove: boolean }; timestamp: number };
+  private readonly ENGINE_VERSION_TTL_MS = 5 * 60 * 1000;
   
   // Command queue for throttling
   private commandQueue: CommandQueueItem[] = [];
@@ -50,20 +52,54 @@ export class UnrealBridge {
   private readonly STAT_COMMAND_DELAY = 300; // Special delay for stat commands to avoid warnings
   private lastCommandTime = 0;
   private lastStatCommandTime = 0; // Track stat commands separately
-  
-  // Safe viewmodes that won't cause crashes (per docs and testing)
-  private readonly _SAFE_VIEWMODES = [
-    'Lit', 'Unlit', 'Wireframe', 'DetailLighting',
-    'LightingOnly', 'ReflectionOverride', 'ShaderComplexity'
-  ];
+
+  // Console object cache to reduce FindConsoleObject warnings
+  private consoleObjectCache = new Map<string, any>();
+  private readonly CONSOLE_CACHE_TTL = 300000; // 5 minutes TTL for cached objects
+  private pluginStatusCache = new Map<string, { enabled: boolean; timestamp: number }>();
+  private readonly PLUGIN_CACHE_TTL = 5 * 60 * 1000;
   
   // Unsafe viewmodes that can cause crashes or instability via visualizeBuffer
   private readonly UNSAFE_VIEWMODES = [
     'BaseColor', 'WorldNormal', 'Metallic', 'Specular',
-    'Roughness', 'SubsurfaceColor', 'Opacity',
+      'Roughness',
+      'SubsurfaceColor',
+      'Opacity',
     'LightComplexity', 'LightmapDensity',
     'StationaryLightOverlap', 'CollisionPawn', 'CollisionVisibility'
   ];
+  private readonly HARD_BLOCKED_VIEWMODES = new Set([
+    'BaseColor', 'WorldNormal', 'Metallic', 'Specular', 'Roughness', 'SubsurfaceColor', 'Opacity'
+  ]);
+  private readonly VIEWMODE_ALIASES = new Map<string, string>([
+    ['lit', 'Lit'],
+    ['unlit', 'Unlit'],
+    ['wireframe', 'Wireframe'],
+    ['brushwireframe', 'BrushWireframe'],
+    ['brush_wireframe', 'BrushWireframe'],
+    ['detaillighting', 'DetailLighting'],
+    ['detail_lighting', 'DetailLighting'],
+    ['lightingonly', 'LightingOnly'],
+    ['lighting_only', 'LightingOnly'],
+    ['lightonly', 'LightingOnly'],
+    ['light_only', 'LightingOnly'],
+    ['lightcomplexity', 'LightComplexity'],
+    ['light_complexity', 'LightComplexity'],
+    ['shadercomplexity', 'ShaderComplexity'],
+    ['shader_complexity', 'ShaderComplexity'],
+    ['lightmapdensity', 'LightmapDensity'],
+    ['lightmap_density', 'LightmapDensity'],
+    ['stationarylightoverlap', 'StationaryLightOverlap'],
+    ['stationary_light_overlap', 'StationaryLightOverlap'],
+    ['reflectionoverride', 'ReflectionOverride'],
+    ['reflection_override', 'ReflectionOverride'],
+    ['texeldensity', 'TexelDensity'],
+    ['texel_density', 'TexelDensity'],
+    ['vertexcolor', 'VertexColor'],
+    ['vertex_color', 'VertexColor'],
+    ['litdetail', 'DetailLighting'],
+    ['lit_only', 'LightingOnly']
+  ]);
   
   // Python script templates for EditorLevelLibrary access
   private readonly PYTHON_TEMPLATES: Record<string, PythonScriptTemplate> = {
@@ -71,27 +107,48 @@ export class UnrealBridge {
       name: 'get_all_actors',
       script: `
 import unreal
+import json
+
 # Use EditorActorSubsystem instead of deprecated EditorLevelLibrary
-subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-actors = subsys.get_all_level_actors()
-result = [{'name': a.get_name(), 'class': a.get_class().get_name(), 'path': a.get_path_name()} for a in actors]
-print(f"RESULT:{result}")
+try:
+   subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+   if subsys:
+       actors = subsys.get_all_level_actors()
+       result = [{'name': a.get_name(), 'class': a.get_class().get_name(), 'path': a.get_path_name()} for a in actors]
+       print(f"RESULT:{json.dumps(result)}")
+   else:
+       print("RESULT:[]")
+except Exception as e:
+   print(f"RESULT:{json.dumps({'error': str(e)})}")
       `.trim()
     },
     SPAWN_ACTOR_AT_LOCATION: {
       name: 'spawn_actor',
       script: `
 import unreal
+import json
+
 location = unreal.Vector({x}, {y}, {z})
 rotation = unreal.Rotator({pitch}, {yaw}, {roll})
-actor_class = unreal.EditorAssetLibrary.load_asset("{class_path}")
-if actor_class:
-    # Use EditorActorSubsystem instead of deprecated EditorLevelLibrary
-    subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    spawned = subsys.spawn_actor_from_object(actor_class, location, rotation)
-    print(f"RESULT:{{'success': True, 'actor': spawned.get_name()}}")
-else:
-    print(f"RESULT:{{'success': False, 'error': 'Failed to load actor class'}}")
+
+try:
+   # Use EditorActorSubsystem instead of deprecated EditorLevelLibrary
+   subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+   if subsys:
+       # Try to load asset class
+       actor_class = unreal.EditorAssetLibrary.load_asset("{class_path}")
+       if actor_class:
+           spawned = subsys.spawn_actor_from_object(actor_class, location, rotation)
+           if spawned:
+               print(f"RESULT:{json.dumps({'success': True, 'actor': spawned.get_name(), 'location': [{x}, {y}, {z}]}})}")
+           else:
+               print(f"RESULT:{json.dumps({'success': False, 'error': 'Failed to spawn actor'})}")
+       else:
+           print(f"RESULT:{json.dumps({'success': False, 'error': 'Failed to load actor class: {class_path}'})}")
+   else:
+       print(f"RESULT:{json.dumps({'success': False, 'error': 'EditorActorSubsystem not available'})}")
+except Exception as e:
+   print(f"RESULT:{json.dumps({'success': False, 'error': str(e)})}")
       `.trim()
     },
     DELETE_ACTOR: {
@@ -99,80 +156,166 @@ else:
       script: `
 import unreal
 import json
-subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-actors = subsys.get_all_level_actors()
-found = False
-for actor in actors:
-    if not actor:
-        continue
-    label = actor.get_actor_label()
-    name = actor.get_name()
-    if label == "{actor_name}" or name == "{actor_name}" or label.lower().startswith("{actor_name}".lower()+"_"):
-        subsys.destroy_actor(actor)
-        print("RESULT:" + json.dumps({'success': True, 'deleted': label}))
-        found = True
-        break
-if not found:
-    print("RESULT:" + json.dumps({'success': False, 'error': 'Actor not found'}))
+
+try:
+   subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+   if subsys:
+       actors = subsys.get_all_level_actors()
+       found = False
+       for actor in actors:
+           if not actor:
+               continue
+           label = actor.get_actor_label()
+           name = actor.get_name()
+           if label == "{actor_name}" or name == "{actor_name}" or label.lower().startswith("{actor_name}".lower()+"_"):
+               success = subsys.destroy_actor(actor)
+               print(f"RESULT:{json.dumps({'success': success, 'deleted': label})}")
+               found = True
+               break
+       if not found:
+           print(f"RESULT:{json.dumps({'success': False, 'error': 'Actor not found: {actor_name}'})}")
+   else:
+       print(f"RESULT:{json.dumps({'success': False, 'error': 'EditorActorSubsystem not available'})}")
+except Exception as e:
+   print(f"RESULT:{json.dumps({'success': False, 'error': str(e)})}")
       `.trim()
     },
     CREATE_ASSET: {
       name: 'create_asset',
       script: `
 import unreal
-asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-factory = unreal.{factory_class}()
-asset = asset_tools.create_asset("{asset_name}", "{package_path}", {asset_class}, factory)
-if asset:
-    unreal.EditorAssetLibrary.save_asset(asset.get_path_name())
-    print(f"RESULT:{{'success': True, 'path': asset.get_path_name()}}")
-else:
-    print(f"RESULT:{{'success': False, 'error': 'Failed to create asset'}}")
+import json
+
+try:
+   asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+   if asset_tools:
+       # Create factory based on asset type
+       factory_class = getattr(unreal, '{factory_class}', None)
+       asset_class = getattr(unreal, '{asset_class}', None)
+
+       if factory_class and asset_class:
+           factory = factory_class()
+           # Clean up the path - remove trailing slashes and normalize
+           package_path = "{package_path}".rstrip('/').replace('//', '/')
+
+           # Ensure package path is valid (starts with /Game or /Engine)
+           if not package_path.startswith('/Game') and not package_path.startswith('/Engine'):
+               if not package_path.startswith('/'):
+                   package_path = f"/Game/{package_path}"
+               else:
+                   package_path = f"/Game{package_path}"
+
+           # Create full asset path for verification
+           full_asset_path = f"{package_path}/{asset_name}" if package_path != "/Game" else f"/Game/{asset_name}"
+
+           # Create the asset with cleaned path
+           asset = asset_tools.create_asset("{asset_name}", package_path, asset_class, factory)
+           if asset:
+               # Save the asset
+               saved = unreal.EditorAssetLibrary.save_asset(asset.get_path_name())
+               # Enhanced verification with retry logic
+                asset_path = asset.get_path_name()
+                verification_attempts = 0
+                max_verification_attempts = 5
+                asset_verified = False
+
+                while verification_attempts < max_verification_attempts and not asset_verified:
+                    verification_attempts += 1
+                    # Wait a bit for the asset to be fully saved
+                    import time
+                    time.sleep(0.1)
+
+                    # Check if asset exists
+                    asset_exists = unreal.EditorAssetLibrary.does_asset_exist(asset_path)
+
+                    if asset_exists:
+                        asset_verified = True
+                    elif verification_attempts < max_verification_attempts:
+                        # Try to reload the asset registry
+                        try:
+                            unreal.AssetRegistryHelpers.get_asset_registry().scan_modified_asset_files([asset_path])
+                        except:
+                            pass
+
+                if asset_verified:
+                    print(f"RESULT:{json.dumps({'success': saved, 'path': asset_path, 'verified': True})}")
+                else:
+                    print(f"RESULT:{json.dumps({'success': saved, 'path': asset_path, 'warning': 'Asset created but verification pending'})}")
+           else:
+               print(f"RESULT:{json.dumps({'success': False, 'error': 'Failed to create asset'})}")
+       else:
+           print(f"RESULT:{json.dumps({'success': False, 'error': 'Invalid factory or asset class'})}")
+   else:
+       print(f"RESULT:{json.dumps({'success': False, 'error': 'AssetToolsHelpers not available'})}")
+except Exception as e:
+   print(f"RESULT:{json.dumps({'success': False, 'error': str(e)})}")
       `.trim()
     },
     SET_VIEWPORT_CAMERA: {
       name: 'set_viewport_camera',
       script: `
 import unreal
+import json
+
 location = unreal.Vector({x}, {y}, {z})
 rotation = unreal.Rotator({pitch}, {yaw}, {roll})
-# Use UnrealEditorSubsystem for viewport operations (UE5.1+)
-ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-if ues:
-    ues.set_level_viewport_camera_info(location, rotation)
-    try:
-        if les:
-            les.editor_invalidate_viewports()
-    except Exception:
-        pass
-    print(f"RESULT:{{'success': True, 'location': [{x}, {y}, {z}], 'rotation': [{pitch}, {yaw}, {roll}]}}")
-else:
-    print(f"RESULT:{{'success': False, 'error': 'UnrealEditorSubsystem not available'}}")
+
+try:
+   # Use UnrealEditorSubsystem for viewport operations (UE5.1+)
+   ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+   les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+
+   if ues:
+       ues.set_level_viewport_camera_info(location, rotation)
+       try:
+           if les:
+               les.editor_invalidate_viewports()
+       except Exception:
+           pass
+       print(f"RESULT:{json.dumps({'success': True, 'location': [{x}, {y}, {z}], 'rotation': [{pitch}, {yaw}, {roll}]}})}")
+   else:
+       print(f"RESULT:{json.dumps({'success': False, 'error': 'UnrealEditorSubsystem not available'})}")
+except Exception as e:
+   print(f"RESULT:{json.dumps({'success': False, 'error': str(e)})}")
       `.trim()
     },
     BUILD_LIGHTING: {
       name: 'build_lighting',
       script: `
 import unreal
+import json
+
 try:
-    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-    if les:
-        q = unreal.LightingBuildQuality.{quality}
-        les.build_light_maps(q, True)
-        print(f"RESULT:{{'success': True, 'quality': '{quality}', 'method': 'LevelEditorSubsystem'}}")
-    else:
-        print(f"RESULT:{{'success': False, 'error': 'LevelEditorSubsystem not available'}}")
+   les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+   if les:
+       # Use UE 5.6 enhanced lighting quality settings
+       quality_map = {
+           'Preview': unreal.LightingBuildQuality.PREVIEW,
+           'Medium': unreal.LightingBuildQuality.MEDIUM,
+           'High': unreal.LightingBuildQuality.HIGH,
+           'Production': unreal.LightingBuildQuality.PRODUCTION
+       }
+       q = quality_map.get('{quality}', unreal.LightingBuildQuality.PREVIEW)
+       les.build_light_maps(q, True)
+       print(f"RESULT:{json.dumps({'success': True, 'quality': '{quality}', 'method': 'LevelEditorSubsystem'})}")
+   else:
+       print(f"RESULT:{json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'})}")
 except Exception as e:
-    print(f"RESULT:{{'success': False, 'error': str(e)}}")
+   print(f"RESULT:{json.dumps({'success': False, 'error': str(e)})}")
       `.trim()
     },
     SAVE_ALL_DIRTY_PACKAGES: {
       name: 'save_dirty_packages',
       script: `
 import unreal
-saved = unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
-print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
+import json
+
+try:
+   # Use UE 5.6 enhanced saving with better error handling
+   saved = unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+   print(f"RESULT:{json.dumps({'success': bool(saved), 'saved_count': saved if isinstance(saved, int) else 0, 'message': 'All dirty packages saved'})}")
+except Exception as e:
+   print(f"RESULT:{json.dumps({'success': False, 'error': str(e), 'message': 'Failed to save dirty packages'})}")
       `.trim()
     }
   };
@@ -357,16 +500,68 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
     const started = Date.now();
     
     // Fix Content-Length header issue - ensure body is properly handled
-    if (body === undefined || body === null) {
-      body = method === 'GET' ? undefined : {};
+    let payload = body;
+    if ((payload === undefined || payload === null) && method !== 'GET') {
+      payload = {};
     }
     
-    // Add timeout wrapper to prevent hanging
-    const CALL_TIMEOUT = 10000; // 10 seconds timeout
+    // Add timeout wrapper to prevent hanging - adjust based on operation type
+    let CALL_TIMEOUT = 10000; // Default 10 seconds timeout
+    const longRunningTimeout = 10 * 60 * 1000; // 10 minutes for heavy editor jobs
+
+    // Use payload contents to detect long-running editor operations
+    let payloadSignature = '';
+    if (typeof payload === 'string') {
+      payloadSignature = payload;
+    } else if (payload && typeof payload === 'object') {
+      try {
+        payloadSignature = JSON.stringify(payload);
+      } catch {
+        payloadSignature = '';
+      }
+    }
+
+    // Allow explicit override via meta property when provided
+    let sanitizedPayload = payload;
+    if (payload && typeof payload === 'object' && '__callTimeoutMs' in payload) {
+      const overrideRaw = (payload as any).__callTimeoutMs;
+      const overrideMs = typeof overrideRaw === 'number'
+        ? overrideRaw
+        : Number.parseInt(String(overrideRaw), 10);
+      if (Number.isFinite(overrideMs) && overrideMs > 0) {
+        CALL_TIMEOUT = Math.max(CALL_TIMEOUT, overrideMs);
+      }
+      sanitizedPayload = { ...(payload as any) };
+      delete (sanitizedPayload as any).__callTimeoutMs;
+    }
+
+    // For heavy operations, use longer timeout based on URL or payload signature
+    if (url.includes('build') || url.includes('create') || url.includes('asset')) {
+      CALL_TIMEOUT = Math.max(CALL_TIMEOUT, 30000); // 30 seconds for heavy operations
+    }
+    if (url.includes('light') || url.includes('BuildLighting')) {
+      CALL_TIMEOUT = Math.max(CALL_TIMEOUT, 60000); // Base 60 seconds for lighting builds
+    }
+
+    if (payloadSignature) {
+      const longRunningPatterns = [
+        /build_light_maps/i,
+        /lightingbuildquality/i,
+        /editorbuildlibrary/i,
+        /buildlighting/i,
+        /"command"\s*:\s*"buildlighting/i
+      ];
+      if (longRunningPatterns.some(pattern => pattern.test(payloadSignature))) {
+        if (CALL_TIMEOUT < longRunningTimeout) {
+          this.log.debug(`Detected long-running lighting operation, extending HTTP timeout to ${longRunningTimeout}ms`);
+        }
+        CALL_TIMEOUT = Math.max(CALL_TIMEOUT, longRunningTimeout);
+      }
+    }
     
     // CRITICAL: Intercept and block dangerous console commands at HTTP level
-    if (url === '/remote/object/call' && body?.functionName === 'ExecuteConsoleCommand') {
-      const command = body?.parameters?.Command;
+    if (url === '/remote/object/call' && (payload as any)?.functionName === 'ExecuteConsoleCommand') {
+      const command = (payload as any)?.parameters?.Command;
       if (command && typeof command === 'string') {
         const cmdLower = command.trim().toLowerCase();
         
@@ -411,23 +606,37 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
       try {
         // For GET requests, send payload as query parameters (not in body)
         const config: any = { url, method, timeout: CALL_TIMEOUT };
-        if (method === 'GET' && body && typeof body === 'object') {
-          config.params = body;
-        } else if (body !== undefined) {
-          config.data = body;
+        if (method === 'GET' && sanitizedPayload && typeof sanitizedPayload === 'object') {
+          config.params = sanitizedPayload;
+        } else if (sanitizedPayload !== undefined) {
+          config.data = sanitizedPayload;
         }
-        
+
         // Wrap with timeout promise to ensure we don't hang
-        const requestPromise = this.http.request<T>(config);
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            reject(new Error(`Request timeout after ${CALL_TIMEOUT}ms`));
+  const requestPromise = this.http.request<T>(config);
+  const resp = await new Promise<Awaited<typeof requestPromise>>((resolve, reject) => {
+          const timer = setTimeout(() => {
+            const err = new Error(`Request timeout after ${CALL_TIMEOUT}ms`);
+            (err as any).code = 'UE_HTTP_TIMEOUT';
+            reject(err);
           }, CALL_TIMEOUT);
+          requestPromise.then(result => {
+            clearTimeout(timer);
+            resolve(result);
+          }).catch(err => {
+            clearTimeout(timer);
+            reject(err);
+          });
         });
-        
-        const resp = await Promise.race([requestPromise, timeoutPromise]);
         const ms = Date.now() - started;
-        this.log.debug(`[HTTP ${method}] ${url} -> ${ms}ms`);
+
+        // Add connection health check for long-running requests
+        if (ms > 5000) {
+          this.log.debug(`[HTTP ${method}] ${url} -> ${ms}ms (long request)`);
+        } else {
+          this.log.debug(`[HTTP ${method}] ${url} -> ${ms}ms`);
+        }
+
         return resp.data;
       } catch (error: any) {
         lastError = error;
@@ -455,6 +664,159 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
     throw lastError;
   }
 
+  private parsePythonJsonResult<T = any>(raw: any): T | null {
+    if (!raw) {
+      return null;
+    }
+
+    const fragments: string[] = [];
+
+    if (typeof raw === 'string') {
+      fragments.push(raw);
+    }
+
+    if (typeof raw?.Output === 'string') {
+      fragments.push(raw.Output);
+    }
+
+    if (typeof raw?.ReturnValue === 'string') {
+      fragments.push(raw.ReturnValue);
+    }
+
+    if (Array.isArray(raw?.LogOutput)) {
+      for (const entry of raw.LogOutput) {
+        if (!entry) continue;
+        if (typeof entry === 'string') {
+          fragments.push(entry);
+        } else if (typeof entry?.Output === 'string') {
+          fragments.push(entry.Output);
+        }
+      }
+    }
+
+    const combined = fragments.join('\n');
+    const match = combined.match(/RESULT:(\{.*\}|\[.*\])/s);
+    if (!match) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(match[1]);
+    } catch {
+      return null;
+    }
+  }
+
+  async ensurePluginsEnabled(pluginNames: string[], context?: string): Promise<string[]> {
+    if (!pluginNames || pluginNames.length === 0) {
+      return [];
+    }
+
+    const now = Date.now();
+    const pluginsToCheck = pluginNames.filter((name) => {
+      const cached = this.pluginStatusCache.get(name);
+      if (!cached) return true;
+      if (now - cached.timestamp > this.PLUGIN_CACHE_TTL) {
+        this.pluginStatusCache.delete(name);
+        return true;
+      }
+      return false;
+    });
+
+    if (pluginsToCheck.length > 0) {
+    const python = `
+import unreal
+import json
+
+plugins = ${JSON.stringify(pluginsToCheck)}
+status = {}
+
+def get_plugin_manager():
+  try:
+    return unreal.PluginManager.get()
+  except AttributeError:
+    return None
+  except Exception:
+    return None
+
+def get_plugins_subsystem():
+  try:
+    return unreal.get_editor_subsystem(unreal.PluginsEditorSubsystem)
+  except AttributeError:
+    pass
+  except Exception:
+    pass
+  try:
+    return unreal.PluginsSubsystem()
+  except Exception:
+    return None
+
+pm = get_plugin_manager()
+ps = get_plugins_subsystem()
+
+def is_enabled(plugin_name):
+  if pm:
+    try:
+      if pm.is_plugin_enabled(plugin_name):
+        return True
+    except Exception:
+      try:
+        plugin = pm.find_plugin(plugin_name)
+        if plugin and plugin.is_enabled():
+          return True
+      except Exception:
+        pass
+  if ps:
+    try:
+      return bool(ps.is_plugin_enabled(plugin_name))
+    except Exception:
+      try:
+        plugin = ps.find_plugin(plugin_name)
+        if plugin and plugin.is_enabled():
+          return True
+      except Exception:
+        pass
+  return False
+
+for plugin_name in plugins:
+  enabled = False
+  try:
+    enabled = is_enabled(plugin_name)
+  except Exception:
+    enabled = False
+  status[plugin_name] = bool(enabled)
+
+print('RESULT:' + json.dumps(status))
+`.trim();
+
+      try {
+        const response = await this.executePython(python);
+        const parsed = this.parsePythonJsonResult<Record<string, boolean>>(response);
+        if (parsed) {
+          for (const [name, enabled] of Object.entries(parsed)) {
+            this.pluginStatusCache.set(name, { enabled: Boolean(enabled), timestamp: now });
+          }
+        } else {
+          this.log.warn('Failed to parse plugin status response', { context, pluginsToCheck });
+        }
+      } catch (error) {
+        this.log.warn('Plugin status check failed', { context, pluginsToCheck, error: (error as Error)?.message ?? error });
+      }
+    }
+
+    for (const name of pluginNames) {
+      if (!this.pluginStatusCache.has(name)) {
+        this.pluginStatusCache.set(name, { enabled: false, timestamp: now });
+      }
+    }
+
+    const missing = pluginNames.filter((name) => !this.pluginStatusCache.get(name)?.enabled);
+    if (missing.length && context) {
+      this.log.warn(`Missing required Unreal plugins for ${context}: ${missing.join(', ')}`);
+    }
+    return missing;
+  }
+
   // Generic function call via Remote Control HTTP API
   async call(body: RcCallBody): Promise<any> {
     if (!this.connected) throw new Error('Not connected to Unreal Engine');
@@ -472,10 +834,11 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
   }
 
   // Execute a console command safely with validation and throttling
-  async executeConsoleCommand(command: string): Promise<any> {
+  async executeConsoleCommand(command: string, options: { allowPython?: boolean } = {}): Promise<any> {
     if (!this.connected) {
       throw new Error('Not connected to Unreal Engine');
     }
+    const { allowPython = false } = options;
     // Validate command is not empty
     if (!command || typeof command !== 'string') {
       throw new Error('Invalid command: must be a non-empty string');
@@ -485,6 +848,16 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
     if (cmdTrimmed.length === 0) {
       // Return success for empty commands to match UE behavior
       return { success: true, message: 'Empty command ignored' };
+    }
+
+    if (cmdTrimmed.includes('\n') || cmdTrimmed.includes('\r')) {
+      throw new Error('Multi-line console commands are not allowed. Send one command per call.');
+    }
+
+    const cmdLower = cmdTrimmed.toLowerCase();
+
+    if (!allowPython && (cmdLower === 'py' || cmdLower.startsWith('py '))) {
+      throw new Error('Python console commands are blocked from external calls for safety.');
     }
     
     // Check for dangerous commands
@@ -496,10 +869,24 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
       'buildpaths', // Can cause access violation if nav system not initialized
       'rebuildnavigation' // Can also crash without proper nav setup
     ];
-    
-    const cmdLower = cmdTrimmed.toLowerCase();
     if (dangerousCommands.some(dangerous => cmdLower.includes(dangerous))) {
       throw new Error(`Dangerous command blocked: ${command}`);
+    }
+
+    const forbiddenTokens = [
+      'rm ', 'rm-', 'del ', 'format ', 'shutdown', 'reboot',
+      'rmdir', 'mklink', 'copy ', 'move ', 'start "', 'system(',
+      'import os', 'import subprocess', 'subprocess.', 'os.system',
+      'exec(', 'eval(', '__import__', 'import sys', 'import importlib',
+      'with open', 'open('
+    ];
+
+    if (cmdLower.includes('&&') || cmdLower.includes('||')) {
+      throw new Error('Command chaining with && or || is blocked for safety.');
+    }
+
+    if (forbiddenTokens.some(token => cmdLower.includes(token))) {
+      throw new Error(`Command contains unsafe token and was blocked: ${command}`);
     }
     
     // Determine priority based on command type
@@ -547,6 +934,82 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
     }
   }
 
+  summarizeConsoleCommand(command: string, response: any) {
+    const trimmedCommand = command.trim();
+    const logLines = Array.isArray(response?.LogOutput)
+      ? (response.LogOutput as any[]).map(entry => {
+          if (entry === null || entry === undefined) {
+            return '';
+          }
+          if (typeof entry === 'string') {
+            return entry;
+          }
+          return typeof entry.Output === 'string' ? entry.Output : '';
+        }).filter(Boolean)
+      : [];
+
+    let output = logLines.join('\n').trim();
+    if (!output) {
+      if (typeof response === 'string') {
+        output = response.trim();
+      } else if (response && typeof response === 'object') {
+        if (typeof response.Output === 'string') {
+          output = response.Output.trim();
+        } else if ('result' in response && response.result !== undefined) {
+          output = String(response.result).trim();
+        } else if ('ReturnValue' in response && typeof response.ReturnValue === 'string') {
+          output = response.ReturnValue.trim();
+        }
+      }
+    }
+
+    const returnValue = response && typeof response === 'object' && 'ReturnValue' in response
+      ? (response as any).ReturnValue
+      : undefined;
+
+    return {
+      command: trimmedCommand,
+      output,
+      logLines,
+      returnValue,
+      raw: response
+    };
+  }
+
+  async executeConsoleCommands(
+    commands: Iterable<string | { command: string; priority?: number; allowPython?: boolean }>,
+    options: { continueOnError?: boolean; delayMs?: number } = {}
+  ): Promise<any[]> {
+    const { continueOnError = false, delayMs = 0 } = options;
+    const results: any[] = [];
+
+    for (const rawCommand of commands) {
+      const descriptor = typeof rawCommand === 'string' ? { command: rawCommand } : rawCommand;
+      const command = descriptor.command?.trim();
+      if (!command) {
+        continue;
+      }
+      try {
+        const result = await this.executeConsoleCommand(command, {
+          allowPython: Boolean(descriptor.allowPython)
+        });
+        results.push(result);
+      } catch (error) {
+        if (!continueOnError) {
+          throw error;
+        }
+        this.log.warn(`Console batch command failed: ${command}`, error);
+        results.push(error);
+      }
+
+      if (delayMs > 0) {
+        await this.delay(delayMs);
+      }
+    }
+
+    return results;
+  }
+
   // Try to execute a Python command via the PythonScriptPlugin, fallback to `py` console command.
   async executePython(command: string): Promise<any> {
     if (!this.connected) {
@@ -582,7 +1045,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
         
         // For simple single-line commands
         if (!isMultiLine) {
-          return await this.executeConsoleCommand(`py ${command}`);
+          return await this.executeConsoleCommand(`py ${command}`, { allowPython: true });
         }
         
         // For multi-line scripts, try to execute as a block
@@ -594,7 +1057,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
             .replace(/"/g, '\\"')
             .replace(/\n/g, '\\n')
             .replace(/\r/g, '');
-          return await this.executeConsoleCommand(`py exec("${escapedScript}")`);
+          return await this.executeConsoleCommand(`py exec("${escapedScript}")`, { allowPython: true });
         } catch {
           // If that fails, break into smaller chunks
           try {
@@ -616,9 +1079,9 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
               if (stmt.length > 200) {
                 // Try to execute as a single exec block
                 const miniScript = `exec("""${stmt.replace(/"/g, '\\"')}""")`;
-                result = await this.executeConsoleCommand(`py ${miniScript}`);
+                result = await this.executeConsoleCommand(`py ${miniScript}`, { allowPython: true });
               } else {
-                result = await this.executeConsoleCommand(`py ${stmt}`);
+                result = await this.executeConsoleCommand(`py ${stmt}`, { allowPython: true });
               }
               // Small delay between commands
               await new Promise(resolve => setTimeout(resolve, 30));
@@ -635,7 +1098,7 @@ print(f"RESULT:{{'success': {saved}, 'message': 'All dirty packages saved'}}")
               if (line.trim().startsWith('#')) {
                 continue;
               }
-              result = await this.executeConsoleCommand(`py ${line.trim()}`);
+              result = await this.executeConsoleCommand(`py ${line.trim()}`, { allowPython: true });
               // Small delay between commands to ensure execution order
               await new Promise(resolve => setTimeout(resolve, 50));
             }
@@ -834,6 +1297,11 @@ finally:
    * Get the Unreal Engine version via Python and parse major/minor/patch.
    */
   async getEngineVersion(): Promise<{ version: string; major: number; minor: number; patch: number; isUE56OrAbove: boolean; }> {
+    const now = Date.now();
+    if (this.engineVersionCache && now - this.engineVersionCache.timestamp < this.ENGINE_VERSION_TTL_MS) {
+      return this.engineVersionCache.value;
+    }
+
     try {
       const script = `
 import unreal, json, re
@@ -850,10 +1318,14 @@ print('RESULT:' + json.dumps({'version': ver, 'major': major, 'minor': minor, 'p
       const minor = Number(result?.minor ?? 0) || 0;
       const patch = Number(result?.patch ?? 0) || 0;
       const isUE56OrAbove = major > 5 || (major === 5 && minor >= 6);
-      return { version, major, minor, patch, isUE56OrAbove };
+      const value = { version, major, minor, patch, isUE56OrAbove };
+      this.engineVersionCache = { value, timestamp: now };
+      return value;
     } catch (error) {
       this.log.warn('Failed to get engine version via Python', error);
-      return { version: 'unknown', major: 0, minor: 0, patch: 0, isUE56OrAbove: false };
+      const fallback = { version: 'unknown', major: 0, minor: 0, patch: 0, isUE56OrAbove: false };
+      this.engineVersionCache = { value: fallback, timestamp: now };
+      return fallback;
     }
   }
 
@@ -928,45 +1400,71 @@ print('RESULT:' + json.dumps(flags))
    * Prevent crashes by validating and safely switching viewmodes
    */
   async setSafeViewMode(mode: string): Promise<any> {
-    const normalizedMode = mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase();
-    
-    // Check if the viewmode is known to be unsafe
-    if (this.UNSAFE_VIEWMODES.includes(normalizedMode)) {
-      this.log.warn(`Viewmode '${normalizedMode}' is known to cause crashes. Using safe alternative.`);
-      
-      // For visualizeBuffer modes, we need special handling
-      if (normalizedMode === 'BaseColor' || normalizedMode === 'WorldNormal') {
-        // First ensure we're in a safe state
-        await this.executeConsoleCommand('viewmode Lit');
-        await this.delay(100);
-        
-        // Try to use a safer alternative or skip
-        this.log.info(`Skipping unsafe visualizeBuffer mode: ${normalizedMode}`);
-        return {
-          success: false,
-          message: `Viewmode ${normalizedMode} skipped for safety`,
-          alternative: 'Lit'
-        };
-      }
-      
-      // For other unsafe modes, switch to safe alternatives
-      const safeAlternative = this.getSafeAlternative(normalizedMode);
-      return this.executeConsoleCommand(`viewmode ${safeAlternative}`);
+    const acceptedModes = Array.from(new Set(this.VIEWMODE_ALIASES.values())).sort();
+
+    if (typeof mode !== 'string') {
+      return {
+        success: false,
+        error: 'View mode must be provided as a string',
+        acceptedModes
+      };
     }
-    
-    // Safe mode - execute with delay
-    return this.executeThrottledCommand(() => 
-      this.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          WorldContextObject: null,
-          Command: `viewmode ${normalizedMode}`,
-          SpecificPlayer: null
-        },
-        generateTransaction: false
-      })
-    );
+
+    const key = mode.trim().toLowerCase().replace(/[\s_-]+/g, '');
+    if (!key) {
+      return {
+        success: false,
+        error: 'View mode cannot be empty',
+        acceptedModes
+      };
+    }
+
+    const targetMode = this.VIEWMODE_ALIASES.get(key);
+    if (!targetMode) {
+      return {
+        success: false,
+        error: `Unknown view mode '${mode}'`,
+        acceptedModes
+      };
+    }
+
+    if (this.HARD_BLOCKED_VIEWMODES.has(targetMode)) {
+      this.log.warn(`Viewmode '${targetMode}' is blocked for safety. Using alternative.`);
+      const alternative = this.getSafeAlternative(targetMode);
+      const altCommand = `viewmode ${alternative}`;
+      const altResult = await this.executeConsoleCommand(altCommand);
+      const altSummary = this.summarizeConsoleCommand(altCommand, altResult);
+      return {
+        ...altSummary,
+        success: false,
+        requestedMode: targetMode,
+        viewMode: alternative,
+        message: `View mode '${targetMode}' is unsafe in remote sessions. Switched to '${alternative}'.`,
+        alternative
+      };
+    }
+
+    const command = `viewmode ${targetMode}`;
+    const rawResult = await this.executeConsoleCommand(command);
+    const summary = this.summarizeConsoleCommand(command, rawResult);
+    const response: any = {
+      ...summary,
+      success: summary.returnValue !== false,
+      requestedMode: targetMode,
+      viewMode: targetMode,
+      message: `View mode set to ${targetMode}`
+    };
+
+    if (this.UNSAFE_VIEWMODES.includes(targetMode)) {
+      response.warning = `View mode '${targetMode}' may be unstable on some engine versions.`;
+    }
+
+    if (summary.output && /unknown|invalid/i.test(summary.output)) {
+      response.success = false;
+      response.error = summary.output;
+    }
+
+    return response;
   }
 
   /**
@@ -979,6 +1477,8 @@ print('RESULT:' + json.dumps(flags))
       'Metallic': 'Lit',
       'Specular': 'Lit',
       'Roughness': 'Lit',
+      'SubsurfaceColor': 'Lit',
+      'Opacity': 'Lit',
       'LightComplexity': 'LightingOnly',
       'ShaderComplexity': 'Wireframe',
       'CollisionPawn': 'Wireframe',
@@ -1097,7 +1597,10 @@ print('RESULT:' + json.dumps(flags))
     }
     // Priority 7,9-10: Light operations (console commands, queries)
     else {
-      return this.MIN_COMMAND_DELAY;
+      // For light operations, add some jitter to prevent thundering herd
+      const baseDelay = this.MIN_COMMAND_DELAY;
+      const jitter = Math.random() * 50; // Add up to 50ms random jitter
+      return baseDelay + jitter;
     }
   }
 
@@ -1144,6 +1647,28 @@ print('RESULT:' + json.dumps(flags))
         this.processCommandQueue();
       }
     }, 1000);
+
+    // Clean console cache every 5 minutes
+    setInterval(() => {
+      this.cleanConsoleCache();
+    }, this.CONSOLE_CACHE_TTL);
+  }
+
+  /**
+   * Clean expired entries from console object cache
+   */
+  private cleanConsoleCache(): void {
+    const now = Date.now();
+    let cleaned = 0;
+    for (const [key, value] of this.consoleObjectCache.entries()) {
+      if (now - (value.timestamp || 0) > this.CONSOLE_CACHE_TTL) {
+        this.consoleObjectCache.delete(key);
+        cleaned++;
+      }
+    }
+    if (cleaned > 0) {
+      this.log.debug(`Cleaned ${cleaned} expired console cache entries`);
+    }
   }
 
   /**
@@ -1157,14 +1682,7 @@ print('RESULT:' + json.dumps(flags))
    * Batch command execution with proper delays
    */
   async executeBatch(commands: Array<{ command: string; priority?: number }>): Promise<any[]> {
-    const results: any[] = [];
-    
-    for (const cmd of commands) {
-      const result = await this.executeConsoleCommand(cmd.command);
-      results.push(result);
-    }
-    
-    return results;
+    return this.executeConsoleCommands(commands.map(cmd => cmd.command));
   }
 
   /**

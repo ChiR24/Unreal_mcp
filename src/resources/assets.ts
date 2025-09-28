@@ -1,4 +1,5 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { coerceBoolean, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
 
 export class AssetResources {
   constructor(private bridge: UnrealBridge) {}
@@ -177,54 +178,51 @@ except Exception as e:
 `.trim();
 
       const resp = await this.bridge.executePython(py);
-      let output = '';
-      if (resp?.LogOutput && Array.isArray(resp.LogOutput)) {
-        output = resp.LogOutput.map((l: any) => l.Output || '').join('');
-      } else if (typeof resp === 'string') {
-        output = resp;
-      } else {
-        output = JSON.stringify(resp);
-      }
-      
-      const m = output.match(/RESULT:({.*})/);
-      if (m) {
-        try {
-          const parsed = JSON.parse(m[1]);
-          if (parsed.success) {
-            // Map folders and assets to a clear response
-            const foldersArr = Array.isArray(parsed.folders_list) ? parsed.folders_list.map((f: any) => ({
-              Name: f.n,
-              Path: f.p,
+      const interpreted = interpretStandardResult(resp, {
+        successMessage: 'Directory contents retrieved',
+        failureMessage: 'Failed to list directory contents'
+      });
+
+      if (interpreted.success) {
+        const payload = interpreted.payload as Record<string, unknown>;
+
+        const foldersArr = Array.isArray(payload.folders_list)
+          ? payload.folders_list.map((f: any) => ({
+              Name: coerceString(f?.n) ?? '',
+              Path: coerceString(f?.p) ?? '',
               Class: 'Folder',
               isFolder: true
-            })) : [];
+            }))
+          : [];
 
-            const assetsArr = Array.isArray(parsed.assets) ? parsed.assets.map((a: any) => ({
-              Name: a.n,
-              Path: a.p,
-              Class: a.c || 'Asset',
+        const assetsArr = Array.isArray(payload.assets)
+          ? payload.assets.map((a: any) => ({
+              Name: coerceString(a?.n) ?? '',
+              Path: coerceString(a?.p) ?? '',
+              Class: coerceString(a?.c) ?? 'Asset',
               isFolder: false
-            })) : [];
+            }))
+          : [];
 
-            const total = foldersArr.length + assetsArr.length;
-            const summary = {
-              total,
-              folders: foldersArr.length,
-              assets: assetsArr.length
-            };
+        const total = foldersArr.length + assetsArr.length;
+        const summary = {
+          total,
+          folders: foldersArr.length,
+          assets: assetsArr.length
+        };
 
-            return {
-              success: true,
-              path: parsed.path || this.normalizeDir(dir),
-              summary,
-              foldersList: foldersArr,
-              assets: assetsArr,
-              count: total,
-              note: `Immediate children of ${parsed.path || this.normalizeDir(dir)}: ${foldersArr.length} folder(s), ${assetsArr.length} asset(s)`,
-              method: 'asset_registry_listing'
-            };
-          }
-        } catch {}
+        const resolvedPath = coerceString(payload.path) ?? this.normalizeDir(dir);
+
+        return {
+          success: true,
+          path: resolvedPath,
+          summary,
+          foldersList: foldersArr,
+          assets: assetsArr,
+          count: total,
+          note: `Immediate children of ${resolvedPath}: ${foldersArr.length} folder(s), ${assetsArr.length} asset(s)`,
+          method: 'asset_registry_listing'
+        };
       }
     } catch (err: any) {
       console.warn('Engine asset listing failed:', err.message);
@@ -260,16 +258,15 @@ except Exception as e:
     print("RESULT:{'success': False, 'error': '" + str(e) + "'}")
 `.trim();
     const resp = await this.bridge.executePython(py);
-    let output = '';
-    if (resp?.LogOutput && Array.isArray(resp.LogOutput)) output = resp.LogOutput.map((l: any) => l.Output || '').join('');
-    else if (typeof resp === 'string') output = resp; else output = JSON.stringify(resp);
-    const m = output.match(/RESULT:({.*})/);
-    if (m) {
-      try {
-        const parsed = JSON.parse(m[1].replace(/'/g, '"'));
-        if (parsed.success) return !!parsed.exists;
-      } catch {}
+    const interpreted = interpretStandardResult(resp, {
+      successMessage: 'Asset existence verified',
+      failureMessage: 'Failed to verify asset existence'
+    });
+
+    if (interpreted.success) {
+      return coerceBoolean(interpreted.payload.exists, false) ?? false;
     }
+
     return false;
   }
 }

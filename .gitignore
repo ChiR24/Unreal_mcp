@@ -5,7 +5,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # Build outputs
-src/tests
 dist/
 build/
 *.js.map
@@ -27,20 +26,14 @@ Warp.md
 *~
 .DS_Store
 
-# Test files
+# Test artifacts
 test*.js
 test*.json
 *.test.js
 *.spec.js
 coverage/
 .nyc_output/
-
-# Temporary files
-*.tmp
-*.temp
-*.log
-*.pid
-*.seed
+tests/reports/
 
 # Debug/utility scripts
 debug-*.js
@@ -48,12 +41,12 @@ show-*.js
 hide-*.js
 verify-*.js
 
-# OS files
-Thumbs.db
-Desktop.ini
-
-# Backup files
-*.bak
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.pid
+*.seed
 *.backup
 *_backup.*
 *_old.*
@@ -61,4 +54,8 @@ Desktop.ini
 # Cache
 .cache/
 .eslintcache
-package-lock.json
+.mcpregistry_registry_token
+.mcpregistry_github_token
+mcp-publisher.exe
+PUBLISH.md
+validate-server.js

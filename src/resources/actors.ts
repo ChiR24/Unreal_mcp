@@ -1,4 +1,5 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { bestEffortInterpretedText, coerceNumber, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
 
 interface CacheEntry {
   data: any;
@@ -33,7 +34,7 @@ export class ActorResources {
     
     // Use Python to get actors via EditorActorSubsystem
     try {
-      const pythonCode = `
+  const pythonCode = `
 import unreal, json
 actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 actors = actor_subsystem.get_all_level_actors() if actor_subsystem else []
@@ -51,44 +52,29 @@ for actor in actors:
 print('RESULT:' + json.dumps({'success': True, 'count': len(actor_list), 'actors': actor_list}))
       `.trim();
       
-      const resp = await this.bridge.executePythonWithResult(pythonCode);
-      if (resp && typeof resp === 'object' && resp.success === true && Array.isArray((resp as any).actors)) {
-        this.setCache('listActors', resp);
-        return resp;
+      const response = await this.bridge.executePython(pythonCode);
+      const interpreted = interpretStandardResult(response, {
+        successMessage: 'Retrieved actor list',
+        failureMessage: 'Failed to retrieve actor list'
+      });
+
+      if (interpreted.success && Array.isArray(interpreted.payload.actors)) {
+        const actors = interpreted.payload.actors as any[];
+        const count = coerceNumber(interpreted.payload.count) ?? actors.length;
+        const payload = {
+          success: true as const,
+          count,
+          actors
+        };
+        this.setCache('listActors', payload);
+        return payload;
       }
 
-      // Fallback manual extraction with bracket matching
-      const raw = await this.bridge.executePython(pythonCode);
-      let output = '';
-      if (raw?.LogOutput && Array.isArray(raw.LogOutput)) output = raw.LogOutput.map((l: any) => l.Output || '').join('');
-      else if (typeof raw === 'string') output = raw; else output = JSON.stringify(raw);
-      const marker = 'RESULT:';
-      const idx = output.lastIndexOf(marker);
-      if (idx !== -1) {
-        let i = idx + marker.length;
-        while (i < output.length && output[i] !== '{') i++;
-        if (i < output.length) {
-          let depth = 0, inStr = false, esc = false, j = i;
-          for (; j < output.length; j++) {
-            const ch = output[j];
-            if (esc) { esc = false; continue; }
-            if (ch === '\\') { esc = true; continue; }
-            if (ch === '"') { inStr = !inStr; continue; }
-            if (!inStr) {
-              if (ch === '{') depth++;
-              else if (ch === '}') { depth--; if (depth === 0) { j++; break; } }
-            }
-          }
-          const jsonStr = output.slice(i, j);
-          try {
-            const parsed = JSON.parse(jsonStr);
-            this.setCache('listActors', parsed);
-            return parsed;
-          } catch {}
-        }
-      }
-
-      return { success: false, error: 'Failed to parse actors list' };
+      return {
+        success: false,
+        error: coerceString(interpreted.payload.error) ?? interpreted.error ?? 'Failed to parse actors list',
+        note: bestEffortInterpretedText(interpreted)
+      };
     } catch (err) {
       return { success: false, error: `Failed to list actors: ${err}` };
     }
@@ -99,18 +85,47 @@ print('RESULT:' + json.dumps({'success': True, 'count': len(actor_list), 'actors
     try {
       const pythonCode = `
 import unreal
+import json
+
 actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-actors = actor_subsystem.get_all_level_actors()
+actors = actor_subsystem.get_all_level_actors() if actor_subsystem else []
+
+found = None
 for actor in actors:
-    if actor and actor.get_name() == "${actorName}":
-        print(f"Found actor: {actor.get_path_name()}")
+    if actor and actor.get_name() == ${JSON.stringify(actorName)}:
+        found = {
+            'success': True,
+            'name': actor.get_name(),
+            'path': actor.get_path_name(),
+            'class': actor.get_class().get_name()
+        }
         break
-else:
-    print(f"Actor not found: ${actorName}")
+
+if not found:
+    found = {'success': False, 'error': f"Actor not found: {actorName}"}
+
+print('RESULT:' + json.dumps(found))
       `.trim();
-      
-      const result = await this.bridge.executePython(pythonCode);
-      return result;
+
+      const response = await this.bridge.executePython(pythonCode);
+      const interpreted = interpretStandardResult(response, {
+        successMessage: `Actor resolved: ${actorName}`,
+        failureMessage: `Actor not found: ${actorName}`
+      });
+
+      if (interpreted.success) {
+        return {
+          success: true as const,
+          name: coerceString(interpreted.payload.name) ?? actorName,
+          path: coerceString(interpreted.payload.path),
+          class: coerceString(interpreted.payload.class)
+        };
+      }
+
+      return {
+        success: false as const,
+        error: coerceString(interpreted.payload.error) ?? interpreted.error ?? `Actor not found: ${actorName}`
+      };
     } catch (err) {
       return { error: `Failed to get actor: ${err}` };
     }
