@@ -25,11 +25,26 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 ### Prerequisites
 - Node.js 18+
 - Unreal Engine 5.0-5.6
-- Required UE Plugins:
-  - Remote Control
-  - Web Remote Control
-  - Python Script Plugin
-  - Editor Scripting Utilities
+- Required UE Plugins (enable via **Edit ▸ Plugins**):
+  - **Remote Control API** – core Remote Control HTTP/WS endpoints
+  - **Remote Control Web Interface** – enables WebSocket bridge used by this server
+  - **Python Editor Script Plugin** – exposes Python runtime for automation
+  - **Editor Scripting Utilities** – unlocks Editor Actor/Asset subsystems used throughout the tools
+  - **Sequencer** *(built-in)* – keep enabled for cinematic tools
+  - **Level Sequence Editor** – required for `manage_sequence` operations
+
+> 💡 After toggling any plugin, restart the editor to finalize activation. Keep `Editor Scripting Utilities` and `Python Editor Script Plugin` enabled prior to connecting, otherwise many subsystem-based tools (actor spawning, audio, foliage, UI widgets) will refuse to run for safety.
+
+### Plugin feature map
+
+| Plugin | Location | Used By | Notes |
+|--------|----------|---------|-------|
+| Remote Control API | Developer Tools ▸ Remote Control | All tools | Provides HTTP/WS endpoints consumed by the MCP bridge |
+| Remote Control Web Interface | Developer Tools ▸ Remote Control | All tools | Enables persistent WebSocket session |
+| Python Editor Script Plugin | Scripting | Landscapes, lighting, audio, physics, sequences, UI | Required for every Python execution path |
+| Editor Scripting Utilities | Scripting | Actors, foliage, assets, landscapes, UI | Supplies Editor Actor/Asset subsystems in UE5.6 |
+| Sequencer | Built-in | Sequencer tools | Ensure not disabled in project settings |
+| Level Sequence Editor | Animation | Sequencer tools | Activate before calling `manage_sequence` operations |
 
 ### Installation
 
