@@ -4,26 +4,14 @@ export const consolidatedToolDefinitions = [
   // 1. ASSET MANAGER - Combines asset operations
   {
     name: 'manage_asset',
-    description: `Search, browse, import, and create simple material assets.
+  description: `Asset library utility for browsing, importing, and bootstrapping simple materials.
 
-When to use this tool:
-- You want to list assets in the project Content directory (use /Game; /Content is auto-mapped).
-- You want to import files from disk into the project (e.g., FBX, PNG, WAV, EXR).
-- You want to generate a very basic Material asset by name at a path.
+Use it when you need to:
+- explore project content (\u002fContent automatically maps to \u002fGame).
+- import FBX/PNG/WAV/EXR files into the project.
+- spin up a minimal Material asset at a specific path.
 
-Supported actions:
-- list: Returns assets in a folder (recursive behavior is auto-enabled for /Game).
-- import: Imports a file into the project at a destination path (e.g., /Game/Folder).
-- create_material: Creates a simple Material asset at a path.
-
-Tips:
-- Unreal uses /Game for project content; this server maps /Content → /Game automatically.
-- For large projects, listing /Game returns a sample subset for speed; refine to subfolders.
-
-Examples:
-- {"action":"list","directory":"/Game/ThirdPerson"}
-- {"action":"import","sourcePath":"C:/Temp/Tree.fbx","destinationPath":"/Game/Environment/Trees"}
-- {"action":"create_material","name":"M_Mask","path":"/Game/Materials"}`,
+Supported actions: list, import, create_material.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -71,35 +59,14 @@ Examples:
   // 2. ACTOR CONTROL - Combines actor operations
   {
     name: 'control_actor',
-    description: `Spawn, delete, and apply physics to actors in the level.
+  description: `Viewport actor toolkit for spawning, removing, or nudging actors with physics forces.
 
-When to use this tool:
-- Place an actor/mesh, remove an actor, or nudge an actor with a physics force.
+Use it when you need to:
+- drop a class or mesh into the level (classPath accepts names or asset paths).
+- delete actors by label, case-insensitively.
+- push a physics-enabled actor with a world-space force vector.
 
-Supported actions:
-- spawn
-- delete
-- apply_force
-
-Spawning:
-- classPath can be a class name (e.g., StaticMeshActor, CameraActor) OR an asset path (e.g., /Engine/BasicShapes/Cube, /Game/Meshes/SM_Rock).
-- Asset paths auto-spawn StaticMeshActor with the mesh assigned.
-
-Deleting:
-- Finds actors by label/name (case-insensitive) and deletes matches.
-
-Apply force:
-- Applies a world-space force vector to an actor with physics enabled.
-
-Tips:
-- classPath accepts classes or asset paths; simple names like Cube auto-resolve to engine assets.
-- location/rotation are optional; defaults are used if omitted.
-- For delete/apply_force, provide actorName.
-
-Examples:
-- {"action":"spawn","classPath":"/Engine/BasicShapes/Cube","location":{"x":0,"y":0,"z":100}}
-- {"action":"delete","actorName":"Cube_1"}
-- {"action":"apply_force","actorName":"PhysicsBox","force":{"x":0,"y":0,"z":5000}}`,
+Supported actions: spawn, delete, apply_force.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -159,26 +126,14 @@ Examples:
   // 3. EDITOR CONTROL - Combines editor operations
   {
     name: 'control_editor',
-    description: `Play/Stop PIE, position the editor camera, and switch common view modes.
+  description: `Editor session controls for PIE playback, camera placement, and view modes.
 
-When to use this tool:
-- Start/stop a PIE session, move the viewport camera, or change viewmode (Lit/Unlit/Wireframe/etc.).
+Use it when you need to:
+- start or stop Play In Editor.
+- reposition the active viewport camera.
+- switch between Lit/Unlit/Wireframe and other safe view modes.
 
-Supported actions:
-- play
-- stop
-- set_camera
-- set_view_mode
-
-Notes:
-- View modes are validated; unsafe modes are blocked.
-- Camera accepts location/rotation (optional); values normalized.
-
-Examples:
-- {"action":"play"}
-- {"action":"set_camera","location":{"x":0,"y":-600,"z":250},"rotation":{"pitch":0,"yaw":0,"roll":0}}
-- {"action":"set_view_mode","viewMode":"Wireframe"}
-- {"action":"stop"}`,
+Supported actions: play, stop, set_camera, set_view_mode (with validation).`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -236,28 +191,15 @@ Examples:
   // 4. LEVEL MANAGER - Combines level and lighting operations
   {
     name: 'manage_level',
-    description: `Load/save/stream levels, create lights, and trigger lighting builds.
+  description: `Level management helper for loading/saving, streaming, light creation, and lighting builds.
 
-When to use this tool:
-- Switch to a level, save the current level, stream sublevels, add a light, or start a lighting build.
+Use it when you need to:
+- open or save a level by path.
+- toggle streaming sublevels on/off.
+- spawn a light actor of a given type.
+- kick off a lighting build at a chosen quality.
 
-Supported actions:
-- load
-- save
-- stream
-- create_light
-- build_lighting
-
-Tips:
-- Use /Game paths for levels (e.g., /Game/Maps/Level).
-- For streaming, set shouldBeLoaded and shouldBeVisible accordingly.
-- For lights, provide lightType and optional location/intensity.
-
-Examples:
-- {"action":"load","levelPath":"/Game/Maps/Lobby"}
-- {"action":"stream","levelName":"Sublevel_A","shouldBeLoaded":true,"shouldBeVisible":true}
-- {"action":"create_light","lightType":"Directional","name":"KeyLight","intensity":5.0}
-- {"action":"build_lighting","quality":"High"}`,
+Supported actions: load, save, stream, create_light, build_lighting.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -313,25 +255,14 @@ Examples:
   // 5. ANIMATION SYSTEM - Combines animation and physics setup
   {
     name: 'animation_physics',
-    description: `Create animation blueprints, play montages, and set up simple ragdolls.
+  description: `Animation and physics rigging helper covering Anim BPs, montage playback, and ragdoll setup.
 
-When to use this tool:
-- Generate an Anim Blueprint for a skeleton, play a Montage/Animation on an actor, or enable ragdoll.
+Use it when you need to:
+- generate an Animation Blueprint for a skeleton.
+- play a montage/animation on an actor at a chosen rate.
+- enable a quick ragdoll using an existing physics asset.
 
-Supported actions:
-- create_animation_bp
-- play_montage
-- setup_ragdoll
-
-Tips:
-- Ensure the montage/animation is compatible with the target actor/skeleton.
-- setup_ragdoll requires a valid physicsAssetName on the skeleton.
-- Use savePath when creating new assets.
-
-Examples:
-- {"action":"create_animation_bp","name":"ABP_Hero","skeletonPath":"/Game/Characters/Hero/SK_Hero_Skeleton","savePath":"/Game/Characters/Hero"}
-- {"action":"play_montage","actorName":"Hero","montagePath":"/Game/Anim/MT_Attack"}
-- {"action":"setup_ragdoll","skeletonPath":"/Game/Characters/Hero/SK_Hero_Skeleton","physicsAssetName":"PHYS_Hero"}`,
+Supported actions: create_animation_bp, play_montage, setup_ragdoll.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -371,24 +302,14 @@ Examples:
   // 6. EFFECTS SYSTEM - Combines particles and visual effects
   {
     name: 'create_effect',
-    description: `Create particles/FX and lightweight debug shapes for rapid iteration.
+  description: `FX sandbox for spawning Niagara systems, particle presets, or disposable debug shapes.
 
-When to use this tool:
-- Spawn a Niagara system at a location, create a particle effect by type tag, or draw debug geometry for planning.
+Use it when you need to:
+- fire a Niagara system at a specific location/scale.
+- trigger a simple particle effect by tag/name.
+- draw temporary debug primitives (box/sphere/line) for planning layouts.
 
-Supported actions:
-- particle
-- niagara
-- debug_shape
-
-Tips:
-- Set color as RGBA [r,g,b,a]; scale defaults to 1 if omitted.
-- Use debug shapes for quick layout planning and measurements.
-
-Examples:
-- {"action":"niagara","systemPath":"/Game/FX/NS_Explosion","location":{"x":0,"y":0,"z":200},"scale":1.0}
-- {"action":"particle","effectType":"Smoke","name":"SMK1","location":{"x":100,"y":0,"z":50}}
-- {"action":"debug_shape","shape":"Sphere","location":{"x":0,"y":0,"z":0},"size":100,"duration":5}`,
+Supported actions: niagara, particle, debug_shape.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -449,22 +370,13 @@ Examples:
   // 7. BLUEPRINT MANAGER - Blueprint operations
   {
     name: 'manage_blueprint',
-    description: `Create new Blueprints and add components programmatically.
+  description: `Blueprint scaffolding helper for creating assets and attaching components.
 
-When to use this tool:
-- Quickly scaffold a Blueprint asset or add a component to an existing Blueprint.
+Use it when you need to:
+- create a new Blueprint of a specific base type (Actor, Pawn, Character, ...).
+- add a component to an existing Blueprint asset with a unique name.
 
-Supported actions:
-- create
-- add_component
-
-Tips:
-- blueprintType can be Actor, Pawn, Character, etc.
-- Component names should be unique within the Blueprint.
-
-Examples:
-- {"action":"create","name":"BP_Switch","blueprintType":"Actor","savePath":"/Game/Blueprints"}
-- {"action":"add_component","name":"BP_Switch","componentType":"PointLightComponent","componentName":"KeyLight"}`,
+Supported actions: create, add_component.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -499,28 +411,15 @@ Examples:
   // 8. ENVIRONMENT BUILDER - Landscape and foliage
   {
     name: 'build_environment',
-    description: `Environment authoring helpers (landscape, foliage).
+  description: `Environment authoring toolkit for landscapes and foliage, from sculpting to procedural scatters.
 
-When to use this tool:
-- Create a procedural terrain alternative, add/paint foliage, or attempt a landscape workflow.
+Use it when you need to:
+- create or sculpt a landscape actor.
+- add foliage via types or paint strokes.
+- drive procedural terrain/foliage generation with bounds, seeds, and density settings.
+- spawn explicit foliage instances at transforms.
 
-Supported actions:
-- create_landscape
-- sculpt
-- add_foliage
-- paint_foliage
-
-Important:
-- Native Landscape creation via Python is limited and may return a helpful error suggesting Landscape Mode in the editor.
-- Foliage helpers create FoliageType assets and support simple placement.
-
-Tips:
-- Adjust brushSize and strength to tune sculpting results.
-
-Examples:
-- {"action":"create_landscape","name":"Landscape_Basic","sizeX":1024,"sizeY":1024}
-- {"action":"add_foliage","name":"FT_Grass","meshPath":"/Game/Foliage/SM_Grass","density":300}
-- {"action":"paint_foliage","foliageType":"/Game/Foliage/Types/FT_Grass","position":{"x":0,"y":0,"z":0},"brushSize":300}`,
+Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_procedural_terrain, create_procedural_foliage, add_foliage_instances, create_landscape_grass_type.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -614,31 +513,16 @@ Examples:
   // 9. PERFORMANCE & AUDIO - System settings
   {
     name: 'system_control',
-    description: `Performance toggles, quality settings, audio playback, simple UI helpers, screenshots, and engine lifecycle.
+  description: `Runtime/system controls for profiling, quality tiers, audio/UI triggers, screenshots, and editor lifecycle.
 
-When to use this tool:
-- Toggle profiling and FPS stats, adjust quality (sg.*), play a sound, create/show a basic widget, take a screenshot, or launch/quit the editor.
+Use it when you need to:
+- toggle stat overlays or targeted profilers.
+- adjust scalability categories (sg.*) or enable FPS display.
+- play a one-shot sound and optionally position it.
+- create/show lightweight widgets.
+- capture a screenshot or start/quit the editor process.
 
-Supported actions:
-- profile
-- show_fps
-- set_quality
-- play_sound
-- create_widget
-- show_widget
-- screenshot
-- engine_start
-- engine_quit
-
-Tips:
-- Screenshot resolution format: 1920x1080.
-- engine_start can read UE project path from env; provide editorExe/projectPath if needed.
-
-Examples:
-- {"action":"show_fps","enabled":true}
-- {"action":"set_quality","category":"Shadows","level":2}
-- {"action":"play_sound","soundPath":"/Game/Audio/SFX/Click","volume":0.5}
-- {"action":"screenshot","resolution":"1920x1080"}`,
+Supported actions: profile, show_fps, set_quality, play_sound, create_widget, show_widget, screenshot, engine_start, engine_quit.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -708,22 +592,9 @@ Examples:
   // 10. CONSOLE COMMAND - Universal tool
   {
     name: 'console_command',
-    description: `Execute an Unreal console command with built-in safety.
+  description: `Guarded console command executor for one-off \`stat\`, \`r.*\`, or viewmode commands.
 
-When to use this tool:
-- Fire a specific command (e.g., stat fps, viewmode wireframe, r.ScreenPercentage 75).
-
-Safety:
-- Dangerous commands are blocked (quit/exit, GPU crash triggers, unsafe visualizebuffer modes, etc.).
-- Unknown commands will return a warning instead of crashing.
-
-Tips:
-- Prefer dedicated tools (system_control, control_editor) when available for structured control.
-
-Examples:
-- {"command":"stat fps"}
-- {"command":"viewmode wireframe"}
-- {"command":"r.ScreenPercentage 75"}`,
+Use it when higher-level tools don't cover the console tweak you need. Hazardous commands (quit/exit, crash triggers, unsafe viewmodes) are blocked, and unknown commands respond with a warning instead of executing blindly.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -747,29 +618,15 @@ Examples:
   // 11. REMOTE CONTROL PRESETS
   {
     name: 'manage_rc',
-    description: `Create and manage Remote Control presets; expose actors/properties; set/get values.
+  description: `Remote Control preset helper for building, exposing, and mutating RC assets.
 
-When to use this tool:
-- Automate Remote Control (RC) preset authoring and interaction from the assistant.
+Use it when you need to:
+- create a preset asset on disk.
+- expose actors or object properties to the preset.
+- list the exposed fields for inspection.
+- get or set property values through RC with JSON-serializable payloads.
 
-Supported actions:
-- create_preset
-- expose_actor
-- expose_property
-- list_fields
-- set_property
-- get_property
-
-Tips:
-- value must be JSON-serializable.
-- Use objectPath/presetPath with full asset/object paths.
-
-Examples:
-- {"action":"create_preset","name":"LivePreset","path":"/Game/RCPresets"}
-- {"action":"expose_actor","presetPath":"/Game/RCPresets/LivePreset","actorName":"CameraActor"}
-- {"action":"expose_property","presetPath":"/Game/RCPresets/LivePreset","objectPath":"/Script/Engine.Default__Engine","propertyName":"GameUserSettings"}
-- {"action":"list_fields","presetPath":"/Game/RCPresets/LivePreset"}
-- {"action":"set_property","objectPath":"/Game/MyActor","propertyName":"CustomFloat","value":0.5}`,
+Supported actions: create_preset, expose_actor, expose_property, list_fields, set_property, get_property.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -804,37 +661,15 @@ Examples:
   // 12. SEQUENCER / CINEMATICS
   {
     name: 'manage_sequence',
-    description: `Create/open Level Sequences, bind actors, add cameras, and control playback.
+  description: `Sequencer automation helper for Level Sequences: asset management, bindings, and playback control.
 
-When to use this tool:
-- Build quick cinematics: create/open a sequence, add a camera or actors, tweak properties, and play.
+Use it when you need to:
+- create or open a sequence asset.
+- add actors, spawnable cameras, or other bindings.
+- adjust sequence metadata (frame rate, bounds, playback window).
+- drive playback (play/pause/stop), adjust speed, or fetch binding info.
 
-Supported actions:
-- create
-- open
-- add_camera
-- add_actor
-- add_actors
-- remove_actors
-- get_bindings
-- add_spawnable_from_class
-- play
-- pause
-- stop
-- set_properties
-- get_properties
-- set_playback_speed
-
-Tips:
-- Set spawnable=true to auto-create a camera actor.
-- Use frameRate/lengthInFrames to define timing; use playbackStart/End to trim.
-
-Examples:
-- {"action":"create","name":"Intro","path":"/Game/Cinematics"}
-- {"action":"add_camera","spawnable":true}
-- {"action":"add_actor","actorName":"Hero"}
-- {"action":"play","loopMode":"once"}
-- {"action":"set_properties","path":"/Game/Cinematics/Intro","frameRate":24,"lengthInFrames":480}`,
+Supported actions: create, open, add_camera, add_actor, add_actors, remove_actors, get_bindings, add_spawnable_from_class, play, pause, stop, set_properties, get_properties, set_playback_speed.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -887,22 +722,13 @@ Examples:
   // 13. INTROSPECTION
   {
     name: 'inspect',
-    description: `Read object info and set properties with validation.
+  description: `Introspection utility for reading or mutating properties on actors, components, or CDOs.
 
-When to use this tool:
-- Inspect an object by path (class default object or actor/component) and optionally modify properties.
+Use it when you need to:
+- inspect an object by path and retrieve its serialized properties.
+- set a property value with built-in validation.
 
-Supported actions:
-- inspect_object
-- set_property
-
-Tips:
-- propertyName is case-sensitive; ensure it exists on the target object.
-- For class default objects (CDOs), use the /Script/...Default__Class path.
-
-Examples:
-- {"action":"inspect_object","objectPath":"/Script/Engine.Default__Engine"}
-- {"action":"set_property","objectPath":"/Game/MyActor","propertyName":"CustomBool","value":true}`,
+Supported actions: inspect_object, set_property.`,
     inputSchema: {
       type: 'object',
       properties: {
