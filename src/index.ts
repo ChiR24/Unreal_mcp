@@ -246,14 +246,38 @@ export async function createServer() {
       capabilities: {
         resources: {},
         tools: {},
-        prompts: {},
-        logging: {}
+        prompts: {
+          listChanged: false
+        },
+        logging: {},
+        elicitation: {}
       }
     }
   );
 
   // Optional elicitation helper – used only if client supports it.
   const elicitation = createElicitationHelper(server as any, log);
+  const defaultElicitationTimeoutMs = elicitation.getDefaultTimeoutMs();
+
+  const createNotConnectedResponse = (toolName: string) => {
+    const payload = {
+      success: false,
+      error: 'UE_NOT_CONNECTED',
+      message: 'Unreal Engine is not connected (after 3 attempts). Please open UE and try again.',
+      retriable: false,
+      scope: `tool-call/${toolName}`
+    } as const;
+
+    return responseValidator.wrapResponse(toolName, {
+      ...payload,
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(payload, null, 2)
+        }
+      ]
+    });
+  };
 
   // Handle resource listing
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
@@ -453,18 +477,8 @@ export async function createServer() {
     // Ensure connection only when needed, with 3 attempts
     const connected = await ensureConnectedOnDemand();
     if (!connected) {
-      const notConnected = {
-        success: false,
-        error: 'UE_NOT_CONNECTED',
-        message: 'Unreal Engine is not connected (after 3 attempts). Please open UE and try again.',
-        retriable: false,
-        scope: `tool-call/${name}`
-      } as any;
       trackPerformance(startTime, false);
-      return responseValidator.wrapResponse(name, {
-        ...notConnected,
-        content: [{ type: 'text', text: JSON.stringify(notConnected, null, 2) }]
-      });
+      return createNotConnectedResponse(name);
     }
     
 // Create tools object for handler
@@ -494,6 +508,7 @@ export async function createServer() {
       // Elicitation (client-optional)
       elicit: elicitation.elicit,
       supportsElicitation: elicitation.supports,
+  elicitationTimeoutMs: defaultElicitationTimeoutMs,
       // Resources for listing and info
       assetResources,
       actorResources,
@@ -546,10 +561,14 @@ export async function createServer() {
           }
 
           if (Object.keys(primitiveProps).length > 0) {
+            const elicitOptions: any = { fallback: async () => ({ ok: false, error: 'missing-params' }) };
+            if (typeof (tools as any).elicitationTimeoutMs === 'number' && Number.isFinite((tools as any).elicitationTimeoutMs)) {
+              elicitOptions.timeoutMs = (tools as any).elicitationTimeoutMs;
+            }
             const elicitRes = await elicitFn(
               `Provide missing parameters for ${name}`,
               { type: 'object', properties: primitiveProps, required: Object.keys(primitiveProps) },
-              { fallback: async () => ({ ok: false, error: 'missing-params' }) }
+              elicitOptions
             );
             if (elicitRes && elicitRes.ok && elicitRes.value) {
               args = { ...args, ...elicitRes.value };
@@ -624,11 +643,18 @@ export async function createServer() {
       prompts: prompts.map(p => ({
         name: p.name,
         description: p.description,
-        arguments: Object.entries(p.arguments || {}).map(([name, schema]) => ({
-          name,
-          description: schema.description,
-          required: schema.required || false
-        }))
+        arguments: Object.entries(p.arguments || {}).map(([name, schema]) => {
+          const meta: Record<string, unknown> = {};
+          if (schema.type) meta.type = schema.type;
+          if (schema.enum) meta.enum = schema.enum;
+          if (schema.default !== undefined) meta.default = schema.default;
+          return {
+            name,
+            description: schema.description,
+            required: schema.required ?? false,
+            ...(Object.keys(meta).length ? { _meta: meta } : {})
+          };
+        })
       }))
     };
   });
@@ -639,18 +665,12 @@ export async function createServer() {
     if (!prompt) {
       throw new Error(`Unknown prompt: ${request.params.name}`);
     }
-    
-    // Return a template for the lighting setup
+
+    const args = (request.params.arguments || {}) as Record<string, unknown>;
+    const messages = prompt.build(args);
     return {
-      messages: [
-        {
-          role: 'user',
-          content: {
-            type: 'text',
-            text: `Set up three-point lighting with ${request.params.arguments?.intensity || 'medium'} intensity`
-          }
-        }
-      ]
+      description: prompt.description,
+      messages
     };
   });
 

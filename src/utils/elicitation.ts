@@ -25,15 +25,52 @@ export function createElicitationHelper(server: Server, log: Logger) {
   // and disable on a Method-not-found (-32601) error for the session.
   let supported = true; // optimistic; will be set false on first failure
 
+  const MIN_TIMEOUT_MS = 30_000;
+  const MAX_TIMEOUT_MS = 10 * 60 * 1000;
+  const DEFAULT_TIMEOUT_MS = 3 * 60 * 1000;
+
+  const timeoutEnvRaw = process.env.MCP_ELICITATION_TIMEOUT_MS ?? process.env.ELICITATION_TIMEOUT_MS ?? '';
+  const parsedEnvTimeout = Number.parseInt(timeoutEnvRaw, 10);
+  const defaultTimeoutMs = Number.isFinite(parsedEnvTimeout) && parsedEnvTimeout > 0
+    ? Math.min(Math.max(parsedEnvTimeout, MIN_TIMEOUT_MS), MAX_TIMEOUT_MS)
+    : DEFAULT_TIMEOUT_MS;
+
+  if (timeoutEnvRaw) {
+    log.debug('Configured elicitation timeout override detected', {
+      defaultTimeoutMs,
+      fromEnv: timeoutEnvRaw
+    });
+  }
+
   function isSafeSchema(schema: ElicitSchema): boolean {
     if (!schema || schema.type !== 'object' || typeof schema.properties !== 'object') return false;
-    const values = Object.values(schema.properties || {});
-    return values.every((p: any) => {
-      if (!p || typeof p !== 'object') return false;
-      if (p.type === 'string') return true;
-      if (p.type === 'number' || p.type === 'integer') return true;
-      if (p.type === 'boolean') return true;
-      if (Array.isArray((p as any).enum)) return true; // enum is a specialized string schema
+
+    const propertyEntries = Object.entries(schema.properties ?? {});
+    const propertyKeys = propertyEntries.map(([key]) => key);
+
+    if (schema.required) {
+      if (!Array.isArray(schema.required)) return false;
+      const invalidRequired = schema.required.some((key) => typeof key !== 'string' || !propertyKeys.includes(key));
+      if (invalidRequired) return false;
+    }
+
+    return propertyEntries.every(([, rawSchema]) => {
+      if (!rawSchema || typeof rawSchema !== 'object') return false;
+      const primitive = rawSchema as PrimitiveSchema & { properties?: unknown; items?: unknown }; // narrow for guards
+
+      if ('properties' in primitive || 'items' in primitive) return false; // nested schemas unsupported
+
+      if (Array.isArray((primitive as any).enum)) {
+        const enumValues = (primitive as any).enum;
+        const allStrings = enumValues.every((value: unknown) => typeof value === 'string');
+        if (!allStrings) return false;
+        return !('type' in primitive) || (primitive as any).type === 'string';
+      }
+
+      if ((primitive as any).type === 'string') return true;
+      if ((primitive as any).type === 'number' || (primitive as any).type === 'integer') return true;
+      if ((primitive as any).type === 'boolean') return true;
+
       return false;
     });
   }
@@ -47,16 +84,17 @@ export function createElicitationHelper(server: Server, log: Logger) {
     const params = { message, requestedSchema } as any;
 
     try {
-      const timeoutMs = opts.timeoutMs ?? 90_000;
-      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), timeoutMs));
-      // The SDK exposes request on the Server instance for client features.
-      // We intentionally use any to avoid depending on SDK internals.
-      const req = (server as any).request?.('elicitation/create', params) ?? (server as any).transport?.request?.('elicitation/create', params);
-      if (!req || typeof req.then !== 'function') throw new Error('request-not-available');
+      const elicitMethod = (server as any)?.elicitInput;
+      if (typeof elicitMethod !== 'function') {
+        supported = false;
+        throw new Error('elicitInput-not-available');
+      }
 
-      const res: any = await Promise.race([req, timeout]);
-      const action = res?.result?.action;
-      const content = res?.result?.content;
+      const requestedTimeout = opts.timeoutMs;
+      const timeoutMs = Math.max(MIN_TIMEOUT_MS, requestedTimeout ?? defaultTimeoutMs);
+      const res: any = await elicitMethod.call(server, params, { timeout: timeoutMs });
+      const action = res?.action;
+      const content = res?.content;
 
       if (action === 'accept') return { ok: true, value: content };
       if (action === 'decline' || action === 'cancel') {
@@ -67,18 +105,25 @@ export function createElicitationHelper(server: Server, log: Logger) {
       return { ok: false, error: 'unexpected-response' };
     } catch (e: any) {
       const msg = String(e?.message || e);
+      const code = (e as any)?.code ?? (e as any)?.error?.code;
       // If client doesn't support it, don’t try again this session
-      if (msg.includes('Method not found') || String((e as any)?.code) === '-32601') {
+      if (
+        msg.includes('Method not found') ||
+        msg.includes('elicitInput-not-available') ||
+        msg.includes('request-not-available') ||
+        String(code) === '-32601'
+      ) {
         supported = false;
       }
-      log.debug('Elicitation failed; falling back', { error: msg });
+      log.debug('Elicitation failed; falling back', { error: msg, code });
       if (opts.fallback) return opts.fallback();
-      return { ok: false, error: 'rpc-failed' };
+      return { ok: false, error: msg.includes('timeout') ? 'timeout' : 'rpc-failed' };
     }
   }
 
   return {
     supports: () => supported,
-    elicit
+    elicit,
+    getDefaultTimeoutMs: () => defaultTimeoutMs
   };
 }

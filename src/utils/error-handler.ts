@@ -17,21 +17,6 @@ export enum ErrorType {
 }
 
 /**
- * Custom error class for MCP tools
- */
-export class ToolError extends Error {
-  constructor(
-    public type: ErrorType,
-    public toolName: string,
-    message: string,
-    public originalError?: any
-  ) {
-    super(message);
-    this.name = 'ToolError';
-  }
-}
-
-/**
  * Consistent error handling for all tools
  */
 export class ErrorHandler {
@@ -77,46 +62,15 @@ export class ErrorHandler {
   }
 
   /**
-   * Create a standardized warning response
-   */
-  static createWarningResponse(
-    message: string,
-    result: any,
-    toolName: string
-  ): BaseToolResponse {
-    log.warn(`Tool ${toolName} warning: ${message}`);
-    
-    return {
-      success: true,
-      warning: message,
-      message: `${toolName} completed with warnings`,
-      ...result
-    };
-  }
-
-  /**
-   * Create a standardized success response
-   */
-  static createSuccessResponse(
-    message: string,
-    data: any = {}
-  ): BaseToolResponse {
-    return {
-      success: true,
-      message,
-      ...data
-    };
-  }
-
-  /**
    * Categorize error by type
    */
   private static categorizeError(error: any): ErrorType {
-    if (error instanceof ToolError) {
-      return error.type;
+    const explicitType = (error?.type || error?.errorType || '').toString().toUpperCase();
+    if (explicitType && Object.values(ErrorType).includes(explicitType as ErrorType)) {
+      return explicitType as ErrorType;
     }
 
-    const errorMessage = error.message?.toLowerCase() || String(error).toLowerCase();
+    const errorMessage = error?.message?.toLowerCase() || String(error).toLowerCase();
 
     // Connection errors
     if (
@@ -207,114 +161,5 @@ export class ErrorHandler {
       if (!isNaN(status) && (status === 429 || (status >= 500 && status < 600))) return true;
     } catch {}
     return false;
-  }
-
-  /**
-   * Wrap async function with error handling
-   */
-  static async wrapAsync<T extends BaseToolResponse>(
-    toolName: string,
-    fn: () => Promise<T>,
-    context?: any
-  ): Promise<T> {
-    try {
-      const result = await fn();
-      
-      // Ensure result has success field
-      if (typeof result === 'object' && result !== null) {
-        if (!('success' in result)) {
-          (result as any).success = true;
-        }
-      }
-      
-      return result;
-    } catch (error) {
-      return this.createErrorResponse(error, toolName, context) as T;
-    }
-  }
-
-  /**
-   * Validate required parameters
-   */
-  static validateParams(
-    params: any,
-    required: string[],
-    toolName: string
-  ): void {
-    if (!params || typeof params !== 'object') {
-      throw new ToolError(
-        ErrorType.PARAMETER,
-        toolName,
-        'Invalid parameters: expected object'
-      );
-    }
-
-    for (const field of required) {
-      if (!(field in params) || params[field] === undefined || params[field] === null) {
-        throw new ToolError(
-          ErrorType.PARAMETER,
-          toolName,
-          `Missing required parameter: ${field}`
-        );
-      }
-
-      // Additional validation for common types
-      if (field.includes('Path') || field.includes('Name')) {
-        if (typeof params[field] !== 'string' || params[field].trim() === '') {
-          throw new ToolError(
-            ErrorType.PARAMETER,
-            toolName,
-            `Invalid ${field}: must be a non-empty string`
-          );
-        }
-      }
-    }
-  }
-
-  /**
-   * Handle Unreal Engine specific errors
-   */
-  static handleUnrealError(error: any, operation: string): string {
-    const errorStr = String(error.message || error).toLowerCase();
-
-    // Common Unreal errors
-    if (errorStr.includes('worldcontext')) {
-      return `${operation} completed (WorldContext warnings are normal)`;
-    }
-    
-    if (errorStr.includes('does not exist')) {
-      return `Asset or object not found for ${operation}`;
-    }
-    
-    if (errorStr.includes('access denied') || errorStr.includes('read-only')) {
-      return `Permission denied for ${operation}. Check file permissions.`;
-    }
-    
-    if (errorStr.includes('already exists')) {
-      return `Object already exists for ${operation}`;
-    }
-
-    return `Unreal Engine error during ${operation}: ${error.message || error}`;
-  }
-
-  /**
-   * Create operation result with consistent structure
-   */
-  static createResult<T extends BaseToolResponse>(
-    success: boolean,
-    message: string,
-    data?: Partial<T>
-  ): T {
-    const result: BaseToolResponse = {
-      success,
-      message,
-      ...(data || {})
-    };
-
-    if (!success && !result.error) {
-      result.error = message;
-    }
-
-    return result as T;
   }
 }

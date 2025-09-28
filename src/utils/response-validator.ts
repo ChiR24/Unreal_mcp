@@ -118,8 +118,7 @@ export class ResponseValidator {
 
     // Choose the payload to validate: if already MCP-shaped, validate the
     // structured content extracted from text; otherwise validate the object directly.
-    const validationTarget = alreadyMcpShaped ? response : response;
-    const validation = this.validateResponse(toolName, validationTarget);
+    const validation = this.validateResponse(toolName, response);
     const structuredPayload = validation.structuredContent;
 
     if (!validation.valid) {

@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import http from 'http';
 import https from 'https';
 import { Logger } from './logger.js';
@@ -20,41 +20,10 @@ const httpsAgent = new https.Agent({
   timeout: 60000, // Longer timeout
 });
 
-// Retry configuration interface
-interface RetryConfig {
-  maxRetries: number;
-  initialDelay: number;
-  maxDelay: number;
-  backoffMultiplier: number;
-  retryableStatuses: number[];
-  retryableErrors: string[];
-}
-
 const log = new Logger('HTTP');
 
-const defaultRetryConfig: RetryConfig = {
-  maxRetries: 3,
-  initialDelay: 1000,
-  maxDelay: 10000,
-  backoffMultiplier: 2,
-  retryableStatuses: [408, 429, 500, 502, 503, 504],
-  retryableErrors: ['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND']
-};
-
 /**
- * Calculate exponential backoff delay with jitter
- */
-function calculateBackoff(attempt: number, config: RetryConfig): number {
-  const delay = Math.min(
-    config.initialDelay * Math.pow(config.backoffMultiplier, attempt - 1),
-    config.maxDelay
-  );
-  // Add jitter to prevent thundering herd
-  return delay + Math.random() * 1000;
-}
-
-/**
- * Enhanced HTTP client factory with connection pooling and retry logic
+ * Enhanced HTTP client factory with connection pooling and request timing
  */
 export function createHttpClient(baseURL: string): AxiosInstance {
   const client = axios.create({
@@ -115,73 +84,5 @@ export function createHttpClient(baseURL: string): AxiosInstance {
   return client;
 }
 
-/**
- * Execute request with retry logic for resilience
- */
-export async function requestWithRetry<T = any>(
-  client: AxiosInstance,
-  config: AxiosRequestConfig,
-  retryConfig: Partial<RetryConfig> = {}
-): Promise<T> {
-  const retry = { ...defaultRetryConfig, ...retryConfig };
-  let lastError: Error | null = null;
-
-  for (let attempt = 1; attempt <= retry.maxRetries; attempt++) {
-    try {
-      const response = await client.request<T>(config);
-
-      // Check if we should retry based on status
-      if (retry.retryableStatuses.includes(response.status)) {
-        throw new Error(`Retryable status: ${response.status}`);
-      }
-
-      return response.data;
-    } catch (error) {
-      lastError = error as Error;
-      const axiosError = error as AxiosError;
-
-      // Check if error is retryable
-      const isRetryable =
-        retry.retryableErrors.includes(axiosError.code || '') ||
-        (axiosError.response && retry.retryableStatuses.includes(axiosError.response.status));
-
-      if (!isRetryable || attempt === retry.maxRetries) {
-        throw error;
-      }
-
-      // Calculate delay and wait
-      const delay = calculateBackoff(attempt, retry);
-      log.debug(`[HTTP] Retry attempt ${attempt}/${retry.maxRetries} after ${Math.round(delay)}ms`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-
-  throw lastError || new Error('Request failed after retries');
-}
-
-/**
- * Batch multiple requests for efficiency
- */
-export async function batchRequests<T = any>(
-  client: AxiosInstance,
-  requests: AxiosRequestConfig[],
-  options: { concurrency?: number; throwOnError?: boolean } = {}
-): Promise<(T | Error)[]> {
-  const { concurrency = 5, throwOnError = false } = options;
-  const results: (T | Error)[] = [];
-
-  // Process requests in batches
-  for (let i = 0; i < requests.length; i += concurrency) {
-    const batch = requests.slice(i, i + concurrency);
-    const batchPromises = batch.map(req =>
-      client.request<T>(req)
-        .then(res => res.data)
-        .catch(err => throwOnError ? Promise.reject(err) : err)
-    );
-
-    const batchResults = await Promise.all(batchPromises);
-    results.push(...batchResults);
-  }
-
-  return results;
-}
+// No retry helpers are exported; consolidated command flows rely on
+// Unreal's own retry/backoff semantics to avoid duplicate side effects.
