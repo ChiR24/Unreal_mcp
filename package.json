@@ -1,6 +1,6 @@
 {
   "name": "unreal-engine-mcp-server",
-  "version": "0.4.0",
+  "version": "0.4.3",
   "mcpName": "io.github.ChiR24/unreal-engine-mcp",
   "description": "Production-ready MCP server for Unreal Engine integration with 13 tools",
   "type": "module",

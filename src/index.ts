@@ -87,7 +87,7 @@ const CONFIG = {
   RETRY_DELAY_MS: 2000,
   // Server info
   SERVER_NAME: 'unreal-engine-mcp',
-  SERVER_VERSION: '0.4.0',
+  SERVER_VERSION: '0.4.3',
   // Monitoring
   HEALTH_CHECK_INTERVAL_MS: 30000 // 30 seconds
 };
