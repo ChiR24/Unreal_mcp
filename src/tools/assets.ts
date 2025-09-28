@@ -1,11 +1,13 @@
 import { UnrealBridge } from '../unreal-bridge.js';
-import * as fs from 'fs';
-import * as path from 'path';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { bestEffortInterpretedText, coerceNumber, coerceStringArray, interpretStandardResult } from '../utils/result-helpers.js';
 
 export class AssetTools {
   constructor(private bridge: UnrealBridge) {}
 
   async importAsset(sourcePath: string, destinationPath: string) {
+    let createdTestFile = false;
     try {
       // Sanitize destination path (remove trailing slash) and normalize UE path
       let cleanDest = destinationPath.replace(/\/$/, '');
@@ -18,16 +20,18 @@ export class AssetTools {
       if (sourcePath.includes('test_model.fbx')) {
         // Create the file outside of Python, before import
         try {
-          this.createTestFBX(sourcePath);
-      } catch (_err) {
+          await this.createTestFBX(sourcePath);
+          createdTestFile = true;
+        } catch (_err) {
           // If we can't create the file, we'll handle it in Python
         }
       }
 
       // Use Python API to import asset with file creation fallback
-      const pythonCode = `
+  const pythonCode = `
 import unreal
 import os
+import json
 
 # Create test FBX if needed
 source_path = r'${sourcePath}'
@@ -148,52 +152,58 @@ task.options = options
 
 # Use AssetTools to import
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+result = {'success': False, 'error': 'No assets imported', 'source': task.filename}
+
 try:
     asset_tools.import_asset_tasks([task])
     if task.imported_object_paths:
-        print(f"RESULT:{'{'}'success': True, 'imported': {len(task.imported_object_paths)}, 'paths': {task.imported_object_paths}{'}'}")
-    else:
-        print(f"RESULT:{'{'}'success': False, 'error': 'No assets imported', 'source': task.filename{'}'}")
+        result = {
+            'success': True,
+            'imported': len(task.imported_object_paths),
+            'paths': list(task.imported_object_paths)
+        }
 except Exception as e:
-    print(f"RESULT:{'{'}'success': False, 'error': str(e), 'source': task.filename{'}'}")
+    result = {'success': False, 'error': str(e), 'source': task.filename}
+
+print('RESULT:' + json.dumps(result))
 `.trim();
       
       const pyResp = await this.bridge.executePython(pythonCode);
 
-      // Parse Python output
-      let outputStr = '';
-      if (typeof pyResp === 'object' && pyResp !== null) {
-        if (pyResp.LogOutput && Array.isArray(pyResp.LogOutput)) {
-          outputStr = pyResp.LogOutput.map((l: any) => l.Output || '').join('');
-        } else if ('ReturnValue' in pyResp) {
-          outputStr = String((pyResp as any).ReturnValue);
-        } else {
-          outputStr = JSON.stringify(pyResp);
-        }
-      } else {
-        outputStr = String(pyResp || '');
+      const interpreted = interpretStandardResult(pyResp, {
+        successMessage: `Imported assets to ${cleanDest}`,
+        failureMessage: 'Import failed'
+      });
+
+      if (interpreted.success) {
+        const count = coerceNumber(interpreted.payload.imported) ?? 0;
+        const paths = coerceStringArray(interpreted.payload.paths) ?? [];
+        return {
+          success: true,
+          message: `Imported ${count} assets to ${cleanDest}`,
+          imported: count,
+          paths
+        };
       }
 
-      const match = outputStr.match(/RESULT:({.*})/);
-      if (match) {
-        try {
-          const parsed = JSON.parse(match[1].replace(/'/g, '"'));
-          if (parsed.success) {
-            const count = parsed.imported?.count ?? 0;
-            const paths = parsed.imported?.paths ?? [];
-            return { success: true, message: `Imported ${count} assets to ${cleanDest}`, paths };
-          } else {
-            return { error: `Import failed: ${parsed.error || 'Unknown error'} (source: ${parsed.source || sourcePath})` };
-          }
-        } catch {
-          // Fall through
-        }
-      }
-
-      // If unable to parse, return generic attempt result
-      return { error: `Import did not report success for source ${sourcePath}` };
+      const errorMessage = `Import failed: ${interpreted.error ?? 'Unknown error'} (source: ${interpreted.payload.source ?? sourcePath})`;
+      return {
+        success: false,
+        message: errorMessage,
+        error: errorMessage,
+        details: bestEffortInterpretedText(interpreted)
+      };
     } catch (err) {
-      return { error: `Failed to import asset: ${err}` };
+      return { success: false, error: `Failed to import asset: ${err}` };
+    } finally {
+      if (createdTestFile) {
+        try {
+          await fs.rm(sourcePath, { force: true });
+        } catch (cleanupError) {
+          // Swallow cleanup error but log for debug visibility
+          console.warn(`Failed to clean up temporary FBX ${sourcePath}:`, cleanupError);
+        }
+      }
     }
   }
 
@@ -243,7 +253,7 @@ except Exception as e:
     }
   }
 
-  private createTestFBX(filePath: string) {
+  private async createTestFBX(filePath: string): Promise<void> {
     // Create a minimal valid FBX ASCII file for testing
     const fbxContent = `; FBX 7.5.0 project file
 FBXHeaderExtension:  {
@@ -299,11 +309,11 @@ Connections:  {
     
     // Ensure directory exists
     const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    try {
+      await fs.mkdir(dir, { recursive: true });
+    } catch {}
     
     // Write the FBX file
-    fs.writeFileSync(filePath, fbxContent, 'utf8');
+    await fs.writeFile(filePath, fbxContent, 'utf8');
   }
 }
