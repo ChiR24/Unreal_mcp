@@ -9,7 +9,6 @@
   "bin": {
     "unreal-engine-mcp-server": "dist/cli.js"
   },
-  
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
@@ -17,7 +16,8 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "clean": "rimraf dist",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test:tools": "node tests/run-unreal-tool-tests.mjs"
   },
   "engines": {
     "node": ">=18"
@@ -35,21 +35,20 @@
   "author": "Unreal Engine MCP Team",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.18.1",
+    "@modelcontextprotocol/sdk": "^1.18.2",
     "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1",
     "axios": "^1.12.2",
     "dotenv": "^16.4.5",
+    "json5": "^2.2.3",
     "ws": "^8.18.0",
-    "yargs": "^17.7.2",
-    "zod": "^3.22.4"
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@types/json5": "^0.0.30",
     "@types/node": "^20.12.7",
     "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^8.43.0",
     "@typescript-eslint/parser": "^8.43.0",
-    "cross-env": "^10.0.0",
     "eslint": "^8.57.0",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
