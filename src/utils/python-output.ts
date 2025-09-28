@@ -117,10 +117,14 @@ function tryParseJson<T>(candidate: string): T | null {
 }
 
 function normalizeLegacyJson(candidate: string): string {
-  return candidate
-    .replace(/\bTrue\b/g, 'true')
-    .replace(/\bFalse\b/g, 'false')
-    .replace(/\bNone\b/g, 'null');
+  return candidate.replace(/\b(True|False|None)\b/g, (match) => {
+    switch (match) {
+      case 'True': return 'true';
+      case 'False': return 'false';
+      case 'None': return 'null';
+      default: return match;
+    }
+  });
 }
 
 function findJsonBlock(text: string, startIndex: number): string | null {
