@@ -2,24 +2,47 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "Node",
     "outDir": "dist",
     "rootDir": "src",
+    
+    // Strict Type Checking
     "strict": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "resolveJsonModule": true,
-    "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo",
-  "noUnusedLocals": false,
-  "noUnusedParameters": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    
+    // Additional Checks
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "allowUnreachableCode": false,
+    "noUncheckedIndexedAccess": false,
+    
+    // Module & Interop
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    
+    // Emit
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "removeComments": false,
+    "importHelpers": false,
+    "emitDeclarationOnly": false,
+    
+    // Performance
+    "skipLibCheck": true,
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
+    
     "types": ["node"]
   },
   "include": ["src/**/*"],

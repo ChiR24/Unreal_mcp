@@ -162,4 +162,116 @@ export class ErrorHandler {
     } catch {}
     return false;
   }
+
+  /**
+   * Retry an async operation with exponential backoff
+   * Best practice from TypeScript async programming patterns
+   * @param operation - Async operation to retry
+   * @param options - Retry configuration
+   * @returns Result of the operation
+   */
+  static async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    options: {
+      maxRetries?: number;
+      initialDelay?: number;
+      maxDelay?: number;
+      backoffMultiplier?: number;
+      shouldRetry?: (error: unknown) => boolean;
+    } = {}
+  ): Promise<T> {
+    const {
+      maxRetries = 3,
+      initialDelay = 100,
+      maxDelay = 10000,
+      backoffMultiplier = 2,
+      shouldRetry = (error) => this.isRetriable(error)
+    } = options;
+
+    let lastError: unknown;
+    let delay = initialDelay;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+
+        if (attempt === maxRetries || !shouldRetry(error)) {
+          throw error;
+        }
+
+        log.debug(`Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+
+        delay = Math.min(delay * backoffMultiplier, maxDelay);
+      }
+    }
+
+    throw lastError;
+  }
+
+  /**
+   * Add timeout to any promise
+   * @param promise - Promise to add timeout to
+   * @param timeoutMs - Timeout in milliseconds
+   * @param errorMessage - Custom error message for timeout
+   * @returns Promise that rejects on timeout
+   */
+  static async withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    errorMessage = 'Operation timed out'
+  ): Promise<T> {
+    let timeoutHandle: NodeJS.Timeout | undefined;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error(errorMessage));
+      }, timeoutMs);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timeoutHandle !== undefined) {
+        clearTimeout(timeoutHandle);
+      }
+    }
+  }
+
+  /**
+   * Execute multiple operations with Promise.allSettled for better error handling
+   * Returns detailed results for each operation, including failures
+   * @param operations - Array of async operations to execute
+   * @returns Object with successful and failed operations separated
+   */
+  static async batchExecute<T>(
+    operations: Array<() => Promise<T>>
+  ): Promise<{
+    successful: Array<{ index: number; value: T }>;
+    failed: Array<{ index: number; reason: unknown }>;
+    successCount: number;
+    failureCount: number;
+  }> {
+    const results = await Promise.allSettled(operations.map(op => op()));
+
+    const successful: Array<{ index: number; value: T }> = [];
+    const failed: Array<{ index: number; reason: unknown }> = [];
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        successful.push({ index, value: result.value });
+      } else {
+        failed.push({ index, reason: result.reason });
+      }
+    });
+
+    return {
+      successful,
+      failed,
+      successCount: successful.length,
+      failureCount: failed.length
+    };
+  }
 }

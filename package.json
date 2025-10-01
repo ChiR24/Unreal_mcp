@@ -11,13 +11,16 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --watch",
     "start": "node dist/index.js",
     "dev": "ts-node-esm src/index.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "clean": "rimraf dist",
     "prepare": "npm run build",
-    "test:tools": "node tests/run-unreal-tool-tests.mjs"
+    "test:tools": "node tests/run-unreal-tool-tests.mjs",
+    "type-check": "tsc --noEmit",
+    "prebuild": "npm run clean"
   },
   "engines": {
     "node": ">=18"

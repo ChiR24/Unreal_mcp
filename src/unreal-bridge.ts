@@ -2,6 +2,7 @@ import WebSocket from 'ws';
 import { createHttpClient } from './utils/http.js';
 import { Logger } from './utils/logger.js';
 import { loadEnv } from './types/env.js';
+import { ErrorHandler } from './utils/error-handler.js';
 
 // RcMessage interface reserved for future WebSocket message handling
 // interface RcMessage {
@@ -43,6 +44,12 @@ export class UnrealBridge {
   private autoReconnectEnabled = false; // disabled by default to prevent looping retries
   private engineVersionCache?: { value: { version: string; major: number; minor: number; patch: number; isUE56OrAbove: boolean }; timestamp: number };
   private readonly ENGINE_VERSION_TTL_MS = 5 * 60 * 1000;
+  
+  // WebSocket health monitoring (best practice from WebSocket optimization guides)
+  private lastPongReceived = 0;
+  private pingInterval?: NodeJS.Timeout;
+  private readonly PING_INTERVAL_MS = 30000; // 30 seconds
+  private readonly PONG_TIMEOUT_MS = 10000; // 10 seconds
   
   // Command queue for throttling
   private commandQueue: CommandQueueItem[] = [];
@@ -323,11 +330,12 @@ except Exception as e:
   get isConnected() { return this.connected; }
   
   /**
-   * Attempt to connect with retries
+   * Attempt to connect with exponential backoff retry strategy
+   * Uses optimized retry pattern from TypeScript best practices
    * @param maxAttempts Maximum number of connection attempts
    * @param timeoutMs Timeout for each connection attempt in milliseconds
-   * @param retryDelayMs Delay between retry attempts in milliseconds
-   * @returns Promise that resolves when connected or rejects after all attempts fail
+   * @param retryDelayMs Initial delay between retry attempts in milliseconds
+   * @returns Promise that resolves to true if connected, false otherwise
    */
   private connectPromise?: Promise<void>;
 
@@ -343,36 +351,25 @@ except Exception as e:
       return this.connected;
     }
 
-    this.connectPromise = (async () => {
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        // Early exit if another concurrent attempt already connected
-        if (this.connected) {
-          this.log.debug('Already connected; skipping remaining retry attempts');
-          return;
-        }
-        try {
-          this.log.debug(`Connection attempt ${attempt}/${maxAttempts}`);
-          await this.connect(timeoutMs);
-          return; // Successfully connected
-        } catch (err: any) {
-          const msg = (err?.message || String(err));
-          this.log.debug(`Connection attempt ${attempt} failed: ${msg}`);
-          if (attempt < maxAttempts) {
-            this.log.debug(`Retrying in ${retryDelayMs}ms...`);
-            // Sleep, but allow early break if we became connected during the wait
-            const start = Date.now();
-            while (Date.now() - start < retryDelayMs) {
-              if (this.connected) return; // someone else connected
-              await new Promise(r => setTimeout(r, 50));
-            }
-          } else {
-            // Keep this at warn (not error) and avoid stack spam
-            this.log.warn(`All ${maxAttempts} connection attempts failed`);
-            return; // exit, connected remains false
-          }
+    // Use ErrorHandler's retryWithBackoff for consistent retry behavior
+    this.connectPromise = ErrorHandler.retryWithBackoff(
+      () => this.connect(timeoutMs),
+      {
+        maxRetries: maxAttempts - 1,
+        initialDelay: retryDelayMs,
+        maxDelay: 10000,
+        backoffMultiplier: 1.5,
+        shouldRetry: (error) => {
+          // Only retry on connection-related errors
+          const msg = (error as Error)?.message?.toLowerCase() || '';
+          return msg.includes('timeout') || msg.includes('connection') || msg.includes('econnrefused');
         }
       }
-    })();
+    ).then(() => {
+      // Success
+    }).catch((err) => {
+      this.log.warn(`Connection failed after ${maxAttempts} attempts:`, err.message);
+    });
 
     try {
       await this.connectPromise;

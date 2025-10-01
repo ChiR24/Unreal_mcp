@@ -21,13 +21,13 @@ Supported actions: list, import, create_material.`,
           description: 'Action to perform'
         },
         // For list
-        directory: { type: 'string', description: 'Directory path to list (shows immediate children only)' },
+        directory: { type: 'string', description: 'Directory path to list (shows immediate children only). Automatically maps /Content to /Game. Example: "/Game/MyAssets"' },
         // For import
-        sourcePath: { type: 'string', description: 'Source file path' },
-        destinationPath: { type: 'string', description: 'Destination path' },
+        sourcePath: { type: 'string', description: 'Source file path on disk to import (FBX, PNG, WAV, EXR supported). Example: "C:/MyAssets/mesh.fbx"' },
+        destinationPath: { type: 'string', description: 'Destination path in project content where asset will be imported. Example: "/Game/ImportedAssets"' },
         // For create_material
-        name: { type: 'string', description: 'Asset name' },
-        path: { type: 'string', description: 'Save path' }
+        name: { type: 'string', description: 'Name for the new material asset. Example: "MyMaterial"' },
+        path: { type: 'string', description: 'Content path where material will be saved. Example: "/Game/Materials"' }
       },
       required: ['action']
     },
@@ -76,35 +76,38 @@ Supported actions: spawn, delete, apply_force.`,
           description: 'Action to perform'
         },
         // Common
-        actorName: { type: 'string', description: 'Actor name (optional for spawn, auto-generated if not provided)' },
+        actorName: { type: 'string', description: 'Actor label/name (optional for spawn, auto-generated if not provided; required for delete). Case-insensitive for delete action.' },
         classPath: { 
           type: 'string', 
-          description: 'Actor class (e.g., "StaticMeshActor", "CameraActor") OR asset path (e.g., "/Engine/BasicShapes/Cube", "/Game/MyMesh"). Asset paths will automatically spawn as StaticMeshActor with the mesh applied'
+          description: 'Actor class (e.g., "StaticMeshActor", "CameraActor") OR asset path (e.g., "/Engine/BasicShapes/Cube", "/Game/MyMesh"). Asset paths will automatically spawn as StaticMeshActor with the mesh applied. Required for spawn action.'
         },
         // Transform
         location: {
           type: 'object',
+          description: 'World space location in centimeters (Unreal units). Optional for spawn, defaults to origin.',
           properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-            z: { type: 'number' }
+            x: { type: 'number', description: 'X coordinate (forward axis in Unreal)' },
+            y: { type: 'number', description: 'Y coordinate (right axis in Unreal)' },
+            z: { type: 'number', description: 'Z coordinate (up axis in Unreal)' }
           }
         },
         rotation: {
           type: 'object',
+          description: 'World space rotation in degrees. Optional for spawn, defaults to zero rotation.',
           properties: {
-            pitch: { type: 'number' },
-            yaw: { type: 'number' },
-            roll: { type: 'number' }
+            pitch: { type: 'number', description: 'Pitch rotation in degrees (Y-axis rotation)' },
+            yaw: { type: 'number', description: 'Yaw rotation in degrees (Z-axis rotation)' },
+            roll: { type: 'number', description: 'Roll rotation in degrees (X-axis rotation)' }
           }
         },
         // Physics
         force: {
           type: 'object',
+          description: 'Force vector to apply in Newtons. Required for apply_force action. Actor must have physics simulation enabled.',
           properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-            z: { type: 'number' }
+            x: { type: 'number', description: 'Force magnitude along X-axis' },
+            y: { type: 'number', description: 'Force magnitude along Y-axis' },
+            z: { type: 'number', description: 'Force magnitude along Z-axis' }
           }
         }
       },
@@ -145,24 +148,26 @@ Supported actions: play, stop, set_camera, set_view_mode (with validation).`,
         // Camera
         location: {
           type: 'object',
+          description: 'World space camera location for set_camera action. All coordinates required.',
           properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-            z: { type: 'number' }
+            x: { type: 'number', description: 'X coordinate in centimeters' },
+            y: { type: 'number', description: 'Y coordinate in centimeters' },
+            z: { type: 'number', description: 'Z coordinate in centimeters' }
           }
         },
         rotation: {
           type: 'object',
+          description: 'Camera rotation for set_camera action. All rotation components required.',
           properties: {
-            pitch: { type: 'number' },
-            yaw: { type: 'number' },
-            roll: { type: 'number' }
+            pitch: { type: 'number', description: 'Pitch in degrees' },
+            yaw: { type: 'number', description: 'Yaw in degrees' },
+            roll: { type: 'number', description: 'Roll in degrees' }
           }
         },
         // View mode
         viewMode: { 
           type: 'string', 
-          description: 'View mode (Lit, Unlit, Wireframe, etc.)'
+          description: 'View mode for set_view_mode action. Supported: Lit, Unlit, Wireframe, DetailLighting, LightingOnly, LightComplexity, ShaderComplexity. Required for set_view_mode.'
         }
       },
       required: ['action']
@@ -209,31 +214,32 @@ Supported actions: load, save, stream, create_light, build_lighting.`,
           description: 'Level action'
         },
         // Level
-        levelPath: { type: 'string', description: 'Level path' },
-        levelName: { type: 'string', description: 'Level name' },
-        streaming: { type: 'boolean', description: 'Use streaming' },
-        shouldBeLoaded: { type: 'boolean', description: 'Load or unload' },
-        shouldBeVisible: { type: 'boolean', description: 'Visibility' },
+        levelPath: { type: 'string', description: 'Full content path to level asset (e.g., "/Game/Maps/MyLevel"). Required for load action.' },
+        levelName: { type: 'string', description: 'Level name for streaming operations. Required for stream action.' },
+        streaming: { type: 'boolean', description: 'Whether to use streaming load (true) or direct load (false). Optional for load action.' },
+        shouldBeLoaded: { type: 'boolean', description: 'Whether to load (true) or unload (false) the streaming level. Required for stream action.' },
+        shouldBeVisible: { type: 'boolean', description: 'Whether the streaming level should be visible after loading. Optional for stream action.' },
         // Lighting
         lightType: { 
           type: 'string', 
           enum: ['Directional', 'Point', 'Spot', 'Rect'],
-          description: 'Light type'
+          description: 'Type of light to create. Directional for sun-like lighting, Point for omni-directional, Spot for cone-shaped, Rect for area lighting. Required for create_light.'
         },
-        name: { type: 'string', description: 'Object name' },
+        name: { type: 'string', description: 'Name for the spawned light actor. Optional, auto-generated if not provided.' },
         location: {
           type: 'object',
+          description: 'World space location for light placement in centimeters. Optional for create_light, defaults to origin.',
           properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-            z: { type: 'number' }
+            x: { type: 'number', description: 'X coordinate' },
+            y: { type: 'number', description: 'Y coordinate' },
+            z: { type: 'number', description: 'Z coordinate' }
           }
         },
-        intensity: { type: 'number', description: 'Light intensity' },
+        intensity: { type: 'number', description: 'Light intensity value in lumens (for Point/Spot) or lux (for Directional). Typical range: 1000-10000. Optional for create_light.' },
         quality: { 
           type: 'string',
           enum: ['Preview', 'Medium', 'High', 'Production'],
-          description: 'Build quality'
+          description: 'Lighting build quality level. Preview is fastest, Production is highest quality. Required for build_lighting action.'
         }
       },
       required: ['action']
@@ -272,17 +278,17 @@ Supported actions: create_animation_bp, play_montage, setup_ragdoll.`,
           description: 'Action type'
         },
         // Common
-        name: { type: 'string', description: 'Asset name' },
-        actorName: { type: 'string', description: 'Actor name' },
+        name: { type: 'string', description: 'Name for the created animation blueprint asset. Required for create_animation_bp action.' },
+        actorName: { type: 'string', description: 'Actor label/name in the level to apply animation to. Required for play_montage and setup_ragdoll actions.' },
         // Animation
-        skeletonPath: { type: 'string', description: 'Skeleton path' },
-        montagePath: { type: 'string', description: 'Montage path' },
-        animationPath: { type: 'string', description: 'Animation path' },
-        playRate: { type: 'number', description: 'Play rate' },
+        skeletonPath: { type: 'string', description: 'Content path to skeleton asset (e.g., "/Game/Characters/MySkeleton"). Required for create_animation_bp action.' },
+        montagePath: { type: 'string', description: 'Content path to animation montage asset to play. Required for play_montage if animationPath not provided.' },
+        animationPath: { type: 'string', description: 'Content path to animation sequence asset to play. Alternative to montagePath for play_montage action.' },
+        playRate: { type: 'number', description: 'Animation playback speed multiplier. 1.0 is normal speed, 2.0 is double speed, 0.5 is half speed. Optional, defaults to 1.0.' },
         // Physics
-        physicsAssetName: { type: 'string', description: 'Physics asset' },
-        blendWeight: { type: 'number', description: 'Blend weight' },
-        savePath: { type: 'string', description: 'Save location' }
+        physicsAssetName: { type: 'string', description: 'Name or path to physics asset for ragdoll simulation. Required for setup_ragdoll action.' },
+        blendWeight: { type: 'number', description: 'Blend weight between animated and ragdoll physics (0.0 to 1.0). 0.0 is fully animated, 1.0 is fully ragdoll. Optional, defaults to 1.0.' },
+        savePath: { type: 'string', description: 'Content path where animation blueprint will be saved (e.g., "/Game/Animations"). Required for create_animation_bp action.' }
       },
       required: ['action']
     },
@@ -319,34 +325,35 @@ Supported actions: niagara, particle, debug_shape.`,
           description: 'Effect type'
         },
         // Common
-        name: { type: 'string', description: 'Effect name' },
+        name: { type: 'string', description: 'Name for the spawned effect actor. Optional, auto-generated if not provided.' },
         location: {
           type: 'object',
+          description: 'World space location where effect will be spawned in centimeters. Optional, defaults to origin.',
           properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-            z: { type: 'number' }
+            x: { type: 'number', description: 'X coordinate' },
+            y: { type: 'number', description: 'Y coordinate' },
+            z: { type: 'number', description: 'Z coordinate' }
           }
         },
         // Particles
         effectType: { 
           type: 'string',
-          description: 'Effect type (Fire, Smoke, Water, etc.)'
+          description: 'Preset particle effect type (Fire, Smoke, Water, Explosion, etc.). Used for particle action to spawn common effects.'
         },
-        systemPath: { type: 'string', description: 'Niagara system path' },
-        scale: { type: 'number', description: 'Scale factor' },
+        systemPath: { type: 'string', description: 'Content path to Niagara system asset (e.g., "/Game/Effects/MyNiagaraSystem"). Required for niagara action.' },
+        scale: { type: 'number', description: 'Uniform scale multiplier for Niagara effect. 1.0 is normal size. Optional, defaults to 1.0.' },
         // Debug
         shape: { 
           type: 'string',
-          description: 'Debug shape (Line, Box, Sphere, etc.)'
+          description: 'Debug shape type to draw (Line, Box, Sphere, Capsule, Cone, Cylinder, Arrow). Required for debug_shape action.'
         },
-        size: { type: 'number', description: 'Size/radius' },
+        size: { type: 'number', description: 'Size/radius of debug shape in centimeters. For Line, this is thickness. For shapes, this is radius/extent. Optional, defaults vary by shape.' },
         color: {
           type: 'array',
           items: { type: 'number' },
-          description: 'RGBA color'
+          description: 'RGBA color array with values 0-255 (e.g., [255, 0, 0, 255] for red). Optional, defaults to white.'
         },
-        duration: { type: 'number', description: 'Duration' }
+        duration: { type: 'number', description: 'How long debug shape persists in seconds. 0 means one frame, -1 means permanent until cleared. Optional, defaults to 0.' }
       },
       required: ['action']
     },
@@ -385,14 +392,14 @@ Supported actions: create, add_component.`,
           enum: ['create', 'add_component'],
           description: 'Blueprint action'
         },
-        name: { type: 'string', description: 'Blueprint name' },
+        name: { type: 'string', description: 'Name for the blueprint asset. Required for create action. For add_component, this is the blueprint asset name or path.' },
         blueprintType: { 
           type: 'string',
-          description: 'Type (Actor, Pawn, Character, etc.)'
+          description: 'Base class type for blueprint (Actor, Pawn, Character, Object, ActorComponent, SceneComponent, etc.). Required for create action.'
         },
-        componentType: { type: 'string', description: 'Component type' },
-        componentName: { type: 'string', description: 'Component name' },
-        savePath: { type: 'string', description: 'Save location' }
+        componentType: { type: 'string', description: 'Component class to add (StaticMeshComponent, SkeletalMeshComponent, CameraComponent, etc.). Required for add_component action.' },
+        componentName: { type: 'string', description: 'Unique name for the component instance within the blueprint. Required for add_component action.' },
+        savePath: { type: 'string', description: 'Content path where blueprint will be saved (e.g., "/Game/Blueprints"). Required for create action.' }
       },
       required: ['action', 'name']
     },
@@ -429,22 +436,23 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
           description: 'Environment action'
         },
         // Common
-        name: { type: 'string', description: 'Object name' },
+        name: { type: 'string', description: 'Name for landscape, foliage type, or grass type actor. Optional for most actions, auto-generated if not provided.' },
         // Landscape
-        sizeX: { type: 'number', description: 'Landscape size X' },
-        sizeY: { type: 'number', description: 'Landscape size Y' },
+        sizeX: { type: 'number', description: 'Landscape width in components. Each component is typically 63 quads. Required for create_landscape action.' },
+        sizeY: { type: 'number', description: 'Landscape height in components. Each component is typically 63 quads. Required for create_landscape action.' },
         tool: { 
           type: 'string',
-          description: 'Sculpt tool (Sculpt, Smooth, Flatten, etc.)'
+          description: 'Landscape sculpt tool to use (Sculpt, Smooth, Flatten, Ramp, Erosion, Hydro, Noise). Required for sculpt action.'
         },
         // Advanced: procedural terrain
         location: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+          description: 'World space location for terrain placement. Required for create_procedural_terrain.',
+          properties: { x: { type: 'number', description: 'X coordinate' }, y: { type: 'number', description: 'Y coordinate' }, z: { type: 'number', description: 'Z coordinate' } }
         },
-        subdivisions: { type: 'number' },
-        heightFunction: { type: 'string' },
-        materialPath: { type: 'string' },
+        subdivisions: { type: 'number', description: 'Number of subdivisions for procedural terrain mesh. Higher values create more detailed terrain. Optional for create_procedural_terrain.' },
+        heightFunction: { type: 'string', description: 'Mathematical function or algorithm for terrain height generation (e.g., "perlin", "simplex", custom formula). Optional for create_procedural_terrain.' },
+        materialPath: { type: 'string', description: 'Content path to material for terrain/landscape (e.g., "/Game/Materials/TerrainMat"). Optional.' },
         // Advanced: procedural foliage
         bounds: {
           type: 'object',
@@ -482,19 +490,20 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
           }
         },
         // Foliage (for add_foliage)
-        meshPath: { type: 'string', description: 'Mesh path' },
-        density: { type: 'number', description: 'Density' },
+        meshPath: { type: 'string', description: 'Content path to static mesh for foliage (e.g., "/Game/Foliage/TreeMesh"). Required for add_foliage action.' },
+        density: { type: 'number', description: 'Foliage placement density (instances per unit area). Typical range: 0.1 to 10.0. Required for add_foliage and affects procedural foliage.' },
         // Painting
         position: {
           type: 'object',
+          description: 'World space position for foliage paint brush center. Required for paint_foliage action.',
           properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-            z: { type: 'number' }
+            x: { type: 'number', description: 'X coordinate' },
+            y: { type: 'number', description: 'Y coordinate' },
+            z: { type: 'number', description: 'Z coordinate' }
           }
         },
-        brushSize: { type: 'number', description: 'Brush size' },
-        strength: { type: 'number', description: 'Tool strength' }
+        brushSize: { type: 'number', description: 'Radius of foliage paint brush in centimeters. Typical range: 500-5000. Required for paint_foliage action.' },
+        strength: { type: 'number', description: 'Paint tool strength/intensity (0.0 to 1.0). Higher values place more instances. Optional for paint_foliage, defaults to 0.5.' }
       },
       required: ['action']
     },
@@ -534,39 +543,40 @@ Supported actions: profile, show_fps, set_quality, play_sound, create_widget, sh
         // Performance
         profileType: { 
           type: 'string',
-          description: 'Profile type (CPU, GPU, Memory)'
+          description: 'Type of profiling to enable: CPU (stat cpu), GPU (stat gpu), Memory (stat memory), FPS (stat fps), Unit (stat unit). Required for profile action.'
         },
         category: { 
           type: 'string',
-          description: 'Quality category (Shadows, Textures, etc.)'
+          description: 'Scalability quality category to adjust: ViewDistance, AntiAliasing, Shadow/Shadows, PostProcess/PostProcessing, Texture/Textures, Effects, Foliage, Shading. Required for set_quality action.'
         },
-        level: { type: 'number', description: 'Quality level (0-4)' },
-        enabled: { type: 'boolean', description: 'Enable/disable' },
-        verbose: { type: 'boolean', description: 'Verbose output' },
+        level: { type: 'number', description: 'Quality level (0=Low, 1=Medium, 2=High, 3=Epic, 4=Cinematic). Required for set_quality action.' },
+        enabled: { type: 'boolean', description: 'Enable (true) or disable (false) profiling/FPS display. Required for profile and show_fps actions.' },
+        verbose: { type: 'boolean', description: 'Show verbose profiling output with additional details. Optional for profile action.' },
         // Audio
-        soundPath: { type: 'string', description: 'Sound asset path' },
+        soundPath: { type: 'string', description: 'Content path to sound asset (SoundCue or SoundWave, e.g., "/Game/Audio/MySound"). Required for play_sound action.' },
         location: {
           type: 'object',
+          description: 'World space location for 3D sound playback. Required if is3D is true for play_sound action.',
           properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-            z: { type: 'number' }
+            x: { type: 'number', description: 'X coordinate' },
+            y: { type: 'number', description: 'Y coordinate' },
+            z: { type: 'number', description: 'Z coordinate' }
           }
         },
-        volume: { type: 'number', description: 'Volume (0-1)' },
-        is3D: { type: 'boolean', description: '3D sound' },
+        volume: { type: 'number', description: 'Volume multiplier (0.0=silent, 1.0=full volume). Optional for play_sound, defaults to 1.0.' },
+        is3D: { type: 'boolean', description: 'Whether sound should be played as 3D positional audio (true) or 2D (false). Optional for play_sound, defaults to false.' },
         // UI
-        widgetName: { type: 'string', description: 'Widget name' },
+        widgetName: { type: 'string', description: 'Name for widget asset or instance. Required for create_widget and show_widget actions.' },
         widgetType: { 
           type: 'string',
-          description: 'Widget type (HUD, Menu, etc.)'
+          description: 'Widget blueprint type or category (HUD, Menu, Dialog, Notification, etc.). Optional for create_widget, helps categorize the widget.'
         },
-        visible: { type: 'boolean', description: 'Visibility' },
+        visible: { type: 'boolean', description: 'Whether widget should be visible (true) or hidden (false). Required for show_widget action.' },
         // Screenshot
-        resolution: { type: 'string', description: 'e.g. 1920x1080' },
+        resolution: { type: 'string', description: 'Screenshot resolution in WIDTHxHEIGHT format (e.g., "1920x1080", "3840x2160"). Optional for screenshot action, uses viewport size if not specified.' },
         // Engine lifecycle
-        projectPath: { type: 'string', description: 'Path to .uproject (for engine_start, optional if UE_PROJECT_PATH env set)' },
-        editorExe: { type: 'string', description: 'Path to UE Editor executable (optional if UE_EDITOR_EXE env set)' }
+        projectPath: { type: 'string', description: 'Absolute path to .uproject file (e.g., "C:/Projects/MyGame/MyGame.uproject"). Required for engine_start unless UE_PROJECT_PATH environment variable is set.' },
+        editorExe: { type: 'string', description: 'Absolute path to Unreal Editor executable (e.g., "C:/UnrealEngine/Engine/Binaries/Win64/UnrealEditor.exe"). Required for engine_start unless UE_EDITOR_EXE environment variable is set.' }
       },
       required: ['action']
     },
@@ -598,7 +608,7 @@ Use it when higher-level tools don't cover the console tweak you need. Hazardous
     inputSchema: {
       type: 'object',
       properties: {
-        command: { type: 'string', description: 'Console command to execute' }
+        command: { type: 'string', description: 'Console command to execute in Unreal Engine (e.g., "stat fps", "r.SetRes 1920x1080", "viewmode lit"). Dangerous commands like quit/exit and crash triggers are blocked. Required.' }
       },
       required: ['command']
     },
@@ -635,13 +645,13 @@ Supported actions: create_preset, expose_actor, expose_property, list_fields, se
           enum: ['create_preset', 'expose_actor', 'expose_property', 'list_fields', 'set_property', 'get_property'],
           description: 'RC action'
         },
-        name: { type: 'string', description: 'Preset or entity name' },
-        path: { type: 'string', description: 'Preset save path (e.g. /Game/RCPresets)' },
-        presetPath: { type: 'string', description: 'Preset asset path (e.g. /Game/RCPresets/MyPreset)' },
-        actorName: { type: 'string', description: 'Actor label/name to expose' },
-        objectPath: { type: 'string', description: 'Object path for property get/set' },
-        propertyName: { type: 'string', description: 'Property name for remote property set/get' },
-        value: { description: 'Value for property set (JSON-serializable)' }
+        name: { type: 'string', description: 'Name for Remote Control preset asset. Required for create_preset action.' },
+        path: { type: 'string', description: 'Content path where preset will be saved (e.g., "/Game/RCPresets"). Required for create_preset action.' },
+        presetPath: { type: 'string', description: 'Full content path to existing Remote Control preset asset (e.g., "/Game/RCPresets/MyPreset"). Required for expose_actor, expose_property, list_fields, set_property, and get_property actions.' },
+        actorName: { type: 'string', description: 'Actor label/name in level to expose to Remote Control preset. Required for expose_actor action.' },
+        objectPath: { type: 'string', description: 'Full object path for property operations (e.g., "/Game/Maps/Level.Level:PersistentLevel.StaticMeshActor_0"). Required for expose_property, set_property, and get_property actions.' },
+        propertyName: { type: 'string', description: 'Name of the property to expose, get, or set (e.g., "RelativeLocation", "Intensity", "bHidden"). Required for expose_property, set_property, and get_property actions.' },
+        value: { description: 'New value to set for property. Must be JSON-serializable and compatible with property type (e.g., {"X":100,"Y":200,"Z":300} for location, true/false for bool, number for numeric types). Required for set_property action.' }
       },
       required: ['action']
     },
@@ -682,18 +692,18 @@ Supported actions: create, open, add_camera, add_actor, add_actors, remove_actor
           ], 
           description: 'Sequence action' 
         },
-        name: { type: 'string', description: 'Sequence name (for create)' },
-        path: { type: 'string', description: 'Save path (for create), or asset path (for open/operations)' },
-        actorName: { type: 'string', description: 'Actor name to add as possessable' },
-        actorNames: { type: 'array', items: { type: 'string' }, description: 'Multiple actor names for batch operations' },
-        className: { type: 'string', description: 'Class name for spawnable (e.g. StaticMeshActor, CineCameraActor)' },
-        spawnable: { type: 'boolean', description: 'If true, camera is spawnable' },
-        frameRate: { type: 'number', description: 'Frame rate for sequence' },
-        lengthInFrames: { type: 'number', description: 'Total length in frames' },
-        playbackStart: { type: 'number', description: 'Playback start frame' },
-        playbackEnd: { type: 'number', description: 'Playback end frame' },
-        speed: { type: 'number', description: 'Playback speed multiplier' },
-        loopMode: { type: 'string', enum: ['once', 'loop', 'pingpong'], description: 'Playback loop mode' }
+        name: { type: 'string', description: 'Name for new Level Sequence asset. Required for create action.' },
+        path: { type: 'string', description: 'Content path - for create action: save location (e.g., "/Game/Cinematics"); for open/operations: full asset path (e.g., "/Game/Cinematics/MySequence"). Required for create and open actions.' },
+        actorName: { type: 'string', description: 'Actor label/name in level to add as possessable binding to sequence. Required for add_actor action.' },
+        actorNames: { type: 'array', items: { type: 'string' }, description: 'Array of actor labels/names for batch add or remove operations. Required for add_actors and remove_actors actions.' },
+        className: { type: 'string', description: 'Unreal class name for spawnable actor (e.g., "StaticMeshActor", "CineCameraActor", "SkeletalMeshActor"). Required for add_spawnable_from_class action.' },
+        spawnable: { type: 'boolean', description: 'If true, camera is spawnable (owned by sequence); if false, camera is possessable (references level actor). Optional for add_camera, defaults to true.' },
+        frameRate: { type: 'number', description: 'Sequence frame rate in frames per second (e.g., 24, 30, 60). Required for set_properties when changing frame rate.' },
+        lengthInFrames: { type: 'number', description: 'Total sequence length measured in frames. Required for set_properties when changing duration.' },
+        playbackStart: { type: 'number', description: 'First frame of playback range (inclusive). Optional for set_properties.' },
+        playbackEnd: { type: 'number', description: 'Last frame of playback range (inclusive). Optional for set_properties.' },
+        speed: { type: 'number', description: 'Playback speed multiplier. 1.0 is normal speed, 2.0 is double speed, 0.5 is half speed. Required for set_playback_speed action.' },
+        loopMode: { type: 'string', enum: ['once', 'loop', 'pingpong'], description: 'How sequence loops: "once" plays once and stops, "loop" repeats from start, "pingpong" plays forward then backward. Optional for set_properties.' }
       },
       required: ['action']
     },
@@ -732,10 +742,10 @@ Supported actions: inspect_object, set_property.`,
     inputSchema: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['inspect_object', 'set_property'], description: 'Inspection action' },
-        objectPath: { type: 'string', description: 'Object path' },
-        propertyName: { type: 'string', description: 'Property to set/get' },
-        value: { description: 'Value to set (JSON-serializable)' }
+        action: { type: 'string', enum: ['inspect_object', 'set_property'], description: 'Introspection action: "inspect_object" retrieves all properties, "set_property" modifies a specific property. Required.' },
+        objectPath: { type: 'string', description: 'Full object path in Unreal format (e.g., "/Game/Maps/Level.Level:PersistentLevel.StaticMeshActor_0" or "/Script/Engine.Default__StaticMeshActor" for CDO). Required for both actions.' },
+        propertyName: { type: 'string', description: 'Name of the property to modify (e.g., "RelativeLocation", "Mobility", "bHidden"). Required for set_property action.' },
+        value: { description: 'New property value. Must be JSON-serializable and compatible with property type (e.g., {"X":100,"Y":0,"Z":0} for vectors, 5.0 for floats, true for bools, "Value" for strings). Required for set_property action.' }
       },
       required: ['action']
     },
