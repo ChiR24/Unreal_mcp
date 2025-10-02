@@ -40,10 +40,11 @@ import {
   GetPromptRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
 import { responseValidator } from './utils/response-validator.js';
-import { ErrorHandler } from './utils/error-handler.js';
+import { z } from 'zod';
 import { routeStdoutLogsToStderr } from './utils/stdio-redirect.js';
-import { cleanObject } from './utils/safe-json.js';
 import { createElicitationHelper } from './utils/elicitation.js';
+import { cleanObject } from './utils/safe-json.js';
+import { ErrorHandler } from './utils/error-handler.js';
 
 const log = new Logger('UE-MCP');
 
@@ -677,6 +678,33 @@ export async function createServer() {
   return { server, bridge };
 }
 
+// Export configuration schema for Smithery session UI and validation
+export const configSchema = z.object({
+  ueHost: z.string().optional().describe('Unreal Engine host (e.g. 127.0.0.1)'),
+  ueHttpPort: z.number().int().optional().default(30010).describe('Remote Control HTTP port'),
+  ueWsPort: z.number().int().optional().default(30020).describe('Remote Control WebSocket port'),
+  logLevel: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info').describe('Runtime log level')
+});
+
+// Default export expected by Smithery TypeScript runtime. Accepts an optional config object
+// and injects values into the environment before creating the server.
+export default async function createServerDefault({ config }: { config?: any } = {}) {
+  try {
+    if (config) {
+      if (typeof config.ueHost === 'string' && config.ueHost.trim()) process.env.UE_HOST = config.ueHost;
+      if (config.ueHttpPort !== undefined) process.env.UE_RC_HTTP_PORT = String(config.ueHttpPort);
+      if (config.ueWsPort !== undefined) process.env.UE_RC_WS_PORT = String(config.ueWsPort);
+      if (typeof config.logLevel === 'string') process.env.LOG_LEVEL = config.logLevel;
+    }
+  } catch (e) {
+  // Non-fatal: log and continue (console to avoid circular logger dependencies at top-level)
+  console.debug('[createServerDefault] Failed to apply config to environment:', (e as any)?.message || e);
+  }
+
+  const { server } = await createServer();
+  return server;
+}
+
 export async function startStdioServer() {
   const { server } = await createServer();
   const transport = new StdioServerTransport();
@@ -695,10 +723,4 @@ export async function startStdioServer() {
   log.info('Unreal Engine MCP Server started on stdio');
 }
 
-// Start the server when run directly
-if (import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}`) {
-  startStdioServer().catch(error => {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  });
-}
+// Direct execution is handled via src/cli.ts to keep this module side-effect free.

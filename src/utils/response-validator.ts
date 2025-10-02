@@ -9,11 +9,16 @@ const log = new Logger('ResponseValidator');
  * Validates tool responses against their defined output schemas
  */
 export class ResponseValidator {
-  private ajv: Ajv;
+  // Keep ajv as any to avoid complex interop typing issues with Ajv's ESM/CJS dual export
+  // shape when using NodeNext module resolution.
+  private ajv: any;
   private validators: Map<string, any> = new Map();
 
   constructor() {
-    this.ajv = new Ajv({
+    // Cast Ajv to any for construction to avoid errors when TypeScript's NodeNext
+    // module resolution represents the import as a namespace object.
+    const AjvCtor: any = (Ajv as any)?.default ?? Ajv;
+    this.ajv = new AjvCtor({
       allErrors: true,
       verbose: true,
       strict: false // Allow additional properties for flexibility

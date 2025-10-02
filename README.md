@@ -2,9 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NPM Package](https://img.shields.io/npm/v/unreal-engine-mcp-server)](https://www.npmjs.com/package/unreal-engine-mcp-server)
+[![Docker Image](https://img.shields.io/docker/pulls/mcp/server/unreal-engine-mcp-server)](https://hub.docker.com/mcp/server/unreal-engine-mcp-server/overview)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.6-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
+[![Smithery](https://img.shields.io/badge/Smithery-Deployed-blue)](https://smithery.ai/)
 
 A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via Remote Control API. Built with TypeScript and designed for game development automation.
 
@@ -185,6 +187,13 @@ LOG_LEVEL=info                 # debug | info | warn | error
 ```bash
 docker build -t unreal-mcp .
 docker run -it --rm unreal-mcp
+```
+
+Pull from Docker Hub
+
+```bash
+docker pull mcp/server/unreal-engine-mcp-server:latest
+docker run --rm -it mcp/server/unreal-engine-mcp-server:latest
 ```
 
 ## Development

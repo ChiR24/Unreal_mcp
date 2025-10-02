@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
-    "moduleResolution": "Node",
+  "target": "ES2022",
+  "module": "NodeNext",
+  "moduleResolution": "NodeNext",
     "outDir": "dist",
     "rootDir": "src",
     
@@ -40,10 +40,10 @@
     
     // Performance
     "skipLibCheck": true,
-    "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo",
+  "incremental": false,
     
-    "types": ["node"]
+    "types": ["node"],
+    "noEmitOnError": false
   },
   "include": ["src/**/*"],
   "exclude": [

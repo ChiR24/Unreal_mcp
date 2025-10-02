@@ -4,6 +4,7 @@
   "mcpName": "io.github.ChiR24/unreal-engine-mcp",
   "description": "A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via Remote Control API. Built with TypeScript and designed for game development automation.",
   "type": "module",
+  "module": "src/index.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -12,8 +13,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "build:watch": "tsc -p tsconfig.json --watch",
-    "start": "node dist/index.js",
-    "dev": "ts-node-esm src/index.ts",
+  "start": "node dist/cli.js",
+    "smithery:dev": "npx @smithery/cli dev",
+    "smithery:build": "npx @smithery/cli build",
+  "smithery:ci": "npm run build && npx @smithery/cli build",
+  "dev": "ts-node-esm src/cli.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "clean": "rimraf dist",
@@ -39,6 +43,7 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.2",
+    "zod": "^3.22.2",
     "ajv": "^8.17.1",
     "axios": "^1.12.2",
     "dotenv": "^16.4.5",
@@ -53,6 +58,7 @@
   "@typescript-eslint/eslint-plugin": "^8.44.1",
   "@typescript-eslint/parser": "^8.44.1",
     "eslint": "^9.36.0",
+    "@smithery/cli": "^1.0.0",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
