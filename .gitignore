@@ -11,6 +11,7 @@ build/
 *.d.ts.map
 .tsbuildinfo
 Warp.md
+.smithery/
 
 # Environment files
 .env

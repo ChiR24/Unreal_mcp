@@ -250,8 +250,7 @@ export async function createServer() {
         prompts: {
           listChanged: false
         },
-        logging: {},
-        elicitation: {}
+        logging: {}
       }
     }
   );
