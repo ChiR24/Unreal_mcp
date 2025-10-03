@@ -106,7 +106,8 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
       "env": {
         "UE_HOST": "127.0.0.1",
         "UE_RC_HTTP_PORT": "30010",
-        "UE_RC_WS_PORT": "30020"
+        "UE_RC_WS_PORT": "30020",
+        "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject"
       }
     }
   }
@@ -124,7 +125,8 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
       "env": {
         "UE_HOST": "127.0.0.1",
         "UE_RC_HTTP_PORT": "30010",
-        "UE_RC_WS_PORT": "30020"
+        "UE_RC_WS_PORT": "30020",
+        "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject"
       }
     }
   }
@@ -178,6 +180,7 @@ Blueprints, Materials, Textures, Static/Skeletal Meshes, Levels, Sounds, Particl
 UE_HOST=127.0.0.1              # Unreal Engine host
 UE_RC_HTTP_PORT=30010          # Remote Control HTTP port
 UE_RC_WS_PORT=30020            # Remote Control WebSocket port
+UE_PROJECT_PATH="C:/Users/YourName/Documents/Unreal Projects/YourProject"  # Absolute path to your .uproject file
 LOG_LEVEL=info                 # debug | info | warn | error
 ```
 

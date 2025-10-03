@@ -4,6 +4,7 @@ runtime: "typescript"
 env:
   NODE_ENV: "production"
   LOG_LEVEL: "info"
+  UE_PROJECT_PATH: "C:/Users/YourName/Documents/Unreal Projects/YourProject"
 # Session configuration hints (served by the exported Zod configSchema in src/index.ts)
 sessionConfig:
   ueHost:
@@ -22,3 +23,7 @@ sessionConfig:
     type: string
     description: "Server log verbosity"
     default: "info"
+  projectPath:
+    type: string
+    description: "Absolute path to your .uproject file"
+    default: "C:/Users/YourName/Documents/Unreal Projects/YourProject"

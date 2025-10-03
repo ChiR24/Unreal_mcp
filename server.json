@@ -36,6 +36,12 @@
           "description": "Logging level: debug, info, warn, error (default: info)",
           "isRequired": false,
           "value": "info"
+        },
+        {
+          "name": "UE_PROJECT_PATH",
+          "description": "Absolute path to your Unreal .uproject file",
+          "isRequired": false,
+          "value": "C:/Users/YourName/Documents/Unreal Projects/YourProject"
         }
       ]
     }

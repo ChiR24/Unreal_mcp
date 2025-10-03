@@ -679,10 +679,11 @@ export function createServer() {
 
 // Export configuration schema for Smithery session UI and validation
 export const configSchema = z.object({
-  ueHost: z.string().optional().describe('Unreal Engine host (e.g. 127.0.0.1)'),
+  ueHost: z.string().optional().default('127.0.0.1').describe('Unreal Engine host (e.g. 127.0.0.1)'),
   ueHttpPort: z.number().int().optional().default(30010).describe('Remote Control HTTP port'),
   ueWsPort: z.number().int().optional().default(30020).describe('Remote Control WebSocket port'),
-  logLevel: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info').describe('Runtime log level')
+  logLevel: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info').describe('Runtime log level'),
+  projectPath: z.string().optional().default('C:/Users/YourName/Documents/Unreal Projects/YourProject').describe('Absolute path to your Unreal .uproject file')
 });
 
 // Default export expected by Smithery TypeScript runtime. Accepts an optional config object
@@ -693,7 +694,8 @@ export default function createServerDefault({ config }: { config?: any } = {}) {
       if (typeof config.ueHost === 'string' && config.ueHost.trim()) process.env.UE_HOST = config.ueHost;
       if (config.ueHttpPort !== undefined) process.env.UE_RC_HTTP_PORT = String(config.ueHttpPort);
       if (config.ueWsPort !== undefined) process.env.UE_RC_WS_PORT = String(config.ueWsPort);
-      if (typeof config.logLevel === 'string') process.env.LOG_LEVEL = config.logLevel;
+  if (typeof config.logLevel === 'string') process.env.LOG_LEVEL = config.logLevel;
+  if (typeof config.projectPath === 'string' && config.projectPath.trim()) process.env.UE_PROJECT_PATH = config.projectPath;
     }
   } catch (e) {
     // Non-fatal: log and continue (console to avoid circular logger dependencies at top-level)
