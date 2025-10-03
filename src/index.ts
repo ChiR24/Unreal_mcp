@@ -144,7 +144,7 @@ async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
   }
 }
 
-export async function createServer() {
+export function createServer() {
   const bridge = new UnrealBridge();
   // Disable auto-reconnect loops; connect only on-demand
   bridge.setAutoReconnectEnabled(false);
@@ -687,7 +687,7 @@ export const configSchema = z.object({
 
 // Default export expected by Smithery TypeScript runtime. Accepts an optional config object
 // and injects values into the environment before creating the server.
-export default async function createServerDefault({ config }: { config?: any } = {}) {
+export default function createServerDefault({ config }: { config?: any } = {}) {
   try {
     if (config) {
       if (typeof config.ueHost === 'string' && config.ueHost.trim()) process.env.UE_HOST = config.ueHost;
@@ -696,16 +696,16 @@ export default async function createServerDefault({ config }: { config?: any } =
       if (typeof config.logLevel === 'string') process.env.LOG_LEVEL = config.logLevel;
     }
   } catch (e) {
-  // Non-fatal: log and continue (console to avoid circular logger dependencies at top-level)
-  console.debug('[createServerDefault] Failed to apply config to environment:', (e as any)?.message || e);
+    // Non-fatal: log and continue (console to avoid circular logger dependencies at top-level)
+    console.debug('[createServerDefault] Failed to apply config to environment:', (e as any)?.message || e);
   }
 
-  const { server } = await createServer();
+  const { server } = createServer();
   return server;
 }
 
 export async function startStdioServer() {
-  const { server } = await createServer();
+  const { server } = createServer();
   const transport = new StdioServerTransport();
   
   // Add debugging for transport messages
