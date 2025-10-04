@@ -59,7 +59,15 @@ npm install -g unreal-engine-mcp-server
 npm install unreal-engine-mcp-server
 ```
 
-#### Option 2: Clone and Build
+#### Option 2: Installing via Smithery
+
+To install Unreal Engine MCP automatically via [Smithery](https://smithery.ai/server/@ChiR24/unreal_mcp):
+
+```bash
+npx -y @smithery/cli install @ChiR24/unreal_mcp
+```
+
+#### Option 3: Clone and Build
 
 ```bash
 # Clone the repository
