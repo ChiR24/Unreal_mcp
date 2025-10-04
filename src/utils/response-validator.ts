@@ -4,6 +4,69 @@ import { cleanObject } from './safe-json.js';
 
 const log = new Logger('ResponseValidator');
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeText(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function buildSummaryText(toolName: string, payload: unknown): string {
+  if (typeof payload === 'string') {
+    const normalized = payload.trim();
+    return normalized || `${toolName} responded`;
+  }
+
+  if (typeof payload === 'number' || typeof payload === 'bigint' || typeof payload === 'boolean') {
+    return `${toolName} responded: ${payload}`;
+  }
+
+  if (!isRecord(payload)) {
+    return `${toolName} responded`;
+  }
+
+  const parts: string[] = [];
+  const message = typeof payload.message === 'string' ? normalizeText(payload.message) : '';
+  const error = typeof payload.error === 'string' ? normalizeText(payload.error) : '';
+  const success = typeof payload.success === 'boolean' ? (payload.success ? 'success' : 'failed') : '';
+  const path = typeof payload.path === 'string' ? payload.path : '';
+  const name = typeof payload.name === 'string' ? payload.name : '';
+  const warningCount = Array.isArray(payload.warnings) ? payload.warnings.length : 0;
+
+  if (message) parts.push(message);
+  if (error && (!message || !message.includes(error))) parts.push(`error: ${error}`);
+  if (success) parts.push(success);
+  if (path) parts.push(`path: ${path}`);
+  if (name) parts.push(`name: ${name}`);
+  if (warningCount > 0) parts.push(`warnings: ${warningCount}`);
+
+  const summary = isRecord(payload.summary) ? payload.summary : undefined;
+  if (summary) {
+    const summaryParts: string[] = [];
+    for (const [key, value] of Object.entries(summary)) {
+      if (typeof value === 'number' || typeof value === 'string') {
+        summaryParts.push(`${key}: ${value}`);
+      }
+      if (summaryParts.length >= 3) break;
+    }
+    if (summaryParts.length) {
+      parts.push(`summary(${summaryParts.join(', ')})`);
+    }
+  }
+
+  if (parts.length === 0) {
+    const keys = Object.keys(payload).slice(0, 3);
+    if (keys.length) {
+      return `${toolName} responded (${keys.join(', ')})`;
+    }
+  }
+
+  return parts.length > 0
+    ? parts.join(' | ')
+    : `${toolName} responded`;
+}
+
 /**
  * Response Validator for MCP Tool Outputs
  * Validates tool responses against their defined output schemas
@@ -148,14 +211,10 @@ export class ResponseValidator {
     }
 
     // Otherwise, wrap structured result into MCP content
-    let text: string;
-    try {
-      // Pretty-print small objects for readability
-      text = typeof response === 'string'
-        ? response
-        : JSON.stringify(response ?? { success: true }, null, 2);
-    } catch (_e) {
-      text = String(response);
+    const summarySource = structuredPayload !== undefined ? structuredPayload : response;
+    let text = buildSummaryText(toolName, summarySource);
+    if (!text || !text.trim()) {
+      text = buildSummaryText(toolName, response);
     }
 
     const wrapped = {
