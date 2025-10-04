@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.6] - 2025-10-04
+### Fixed
+- Fixed duplicate response output issue where tool responses were being displayed twice in MCP content
+- Response validator now emits concise summaries in text content instead of duplicating full JSON payloads
+- Structured content is preserved for validation and tests while user-facing output is streamlined
+
 ## [0.4.5] - 2025-10-03
 ### Added
 - Expose `UE_PROJECT_PATH` environment variable across runtime config, Smithery manifest, and client example configs. This allows tools that need an absolute .uproject path (e.g., engine_start) to work without additional manual configuration.
