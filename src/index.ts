@@ -151,6 +151,7 @@ export function createServer() {
   bridge.setAutoReconnectEnabled(false);
 
   const automationBridge = new AutomationBridge();
+  bridge.setAutomationBridge(automationBridge);
   automationBridge.start();
 
   automationBridge.on('connected', ({ metadata, port, protocol }) => {

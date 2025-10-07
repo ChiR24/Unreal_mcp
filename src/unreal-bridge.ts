@@ -3,6 +3,7 @@ import { createHttpClient } from './utils/http.js';
 import { Logger } from './utils/logger.js';
 import { loadEnv } from './types/env.js';
 import { ErrorHandler } from './utils/error-handler.js';
+import type { AutomationBridge } from './automation-bridge.js';
 
 // RcMessage interface reserved for future WebSocket message handling
 // interface RcMessage {
@@ -37,6 +38,7 @@ export class UnrealBridge {
   private env = loadEnv();
   private log = new Logger('UnrealBridge');
   private connected = false;
+  private automationBridge?: AutomationBridge;
   private reconnectTimer?: NodeJS.Timeout;
   private reconnectAttempts = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
@@ -328,6 +330,10 @@ except Exception as e:
   };
 
   get isConnected() { return this.connected; }
+
+  setAutomationBridge(automationBridge?: AutomationBridge): void {
+    this.automationBridge = automationBridge;
+  }
   
   /**
    * Attempt to connect with exponential backoff retry strategy
@@ -1003,19 +1009,42 @@ print('RESULT:' + json.dumps(status))
     return results;
   }
 
-  // Try to execute a Python command via the PythonScriptPlugin, fallback to `py` console command.
+  // Try to execute a Python command via the Automation Bridge first, fallback to Remote Control API and console.
   async executePython(command: string): Promise<any> {
+    const trimmedCommand = command.trim();
+
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('execute_editor_python', {
+          script: trimmedCommand
+        });
+
+        if (response.success === false) {
+          throw new Error(response.error || response.message || 'Automation bridge Python execution failed');
+        }
+
+        if (response.result !== undefined) {
+          return response.result;
+        }
+
+        return response.message ?? response;
+      } catch (automationError) {
+        this.log.debug('Automation bridge Python execution failed, falling back to Remote Control', automationError);
+      }
+    }
+
     if (!this.connected) {
       throw new Error('Not connected to Unreal Engine');
     }
-    const isMultiLine = /[\r\n]/.test(command) || command.includes(';');
+
+    const isMultiLine = /[\r\n]/.test(trimmedCommand) || trimmedCommand.includes(';');
     try {
       // Use ExecutePythonCommandEx with appropriate mode based on content
       return await this.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary', 
+        objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary',
         functionName: 'ExecutePythonCommandEx',
         parameters: {
-          PythonCommand: command,
+          PythonCommand: trimmedCommand,
           ExecutionMode: isMultiLine ? 'ExecuteFile' : 'ExecuteStatement',
           FileExecutionScope: 'Private'
         },
@@ -1028,24 +1057,24 @@ print('RESULT:' + json.dumps(status))
           objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary',
           functionName: 'ExecutePythonCommand',
           parameters: {
-            Command: command
+            Command: trimmedCommand
           },
           generateTransaction: false
         });
       } catch {
         // Final fallback: execute via console py command
         this.log.warn('PythonScriptLibrary not available or failed, falling back to console `py` command');
-        
+
         // For simple single-line commands
         if (!isMultiLine) {
-          return await this.executeConsoleCommand(`py ${command}`, { allowPython: true });
+          return await this.executeConsoleCommand(`py ${trimmedCommand}`, { allowPython: true });
         }
-        
+
         // For multi-line scripts, try to execute as a block
         try {
           // Try executing as a single exec block
           // Properly escape the script for Python exec
-          const escapedScript = command
+          const escapedScript = trimmedCommand
             .replace(/\\/g, '\\\\')
             .replace(/"/g, '\\"')
             .replace(/\n/g, '\\n')
@@ -1056,16 +1085,16 @@ print('RESULT:' + json.dumps(status))
           try {
             // First ensure unreal is imported
             await this.executeConsoleCommand('py import unreal');
-            
+
             // For complex multi-line scripts, execute in logical chunks
-            const commandWithoutImport = command.replace(/^\s*import\s+unreal\s*;?\s*/m, '');
-            
+            const commandWithoutImport = trimmedCommand.replace(/^\s*import\s+unreal\s*;?\s*/m, '');
+
             // Split by semicolons first, then by newlines
             const statements = commandWithoutImport
-              .split(/[;\n]/)  
-              .map(s => s.trim())
-              .filter(s => s.length > 0 && !s.startsWith('#'));
-            
+              .split(/[;\n]/)
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0 && !s.startsWith('#'));
+
             let result = null;
             for (const stmt of statements) {
               // Skip if statement is too long for console
@@ -1077,15 +1106,15 @@ print('RESULT:' + json.dumps(status))
                 result = await this.executeConsoleCommand(`py ${stmt}`, { allowPython: true });
               }
               // Small delay between commands
-              await new Promise(resolve => setTimeout(resolve, 30));
+              await new Promise((resolve) => setTimeout(resolve, 30));
             }
-            
+
             return result;
           } catch {
             // Final fallback: execute line by line
-            const lines = command.split('\n').filter(line => line.trim().length > 0);
+            const lines = trimmedCommand.split('\n').filter((line) => line.trim().length > 0);
             let result = null;
-            
+
             for (const line of lines) {
               // Skip comments
               if (line.trim().startsWith('#')) {
@@ -1093,9 +1122,9 @@ print('RESULT:' + json.dumps(status))
               }
               result = await this.executeConsoleCommand(`py ${line.trim()}`, { allowPython: true });
               // Small delay between commands to ensure execution order
-              await new Promise(resolve => setTimeout(resolve, 50));
+              await new Promise((resolve) => setTimeout(resolve, 50));
             }
-            
+
             return result;
           }
         }

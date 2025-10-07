@@ -696,10 +696,12 @@ function enrichTestCase(rawCase) {
       }
       return { ...base, toolName: 'control_actor', arguments: args };
     }
+    case 'Editor Boundary Tests':
     case 'Editor Control Boundary Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       return { ...base, toolName: 'control_editor', arguments: payloadValue };
     }
+    case 'Level Boundary Tests':
     case 'Level Management Boundary Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       return { ...base, toolName: 'manage_level', arguments: payloadValue };
@@ -708,11 +710,13 @@ function enrichTestCase(rawCase) {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       return { ...base, toolName: 'animation_physics', arguments: payloadValue };
     }
-    case 'Blueprint Boundary Tests': {
+    case 'Blueprint Boundary Tests':
+    case 'Blueprint Control Boundary Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       return { ...base, toolName: 'manage_blueprint', arguments: payloadValue };
     }
-    case 'Effects Boundary Tests': {
+    case 'Effects Boundary Tests':
+    case 'Effects Control Boundary Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       const args = { ...payloadValue };
       if (Array.isArray(args.location) && args.location.length === 3) {
@@ -726,23 +730,37 @@ function enrichTestCase(rawCase) {
       }
       return { ...base, toolName: 'create_effect', arguments: args };
     }
+    case 'Environment Boundary Tests':
     case 'Environment Building Boundary Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       const args = { ...payloadValue };
       if (Array.isArray(args.location) && args.location.length === 3) {
         args.location = { x: args.location[0], y: args.location[1], z: args.location[2] };
       }
+      if (args.bounds) {
+        const bounds = { ...args.bounds };
+        if (Array.isArray(bounds.location) && bounds.location.length === 3) {
+          bounds.location = { x: bounds.location[0], y: bounds.location[1], z: bounds.location[2] };
+        }
+        if (Array.isArray(bounds.size) && bounds.size.length === 3) {
+          bounds.size = { x: bounds.size[0], y: bounds.size[1], z: bounds.size[2] };
+        }
+        args.bounds = bounds;
+      }
       return { ...base, toolName: 'build_environment', arguments: args };
     }
+    case 'System Boundary Tests':
     case 'System Control Boundary Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       return { ...base, toolName: 'system_control', arguments: payloadValue };
     }
-    case 'Sequence Boundary Tests': {
+    case 'Sequence Boundary Tests':
+    case 'Sequence Control Boundary Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       return { ...base, toolName: 'manage_sequence', arguments: payloadValue };
     }
-    case 'Remote Control Boundary Tests': {
+    case 'Remote Control Boundary Tests':
+    case 'Remote Control Preset Boundary Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       return { ...base, toolName: 'manage_rc', arguments: payloadValue };
     }
@@ -776,7 +794,51 @@ function evaluateExpectation(testCase, response) {
     : undefined;
   const actualSuccess = structuredSuccess ?? !response.isError;
 
+  // Extract actual error/message from response
+  let actualError = null;
+  let actualMessage = null;
+  if (response.structuredContent) {
+    actualError = response.structuredContent.error;
+    actualMessage = response.structuredContent.message;
+  }
+
+  // CRITICAL FIX: UE_NOT_CONNECTED errors should ALWAYS fail tests unless explicitly expected
+  if (actualError === 'UE_NOT_CONNECTED') {
+    const explicitlyExpectsDisconnection = lowerExpected.includes('not connected') || 
+                                          lowerExpected.includes('ue_not_connected') ||
+                                          lowerExpected.includes('disconnected');
+    if (!explicitlyExpectsDisconnection) {
+      return {
+        passed: false,
+        reason: `Test requires Unreal Engine connection, but got: ${actualError} - ${actualMessage}`
+      };
+    }
+  }
+
+  // For tests that expect specific error types, validate the actual error matches
   const expectedFailure = containsFailure && !containsSuccess;
+  if (expectedFailure && !actualSuccess) {
+    // Test expects failure and got failure - but verify it's the RIGHT kind of failure
+    const lowerReason = actualMessage?.toLowerCase() || actualError?.toLowerCase() || '';
+    const errorTypeMatch = failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
+    
+    // If expected outcome specifies an error type, actual error should match it
+    if (lowerExpected.includes('not found') || lowerExpected.includes('invalid') || 
+        lowerExpected.includes('missing') || lowerExpected.includes('already exists')) {
+      const passed = errorTypeMatch;
+      let reason;
+      if (response.isError) {
+        reason = response.content?.map((entry) => ('text' in entry ? entry.text : JSON.stringify(entry))).join('\n');
+      } else if (response.structuredContent) {
+        reason = JSON.stringify(response.structuredContent);
+      } else {
+        reason = 'No structured response returned';
+      }
+      return { passed, reason };
+    }
+  }
+
+  // Default evaluation logic
   const passed = expectedFailure ? !actualSuccess : !!actualSuccess;
   let reason;
   if (response.isError) {

@@ -300,17 +300,18 @@ export class BlueprintTools {
       save: params.save === true
     };
 
-    const escapedPayload = escapePythonString(JSON.stringify(payload));
+    // Use base64 encoding to avoid any escaping issues with JSON in Python strings
+    const payloadJson = JSON.stringify(payload);
+    const payloadBase64 = Buffer.from(payloadJson).toString('base64');
 
   const pythonScript = `
-import textwrap
-
-exec(textwrap.dedent("""
 import unreal
 import json
 import traceback
+import base64
 
-payload = json.loads('${escapedPayload}')
+# Decode payload from base64 to avoid escaping issues
+payload = json.loads(base64.b64decode('${payloadBase64}').decode('utf-8'))
 
 result = {
   'success': False,
@@ -516,209 +517,30 @@ def assign_simple_construction_script(blueprint, scs_candidate):
   return assigned, errors
 
 def ensure_simple_construction_script(blueprint, result):
+  """
+  For UE 5.6+: SimpleConstructionScript does not exist in Python API.
+  Instead, use SubobjectDataSubsystem or BlueprintEditorLibrary for component management.
+  This function now just returns the SCS if it exists, without trying to create one.
+  """
   probe = result.setdefault('scsProbe', {})
   try:
     probe['blueprintType'] = str(type(blueprint))
   except Exception:
-    probe['blueprintType'] = probe.get('blueprintType')
+    pass
 
-  try:
-    probe['hasSimpleAttr'] = bool(getattr(blueprint, 'simple_construction_script', None))
-  except Exception:
-    probe['hasSimpleAttr'] = None
-
-  try:
-    probe['hasUpperSimpleAttr'] = bool(getattr(blueprint, 'SimpleConstructionScript', None))
-  except Exception:
-    probe['hasUpperSimpleAttr'] = None
-
-  generated_class = None
-  try:
-    generated_attr = getattr(blueprint, 'generated_class', None)
-    generated_class = generated_attr() if callable(generated_attr) else generated_attr
-  except Exception:
-    generated_class = None
-
-  if generated_class:
-    try:
-      probe['generatedClassType'] = str(type(generated_class))
-    except Exception:
-      pass
-
+  # Try to resolve existing SCS (read-only)
   scs = resolve_simple_construction_script(blueprint)
   probe['initialResolved'] = bool(scs)
+  
   if scs:
     probe['result'] = 'existing'
     return scs
-
-  creation_errors = []
-  scs_candidate = None
-  candidate_sources = []
-  if blueprint:
-    candidate_sources.append(('blueprint', blueprint))
-  if generated_class:
-    candidate_sources.append(('generated', generated_class))
-  candidate_sources.append(('transient', None))
-
-  for label, outer in candidate_sources:
-    try:
-      if outer is None:
-        scs_candidate = unreal.SimpleConstructionScript()
-      else:
-        scs_candidate = unreal.SimpleConstructionScript(outer=outer)
-    except TypeError as type_err:
-      creation_errors.append(f"{label}:{type_err}")
-      try:
-        scs_candidate = unreal.SimpleConstructionScript()
-      except Exception as fallback_err:
-        creation_errors.append(f"fallback:{fallback_err}")
-        scs_candidate = None
-    except Exception as err:
-      creation_errors.append(f"{label}:{err}")
-      scs_candidate = None
-
-    if not scs_candidate:
-      continue
-
-    try:
-      current_outer = scs_candidate.get_outer()
-      probe.setdefault('candidateOuterInitial', str(current_outer))
-    except Exception:
-      current_outer = None
-
-    if blueprint and current_outer != blueprint:
-      try:
-        scs_candidate.rename(None, blueprint)
-        probe['candidateOuter'] = 'blueprint'
-      except Exception as rename_err:
-        creation_errors.append(f"rename:{rename_err}")
-        probe['renameError'] = str(rename_err)
-    else:
-      probe['candidateOuter'] = label
-
-    try:
-      scs_candidate.set_flags(unreal.ObjectFlags.TRANSACTIONAL)
-    except Exception:
-      pass
-
-    break
-
-  probe['candidateCreated'] = bool(scs_candidate)
-
-  assignment_errors = []
-  assignment_error = None
-  if scs_candidate:
-    try:
-      blueprint.modify()
-      probe['blueprintModified'] = True
-    except Exception as modify_err:
-      probe['blueprintModifyError'] = str(modify_err)
-
-    assigned, assignment_errors = assign_simple_construction_script(blueprint, scs_candidate)
-    probe['candidateAssigned'] = bool(assigned)
-
-    if not assigned and generated_class:
-      try:
-        setattr(generated_class, 'SimpleConstructionScript', scs_candidate)
-        probe['assignedToGenerated'] = True
-        assigned = True
-      except Exception as gen_assign_err:
-        assignment_errors.append(gen_assign_err)
-        try:
-          generated_class.set_editor_property('SimpleConstructionScript', scs_candidate)
-          probe['assignedToGenerated'] = True
-          assigned = True
-        except Exception as gen_editor_err:
-          assignment_errors.append(gen_editor_err)
-
-    if not assigned:
-      if assignment_errors:
-        assignment_error = assignment_errors[-1]
-      else:
-        assignment_error = 'assignment failed'
-
-    try:
-      if assigned:
-        blueprint.post_edit_change()
-        probe['postEditChange'] = True
-    except Exception as post_err:
-      probe['postEditError'] = str(post_err)
-
-  if assignment_errors:
-    probe['assignmentErrors'] = [str(err) for err in assignment_errors if err]
-
-  if assignment_error:
-    add_warning(f"Unable to attach SimpleConstructionScript: {assignment_error}")
-
-  if creation_errors:
-    probe['creationErrors'] = [err for err in creation_errors if err]
-
-  scs = resolve_simple_construction_script(blueprint)
-  probe['finalResolved'] = bool(scs)
-  if scs:
-    probe['result'] = probe.get('result') or 'created'
-  else:
-    debug_bits = []
-    debug_bits.append(f"created={bool(scs_candidate)}")
-    try:
-      debug_bits.append(f"hasSimpleAttr={bool(getattr(blueprint, 'SimpleConstructionScript', None))}")
-    except Exception as attr_err:
-      debug_bits.append(f"simpleAttrError={attr_err}")
-    try:
-      debug_bits.append(f"hasLowerAttr={bool(getattr(blueprint, 'simple_construction_script', None))}")
-    except Exception as lower_attr_err:
-      debug_bits.append(f"lowerAttrError={lower_attr_err}")
-    if creation_errors:
-      debug_bits.append(f"creationErrors={creation_errors}")
-    add_warning('SCS resolution failed: ' + '; '.join(debug_bits))
-    if creation_errors:
-      add_warning('SimpleConstructionScript creation errors: ' + '; '.join(creation_errors))
-    probe['result'] = probe.get('result') or 'missing'
-    return None
-
-  try:
-    root_nodes = scs.get_root_nodes()
-  except Exception:
-    root_nodes = []
-
-  probe['finalRootNodes'] = len(root_nodes) if root_nodes else 0
-
-  if not root_nodes:
-    default_root = None
-    root_error = None
-    if hasattr(scs, 'create_default_scene_root'):
-      try:
-        default_root = scs.create_default_scene_root()
-      except Exception as err:
-        root_error = err
-
-    if not default_root:
-      try:
-        default_root = scs.create_node(unreal.SceneComponent, 'DefaultSceneRoot')
-        if default_root:
-          try:
-            scs.add_node(default_root)
-          except Exception:
-            pass
-      except Exception as err:
-        root_error = root_error or err
-        default_root = None
-
-    if default_root:
-      for setter in ('set_default_scene_root_node', 'set_root_node'):
-        if hasattr(scs, setter):
-          try:
-            getattr(scs, setter)(default_root)
-          except Exception:
-            continue
-      try:
-        blueprint.mark_package_dirty()
-      except Exception:
-        pass
-    elif root_error:
-      add_warning(f"Failed to ensure default scene root: {root_error}")
-
-  return scs
+  
+  # In UE 5.6+, we cannot create SCS via Python
+  # Component addition should use SubobjectDataSubsystem or Blueprint Editor helpers
+  probe['result'] = 'unavailable'
+  probe['note'] = 'SimpleConstructionScript not available in UE 5.6+ Python API - use Subobject subsystem instead'
+  return None
 
 try:
   blueprint_path, blueprint = resolve_blueprint_path(payload.get('blueprintCandidates', []))
@@ -785,7 +607,6 @@ try:
     result['scsType'] = str(type(scs))
   else:
     result['scsType'] = None
-    add_warning('SimpleConstructionScript unavailable; attempting editor helper fallback.')
 
   component_class, resolved_class_path = resolve_component_class(payload.get('componentClass'))
   if not component_class:
@@ -801,97 +622,109 @@ try:
   helper_errors = []
   addition_method = None
   new_node = None
-  component_simulated = False
+  component_added = False
 
-  if scs:
-    if find_scs_node_by_name(scs, component_name):
-      raise RuntimeError(f"Component {component_name} already exists on {blueprint_path}")
-
+  # UE 5.6+ Approach: Use SubobjectDataSubsystem (preferred) or Blueprint Editor Library
+  subobject_subsystem = unreal.get_engine_subsystem(unreal.SubobjectDataSubsystem)
+  blueprint_editor_lib = getattr(unreal, 'BlueprintEditorLibrary', None)
+  
+  # Method 1: SubobjectDataSubsystem (UE 5.6+ preferred way)
+  if subobject_subsystem and hasattr(subobject_subsystem, 'k2_gather_subobject_data_for_blueprint'):
     try:
       blueprint.modify()
-    except Exception:
-      pass
-
+      
+      # Gather existing subobject data for the blueprint
+      subobject_handles = subobject_subsystem.k2_gather_subobject_data_for_blueprint(blueprint)
+      
+      if subobject_handles and len(subobject_handles) > 0:
+        # Use the first handle as the parent (blueprint root)
+        parent_handle = subobject_handles[0]
+        
+        # Try to add component using the subsystem
+        # This is the modern UE 5.6+ way to add blueprint components
+        params = unreal.AddNewSubobjectParams()
+        params.parent_handle = parent_handle
+        params.new_class = component_class
+        params.blueprint_context = blueprint
+        
+        component_handle = subobject_subsystem.add_new_subobject(params, parent_handle)
+        
+        if component_handle and component_handle.is_valid():
+          # Rename the component using the subsystem method
+          subobject_subsystem.rename_subobject_member_variable(blueprint, component_handle, unreal.Name(component_name))
+          component_added = True
+          addition_method = 'SubobjectDataSubsystem.add_new_subobject'
+          result['additionMethod'] = addition_method
+          result['success'] = True
+          result['message'] = f"Component {component_name} added to {blueprint_path}"
+          
+          # Store handle for later use
+          new_node = component_handle
+      else:
+        helper_errors.append("SubobjectDataSubsystem: No subobject handles found for blueprint")
+    except Exception as subsystem_err:
+      helper_errors.append(f"SubobjectDataSubsystem: {subsystem_err}")
+  
+  # Method 2: BlueprintEditorLibrary (fallback)
+  if not component_added and blueprint_editor_lib and hasattr(blueprint_editor_lib, 'add_component_to_blueprint'):
     try:
-      scs.modify()
-    except Exception:
-      pass
-
-    try:
-      new_node = scs.create_node(component_class, component_name)
-      addition_method = 'SimpleConstructionScript.create_node'
-    except Exception as create_err:
-      helper_errors.append(f"SCS create_node failed: {create_err}")
-      new_node = None
-
-    if new_node and addition_method:
-      try:
-        result['additionMethod'] = addition_method
-      except Exception:
-        pass
-
-  if not new_node:
-    if blueprint_editor_lib and hasattr(blueprint_editor_lib, 'add_component_to_blueprint'):
-      try:
-        new_node = blueprint_editor_lib.add_component_to_blueprint(blueprint, component_class, component_name)
+      blueprint.modify()
+      new_node = blueprint_editor_lib.add_component_to_blueprint(blueprint, component_class, component_name)
+      if new_node:
+        component_added = True
         addition_method = 'BlueprintEditorLibrary.add_component_to_blueprint'
         result['additionMethod'] = addition_method
-      except Exception as helper_err:
-        helper_errors.append(f"BlueprintEditorLibrary: {helper_err}")
-        new_node = None
-
-  if not new_node and kismet_utils and hasattr(kismet_utils, 'add_component_to_blueprint'):
-    try:
-      new_node = kismet_utils.add_component_to_blueprint(blueprint, component_class, component_name)
-      addition_method = 'KismetEditorUtilities.add_component_to_blueprint'
-      result['additionMethod'] = addition_method
+        result['success'] = True
+        result['message'] = f"Component {component_name} added to {blueprint_path}"
     except Exception as helper_err:
-      helper_errors.append(f"KismetEditorUtilities: {helper_err}")
-      new_node = None
+      helper_errors.append(f"BlueprintEditorLibrary: {helper_err}")
 
-  if not new_node:
+  # Method 3: SCS direct manipulation (legacy, only if SCS exists)
+  if not component_added and scs:
+    try:
+      blueprint.modify()
+      scs.modify()
+      new_node = scs.create_node(component_class, component_name)
+      if new_node:
+        scs.add_node(new_node)
+        component_added = True
+        addition_method = 'SimpleConstructionScript.create_node'
+        result['additionMethod'] = addition_method
+        result['success'] = True
+        result['message'] = f"Component {component_name} added to {blueprint_path}"
+    except Exception as create_err:
+      helper_errors.append(f"SCS create_node failed: {create_err}")
+
+  if not component_added:
     if helper_errors:
       for helper_error in helper_errors:
-        add_warning(f"Component addition helper failure: {helper_error}")
+        add_warning(f"Component addition failed: {helper_error}")
+    
+    # Report failure with helpful error message
+    error_msg = "Failed to add component using all available methods. "
+    if not subobject_subsystem:
+      error_msg += "SubobjectDataSubsystem not available. "
+    if not blueprint_editor_lib:
+      error_msg += "BlueprintEditorLibrary not available. "
     if not scs:
-      component_simulated = True
-      result['success'] = True
-      result['simulated'] = True
-      result['message'] = f"Component {component_name} addition simulated; SimpleConstructionScript unavailable"
-      add_warning('SimpleConstructionScript unavailable; component addition simulated.')
-      if resolved_class_path:
-        result['componentClass'] = resolved_class_path
-    else:
-      raise RuntimeError('Blueprint has no SimpleConstructionScript and helper component addition failed')
+      error_msg += "SimpleConstructionScript not available. "
+    
+    raise RuntimeError(error_msg + f"Errors: {'; '.join(helper_errors)}")
 
-  if not component_simulated:
-    if not scs:
-      scs = resolve_simple_construction_script(blueprint)
-      if scs:
-        try:
-          result['scsType'] = str(type(scs))
-        except Exception:
-          result['scsType'] = result.get('scsType')
-
+  # Handle attachment and transforms if component was added
+  if component_added and new_node:
+    # Handle attachment to parent component
     attach_to = payload.get('attachTo')
-    attached = False
     if attach_to and scs:
       parent = find_scs_node_by_name(scs, attach_to)
-      if parent:
-        parent.add_child_node(new_node)
-        attached = True
-        result['attachedTo'] = attach_to
-      else:
-        result['warnings'].append(f"Parent component {attach_to} not found; added as root.")
-
-    if attach_to and not scs:
-      add_warning(f"Attach target {attach_to} skipped because construction script is unresolved.")
-
-    if not attached and scs and addition_method == 'SimpleConstructionScript.create_node':
-      scs.add_node(new_node)
-    elif not attached and not scs:
-      add_warning('Component added without explicit attach; construction script unavailable to finalize hierarchy.')
-
+      if parent and new_node:
+        try:
+          parent.add_child_node(new_node)
+          result['attachedTo'] = attach_to
+        except Exception as attach_err:
+          add_warning(f"Failed to attach to parent: {attach_err}")
+    
+    # Apply transforms if it's a scene component
     transform = payload.get('transform') or {}
     scene_template = None
     try:
@@ -929,6 +762,8 @@ try:
     post_compile_success = False
     if compile_requested:
       post_compile_helper_used = False
+      kismet_utils = getattr(unreal, 'KismetEditorUtilities', None)
+      
       if kismet_utils and hasattr(kismet_utils, 'compile_blueprint'):
         post_compile_helper_used = True
         try:
@@ -957,17 +792,12 @@ try:
 
     unreal.BlueprintEditorLibrary.mark_blueprint_as_structurally_modified(blueprint)
 
-    result['success'] = True
-    result['message'] = f"Component {component_name} added via Python fallback"
     result['componentClass'] = resolved_class_path
     result['compiled'] = post_compile_success if compile_requested else False
     if save_requested:
       result['saved'] = saved
     if not result['warnings']:
       result.pop('warnings', None)
-
-  if component_simulated and not result.get('warnings'):
-    result.pop('warnings', None)
 
 except Exception as err:
   result['success'] = False
@@ -976,7 +806,6 @@ except Exception as err:
     result['message'] = str(err)
 
 print('RESULT:' + json.dumps(result))
-"""))
   `.trim();
 
     try {
