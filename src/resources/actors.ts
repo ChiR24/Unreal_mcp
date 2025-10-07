@@ -1,4 +1,5 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { PythonHelper } from '../utils/python-helpers.js';
 import { bestEffortInterpretedText, coerceNumber, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
 
 interface CacheEntry {
@@ -9,8 +10,11 @@ interface CacheEntry {
 export class ActorResources {
   private cache = new Map<string, CacheEntry>();
   private readonly CACHE_TTL_MS = 5000; // 5 seconds cache for actors (they change more frequently)
+  private readonly python: PythonHelper;
   
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private bridge: UnrealBridge) {
+    this.python = new PythonHelper(bridge);
+  }
   
   private getFromCache(key: string): any | null {
     const entry = this.cache.get(key);
@@ -140,6 +144,27 @@ print('RESULT:' + json.dumps(found))
       return res;
     } catch (err) {
       return { error: `Failed to get transform: ${err}` };
+    }
+  }
+
+  async listActorComponents(actorPath: string) {
+    try {
+      const result = await this.python.listActorComponents(actorPath);
+      if (result?.success) {
+        return {
+          success: true as const,
+          components: Array.isArray(result.components) ? result.components : []
+        };
+      }
+      return {
+        success: false as const,
+        error: coerceString(result?.error) ?? `Failed to resolve components for ${actorPath}`
+      };
+    } catch (err) {
+      return {
+        success: false as const,
+        error: `Component lookup failed: ${err}`
+      };
     }
   }
 }

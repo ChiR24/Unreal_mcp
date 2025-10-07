@@ -1,10 +1,12 @@
-// Consolidated tool handlers - maps 13 tools to all 36 operations
 import { cleanObject } from '../utils/safe-json.js';
 import { Logger } from '../utils/logger.js';
+import { escapePythonString } from '../utils/python.js';
 
 const log = new Logger('ConsolidatedToolHandler');
 
 const ACTION_REQUIRED_ERROR = 'Missing required parameter: action';
+const AUTOMATION_TRANSPORT_KEYS = ['automation_bridge', 'automation', 'bridge'];
+const REMOTE_TRANSPORT_KEYS = ['remote_control', 'remote', 'rc'];
 
 function ensureArgsPresent(args: any) {
   if (args === null || args === undefined) {
@@ -127,6 +129,101 @@ async function elicitMissingPrimitiveArgs(
   }
 }
 
+type AutomationBridgeInfo = {
+  instance?: {
+    sendAutomationRequest?: (action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number }) => Promise<any>;
+    isConnected?: () => boolean;
+  };
+  canSend: boolean;
+  isConnected: boolean;
+};
+
+type AutomationTransportDecision = {
+  useAutomation: boolean;
+  allowFallback: boolean;
+  explicitAutomation: boolean;
+  explicitRemote: boolean;
+  fallbackReason?: string;
+};
+
+function getAutomationBridgeInfo(tools: any): AutomationBridgeInfo {
+  const automationBridge = tools?.automationBridge;
+  const canSend = Boolean(
+    automationBridge && typeof automationBridge.sendAutomationRequest === 'function'
+  );
+  let isConnected = false;
+  if (canSend && typeof automationBridge.isConnected === 'function') {
+    try {
+      isConnected = Boolean(automationBridge.isConnected());
+    } catch {
+      isConnected = false;
+    }
+  }
+
+  return {
+    instance: automationBridge,
+    canSend,
+    isConnected
+  };
+}
+
+function decideAutomationTransport(
+  rawTransport: unknown,
+  info: AutomationBridgeInfo
+): AutomationTransportDecision {
+  const normalized = typeof rawTransport === 'string' ? rawTransport.trim().toLowerCase() : undefined;
+  const explicitAutomation = normalized ? AUTOMATION_TRANSPORT_KEYS.includes(normalized) : false;
+  const explicitRemote = normalized ? REMOTE_TRANSPORT_KEYS.includes(normalized) : false;
+  const auto = !normalized || normalized === '' || normalized === 'auto' || normalized === 'default';
+
+  if (explicitAutomation) {
+    if (!info.canSend) {
+      throw new Error('Automation bridge not available');
+    }
+    return {
+      useAutomation: true,
+      allowFallback: false,
+      explicitAutomation: true,
+      explicitRemote: false
+    };
+  }
+
+  if (explicitRemote) {
+    return {
+      useAutomation: false,
+      allowFallback: false,
+      explicitAutomation: false,
+      explicitRemote: true
+    };
+  }
+
+  if (auto) {
+    if (info.canSend) {
+      return {
+        useAutomation: true,
+        allowFallback: true,
+        explicitAutomation: false,
+        explicitRemote: false
+      };
+    }
+    return {
+      useAutomation: false,
+      allowFallback: false,
+      explicitAutomation: false,
+      explicitRemote: false,
+      fallbackReason: 'Automation bridge disabled; using remote_control transport.'
+    };
+  }
+
+  return {
+    useAutomation: false,
+    allowFallback: false,
+    explicitAutomation: false,
+    explicitRemote: false,
+    fallbackReason: `Unrecognised transport "${normalized}"; using remote_control transport.`
+  };
+}
+
 export async function handleConsolidatedToolCall(
   name: string,
   args: any,
@@ -226,6 +323,145 @@ export async function handleConsolidatedToolCall(
             const sanitizedPath = typeof args.path === 'string' ? args.path.trim() : args.path;
             const name = requireNonEmptyString(sanitizedName, 'name', 'Invalid name: must be a non-empty string');
             const res = await tools.materialTools.createMaterial(name, sanitizedPath || '/Game/Materials');
+            return cleanObject(res);
+          }
+          case 'duplicate': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide the duplication details for manage_asset.duplicate',
+              {
+                sourcePath: {
+                  type: 'string',
+                  title: 'Source Asset Path',
+                  description: 'Existing asset path to duplicate (e.g., /Game/Folder/Asset)'
+                },
+                destinationPath: {
+                  type: 'string',
+                  title: 'Destination Folder',
+                  description: 'Target content folder for the duplicated asset (e.g., /Game/Folder/Duplicates)'
+                }
+              }
+            );
+
+            const sourcePath = requireNonEmptyString(args.sourcePath, 'sourcePath', 'Missing required parameter: sourcePath');
+            const destinationPath = requireNonEmptyString(args.destinationPath, 'destinationPath', 'Missing required parameter: destinationPath');
+            const newName = typeof args.newName === 'string' ? args.newName.trim() : undefined;
+            const timeoutMs = typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
+              ? Math.floor(args.timeoutMs)
+              : undefined;
+
+            const res = await tools.assetTools.duplicateAsset({
+              sourcePath,
+              destinationPath,
+              newName,
+              overwrite: args.overwrite === true,
+              save: args.save === true,
+              timeoutMs
+            });
+            return cleanObject(res);
+          }
+          case 'rename': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide the rename details for manage_asset.rename',
+              {
+                assetPath: {
+                  type: 'string',
+                  title: 'Asset Path',
+                  description: 'Existing asset path to rename (e.g., /Game/Folder/Asset)'
+                },
+                newName: {
+                  type: 'string',
+                  title: 'New Asset Name',
+                  description: 'New asset name without folder path'
+                }
+              }
+            );
+
+            const assetPath = requireNonEmptyString(args.assetPath, 'assetPath', 'Missing required parameter: assetPath');
+            const newName = requireNonEmptyString(args.newName, 'newName', 'Missing required parameter: newName');
+            const timeoutMs = typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
+              ? Math.floor(args.timeoutMs)
+              : undefined;
+
+            const res = await tools.assetTools.renameAsset({ assetPath, newName, timeoutMs });
+            return cleanObject(res);
+          }
+          case 'move': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide the move details for manage_asset.move',
+              {
+                assetPath: {
+                  type: 'string',
+                  title: 'Asset Path',
+                  description: 'Existing asset path to move (e.g., /Game/Folder/Asset)'
+                },
+                destinationPath: {
+                  type: 'string',
+                  title: 'Destination Folder',
+                  description: 'Target content folder (e.g., /Game/NewFolder)'
+                }
+              }
+            );
+
+            const assetPath = requireNonEmptyString(args.assetPath, 'assetPath', 'Missing required parameter: assetPath');
+            const destinationPath = requireNonEmptyString(args.destinationPath, 'destinationPath', 'Missing required parameter: destinationPath');
+            const newName = typeof args.newName === 'string' ? args.newName.trim() : undefined;
+            const timeoutMs = typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
+              ? Math.floor(args.timeoutMs)
+              : undefined;
+
+            const res = await tools.assetTools.moveAsset({
+              assetPath,
+              destinationPath,
+              newName,
+              fixupRedirectors: args.fixupRedirectors !== false,
+              timeoutMs
+            });
+            return cleanObject(res);
+          }
+          case 'delete': {
+            if (!args.assetPath && !Array.isArray(args.assetPaths)) {
+              await elicitMissingPrimitiveArgs(
+                tools,
+                args,
+                'Provide the asset path for manage_asset.delete',
+                {
+                  assetPath: {
+                    type: 'string',
+                    title: 'Asset Path',
+                    description: 'Asset path to delete (e.g., /Game/Folder/Asset)'
+                  }
+                }
+              );
+            }
+
+            let paths: string[] = [];
+            if (Array.isArray(args.assetPaths)) {
+              paths = args.assetPaths
+                .filter((entry: unknown): entry is string => typeof entry === 'string')
+                .map((entry: string) => entry.trim())
+                .filter((entry: string) => entry.length > 0);
+            }
+
+            if (paths.length === 0) {
+              const singlePath = requireNonEmptyString(args.assetPath, 'assetPath', 'Missing required parameter: assetPath');
+              paths = [singlePath];
+            }
+
+            const timeoutMs = typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
+              ? Math.floor(args.timeoutMs)
+              : undefined;
+
+            const res = await tools.assetTools.deleteAssets({
+              assetPaths: paths,
+              fixupRedirectors: args.fixupRedirectors !== false,
+              timeoutMs
+            });
             return cleanObject(res);
           }
           default:
@@ -357,6 +593,46 @@ export async function handleConsolidatedToolCall(
             const res = await tools.bridge.setSafeViewMode(viewMode);
             return cleanObject(res);
           }
+          case 'set_camera_fov': {
+            const fov = requirePositiveNumber(args.fov, 'fov', 'Invalid FOV: must be a positive number');
+            const res = await tools.editorTools.setFOV(fov);
+            return cleanObject(res);
+          }
+          case 'set_camera_position': {
+            const res = await tools.editorTools.setViewportCamera(args.location, args.rotation);
+            return cleanObject(res);
+          }
+          case 'screenshot': {
+            const res = await tools.editorTools.takeScreenshot(args.filename);
+            return cleanObject(res);
+          }
+          case 'set_viewport_resolution': {
+            const width = requirePositiveNumber(args.width, 'width', 'Invalid width: must be a positive number');
+            const height = requirePositiveNumber(args.height, 'height', 'Invalid height: must be a positive number');
+            const res = await tools.editorTools.setViewportResolution(width, height);
+            return cleanObject(res);
+          }
+          case 'console_command': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide the console command to execute',
+              {
+                command: {
+                  type: 'string',
+                  title: 'Console Command',
+                  description: 'The Unreal Engine console command to execute'
+                }
+              }
+            );
+            const command = requireNonEmptyString(args.command, 'command', 'Missing required parameter: command');
+            const res = await tools.editorTools.executeConsoleCommand(command);
+            return cleanObject(res);
+          }
+          case 'stop_pie': {
+            const res = await tools.editorTools.stopPlayInEditor();
+            return cleanObject(res);
+          }
           default:
             throw new Error(`Unknown editor action: ${args.action}`);
         }
@@ -364,7 +640,8 @@ export async function handleConsolidatedToolCall(
       // 4. LEVEL MANAGER
 case 'manage_level':
         switch (requireAction(args)) {
-          case 'load': {
+          case 'load':
+          case 'load_level': {
             await elicitMissingPrimitiveArgs(
               tools,
               args,
@@ -381,11 +658,13 @@ case 'manage_level':
             const res = await tools.levelTools.loadLevel({ levelPath, streaming: !!args.streaming });
             return cleanObject(res);
           }
-          case 'save': {
+          case 'save':
+          case 'save_current_level': {
             const res = await tools.levelTools.saveLevel({ levelName: args.levelName, savePath: args.savePath });
             return cleanObject(res);
           }
-          case 'stream': {
+          case 'stream':
+          case 'stream_level': {
             await elicitMissingPrimitiveArgs(
               tools,
               args,
@@ -400,6 +679,27 @@ case 'manage_level':
             );
             const levelName = requireNonEmptyString(args.levelName, 'levelName', 'Missing required parameter: levelName');
             const res = await tools.levelTools.streamLevel({ levelName, shouldBeLoaded: !!args.shouldBeLoaded, shouldBeVisible: !!args.shouldBeVisible });
+            return cleanObject(res);
+          }
+          case 'create_level': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide the level details for manage_level.create_level',
+              {
+                levelName: {
+                  type: 'string',
+                  title: 'Level Name',
+                  description: 'Name for the new level'
+                }
+              }
+            );
+            const levelName = requireNonEmptyString(args.levelName, 'levelName', 'Missing required parameter: levelName');
+            const res = await tools.levelTools.createLevel({ 
+              levelName, 
+              savePath: args.savePath || args.levelPath || '/Game/Maps',
+              template: args.template 
+            });
             return cleanObject(res);
           }
           case 'create_light': {
@@ -598,6 +898,115 @@ case 'animation_physics':
             const res = await tools.physicsTools.setupRagdoll({ skeletonPath, physicsAssetName, blendWeight: args.blendWeight, savePath: args.savePath });
             return cleanObject(res);
           }
+          case 'configure_vehicle': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide vehicle details for animation_physics.configure_vehicle',
+              {
+                vehicleName: {
+                  type: 'string',
+                  title: 'Vehicle Name',
+                  description: 'Identifier of the vehicle actor or Blueprint to configure'
+                },
+                vehicleType: {
+                  type: 'string',
+                  title: 'Vehicle Type',
+                  description: 'Vehicle archetype (Car, Bike, Tank, Aircraft)'
+                }
+              }
+            );
+
+            const vehicleNameInput = typeof args.vehicleName === 'string' && args.vehicleName.trim() !== ''
+              ? args.vehicleName
+              : (typeof args.name === 'string' ? args.name : undefined);
+            const vehicleName = requireNonEmptyString(vehicleNameInput, 'vehicleName', 'Missing required parameter: vehicleName');
+
+            const vehicleTypeRaw = requireNonEmptyString(args.vehicleType, 'vehicleType', 'Missing required parameter: vehicleType');
+            const normalizedType = vehicleTypeRaw.trim().toLowerCase();
+            const typeMap: Record<string, 'Car' | 'Bike' | 'Tank' | 'Aircraft'> = {
+              car: 'Car',
+              bike: 'Bike',
+              motorcycle: 'Bike',
+              motorbike: 'Bike',
+              tank: 'Tank',
+              aircraft: 'Aircraft',
+              plane: 'Aircraft'
+            };
+            const vehicleType = typeMap[normalizedType];
+            if (!vehicleType) {
+              throw new Error('Invalid vehicleType: expected Car, Bike, Tank, or Aircraft');
+            }
+
+            const sanitizeNumber = (value: any, field: string) => {
+              if (typeof value !== 'number' || !Number.isFinite(value)) {
+                throw new Error(`Invalid ${field}: must be a finite number`);
+              }
+              return value;
+            };
+
+            let wheels: Array<{ name: string; radius: number; width: number; mass: number; isSteering: boolean; isDriving: boolean }> | undefined;
+            if (Array.isArray(args.wheels)) {
+              const wheelEntries: any[] = args.wheels as any[];
+              wheels = wheelEntries.map((wheel: any, index: number) => {
+                if (!wheel || typeof wheel !== 'object') {
+                  throw new Error(`Invalid wheel entry at index ${index}`);
+                }
+                const wheelName = requireNonEmptyString(wheel.name, `wheels[${index}].name`, `Missing wheel name at index ${index}`);
+                const radius = sanitizeNumber(wheel.radius, `wheels[${index}].radius`);
+                const width = sanitizeNumber(wheel.width, `wheels[${index}].width`);
+                const mass = sanitizeNumber(wheel.mass, `wheels[${index}].mass`);
+                const isSteering = Boolean(wheel.isSteering);
+                const isDriving = Boolean(wheel.isDriving);
+                return { name: wheelName, radius, width, mass, isSteering, isDriving };
+              });
+            }
+
+            let engine: { maxRPM: number; torqueCurve: Array<[number, number]> } | undefined;
+            if (args.engine && typeof args.engine === 'object') {
+              const maxRPM = sanitizeNumber((args.engine as any).maxRPM, 'engine.maxRPM');
+              const torqueCurveInput = (args.engine as any).torqueCurve;
+              if (!Array.isArray(torqueCurveInput) || torqueCurveInput.length === 0) {
+                throw new Error('engine.torqueCurve must be a non-empty array of [RPM, Torque] pairs');
+              }
+              const torqueCurve = torqueCurveInput.map((point: any, index: number) => {
+                if (!Array.isArray(point) || point.length < 2) {
+                  throw new Error(`Invalid torque curve entry at index ${index}: expected [RPM, Torque]`);
+                }
+                const rpm = sanitizeNumber(point[0], `engine.torqueCurve[${index}][0]`);
+                const torque = sanitizeNumber(point[1], `engine.torqueCurve[${index}][1]`);
+                return [rpm, torque] as [number, number];
+              });
+              engine = { maxRPM, torqueCurve };
+            }
+
+            let transmission: { gears: number[]; finalDriveRatio: number } | undefined;
+            if (args.transmission && typeof args.transmission === 'object') {
+              const gearsInput = (args.transmission as any).gears;
+              if (!Array.isArray(gearsInput) || gearsInput.length === 0) {
+                throw new Error('transmission.gears must be a non-empty array of numbers');
+              }
+              const gears = gearsInput.map((value: any, index: number) => sanitizeNumber(value, `transmission.gears[${index}]`));
+              const finalDriveRatio = sanitizeNumber((args.transmission as any).finalDriveRatio, 'transmission.finalDriveRatio');
+              transmission = { gears, finalDriveRatio };
+            }
+
+            const pluginDependencies = Array.isArray(args.pluginDependencies)
+              ? args.pluginDependencies
+                  .map((dep: any) => (typeof dep === 'string' ? dep.trim() : ''))
+                  .filter((dep: string) => dep.length > 0)
+              : undefined;
+
+            const res = await tools.physicsTools.configureVehicle({
+              vehicleName,
+              vehicleType,
+              wheels,
+              engine,
+              transmission,
+              pluginDependencies
+            });
+            return cleanObject(res);
+          }
           default:
             throw new Error(`Unknown animation/physics action: ${args.action}`);
         }
@@ -687,6 +1096,72 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
             // Default fallback
             return cleanObject({ success: false, error: `Unsupported debug shape: ${originalShapeLabel}` });
           }
+          case 'spawn_niagara': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide the Niagara system path for create_effect.spawn_niagara',
+              {
+                systemPath: {
+                  type: 'string',
+                  title: 'Niagara System Path',
+                  description: 'Asset path of the Niagara system to spawn'
+                }
+              }
+            );
+            const systemPath = requireNonEmptyString(args.systemPath, 'systemPath', 'Invalid systemPath');
+            const loc = Array.isArray(args.location)
+              ? { x: args.location[0], y: args.location[1], z: args.location[2] }
+              : args.location || { x: 0, y: 0, z: 0 };
+            const res = await tools.niagaraTools.spawnEffect({
+              systemPath,
+              location: [loc.x ?? 0, loc.y ?? 0, loc.z ?? 0],
+              rotation: Array.isArray(args.rotation) ? args.rotation : undefined,
+              scale: args.scale,
+              autoDestroy: args.autoDestroy,
+              attachToActor: args.attachToActor
+            });
+            return cleanObject(res);
+          }
+          case 'set_niagara_parameter': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide the parameter details for create_effect.set_niagara_parameter',
+              {
+                systemName: {
+                  type: 'string',
+                  title: 'System Name',
+                  description: 'Name of the Niagara system'
+                },
+                parameterName: {
+                  type: 'string',
+                  title: 'Parameter Name',
+                  description: 'Name of the parameter to set'
+                },
+                parameterType: {
+                  type: 'string',
+                  title: 'Parameter Type',
+                  description: 'Type of parameter (Float, Vector, Color, Bool, Int)'
+                }
+              }
+            );
+            const systemName = requireNonEmptyString(args.systemName, 'systemName', 'Invalid systemName');
+            const parameterName = requireNonEmptyString(args.parameterName, 'parameterName', 'Invalid parameterName');
+            const parameterType = requireNonEmptyString(args.parameterType, 'parameterType', 'Invalid parameterType');
+            const res = await tools.niagaraTools.setParameter({
+              systemName,
+              parameterName,
+              parameterType: parameterType as 'Float' | 'Vector' | 'Color' | 'Bool' | 'Int',
+              value: args.value,
+              isUserParameter: args.isUserParameter
+            });
+            return cleanObject(res);
+          }
+          case 'clear_debug_shapes': {
+            const res = await tools.debugTools.clearDebugShapes();
+            return cleanObject(res);
+          }
           default:
             throw new Error(`Unknown effect action: ${args.action}`);
         }
@@ -743,7 +1218,61 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
                 }
               }
             );
-            const res = await tools.blueprintTools.addComponent({ blueprintName: args.name, componentType: args.componentType, componentName: args.componentName });
+            const res = await tools.blueprintTools.addComponent({
+              blueprintName: args.name,
+              componentType: args.componentType,
+              componentName: args.componentName,
+              attachTo: args.attachTo,
+              transform: args.transform,
+              properties: args.properties,
+              compile: typeof args.compile === 'boolean' ? args.compile : undefined,
+              save: typeof args.save === 'boolean' ? args.save : undefined,
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+            });
+            return cleanObject(res);
+          }
+          case 'modify_scs': {
+            const blueprintCandidate = typeof args.blueprintPath === 'string' ? args.blueprintPath : args.name;
+            const blueprintPath = typeof blueprintCandidate === 'string' && blueprintCandidate.trim().length > 0
+              ? blueprintCandidate.trim()
+              : undefined;
+            if (!blueprintPath) {
+              throw new Error('blueprintPath (or name) is required for modify_scs');
+            }
+
+            if (!Array.isArray(args.operations) || args.operations.length === 0) {
+              throw new Error('operations array is required for modify_scs');
+            }
+
+            const res = await tools.blueprintTools.modifyConstructionScript({
+              blueprintPath,
+              operations: args.operations,
+              compile: typeof args.compile === 'boolean' ? args.compile : undefined,
+              save: typeof args.save === 'boolean' ? args.save : undefined,
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+            });
+
+            return cleanObject(res);
+          }
+          case 'set_default': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide details for manage_blueprint.set_default',
+              {
+                propertyName: {
+                  type: 'string',
+                  title: 'Property Name',
+                  description: 'Blueprint default property to set'
+                }
+              }
+            );
+            const propertyName = requireNonEmptyString(args.propertyName, 'propertyName', 'Missing required parameter: propertyName');
+            const res = await tools.blueprintTools.setBlueprintDefault({
+              blueprintName: args.name,
+              propertyName,
+              value: args.value
+            });
             return cleanObject(res);
           }
           default:
@@ -903,7 +1432,7 @@ case 'system_control':
         }
 
       // 10. CONSOLE COMMAND - handle validation here
-case 'console_command':
+      case 'console_command':
         if (!args.command || typeof args.command !== 'string' || args.command.trim() === '') {
           return { success: true, message: 'Empty command' } as any;
         }
@@ -933,9 +1462,199 @@ case 'console_command':
         } catch (e: any) {
           return cleanObject({ success: false, command: cmd, error: e?.message || String(e) });
         }
-        
 
-      // 11. REMOTE CONTROL PRESETS - Direct implementation
+      // 11. PYTHON EXECUTION
+      case 'execute_python': {
+        const automationInfo = getAutomationBridgeInfo(tools);
+        const decision = decideAutomationTransport(args.transport, automationInfo);
+        const automationBridge = automationInfo.instance;
+        const warnings: string[] = [];
+
+        const addWarning = (value?: string) => {
+          if (!value) return;
+          if (!warnings.includes(value)) {
+            warnings.push(value);
+          }
+        };
+
+        const hasTemplate = typeof args.template === 'string' && args.template.trim().length > 0;
+        let transportUsed: 'automation_bridge' | 'remote_control' = decision.useAutomation
+          ? 'automation_bridge'
+          : 'remote_control';
+
+        if (hasTemplate) {
+          if (transportUsed === 'automation_bridge') {
+            if (decision.allowFallback) {
+              addWarning('Automation bridge does not support templates; using remote_control transport.');
+              transportUsed = 'remote_control';
+            } else {
+              throw new Error('Template execution is not supported when transport is automation_bridge.');
+            }
+          }
+
+          addWarning(decision.fallbackReason);
+
+          const templateName = args.template.trim();
+          try {
+            const templateResult = await tools.bridge.executeEditorFunction(templateName, args.templateParams);
+            const success = templateResult?.success !== false;
+            const message = typeof templateResult?.message === 'string'
+              ? templateResult.message
+              : `Template ${templateName} executed${success ? '' : ' with errors'}`;
+            const error = success
+              ? undefined
+              : (typeof templateResult?.error === 'string' ? templateResult.error : 'Template reported failure');
+            const templateWarnings = Array.isArray(templateResult?.warnings) ? templateResult.warnings : undefined;
+
+            const payload: Record<string, unknown> = {
+              success,
+              result: templateResult,
+              message,
+              error,
+              transport: 'remote_control'
+            };
+
+            const combinedWarnings = [...(templateWarnings ?? []), ...warnings].filter(Boolean);
+            if (combinedWarnings.length > 0) {
+              payload.warnings = combinedWarnings;
+            }
+
+            return cleanObject(payload);
+          } catch (err: any) {
+            const payload: Record<string, unknown> = {
+              success: false,
+              error: err?.message || String(err),
+              message: `Failed to execute template ${templateName}`,
+              transport: 'remote_control'
+            };
+            if (warnings.length > 0) {
+              payload.warnings = warnings;
+            }
+            return cleanObject(payload);
+          }
+        }
+
+        const scriptArg = requireNonEmptyString(args.script, 'script', 'Missing required parameter: script');
+        let script = scriptArg;
+
+        if (args.context && typeof args.context === 'object') {
+          try {
+            const contextJson = JSON.stringify(args.context);
+            const escapedJson = escapePythonString(contextJson);
+            const prelude = `import json\nMCP_INPUT = json.loads("${escapedJson}")`;
+            script = `${prelude}\n${script}`;
+          } catch (err) {
+            throw new Error(`Failed to serialise context: ${(err as Error)?.message || err}`);
+          }
+        }
+
+        if (transportUsed === 'automation_bridge' && automationBridge?.sendAutomationRequest) {
+          const timeoutMs =
+            typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
+              ? Math.floor(args.timeoutMs)
+              : undefined;
+
+          try {
+            const response = await automationBridge.sendAutomationRequest(
+              'execute_editor_python',
+              { script },
+              { timeoutMs }
+            );
+            const success = response.success !== false;
+            const message = typeof response.message === 'string'
+              ? response.message
+              : success
+                ? 'Python script executed via automation bridge.'
+                : 'Automation bridge reported failure.';
+            const error = success
+              ? undefined
+              : (typeof response.error === 'string' ? response.error : 'AUTOMATION_BRIDGE_FAILURE');
+
+            const payload: Record<string, unknown> = {
+              success,
+              message,
+              error,
+              transport: 'automation_bridge',
+              result: response.result,
+              bridge: {
+                requestId: response.requestId,
+                success: response.success !== false,
+                error: response.error
+              }
+            };
+
+            if (warnings.length > 0) {
+              payload.warnings = warnings;
+            }
+
+            return cleanObject(payload);
+          } catch (err: any) {
+            if (!decision.allowFallback) {
+              return cleanObject({
+                success: false,
+                error: err?.message || String(err),
+                message: 'Automation bridge execution failed',
+                transport: 'automation_bridge'
+              });
+            }
+            const errMessage = err?.message || String(err);
+            addWarning(`Automation bridge error: ${errMessage}. Falling back to remote_control transport.`);
+            transportUsed = 'remote_control';
+          }
+        }
+
+        if (transportUsed === 'remote_control') {
+          addWarning(decision.fallbackReason);
+        }
+
+        const captureResult = args.captureResult !== false;
+
+        try {
+          const result = captureResult
+            ? await tools.bridge.executePythonWithResult(script)
+            : await tools.bridge.executePython(script);
+
+          const success = typeof result === 'object' && result !== null && typeof (result as any).success === 'boolean'
+            ? Boolean((result as any).success)
+            : true;
+          const existingWarnings = Array.isArray((result as any)?.warnings)
+            ? (result as any).warnings
+            : undefined;
+          const message = typeof (result as any)?.message === 'string'
+            ? (result as any).message
+            : (typeof result === 'string' ? result : captureResult ? 'Python script executed' : 'Python command sent');
+          const error = success ? undefined : (typeof (result as any)?.error === 'string' ? (result as any).error : 'Python execution reported failure');
+
+          const payload: Record<string, unknown> = {
+            success,
+            result,
+            message,
+            error,
+            transport: 'remote_control'
+          };
+
+          const combinedWarnings = [...(existingWarnings ?? []), ...warnings].filter(Boolean);
+          if (combinedWarnings.length > 0) {
+            payload.warnings = combinedWarnings;
+          }
+
+          return cleanObject(payload);
+        } catch (err: any) {
+          const payload: Record<string, unknown> = {
+            success: false,
+            error: err?.message || String(err),
+            message: 'Python execution failed',
+            transport: 'remote_control'
+          };
+          if (warnings.length > 0) {
+            payload.warnings = warnings;
+          }
+          return cleanObject(payload);
+        }
+      }
+
+
+      // 12. REMOTE CONTROL PRESETS - Direct implementation
       case 'manage_rc':
         // Handle RC operations directly through RcTools
         let rcResult: any;
@@ -1074,7 +1793,7 @@ case 'console_command':
         // Clean to prevent circular references
         return cleanObject(rcResult);
 
-      // 12. SEQUENCER / CINEMATICS
+  // 13. SEQUENCER / CINEMATICS
       case 'manage_sequence':
         // Direct handling for sequence operations
         const seqResult = await (async () => {
@@ -1129,7 +1848,7 @@ case 'console_command':
         // Return result directly - MCP formatting will be handled by response validator
         // Clean to prevent circular references
         return cleanObject(seqResult);
-      // 13. INTROSPECTION
+  // 14. INTROSPECTION
 case 'inspect':
   const inspectAction = requireAction(args);
   switch (inspectAction) {
@@ -1137,9 +1856,229 @@ case 'inspect':
             const res = await tools.introspectionTools.inspectObject({ objectPath: args.objectPath, detailed: args.detailed });
             return cleanObject(res);
           }
+          case 'get_property': {
+            const objectPath = requireNonEmptyString(args.objectPath, 'objectPath', 'Missing required parameter: objectPath');
+            const propertyName = requireNonEmptyString(args.propertyName, 'propertyName', 'Missing required parameter: propertyName');
+            const automationInfo = getAutomationBridgeInfo(tools);
+            const decision = decideAutomationTransport(args.transport, automationInfo);
+            const automationBridge = automationInfo.instance;
+            const warnings: string[] = [];
+
+            const addWarning = (value?: string) => {
+              if (!value) return;
+              if (!warnings.includes(value)) {
+                warnings.push(value);
+              }
+            };
+
+            let transportUsed: 'automation_bridge' | 'remote_control' = decision.useAutomation
+              ? 'automation_bridge'
+              : 'remote_control';
+
+            if (transportUsed === 'automation_bridge') {
+              if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
+                if (!decision.allowFallback) {
+                  throw new Error('Automation bridge not available');
+                }
+                addWarning('Automation bridge not available; using remote_control transport.');
+                transportUsed = 'remote_control';
+              } else {
+                const timeoutMs =
+                  typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
+                    ? Math.floor(args.timeoutMs)
+                    : undefined;
+
+                try {
+                  const response = await automationBridge.sendAutomationRequest(
+                    'get_object_property',
+                    { objectPath, propertyName },
+                    { timeoutMs }
+                  );
+
+                  const success = response.success !== false;
+                  const message = typeof response.message === 'string'
+                    ? response.message
+                    : success
+                      ? 'Property retrieved via automation bridge.'
+                      : 'Automation bridge reported failure.';
+
+                  const payload: Record<string, unknown> = {
+                    success,
+                    message,
+                    error: success ? undefined : response.error ?? 'AUTOMATION_BRIDGE_FAILURE',
+                    value: response.result,
+                    transport: 'automation_bridge',
+                    bridge: {
+                      requestId: response.requestId,
+                      success: response.success !== false,
+                      error: response.error
+                    }
+                  };
+
+                  if (warnings.length > 0) {
+                    payload.warnings = warnings;
+                  }
+
+                  return cleanObject(payload);
+                } catch (err: any) {
+                  if (!decision.allowFallback) {
+                    return cleanObject({
+                      success: false,
+                      error: err?.message || String(err),
+                      message: 'Automation bridge property lookup failed',
+                      transport: 'automation_bridge'
+                    });
+                  }
+                  const errMessage = err?.message || String(err);
+                  addWarning(`Automation bridge error: ${errMessage}. Falling back to remote_control transport.`);
+                  transportUsed = 'remote_control';
+                }
+              }
+            }
+
+            if (transportUsed === 'remote_control') {
+              addWarning(decision.fallbackReason);
+
+              const res = await tools.introspectionTools.getProperty({ objectPath, propertyName });
+              const resultPayload: Record<string, unknown> =
+                res && typeof res === 'object'
+                  ? { ...(res as Record<string, unknown>) }
+                  : { success: false, error: 'Unexpected response from property lookup.' };
+
+              if (!('transport' in resultPayload)) {
+                resultPayload.transport = 'remote_control';
+              }
+
+              const existingWarnings = Array.isArray((resultPayload as any).warnings)
+                ? (resultPayload as any).warnings
+                : [];
+
+              const combinedWarnings = [...existingWarnings, ...warnings].filter(Boolean);
+              if (combinedWarnings.length > 0) {
+                resultPayload.warnings = combinedWarnings;
+              }
+
+              return cleanObject(resultPayload);
+            }
+
+            throw new Error('Unsupported transport state for get_property');
+          }
           case 'set_property': {
-            const res = await tools.introspectionTools.setProperty({ objectPath: args.objectPath, propertyName: args.propertyName, value: args.value });
-            return cleanObject(res);
+            const objectPath = requireNonEmptyString(args.objectPath, 'objectPath', 'Missing required parameter: objectPath');
+            const propertyName = requireNonEmptyString(args.propertyName, 'propertyName', 'Missing required parameter: propertyName');
+            const automationInfo = getAutomationBridgeInfo(tools);
+            const decision = decideAutomationTransport(args.transport, automationInfo);
+            const automationBridge = automationInfo.instance;
+            const warnings: string[] = [];
+
+            const addWarning = (value?: string) => {
+              if (!value) return;
+              if (!warnings.includes(value)) {
+                warnings.push(value);
+              }
+            };
+
+            let transportUsed: 'automation_bridge' | 'remote_control' = decision.useAutomation
+              ? 'automation_bridge'
+              : 'remote_control';
+
+            if (transportUsed === 'automation_bridge') {
+              if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
+                if (!decision.allowFallback) {
+                  throw new Error('Automation bridge not available');
+                }
+                addWarning('Automation bridge not available; using remote_control transport.');
+                transportUsed = 'remote_control';
+              } else {
+                const payload: Record<string, unknown> = {
+                  objectPath,
+                  propertyName,
+                  value: args.value
+                };
+
+                if (args.markDirty !== undefined) {
+                  payload.markDirty = Boolean(args.markDirty);
+                }
+
+                const timeoutMs =
+                  typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
+                    ? Math.floor(args.timeoutMs)
+                    : undefined;
+
+                try {
+                  const response = await automationBridge.sendAutomationRequest(
+                    'set_object_property',
+                    payload,
+                    { timeoutMs }
+                  );
+
+                  const success = response.success !== false;
+                  const message = typeof response.message === 'string'
+                    ? response.message
+                    : success
+                      ? 'Property updated via automation bridge.'
+                      : 'Automation bridge reported failure.';
+
+                  const resultPayload: Record<string, unknown> = {
+                    success,
+                    message,
+                    error: success ? undefined : response.error ?? 'AUTOMATION_BRIDGE_FAILURE',
+                    transport: 'automation_bridge',
+                    bridge: {
+                      requestId: response.requestId,
+                      success: response.success !== false,
+                      error: response.error
+                    },
+                    result: response.result
+                  };
+
+                  if (warnings.length > 0) {
+                    resultPayload.warnings = warnings;
+                  }
+
+                  return cleanObject(resultPayload);
+                } catch (err: any) {
+                  if (!decision.allowFallback) {
+                    return cleanObject({
+                      success: false,
+                      error: err?.message || String(err),
+                      message: 'Automation bridge property update failed',
+                      transport: 'automation_bridge'
+                    });
+                  }
+                  const errMessage = err?.message || String(err);
+                  addWarning(`Automation bridge error: ${errMessage}. Falling back to remote_control transport.`);
+                  transportUsed = 'remote_control';
+                }
+              }
+            }
+
+            if (transportUsed === 'remote_control') {
+              addWarning(decision.fallbackReason);
+
+              const res = await tools.introspectionTools.setProperty({ objectPath, propertyName, value: args.value });
+              const resultPayload: Record<string, unknown> =
+                res && typeof res === 'object'
+                  ? { ...(res as Record<string, unknown>) }
+                  : { success: false, error: 'Unexpected response from property update.' };
+
+              if (!('transport' in resultPayload)) {
+                resultPayload.transport = 'remote_control';
+              }
+
+              const existingWarnings = Array.isArray((resultPayload as any).warnings)
+                ? (resultPayload as any).warnings
+                : [];
+
+              const combinedWarnings = [...existingWarnings, ...warnings].filter(Boolean);
+              if (combinedWarnings.length > 0) {
+                resultPayload.warnings = combinedWarnings;
+              }
+
+              return cleanObject(resultPayload);
+            }
+
+            throw new Error('Unsupported transport state for set_property');
           }
           default:
             throw new Error(`Unknown inspect action: ${inspectAction}`);

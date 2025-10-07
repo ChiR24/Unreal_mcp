@@ -388,9 +388,9 @@ try:
     world = None
 
   if not world:
-    editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-    if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
-      world = editor_subsystem.get_editor_world()
+      editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+      if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
+        world = editor_subsystem.get_editor_world()
 
   if not world:
     try:
@@ -743,29 +743,37 @@ finally:
       const py = `
   import unreal
   import json
-  try:
-      # Try using AudioMixerBlueprintLibrary if available
       try:
+        # Try using AudioMixerBlueprintLibrary if available
+        try:
           unreal.AudioMixerBlueprintLibrary.set_overall_volume_multiplier(${vol})
           print('RESULT:' + json.dumps({'success': True}))
-      except AttributeError:
-          # Fallback to GameplayStatics method using modern subsystems
+        except AttributeError:
+          # Fallback to GameplayStatics method using modern subsystems (no deprecated EditorLevelLibrary)
           try:
-              # Try modern subsystem first
+            world = None
+            try:
+              editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+              if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
+                world = editor_subsystem.get_editor_world()
+            except Exception:
+              world = None
+
+            if world is None:
               try:
-                  editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-                  if hasattr(editor_subsystem, 'get_editor_world'):
-                      world = editor_subsystem.get_editor_world()
-                  else:
-                      world = unreal.EditorLevelLibrary.get_editor_world()
+                world = unreal.EditorSubsystemLibrary.get_editor_world()
               except Exception:
-                  world = unreal.EditorLevelLibrary.get_editor_world()
+                world = None
+
+            if world:
               unreal.GameplayStatics.set_global_pitch_modulation(world, 1.0, 0.0)  # Reset pitch
               unreal.GameplayStatics.set_global_time_dilation(world, 1.0)  # Reset time
               # Note: There's no direct master volume in GameplayStatics, use sound class
               print('RESULT:' + json.dumps({'success': False, 'error': 'Master volume control not available, use sound classes instead'}))
+            else:
+              print('RESULT:' + json.dumps({'success': False, 'error': 'Unable to resolve editor world'}))
           except Exception as e2:
-              print('RESULT:' + json.dumps({'success': False, 'error': str(e2)}))
+            print('RESULT:' + json.dumps({'success': False, 'error': str(e2)}))
   except Exception as e:
       print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
   `.trim();

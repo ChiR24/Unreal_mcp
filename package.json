@@ -22,6 +22,8 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "clean": "rimraf dist",
     "prepare": "npm run build",
+    "automation:sync": "node scripts/sync-mcp-plugin.js",
+    "automation:verify": "node scripts/verify-automation-bridge.js",
     "test:tools": "node tests/run-unreal-tool-tests.mjs",
     "type-check": "tsc --noEmit",
     "prebuild": "npm run clean"

@@ -289,11 +289,10 @@ try:
         except Exception as check_error:
           result["warnings"].append(f"EditorAssetLibrary.is_asset_dirty failed: {check_error}")
           is_dirty = None
-      if is_dirty is None:
-        # Fallback: attempt to inspect the current level package
+      if is_dirty is None and world is not None:
+        # Fallback: inspect the current level via the active world (avoids deprecated EditorLevelLibrary)
         try:
-          ell = getattr(unreal, 'EditorLevelLibrary', None)
-          level = ell.get_current_level() if ell and hasattr(ell, 'get_current_level') else None
+          level = world.get_current_level() if hasattr(world, 'get_current_level') else None
           package = level.get_outermost() if level and hasattr(level, 'get_outermost') else None
           if package and hasattr(package, 'is_dirty'):
             is_dirty = package.is_dirty()
@@ -909,3 +908,4 @@ print("RESULT:" + json.dumps(result))
   }
 
 }
+

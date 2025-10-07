@@ -15,7 +15,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - **Actor Control** - Spawn, delete, and manipulate actors with physics
 - **Editor Control** - PIE sessions, camera, and viewport management
 - **Level Management** - Load/save levels, lighting, and environment building
-- **Animation & Physics** - Blueprints, state machines, ragdolls, constraints
+- **Animation & Physics** - Blueprints, state machines, ragdolls, constraints, vehicle setup
 - **Visual Effects** - Niagara particles, GPU simulations, procedural effects
 - **Sequencer** - Cinematics, camera animations, and timeline control
 - **Console Commands** - Safe execution with dangerous command filtering
@@ -45,6 +45,21 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 | Editor Scripting Utilities | Scripting | Actors, foliage, assets, landscapes, UI | Supplies Editor Actor/Asset subsystems in UE5.6 |
 | Sequencer | Built-in | Sequencer tools | Ensure not disabled in project settings |
 | Level Sequence Editor | Animation | Sequencer tools | Activate before calling `manage_sequence` operations |
+
+> Tools such as `physics.configureVehicle` accept an optional `pluginDependencies` array so you can list the specific Unreal plugins your project relies on (for example, Chaos Vehicles or third-party vehicle frameworks). When provided, the server will verify those plugins are active before running the configuration.
+
+### Optional MCP Automation Bridge plugin
+- Location: `Public/McpAutomationBridge`
+- Installation: copy the folder into your project's `Plugins/` directory and regenerate project files.
+- Sync helper: run `npm run automation:sync -- --engine "X:/Unreal_Engine/UE_5.6/Engine/Plugins" --project "X:/Newfolder(2)/Game/Unreal/Trial/Plugins" --clean-engine --clean-project` after repo updates to copy the latest bridge build into both plugin folders and strip legacy entries (such as `SupportedTargetPlatforms: ["Editor"]`) that trigger startup warnings.
+- Verification: run `npm run automation:verify -- --project "C:/Path/To/YourProject/Plugins" --config "C:/Path/To/YourProject/Config/DefaultEngine.ini"` to confirm the plugin files, Remote Control settings, and bridge environment variables are in place before launching Unreal.
+- Configuration: enable **MCP Automation Bridge** in **Edit ▸ Plugins**, restart the editor, then set the endpoint/token under **Edit ▸ Project Settings ▸ Plugins ▸ MCP Automation Bridge**. The bridge ships with its own lightweight WebSocket client, so you no longer need the engine’s WebSockets plugin enabled.
+- Startup: after configuration, the Output Log should show a successful connection and the `bridge_started` broadcast; `SendRawMessage` becomes available to Blueprint and C++ callers for manual testing.
+- Current scope: manages a WebSocket session to the Node MCP server (`ws://127.0.0.1:8090` by default), performs optional capability-token handshakes, dispatches inbound JSON to the subsystem delegate, implements reconnect backoff, and now responds to `execute_editor_python`, `get_object_property`, and `set_object_property` automation requests.
+- Usage: the consolidated tools now auto-prefer the automation bridge for Python execution and property access when the plugin is connected. Override with `transport: "remote_control"` to force the legacy path or `transport: "automation_bridge"` to require the plugin.
+- Property overrides: `inspect.get_property`/`inspect.set_property` fall back to Remote Control automatically when the bridge is unavailable and emit warnings describing the chosen transport so you can react in clients.
+- Diagnostics: the `ue://automation-bridge` MCP resource surfaces handshake timestamps, recent disconnects, pending automation requests, and whether the Node listener is running—handy when validating editor connectivity from a client.
+- Roadmap: expand the bridge with the elevated actions defined in `docs/editor-plugin-extension.md` (SCS authoring, typed property marshaling, modal mediation, asset workflows).
 
 ### Installation
 
@@ -132,7 +147,7 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 }
 ```
 
-## Available Tools (13)
+## Available Tools (14)
 
 | Tool | Description |
 |------|-------------|
@@ -140,12 +155,13 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 | `control_actor` | Spawn, delete actors, apply physics |
 | `control_editor` | PIE control, camera, view modes |
 | `manage_level` | Load/save levels, lighting |
-| `animation_physics` | Animation blueprints, ragdolls |
+| `animation_physics` | Animation blueprints, ragdolls, vehicle setup |
 | `create_effect` | Particles, Niagara, debug shapes |
-| `manage_blueprint` | Create blueprints, add components |
+| `manage_blueprint` | Create blueprints, add components, edit defaults |
 | `build_environment` | Landscapes, terrain, foliage |
 | `system_control` | Profiling, quality, UI, screenshots |
 | `console_command` | Direct console command execution |
+| `execute_python` | Run bespoke Python scripts or bridge templates |
 | `manage_rc` | Remote Control presets |
 | `manage_sequence` | Sequencer/cinematics |
 | `inspect` | Object introspection |
@@ -181,6 +197,12 @@ UE_RC_HTTP_PORT=30010          # Remote Control HTTP port
 UE_RC_WS_PORT=30020            # Remote Control WebSocket port
 UE_PROJECT_PATH="C:/Users/YourName/Documents/Unreal Projects/YourProject"  # Absolute path to your .uproject file
 LOG_LEVEL=info                 # debug | info | warn | error
+MCP_AUTOMATION_WS_HOST=127.0.0.1     # (Optional) Host interface for the automation bridge WebSocket server
+MCP_AUTOMATION_WS_PORT=8090          # (Optional) Port for the automation bridge WebSocket server
+MCP_AUTOMATION_WS_PORTS=8090,8091    # (Optional) Comma-separated list of ports to listen on simultaneously
+MCP_AUTOMATION_WS_PROTOCOLS=mcp-automation # (Optional) Preferred WebSocket subprotocols, comma-separated
+MCP_AUTOMATION_CAPABILITY_TOKEN=     # (Optional) Capability token the editor plugin must echo back during handshake
+MCP_AUTOMATION_BRIDGE_ENABLED=true   # Set to false to disable the automation bridge listener entirely
 ```
 
 ### Docker

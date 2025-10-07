@@ -53,11 +53,13 @@ result = {
   "message": "",
   "error": "",
   "actorName": "",
+  "actorPath": "",
   "requestedClass": "${escapedRequestedPath}",
   "resolvedClass": "${escapedResolvedClassPath}",
   "location": [${locX}, ${locY}, ${locZ}],
   "rotation": [${rotPitch}, ${rotYaw}, ${rotRoll}],
   "requestedActorName": "${escapedRequestedActorName}",
+  "componentPaths": [],
   "warnings": [],
   "details": []
 }
@@ -81,6 +83,8 @@ def finalize():
     data.pop("warnings", None)
   if not data.get("details"):
     data.pop("details", None)
+  if not data.get("componentPaths"):
+    data.pop("componentPaths", None)
   return data
 
 try:
@@ -217,6 +221,27 @@ else:
         actor_name = actor.get_actor_label() or fallback_name
       result["success"] = True
       result["actorName"] = actor_name
+      try:
+        result["actorPath"] = actor.get_path_name()
+      except Exception as path_error:
+        add_warning(f"Failed to resolve actor path: {path_error}")
+
+      try:
+        comps = []
+        for comp in actor.get_components_by_class(unreal.ActorComponent):
+          if not comp:
+            continue
+          comp_info = {
+            'name': comp.get_name() if hasattr(comp, 'get_name') else '',
+            'path': comp.get_path_name() if hasattr(comp, 'get_path_name') else '',
+            'class': comp.get_class().get_path_name() if comp.get_class() else ''
+          }
+          comps.append(comp_info)
+        if comps:
+          result['componentPaths'] = comps
+          add_detail(f"Captured {len(comps)} component references for follow-up operations")
+      except Exception as comp_error:
+        add_warning(f"Failed to capture component references: {comp_error}")
       if not result["message"]:
         result["message"] = f"Spawned {actor_name} at ({location.x}, {location.y}, {location.z})"
     else:
@@ -242,15 +267,24 @@ print('RESULT:' + json.dumps(finalize()))
       }
 
       const actorName = coerceString(interpreted.payload.actorName);
+      const actorPath = coerceString(interpreted.payload.actorPath);
       const resolvedClass = coerceString(interpreted.payload.resolvedClass) ?? mappedClassPath;
       const requestedClass = coerceString(interpreted.payload.requestedClass) ?? className;
       const locationVector = coerceVector3(interpreted.payload.location) ?? [locX, locY, locZ];
       const rotationVector = coerceVector3(interpreted.payload.rotation) ?? [rotPitch, rotYaw, rotRoll];
+      const capturedComponents = Array.isArray(interpreted.payload.componentPaths)
+        ? interpreted.payload.componentPaths.map((comp: any) => ({
+            name: coerceString(comp?.name) ?? undefined,
+            path: coerceString(comp?.path) ?? undefined,
+            class: coerceString(comp?.class) ?? undefined
+          }))
+        : undefined;
 
       const result: Record<string, unknown> = {
         success: true,
         message: interpreted.message,
         actorName: actorName ?? undefined,
+        actorPath: actorPath ?? undefined,
         resolvedClass,
         requestedClass,
         location: { x: locationVector[0], y: locationVector[1], z: locationVector[2] },
@@ -262,6 +296,9 @@ print('RESULT:' + json.dumps(finalize()))
       }
       if (interpreted.details?.length) {
         result.details = interpreted.details;
+      }
+      if (capturedComponents?.length) {
+        result.componentPaths = capturedComponents;
       }
 
       return result;

@@ -1,23 +1,22 @@
-// Consolidated tool definitions - reduced from 36 to 13 multi-purpose tools
-
 export const consolidatedToolDefinitions = [
   // 1. ASSET MANAGER - Combines asset operations
   {
     name: 'manage_asset',
-  description: `Asset library utility for browsing, importing, and bootstrapping simple materials.
+  description: `Asset library utility for browsing, importing, bootstrapping materials, and managing asset lifecycles.
 
 Use it when you need to:
 - explore project content (\u002fContent automatically maps to \u002fGame).
 - import FBX/PNG/WAV/EXR files into the project.
 - spin up a minimal Material asset at a specific path.
+- duplicate, rename, move, or delete assets with optional redirector fixup.
 
-Supported actions: list, import, create_material.`,
+Supported actions: list, import, create_material, duplicate, rename, move, delete.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: { 
           type: 'string', 
-          enum: ['list', 'import', 'create_material'],
+          enum: ['list', 'import', 'create_material', 'duplicate', 'rename', 'move', 'delete'],
           description: 'Action to perform'
         },
         // For list
@@ -25,6 +24,18 @@ Supported actions: list, import, create_material.`,
         // For import
         sourcePath: { type: 'string', description: 'Source file path on disk to import (FBX, PNG, WAV, EXR supported). Example: "C:/MyAssets/mesh.fbx"' },
         destinationPath: { type: 'string', description: 'Destination path in project content where asset will be imported. Example: "/Game/ImportedAssets"' },
+        // Duplicate / move / rename helpers
+        assetPath: { type: 'string', description: 'Existing asset path (e.g., "/Game/MyFolder/MyAsset") used by rename/move/delete actions.' },
+        assetPaths: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of asset paths to delete. Overrides assetPath when provided.'
+        },
+        newName: { type: 'string', description: 'Optional new asset name applied during duplicate, rename, or move actions.' },
+        overwrite: { type: 'boolean', description: 'Overwrite any existing asset at the destination path when duplicating.' },
+        save: { type: 'boolean', description: 'Save newly created assets after duplication.' },
+        fixupRedirectors: { type: 'boolean', description: 'Run redirector fixup for affected folders after move/delete actions.' },
+        timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds for automation-bridge-backed asset operations.' },
         // For create_material
         name: { type: 'string', description: 'Name for the new material asset. Example: "MyMaterial"' },
         path: { type: 'string', description: 'Content path where material will be saved. Example: "/Game/Materials"' }
@@ -50,6 +61,12 @@ Supported actions: list, import, create_material.`,
         },
         paths: { type: 'array', items: { type: 'string' }, description: 'Imported asset paths (for import)' },
         materialPath: { type: 'string', description: 'Created material path (for create_material)' },
+        path: { type: 'string', description: 'Resulting asset path for duplicate, rename, or move actions' },
+        conflictPath: { type: 'string', description: 'Conflicting asset path when the operation could not proceed' },
+        overwritten: { type: 'boolean', description: 'Whether an existing asset was overwritten during duplication' },
+        deleted: { type: 'array', items: { type: 'string' }, description: 'List of assets successfully deleted (for delete action)' },
+        missing: { type: 'array', items: { type: 'string' }, description: 'Assets that were not found during delete action' },
+        failed: { type: 'array', items: { type: 'string' }, description: 'Assets that failed to delete' },
         message: { type: 'string', description: 'Status message' },
         error: { type: 'string', description: 'Error message if failed' }
       }
@@ -118,6 +135,19 @@ Supported actions: spawn, delete, apply_force.`,
       properties: {
         success: { type: 'boolean', description: 'Whether the operation succeeded' },
         actor: { type: 'string', description: 'Spawned actor name (for spawn)' },
+        actorPath: { type: 'string', description: 'Resolved actor path in the level (for spawn)' },
+        componentPaths: {
+          type: 'array',
+          description: 'Captured component references for newly spawned actors',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              path: { type: 'string' },
+              class: { type: 'string' }
+            }
+          }
+        },
         deleted: { type: 'string', description: 'Deleted actor name (for delete)' },
         physicsEnabled: { type: 'boolean', description: 'Physics state (for apply_force)' },
         message: { type: 'string', description: 'Status message' },
@@ -261,20 +291,21 @@ Supported actions: load, save, stream, create_light, build_lighting.`,
   // 5. ANIMATION SYSTEM - Combines animation and physics setup
   {
     name: 'animation_physics',
-  description: `Animation and physics rigging helper covering Anim BPs, montage playback, and ragdoll setup.
+  description: `Animation and physics rigging helper covering Anim BPs, montage playback, ragdolls, and vehicle setup.
 
 Use it when you need to:
 - generate an Animation Blueprint for a skeleton.
 - play a montage/animation on an actor at a chosen rate.
 - enable a quick ragdoll using an existing physics asset.
+ - configure vehicle movement and drivetrain settings via physics helpers.
 
-Supported actions: create_animation_bp, play_montage, setup_ragdoll.`,
+Supported actions: create_animation_bp, play_montage, setup_ragdoll, configure_vehicle.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: { 
           type: 'string', 
-          enum: ['create_animation_bp', 'play_montage', 'setup_ragdoll'],
+          enum: ['create_animation_bp', 'play_montage', 'setup_ragdoll', 'configure_vehicle'],
           description: 'Action type'
         },
         // Common
@@ -288,7 +319,59 @@ Supported actions: create_animation_bp, play_montage, setup_ragdoll.`,
         // Physics
         physicsAssetName: { type: 'string', description: 'Name or path to physics asset for ragdoll simulation. Required for setup_ragdoll action.' },
         blendWeight: { type: 'number', description: 'Blend weight between animated and ragdoll physics (0.0 to 1.0). 0.0 is fully animated, 1.0 is fully ragdoll. Optional, defaults to 1.0.' },
-        savePath: { type: 'string', description: 'Content path where animation blueprint will be saved (e.g., "/Game/Animations"). Required for create_animation_bp action.' }
+        savePath: { type: 'string', description: 'Content path where animation blueprint will be saved (e.g., "/Game/Animations"). Required for create_animation_bp action.' },
+        // Vehicle configuration
+        vehicleName: { type: 'string', description: 'Vehicle actor or Blueprint identifier to configure. Required for configure_vehicle action.' },
+        vehicleType: { type: 'string', enum: ['Car', 'Bike', 'Tank', 'Aircraft'], description: 'Vehicle archetype used for helper defaults (Car, Bike, Tank, Aircraft). Required for configure_vehicle action.' },
+        wheels: {
+          type: 'array',
+          description: 'Wheel configuration entries for configure_vehicle. Each entry should include radius, width, mass, and steering/driving flags.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Wheel identifier or socket name' },
+              radius: { type: 'number', description: 'Wheel radius in centimeters' },
+              width: { type: 'number', description: 'Wheel width in centimeters' },
+              mass: { type: 'number', description: 'Wheel mass in kilograms' },
+              isSteering: { type: 'boolean', description: 'Whether this wheel steers' },
+              isDriving: { type: 'boolean', description: 'Whether this wheel applies drive torque' }
+            }
+          }
+        },
+        engine: {
+          type: 'object',
+          description: 'Engine configuration block for configure_vehicle action.',
+          properties: {
+            maxRPM: { type: 'number', description: 'Maximum engine RPM' },
+            torqueCurve: {
+              type: 'array',
+              description: 'Array of [RPM, Torque] points defining the torque curve.',
+              items: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 2,
+                maxItems: 2
+              }
+            }
+          }
+        },
+        transmission: {
+          type: 'object',
+          description: 'Transmission configuration for configure_vehicle action.',
+          properties: {
+            gears: {
+              type: 'array',
+              description: 'Gear ratios for the transmission (index 0 = first gear).',
+              items: { type: 'number' }
+            },
+            finalDriveRatio: { type: 'number', description: 'Final drive ratio applied after the gear ratios.' }
+          }
+        },
+        pluginDependencies: {
+          type: 'array',
+          description: 'Optional list of Unreal plugin names that must be enabled before configure_vehicle runs.',
+          items: { type: 'string' }
+        }
       },
       required: ['action']
     },
@@ -300,6 +383,9 @@ Supported actions: create_animation_bp, play_montage, setup_ragdoll.`,
         playing: { type: 'boolean', description: 'Montage playing state' },
         playRate: { type: 'number', description: 'Current play rate' },
         ragdollActive: { type: 'boolean', description: 'Ragdoll activation state' },
+        vehicleName: { type: 'string', description: 'Vehicle identifier used during configure_vehicle' },
+        vehicleType: { type: 'string', description: 'Vehicle archetype applied during configure_vehicle' },
+        warnings: { type: 'array', items: { type: 'string' }, description: 'Warnings emitted during the operation' },
         message: { type: 'string', description: 'Status message' }
       }
     }
@@ -377,29 +463,108 @@ Supported actions: niagara, particle, debug_shape.`,
   // 7. BLUEPRINT MANAGER - Blueprint operations
   {
     name: 'manage_blueprint',
-  description: `Blueprint scaffolding helper for creating assets and attaching components.
+  description: `Blueprint scaffolding helper for creating assets, attaching components, and mutating defaults.
 
 Use it when you need to:
 - create a new Blueprint of a specific base type (Actor, Pawn, Character, ...).
 - add a component to an existing Blueprint asset with a unique name.
+- tweak Blueprint Class Default Object (CDO) properties when Remote Control cannot.
+- orchestrate multi-step Simple Construction Script edits with compile/save toggles.
 
-Supported actions: create, add_component.`,
+Supported actions: create, add_component, set_default, modify_scs.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: { 
           type: 'string', 
-          enum: ['create', 'add_component'],
+          enum: ['create', 'add_component', 'set_default', 'modify_scs'],
           description: 'Blueprint action'
         },
         name: { type: 'string', description: 'Name for the blueprint asset. Required for create action. For add_component, this is the blueprint asset name or path.' },
+        blueprintPath: { type: 'string', description: 'Alternative blueprint identifier for modify_scs when different from name.' },
         blueprintType: { 
           type: 'string',
           description: 'Base class type for blueprint (Actor, Pawn, Character, Object, ActorComponent, SceneComponent, etc.). Required for create action.'
         },
         componentType: { type: 'string', description: 'Component class to add (StaticMeshComponent, SkeletalMeshComponent, CameraComponent, etc.). Required for add_component action.' },
         componentName: { type: 'string', description: 'Unique name for the component instance within the blueprint. Required for add_component action.' },
-        savePath: { type: 'string', description: 'Content path where blueprint will be saved (e.g., "/Game/Blueprints"). Required for create action.' }
+        attachTo: { type: 'string', description: 'Optional parent component name when adding components.' },
+        transform: {
+          type: 'object',
+          description: 'Relative transform overrides for add_component or set_component_properties operations.',
+          properties: {
+            location: {
+              type: 'object',
+              description: 'Relative location in centimeters (X/Y/Z). Each axis is optional.',
+              properties: {
+                x: { type: 'number' },
+                y: { type: 'number' },
+                z: { type: 'number' }
+              }
+            },
+            rotation: {
+              type: 'object',
+              description: 'Relative rotation in degrees (Pitch/Yaw/Roll). Each axis is optional.',
+              properties: {
+                pitch: { type: 'number' },
+                yaw: { type: 'number' },
+                roll: { type: 'number' }
+              }
+            },
+            scale: {
+              type: 'object',
+              description: 'Relative scale multiplier. Each axis is optional.',
+              properties: {
+                x: { type: 'number' },
+                y: { type: 'number' },
+                z: { type: 'number' }
+              }
+            }
+          }
+        },
+        properties: {
+          type: 'object',
+          description: 'Component template property overrides applied during add_component or modify_scs.'
+        },
+        savePath: { type: 'string', description: 'Content path where blueprint will be saved (e.g., "/Game/Blueprints"). Required for create action.' },
+        propertyName: { type: 'string', description: 'Blueprint default property to set when action is set_default.' },
+        value: { description: 'Value to assign to the Blueprint default property when action is set_default. Accepts JSON-compatible values.' },
+        compile: { type: 'boolean', description: 'Compile the Blueprint after modify_scs executes.' },
+        save: { type: 'boolean', description: 'Save the Blueprint after modify_scs executes.' },
+        timeoutMs: { type: 'number', description: 'Optional timeout (ms) for automation-bridge-backed operations.' },
+        operations: {
+          type: 'array',
+          description: 'List of Simple Construction Script operations for modify_scs.',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', enum: ['add_component', 'remove_component', 'set_component_properties'], description: 'Operation type.' },
+              componentName: { type: 'string', description: 'Target component name.' },
+              componentClass: { type: 'string', description: 'Component class path (add_component).' },
+              attachTo: { type: 'string', description: 'Parent component when attaching new components.' },
+              transform: {
+                type: 'object',
+                description: 'Relative transform overrides for this operation.',
+                properties: {
+                  location: {
+                    type: 'object',
+                    properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+                  },
+                  rotation: {
+                    type: 'object',
+                    properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }
+                  },
+                  scale: {
+                    type: 'object',
+                    properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+                  }
+                }
+              },
+              properties: { type: 'object', description: 'Component template property overrides.' }
+            },
+            required: ['type']
+          }
+        }
       },
       required: ['action', 'name']
     },
@@ -408,9 +573,43 @@ Supported actions: create, add_component.`,
       properties: {
         success: { type: 'boolean', description: 'Whether the operation succeeded' },
         blueprintPath: { type: 'string', description: 'Blueprint asset path' },
-        componentAdded: { type: 'string', description: 'Added component name' },
+        componentAdded: { type: 'string', description: 'Added component name (legacy)' },
+        componentName: { type: 'string', description: 'Target component name for add_component or modify_scs responses.' },
+        componentClass: { type: 'string', description: 'Component class reference reported from add_component.' },
+        propertyName: { type: 'string', description: 'Blueprint default property that was updated' },
+        value: { description: 'Value applied to the default property' },
+        cdoPath: { type: 'string', description: 'Resolved Blueprint CDO path when mutating defaults' },
+        compiled: { type: 'boolean', description: 'Whether the Blueprint was compiled after modify_scs.' },
+        saved: { type: 'boolean', description: 'Whether the Blueprint asset was saved after modify_scs.' },
+        operations: {
+          type: 'array',
+          description: 'Per-operation outcome returned by modify_scs.',
+          items: {
+            type: 'object',
+            properties: {
+              index: { type: 'number' },
+              type: { type: 'string' },
+              success: { type: 'boolean' },
+              componentName: { type: 'string' },
+              componentClass: { type: 'string' },
+              warning: { type: 'string' }
+            }
+          }
+        },
         message: { type: 'string', description: 'Status message' },
-        warning: { type: 'string', description: 'Warning if manual steps needed' }
+        warning: { type: 'string', description: 'Warning if manual steps needed' },
+        warnings: { type: 'array', items: { type: 'string' }, description: 'Detailed warnings when fallbacks/simulation is used' },
+        details: { type: 'array', items: { type: 'string' }, description: 'Additional context about Blueprint operations' },
+        transport: { type: 'string', description: 'Transport used (e.g., automation_bridge).' },
+        bridge: {
+          type: 'object',
+          description: 'Automation bridge debugging details when available.',
+          properties: {
+            requestId: { type: 'string' },
+            success: { type: 'boolean' },
+            error: { type: 'string' }
+          }
+        }
       }
     }
   },
@@ -625,7 +824,55 @@ Use it when higher-level tools don't cover the console tweak you need. Hazardous
     }
   },
 
-  // 11. REMOTE CONTROL PRESETS
+  // 11. PYTHON EXECUTION
+  {
+    name: 'execute_python',
+  description: `General-purpose Python runner for the Unreal Editor.
+
+Use it when you need to:
+- run a one-off Python script without creating a dedicated tool.
+- leverage existing bridge templates (e.g., GET_ALL_ACTORS) with custom parameters.
+- capture structured RESULT payloads emitted from the script.
+
+Supported modes: direct script execution or template invocation.
+
+Set \`transport\` to "automation_bridge" to execute through the MCP Automation Bridge plugin when Remote Control cannot run the script.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        script: { type: 'string', description: 'Raw Python source to execute inside the Unreal Editor. Required if no template is provided.' },
+        template: { type: 'string', description: 'Optional bridge template name (e.g., "GET_ALL_ACTORS"). When set, the template is executed instead of the raw script.' },
+        templateParams: { type: 'object', description: 'Optional parameters to substitute into the selected template.' },
+        context: { type: 'object', description: 'JSON-serialisable payload exposed to the script as MCP_INPUT.' },
+        captureResult: { type: 'boolean', description: 'Parse RESULT: blocks from stdout (true) or return raw execution output (false). Defaults to true.' },
+        transport: {
+          type: 'string',
+          enum: ['remote_control', 'automation_bridge'],
+          description: 'Execution transport. Defaults to remote_control; set to automation_bridge to route through the editor plugin.'
+        },
+        timeoutMs: {
+          type: 'number',
+          description: 'Optional timeout (milliseconds) when using the automation bridge transport. Defaults to 15000.'
+        }
+      },
+      anyOf: [
+        { required: ['script'] },
+        { required: ['template'] }
+      ]
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the Python execution succeeded' },
+        result: { description: 'Parsed RESULT payload or raw execution response' },
+        message: { type: 'string', description: 'Human-readable status message' },
+        warnings: { type: 'array', items: { type: 'string' }, description: 'Optional warnings from execution' },
+        error: { type: 'string', description: 'Error details if execution failed' }
+      }
+    }
+  },
+
+  // 12. REMOTE CONTROL PRESETS
   {
     name: 'manage_rc',
   description: `Remote Control preset helper for building, exposing, and mutating RC assets.
@@ -668,7 +915,7 @@ Supported actions: create_preset, expose_actor, expose_property, list_fields, se
     }
   },
 
-  // 12. SEQUENCER / CINEMATICS
+  // 13. SEQUENCER / CINEMATICS
   {
     name: 'manage_sequence',
   description: `Sequencer automation helper for Level Sequences: asset management, bindings, and playback control.
@@ -729,7 +976,7 @@ Supported actions: create, open, add_camera, add_actor, add_actors, remove_actor
     }
   },
 
-  // 13. INTROSPECTION
+  // 14. INTROSPECTION
   {
     name: 'inspect',
   description: `Introspection utility for reading or mutating properties on actors, components, or CDOs.
@@ -742,10 +989,23 @@ Supported actions: inspect_object, set_property.`,
     inputSchema: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['inspect_object', 'set_property'], description: 'Introspection action: "inspect_object" retrieves all properties, "set_property" modifies a specific property. Required.' },
+  action: { type: 'string', enum: ['inspect_object', 'set_property', 'get_property'], description: 'Introspection action: inspect_object retrieves metadata, set_property mutates a value, get_property fetches a single property.' },
         objectPath: { type: 'string', description: 'Full object path in Unreal format (e.g., "/Game/Maps/Level.Level:PersistentLevel.StaticMeshActor_0" or "/Script/Engine.Default__StaticMeshActor" for CDO). Required for both actions.' },
         propertyName: { type: 'string', description: 'Name of the property to modify (e.g., "RelativeLocation", "Mobility", "bHidden"). Required for set_property action.' },
-        value: { description: 'New property value. Must be JSON-serializable and compatible with property type (e.g., {"X":100,"Y":0,"Z":0} for vectors, 5.0 for floats, true for bools, "Value" for strings). Required for set_property action.' }
+        value: { description: 'New property value. Must be JSON-serializable and compatible with property type (e.g., {"X":100,"Y":0,"Z":0} for vectors, 5.0 for floats, true for bools, "Value" for strings). Required for set_property action.' },
+        transport: {
+          type: 'string',
+          enum: ['remote_control', 'automation_bridge'],
+          description: 'Transport for property mutations. Defaults to remote_control; set to automation_bridge to use the editor plugin.'
+        },
+        timeoutMs: {
+          type: 'number',
+          description: 'Optional timeout in milliseconds when using the automation bridge transport (default 15000).'
+        },
+        markDirty: {
+          type: 'boolean',
+          description: 'When false, skips marking the target package dirty (automation bridge transport only).'
+        }
       },
       required: ['action']
     },
@@ -755,7 +1015,10 @@ Supported actions: inspect_object, set_property.`,
         success: { type: 'boolean' },
         info: { type: 'object' },
         message: { type: 'string' },
-        error: { type: 'string' }
+        error: { type: 'string' },
+        value: {},
+        transport: { type: 'string' },
+        bridge: { type: 'object' }
       }
     }
   }

@@ -355,4 +355,103 @@ if ues:
       return { success: false, error: `Failed to set FOV: ${err}` };
     }
   }
+
+  async takeScreenshot(filename?: string) {
+    try {
+      const sanitizedFilename = filename ? filename.replace(/[<>:*?"|]/g, '_') : `Screenshot_${Date.now()}`;
+      const command = filename ? `highresshot 1920x1080 filename="${sanitizedFilename}"` : 'shot';
+      
+      const res = await this.bridge.executeConsoleCommand(command);
+      
+      return { 
+        success: true, 
+        message: `Screenshot captured: ${sanitizedFilename}`,
+        filename: sanitizedFilename,
+        command 
+      };
+    } catch (err) {
+      return { success: false, error: `Failed to take screenshot: ${err}` };
+    }
+  }
+
+  async setViewportResolution(width: number, height: number) {
+    try {
+      // Clamp to reasonable limits
+      const clampedWidth = Math.max(320, Math.min(7680, width));
+      const clampedHeight = Math.max(240, Math.min(4320, height));
+      
+      const pythonCmd = `
+import unreal
+import json
+
+result = {"success": False, "message": "", "error": ""}
+
+try:
+    # Use LevelEditorSubsystem to resize viewport
+    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    if les:
+        # Set viewport resolution via Python
+        unreal.SystemLibrary.execute_console_command(
+            None, 
+            f"r.SetRes {clampedWidth}x{clampedHeight}"
+        )
+        result["success"] = True
+        result["message"] = f"Viewport resolution set to {clampedWidth}x{clampedHeight}"
+    else:
+        result["error"] = "LevelEditorSubsystem not available"
+except Exception as e:
+    result["error"] = str(e)
+
+print("RESULT:" + json.dumps(result))
+`.trim();
+
+      const resp: any = await this.bridge.executePython(pythonCmd);
+      const interpreted = interpretStandardResult(resp, {
+        successMessage: `Viewport resolution set to ${clampedWidth}x${clampedHeight}`,
+        failureMessage: 'Failed to set viewport resolution'
+      });
+
+      if (interpreted.success) {
+        return { 
+          success: true, 
+          message: interpreted.message,
+          width: clampedWidth,
+          height: clampedHeight
+        };
+      }
+
+      return {
+        success: false,
+        error: interpreted.error ?? 'Failed to set viewport resolution'
+      };
+    } catch (err) {
+      return { success: false, error: `Failed to set viewport resolution: ${err}` };
+    }
+  }
+
+  async executeConsoleCommand(command: string) {
+    try {
+      // Sanitize and validate command
+      if (!command || typeof command !== 'string') {
+        return { success: false, error: 'Invalid command: must be a non-empty string' };
+      }
+
+      if (command.length > 1000) {
+        return { 
+          success: false, 
+          error: `Command too long (${command.length} chars). Maximum is 1000 characters.` 
+        };
+      }
+
+      const res = await this.bridge.executeConsoleCommand(command);
+      
+      return { 
+        success: true, 
+        message: `Console command executed: ${command}`,
+        output: res 
+      };
+    } catch (err) {
+      return { success: false, error: `Failed to execute console command: ${err}` };
+    }
+  }
 }

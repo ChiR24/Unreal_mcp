@@ -1,10 +1,60 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation-bridge.js';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { bestEffortInterpretedText, coerceNumber, coerceStringArray, interpretStandardResult } from '../utils/result-helpers.js';
+import {
+  bestEffortInterpretedText,
+  coerceBoolean,
+  coerceNumber,
+  coerceString,
+  coerceStringArray,
+  interpretStandardResult
+} from '../utils/result-helpers.js';
+import { escapePythonString } from '../utils/python.js';
 
 export class AssetTools {
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+
+  setAutomationBridge(automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
+
+  private async executeAssetPython(script: string, timeoutMs?: number): Promise<any> {
+    const trimmed = script.trim();
+
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest(
+          'execute_editor_python',
+          { script: trimmed },
+          { timeoutMs }
+        );
+
+        if (response.success === false) {
+          return {
+            success: false,
+            message: response.message || 'Automation bridge execution failed',
+            error: response.error || response.message || 'AUTOMATION_BRIDGE_FAILURE'
+          };
+        }
+
+        if (response.result !== undefined && response.result !== null) {
+          return response.result;
+        }
+
+        if (response.success === true || response.success === undefined) {
+          return {
+            success: true,
+            message: response.message || 'Automation bridge executed Python script'
+          };
+        }
+      } catch (_err) {
+        // Fall back to Remote Control execution if the automation bridge call fails
+      }
+    }
+
+    return this.bridge.executePythonWithResult(trimmed);
+  }
 
   async importAsset(sourcePath: string, destinationPath: string) {
     let createdTestFile = false;
@@ -207,35 +257,355 @@ print('RESULT:' + json.dumps(result))
     }
   }
 
-  async duplicateAsset(sourcePath: string, destinationPath: string) {
-    try {
-      const res = await this.bridge.call({
-        objectPath: '/Script/EditorScriptingUtilities.Default__EditorAssetLibrary',
-        functionName: 'DuplicateAsset',
-        parameters: {
-          SourceAssetPath: sourcePath,
-          DestinationAssetPath: destinationPath
-        }
-      });
-      return res?.Result ?? res;
-    } catch (err) {
-      return { error: `Failed to duplicate asset: ${err}` };
-    }
+  async duplicateAsset(params: {
+    sourcePath: string;
+    destinationPath: string;
+    newName?: string;
+    overwrite?: boolean;
+    save?: boolean;
+    timeoutMs?: number;
+  }) {
+    const escapedSource = escapePythonString(params.sourcePath);
+    const escapedDestination = escapePythonString(params.destinationPath);
+    const escapedNewName = escapePythonString(params.newName ?? '');
+    const script = `
+import unreal, json
+
+source_path = r"${escapedSource}"
+target_folder = r"${escapedDestination}".rstrip('/')
+requested_name = r"${escapedNewName}"
+overwrite_existing = ${params.overwrite ? 'True' : 'False'}
+save_new_asset = ${params.save ? 'True' : 'False'}
+
+result = {
+    'success': False,
+    'message': '',
+    'error': '',
+    'source': source_path,
+    'path': ''
+}
+
+asset_lib = unreal.EditorAssetLibrary
+
+if not asset_lib.does_asset_exist(source_path):
+    result['error'] = f"Source asset not found: {params.sourcePath}"
+else:
+    original_name = source_path.split('/')[-1]
+    asset_name = requested_name.strip() or original_name
+    if not asset_name:
+        result['error'] = 'Unable to determine asset name'
+    else:
+        folder = target_folder or source_path.rsplit('/', 1)[0]
+        folder = folder.rstrip('/')
+        if not folder:
+            result['error'] = 'Destination path is empty'
+        else:
+            new_path = f"{folder}/{asset_name}"
+            if not overwrite_existing and asset_lib.does_asset_exist(new_path):
+                result['error'] = f"Asset already exists at {new_path}"
+                result['conflictPath'] = new_path
+            else:
+                overwritten = False
+                if overwrite_existing and asset_lib.does_asset_exist(new_path):
+                    if not asset_lib.delete_asset(new_path):
+                        result['error'] = f"Failed to remove existing asset at {new_path}"
+                    else:
+                        overwritten = True
+                if not result['error']:
+                    duplicated = asset_lib.duplicate_asset(source_path, new_path)
+                    if duplicated:
+                        result['success'] = True
+                        result['path'] = new_path
+                        result['message'] = f"Duplicated asset to {new_path}"
+                        result['overwritten'] = overwritten
+                        if save_new_asset:
+                            try:
+                                asset_lib.save_asset(new_path, False)
+                            except Exception as save_err:
+                                result.setdefault('warnings', []).append(f"Save failed for {new_path}: {save_err}")
+                    else:
+                        result['error'] = 'DuplicateAsset returned False'
+
+if not result['success'] and not result['error']:
+    result['error'] = 'Duplicate operation failed'
+
+if result.get('error'):
+    result['message'] = result['error']
+else:
+    result['error'] = None
+
+if 'warnings' in result and not result['warnings']:
+    result.pop('warnings')
+
+print('RESULT:' + json.dumps(result))
+`.trim();
+
+    const pyResult = await this.executeAssetPython(script, params.timeoutMs);
+    const interpreted = interpretStandardResult(pyResult, {
+      successMessage: `Duplicated asset to ${params.destinationPath}`,
+      failureMessage: 'Failed to duplicate asset'
+    });
+
+    const payload = interpreted.payload ?? {};
+
+    return {
+      success: interpreted.success,
+      message: interpreted.message,
+      error: interpreted.error,
+      sourcePath: params.sourcePath,
+      path: coerceString(payload.path),
+      conflictPath: coerceString(payload.conflictPath),
+      overwritten: coerceBoolean(payload.overwritten),
+      warnings: interpreted.warnings,
+      details: interpreted.details
+    };
   }
 
-  async deleteAsset(assetPath: string) {
-    try {
-      const res = await this.bridge.call({
-        objectPath: '/Script/EditorScriptingUtilities.Default__EditorAssetLibrary',
-        functionName: 'DeleteAsset',
-        parameters: {
-          AssetPathToDelete: assetPath
-        }
-      });
-      return res?.Result ?? res;
-    } catch (err) {
-      return { error: `Failed to delete asset: ${err}` };
-    }
+  async renameAsset(params: {
+    assetPath: string;
+    newName: string;
+    timeoutMs?: number;
+  }) {
+    const escapedSource = escapePythonString(params.assetPath);
+    const escapedNewName = escapePythonString(params.newName);
+    const script = `
+import unreal, json
+
+asset_path = r"${escapedSource}"
+new_name = r"${escapedNewName}".strip()
+
+result = {
+    'success': False,
+    'message': '',
+    'error': '',
+    'path': asset_path
+}
+
+asset_lib = unreal.EditorAssetLibrary
+
+if not new_name:
+    result['error'] = 'New asset name must not be empty'
+elif not asset_lib.does_asset_exist(asset_path):
+    result['error'] = f"Asset not found: {params.assetPath}"
+else:
+    parent_path, _ = asset_path.rsplit('/', 1)
+    destination = f"{parent_path}/{new_name}"
+    if asset_lib.does_asset_exist(destination):
+        result['error'] = f"Asset already exists at {destination}"
+        result['conflictPath'] = destination
+    else:
+        if asset_lib.rename_asset(asset_path, destination):
+            result['success'] = True
+            result['path'] = destination
+            result['message'] = f"Renamed asset to {destination}"
+        else:
+            result['error'] = 'RenameAsset returned False'
+
+if not result['success'] and not result['error']:
+    result['error'] = 'Rename operation failed'
+
+if result.get('error'):
+    result['message'] = result['error']
+else:
+    result['error'] = None
+
+print('RESULT:' + json.dumps(result))
+`.trim();
+
+    const pyResult = await this.executeAssetPython(script, params.timeoutMs);
+    const interpreted = interpretStandardResult(pyResult, {
+      successMessage: 'Asset renamed successfully',
+      failureMessage: 'Failed to rename asset'
+    });
+
+    const payload = interpreted.payload ?? {};
+
+    return {
+      success: interpreted.success,
+      message: interpreted.message,
+      error: interpreted.error,
+      path: coerceString(payload.path),
+      conflictPath: coerceString(payload.conflictPath),
+      warnings: interpreted.warnings,
+      details: interpreted.details
+    };
+  }
+
+  async moveAsset(params: {
+    assetPath: string;
+    destinationPath: string;
+    newName?: string;
+    fixupRedirectors?: boolean;
+    timeoutMs?: number;
+  }) {
+    const escapedSource = escapePythonString(params.assetPath);
+    const escapedDestination = escapePythonString(params.destinationPath);
+    const escapedNewName = escapePythonString(params.newName ?? '');
+    const script = `
+import unreal, json
+
+asset_path = r"${escapedSource}"
+target_folder = r"${escapedDestination}".rstrip('/')
+requested_name = r"${escapedNewName}"
+fixup_redirectors = ${params.fixupRedirectors === false ? 'False' : 'True'}
+
+result = {
+    'success': False,
+    'message': '',
+    'error': '',
+    'path': asset_path
+}
+
+asset_lib = unreal.EditorAssetLibrary
+asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+
+if not asset_lib.does_asset_exist(asset_path):
+    result['error'] = f"Asset not found: {params.assetPath}"
+else:
+    current_name = asset_path.split('/')[-1]
+    asset_name = requested_name.strip() or current_name
+    folder = target_folder or asset_path.rsplit('/', 1)[0]
+    folder = folder.rstrip('/')
+    if not folder:
+        result['error'] = 'Destination path is empty'
+    else:
+        destination = f"{folder}/{asset_name}"
+        if destination == asset_path:
+            result['success'] = True
+            result['path'] = destination
+            result['message'] = 'Asset already resides at the requested path'
+        elif asset_lib.does_asset_exist(destination):
+            result['error'] = f"Asset already exists at {destination}"
+            result['conflictPath'] = destination
+        else:
+            if asset_lib.rename_asset(asset_path, destination):
+                result['success'] = True
+                result['path'] = destination
+                result['message'] = f"Moved asset to {destination}"
+                if fixup_redirectors and asset_tools:
+                    try:
+                        asset_tools.fixup_redirectors([folder])
+                    except Exception as fix_err:
+                        result.setdefault('warnings', []).append(f"Fix redirectors failed for {folder}: {fix_err}")
+            else:
+                result['error'] = 'RenameAsset returned False'
+
+if not result['success'] and not result['error']:
+    result['error'] = 'Move operation failed'
+
+if result.get('error'):
+    result['message'] = result['error']
+else:
+    result['error'] = None
+
+if 'warnings' in result and not result['warnings']:
+    result.pop('warnings')
+
+print('RESULT:' + json.dumps(result))
+`.trim();
+
+    const pyResult = await this.executeAssetPython(script, params.timeoutMs);
+    const interpreted = interpretStandardResult(pyResult, {
+      successMessage: 'Asset moved successfully',
+      failureMessage: 'Failed to move asset'
+    });
+
+    const payload = interpreted.payload ?? {};
+
+    return {
+      success: interpreted.success,
+      message: interpreted.message,
+      error: interpreted.error,
+      path: coerceString(payload.path),
+      conflictPath: coerceString(payload.conflictPath),
+      warnings: interpreted.warnings,
+      details: interpreted.details
+    };
+  }
+
+  async deleteAssets(params: {
+    assetPaths: string | string[];
+    fixupRedirectors?: boolean;
+    timeoutMs?: number;
+  }) {
+    const paths = Array.isArray(params.assetPaths) ? params.assetPaths : [params.assetPaths];
+    const serializedPaths = '[' + paths.map((entry) => `r"${escapePythonString(entry)}"`).join(', ') + ']';
+    const script = `
+import unreal, json
+
+asset_paths = ${serializedPaths}
+fixup_redirectors = ${params.fixupRedirectors === false ? 'False' : 'True'}
+
+result = {
+    'success': False,
+    'message': '',
+    'error': '',
+    'deleted': [],
+    'missing': [],
+    'failed': []
+}
+
+asset_lib = unreal.EditorAssetLibrary
+asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+
+for path in asset_paths:
+    normalized = path.rstrip('/')
+    if not asset_lib.does_asset_exist(normalized):
+        result['missing'].append(normalized)
+        continue
+
+    try:
+        if asset_lib.delete_asset(normalized):
+            result['deleted'].append(normalized)
+        else:
+            result['failed'].append(normalized)
+    except Exception as delete_err:
+        result['failed'].append(f"{normalized}:: {delete_err}")
+
+if result['failed']:
+    result['error'] = f"Failed to delete {len(result['failed'])} asset(s)"
+elif not result['deleted']:
+    result['error'] = 'No assets were deleted'
+else:
+    result['success'] = True
+
+if result['deleted'] and fixup_redirectors and asset_tools:
+    try:
+        folders = sorted({ path.rsplit('/', 1)[0] for path in result['deleted'] if '/' in path })
+        if folders:
+            asset_tools.fixup_redirectors(folders)
+    except Exception as fix_err:
+        result.setdefault('warnings', []).append(f"Fix redirectors failed: {fix_err}")
+
+if result.get('error'):
+    result['message'] = result['error']
+else:
+    result['error'] = None
+
+if 'warnings' in result and not result['warnings']:
+    result.pop('warnings')
+
+print('RESULT:' + json.dumps(result))
+`.trim();
+
+    const pyResult = await this.executeAssetPython(script, params.timeoutMs);
+    const interpreted = interpretStandardResult(pyResult, {
+      successMessage: 'Assets deleted successfully',
+      failureMessage: 'Failed to delete assets'
+    });
+
+    const payload = interpreted.payload ?? {};
+
+    return {
+      success: interpreted.success,
+      message: interpreted.message,
+      error: interpreted.error,
+      deleted: coerceStringArray(payload.deleted),
+      missing: coerceStringArray(payload.missing),
+      failed: coerceStringArray(payload.failed),
+      warnings: interpreted.warnings,
+      details: interpreted.details
+    };
   }
 
   async saveAsset(assetPath: string) {

@@ -32,8 +32,8 @@ export class SequenceTools {
   constructor(private bridge: UnrealBridge) {}
 
     private async ensureSequencerPrerequisites(operation: string): Promise<string[] | null> {
-        const missing = await this.bridge.ensurePluginsEnabled(['LevelSequenceEditor', 'Sequencer'], operation);
-        return missing.length ? missing : null;
+        const missing = await this.bridge.ensurePluginsEnabled(['LevelSequenceEditor'], operation);
+        return missing.length > 0 ? missing : null;
     }
 
   /**

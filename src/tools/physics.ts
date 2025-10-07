@@ -689,8 +689,29 @@ print('RESULT:' + json.dumps(result))
       gears: number[];
       finalDriveRatio: number;
     };
+    pluginDependencies?: string[];
   }) {
     try {
+      const dependencies = Array.isArray(params.pluginDependencies)
+        ? params.pluginDependencies
+            .map(dep => (typeof dep === 'string' ? dep.trim() : ''))
+            .filter(dep => dep.length > 0)
+        : [];
+
+      if (dependencies.length > 0) {
+        const missingPlugins = await this.bridge.ensurePluginsEnabled(dependencies, 'physics.configureVehicle');
+        if (missingPlugins.length > 0) {
+          const missingList = missingPlugins.join(', ');
+          return {
+            success: false,
+            error: `Required Unreal plugins not enabled: ${missingList}`,
+            warnings: [
+              `Enable ${missingList} in the editor (Edit > Plugins) and restart the session before running physics.configureVehicle.`
+            ]
+          };
+        }
+      }
+
       const commands = [
         `CreateVehicle ${params.vehicleName} ${params.vehicleType}`
       ];
@@ -733,10 +754,14 @@ print('RESULT:' + json.dumps(result))
       }
       
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
-        message: `Vehicle ${params.vehicleName} configured` 
+
+      const warnings: string[] = [];
+      warnings.push('Verify wheel class assignments and offsets in the vehicle movement component to ensure they match your project defaults.');
+
+      return {
+        success: true,
+        message: `Vehicle ${params.vehicleName} configured`,
+        warnings: warnings.length > 0 ? warnings : undefined
       };
     } catch (err) {
       return { success: false, error: `Failed to configure vehicle: ${err}` };

@@ -3,6 +3,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Logger } from './utils/logger.js';
 import { UnrealBridge } from './unreal-bridge.js';
+import { AutomationBridge } from './automation-bridge.js';
 import { AssetResources } from './resources/assets.js';
 import { ActorResources } from './resources/actors.js';
 import { LevelResources } from './resources/levels.js';
@@ -148,6 +149,34 @@ export function createServer() {
   const bridge = new UnrealBridge();
   // Disable auto-reconnect loops; connect only on-demand
   bridge.setAutoReconnectEnabled(false);
+
+  const automationBridge = new AutomationBridge();
+  automationBridge.start();
+
+  automationBridge.on('connected', ({ metadata, port, protocol }) => {
+    log.info(
+      `Automation bridge connected (port=${port}, protocol=${protocol ?? 'none'})`,
+      metadata
+    );
+  });
+
+  automationBridge.on('disconnected', ({ code, reason, port, protocol }) => {
+    log.info(
+      `Automation bridge disconnected (code=${code}, reason=${reason || 'n/a'}, port=${port}, protocol=${protocol ?? 'none'})`
+    );
+  });
+
+  automationBridge.on('handshakeFailed', ({ reason, port }) => {
+    log.warn(`Automation bridge handshake failed (port=${port}): ${reason}`);
+  });
+
+  automationBridge.on('message', (message) => {
+    log.debug('Automation bridge inbound message', message);
+  });
+
+  automationBridge.on('error', (error) => {
+    log.error('Automation bridge error', error);
+  });
   
 // Initialize response validation with schemas
   log.debug('Initializing response validation...');
@@ -216,13 +245,13 @@ export function createServer() {
   
   // Tools
   const actorTools = new ActorTools(bridge);
-  const assetTools = new AssetTools(bridge);
+  const assetTools = new AssetTools(bridge, automationBridge);
   const editorTools = new EditorTools(bridge);
   const materialTools = new MaterialTools(bridge);
   const animationTools = new AnimationTools(bridge);
   const physicsTools = new PhysicsTools(bridge);
   const niagaraTools = new NiagaraTools(bridge);
-  const blueprintTools = new BlueprintTools(bridge);
+  const blueprintTools = new BlueprintTools(bridge, automationBridge);
   const levelTools = new LevelTools(bridge);
   const lightingTools = new LightingTools(bridge);
   const landscapeTools = new LandscapeTools(bridge);
@@ -311,6 +340,12 @@ export function createServer() {
           uri: 'ue://health',
           name: 'Health Status',
           description: 'Server health and performance metrics',
+          mimeType: 'application/json'
+        },
+        {
+          uri: 'ue://automation-bridge',
+          name: 'Automation Bridge',
+          description: 'Automation bridge diagnostics and recent activity',
           mimeType: 'application/json'
         },
         {
@@ -430,7 +465,8 @@ export function createServer() {
             rcHttpReachable: bridge.isConnected
           }
         },
-        recentErrors: metrics.recentErrors.slice(-5)
+        recentErrors: metrics.recentErrors.slice(-5),
+        automationBridge: automationBridge.getStatus()
       };
       
       return {
@@ -438,6 +474,40 @@ export function createServer() {
           uri,
           mimeType: 'application/json',
           text: JSON.stringify(health, null, 2)
+        }]
+      };
+    }
+
+    if (uri === 'ue://automation-bridge') {
+      const status = automationBridge.getStatus();
+      const content = {
+        summary: {
+          enabled: status.enabled,
+          connected: status.connected,
+          host: status.host,
+          port: status.port,
+          capabilityTokenRequired: status.capabilityTokenRequired,
+          pendingRequests: status.pendingRequests
+        },
+        timestamps: {
+          connectedAt: status.connectedAt,
+          lastHandshakeAt: status.lastHandshakeAt,
+          lastMessageAt: status.lastMessageAt,
+          lastRequestSentAt: status.lastRequestSentAt
+        },
+        lastDisconnect: status.lastDisconnect,
+        lastHandshakeFailure: status.lastHandshakeFailure,
+        lastError: status.lastError,
+        lastHandshakeMetadata: status.lastHandshakeMetadata,
+        pendingRequestDetails: status.pendingRequestDetails,
+        listening: status.webSocketListening
+      };
+
+      return {
+        contents: [{
+          uri,
+          mimeType: 'application/json',
+          text: JSON.stringify(content, null, 2)
         }]
       };
     }
@@ -513,7 +583,8 @@ export function createServer() {
       assetResources,
       actorResources,
       levelResources,
-      bridge
+      bridge,
+      automationBridge
     };
     
 // Execute consolidated tool handler
@@ -674,7 +745,7 @@ export function createServer() {
     };
   });
 
-  return { server, bridge };
+  return { server, bridge, automationBridge };
 }
 
 // Export configuration schema for Smithery session UI and validation

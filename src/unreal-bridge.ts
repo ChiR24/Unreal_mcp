@@ -728,60 +728,56 @@ import json
 plugins = ${JSON.stringify(pluginsToCheck)}
 status = {}
 
-def get_plugin_manager():
+def is_plugin_enabled(plugin_name):
+  # Try PluginBlueprintLibrary first (most reliable for checking mounted/enabled status)
   try:
-    return unreal.PluginManager.get()
-  except AttributeError:
-    return None
+    lib = unreal.PluginBlueprintLibrary
+    if lib:
+      # Check if plugin is mounted (loaded and available)
+      if hasattr(lib, 'is_plugin_mounted') and callable(lib.is_plugin_mounted):
+        mounted = lib.is_plugin_mounted(plugin_name)
+        if mounted:
+          return True
+      # Also check enabled plugin names list
+      if hasattr(lib, 'get_enabled_plugin_names') and callable(lib.get_enabled_plugin_names):
+        enabled_names = lib.get_enabled_plugin_names()
+        if enabled_names and plugin_name in enabled_names:
+          return True
   except Exception:
-    return None
-
-def get_plugins_subsystem():
-  try:
-    return unreal.get_editor_subsystem(unreal.PluginsEditorSubsystem)
-  except AttributeError:
     pass
-  except Exception:
-    pass
+  
+  # Fallback: Try PluginManager
   try:
-    return unreal.PluginsSubsystem()
-  except Exception:
-    return None
-
-pm = get_plugin_manager()
-ps = get_plugins_subsystem()
-
-def is_enabled(plugin_name):
-  if pm:
-    try:
-      if pm.is_plugin_enabled(plugin_name):
-        return True
-    except Exception:
-      try:
+    pm = unreal.PluginManager.get() if hasattr(unreal, 'PluginManager') else None
+    if pm:
+      if hasattr(pm, 'is_plugin_enabled') and callable(pm.is_plugin_enabled):
+        if pm.is_plugin_enabled(plugin_name):
+          return True
+      if hasattr(pm, 'find_plugin') and callable(pm.find_plugin):
         plugin = pm.find_plugin(plugin_name)
-        if plugin and plugin.is_enabled():
+        if plugin and hasattr(plugin, 'is_enabled') and callable(plugin.is_enabled):
+          if plugin.is_enabled():
+            return True
+  except Exception:
+    pass
+  
+  # Fallback: Try subsystem
+  try:
+    ps = unreal.get_editor_subsystem(unreal.PluginsEditorSubsystem)
+    if ps:
+      if hasattr(ps, 'is_plugin_enabled') and callable(ps.is_plugin_enabled):
+        if ps.is_plugin_enabled(plugin_name):
           return True
-      except Exception:
-        pass
-  if ps:
-    try:
-      return bool(ps.is_plugin_enabled(plugin_name))
-    except Exception:
-      try:
-        plugin = ps.find_plugin(plugin_name)
-        if plugin and plugin.is_enabled():
-          return True
-      except Exception:
-        pass
+  except Exception:
+    pass
+  
   return False
 
 for plugin_name in plugins:
-  enabled = False
   try:
-    enabled = is_enabled(plugin_name)
+    status[plugin_name] = bool(is_plugin_enabled(plugin_name))
   except Exception:
-    enabled = False
-  status[plugin_name] = bool(enabled)
+    status[plugin_name] = False
 
 print('RESULT:' + json.dumps(status))
 `.trim();
