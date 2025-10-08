@@ -1067,9 +1067,17 @@ print('RESULT:' + json.dumps(result))
       throw new Error('Automation bridge not connected');
     }
 
-    const response = await this.automationBridge.sendAutomationRequest('execute_editor_python', {
-      script: trimmedCommand
-    });
+    const timeoutEnv = process.env.MCP_AUTOMATION_PYTHON_TIMEOUT_MS;
+    const requestedTimeout = timeoutEnv ? Number(timeoutEnv) : Number.NaN;
+    const timeoutMs = Number.isFinite(requestedTimeout) && requestedTimeout > 0
+      ? requestedTimeout
+      : 45000;
+
+    const response = await this.automationBridge.sendAutomationRequest(
+      'execute_editor_python',
+      { script: trimmedCommand },
+      { timeoutMs: Math.max(1000, timeoutMs) }
+    );
 
     if (response.success === false) {
       throw new Error(response.error || response.message || 'Automation bridge Python execution failed');

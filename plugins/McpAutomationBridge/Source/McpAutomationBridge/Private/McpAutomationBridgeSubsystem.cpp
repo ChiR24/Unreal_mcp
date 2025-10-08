@@ -4,6 +4,8 @@
 #include "IPythonScriptPlugin.h"
 #include "McpAutomationBridgeSettings.h"
 #include "HAL/PlatformTime.h"
+#include "Misc/OutputDevice.h"
+#include "Misc/ScopeExit.h"
 #include "Modules/ModuleManager.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
@@ -32,6 +34,34 @@ DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
 
 namespace
 {
+class FMcpPythonOutputCapture final : public FOutputDevice
+{
+public:
+    virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override
+    {
+        if (!V)
+        {
+            return;
+        }
+
+        static const FName LogPythonName(TEXT("LogPython"));
+        static const FName PythonName(TEXT("Python"));
+
+        if (Category == LogPythonName || Category == PythonName || Category == NAME_None)
+        {
+            CapturedLines.Add(FString(V));
+        }
+    }
+
+    TArray<FString> Consume()
+    {
+        return MoveTemp(CapturedLines);
+    }
+
+private:
+    TArray<FString> CapturedLines;
+};
+
 bool ApplyJsonValueToProperty(UObject* Target, FProperty* Property, const TSharedPtr<FJsonValue>& JsonValue, FString& OutError)
 {
     if (!Target || !Property)
@@ -647,12 +677,58 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             return;
         }
 
+        FMcpPythonOutputCapture OutputCapture;
+        const bool bCaptureLogs = (GLog != nullptr);
+
+        if (bCaptureLogs)
+        {
+            GLog->AddOutputDevice(&OutputCapture);
+        }
+
+        ON_SCOPE_EXIT
+        {
+            if (bCaptureLogs && GLog)
+            {
+                GLog->RemoveOutputDevice(&OutputCapture);
+            }
+        };
+
         const bool bSuccess = PythonPlugin->ExecPythonCommand(*Script);
         const FString ResultMessage = bSuccess
             ? TEXT("Python script executed via MCP Automation Bridge.")
             : TEXT("Python script executed but returned false.");
 
-        SendAutomationResponse(RequestId, bSuccess, ResultMessage, nullptr, bSuccess ? FString() : TEXT("PYTHON_EXEC_FAILED"));
+        TArray<FString> Captured = bCaptureLogs ? OutputCapture.Consume() : TArray<FString>();
+        TSharedPtr<FJsonObject> ResultPayload;
+
+        if (Captured.Num() > 0)
+        {
+            ResultPayload = MakeShared<FJsonObject>();
+
+            FString CombinedOutput = FString::Join(Captured, TEXT("\n"));
+            ResultPayload->SetStringField(TEXT("Output"), CombinedOutput);
+
+            TArray<TSharedPtr<FJsonValue>> LogOutputArray;
+            LogOutputArray.Reserve(Captured.Num());
+            for (const FString& Line : Captured)
+            {
+                if (Line.TrimStartAndEnd().IsEmpty())
+                {
+                    continue;
+                }
+
+                TSharedPtr<FJsonObject> LogEntry = MakeShared<FJsonObject>();
+                LogEntry->SetStringField(TEXT("Output"), Line);
+                LogOutputArray.Add(MakeShared<FJsonValueObject>(LogEntry));
+            }
+
+            if (LogOutputArray.Num() > 0)
+            {
+                ResultPayload->SetArrayField(TEXT("LogOutput"), LogOutputArray);
+            }
+        }
+
+        SendAutomationResponse(RequestId, bSuccess, ResultMessage, ResultPayload, bSuccess ? FString() : TEXT("PYTHON_EXEC_FAILED"));
         return;
     }
 
@@ -1222,5 +1298,65 @@ void UMcpAutomationBridgeSubsystem::StopBridge()
     }
 
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Automation bridge stopped."));
+}
+
+void UMcpAutomationBridgeSubsystem::RecordHeartbeat()
+{
+    LastHeartbeatTimestamp = FPlatformTime::Seconds();
+}
+
+void UMcpAutomationBridgeSubsystem::ResetHeartbeatTracking()
+{
+    LastHeartbeatTimestamp = 0.0;
+    HeartbeatTimeoutSeconds = 0.0f;
+    bHeartbeatTrackingEnabled = false;
+}
+
+void UMcpAutomationBridgeSubsystem::ForceReconnect(const FString& Reason, float ReconnectDelayOverride)
+{
+    const float EffectiveDelay = ReconnectDelayOverride >= 0.0f ? ReconnectDelayOverride : AutoReconnectDelaySeconds;
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Forcing automation bridge reconnect (delay %.2f s): %s"), EffectiveDelay, Reason.IsEmpty() ? TEXT("no reason provided") : *Reason);
+
+    if (ActiveSocket.IsValid())
+    {
+        ActiveSocket->OnConnected().RemoveAll(this);
+        ActiveSocket->OnConnectionError().RemoveAll(this);
+        ActiveSocket->OnClosed().RemoveAll(this);
+        ActiveSocket->OnMessage().RemoveAll(this);
+        ActiveSocket->Close();
+        ActiveSocket.Reset();
+    }
+
+    ResetHeartbeatTracking();
+    BridgeState = EMcpAutomationBridgeState::Disconnected;
+    bReconnectEnabled = true;
+    TimeUntilReconnect = EffectiveDelay;
+
+    if (EffectiveDelay <= 0.0f && bBridgeAvailable)
+    {
+        AttemptConnection();
+    }
+}
+
+void UMcpAutomationBridgeSubsystem::SendControlMessage(const TSharedPtr<FJsonObject>& Message)
+{
+    if (!Message.IsValid())
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Ignoring control message send; payload invalid."));
+        return;
+    }
+
+    if (!ActiveSocket.IsValid() || !ActiveSocket->IsConnected())
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Skipping control message send; socket not connected."));
+        return;
+    }
+
+    FString Serialized;
+    const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
+    FJsonSerializer::Serialize(Message.ToSharedRef(), Writer);
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("Outbound control message: %s"), *Serialized);
+    ActiveSocket->Send(Serialized);
 }
 
