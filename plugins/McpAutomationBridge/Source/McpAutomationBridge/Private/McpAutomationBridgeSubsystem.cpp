@@ -28,7 +28,7 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/SoftObjectPath.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogMcpAutomationBridgeSubsystem, Log, All);
+DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
 
 namespace
 {
@@ -1223,3 +1223,4 @@ void UMcpAutomationBridgeSubsystem::StopBridge()
 
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Automation bridge stopped."));
 }
+

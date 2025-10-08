@@ -3,6 +3,11 @@
 #include "Containers/Ticker.h"
 #include "EditorSubsystem.h"
 #include "Templates/SharedPointer.h"
+#include "Dom/JsonObject.h"
+#include "HAL/PlatformTime.h"
+#include "Logging/LogMacros.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 #include "McpAutomationBridgeSubsystem.generated.h"
 
 UENUM(BlueprintType)
@@ -29,7 +34,7 @@ struct MCPAUTOMATIONBRIDGE_API FMcpAutomationMessage
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMcpAutomationMessageReceived, const FMcpAutomationMessage&, Message);
 
 class FMcpBridgeWebSocket;
-class FJsonObject;
+DECLARE_LOG_CATEGORY_EXTERN(LogMcpAutomationBridgeSubsystem, Log, All);
 
 UCLASS()
 class MCPAUTOMATIONBRIDGE_API UMcpAutomationBridgeSubsystem : public UEditorSubsystem
@@ -89,3 +94,63 @@ private:
     void ForceReconnect(const FString& Reason, float ReconnectDelayOverride = -1.0f);
     void SendControlMessage(const TSharedPtr<FJsonObject>& Message);
 };
+
+inline void UMcpAutomationBridgeSubsystem::RecordHeartbeat()
+{
+    LastHeartbeatTimestamp = FPlatformTime::Seconds();
+}
+
+inline void UMcpAutomationBridgeSubsystem::ResetHeartbeatTracking()
+{
+    LastHeartbeatTimestamp = 0.0;
+    HeartbeatTimeoutSeconds = 0.0f;
+    bHeartbeatTrackingEnabled = false;
+}
+
+inline void UMcpAutomationBridgeSubsystem::ForceReconnect(const FString& Reason, float ReconnectDelayOverride)
+{
+    const float EffectiveDelay = ReconnectDelayOverride >= 0.0f ? ReconnectDelayOverride : AutoReconnectDelaySeconds;
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Forcing automation bridge reconnect (delay %.2f s): %s"), EffectiveDelay, Reason.IsEmpty() ? TEXT("no reason provided") : *Reason);
+
+    if (ActiveSocket.IsValid())
+    {
+        ActiveSocket->OnConnected().RemoveAll(this);
+        ActiveSocket->OnConnectionError().RemoveAll(this);
+        ActiveSocket->OnClosed().RemoveAll(this);
+        ActiveSocket->OnMessage().RemoveAll(this);
+        ActiveSocket->Close();
+        ActiveSocket.Reset();
+    }
+
+    ResetHeartbeatTracking();
+    BridgeState = EMcpAutomationBridgeState::Disconnected;
+    bReconnectEnabled = true;
+    TimeUntilReconnect = EffectiveDelay;
+
+    if (EffectiveDelay <= 0.0f && bBridgeAvailable)
+    {
+        AttemptConnection();
+    }
+}
+
+inline void UMcpAutomationBridgeSubsystem::SendControlMessage(const TSharedPtr<FJsonObject>& Message)
+{
+    if (!Message.IsValid())
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Ignoring control message send; payload invalid."));
+        return;
+    }
+
+    if (!ActiveSocket.IsValid() || !ActiveSocket->IsConnected())
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Skipping control message send; socket not connected."));
+        return;
+    }
+
+    FString Serialized;
+    const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
+    FJsonSerializer::Serialize(Message.ToSharedRef(), Writer);
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("Outbound control message: %s"), *Serialized);
+    ActiveSocket->Send(Serialized);
+}
