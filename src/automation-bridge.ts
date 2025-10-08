@@ -402,13 +402,15 @@ export class AutomationBridge extends EventEmitter {
       }
     }, 5000);
 
-    socket.on('message', (data) => {
+    socket.on('message', (data, isBinary) => {
       let parsed: AutomationBridgeMessage;
       try {
         const text = typeof data === 'string' ? data : data.toString('utf8');
+        log.debug(`[AutomationBridge] Received message (binary=${isBinary}, length=${text.length}): ${text.substring(0, 200)}`);
         parsed = JSON.parse(text);
       } catch (error) {
-        log.error('Received non-JSON automation message; closing connection.', error);
+        const text = typeof data === 'string' ? data : data.toString('utf8');
+        log.error(`Received non-JSON automation message (binary=${isBinary}); closing connection. Data: ${text.substring(0, 500)}`, error);
         socket.close(4003, 'Invalid JSON payload');
         this.lastHandshakeFailure = { reason: 'invalid-json', at: new Date() };
         this.emitAutomation('handshakeFailed', { reason: 'invalid-json', port });

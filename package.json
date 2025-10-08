@@ -13,7 +13,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "build:watch": "tsc -p tsconfig.json --watch",
-  "start": "node dist/cli.js",
+    "start": "node dist/cli.js",
+    "check:connection": "node check-unreal-connection.mjs",
     "smithery:dev": "npx @smithery/cli dev",
     "smithery:build": "npx @smithery/cli build",
   "smithery:ci": "npm run build && npx @smithery/cli build",

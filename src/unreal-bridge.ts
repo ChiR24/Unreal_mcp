@@ -373,7 +373,7 @@ except Exception as e:
    */
   private connectPromise?: Promise<void>;
 
-  async tryConnect(maxAttempts: number = 3, timeoutMs: number = 5000, retryDelayMs: number = 2000): Promise<boolean> {
+  async tryConnect(maxAttempts: number = 3, timeoutMs: number = 15000, retryDelayMs: number = 3000): Promise<boolean> {
     if (this.connected && this.automationBridge?.isConnected()) {
       return true;
     }
@@ -409,6 +409,8 @@ except Exception as e:
       }
     ).catch((err) => {
       this.log.warn(`Automation bridge connection failed after ${maxAttempts} attempts:`, err.message);
+      this.log.warn('⚠️  Ensure Unreal Editor is running with MCP Automation Bridge plugin enabled');
+      this.log.warn('⚠️  Plugin should auto-connect to ws://127.0.0.1:8090 on editor startup');
     });
 
     try {
@@ -421,7 +423,7 @@ except Exception as e:
     return this.connected;
   }
 
-  async connect(timeoutMs: number = 5000): Promise<void> {
+  async connect(timeoutMs: number = 15000): Promise<void> {
     const automationBridge = this.automationBridge;
     if (!automationBridge) {
       throw new Error('Automation bridge not configured');

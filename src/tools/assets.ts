@@ -288,7 +288,7 @@ result = {
 asset_lib = unreal.EditorAssetLibrary
 
 if not asset_lib.does_asset_exist(source_path):
-    result['error'] = f"Source asset not found: {params.sourcePath}"
+    result['error'] = f"Source asset not found: {source_path}"
 else:
     original_name = source_path.split('/')[-1]
     asset_name = requested_name.strip() or original_name
@@ -386,7 +386,7 @@ asset_lib = unreal.EditorAssetLibrary
 if not new_name:
     result['error'] = 'New asset name must not be empty'
 elif not asset_lib.does_asset_exist(asset_path):
-    result['error'] = f"Asset not found: {params.assetPath}"
+    result['error'] = f"Asset not found: {asset_path}"
 else:
     parent_path, _ = asset_path.rsplit('/', 1)
     destination = f"{parent_path}/{new_name}"
@@ -460,7 +460,7 @@ asset_lib = unreal.EditorAssetLibrary
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
 
 if not asset_lib.does_asset_exist(asset_path):
-    result['error'] = f"Asset not found: {params.assetPath}"
+    result['error'] = f"Asset not found: {asset_path}"
 else:
     current_name = asset_path.split('/')[-1]
     asset_name = requested_name.strip() or current_name
