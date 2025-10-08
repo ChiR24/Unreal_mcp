@@ -186,6 +186,12 @@ FString BytesToStringView(const TArray<uint8>& Data)
 
 void DispatchOnGameThread(TFunction<void()>&& Fn)
 {
+    if (IsInGameThread())
+    {
+        Fn();
+        return;
+    }
+
     AsyncTask(ENamedThreads::GameThread, MoveTemp(Fn));
 }
 }
@@ -219,6 +225,11 @@ FMcpBridgeWebSocket::~FMcpBridgeWebSocket()
     }
 }
 
+void FMcpBridgeWebSocket::InitializeWeakSelf(const TSharedPtr<FMcpBridgeWebSocket>& InShared)
+{
+    SelfWeakPtr = InShared;
+}
+
 void FMcpBridgeWebSocket::Connect()
 {
     if (Thread)
@@ -231,7 +242,7 @@ void FMcpBridgeWebSocket::Connect()
     Thread = FRunnableThread::Create(this, TEXT("FMcpBridgeWebSocketWorker"), 0, TPri_Normal);
     if (!Thread)
     {
-        DispatchOnGameThread([WeakThis = TWeakPtr<FMcpBridgeWebSocket>(AsShared())]
+        DispatchOnGameThread([WeakThis = SelfWeakPtr]
         {
             if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
             {
@@ -294,7 +305,7 @@ uint32 FMcpBridgeWebSocket::Run()
     }
 
     bConnected = true;
-    DispatchOnGameThread([WeakThis = TWeakPtr<FMcpBridgeWebSocket>(AsShared())]
+    DispatchOnGameThread([WeakThis = SelfWeakPtr]
     {
         if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
         {
@@ -336,7 +347,7 @@ void FMcpBridgeWebSocket::TearDown(const FString& Reason, bool bWasClean, int32 
     bConnected = false;
     ResetFragmentState();
 
-    DispatchOnGameThread([WeakThis = TWeakPtr<FMcpBridgeWebSocket>(AsShared()), Reason, bWasClean, StatusCode, bWasConnected]
+    DispatchOnGameThread([WeakThis = SelfWeakPtr, Reason, bWasClean, StatusCode, bWasConnected]
     {
         if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
         {
@@ -671,7 +682,7 @@ bool FMcpBridgeWebSocket::SendControlFrame(const uint8 ControlOpCode, const TArr
 void FMcpBridgeWebSocket::HandleTextPayload(const TArray<uint8>& Payload)
 {
     const FString Message = BytesToStringView(Payload);
-    DispatchOnGameThread([WeakThis = TWeakPtr<FMcpBridgeWebSocket>(AsShared()), Message]
+    DispatchOnGameThread([WeakThis = SelfWeakPtr, Message]
     {
         if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
         {

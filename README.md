@@ -6,7 +6,7 @@
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.6-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
 
-A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via Remote Control API. Built with TypeScript and designed for game development automation.
+A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine through the Automation Bridge plugin and Python subsystem APIs. Built with TypeScript and designed for game development automation.
 
 ## Features
 
@@ -26,10 +26,10 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - Node.js 18+
 - Unreal Engine 5.0-5.6
 - Required UE Plugins (enable via **Edit ▸ Plugins**):
-  - **Remote Control API** – core Remote Control HTTP/WS endpoints
-  - **Remote Control Web Interface** – enables WebSocket bridge used by this server
+  - **MCP Automation Bridge** – WebSocket automation transport (ships inside `Public/McpAutomationBridge`)
   - **Python Editor Script Plugin** – exposes Python runtime for automation
   - **Editor Scripting Utilities** – unlocks Editor Actor/Asset subsystems used throughout the tools
+  - **Remote Control API** – required for Remote Control preset tooling
   - **Sequencer** *(built-in)* – keep enabled for cinematic tools
   - **Level Sequence Editor** – required for `manage_sequence` operations
 
@@ -39,10 +39,10 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 | Plugin | Location | Used By | Notes |
 |--------|----------|---------|-------|
-| Remote Control API | Developer Tools ▸ Remote Control | All tools | Provides HTTP/WS endpoints consumed by the MCP bridge |
-| Remote Control Web Interface | Developer Tools ▸ Remote Control | All tools | Enables persistent WebSocket session |
+| MCP Automation Bridge | Project Plugins ▸ MCP Automation Bridge | All transport, console, Python tools | Primary automation transport consumed by the MCP server |
 | Python Editor Script Plugin | Scripting | Landscapes, lighting, audio, physics, sequences, UI | Required for every Python execution path |
 | Editor Scripting Utilities | Scripting | Actors, foliage, assets, landscapes, UI | Supplies Editor Actor/Asset subsystems in UE5.6 |
+| Remote Control API | Developer Tools ▸ Remote Control | `manage_rc` tools | Required for Remote Control preset workflows |
 | Sequencer | Built-in | Sequencer tools | Ensure not disabled in project settings |
 | Level Sequence Editor | Animation | Sequencer tools | Activate before calling `manage_sequence` operations |
 
@@ -52,12 +52,11 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - Location: `Public/McpAutomationBridge`
 - Installation: copy the folder into your project's `Plugins/` directory and regenerate project files.
 - Sync helper: run `npm run automation:sync -- --engine "X:/Unreal_Engine/UE_5.6/Engine/Plugins" --project "X:/Newfolder(2)/Game/Unreal/Trial/Plugins" --clean-engine --clean-project` after repo updates to copy the latest bridge build into both plugin folders and strip legacy entries (such as `SupportedTargetPlatforms: ["Editor"]`) that trigger startup warnings.
-- Verification: run `npm run automation:verify -- --project "C:/Path/To/YourProject/Plugins" --config "C:/Path/To/YourProject/Config/DefaultEngine.ini"` to confirm the plugin files, Remote Control settings, and bridge environment variables are in place before launching Unreal.
+- Verification: run `npm run automation:verify -- --project "C:/Path/To/YourProject/Plugins" --config "C:/Path/To/YourProject/Config/DefaultEngine.ini"` to confirm the plugin files and automation bridge environment variables are in place before launching Unreal.
 - Configuration: enable **MCP Automation Bridge** in **Edit ▸ Plugins**, restart the editor, then set the endpoint/token under **Edit ▸ Project Settings ▸ Plugins ▸ MCP Automation Bridge**. The bridge ships with its own lightweight WebSocket client, so you no longer need the engine’s WebSockets plugin enabled.
 - Startup: after configuration, the Output Log should show a successful connection and the `bridge_started` broadcast; `SendRawMessage` becomes available to Blueprint and C++ callers for manual testing.
 - Current scope: manages a WebSocket session to the Node MCP server (`ws://127.0.0.1:8090` by default), performs optional capability-token handshakes, dispatches inbound JSON to the subsystem delegate, implements reconnect backoff, and now responds to `execute_editor_python`, `get_object_property`, and `set_object_property` automation requests.
-- Usage: the consolidated tools now auto-prefer the automation bridge for Python execution and property access when the plugin is connected. Override with `transport: "remote_control"` to force the legacy path or `transport: "automation_bridge"` to require the plugin.
-- Property overrides: `inspect.get_property`/`inspect.set_property` fall back to Remote Control automatically when the bridge is unavailable and emit warnings describing the chosen transport so you can react in clients.
+- Usage: the consolidated tools require the automation bridge for Python execution and property access. Keep the plugin enabled for all supported workflows.
 - Diagnostics: the `ue://automation-bridge` MCP resource surfaces handshake timestamps, recent disconnects, pending automation requests, and whether the Node listener is running—handy when validating editor connectivity from a client.
 - Roadmap: expand the bridge with the elevated actions defined in `docs/editor-plugin-extension.md` (SCS authoring, typed property marshaling, modal mediation, asset workflows).
 
@@ -119,9 +118,8 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
       "args": ["unreal-engine-mcp-server"],
       "env": {
         "UE_HOST": "127.0.0.1",
-        "UE_RC_HTTP_PORT": "30010",
-        "UE_RC_WS_PORT": "30020",
-        "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject"
+        "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject",
+        "MCP_AUTOMATION_WS_PORT": "8090"
       }
     }
   }
@@ -138,9 +136,8 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
       "args": ["path/to/Unreal_mcp/dist/cli.js"],
       "env": {
         "UE_HOST": "127.0.0.1",
-        "UE_RC_HTTP_PORT": "30010",
-        "UE_RC_WS_PORT": "30020",
-        "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject"
+        "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject",
+        "MCP_AUTOMATION_WS_PORT": "8090"
       }
     }
   }
@@ -168,10 +165,10 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 
 ## Key Features
 
-- **Graceful Degradation** - Server starts even without UE connection
-- **Auto-Reconnection** - Attempts reconnection every 10 seconds
-- **Connection Timeout** - 5-second timeout with configurable retries
-- **Non-Intrusive Health Checks** - Uses echo commands every 30 seconds
+- **Automation Bridge Transport** - All console and Python execution routes through the MCP Automation Bridge plugin
+- **Graceful Degradation** - Server starts even without an active Unreal connection
+- **On-Demand Connection** - Retries automation handshakes with backoff instead of persistent polling
+- **Non-Intrusive Health Checks** - Uses echo commands every 30 seconds while connected
 - **Command Safety** - Blocks dangerous console commands
 - **Input Flexibility** - Vectors/rotators accept object or array format
 - **Asset Caching** - 10-second TTL for improved performance
@@ -193,8 +190,6 @@ Blueprints, Materials, Textures, Static/Skeletal Meshes, Levels, Sounds, Particl
 
 ```env
 UE_HOST=127.0.0.1              # Unreal Engine host
-UE_RC_HTTP_PORT=30010          # Remote Control HTTP port
-UE_RC_WS_PORT=30020            # Remote Control WebSocket port
 UE_PROJECT_PATH="C:/Users/YourName/Documents/Unreal Projects/YourProject"  # Absolute path to your .uproject file
 LOG_LEVEL=info                 # debug | info | warn | error
 MCP_AUTOMATION_WS_HOST=127.0.0.1     # (Optional) Host interface for the automation bridge WebSocket server

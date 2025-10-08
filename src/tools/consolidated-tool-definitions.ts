@@ -232,23 +232,24 @@ Use it when you need to:
 - open or save a level by path.
 - toggle streaming sublevels on/off.
 - spawn a light actor of a given type.
+- generate a new map using a predefined template.
 - kick off a lighting build at a chosen quality.
 
-Supported actions: load, save, stream, create_light, build_lighting.`,
+Supported actions: load, save, stream, create_level, create_light, build_lighting.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: { 
           type: 'string', 
-          enum: ['load', 'save', 'stream', 'create_light', 'build_lighting'],
+          enum: ['load', 'save', 'stream', 'create_level', 'create_light', 'build_lighting'],
           description: 'Level action'
         },
         // Level
         levelPath: { type: 'string', description: 'Full content path to level asset (e.g., "/Game/Maps/MyLevel"). Required for load action.' },
-        levelName: { type: 'string', description: 'Level name for streaming operations. Required for stream action.' },
+        levelName: { type: 'string', description: 'Optional short name for streaming operations. If omitted, derived automatically from levelPath.' },
         streaming: { type: 'boolean', description: 'Whether to use streaming load (true) or direct load (false). Optional for load action.' },
         shouldBeLoaded: { type: 'boolean', description: 'Whether to load (true) or unload (false) the streaming level. Required for stream action.' },
-        shouldBeVisible: { type: 'boolean', description: 'Whether the streaming level should be visible after loading. Optional for stream action.' },
+        shouldBeVisible: { type: 'boolean', description: 'Whether the streaming level should be visible after loading. Defaults to shouldBeLoaded when omitted.' },
         // Lighting
         lightType: { 
           type: 'string', 
@@ -836,7 +837,7 @@ Use it when you need to:
 
 Supported modes: direct script execution or template invocation.
 
-Set \`transport\` to "automation_bridge" to execute through the MCP Automation Bridge plugin when Remote Control cannot run the script.`,
+Execution always routes through the MCP Automation Bridge plugin.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -847,8 +848,8 @@ Set \`transport\` to "automation_bridge" to execute through the MCP Automation B
         captureResult: { type: 'boolean', description: 'Parse RESULT: blocks from stdout (true) or return raw execution output (false). Defaults to true.' },
         transport: {
           type: 'string',
-          enum: ['remote_control', 'automation_bridge'],
-          description: 'Execution transport. Defaults to remote_control; set to automation_bridge to route through the editor plugin.'
+          enum: ['automation_bridge'],
+          description: 'Execution transport. Only automation_bridge is supported; omit to use the default.'
         },
         timeoutMs: {
           type: 'number',
@@ -995,8 +996,8 @@ Supported actions: inspect_object, set_property.`,
         value: { description: 'New property value. Must be JSON-serializable and compatible with property type (e.g., {"X":100,"Y":0,"Z":0} for vectors, 5.0 for floats, true for bools, "Value" for strings). Required for set_property action.' },
         transport: {
           type: 'string',
-          enum: ['remote_control', 'automation_bridge'],
-          description: 'Transport for property mutations. Defaults to remote_control; set to automation_bridge to use the editor plugin.'
+          enum: ['automation_bridge'],
+          description: 'Transport for property mutations. Only automation_bridge is supported; omit to use the default.'
         },
         timeoutMs: {
           type: 'number',

@@ -20,18 +20,6 @@
           "value": "127.0.0.1"
         },
         {
-          "name": "UE_RC_HTTP_PORT",
-          "description": "Remote Control HTTP port (default: 30010)",
-          "isRequired": false,
-          "value": "30010"
-        },
-        {
-          "name": "UE_RC_WS_PORT",
-          "description": "Remote Control WebSocket port (default: 30020)",
-          "isRequired": false,
-          "value": "30020"
-        },
-        {
           "name": "LOG_LEVEL",
           "description": "Logging level: debug, info, warn, error (default: info)",
           "isRequired": false,
@@ -42,6 +30,12 @@
           "description": "Absolute path to your Unreal .uproject file",
           "isRequired": false,
           "value": "C:/Users/YourName/Documents/Unreal Projects/YourProject"
+        },
+        {
+          "name": "MCP_AUTOMATION_WS_PORT",
+          "description": "Automation bridge WebSocket port (default: 8090)",
+          "isRequired": false,
+          "value": "8090"
         }
       ]
     }

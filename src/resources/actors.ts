@@ -137,11 +137,10 @@ print('RESULT:' + json.dumps(found))
 
   async getActorTransform(actorPath: string) {
     try {
-      const res = await this.bridge.httpCall('/remote/object/property', 'GET', {
+      return await this.bridge.getObjectProperty({
         objectPath: actorPath,
         propertyName: 'ActorTransform'
       });
-      return res;
     } catch (err) {
       return { error: `Failed to get transform: ${err}` };
     }

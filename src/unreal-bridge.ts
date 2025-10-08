@@ -1,8 +1,6 @@
-import WebSocket from 'ws';
-import { createHttpClient } from './utils/http.js';
 import { Logger } from './utils/logger.js';
-import { loadEnv } from './types/env.js';
 import { ErrorHandler } from './utils/error-handler.js';
+import { escapePythonString } from './utils/python.js';
 import type { AutomationBridge } from './automation-bridge.js';
 
 // RcMessage interface reserved for future WebSocket message handling
@@ -10,13 +8,6 @@ import type { AutomationBridge } from './automation-bridge.js';
 //   MessageName: string;
 //   Parameters?: any;
 // }
-
-interface RcCallBody {
-  objectPath: string; // e.g. "/Script/UnrealEd.Default__EditorAssetLibrary"
-  functionName: string; // e.g. "ListAssets"
-  parameters?: Record<string, any>;
-  generateTransaction?: boolean;
-}
 
 interface CommandQueueItem {
   command: () => Promise<any>;
@@ -33,25 +24,18 @@ interface PythonScriptTemplate {
 }
 
 export class UnrealBridge {
-  private ws?: WebSocket;
-  private http = createHttpClient('');
-  private env = loadEnv();
   private log = new Logger('UnrealBridge');
   private connected = false;
   private automationBridge?: AutomationBridge;
-  private reconnectTimer?: NodeJS.Timeout;
-  private reconnectAttempts = 0;
-  private readonly MAX_RECONNECT_ATTEMPTS = 5;
-  private readonly BASE_RECONNECT_DELAY = 1000;
-  private autoReconnectEnabled = false; // disabled by default to prevent looping retries
+  private automationBridgeListeners?: {
+    connected: (info: any) => void;
+    disconnected: (info: any) => void;
+    handshakeFailed: (info: any) => void;
+  };
+  private autoReconnectEnabled = false; // retained for API compatibility
+  private commandProcessorInitialized = false;
   private engineVersionCache?: { value: { version: string; major: number; minor: number; patch: number; isUE56OrAbove: boolean }; timestamp: number };
   private readonly ENGINE_VERSION_TTL_MS = 5 * 60 * 1000;
-  
-  // WebSocket health monitoring (best practice from WebSocket optimization guides)
-  private lastPongReceived = 0;
-  private pingInterval?: NodeJS.Timeout;
-  private readonly PING_INTERVAL_MS = 30000; // 30 seconds
-  private readonly PONG_TIMEOUT_MS = 10000; // 10 seconds
   
   // Command queue for throttling
   private commandQueue: CommandQueueItem[] = [];
@@ -332,7 +316,51 @@ except Exception as e:
   get isConnected() { return this.connected; }
 
   setAutomationBridge(automationBridge?: AutomationBridge): void {
+    if (this.automationBridge && this.automationBridgeListeners) {
+      this.automationBridge.off('connected', this.automationBridgeListeners.connected);
+      this.automationBridge.off('disconnected', this.automationBridgeListeners.disconnected);
+      this.automationBridge.off('handshakeFailed', this.automationBridgeListeners.handshakeFailed);
+    }
+
     this.automationBridge = automationBridge;
+    this.automationBridgeListeners = undefined;
+
+    if (!automationBridge) {
+      this.connected = false;
+      return;
+    }
+
+    const onConnected = (info: any) => {
+      this.connected = true;
+      this.log.debug('Automation bridge connected', info);
+      this.startCommandProcessor();
+    };
+
+    const onDisconnected = (info: any) => {
+      this.connected = false;
+      this.log.debug('Automation bridge disconnected', info);
+    };
+
+    const onHandshakeFailed = (info: any) => {
+      this.connected = false;
+      this.log.warn('Automation bridge handshake failed', info);
+    };
+
+    automationBridge.on('connected', onConnected);
+    automationBridge.on('disconnected', onDisconnected);
+    automationBridge.on('handshakeFailed', onHandshakeFailed);
+
+    this.automationBridgeListeners = {
+      connected: onConnected,
+      disconnected: onDisconnected,
+      handshakeFailed: onHandshakeFailed
+    };
+
+    if (automationBridge.isConnected()) {
+      this.startCommandProcessor();
+    }
+
+    this.connected = automationBridge.isConnected();
   }
   
   /**
@@ -346,35 +374,41 @@ except Exception as e:
   private connectPromise?: Promise<void>;
 
   async tryConnect(maxAttempts: number = 3, timeoutMs: number = 5000, retryDelayMs: number = 2000): Promise<boolean> {
-    if (this.connected) return true;
+    if (this.connected && this.automationBridge?.isConnected()) {
+      return true;
+    }
+
+    if (!this.automationBridge) {
+      this.log.warn('Automation bridge is not configured; cannot establish connection.');
+      return false;
+    }
+
+    if (this.automationBridge.isConnected()) {
+      this.connected = true;
+      return true;
+    }
 
     if (this.connectPromise) {
       try {
         await this.connectPromise;
-      } catch {
-        // swallow, we'll return connected flag
-      }
+      } catch {}
       return this.connected;
     }
 
-    // Use ErrorHandler's retryWithBackoff for consistent retry behavior
     this.connectPromise = ErrorHandler.retryWithBackoff(
       () => this.connect(timeoutMs),
       {
-        maxRetries: maxAttempts - 1,
+        maxRetries: Math.max(0, maxAttempts - 1),
         initialDelay: retryDelayMs,
         maxDelay: 10000,
         backoffMultiplier: 1.5,
         shouldRetry: (error) => {
-          // Only retry on connection-related errors
           const msg = (error as Error)?.message?.toLowerCase() || '';
-          return msg.includes('timeout') || msg.includes('connection') || msg.includes('econnrefused');
+          return msg.includes('timeout') || msg.includes('connect') || msg.includes('automation');
         }
       }
-    ).then(() => {
-      // Success
-    }).catch((err) => {
-      this.log.warn(`Connection failed after ${maxAttempts} attempts:`, err.message);
+    ).catch((err) => {
+      this.log.warn(`Automation bridge connection failed after ${maxAttempts} attempts:`, err.message);
     });
 
     try {
@@ -383,290 +417,71 @@ except Exception as e:
       this.connectPromise = undefined;
     }
 
+    this.connected = this.automationBridge?.isConnected() ?? false;
     return this.connected;
   }
 
   async connect(timeoutMs: number = 5000): Promise<void> {
-    // If already connected and socket is open, do nothing
-    if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.log.debug('connect() called but already connected; skipping');
+    const automationBridge = this.automationBridge;
+    if (!automationBridge) {
+      throw new Error('Automation bridge not configured');
+    }
+
+    if (automationBridge.isConnected()) {
+      this.connected = true;
       return;
     }
 
-    const wsUrl = `ws://${this.env.UE_HOST}:${this.env.UE_RC_WS_PORT}`;
-    const httpBase = `http://${this.env.UE_HOST}:${this.env.UE_RC_HTTP_PORT}`;
-    this.http = createHttpClient(httpBase);
+    const success = await this.waitForAutomationConnection(timeoutMs);
+    if (!success) {
+      throw new Error('Automation bridge connection timeout');
+    }
 
-    this.log.debug(`Connecting to UE Remote Control: ${wsUrl}`);
-    this.ws = new WebSocket(wsUrl);
+    this.connected = true;
+  }
 
-    await new Promise<void>((resolve, reject) => {
-      if (!this.ws) return reject(new Error('WS not created'));
-      
-      // Guard against double-resolution/rejection
+  private async waitForAutomationConnection(timeoutMs: number): Promise<boolean> {
+    const automationBridge = this.automationBridge;
+    if (!automationBridge) {
+      return false;
+    }
+
+    if (automationBridge.isConnected()) {
+      return true;
+    }
+
+    return new Promise<boolean>((resolve) => {
       let settled = false;
-      const safeResolve = () => { if (!settled) { settled = true; resolve(); } };
-      const safeReject = (err: Error) => { if (!settled) { settled = true; reject(err); } };
-      
-      // Setup timeout
-      const timeout = setTimeout(() => {
-        this.log.warn(`Connection timeout after ${timeoutMs}ms`);
-        if (this.ws) {
-          try {
-            // Attach a temporary error handler to avoid unhandled 'error' events on abort
-            this.ws.on('error', () => {});
-            // Prefer graceful close; terminate as a fallback
-            if (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN) {
-              try { this.ws.close(); } catch {}
-              try { this.ws.terminate(); } catch {}
-            }
-          } finally {
-            try { this.ws.removeAllListeners(); } catch {}
-            this.ws = undefined;
-          }
+
+      const cleanup = () => {
+        if (settled) {
+          return;
         }
-        safeReject(new Error('Connection timeout: Unreal Engine may not be running or Remote Control is not enabled'));
-      }, timeoutMs);
-      
-      // Success handler
-      const onOpen = () => {
-        clearTimeout(timeout);
-        this.connected = true;
-        this.log.info('Connected to Unreal Remote Control');
-        this.startCommandProcessor(); // Start command processor on connect
-        safeResolve();
+        settled = true;
+        automationBridge.off('connected', onConnected);
+        automationBridge.off('handshakeFailed', onHandshakeFailed);
+        clearTimeout(timer);
       };
-      
-      // Error handler
-      const onError = (err: Error) => {
-        clearTimeout(timeout);
-        // Keep error logs concise to avoid stack spam when UE is not running
-        this.log.debug(`WebSocket error during connect: ${(err && (err as any).code) || ''} ${err.message}`);
-        if (this.ws) {
-          try {
-            // Attach a temporary error handler to avoid unhandled 'error' events while aborting
-            this.ws.on('error', () => {});
-            if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
-              try { this.ws.close(); } catch {}
-              try { this.ws.terminate(); } catch {}
-            }
-          } finally {
-            try { this.ws.removeAllListeners(); } catch {}
-            this.ws = undefined;
-          }
-        }
-        safeReject(new Error(`Failed to connect: ${err.message}`));
+
+      const onConnected = (info: any) => {
+        cleanup();
+        this.log.debug('Automation bridge connected while waiting', info);
+        resolve(true);
       };
-      
-      // Close handler (if closed before open)
-      const onClose = () => {
-        if (!this.connected) {
-          clearTimeout(timeout);
-          safeReject(new Error('Connection closed before establishing'));
-        } else {
-          // Normal close after connection was established
-          this.connected = false;
-          this.ws = undefined;
-          this.log.warn('WebSocket closed');
-          if (this.autoReconnectEnabled) {
-            this.scheduleReconnect();
-          }
-        }
+
+      const onHandshakeFailed = (info: any) => {
+        this.log.warn('Automation bridge handshake failed while waiting', info);
       };
-      
-      // Message handler (currently best-effort logging)
-      const onMessage = (raw: WebSocket.RawData) => {
-        try {
-          const msg = JSON.parse(String(raw));
-          this.log.debug('WS message', msg);
-        } catch (_e) {
-          // Noise reduction: keep at debug and do nothing on parse errors
-        }
-      };
-      
-      // Attach listeners
-      this.ws.once('open', onOpen);
-      this.ws.once('error', onError);
-      this.ws.on('close', onClose);
-      this.ws.on('message', onMessage);
+
+      const timer = setTimeout(() => {
+        cleanup();
+        resolve(false);
+      }, Math.max(0, timeoutMs));
+
+      automationBridge.on('connected', onConnected);
+      automationBridge.on('handshakeFailed', onHandshakeFailed);
     });
   }
-
-
-  async httpCall<T = any>(path: string, method: 'GET' | 'POST' | 'PUT' = 'POST', body?: any): Promise<T> {
-    // Guard: if not connected, do not attempt HTTP
-    if (!this.connected) {
-      throw new Error('Not connected to Unreal Engine');
-    }
-
-    const url = path.startsWith('/') ? path : `/${path}`;
-    const started = Date.now();
-    
-    // Fix Content-Length header issue - ensure body is properly handled
-    let payload = body;
-    if ((payload === undefined || payload === null) && method !== 'GET') {
-      payload = {};
-    }
-    
-    // Add timeout wrapper to prevent hanging - adjust based on operation type
-    let CALL_TIMEOUT = 10000; // Default 10 seconds timeout
-    const longRunningTimeout = 10 * 60 * 1000; // 10 minutes for heavy editor jobs
-
-    // Use payload contents to detect long-running editor operations
-    let payloadSignature = '';
-    if (typeof payload === 'string') {
-      payloadSignature = payload;
-    } else if (payload && typeof payload === 'object') {
-      try {
-        payloadSignature = JSON.stringify(payload);
-      } catch {
-        payloadSignature = '';
-      }
-    }
-
-    // Allow explicit override via meta property when provided
-    let sanitizedPayload = payload;
-    if (payload && typeof payload === 'object' && '__callTimeoutMs' in payload) {
-      const overrideRaw = (payload as any).__callTimeoutMs;
-      const overrideMs = typeof overrideRaw === 'number'
-        ? overrideRaw
-        : Number.parseInt(String(overrideRaw), 10);
-      if (Number.isFinite(overrideMs) && overrideMs > 0) {
-        CALL_TIMEOUT = Math.max(CALL_TIMEOUT, overrideMs);
-      }
-      sanitizedPayload = { ...(payload as any) };
-      delete (sanitizedPayload as any).__callTimeoutMs;
-    }
-
-    // For heavy operations, use longer timeout based on URL or payload signature
-    if (url.includes('build') || url.includes('create') || url.includes('asset')) {
-      CALL_TIMEOUT = Math.max(CALL_TIMEOUT, 30000); // 30 seconds for heavy operations
-    }
-    if (url.includes('light') || url.includes('BuildLighting')) {
-      CALL_TIMEOUT = Math.max(CALL_TIMEOUT, 60000); // Base 60 seconds for lighting builds
-    }
-
-    if (payloadSignature) {
-      const longRunningPatterns = [
-        /build_light_maps/i,
-        /lightingbuildquality/i,
-        /editorbuildlibrary/i,
-        /buildlighting/i,
-        /"command"\s*:\s*"buildlighting/i
-      ];
-      if (longRunningPatterns.some(pattern => pattern.test(payloadSignature))) {
-        if (CALL_TIMEOUT < longRunningTimeout) {
-          this.log.debug(`Detected long-running lighting operation, extending HTTP timeout to ${longRunningTimeout}ms`);
-        }
-        CALL_TIMEOUT = Math.max(CALL_TIMEOUT, longRunningTimeout);
-      }
-    }
-    
-    // CRITICAL: Intercept and block dangerous console commands at HTTP level
-    if (url === '/remote/object/call' && (payload as any)?.functionName === 'ExecuteConsoleCommand') {
-      const command = (payload as any)?.parameters?.Command;
-      if (command && typeof command === 'string') {
-        const cmdLower = command.trim().toLowerCase();
-        
-        // List of commands that cause crashes
-        const crashCommands = [
-          'buildpaths',           // Causes access violation 0x0000000000000060
-          'rebuildnavigation',    // Can crash without nav system
-          'buildhierarchicallod', // Can crash without proper setup
-          'buildlandscapeinfo',   // Can crash without landscape
-          'rebuildselectednavigation' // Nav-related crash
-        ];
-        
-        // Check if this is a crash-inducing command
-        if (crashCommands.some(dangerous => cmdLower === dangerous || cmdLower.startsWith(dangerous + ' '))) {
-          this.log.warn(`BLOCKED dangerous command that causes crashes: ${command}`);
-          // Return a safe error response instead of executing
-          return {
-            success: false,
-            error: `Command '${command}' blocked: This command can cause Unreal Engine to crash. Use the Python API alternatives instead.`
-          } as any;
-        }
-        
-        // Also block other dangerous commands
-        const dangerousPatterns = [
-          'quit', 'exit', 'r.gpucrash', 'debug crash',
-          'viewmode visualizebuffer' // These can crash in certain states
-        ];
-        
-        if (dangerousPatterns.some(pattern => cmdLower.includes(pattern))) {
-          this.log.warn(`BLOCKED potentially dangerous command: ${command}`);
-          return {
-            success: false,
-            error: `Command '${command}' blocked for safety.`
-          } as any;
-        }
-      }
-    }
-    
-    // Retry logic with exponential backoff and timeout
-    let lastError: any;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        // For GET requests, send payload as query parameters (not in body)
-        const config: any = { url, method, timeout: CALL_TIMEOUT };
-        if (method === 'GET' && sanitizedPayload && typeof sanitizedPayload === 'object') {
-          config.params = sanitizedPayload;
-        } else if (sanitizedPayload !== undefined) {
-          config.data = sanitizedPayload;
-        }
-
-        // Wrap with timeout promise to ensure we don't hang
-  const requestPromise = this.http.request<T>(config);
-  const resp = await new Promise<Awaited<typeof requestPromise>>((resolve, reject) => {
-          const timer = setTimeout(() => {
-            const err = new Error(`Request timeout after ${CALL_TIMEOUT}ms`);
-            (err as any).code = 'UE_HTTP_TIMEOUT';
-            reject(err);
-          }, CALL_TIMEOUT);
-          requestPromise.then(result => {
-            clearTimeout(timer);
-            resolve(result);
-          }).catch(err => {
-            clearTimeout(timer);
-            reject(err);
-          });
-        });
-        const ms = Date.now() - started;
-
-        // Add connection health check for long-running requests
-        if (ms > 5000) {
-          this.log.debug(`[HTTP ${method}] ${url} -> ${ms}ms (long request)`);
-        } else {
-          this.log.debug(`[HTTP ${method}] ${url} -> ${ms}ms`);
-        }
-
-        return resp.data;
-      } catch (error: any) {
-        lastError = error;
-        const delay = Math.min(1000 * Math.pow(2, attempt), 5000); // Exponential backoff with 5s max
-        
-        // Log timeout errors specifically
-        if (error.message?.includes('timeout')) {
-          this.log.debug(`HTTP request timed out (attempt ${attempt + 1}/3): ${url}`);
-        }
-        
-        if (attempt < 2) {
-          this.log.debug(`HTTP request failed (attempt ${attempt + 1}/3), retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          
-          // If connection error, try to reconnect
-          if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
-            if (this.autoReconnectEnabled) {
-              this.scheduleReconnect();
-            }
-          }
-        }
-      }
-    }
-    
-    throw lastError;
-  }
-
   private parsePythonJsonResult<T = any>(raw: any): T | null {
     if (!raw) {
       return null;
@@ -816,26 +631,196 @@ print('RESULT:' + json.dumps(status))
     return missing;
   }
 
-  // Generic function call via Remote Control HTTP API
-  async call(body: RcCallBody): Promise<any> {
-    if (!this.connected) throw new Error('Not connected to Unreal Engine');
-    // Using HTTP endpoint /remote/object/call
-    const result = await this.httpCall<any>('/remote/object/call', 'PUT', {
-      generateTransaction: false,
-      ...body
-    });
-    return result;
+  async getObjectProperty(params: {
+    objectPath: string;
+    propertyName: string;
+    timeoutMs?: number;
+    allowFallback?: boolean;
+  }): Promise<Record<string, any>> {
+  const { objectPath, propertyName, timeoutMs } = params;
+    if (!objectPath || typeof objectPath !== 'string') {
+      throw new Error('Invalid objectPath: must be a non-empty string');
+    }
+    if (!propertyName || typeof propertyName !== 'string') {
+      throw new Error('Invalid propertyName: must be a non-empty string');
+    }
+
+    const bridge = this.automationBridge;
+    if (!bridge || typeof bridge.sendAutomationRequest !== 'function') {
+      return {
+        success: false,
+        objectPath,
+        propertyName,
+        error: 'Automation bridge not connected',
+        transport: 'automation_bridge'
+      };
+    }
+
+    try {
+      const response = await bridge.sendAutomationRequest(
+        'get_object_property',
+        {
+          objectPath,
+          propertyName
+        },
+        timeoutMs ? { timeoutMs } : undefined
+      );
+
+      const success = response.success !== false;
+      const rawResult =
+        response.result && typeof response.result === 'object'
+          ? { ...(response.result as Record<string, unknown>) }
+          : response.result;
+      const value =
+        (rawResult as any)?.value ??
+        (rawResult as any)?.propertyValue ??
+        (success ? rawResult : undefined);
+
+      if (success) {
+        return {
+          success: true,
+          objectPath,
+          propertyName,
+          value,
+          propertyValue: value,
+          transport: 'automation_bridge',
+          message: response.message,
+          warnings: Array.isArray((rawResult as any)?.warnings)
+            ? (rawResult as any).warnings
+            : undefined,
+          raw: rawResult,
+          bridge: {
+            requestId: response.requestId,
+            success: true,
+            error: response.error
+          }
+        };
+      }
+
+      return {
+        success: false,
+        objectPath,
+        propertyName,
+        error: response.error || response.message || 'AUTOMATION_BRIDGE_FAILURE',
+        transport: 'automation_bridge',
+        raw: rawResult,
+        bridge: {
+          requestId: response.requestId,
+          success: false,
+          error: response.error
+        }
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        success: false,
+        objectPath,
+        propertyName,
+        error: message,
+        transport: 'automation_bridge'
+      };
+    }
   }
 
-  async getExposed(): Promise<any> {
-    if (!this.connected) throw new Error('Not connected to Unreal Engine');
-    return this.httpCall('/remote/preset', 'GET');
+  async setObjectProperty(params: {
+    objectPath: string;
+    propertyName: string;
+    value: unknown;
+    markDirty?: boolean;
+    timeoutMs?: number;
+    allowFallback?: boolean;
+  }): Promise<Record<string, any>> {
+  const { objectPath, propertyName, value, markDirty, timeoutMs } = params;
+    if (!objectPath || typeof objectPath !== 'string') {
+      throw new Error('Invalid objectPath: must be a non-empty string');
+    }
+    if (!propertyName || typeof propertyName !== 'string') {
+      throw new Error('Invalid propertyName: must be a non-empty string');
+    }
+
+    const bridge = this.automationBridge;
+    if (!bridge || typeof bridge.sendAutomationRequest !== 'function') {
+      return {
+        success: false,
+        objectPath,
+        propertyName,
+        error: 'Automation bridge not connected',
+        transport: 'automation_bridge'
+      };
+    }
+
+    const payload: Record<string, unknown> = {
+      objectPath,
+      propertyName,
+      value
+    };
+    if (markDirty !== undefined) {
+      payload.markDirty = Boolean(markDirty);
+    }
+
+    try {
+      const response = await bridge.sendAutomationRequest(
+        'set_object_property',
+        payload,
+        timeoutMs ? { timeoutMs } : undefined
+      );
+
+      const success = response.success !== false;
+      const rawResult =
+        response.result && typeof response.result === 'object'
+          ? { ...(response.result as Record<string, unknown>) }
+          : response.result;
+
+      if (success) {
+        return {
+          success: true,
+          objectPath,
+          propertyName,
+          message:
+            response.message ||
+            (typeof (rawResult as any)?.message === 'string' ? (rawResult as any).message : undefined),
+          transport: 'automation_bridge',
+          raw: rawResult,
+          bridge: {
+            requestId: response.requestId,
+            success: true,
+            error: response.error
+          }
+        };
+      }
+
+      return {
+        success: false,
+        objectPath,
+        propertyName,
+        error: response.error || response.message || 'AUTOMATION_BRIDGE_FAILURE',
+        transport: 'automation_bridge',
+        raw: rawResult,
+        bridge: {
+          requestId: response.requestId,
+          success: false,
+          error: response.error
+        }
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        success: false,
+        objectPath,
+        propertyName,
+        error: message,
+        transport: 'automation_bridge'
+      };
+    }
   }
 
   // Execute a console command safely with validation and throttling
   async executeConsoleCommand(command: string, options: { allowPython?: boolean } = {}): Promise<any> {
-    if (!this.connected) {
-      throw new Error('Not connected to Unreal Engine');
+    const automationAvailable = Boolean(
+      this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function'
+    );
+    if (!automationAvailable) {
+      throw new Error('Automation bridge not connected');
     }
     const { allowPython = false } = options;
     // Validate command is not empty
@@ -911,21 +896,66 @@ print('RESULT:' + json.dumps(status))
       this.log.warn(`Command appears invalid: ${cmdTrimmed}`);
     }
     
+    const executeCommand = async (): Promise<any> => {
+      const escaped = escapePythonString(cmdTrimmed);
+      const automationScript = `
+import unreal
+import json
+
+command = "${escaped}"
+result = {
+    'success': False,
+    'command': command
+}
+
+try:
+    output = unreal.SystemLibrary.execute_console_command(None, command, None)
+    result['success'] = True
+    if output is not None:
+        try:
+            result['output'] = str(output)
+        except Exception:
+            result['output'] = ''
+except Exception as exc:
+    result['error'] = str(exc)
+
+print('RESULT:' + json.dumps(result))
+      `.trim();
+
+      const automationResult = await this.executePythonWithResult(automationScript);
+      if (automationResult && typeof automationResult === 'object') {
+        const success = (automationResult as any).success !== false;
+        const enriched = {
+          ...(automationResult as Record<string, unknown>),
+          success,
+          command: cmdTrimmed,
+          transport: 'automation_bridge' as const
+        };
+
+        if (success) {
+          if (!Array.isArray((enriched as any).logLines) && typeof (enriched as any).output === 'string') {
+            (enriched as any).logLines = [(enriched as any).output];
+          }
+          return enriched;
+        }
+
+        throw new Error((automationResult as any).error || (automationResult as any).message || 'Automation bridge console command failed');
+      }
+
+      if (automationResult !== undefined) {
+        return {
+          success: true,
+          command: cmdTrimmed,
+          result: automationResult,
+          transport: 'automation_bridge' as const
+        };
+      }
+
+      throw new Error('Automation bridge returned no response for console command');
+    };
+
     try {
-      const result = await this.executeThrottledCommand(
-        () => this.httpCall('/remote/object/call', 'PUT', {
-          objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-          functionName: 'ExecuteConsoleCommand',
-          parameters: {
-            WorldContextObject: null,
-            Command: cmdTrimmed,
-            SpecificPlayer: null
-          },
-          generateTransaction: false
-        }),
-        priority
-      );
-      
+      const result = await this.executeThrottledCommand(executeCommand, priority);
       return result;
     } catch (error) {
       this.log.error(`Console command failed: ${cmdTrimmed}`, error);
@@ -935,24 +965,43 @@ print('RESULT:' + json.dumps(status))
 
   summarizeConsoleCommand(command: string, response: any) {
     const trimmedCommand = command.trim();
-    const logLines = Array.isArray(response?.LogOutput)
-      ? (response.LogOutput as any[]).map(entry => {
-          if (entry === null || entry === undefined) {
-            return '';
-          }
-          if (typeof entry === 'string') {
-            return entry;
-          }
-          return typeof entry.Output === 'string' ? entry.Output : '';
-        }).filter(Boolean)
-      : [];
+    const logLines: string[] = [];
+
+    if (Array.isArray(response?.LogOutput)) {
+      for (const entry of response.LogOutput as any[]) {
+        if (entry === null || entry === undefined) continue;
+        if (typeof entry === 'string') {
+          logLines.push(entry);
+        } else if (typeof entry.Output === 'string') {
+          logLines.push(entry.Output);
+        }
+      }
+    }
+
+    if (Array.isArray(response?.logLines)) {
+      for (const entry of response.logLines as any[]) {
+        if (typeof entry === 'string' && entry.trim().length > 0) {
+          logLines.push(entry);
+        }
+      }
+    }
+
+    if (Array.isArray(response?.logs)) {
+      for (const entry of response.logs as any[]) {
+        if (typeof entry === 'string' && entry.trim().length > 0) {
+          logLines.push(entry);
+        }
+      }
+    }
 
     let output = logLines.join('\n').trim();
     if (!output) {
       if (typeof response === 'string') {
         output = response.trim();
       } else if (response && typeof response === 'object') {
-        if (typeof response.Output === 'string') {
+        if (typeof response.output === 'string') {
+          output = response.output.trim();
+        } else if (typeof response.Output === 'string') {
           output = response.Output.trim();
         } else if ('result' in response && response.result !== undefined) {
           output = String(response.result).trim();
@@ -962,8 +1011,8 @@ print('RESULT:' + json.dumps(status))
       }
     }
 
-    const returnValue = response && typeof response === 'object' && 'ReturnValue' in response
-      ? (response as any).ReturnValue
+    const returnValue = response && typeof response === 'object'
+      ? ((response as any).ReturnValue ?? (response as any).returnValue ?? ((response as any).result && (response as any).result.ReturnValue))
       : undefined;
 
     return {
@@ -971,6 +1020,7 @@ print('RESULT:' + json.dumps(status))
       output,
       logLines,
       returnValue,
+      transport: typeof response?.transport === 'string' ? response.transport : undefined,
       raw: response
     };
   }
@@ -1009,127 +1059,27 @@ print('RESULT:' + json.dumps(status))
     return results;
   }
 
-  // Try to execute a Python command via the Automation Bridge first, fallback to Remote Control API and console.
+  // Execute a Python command via the Automation Bridge
   async executePython(command: string): Promise<any> {
     const trimmedCommand = command.trim();
 
-    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
-      try {
-        const response = await this.automationBridge.sendAutomationRequest('execute_editor_python', {
-          script: trimmedCommand
-        });
-
-        if (response.success === false) {
-          throw new Error(response.error || response.message || 'Automation bridge Python execution failed');
-        }
-
-        if (response.result !== undefined) {
-          return response.result;
-        }
-
-        return response.message ?? response;
-      } catch (automationError) {
-        this.log.debug('Automation bridge Python execution failed, falling back to Remote Control', automationError);
-      }
+    if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
+      throw new Error('Automation bridge not connected');
     }
 
-    if (!this.connected) {
-      throw new Error('Not connected to Unreal Engine');
+    const response = await this.automationBridge.sendAutomationRequest('execute_editor_python', {
+      script: trimmedCommand
+    });
+
+    if (response.success === false) {
+      throw new Error(response.error || response.message || 'Automation bridge Python execution failed');
     }
 
-    const isMultiLine = /[\r\n]/.test(trimmedCommand) || trimmedCommand.includes(';');
-    try {
-      // Use ExecutePythonCommandEx with appropriate mode based on content
-      return await this.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary',
-        functionName: 'ExecutePythonCommandEx',
-        parameters: {
-          PythonCommand: trimmedCommand,
-          ExecutionMode: isMultiLine ? 'ExecuteFile' : 'ExecuteStatement',
-          FileExecutionScope: 'Private'
-        },
-        generateTransaction: false
-      });
-    } catch {
-      try {
-        // Fallback to ExecutePythonCommand (more tolerant for multi-line)
-        return await this.httpCall('/remote/object/call', 'PUT', {
-          objectPath: '/Script/PythonScriptPlugin.Default__PythonScriptLibrary',
-          functionName: 'ExecutePythonCommand',
-          parameters: {
-            Command: trimmedCommand
-          },
-          generateTransaction: false
-        });
-      } catch {
-        // Final fallback: execute via console py command
-        this.log.warn('PythonScriptLibrary not available or failed, falling back to console `py` command');
-
-        // For simple single-line commands
-        if (!isMultiLine) {
-          return await this.executeConsoleCommand(`py ${trimmedCommand}`, { allowPython: true });
-        }
-
-        // For multi-line scripts, try to execute as a block
-        try {
-          // Try executing as a single exec block
-          // Properly escape the script for Python exec
-          const escapedScript = trimmedCommand
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"')
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '');
-          return await this.executeConsoleCommand(`py exec("${escapedScript}")`, { allowPython: true });
-        } catch {
-          // If that fails, break into smaller chunks
-          try {
-            // First ensure unreal is imported
-            await this.executeConsoleCommand('py import unreal');
-
-            // For complex multi-line scripts, execute in logical chunks
-            const commandWithoutImport = trimmedCommand.replace(/^\s*import\s+unreal\s*;?\s*/m, '');
-
-            // Split by semicolons first, then by newlines
-            const statements = commandWithoutImport
-              .split(/[;\n]/)
-              .map((s) => s.trim())
-              .filter((s) => s.length > 0 && !s.startsWith('#'));
-
-            let result = null;
-            for (const stmt of statements) {
-              // Skip if statement is too long for console
-              if (stmt.length > 200) {
-                // Try to execute as a single exec block
-                const miniScript = `exec("""${stmt.replace(/"/g, '\\"')}""")`;
-                result = await this.executeConsoleCommand(`py ${miniScript}`, { allowPython: true });
-              } else {
-                result = await this.executeConsoleCommand(`py ${stmt}`, { allowPython: true });
-              }
-              // Small delay between commands
-              await new Promise((resolve) => setTimeout(resolve, 30));
-            }
-
-            return result;
-          } catch {
-            // Final fallback: execute line by line
-            const lines = trimmedCommand.split('\n').filter((line) => line.trim().length > 0);
-            let result = null;
-
-            for (const line of lines) {
-              // Skip comments
-              if (line.trim().startsWith('#')) {
-                continue;
-              }
-              result = await this.executeConsoleCommand(`py ${line.trim()}`, { allowPython: true });
-              // Small delay between commands to ensure execution order
-              await new Promise((resolve) => setTimeout(resolve, 50));
-            }
-
-            return result;
-          }
-        }
-      }
+    if (response.result !== undefined) {
+      return response.result;
     }
+
+    return response.message ?? response;
   }
   
   // Allow callers to enable/disable auto-reconnect behavior
@@ -1137,63 +1087,8 @@ print('RESULT:' + json.dumps(status))
     this.autoReconnectEnabled = enabled;
   }
 
-  // Connection recovery
-  private scheduleReconnect(): void {
-    if (!this.autoReconnectEnabled) {
-      this.log.info('Auto-reconnect disabled; not scheduling reconnection');
-      return;
-    }
-    if (this.reconnectTimer || this.connected) {
-      return;
-    }
-    
-    if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
-      this.log.error('Max reconnection attempts reached. Please check Unreal Engine.');
-      return;
-    }
-    
-    // Exponential backoff with jitter
-    const delay = Math.min(
-      this.BASE_RECONNECT_DELAY * Math.pow(2, this.reconnectAttempts) + Math.random() * 1000,
-      30000 // Max 30 seconds
-    );
-    
-    this.log.debug(`Scheduling reconnection attempt ${this.reconnectAttempts + 1}/${this.MAX_RECONNECT_ATTEMPTS} in ${Math.round(delay)}ms`);
-    
-    this.reconnectTimer = setTimeout(async () => {
-      this.reconnectTimer = undefined;
-      this.reconnectAttempts++;
-      
-      try {
-        await this.connect();
-        this.reconnectAttempts = 0;
-        this.log.info('Successfully reconnected to Unreal Engine');
-      } catch (err) {
-        this.log.warn('Reconnection attempt failed:', err);
-        this.scheduleReconnect();
-      }
-    }, delay);
-  }
-  
   // Graceful shutdown
   async disconnect(): Promise<void> {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = undefined;
-    }
-    
-    if (this.ws) {
-      try {
-        // Avoid unhandled error during shutdown
-        this.ws.on('error', () => {});
-        try { this.ws.close(); } catch {}
-        try { this.ws.terminate(); } catch {}
-      } finally {
-        try { this.ws.removeAllListeners(); } catch {}
-        this.ws = undefined;
-      }
-    }
-    
     this.connected = false;
   }
   
@@ -1663,6 +1558,10 @@ print('RESULT:' + json.dumps(flags))
    * Start the command processor
    */
   private startCommandProcessor(): void {
+    if (this.commandProcessorInitialized) {
+      return;
+    }
+    this.commandProcessorInitialized = true;
     // Periodic queue processing to handle any stuck commands
     setInterval(() => {
       if (!this.isProcessing && this.commandQueue.length > 0) {

@@ -390,6 +390,8 @@ void UMcpAutomationBridgeSubsystem::AttemptConnection()
         return;
     }
 
+    ActiveSocket->InitializeWeakSelf(ActiveSocket);
+
     ActiveSocket->OnConnected().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleConnected);
     ActiveSocket->OnConnectionError().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleConnectionError);
     ActiveSocket->OnClosed().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleClosed);

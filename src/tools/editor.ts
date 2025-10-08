@@ -145,16 +145,7 @@ else:
   async pausePlayInEditor() {
     try {
       // Pause/Resume PIE
-      await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          WorldContextObject: null,
-          Command: 'pause',
-          SpecificPlayer: null
-        },
-        generateTransaction: false
-      });
+      await this.bridge.executeConsoleCommand('pause');
       return { success: true, message: 'PIE paused/resumed' };
     } catch (err) {
       return { success: false, error: `Failed to pause PIE: ${err}` };
@@ -322,16 +313,7 @@ if ues:
   
   async setCameraSpeed(speed: number) {
     try {
-      await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          WorldContextObject: null,
-          Command: `camspeed ${speed}`,
-          SpecificPlayer: null
-        },
-        generateTransaction: false
-      });
+      await this.bridge.executeConsoleCommand(`camspeed ${speed}`);
       return { success: true, message: `Camera speed set to ${speed}` };
     } catch (err) {
       return { success: false, error: `Failed to set camera speed: ${err}` };
@@ -340,16 +322,7 @@ if ues:
   
   async setFOV(fov: number) {
     try {
-      await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          WorldContextObject: null,
-          Command: `fov ${fov}`,
-          SpecificPlayer: null
-        },
-        generateTransaction: false
-      });
+      await this.bridge.executeConsoleCommand(`fov ${fov}`);
       return { success: true, message: `FOV set to ${fov}` };
     } catch (err) {
       return { success: false, error: `Failed to set FOV: ${err}` };
@@ -361,8 +334,8 @@ if ues:
       const sanitizedFilename = filename ? filename.replace(/[<>:*?"|]/g, '_') : `Screenshot_${Date.now()}`;
       const command = filename ? `highresshot 1920x1080 filename="${sanitizedFilename}"` : 'shot';
       
-      const res = await this.bridge.executeConsoleCommand(command);
-      
+      await this.bridge.executeConsoleCommand(command);
+
       return { 
         success: true, 
         message: `Screenshot captured: ${sanitizedFilename}`,

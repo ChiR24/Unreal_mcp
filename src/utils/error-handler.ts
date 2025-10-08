@@ -128,7 +128,7 @@ export class ErrorHandler {
 
     switch (type) {
       case ErrorType.CONNECTION:
-        return 'Failed to connect to Unreal Engine. Please ensure Remote Control is enabled and the engine is running.';
+        return 'Failed to connect to Unreal Engine. Please ensure the Automation Bridge plugin is active and the editor is running.';
       
       case ErrorType.VALIDATION:
         return `Invalid input: ${originalMessage}`;

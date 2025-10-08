@@ -151,12 +151,26 @@ print('RESULT:' + json.dumps(result))
 
   async applyMaterialToActor(actorPath: string, materialPath: string, slotIndex = 0) {
     try {
-      await this.bridge.httpCall('/remote/object/property', 'PUT', {
+      const result = await this.bridge.setObjectProperty({
         objectPath: actorPath,
         propertyName: `StaticMeshComponent.Materials[${slotIndex}]`,
-        propertyValue: materialPath
+        value: materialPath
       });
-      return { success: true, message: 'Material applied' };
+
+      if (result.success) {
+        return {
+          success: true,
+          message: 'Material applied',
+          transport: result.transport,
+          warnings: Array.isArray(result.warnings) ? result.warnings : undefined
+        };
+      }
+
+      return {
+        success: false,
+        error: result.error ?? `Failed to apply material to ${actorPath}`,
+        transport: result.transport
+      };
     } catch (err) {
       return { success: false, error: `Failed to apply material: ${err}` };
     }
@@ -164,16 +178,32 @@ print('RESULT:' + json.dumps(result))
 
   private async assetExists(assetPath: string): Promise<boolean> {
     try {
-      const response = await this.bridge.call({
-        objectPath: '/Script/EditorScriptingUtilities.Default__EditorAssetLibrary',
-        functionName: 'DoesAssetExist',
-        parameters: {
-          AssetPath: assetPath
-        }
-      });
-      return coerceBoolean(response?.ReturnValue ?? response?.Result ?? response, false) === true;
+      const python = `
+import unreal, json
+
+path = r"${escapePythonString(assetPath)}"
+result = {
+    'success': False,
+    'exists': False
+}
+
+try:
+    result['exists'] = bool(unreal.EditorAssetLibrary.does_asset_exist(path))
+    result['success'] = True
+except Exception as err:
+    result['error'] = str(err)
+
+print('RESULT:' + json.dumps(result))
+      `.trim();
+
+      const response = await this.bridge.executePythonWithResult(python);
+      if (response && typeof response === 'object' && coerceBoolean((response as any).success, false)) {
+        return coerceBoolean((response as any).exists, false) === true;
+      }
     } catch {
-      return false;
+      // ignored, fall through to false
     }
+
+    return false;
   }
 }

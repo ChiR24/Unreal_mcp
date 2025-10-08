@@ -428,17 +428,17 @@ except Exception as e:
             };
           }
         }
-        
-        const res = await this.bridge.httpCall('/remote/object/property', 'PUT', {
+        const res = await this.bridge.setObjectProperty({
           objectPath: params.objectPath,
           propertyName: params.propertyName,
-          propertyValue: processedValue
+          value: processedValue
         });
-        
-        // Clear cache for this object
-        this.objectCache.delete(params.objectPath);
-        
-        return { success: true, result: res };
+
+        if (res.success) {
+          this.objectCache.delete(params.objectPath);
+        }
+
+        return res;
       } catch (err: any) {
         const errorMsg = err?.message || String(err);
         if (errorMsg.includes('404')) {
@@ -456,77 +456,17 @@ except Exception as e:
    * Get property value of an object
    */
   async getProperty(params: { objectPath: string; propertyName: string }) {
-    const py = `
-import unreal, json
-path = r"${params.objectPath}"
-prop_name = r"${params.propertyName}"
-try:
-    obj = unreal.load_object(None, path)
-    if not obj:
-        print('RESULT:' + json.dumps({'success': False, 'error': 'Object not found'}))
-    else:
-        # Try different methods to get property
-        value = None
-        found = False
-        
-        # Method 1: Direct attribute access
-        if hasattr(obj, prop_name):
-            try:
-                value = getattr(obj, prop_name)
-                found = True
-            except Exception:
-                pass
-        
-        # Method 2: get_editor_property (UE4/5)
-        if not found and hasattr(obj, 'get_editor_property'):
-            try:
-                value = obj.get_editor_property(prop_name)
-                found = True
-            except Exception:
-                pass
-        
-        # Method 3: Try with common property name variations
-        if not found:
-            # Try common property name variations
-            variations = [
-                prop_name,
-                prop_name.lower(),
-                prop_name.upper(),
-                prop_name.capitalize(),
-                # Convert snake_case to CamelCase
-                ''.join(word.capitalize() for word in prop_name.split('_')),
-                # Convert CamelCase to snake_case
-                ''.join(['_' + c.lower() if c.isupper() else c for c in prop_name]).lstrip('_')
-            ]
-            for variant in variations:
-                if hasattr(obj, variant):
-                    try:
-                        value = getattr(obj, variant)
-                        found = True
-                        break
-                    except Exception:
-                        pass
-        
-        if found:
-            # Convert complex types to string
-            if hasattr(value, '__dict__'):
-                value = str(value)
-            elif isinstance(value, (list, tuple, dict)):
-                value = json.dumps(value)
-            
-            print('RESULT:' + json.dumps({'success': True, 'value': value}))
-        else:
-            print('RESULT:' + json.dumps({'success': False, 'error': f'Property {prop_name} not found'}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
+    return this.executeWithRetry(
+      async () => {
+        const result = await this.bridge.getObjectProperty({
+          objectPath: params.objectPath,
+          propertyName: params.propertyName
+        });
 
-    const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(py),
+        return result;
+      },
       'getProperty'
     );
-    
-    return this.parsePythonResult(resp, 'getProperty');
   }
 
   /**

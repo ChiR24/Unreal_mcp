@@ -1,6 +1,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { Logger } from '../utils/logger.js';
 import { interpretStandardResult } from '../utils/result-helpers.js';
+import { escapePythonString } from '../utils/python.js';
 
 export interface RCPreset {
   id: string;
@@ -94,6 +95,54 @@ export class RcTools {
           : (cleanedOutput ?? '').substring(0, 200).trim();
         return detail ? `${error}: ${detail}` : error;
       })()
+    };
+  }
+
+  private coerceToNumber(value: unknown, fallback = 0): number {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return fallback;
+  }
+
+  private normalizeVector(value: any): { X: number; Y: number; Z: number } {
+    if (!value || typeof value !== 'object') {
+      return { X: 0, Y: 0, Z: 0 };
+    }
+    return {
+      X: this.coerceToNumber(value.x ?? value.X, 0),
+      Y: this.coerceToNumber(value.y ?? value.Y, 0),
+      Z: this.coerceToNumber(value.z ?? value.Z, 0)
+    };
+  }
+
+  private normalizeRotator(value: any): { Pitch: number; Yaw: number; Roll: number } {
+    if (!value || typeof value !== 'object') {
+      return { Pitch: 0, Yaw: 0, Roll: 0 };
+    }
+    return {
+      Pitch: this.coerceToNumber(value.pitch ?? value.Pitch, 0),
+      Yaw: this.coerceToNumber(value.yaw ?? value.Yaw, 0),
+      Roll: this.coerceToNumber(value.roll ?? value.Roll, 0)
+    };
+  }
+
+  private normalizeTransform(value: any) {
+    const translation = this.normalizeVector(value?.location ?? value?.Location);
+    const rotation = this.normalizeRotator(value?.rotation ?? value?.Rotation);
+    const scaleSource = value?.scale ?? value?.Scale ?? { x: 1, y: 1, z: 1 };
+    const scale3D = this.normalizeVector(scaleSource);
+
+    return {
+      Translation: translation,
+      Rotation: rotation,
+      Scale3D: scale3D
     };
   }
 
@@ -343,20 +392,29 @@ except Exception as e:
         if (typeof params.value === 'object' && params.value !== null) {
           // Check if it's a vector/rotator/transform
           if ('x' in params.value || 'X' in params.value) {
-            processedValue = {
-              X: params.value.x || params.value.X || 0,
-              Y: params.value.y || params.value.Y || 0,
-              Z: params.value.z || params.value.Z || 0
-            };
+            processedValue = this.normalizeVector(params.value);
+          } else if ('pitch' in params.value || 'Pitch' in params.value) {
+            processedValue = this.normalizeRotator(params.value);
+          } else if ('location' in params.value || 'Location' in params.value) {
+            processedValue = this.normalizeTransform(params.value);
           }
         }
         
-        const res = await this.bridge.httpCall('/remote/object/property', 'PUT', {
+        const result = await this.bridge.setObjectProperty({
           objectPath: params.objectPath,
           propertyName: params.propertyName,
-          propertyValue: processedValue
+          value: processedValue
         });
-        return { success: true, result: res };
+
+        if (!result.success && result.error) {
+          return {
+            success: false,
+            error: result.error,
+            transport: result.transport
+          };
+        }
+
+        return result;
       } catch (err: any) {
         // Check for specific error types
         const errorMsg = err?.message || String(err);
@@ -375,11 +433,20 @@ except Exception as e:
   async getProperty(params: { objectPath: string; propertyName: string }) {
     return this.executeWithRetry(async () => {
       try {
-        const res = await this.bridge.httpCall('/remote/object/property', 'GET', {
+        const result = await this.bridge.getObjectProperty({
           objectPath: params.objectPath,
           propertyName: params.propertyName
         });
-        return { success: true, value: res };
+
+        if (!result.success && result.error) {
+          return {
+            success: false,
+            error: result.error,
+            transport: result.transport
+          };
+        }
+
+        return result;
       } catch (err: any) {
         const errorMsg = err?.message || String(err);
         if (errorMsg.includes('404')) {
@@ -477,20 +544,106 @@ except Exception as e:
   /**
    * Call an exposed function through Remote Control
    */
-  async callFunction(params: { 
-    presetPath: string; 
-    functionName: string; 
-    parameters?: Record<string, any> 
-  }): Promise<{ success: boolean; result?: any; error?: string }> {
+  async callFunction(params: {
+    presetPath: string;
+    functionName: string;
+    parameters?: Record<string, any>
+  }): Promise<{ success: boolean; result?: any; error?: string; transport?: string }> {
+    const parameters = params.parameters ?? {};
+    const paramsJson = JSON.stringify(parameters ?? {});
+
+    const python = `
+import unreal, json
+
+result = {
+    'success': False,
+    'transport': 'automation_bridge'
+}
+
+preset_path = r"${escapePythonString(params.presetPath)}"
+function_label = r"${escapePythonString(params.functionName)}"
+parameters = json.loads(r"""${escapePythonString(paramsJson)}""")
+
+try:
+    preset = unreal.EditorAssetLibrary.load_asset(preset_path)
+    if not preset:
+        result['error'] = 'Preset not found'
+    else:
+        rc_function = None
+
+        if hasattr(preset, 'get_remote_control_function'):
+            try:
+                rc_function = preset.get_remote_control_function(function_label)
+            except Exception:
+                rc_function = None
+
+        if not rc_function and hasattr(preset, 'get_exposed_entities'):
+            try:
+                for entity in preset.get_exposed_entities() or []:
+                    label = getattr(entity, 'label', '')
+                    name = getattr(entity, 'name', '')
+                    if function_label in (label, name):
+                        entity_id = getattr(entity, 'id', None)
+                        if entity_id and hasattr(preset, 'get_remote_control_function'):
+                            try:
+                                rc_function = preset.get_remote_control_function(entity_id)
+                            except Exception:
+                                rc_function = None
+                        break
+            except Exception:
+                pass
+
+        call_success = False
+        call_result = None
+
+        try:
+            if hasattr(preset, 'call_function'):
+                call_result = preset.call_function(function_label, parameters)
+                call_success = True
+            elif rc_function and hasattr(preset, 'call_remote_function'):
+                call_result = preset.call_remote_function(rc_function, parameters)
+                call_success = True
+            elif hasattr(preset, 'invoke_function'):
+                call_result = preset.invoke_function(function_label, parameters)
+                call_success = True
+        except Exception as call_err:
+            result['error'] = str(call_err)
+
+        if call_success:
+            result['success'] = True
+            result['result'] = call_result
+        elif 'error' not in result or not result['error']:
+            result['error'] = f"Function '{function_label}' not found or call failed"
+
+except Exception as err:
+    result['error'] = str(err)
+
+print('RESULT:' + json.dumps(result))
+    `.trim();
+
     try {
-      const res = await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: params.presetPath,
-        functionName: params.functionName,
-        parameters: params.parameters || {}
-      });
-      return { success: true, result: res };
+      const automationResult = await this.bridge.executePythonWithResult(python);
+      if (automationResult && automationResult.success) {
+        return {
+          success: true,
+          result: automationResult.result,
+          transport: 'automation_bridge'
+        };
+      }
+
+      const errorPayload = (automationResult && typeof automationResult === 'object') ? automationResult : undefined;
+      const errorMessage = errorPayload?.error || errorPayload?.message || 'Automation bridge function call failed';
+      return {
+        success: false,
+        error: errorMessage,
+        transport: 'automation_bridge'
+      };
     } catch (err: any) {
-      return { success: false, error: String(err?.message || err) };
+      return {
+        success: false,
+        error: err?.message || String(err),
+        transport: 'automation_bridge'
+      };
     }
   }
 
@@ -498,10 +651,32 @@ except Exception as e:
    * Validate connection to Remote Control
    */
   async validateConnection(): Promise<boolean> {
+    const python = `
+import unreal, json
+
+result = {
+    'success': False,
+    'message': ''
+}
+
+try:
+    preset_class = getattr(unreal, 'RemoteControlPreset', None)
+    if preset_class is None:
+        result['error'] = 'Remote Control Python API unavailable'
+    else:
+        result['success'] = True
+        result['message'] = 'Remote Control Python API available'
+except Exception as err:
+    result['error'] = str(err)
+
+print('RESULT:' + json.dumps(result))
+    `.trim();
+
     try {
-      await this.bridge.httpCall('/remote/info', 'GET', {});
-      return true;
-    } catch {
+      const resp = await this.bridge.executePythonWithResult(python);
+      return Boolean(resp?.success);
+    } catch (err: any) {
+      this.log.warn('validateConnection via automation failed', err?.message || err);
       return false;
     }
   }

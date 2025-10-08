@@ -28,6 +28,8 @@ public:
     FMcpBridgeWebSocket(const FString& InUrl, const FString& InProtocols, const TMap<FString, FString>& InHeaders);
     virtual ~FMcpBridgeWebSocket() override;
 
+    void InitializeWeakSelf(const TSharedPtr<FMcpBridgeWebSocket>& InShared);
+
     void Connect();
     void Close(int32 StatusCode = 1000, const FString& Reason = FString());
     bool Send(const FString& Data);
@@ -84,4 +86,6 @@ private:
     TArray<uint8> PendingReceived;
     TArray<uint8> FragmentAccumulator;
     bool bFragmentMessageActive = false;
+
+    TWeakPtr<FMcpBridgeWebSocket> SelfWeakPtr;
 };

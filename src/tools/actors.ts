@@ -349,16 +349,7 @@ else:
       // Use summon command with location if provided
   const command = `summon ${spawnClass} ${locX} ${locY} ${locZ}`;
       
-      await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          WorldContextObject: null,
-          Command: command,
-          SpecificPlayer: null
-        },
-        generateTransaction: false
-      });
+      await this.bridge.executeConsoleCommand(command);
       
       // Console commands don't reliably report success/failure
       // We can't guarantee this actually worked, so indicate uncertainty

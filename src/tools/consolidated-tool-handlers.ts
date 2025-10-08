@@ -6,7 +6,6 @@ const log = new Logger('ConsolidatedToolHandler');
 
 const ACTION_REQUIRED_ERROR = 'Missing required parameter: action';
 const AUTOMATION_TRANSPORT_KEYS = ['automation_bridge', 'automation', 'bridge'];
-const REMOTE_TRANSPORT_KEYS = ['remote_control', 'remote', 'rc'];
 
 function ensureArgsPresent(args: any) {
   if (args === null || args === undefined) {
@@ -142,7 +141,6 @@ type AutomationTransportDecision = {
   useAutomation: boolean;
   allowFallback: boolean;
   explicitAutomation: boolean;
-  explicitRemote: boolean;
   fallbackReason?: string;
 };
 
@@ -173,54 +171,21 @@ function decideAutomationTransport(
 ): AutomationTransportDecision {
   const normalized = typeof rawTransport === 'string' ? rawTransport.trim().toLowerCase() : undefined;
   const explicitAutomation = normalized ? AUTOMATION_TRANSPORT_KEYS.includes(normalized) : false;
-  const explicitRemote = normalized ? REMOTE_TRANSPORT_KEYS.includes(normalized) : false;
   const auto = !normalized || normalized === '' || normalized === 'auto' || normalized === 'default';
 
-  if (explicitAutomation) {
-    if (!info.canSend) {
-      throw new Error('Automation bridge not available');
-    }
-    return {
-      useAutomation: true,
-      allowFallback: false,
-      explicitAutomation: true,
-      explicitRemote: false
-    };
+  if (!auto && !explicitAutomation) {
+    throw new Error('Unsupported transport. Only automation_bridge is supported.');
   }
 
-  if (explicitRemote) {
-    return {
-      useAutomation: false,
-      allowFallback: false,
-      explicitAutomation: false,
-      explicitRemote: true
-    };
-  }
-
-  if (auto) {
-    if (info.canSend) {
-      return {
-        useAutomation: true,
-        allowFallback: true,
-        explicitAutomation: false,
-        explicitRemote: false
-      };
-    }
-    return {
-      useAutomation: false,
-      allowFallback: false,
-      explicitAutomation: false,
-      explicitRemote: false,
-      fallbackReason: 'Automation bridge disabled; using remote_control transport.'
-    };
+  if (!info.canSend) {
+    throw new Error('Automation bridge not available');
   }
 
   return {
-    useAutomation: false,
-    allowFallback: false,
-    explicitAutomation: false,
-    explicitRemote: false,
-    fallbackReason: `Unrecognised transport "${normalized}"; using remote_control transport.`
+    useAutomation: true,
+    allowFallback: true,
+    explicitAutomation,
+    fallbackReason: 'Automation bridge request failed; retrying via Python wrapper.'
   };
 }
 
@@ -245,7 +210,7 @@ export async function handleConsolidatedToolCall(
               throw new Error('Invalid directory: must be a string');
             }
             const res = await tools.assetResources.list(args.directory || '/Game', false);
-            return cleanObject({ success: true, ...res });
+            return cleanObject(res);
           }
           case 'import': {
             let sourcePath = typeof args.sourcePath === 'string' ? args.sourcePath.trim() : '';
@@ -668,17 +633,47 @@ case 'manage_level':
             await elicitMissingPrimitiveArgs(
               tools,
               args,
-              'Provide the streaming level name for manage_level.stream',
+              'Provide the streaming level path (or name) for manage_level.stream',
               {
-                levelName: {
+                levelPath: {
                   type: 'string',
-                  title: 'Level Name',
-                  description: 'Streaming level name to toggle'
+                  title: 'Level Path',
+                  description: 'Streaming level path (e.g., "/Game/Maps/Sublevel1"). Either levelPath or levelName is required.'
                 }
               }
             );
-            const levelName = requireNonEmptyString(args.levelName, 'levelName', 'Missing required parameter: levelName');
-            const res = await tools.levelTools.streamLevel({ levelName, shouldBeLoaded: !!args.shouldBeLoaded, shouldBeVisible: !!args.shouldBeVisible });
+            const deriveLevelName = (value?: string | null): string | undefined => {
+              if (!value) return undefined;
+              const trimmed = value.trim();
+              if (!trimmed) return undefined;
+              const tail = trimmed.split('/').filter(Boolean).pop();
+              if (!tail) return undefined;
+              const namePart = tail.includes('.') ? tail.split('.')[0] : tail;
+              return namePart?.trim() || undefined;
+            };
+
+            const pathInput = typeof args.levelPath === 'string' ? args.levelPath.trim() : '';
+            const nameInput = typeof args.levelName === 'string' ? args.levelName.trim() : '';
+
+            if (!pathInput && !nameInput) {
+              throw new Error('Missing required parameter: levelPath');
+            }
+
+            if (typeof args.shouldBeLoaded !== 'boolean') {
+              throw new Error('Missing required parameter: shouldBeLoaded');
+            }
+
+            const levelPath = pathInput || undefined;
+            const levelName = nameInput || deriveLevelName(pathInput) || undefined;
+            const shouldBeLoaded = Boolean(args.shouldBeLoaded);
+            const shouldBeVisible = typeof args.shouldBeVisible === 'boolean' ? Boolean(args.shouldBeVisible) : undefined;
+
+            const res = await tools.levelTools.streamLevel({
+              levelPath,
+              levelName,
+              shouldBeLoaded,
+              shouldBeVisible
+            });
             return cleanObject(res);
           }
           case 'create_level': {
@@ -721,8 +716,17 @@ case 'manage_level':
               }
             );
             const lightType = requireNonEmptyString(args.lightType, 'lightType', 'Missing required parameter: lightType');
-            const name = requireNonEmptyString(args.name, 'name', 'Invalid name');
+            const defaultLightNames: Record<string, string> = {
+              directional: 'DirectionalLight_Auto',
+              point: 'PointLight_Auto',
+              spot: 'SpotLight_Auto',
+              rect: 'RectLight_Auto',
+              sky: 'SkyLight_Auto',
+              skylight: 'SkyLight_Auto'
+            };
+            const providedName = typeof args.name === 'string' ? args.name.trim() : '';
             const typeKey = lightType.toLowerCase();
+            const name = providedName || defaultLightNames[typeKey] || 'Light_Auto';
             const toVector = (value: any, fallback: [number, number, number]): [number, number, number] => {
               if (Array.isArray(value) && value.length === 3) {
                 return [Number(value[0]) || 0, Number(value[1]) || 0, Number(value[2]) || 0];
@@ -1478,22 +1482,7 @@ case 'system_control':
         };
 
         const hasTemplate = typeof args.template === 'string' && args.template.trim().length > 0;
-        let transportUsed: 'automation_bridge' | 'remote_control' = decision.useAutomation
-          ? 'automation_bridge'
-          : 'remote_control';
-
         if (hasTemplate) {
-          if (transportUsed === 'automation_bridge') {
-            if (decision.allowFallback) {
-              addWarning('Automation bridge does not support templates; using remote_control transport.');
-              transportUsed = 'remote_control';
-            } else {
-              throw new Error('Template execution is not supported when transport is automation_bridge.');
-            }
-          }
-
-          addWarning(decision.fallbackReason);
-
           const templateName = args.template.trim();
           try {
             const templateResult = await tools.bridge.executeEditorFunction(templateName, args.templateParams);
@@ -1511,7 +1500,7 @@ case 'system_control':
               result: templateResult,
               message,
               error,
-              transport: 'remote_control'
+              transport: 'automation_bridge'
             };
 
             const combinedWarnings = [...(templateWarnings ?? []), ...warnings].filter(Boolean);
@@ -1525,7 +1514,7 @@ case 'system_control':
               success: false,
               error: err?.message || String(err),
               message: `Failed to execute template ${templateName}`,
-              transport: 'remote_control'
+              transport: 'automation_bridge'
             };
             if (warnings.length > 0) {
               payload.warnings = warnings;
@@ -1548,63 +1537,60 @@ case 'system_control':
           }
         }
 
-        if (transportUsed === 'automation_bridge' && automationBridge?.sendAutomationRequest) {
-          const timeoutMs =
-            typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
-              ? Math.floor(args.timeoutMs)
-              : undefined;
-
-          try {
-            const response = await automationBridge.sendAutomationRequest(
-              'execute_editor_python',
-              { script },
-              { timeoutMs }
-            );
-            const success = response.success !== false;
-            const message = typeof response.message === 'string'
-              ? response.message
-              : success
-                ? 'Python script executed via automation bridge.'
-                : 'Automation bridge reported failure.';
-            const error = success
-              ? undefined
-              : (typeof response.error === 'string' ? response.error : 'AUTOMATION_BRIDGE_FAILURE');
-
-            const payload: Record<string, unknown> = {
-              success,
-              message,
-              error,
-              transport: 'automation_bridge',
-              result: response.result,
-              bridge: {
-                requestId: response.requestId,
-                success: response.success !== false,
-                error: response.error
-              }
-            };
-
-            if (warnings.length > 0) {
-              payload.warnings = warnings;
-            }
-
-            return cleanObject(payload);
-          } catch (err: any) {
-            if (!decision.allowFallback) {
-              return cleanObject({
-                success: false,
-                error: err?.message || String(err),
-                message: 'Automation bridge execution failed',
-                transport: 'automation_bridge'
-              });
-            }
-            const errMessage = err?.message || String(err);
-            addWarning(`Automation bridge error: ${errMessage}. Falling back to remote_control transport.`);
-            transportUsed = 'remote_control';
-          }
+        if (!automationBridge?.sendAutomationRequest) {
+          throw new Error('Automation bridge not connected');
         }
 
-        if (transportUsed === 'remote_control') {
+        const timeoutMs =
+          typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
+            ? Math.floor(args.timeoutMs)
+            : undefined;
+
+        try {
+          const response = await automationBridge.sendAutomationRequest(
+            'execute_editor_python',
+            { script },
+            { timeoutMs }
+          );
+          const success = response.success !== false;
+          const message = typeof response.message === 'string'
+            ? response.message
+            : success
+              ? 'Python script executed via automation bridge.'
+              : 'Automation bridge reported failure.';
+          const error = success
+            ? undefined
+            : (typeof response.error === 'string' ? response.error : 'AUTOMATION_BRIDGE_FAILURE');
+
+          const payload: Record<string, unknown> = {
+            success,
+            message,
+            error,
+            transport: 'automation_bridge',
+            result: response.result,
+            bridge: {
+              requestId: response.requestId,
+              success: response.success !== false,
+              error: response.error
+            }
+          };
+
+          if (warnings.length > 0) {
+            payload.warnings = warnings;
+          }
+
+          return cleanObject(payload);
+        } catch (err: any) {
+          if (!decision.allowFallback) {
+            return cleanObject({
+              success: false,
+              error: err?.message || String(err),
+              message: 'Automation bridge execution failed',
+              transport: 'automation_bridge'
+            });
+          }
           addWarning(decision.fallbackReason);
+          addWarning(`Automation bridge error: ${err?.message || String(err)}.`);
         }
 
         const captureResult = args.captureResult !== false;
@@ -1630,7 +1616,7 @@ case 'system_control':
             result,
             message,
             error,
-            transport: 'remote_control'
+            transport: 'automation_bridge'
           };
 
           const combinedWarnings = [...(existingWarnings ?? []), ...warnings].filter(Boolean);
@@ -1644,7 +1630,7 @@ case 'system_control':
             success: false,
             error: err?.message || String(err),
             message: 'Python execution failed',
-            transport: 'remote_control'
+            transport: 'automation_bridge'
           };
           if (warnings.length > 0) {
             payload.warnings = warnings;
@@ -1860,225 +1846,133 @@ case 'inspect':
             const objectPath = requireNonEmptyString(args.objectPath, 'objectPath', 'Missing required parameter: objectPath');
             const propertyName = requireNonEmptyString(args.propertyName, 'propertyName', 'Missing required parameter: propertyName');
             const automationInfo = getAutomationBridgeInfo(tools);
-            const decision = decideAutomationTransport(args.transport, automationInfo);
+            decideAutomationTransport(args.transport, automationInfo);
             const automationBridge = automationInfo.instance;
-            const warnings: string[] = [];
 
-            const addWarning = (value?: string) => {
-              if (!value) return;
-              if (!warnings.includes(value)) {
-                warnings.push(value);
-              }
-            };
-
-            let transportUsed: 'automation_bridge' | 'remote_control' = decision.useAutomation
-              ? 'automation_bridge'
-              : 'remote_control';
-
-            if (transportUsed === 'automation_bridge') {
-              if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
-                if (!decision.allowFallback) {
-                  throw new Error('Automation bridge not available');
-                }
-                addWarning('Automation bridge not available; using remote_control transport.');
-                transportUsed = 'remote_control';
-              } else {
-                const timeoutMs =
-                  typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
-                    ? Math.floor(args.timeoutMs)
-                    : undefined;
-
-                try {
-                  const response = await automationBridge.sendAutomationRequest(
-                    'get_object_property',
-                    { objectPath, propertyName },
-                    { timeoutMs }
-                  );
-
-                  const success = response.success !== false;
-                  const message = typeof response.message === 'string'
-                    ? response.message
-                    : success
-                      ? 'Property retrieved via automation bridge.'
-                      : 'Automation bridge reported failure.';
-
-                  const payload: Record<string, unknown> = {
-                    success,
-                    message,
-                    error: success ? undefined : response.error ?? 'AUTOMATION_BRIDGE_FAILURE',
-                    value: response.result,
-                    transport: 'automation_bridge',
-                    bridge: {
-                      requestId: response.requestId,
-                      success: response.success !== false,
-                      error: response.error
-                    }
-                  };
-
-                  if (warnings.length > 0) {
-                    payload.warnings = warnings;
-                  }
-
-                  return cleanObject(payload);
-                } catch (err: any) {
-                  if (!decision.allowFallback) {
-                    return cleanObject({
-                      success: false,
-                      error: err?.message || String(err),
-                      message: 'Automation bridge property lookup failed',
-                      transport: 'automation_bridge'
-                    });
-                  }
-                  const errMessage = err?.message || String(err);
-                  addWarning(`Automation bridge error: ${errMessage}. Falling back to remote_control transport.`);
-                  transportUsed = 'remote_control';
-                }
-              }
+            if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
+              throw new Error('Automation bridge not connected');
             }
 
-            if (transportUsed === 'remote_control') {
-              addWarning(decision.fallbackReason);
+            const timeoutMs =
+              typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
+                ? Math.floor(args.timeoutMs)
+                : undefined;
 
-              const res = await tools.introspectionTools.getProperty({ objectPath, propertyName });
-              const resultPayload: Record<string, unknown> =
-                res && typeof res === 'object'
-                  ? { ...(res as Record<string, unknown>) }
-                  : { success: false, error: 'Unexpected response from property lookup.' };
+            try {
+              const response = await automationBridge.sendAutomationRequest(
+                'get_object_property',
+                { objectPath, propertyName },
+                { timeoutMs }
+              );
 
-              if (!('transport' in resultPayload)) {
-                resultPayload.transport = 'remote_control';
-              }
+              const success = response.success !== false;
+              const rawResult =
+                response.result && typeof response.result === 'object'
+                  ? { ...(response.result as Record<string, unknown>) }
+                  : response.result;
+              const value =
+                (rawResult as any)?.value ??
+                (rawResult as any)?.propertyValue ??
+                (success ? rawResult : undefined);
 
-              const existingWarnings = Array.isArray((resultPayload as any).warnings)
-                ? (resultPayload as any).warnings
-                : [];
+              const message = typeof response.message === 'string'
+                ? response.message
+                : success
+                  ? 'Property retrieved via automation bridge.'
+                  : 'Automation bridge reported failure.';
 
-              const combinedWarnings = [...existingWarnings, ...warnings].filter(Boolean);
-              if (combinedWarnings.length > 0) {
-                resultPayload.warnings = combinedWarnings;
-              }
+              const payload: Record<string, unknown> = {
+                success,
+                message,
+                error: success ? undefined : response.error ?? 'AUTOMATION_BRIDGE_FAILURE',
+                value,
+                propertyValue: value,
+                transport: 'automation_bridge',
+                bridge: {
+                  requestId: response.requestId,
+                  success: response.success !== false,
+                  error: response.error
+                },
+                raw: rawResult
+              };
 
-              return cleanObject(resultPayload);
+              return cleanObject(payload);
+            } catch (err: any) {
+              return cleanObject({
+                success: false,
+                error: err?.message || String(err),
+                message: 'Automation bridge property lookup failed',
+                transport: 'automation_bridge'
+              });
             }
-
-            throw new Error('Unsupported transport state for get_property');
           }
           case 'set_property': {
             const objectPath = requireNonEmptyString(args.objectPath, 'objectPath', 'Missing required parameter: objectPath');
             const propertyName = requireNonEmptyString(args.propertyName, 'propertyName', 'Missing required parameter: propertyName');
             const automationInfo = getAutomationBridgeInfo(tools);
-            const decision = decideAutomationTransport(args.transport, automationInfo);
+            decideAutomationTransport(args.transport, automationInfo);
             const automationBridge = automationInfo.instance;
-            const warnings: string[] = [];
 
-            const addWarning = (value?: string) => {
-              if (!value) return;
-              if (!warnings.includes(value)) {
-                warnings.push(value);
-              }
+            if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
+              throw new Error('Automation bridge not connected');
+            }
+
+            const payload: Record<string, unknown> = {
+              objectPath,
+              propertyName,
+              value: args.value
             };
 
-            let transportUsed: 'automation_bridge' | 'remote_control' = decision.useAutomation
-              ? 'automation_bridge'
-              : 'remote_control';
-
-            if (transportUsed === 'automation_bridge') {
-              if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
-                if (!decision.allowFallback) {
-                  throw new Error('Automation bridge not available');
-                }
-                addWarning('Automation bridge not available; using remote_control transport.');
-                transportUsed = 'remote_control';
-              } else {
-                const payload: Record<string, unknown> = {
-                  objectPath,
-                  propertyName,
-                  value: args.value
-                };
-
-                if (args.markDirty !== undefined) {
-                  payload.markDirty = Boolean(args.markDirty);
-                }
-
-                const timeoutMs =
-                  typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
-                    ? Math.floor(args.timeoutMs)
-                    : undefined;
-
-                try {
-                  const response = await automationBridge.sendAutomationRequest(
-                    'set_object_property',
-                    payload,
-                    { timeoutMs }
-                  );
-
-                  const success = response.success !== false;
-                  const message = typeof response.message === 'string'
-                    ? response.message
-                    : success
-                      ? 'Property updated via automation bridge.'
-                      : 'Automation bridge reported failure.';
-
-                  const resultPayload: Record<string, unknown> = {
-                    success,
-                    message,
-                    error: success ? undefined : response.error ?? 'AUTOMATION_BRIDGE_FAILURE',
-                    transport: 'automation_bridge',
-                    bridge: {
-                      requestId: response.requestId,
-                      success: response.success !== false,
-                      error: response.error
-                    },
-                    result: response.result
-                  };
-
-                  if (warnings.length > 0) {
-                    resultPayload.warnings = warnings;
-                  }
-
-                  return cleanObject(resultPayload);
-                } catch (err: any) {
-                  if (!decision.allowFallback) {
-                    return cleanObject({
-                      success: false,
-                      error: err?.message || String(err),
-                      message: 'Automation bridge property update failed',
-                      transport: 'automation_bridge'
-                    });
-                  }
-                  const errMessage = err?.message || String(err);
-                  addWarning(`Automation bridge error: ${errMessage}. Falling back to remote_control transport.`);
-                  transportUsed = 'remote_control';
-                }
-              }
+            if (args.markDirty !== undefined) {
+              payload.markDirty = Boolean(args.markDirty);
             }
 
-            if (transportUsed === 'remote_control') {
-              addWarning(decision.fallbackReason);
+            const timeoutMs =
+              typeof args.timeoutMs === 'number' && Number.isFinite(args.timeoutMs) && args.timeoutMs > 0
+                ? Math.floor(args.timeoutMs)
+                : undefined;
 
-              const res = await tools.introspectionTools.setProperty({ objectPath, propertyName, value: args.value });
-              const resultPayload: Record<string, unknown> =
-                res && typeof res === 'object'
-                  ? { ...(res as Record<string, unknown>) }
-                  : { success: false, error: 'Unexpected response from property update.' };
+            try {
+              const response = await automationBridge.sendAutomationRequest(
+                'set_object_property',
+                payload,
+                { timeoutMs }
+              );
 
-              if (!('transport' in resultPayload)) {
-                resultPayload.transport = 'remote_control';
-              }
+              const success = response.success !== false;
+              const rawResult =
+                response.result && typeof response.result === 'object'
+                  ? { ...(response.result as Record<string, unknown>) }
+                  : response.result;
+              const message = typeof response.message === 'string'
+                ? response.message
+                : success
+                  ? 'Property updated via automation bridge.'
+                  : 'Automation bridge reported failure.';
 
-              const existingWarnings = Array.isArray((resultPayload as any).warnings)
-                ? (resultPayload as any).warnings
-                : [];
-
-              const combinedWarnings = [...existingWarnings, ...warnings].filter(Boolean);
-              if (combinedWarnings.length > 0) {
-                resultPayload.warnings = combinedWarnings;
-              }
+              const resultPayload: Record<string, unknown> = {
+                success,
+                message,
+                error: success ? undefined : response.error ?? 'AUTOMATION_BRIDGE_FAILURE',
+                transport: 'automation_bridge',
+                bridge: {
+                  requestId: response.requestId,
+                  success: response.success !== false,
+                  error: response.error
+                },
+                result: response.result,
+                raw: rawResult
+              };
 
               return cleanObject(resultPayload);
+            } catch (err: any) {
+              return cleanObject({
+                success: false,
+                error: err?.message || String(err),
+                message: 'Automation bridge property update failed',
+                transport: 'automation_bridge'
+              });
             }
-
-            throw new Error('Unsupported transport state for set_property');
           }
           default:
             throw new Error(`Unknown inspect action: ${inspectAction}`);

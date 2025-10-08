@@ -509,7 +509,7 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
 
   async clearDebugShapes() {
     try {
-      const res = await this.bridge.executeConsoleCommand('FlushPersistentDebugLines');
+      await this.bridge.executeConsoleCommand('FlushPersistentDebugLines');
       return { success: true, message: 'Debug shapes cleared' };
     } catch (err) {
       return { success: false, error: `Failed to clear debug shapes: ${err}` };

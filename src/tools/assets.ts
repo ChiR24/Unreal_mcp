@@ -610,14 +610,31 @@ print('RESULT:' + json.dumps(result))
 
   async saveAsset(assetPath: string) {
     try {
-      const res = await this.bridge.call({
-        objectPath: '/Script/EditorScriptingUtilities.Default__EditorAssetLibrary',
-        functionName: 'SaveAsset',
-        parameters: {
-          AssetToSave: assetPath
-        }
-      });
-      return res?.Result ?? res;
+      const python = `
+import unreal, json
+
+path = r"${escapePythonString(assetPath)}"
+result = {
+    'success': False,
+    'saved': False
+}
+
+try:
+    saved = unreal.EditorAssetLibrary.save_asset(path)
+    result['saved'] = bool(saved)
+    result['success'] = True
+except Exception as err:
+    result['error'] = str(err)
+
+print('RESULT:' + json.dumps(result))
+      `.trim();
+
+      const resp = await this.bridge.executePythonWithResult(python);
+      if (resp && typeof resp === 'object' && coerceBoolean((resp as any).success, false)) {
+        return { success: true, saved: coerceBoolean((resp as any).saved, false) };
+      }
+
+      return { success: false, error: (resp as any)?.error ?? 'Failed to save asset' };
     } catch (err) {
       return { error: `Failed to save asset: ${err}` };
     }

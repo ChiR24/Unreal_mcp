@@ -90,8 +90,7 @@ RemoteControlWebSocketServerPort=30010
 **Environment Variables (optional):**
 ```
 UE_HOST=127.0.0.1
-UE_RC_HTTP_PORT=30020
-UE_RC_WS_PORT=30010
+MCP_AUTOMATION_WS_PORT=8090
 ```
 
 ## Test Output

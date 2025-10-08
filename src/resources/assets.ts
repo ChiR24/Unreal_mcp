@@ -225,18 +225,31 @@ except Exception as e:
         };
       }
     } catch (err: any) {
-      console.warn('Engine asset listing failed:', err.message);
+      const errorMessage = err?.message ? String(err.message) : 'Asset registry request failed';
+      console.warn('Engine asset listing failed:', errorMessage);
+      return {
+        success: false,
+        path: this.normalizeDir(dir),
+        summary: { total: 0, folders: 0, assets: 0 },
+        foldersList: [],
+        assets: [],
+        error: errorMessage,
+        warning: 'AssetRegistry query failed. Ensure the MCP Automation Bridge is connected.',
+        transport: 'automation_bridge',
+        method: 'asset_registry_fallback'
+      };
     }
-    
-    // Fallback: return empty with explanation
+
     return {
-      success: true,
+      success: false,
       path: this.normalizeDir(dir),
       summary: { total: 0, folders: 0, assets: 0 },
       foldersList: [],
       assets: [],
-      warning: 'No items at this path or failed to query AssetRegistry.',
-      method: 'asset_registry_fallback'
+      error: 'Asset registry returned no payload.',
+      warning: 'No items returned from AssetRegistry request.',
+      transport: 'automation_bridge',
+      method: 'asset_registry_empty'
     };
   }
 

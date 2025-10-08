@@ -491,11 +491,30 @@ print("RESULT:" + json.dumps(result))
 
   // Stream level (Python attempt with fallback)
   async streamLevel(params: {
-    levelName: string;
+    levelPath?: string;
+    levelName?: string;
     shouldBeLoaded: boolean;
-    shouldBeVisible: boolean;
+    shouldBeVisible?: boolean;
     position?: [number, number, number];
   }) {
+    const rawPath = typeof params.levelPath === 'string' ? params.levelPath.trim() : '';
+    const levelPath = rawPath.length > 0 ? rawPath : undefined;
+    const providedName = typeof params.levelName === 'string' ? params.levelName.trim() : '';
+    const derivedName = providedName.length > 0
+      ? providedName
+      : (levelPath ? levelPath.split('/').filter(Boolean).pop() ?? '' : '');
+    const levelName = derivedName.length > 0 ? derivedName : undefined;
+    const qualifiedName = levelPath && levelName && !levelName.includes('.')
+      ? `${levelPath}.${levelName}`
+      : undefined;
+    const shouldBeVisible = params.shouldBeVisible ?? params.shouldBeLoaded;
+
+    const levelLiteral = JSON.stringify(levelName ?? '');
+    const levelPathLiteral = JSON.stringify(levelPath ?? '');
+    const qualifiedLiteral = JSON.stringify(qualifiedName ?? '');
+    const loadLiteral = params.shouldBeLoaded ? 'True' : 'False';
+    const visibleLiteral = shouldBeVisible ? 'True' : 'False';
+
     const python = `
 import unreal
 import json
@@ -506,9 +525,11 @@ result = {
   "error": "",
   "warnings": [],
   "details": [],
-  "level": "${params.levelName}",
-  "loaded": ${params.shouldBeLoaded ? 'True' : 'False'},
-  "visible": ${params.shouldBeVisible ? 'True' : 'False'}
+  "level": ${levelLiteral},
+  "level_path": ${levelPathLiteral},
+  "qualified_name": ${qualifiedLiteral},
+  "loaded": ${loadLiteral},
+  "visible": ${visibleLiteral}
 }
 
 try:
@@ -541,6 +562,33 @@ try:
     if not streaming_levels:
       result["error"] = "Streaming levels unavailable"
     else:
+      target_candidates = []
+      try:
+        level_path = (result.get("level_path") or "").replace('\\', '/')
+        level_name = (result.get("level") or "").replace('\\', '/')
+        qualified_name = (result.get("qualified_name") or "").replace('\\', '/')
+
+        candidates_raw = [level_path, level_name, qualified_name]
+
+        if level_path:
+          tail = level_path.split('/')[-1]
+          if tail:
+            candidates_raw.append(tail)
+            if '.' not in tail:
+              candidates_raw.append(f"{level_path}.{tail}")
+
+        if level_name and '/' in level_name:
+          tail = level_name.split('/')[-1]
+          if tail:
+            candidates_raw.append(tail)
+            if '.' not in tail and level_path:
+              candidates_raw.append(f"{level_path}.{tail}")
+
+        target_candidates = [cand for cand in candidates_raw if cand]
+      except Exception as candidate_error:
+        target_candidates = []
+        result["warnings"].append(f"Failed to build target candidates: {candidate_error}")
+
       for streaming_level in streaming_levels:
         try:
           name = None
@@ -552,13 +600,21 @@ try:
             except Exception:
               name = None
 
-          if name and name.endswith('/${params.levelName}'):
+          normalized_name = str(name).replace('\\', '/') if name else None
+          matches = False
+          if normalized_name and target_candidates:
+            for candidate in target_candidates:
+              if normalized_name == candidate or normalized_name.endswith('/' + candidate) or normalized_name.endswith(candidate):
+                matches = True
+                break
+
+          if matches:
             try:
-              streaming_level.set_should_be_loaded(${params.shouldBeLoaded ? 'True' : 'False'})
+              streaming_level.set_should_be_loaded(${loadLiteral})
             except Exception as load_error:
               result["warnings"].append(f"Failed to set loaded flag: {load_error}")
             try:
-              streaming_level.set_should_be_visible(${params.shouldBeVisible ? 'True' : 'False'})
+              streaming_level.set_should_be_visible(${visibleLiteral})
             except Exception as visible_error:
               result["warnings"].append(f"Failed to set visibility: {visible_error}")
             updated = True
@@ -590,6 +646,7 @@ if not result["warnings"]:
   result.pop("warnings")
 if not result["details"]:
   result.pop("details")
+result.pop("qualified_name", None)
 if result.get("error") is None:
   result.pop("error")
 
@@ -603,15 +660,22 @@ print("RESULT:" + json.dumps(result))
         failureMessage: 'Streaming level update failed'
       });
 
-      const levelName = coerceString(interpreted.payload.level) ?? params.levelName;
+      const payloadLevelPath = coerceString((interpreted.payload as Record<string, unknown>)['level_path'])
+        ?? levelPath
+        ?? undefined;
+      const payloadLevel = coerceString(interpreted.payload.level)
+        ?? levelName
+        ?? (payloadLevelPath ? payloadLevelPath.split('/').filter(Boolean).pop() : undefined)
+        ?? '';
       const loaded = coerceBoolean(interpreted.payload.loaded, params.shouldBeLoaded) ?? params.shouldBeLoaded;
-      const visible = coerceBoolean(interpreted.payload.visible, params.shouldBeVisible) ?? params.shouldBeVisible;
+      const visible = coerceBoolean(interpreted.payload.visible, shouldBeVisible) ?? shouldBeVisible;
 
       if (interpreted.success) {
         const result: Record<string, unknown> = {
           success: true,
           message: interpreted.message,
-          level: levelName,
+          level: payloadLevel,
+          levelPath: payloadLevelPath,
           loaded,
           visible
         };
@@ -627,7 +691,8 @@ print("RESULT:" + json.dumps(result))
       const failure: Record<string, unknown> = {
         success: false,
         error: interpreted.error || interpreted.message || 'Streaming level update failed',
-        level: levelName,
+        level: payloadLevel,
+        levelPath: payloadLevelPath,
         loaded,
         visible
       };
@@ -642,9 +707,11 @@ print("RESULT:" + json.dumps(result))
       }
       return failure;
     } catch {
+      const levelIdentifier = levelName ?? levelPath ?? '';
+      const simpleName = levelIdentifier.split('/').filter(Boolean).pop() || levelIdentifier;
       const loadCmd = params.shouldBeLoaded ? 'Load' : 'Unload';
-      const visCmd = params.shouldBeVisible ? 'Show' : 'Hide';
-      const command = `StreamLevel ${params.levelName} ${loadCmd} ${visCmd}`;
+      const visCmd = shouldBeVisible ? 'Show' : 'Hide';
+      const command = `StreamLevel ${simpleName} ${loadCmd} ${visCmd}`;
       return this.bridge.executeConsoleCommand(command);
     }
   }

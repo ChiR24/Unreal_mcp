@@ -2,6 +2,19 @@ import { EventEmitter } from 'node:events';
 import type { IncomingMessage } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Logger } from './utils/logger.js';
+import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const packageInfo: { name?: string; version?: string } = (() => {
+  try {
+    return require('../package.json');
+  } catch (error) {
+    const log = new Logger('AutomationBridge');
+    log.debug('Unable to read package.json for version info', error);
+    return {};
+  }
+})();
 
 export interface AutomationBridgeOptions {
   host?: string;
@@ -10,6 +23,10 @@ export interface AutomationBridgeOptions {
   protocols?: string[];
   capabilityToken?: string;
   enabled?: boolean;
+  serverName?: string;
+  serverVersion?: string;
+  heartbeatIntervalMs?: number;
+  maxPendingRequests?: number;
 }
 
 export interface AutomationBridgeMessage {
@@ -84,6 +101,11 @@ export class AutomationBridge extends EventEmitter {
   private readonly DEFAULT_CAPABILITIES = ['python', 'console_commands'];
   private readonly DEFAULT_HEARTBEAT_INTERVAL_MS = 30000;
   private readonly DEFAULT_MAX_PENDING_REQUESTS = 32;
+  private readonly sessionId = randomUUID();
+  private readonly serverName: string;
+  private readonly serverVersion: string;
+  private readonly heartbeatIntervalMs: number;
+  private readonly maxPendingRequests: number;
   private activeSocket?: WebSocket;
   private activePort?: number;
   private activeProtocol?: string;
@@ -98,6 +120,7 @@ export class AutomationBridge extends EventEmitter {
   private lastError?: { message: string; at: Date };
   private lastMessageAt?: Date;
   private lastRequestSentAt?: Date;
+  private heartbeatTimer?: NodeJS.Timeout;
 
   constructor(options: AutomationBridgeOptions = {}) {
     super();
@@ -149,6 +172,19 @@ export class AutomationBridge extends EventEmitter {
     this.capabilityToken =
       options.capabilityToken ?? process.env.MCP_AUTOMATION_CAPABILITY_TOKEN ?? undefined;
     this.enabled = options.enabled ?? process.env.MCP_AUTOMATION_BRIDGE_ENABLED !== 'false';
+    this.serverName = options.serverName
+      ?? process.env.MCP_SERVER_NAME
+      ?? packageInfo.name
+      ?? 'unreal-engine-mcp';
+    this.serverVersion = options.serverVersion
+      ?? process.env.MCP_SERVER_VERSION
+      ?? packageInfo.version
+      ?? process.env.npm_package_version
+      ?? '0.0.0';
+    const resolvedHeartbeat = options.heartbeatIntervalMs ?? this.DEFAULT_HEARTBEAT_INTERVAL_MS;
+    this.heartbeatIntervalMs = resolvedHeartbeat > 0 ? resolvedHeartbeat : 0;
+    const resolvedMaxPending = options.maxPendingRequests ?? this.DEFAULT_MAX_PENDING_REQUESTS;
+    this.maxPendingRequests = Math.max(1, resolvedMaxPending);
   }
 
   override on<K extends keyof AutomationBridgeEvents>(
@@ -243,6 +279,15 @@ export class AutomationBridge extends EventEmitter {
 
   /** Stops the WebSocket server and active connection. */
   stop(): void {
+    if (this.isConnected()) {
+      this.send({
+        type: 'bridge_shutdown',
+        sessionId: this.sessionId,
+        timestamp: new Date().toISOString(),
+        reason: 'Server shutting down'
+      });
+    }
+    this.stopHeartbeat();
     if (this.activeSocket) {
       this.activeSocket.removeAllListeners();
       this.activeSocket.close(1001, 'Server shutdown');
@@ -342,6 +387,7 @@ export class AutomationBridge extends EventEmitter {
       log.warn(
         `Existing automation bridge connection detected on port ${previousPort ?? 'unknown'}; closing previous socket.`
       );
+      this.stopHeartbeat();
       this.activeSocket.close(4001, 'Superseded by new connection');
       this.rejectAllPending(new Error('Automation bridge connection superseded by new client.'));
     }
@@ -400,7 +446,8 @@ export class AutomationBridge extends EventEmitter {
         this.lastMessageAt = now;
   const ackPayload = this.createHandshakeAck(parsed as Record<string, unknown>);
         this.lastHandshakeAck = ackPayload;
-  this.send(ackPayload);
+    this.send(ackPayload);
+    this.startHeartbeat();
         this.emitAutomation('connected', {
           socket,
           metadata,
@@ -431,6 +478,7 @@ export class AutomationBridge extends EventEmitter {
         this.activePort = undefined;
       }
       clearTimeout(handshakeTimeout);
+      this.stopHeartbeat();
       this.lastDisconnect = { code, reason, at: new Date() };
       this.emitAutomation('disconnected', {
         code,
@@ -460,25 +508,25 @@ export class AutomationBridge extends EventEmitter {
   }
 
   private createHandshakeAck(handshake: Record<string, unknown>): AutomationBridgeMessage {
-    const version = typeof process.env.npm_package_version === 'string'
-      ? process.env.npm_package_version
-      : '0.0.0';
-    const handshakeVersion = typeof handshake['protocolVersion'] === 'number'
-      ? handshake['protocolVersion']
-      : typeof handshake['protocol_version'] === 'number'
-        ? handshake['protocol_version']
+    const handshakeVersionRaw =
+      handshake['protocolVersion'] ?? handshake['protocol_version'] ?? 1;
+    const protocolVersion =
+      typeof handshakeVersionRaw === 'number' || typeof handshakeVersionRaw === 'string'
+        ? handshakeVersionRaw
         : 1;
 
     return {
       type: 'bridge_ack',
       message: 'Automation bridge ready',
-      serverVersion: version,
-      protocolVersion: handshakeVersion,
+      serverName: this.serverName,
+      serverVersion: this.serverVersion,
+      sessionId: this.sessionId,
+      protocolVersion,
       supportedOpcodes: [...this.DEFAULT_SUPPORTED_OPCODES],
       expectedResponseOpcodes: [...this.DEFAULT_RESPONSE_OPCODES],
       capabilities: [...this.DEFAULT_CAPABILITIES],
-      heartbeatIntervalMs: this.DEFAULT_HEARTBEAT_INTERVAL_MS,
-      maxPendingRequests: this.DEFAULT_MAX_PENDING_REQUESTS,
+      heartbeatIntervalMs: this.heartbeatIntervalMs,
+      maxPendingRequests: this.maxPendingRequests,
       supportedProtocols: [...this.negotiatedProtocols],
       availablePorts: [...this.ports],
       activePort: this.activePort ?? null,
@@ -487,11 +535,23 @@ export class AutomationBridge extends EventEmitter {
   }
 
   private handleAutomationMessage(message: AutomationBridgeMessage): void {
-    if (message.type !== 'automation_response') {
-      return;
+    switch (message.type) {
+      case 'automation_response':
+        this.handleAutomationResponse(message as AutomationBridgeResponseMessage);
+        break;
+      case 'bridge_ping':
+        this.handleBridgePing(message);
+        break;
+      case 'bridge_goodbye':
+        log.info('Automation bridge client initiated shutdown.', message);
+        break;
+      default:
+        log.debug('Received automation bridge message with no handler', message);
+        break;
     }
+  }
 
-    const response = message as AutomationBridgeResponseMessage;
+  private handleAutomationResponse(response: AutomationBridgeResponseMessage): void {
     const requestId = response.requestId;
     if (!requestId) {
       log.warn('Received automation_response without requestId');
@@ -507,6 +567,47 @@ export class AutomationBridge extends EventEmitter {
     clearTimeout(pending.timeout);
     this.pendingRequests.delete(requestId);
     pending.resolve(response);
+  }
+
+  private handleBridgePing(message: AutomationBridgeMessage): void {
+    const pong: AutomationBridgeMessage = {
+      type: 'bridge_pong',
+      sessionId: this.sessionId,
+      timestamp: new Date().toISOString()
+    };
+
+    if (Object.prototype.hasOwnProperty.call(message, 'nonce')) {
+      pong.nonce = message.nonce;
+    }
+
+    this.send(pong);
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    if (this.heartbeatIntervalMs <= 0) {
+      return;
+    }
+
+    this.heartbeatTimer = setInterval(() => {
+      if (!this.isConnected()) {
+        this.stopHeartbeat();
+        return;
+      }
+
+      this.send({
+        type: 'bridge_heartbeat',
+        sessionId: this.sessionId,
+        timestamp: new Date().toISOString()
+      });
+    }, this.heartbeatIntervalMs);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = undefined;
+    }
   }
 
   private rejectAllPending(error: Error): void {

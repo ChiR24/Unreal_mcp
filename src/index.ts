@@ -47,6 +47,28 @@ import { createElicitationHelper } from './utils/elicitation.js';
 import { cleanObject } from './utils/safe-json.js';
 import { ErrorHandler } from './utils/error-handler.js';
 
+const ListCommandsRequestSchema = z.object({
+  method: z.literal('commands/list'),
+  params: z
+    .object({
+      _meta: z.any().optional()
+    })
+    .partial()
+    .optional()
+});
+
+const listCommandsResponse = {
+  commands: [
+    { name: 'ping', description: 'Check connectivity' },
+    { name: 'tools/list', description: 'List available tools' },
+    { name: 'tools/call', description: 'Invoke a tool by name' },
+    { name: 'resources/list', description: 'List available resources' },
+    { name: 'resources/read', description: 'Read the contents of a resource' },
+    { name: 'prompts/list', description: 'List prompt templates' },
+    { name: 'prompts/get', description: 'Fetch a prompt template' }
+  ]
+} as const;
+
 const log = new Logger('UE-MCP');
 
 // Ensure stdout remains JSON-only for MCP by routing logs to stderr unless opted out.
@@ -309,6 +331,9 @@ export function createServer() {
     });
   };
 
+  // Handle commands listing for MCP inspector compatibility
+  server.setRequestHandler(ListCommandsRequestSchema, async () => listCommandsResponse);
+
   // Handle resource listing
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
     return {
@@ -409,32 +434,18 @@ export function createServer() {
     }
     
     if (uri === 'ue://exposed') {
-      const ok = await ensureConnectedOnDemand();
-      if (!ok) {
-        return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
-      }
-      try {
-        const exposed = await bridge.getExposed();
-        return {
-          contents: [{
-            uri,
-            mimeType: 'application/json',
-            text: JSON.stringify(exposed, null, 2)
-          }]
-        };
-      } catch {
-        return {
-          contents: [{
-            uri,
-            mimeType: 'text/plain',
-            text: 'Failed to get exposed properties. Ensure Remote Control is configured.'
-          }]
-        };
-      }
+      return {
+        contents: [{
+          uri,
+          mimeType: 'text/plain',
+          text: 'Remote Control exposed properties are no longer available; tools now rely on the automation bridge.'
+        }]
+      };
     }
     
     if (uri === 'ue://health') {
       const uptimeMs = Date.now() - metrics.uptime;
+      const automationStatus = automationBridge.getStatus();
       // Query engine version and feature flags only when connected
       let versionInfo: any = {};
       let featureFlags: any = {};
@@ -457,17 +468,16 @@ export function createServer() {
         unrealConnection: {
           status: bridge.isConnected ? 'connected' : 'disconnected',
           host: process.env.UE_HOST || 'localhost',
-          httpPort: process.env.UE_RC_HTTP_PORT || 30010,
-          wsPort: process.env.UE_RC_WS_PORT || 30020,
+          transport: 'automation_bridge',
           engineVersion: versionInfo,
           features: {
             pythonEnabled: featureFlags.pythonEnabled === true,
             subsystems: featureFlags.subsystems || {},
-            rcHttpReachable: bridge.isConnected
+            automationBridgeConnected: automationStatus.connected
           }
         },
         recentErrors: metrics.recentErrors.slice(-5),
-        automationBridge: automationBridge.getStatus()
+        automationBridge: automationStatus
       };
       
       return {
@@ -652,24 +662,39 @@ export function createServer() {
       }
 
       let result = await handleConsolidatedToolCall(name, args, tools);
-      
+
       log.debug(`Tool ${name} returned result`);
-      
+
       // Clean the result to remove circular references
       result = cleanObject(result);
-      
+
+      const explicitSuccess = typeof (result as any)?.success === 'boolean' ? Boolean((result as any).success) : undefined;
+
       // Validate and enhance response
-      result = responseValidator.wrapResponse(name, result);
-      
-      trackPerformance(startTime, true);
-      
-      log.info(`Tool ${name} completed successfully in ${Date.now() - startTime}ms`);
-      
+      const wrappedResult = responseValidator.wrapResponse(name, result);
+
+      const wrappedSuccess = typeof (wrappedResult as any)?.success === 'boolean'
+        ? Boolean((wrappedResult as any).success)
+        : undefined;
+      const isErrorResponse = Boolean((wrappedResult as any)?.isError === true);
+
+      const tentative = explicitSuccess ?? wrappedSuccess;
+      const finalSuccess = tentative !== undefined ? (tentative && !isErrorResponse) : !isErrorResponse;
+
+      trackPerformance(startTime, finalSuccess);
+
+      const durationMs = Date.now() - startTime;
+      if (finalSuccess) {
+        log.info(`Tool ${name} completed successfully in ${durationMs}ms`);
+      } else {
+        log.warn(`Tool ${name} completed with errors in ${durationMs}ms`);
+      }
+
       // Log that we're returning the response
-      const responsePreview = JSON.stringify(result).substring(0, 100);
+      const responsePreview = JSON.stringify(wrappedResult).substring(0, 100);
       log.debug(`Returning response to MCP client: ${responsePreview}...`);
-      
-      return result;
+
+      return wrappedResult;
     } catch (error) {
       trackPerformance(startTime, false);
       
@@ -751,9 +776,7 @@ export function createServer() {
 
 // Export configuration schema for Smithery session UI and validation
 export const configSchema = z.object({
-  ueHost: z.string().optional().default('127.0.0.1').describe('Unreal Engine host (e.g. 127.0.0.1)'),
-  ueHttpPort: z.number().int().optional().default(30010).describe('Remote Control HTTP port'),
-  ueWsPort: z.number().int().optional().default(30020).describe('Remote Control WebSocket port'),
+  ueHost: z.string().optional().default('127.0.0.1').describe('Unreal Engine host (used for display and telemetry only)'),
   logLevel: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info').describe('Runtime log level'),
   projectPath: z.string().optional().default('C:/Users/YourName/Documents/Unreal Projects/YourProject').describe('Absolute path to your Unreal .uproject file')
 });
@@ -764,8 +787,6 @@ export default function createServerDefault({ config }: { config?: any } = {}) {
   try {
     if (config) {
       if (typeof config.ueHost === 'string' && config.ueHost.trim()) process.env.UE_HOST = config.ueHost;
-      if (config.ueHttpPort !== undefined) process.env.UE_RC_HTTP_PORT = String(config.ueHttpPort);
-      if (config.ueWsPort !== undefined) process.env.UE_RC_WS_PORT = String(config.ueWsPort);
   if (typeof config.logLevel === 'string') process.env.LOG_LEVEL = config.logLevel;
   if (typeof config.projectPath === 'string' && config.projectPath.trim()) process.env.UE_PROJECT_PATH = config.projectPath;
     }
