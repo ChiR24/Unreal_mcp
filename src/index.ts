@@ -4,6 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { Logger } from './utils/logger.js';
 import { UnrealBridge } from './unreal-bridge.js';
 import { AutomationBridge } from './automation-bridge.js';
+import { createRequire } from 'node:module';
 import { AssetResources } from './resources/assets.js';
 import { ActorResources } from './resources/actors.js';
 import { LevelResources } from './resources/levels.js';
@@ -46,6 +47,23 @@ import { routeStdoutLogsToStderr } from './utils/stdio-redirect.js';
 import { createElicitationHelper } from './utils/elicitation.js';
 import { cleanObject } from './utils/safe-json.js';
 import { ErrorHandler } from './utils/error-handler.js';
+
+const require = createRequire(import.meta.url);
+const packageInfo: { name?: string; version?: string } = (() => {
+  try {
+    return require('../package.json');
+  } catch (error) {
+    const log = new Logger('UE-MCP');
+    log.debug('Unable to read package.json for server metadata', error);
+    return {};
+  }
+})();
+const DEFAULT_SERVER_NAME = typeof packageInfo.name === 'string' && packageInfo.name.trim().length > 0
+  ? packageInfo.name
+  : 'unreal-engine-mcp';
+const DEFAULT_SERVER_VERSION = typeof packageInfo.version === 'string' && packageInfo.version.trim().length > 0
+  ? packageInfo.version
+  : '0.0.0';
 
 const ListCommandsRequestSchema = z.object({
   method: z.literal('commands/list'),
@@ -110,8 +128,9 @@ const CONFIG = {
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY_MS: 2000,
   // Server info
-  SERVER_NAME: 'unreal-engine-mcp',
-  SERVER_VERSION: '0.4.6',
+  SERVER_NAME: DEFAULT_SERVER_NAME,
+  SERVER_VERSION: DEFAULT_SERVER_VERSION,
+  AUTOMATION_HEARTBEAT_MS: 15000,
   // Monitoring
   HEALTH_CHECK_INTERVAL_MS: 30000 // 30 seconds
 };
@@ -172,7 +191,11 @@ export function createServer() {
   // Disable auto-reconnect loops; connect only on-demand
   bridge.setAutoReconnectEnabled(false);
 
-  const automationBridge = new AutomationBridge();
+  const automationBridge = new AutomationBridge({
+    serverName: CONFIG.SERVER_NAME,
+    serverVersion: CONFIG.SERVER_VERSION,
+    heartbeatIntervalMs: CONFIG.AUTOMATION_HEARTBEAT_MS
+  });
   bridge.setAutomationBridge(automationBridge);
   automationBridge.start();
 
@@ -800,8 +823,49 @@ export default function createServerDefault({ config }: { config?: any } = {}) {
 }
 
 export async function startStdioServer() {
-  const { server } = createServer();
+  const { server, automationBridge } = createServer();
   const transport = new StdioServerTransport();
+  let shuttingDown = false;
+
+  const handleShutdown = async (signal?: NodeJS.Signals) => {
+    if (shuttingDown) {
+      return;
+    }
+    shuttingDown = true;
+    const reason = signal ? ` due to ${signal}` : '';
+    log.info(`Shutting down MCP server${reason}`);
+    try {
+      automationBridge.stop();
+    } catch (error) {
+      log.warn('Failed to stop automation bridge cleanly', error);
+    }
+
+    try {
+      if (typeof (server as any).close === 'function') {
+        await (server as any).close();
+      }
+    } catch (error) {
+      log.warn('Failed to close MCP server transport cleanly', error);
+    }
+
+    if (signal) {
+      process.exit(0);
+    }
+  };
+
+  ['SIGINT', 'SIGTERM'].forEach((signal) => {
+    process.once(signal as NodeJS.Signals, () => {
+      void handleShutdown(signal as NodeJS.Signals);
+    });
+  });
+
+  process.once('beforeExit', () => {
+    automationBridge.stop();
+  });
+
+  process.once('exit', () => {
+    automationBridge.stop();
+  });
   
   // Add debugging for transport messages
   const originalWrite = process.stdout.write;

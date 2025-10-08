@@ -542,6 +542,10 @@ export class AutomationBridge extends EventEmitter {
       case 'bridge_ping':
         this.handleBridgePing(message);
         break;
+      case 'bridge_pong':
+      case 'bridge_heartbeat':
+        // Heartbeat acknowledgements require no action beyond updating timestamps.
+        break;
       case 'bridge_goodbye':
         log.info('Automation bridge client initiated shutdown.', message);
         break;
