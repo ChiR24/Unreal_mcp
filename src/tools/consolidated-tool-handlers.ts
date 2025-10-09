@@ -263,8 +263,34 @@ export async function handleConsolidatedToolCall(
 
             const sourcePathValidated = requireNonEmptyString(sourcePath || args.sourcePath, 'sourcePath', 'Invalid sourcePath');
             const destinationPathValidated = requireNonEmptyString(destinationPath || args.destinationPath, 'destinationPath', 'Invalid destinationPath');
-            const res = await tools.assetTools.importAsset(sourcePathValidated, destinationPathValidated);
-            return cleanObject(res);
+            
+            // Use deferred asset import to avoid Task Graph recursion
+            const automationInfo = getAutomationBridgeInfo(tools);
+            const automationBridge = automationInfo.instance;
+            if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
+              throw new Error('Automation bridge not connected for asset import');
+            }
+            
+            const response = await automationBridge.sendAutomationRequest(
+              'import_asset_deferred',
+              { sourcePath: sourcePathValidated, destinationPath: destinationPathValidated }
+            );
+            
+            if (response.success === false) {
+              return cleanObject({
+                success: false,
+                message: response.message || 'Asset import failed',
+                error: response.error || response.message || 'IMPORT_FAILED'
+              });
+            }
+            
+            const res = response.result || {};
+            return cleanObject({
+              success: true,
+              message: res.message || `Imported assets to ${destinationPathValidated}`,
+              imported: res.imported || 0,
+              paths: res.paths || []
+            });
           }
           case 'create_material': {
             await elicitMissingPrimitiveArgs(

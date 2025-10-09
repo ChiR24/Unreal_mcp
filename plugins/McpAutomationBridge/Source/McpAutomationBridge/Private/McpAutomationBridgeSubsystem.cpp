@@ -20,6 +20,8 @@
 #include "Math/Vector.h"
 #include "Math/Rotator.h"
 #include "Misc/PackageName.h"
+#include "Misc/CoreMisc.h"
+#include "Async/Async.h"
 #include "ScopedTransaction.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
@@ -29,6 +31,8 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/SoftObjectPath.h"
+#include "AssetImportTask.h"
+#include "AssetToolsModule.h"
 
 DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
 
@@ -347,15 +351,22 @@ void UMcpAutomationBridgeSubsystem::Deinitialize()
 
 bool UMcpAutomationBridgeSubsystem::SendRawMessage(const FString& Message)
 {
-    if (!ActiveSocket.IsValid() || !ActiveSocket->IsConnected())
+    // Send to all connected sockets
+    bool bSentToAny = false;
+    for (const TSharedPtr<FMcpBridgeWebSocket>& Socket : ActiveSockets)
     {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Bridge socket not connected; message dropped."));
-        return false;
+        if (Socket.IsValid() && Socket->IsConnected())
+        {
+            Socket->Send(Message);
+            bSentToAny = true;
+        }
     }
-
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Outbound automation message: %s"), *Message);
-    ActiveSocket->Send(Message);
-    return true;
+    
+    if (!bSentToAny)
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Bridge sockets not connected; message dropped."));
+    }
+    return bSentToAny;
 }
 
 bool UMcpAutomationBridgeSubsystem::Tick(const float DeltaTime)
@@ -375,7 +386,7 @@ bool UMcpAutomationBridgeSubsystem::Tick(const float DeltaTime)
         }
     }
 
-    if (!ActiveSocket.IsValid() && BridgeState == EMcpAutomationBridgeState::Connecting)
+    if (!ActiveSockets.Num() && BridgeState == EMcpAutomationBridgeState::Connecting)
     {
         BridgeState = EMcpAutomationBridgeState::Disconnected;
     }
@@ -388,6 +399,17 @@ bool UMcpAutomationBridgeSubsystem::Tick(const float DeltaTime)
             const float ElapsedSeconds = static_cast<float>(NowSeconds - LastHeartbeatTimestamp);
             UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Automation bridge heartbeat timed out after %.1f seconds; forcing reconnect."), ElapsedSeconds);
             ForceReconnect(TEXT("Heartbeat timeout."), 0.1f);
+        }
+        else if (HeartbeatTimeoutSeconds > 0.0f && (NowSeconds - LastHeartbeatTimestamp) > static_cast<double>(HeartbeatTimeoutSeconds / 3.0f))
+        {
+            // Send heartbeat ping to all connected clients
+            for (const TSharedPtr<FMcpBridgeWebSocket>& Socket : ActiveSockets)
+            {
+                if (Socket.IsValid() && Socket->IsConnected())
+                {
+                    Socket->SendHeartbeatPing();
+                }
+            }
         }
     }
 
@@ -403,56 +425,43 @@ void UMcpAutomationBridgeSubsystem::AttemptConnection()
 
     ResetHeartbeatTracking();
 
-    if (EndpointUrl.IsEmpty())
-    {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Automation bridge endpoint is empty; skipping connection."));
-        BridgeState = EMcpAutomationBridgeState::Disconnected;
-        bReconnectEnabled = false;
-        return;
-    }
+    // In server mode, we don't need an endpoint URL - we listen on a fixed port
+    const int32 ListenPort = 8091;
 
-    if (ActiveSocket.IsValid())
-    {
-        ActiveSocket->OnConnected().RemoveAll(this);
-        ActiveSocket->OnConnectionError().RemoveAll(this);
-        ActiveSocket->OnClosed().RemoveAll(this);
-        ActiveSocket->OnMessage().RemoveAll(this);
-        ActiveSocket->Close();
-        ActiveSocket.Reset();
-    }
+    // Create server socket that listens for MCP client connections
+    auto ServerSocket = MakeShared<FMcpBridgeWebSocket>(ListenPort);
 
-    TMap<FString, FString> Headers;
-    if (!CapabilityToken.IsEmpty())
-    {
-        Headers.Add(TEXT("X-MCP-Capability"), CapabilityToken);
-    }
+    ServerSocket->InitializeWeakSelf(ServerSocket);
 
-    ActiveSocket = MakeShared<FMcpBridgeWebSocket>(EndpointUrl, TEXT(""), Headers);
+    // For server mode, we handle client connections instead of our own connection
+    ServerSocket->OnClientConnected().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleClientConnected);
+    ServerSocket->OnConnectionError().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleConnectionError);
+    ServerSocket->OnClosed().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleClosed);
+    ServerSocket->OnMessage().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleMessage);
+    ServerSocket->OnHeartbeat().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleHeartbeat);
 
-    if (!ActiveSocket.IsValid())
-    {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Failed to create WebSocket for endpoint %s"), *EndpointUrl);
-        BridgeState = EMcpAutomationBridgeState::Disconnected;
-        TimeUntilReconnect = AutoReconnectDelaySeconds;
-        return;
-    }
-
-    ActiveSocket->InitializeWeakSelf(ActiveSocket);
-
-    ActiveSocket->OnConnected().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleConnected);
-    ActiveSocket->OnConnectionError().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleConnectionError);
-    ActiveSocket->OnClosed().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleClosed);
-    ActiveSocket->OnMessage().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleMessage);
-
+    ActiveSockets.Add(ServerSocket);
     BridgeState = EMcpAutomationBridgeState::Connecting;
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Connecting to MCP automation endpoint %s"), *EndpointUrl);
-    ActiveSocket->Connect();
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Starting MCP automation server on port %d"), ListenPort);
+    ServerSocket->Listen();
 }
 
-void UMcpAutomationBridgeSubsystem::HandleConnected()
+void UMcpAutomationBridgeSubsystem::HandleConnected(TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     BridgeState = EMcpAutomationBridgeState::Connected;
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("MCP automation bridge connected."));
+
+    // Add the socket to active sockets if it's not already there
+    if (!ActiveSockets.Contains(Socket))
+    {
+        ActiveSockets.Add(Socket);
+        
+        // Set up event handlers for this socket
+        Socket->OnClosed().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleClosed);
+        Socket->OnMessage().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleMessage);
+        Socket->OnHeartbeat().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleHeartbeat);
+    }
+
     ActiveSessionId.Reset();
     RecordHeartbeat();
     bHeartbeatTrackingEnabled = false;
@@ -470,9 +479,9 @@ void UMcpAutomationBridgeSubsystem::HandleConnected()
         Writer->Close();
     }
 
-    if (ActiveSocket.IsValid())
+    if (Socket.IsValid())
     {
-        ActiveSocket->Send(HelloPayload);
+        Socket->Send(HelloPayload);
     }
 
     FMcpAutomationMessage Handshake;
@@ -481,7 +490,57 @@ void UMcpAutomationBridgeSubsystem::HandleConnected()
     OnMessageReceived.Broadcast(Handshake);
 }
 
-void UMcpAutomationBridgeSubsystem::HandleConnectionError(const FString& Error)
+void UMcpAutomationBridgeSubsystem::HandleClientConnected(TSharedPtr<FMcpBridgeWebSocket> ClientSocket)
+{
+    BridgeState = EMcpAutomationBridgeState::Connected;
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("MCP automation client connected."));
+
+    // Add the client socket to active sockets if it's not already there
+    if (!ActiveSockets.Contains(ClientSocket))
+    {
+        ActiveSockets.Add(ClientSocket);
+        
+        // Set up event handlers for this client socket
+        ClientSocket->OnClosed().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleClosed);
+        ClientSocket->OnMessage().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleMessage);
+        ClientSocket->OnHeartbeat().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleHeartbeat);
+    }
+
+    ActiveSessionId.Reset();
+    RecordHeartbeat();
+    bHeartbeatTrackingEnabled = false;
+
+    // Send server hello to the connected client
+    FString HelloPayload;
+    {
+        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&HelloPayload);
+        Writer->WriteObjectStart();
+        Writer->WriteValue(TEXT("type"), TEXT("bridge_ack"));
+        Writer->WriteValue(TEXT("serverVersion"), TEXT("1.0.0"));
+        Writer->WriteValue(TEXT("serverName"), TEXT("Unreal Engine MCP Automation Bridge"));
+        Writer->WriteValue(TEXT("sessionId"), FGuid::NewGuid().ToString());
+        Writer->WriteValue(TEXT("heartbeatIntervalMs"), 30000); // 30 second heartbeat
+        Writer->WriteObjectEnd();
+        Writer->Close();
+    }
+
+    if (ClientSocket.IsValid())
+    {
+        ClientSocket->Send(HelloPayload);
+    }
+
+    FMcpAutomationMessage Handshake;
+    Handshake.Type = TEXT("bridge_started");
+    Handshake.PayloadJson = TEXT("{}");
+    OnMessageReceived.Broadcast(Handshake);
+}
+
+void UMcpAutomationBridgeSubsystem::HandleHeartbeat(TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    RecordHeartbeat();
+}
+
+void UMcpAutomationBridgeSubsystem::HandleConnectionError(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Error)
 {
     if (AutoReconnectDelaySeconds > 0.0f)
     {
@@ -494,33 +553,41 @@ void UMcpAutomationBridgeSubsystem::HandleConnectionError(const FString& Error)
     BridgeState = EMcpAutomationBridgeState::Disconnected;
     TimeUntilReconnect = AutoReconnectDelaySeconds;
     ResetHeartbeatTracking();
-    if (ActiveSocket.IsValid())
+    
+    // Remove the failed socket
+    ActiveSockets.Remove(Socket);
+    
+    if (Socket.IsValid())
     {
-        ActiveSocket->OnConnected().RemoveAll(this);
-        ActiveSocket->OnConnectionError().RemoveAll(this);
-        ActiveSocket->OnClosed().RemoveAll(this);
-        ActiveSocket->OnMessage().RemoveAll(this);
-        ActiveSocket.Reset();
+        Socket->OnConnected().RemoveAll(this);
+        Socket->OnConnectionError().RemoveAll(this);
+        Socket->OnClosed().RemoveAll(this);
+        Socket->OnMessage().RemoveAll(this);
+        Socket->OnHeartbeat().RemoveAll(this);
     }
 }
 
-void UMcpAutomationBridgeSubsystem::HandleClosed(const int32 StatusCode, const FString& Reason, const bool bWasClean)
+void UMcpAutomationBridgeSubsystem::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket, const int32 StatusCode, const FString& Reason, const bool bWasClean)
 {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Automation bridge closed (code %d, clean=%s): %s"), StatusCode, bWasClean ? TEXT("true") : TEXT("false"), *Reason);
     BridgeState = EMcpAutomationBridgeState::Disconnected;
     TimeUntilReconnect = AutoReconnectDelaySeconds;
     ResetHeartbeatTracking();
-    if (ActiveSocket.IsValid())
+    
+    // Remove the closed socket
+    ActiveSockets.Remove(Socket);
+    
+    if (Socket.IsValid())
     {
-        ActiveSocket->OnConnected().RemoveAll(this);
-        ActiveSocket->OnConnectionError().RemoveAll(this);
-        ActiveSocket->OnClosed().RemoveAll(this);
-        ActiveSocket->OnMessage().RemoveAll(this);
-        ActiveSocket.Reset();
+        Socket->OnConnected().RemoveAll(this);
+        Socket->OnConnectionError().RemoveAll(this);
+        Socket->OnClosed().RemoveAll(this);
+        Socket->OnMessage().RemoveAll(this);
+        Socket->OnHeartbeat().RemoveAll(this);
     }
 }
 
-void UMcpAutomationBridgeSubsystem::HandleMessage(const FString& Message)
+void UMcpAutomationBridgeSubsystem::HandleMessage(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Message)
 {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Automation bridge inbound: %s"), *Message);
 
@@ -550,7 +617,7 @@ void UMcpAutomationBridgeSubsystem::HandleMessage(const FString& Message)
                 FString Action;
                 if (!JsonObject->TryGetStringField(TEXT("action"), Action) || Action.IsEmpty())
                 {
-                    SendAutomationError(RequestId, TEXT("Automation request missing action."), TEXT("INVALID_ACTION"));
+                    SendAutomationError(Socket, RequestId, TEXT("Automation request missing action."), TEXT("INVALID_ACTION"));
                 }
                 else
                 {
@@ -559,7 +626,9 @@ void UMcpAutomationBridgeSubsystem::HandleMessage(const FString& Message)
                     {
                         Payload = JsonObject->GetObjectField(TEXT("payload"));
                     }
-                    ProcessAutomationRequest(RequestId, Action, Payload);
+                    // Track which socket made this request
+                    PendingRequestsToSockets.Add(RequestId, Socket);
+                    ProcessAutomationRequest(RequestId, Action, Payload, Socket);
                 }
             }
             return;
@@ -648,20 +717,48 @@ void UMcpAutomationBridgeSubsystem::HandleMessage(const FString& Message)
     OnMessageReceived.Broadcast(Parsed);
 }
 
-void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload)
+void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    // Ensure automation processing happens on the game thread
+    if (!IsInGameThread())
+    {
+        AsyncTask(ENamedThreads::GameThread, [WeakThis = TWeakObjectPtr<UMcpAutomationBridgeSubsystem>(this), RequestId, Action, Payload, RequestingSocket]()
+        {
+            if (UMcpAutomationBridgeSubsystem* Pinned = WeakThis.Get())
+            {
+                Pinned->ProcessAutomationRequest(RequestId, Action, Payload, RequestingSocket);
+            }
+        });
+        return;
+    }
+
+    // Guard against reentrant automation request processing to prevent Task Graph recursion crashes
+    if (bProcessingAutomationRequest)
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Ignoring reentrant automation request %s for action %s"), *RequestId, *Action);
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Automation request processing is already in progress. Please wait for the current request to complete."), TEXT("REENTRANT_REQUEST"));
+        return;
+    }
+
+    bProcessingAutomationRequest = true;
+
+    // Ensure the flag is reset even if an exception occurs
+    ON_SCOPE_EXIT
+    {
+        bProcessingAutomationRequest = false;
+    };
     if (Action.Equals(TEXT("execute_editor_python"), ESearchCase::IgnoreCase))
     {
         if (!Payload.IsValid())
         {
-            SendAutomationError(RequestId, TEXT("execute_editor_python payload missing."), TEXT("INVALID_PAYLOAD"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("execute_editor_python payload missing."), TEXT("INVALID_PAYLOAD"));
             return;
         }
 
         FString Script;
         if (!Payload->TryGetStringField(TEXT("script"), Script) || Script.TrimStartAndEnd().IsEmpty())
         {
-            SendAutomationError(RequestId, TEXT("execute_editor_python requires a non-empty script."), TEXT("INVALID_ARGUMENT"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("execute_editor_python requires a non-empty script."), TEXT("INVALID_ARGUMENT"));
             return;
         }
 
@@ -673,7 +770,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         IPythonScriptPlugin* PythonPlugin = IPythonScriptPlugin::Get();
         if (!PythonPlugin)
         {
-            SendAutomationError(RequestId, TEXT("PythonScriptPlugin is not available. Enable the Python Editor Script Plugin."), TEXT("PYTHON_PLUGIN_DISABLED"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("PythonScriptPlugin is not available. Enable the Python Editor Script Plugin."), TEXT("PYTHON_PLUGIN_DISABLED"));
             return;
         }
 
@@ -728,7 +825,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             }
         }
 
-        SendAutomationResponse(RequestId, bSuccess, ResultMessage, ResultPayload, bSuccess ? FString() : TEXT("PYTHON_EXEC_FAILED"));
+        SendAutomationResponse(RequestingSocket, RequestId, bSuccess, ResultMessage, ResultPayload, bSuccess ? FString() : TEXT("PYTHON_EXEC_FAILED"));
         return;
     }
 
@@ -736,42 +833,42 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
     {
         if (!Payload.IsValid())
         {
-            SendAutomationError(RequestId, TEXT("set_object_property payload missing."), TEXT("INVALID_PAYLOAD"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("set_object_property payload missing."), TEXT("INVALID_PAYLOAD"));
             return;
         }
 
         FString ObjectPath;
         if (!Payload->TryGetStringField(TEXT("objectPath"), ObjectPath) || ObjectPath.TrimStartAndEnd().IsEmpty())
         {
-            SendAutomationError(RequestId, TEXT("set_object_property requires a non-empty objectPath."), TEXT("INVALID_OBJECT"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("set_object_property requires a non-empty objectPath."), TEXT("INVALID_OBJECT"));
             return;
         }
 
         FString PropertyName;
         if (!Payload->TryGetStringField(TEXT("propertyName"), PropertyName) || PropertyName.TrimStartAndEnd().IsEmpty())
         {
-            SendAutomationError(RequestId, TEXT("set_object_property requires a non-empty propertyName."), TEXT("INVALID_PROPERTY"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("set_object_property requires a non-empty propertyName."), TEXT("INVALID_PROPERTY"));
             return;
         }
 
         const TSharedPtr<FJsonValue> ValueField = Payload->TryGetField(TEXT("value"));
         if (!ValueField.IsValid())
         {
-            SendAutomationError(RequestId, TEXT("set_object_property payload missing value field."), TEXT("INVALID_VALUE"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("set_object_property payload missing value field."), TEXT("INVALID_VALUE"));
             return;
         }
 
         UObject* TargetObject = FindObject<UObject>(nullptr, *ObjectPath);
         if (!TargetObject)
         {
-            SendAutomationError(RequestId, FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath), TEXT("OBJECT_NOT_FOUND"));
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath), TEXT("OBJECT_NOT_FOUND"));
             return;
         }
 
         FProperty* Property = TargetObject->GetClass()->FindPropertyByName(*PropertyName);
         if (!Property)
         {
-            SendAutomationError(RequestId, FString::Printf(TEXT("Property %s not found on object %s."), *PropertyName, *ObjectPath), TEXT("PROPERTY_NOT_FOUND"));
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Property %s not found on object %s."), *PropertyName, *ObjectPath), TEXT("PROPERTY_NOT_FOUND"));
             return;
         }
 
@@ -783,7 +880,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
 
         if (!ApplyJsonValueToProperty(TargetObject, Property, ValueField, ConversionError))
         {
-            SendAutomationError(RequestId, ConversionError, TEXT("PROPERTY_CONVERSION_FAILED"));
+            SendAutomationError(RequestingSocket, RequestId, ConversionError, TEXT("PROPERTY_CONVERSION_FAILED"));
             return;
         }
 
@@ -792,7 +889,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         {
             if (!Payload->TryGetBoolField(TEXT("markDirty"), bMarkDirty))
             {
-                SendAutomationError(RequestId, TEXT("markDirty must be a boolean."), TEXT("INVALID_MARK_DIRTY"));
+                SendAutomationError(RequestingSocket, RequestId, TEXT("markDirty must be a boolean."), TEXT("INVALID_MARK_DIRTY"));
                 return;
             }
         }
@@ -814,7 +911,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             ResultPayload->SetField(TEXT("value"), CurrentValue);
         }
 
-        SendAutomationResponse(RequestId, true, TEXT("Property value updated."), ResultPayload, FString());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Property value updated."), ResultPayload, FString());
         return;
     }
 
@@ -822,42 +919,42 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
     {
         if (!Payload.IsValid())
         {
-            SendAutomationError(RequestId, TEXT("get_object_property payload missing."), TEXT("INVALID_PAYLOAD"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("get_object_property payload missing."), TEXT("INVALID_PAYLOAD"));
             return;
         }
 
         FString ObjectPath;
         if (!Payload->TryGetStringField(TEXT("objectPath"), ObjectPath) || ObjectPath.TrimStartAndEnd().IsEmpty())
         {
-            SendAutomationError(RequestId, TEXT("get_object_property requires a non-empty objectPath."), TEXT("INVALID_OBJECT"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("get_object_property requires a non-empty objectPath."), TEXT("INVALID_OBJECT"));
             return;
         }
 
         FString PropertyName;
         if (!Payload->TryGetStringField(TEXT("propertyName"), PropertyName) || PropertyName.TrimStartAndEnd().IsEmpty())
         {
-            SendAutomationError(RequestId, TEXT("get_object_property requires a non-empty propertyName."), TEXT("INVALID_PROPERTY"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("get_object_property requires a non-empty propertyName."), TEXT("INVALID_PROPERTY"));
             return;
         }
 
         UObject* TargetObject = FindObject<UObject>(nullptr, *ObjectPath);
         if (!TargetObject)
         {
-            SendAutomationError(RequestId, FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath), TEXT("OBJECT_NOT_FOUND"));
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath), TEXT("OBJECT_NOT_FOUND"));
             return;
         }
 
         FProperty* Property = TargetObject->GetClass()->FindPropertyByName(*PropertyName);
         if (!Property)
         {
-            SendAutomationError(RequestId, FString::Printf(TEXT("Property %s not found on object %s."), *PropertyName, *ObjectPath), TEXT("PROPERTY_NOT_FOUND"));
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Property %s not found on object %s."), *PropertyName, *ObjectPath), TEXT("PROPERTY_NOT_FOUND"));
             return;
         }
 
         const TSharedPtr<FJsonValue> CurrentValue = ExportPropertyToJsonValue(TargetObject, Property);
         if (!CurrentValue.IsValid())
         {
-            SendAutomationError(RequestId, FString::Printf(TEXT("Unable to export property %s."), *PropertyName), TEXT("PROPERTY_EXPORT_FAILED"));
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unable to export property %s."), *PropertyName), TEXT("PROPERTY_EXPORT_FAILED"));
             return;
         }
 
@@ -866,7 +963,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
         ResultPayload->SetField(TEXT("value"), CurrentValue);
 
-        SendAutomationResponse(RequestId, true, TEXT("Property value retrieved."), ResultPayload, FString());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Property value retrieved."), ResultPayload, FString());
         return;
     }
 
@@ -874,21 +971,21 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
     {
         if (!Payload.IsValid())
         {
-            SendAutomationError(RequestId, TEXT("blueprint_modify_scs payload missing."), TEXT("INVALID_PAYLOAD"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_modify_scs payload missing."), TEXT("INVALID_PAYLOAD"));
             return;
         }
 
         FString BlueprintPath;
         if (!Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) || BlueprintPath.TrimStartAndEnd().IsEmpty())
         {
-            SendAutomationError(RequestId, TEXT("blueprint_modify_scs requires a non-empty blueprintPath."), TEXT("INVALID_BLUEPRINT"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_modify_scs requires a non-empty blueprintPath."), TEXT("INVALID_BLUEPRINT"));
             return;
         }
 
         const TArray<TSharedPtr<FJsonValue>>* OperationsArray = nullptr;
         if (!Payload->TryGetArrayField(TEXT("operations"), OperationsArray) || OperationsArray == nullptr)
         {
-            SendAutomationError(RequestId, TEXT("blueprint_modify_scs requires an operations array."), TEXT("INVALID_OPERATIONS"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_modify_scs requires an operations array."), TEXT("INVALID_OPERATIONS"));
             return;
         }
 
@@ -897,14 +994,14 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedBlueprintPath, LoadError);
         if (!Blueprint)
         {
-            SendAutomationError(RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+            SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
             return;
         }
 
         USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
         if (!SCS)
         {
-            SendAutomationError(RequestId, TEXT("Blueprint does not expose a SimpleConstructionScript."), TEXT("SCS_UNAVAILABLE"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint does not expose a SimpleConstructionScript."), TEXT("SCS_UNAVAILABLE"));
             return;
         }
 
@@ -913,7 +1010,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         {
             if (!Payload->TryGetBoolField(TEXT("compile"), bCompile))
             {
-                SendAutomationError(RequestId, TEXT("compile must be a boolean."), TEXT("INVALID_COMPILE_FLAG"));
+                SendAutomationError(RequestingSocket, RequestId, TEXT("compile must be a boolean."), TEXT("INVALID_COMPILE_FLAG"));
                 return;
             }
         }
@@ -923,7 +1020,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         {
             if (!Payload->TryGetBoolField(TEXT("save"), bSave))
             {
-                SendAutomationError(RequestId, TEXT("save must be a boolean."), TEXT("INVALID_SAVE_FLAG"));
+                SendAutomationError(RequestingSocket, RequestId, TEXT("save must be a boolean."), TEXT("INVALID_SAVE_FLAG"));
                 return;
             }
         }
@@ -933,7 +1030,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
             ResultPayload->SetStringField(TEXT("blueprintPath"), NormalizedBlueprintPath);
             ResultPayload->SetArrayField(TEXT("operations"), TArray<TSharedPtr<FJsonValue>>());
-            SendAutomationResponse(RequestId, true, TEXT("No SCS operations supplied."), ResultPayload, FString());
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("No SCS operations supplied."), ResultPayload, FString());
             return;
         }
 
@@ -949,7 +1046,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             const TSharedPtr<FJsonValue>& OperationValue = (*OperationsArray)[Index];
             if (!OperationValue.IsValid() || OperationValue->Type != EJson::Object)
             {
-                SendAutomationError(RequestId, FString::Printf(TEXT("Operation at index %d is not an object."), Index), TEXT("INVALID_OPERATION_PAYLOAD"));
+                SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Operation at index %d is not an object."), Index), TEXT("INVALID_OPERATION_PAYLOAD"));
                 return;
             }
 
@@ -957,7 +1054,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             FString OperationType;
             if (!OperationObject->TryGetStringField(TEXT("type"), OperationType) || OperationType.TrimStartAndEnd().IsEmpty())
             {
-                SendAutomationError(RequestId, FString::Printf(TEXT("Operation at index %d missing type."), Index), TEXT("INVALID_OPERATION_TYPE"));
+                SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Operation at index %d missing type."), Index), TEXT("INVALID_OPERATION_TYPE"));
                 return;
             }
 
@@ -971,14 +1068,14 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 FString ComponentName;
                 if (!OperationObject->TryGetStringField(TEXT("componentName"), ComponentName) || ComponentName.TrimStartAndEnd().IsEmpty())
                 {
-                    SendAutomationError(RequestId, FString::Printf(TEXT("add_component operation at index %d missing componentName."), Index), TEXT("INVALID_COMPONENT_NAME"));
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("add_component operation at index %d missing componentName."), Index), TEXT("INVALID_COMPONENT_NAME"));
                     return;
                 }
 
                 FString ComponentClassPath;
                 if (!OperationObject->TryGetStringField(TEXT("componentClass"), ComponentClassPath) || ComponentClassPath.TrimStartAndEnd().IsEmpty())
                 {
-                    SendAutomationError(RequestId, FString::Printf(TEXT("add_component operation at index %d missing componentClass."), Index), TEXT("INVALID_COMPONENT_CLASS"));
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("add_component operation at index %d missing componentClass."), Index), TEXT("INVALID_COMPONENT_CLASS"));
                     return;
                 }
 
@@ -993,26 +1090,26 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 }
                 if (!ComponentClass)
                 {
-                    SendAutomationError(RequestId, FString::Printf(TEXT("Unable to load component class %s."), *ComponentClassPath), TEXT("COMPONENT_CLASS_NOT_FOUND"));
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unable to load component class %s."), *ComponentClassPath), TEXT("COMPONENT_CLASS_NOT_FOUND"));
                     return;
                 }
 
                 if (!ComponentClass->IsChildOf(UActorComponent::StaticClass()))
                 {
-                    SendAutomationError(RequestId, FString::Printf(TEXT("Class %s is not a component."), *ComponentClassPath), TEXT("INVALID_COMPONENT_CLASS"));
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Class %s is not a component."), *ComponentClassPath), TEXT("INVALID_COMPONENT_CLASS"));
                     return;
                 }
 
                 if (FindScsNodeByName(SCS, ComponentName))
                 {
-                    SendAutomationError(RequestId, FString::Printf(TEXT("Component %s already exists on Blueprint."), *ComponentName), TEXT("COMPONENT_ALREADY_EXISTS"));
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Component %s already exists on Blueprint."), *ComponentName), TEXT("COMPONENT_ALREADY_EXISTS"));
                     return;
                 }
 
                 USCS_Node* NewNode = SCS->CreateNode(ComponentClass, *ComponentName);
                 if (!NewNode)
                 {
-                    SendAutomationError(RequestId, FString::Printf(TEXT("Failed to create SCS node for %s."), *ComponentName), TEXT("NODE_CREATION_FAILED"));
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to create SCS node for %s."), *ComponentName), TEXT("NODE_CREATION_FAILED"));
                     return;
                 }
 
@@ -1069,7 +1166,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                         FString PropertyError;
                         if (!ApplyPropertyOverrides(Template, *PropertyOverrides, AccumulatedWarnings, PropertyError))
                         {
-                            SendAutomationError(RequestId, PropertyError, TEXT("COMPONENT_PROPERTY_FAILED"));
+                            SendAutomationError(RequestingSocket, RequestId, PropertyError, TEXT("COMPONENT_PROPERTY_FAILED"));
                             return;
                         }
                     }
@@ -1085,7 +1182,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 FString ComponentName;
                 if (!OperationObject->TryGetStringField(TEXT("componentName"), ComponentName) || ComponentName.TrimStartAndEnd().IsEmpty())
                 {
-                    SendAutomationError(RequestId, FString::Printf(TEXT("remove_component operation at index %d missing componentName."), Index), TEXT("INVALID_COMPONENT_NAME"));
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("remove_component operation at index %d missing componentName."), Index), TEXT("INVALID_COMPONENT_NAME"));
                     return;
                 }
 
@@ -1109,14 +1206,14 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 FString ComponentName;
                 if (!OperationObject->TryGetStringField(TEXT("componentName"), ComponentName) || ComponentName.TrimStartAndEnd().IsEmpty())
                 {
-                    SendAutomationError(RequestId, FString::Printf(TEXT("set_component_properties operation at index %d missing componentName."), Index), TEXT("INVALID_COMPONENT_NAME"));
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("set_component_properties operation at index %d missing componentName."), Index), TEXT("INVALID_COMPONENT_NAME"));
                     return;
                 }
 
                 const TSharedPtr<FJsonObject>* PropertyOverrides = nullptr;
                 if (!OperationObject->TryGetObjectField(TEXT("properties"), PropertyOverrides) || PropertyOverrides == nullptr || !PropertyOverrides->IsValid())
                 {
-                    SendAutomationError(RequestId, FString::Printf(TEXT("set_component_properties operation at index %d missing properties object."), Index), TEXT("INVALID_PROPERTIES"));
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("set_component_properties operation at index %d missing properties object."), Index), TEXT("INVALID_PROPERTIES"));
                     return;
                 }
 
@@ -1125,14 +1222,14 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                     UActorComponent* Template = TargetNode->ComponentTemplate;
                     if (!Template)
                     {
-                        SendAutomationError(RequestId, FString::Printf(TEXT("Component %s has no template for property assignment."), *ComponentName), TEXT("COMPONENT_TEMPLATE_MISSING"));
+                        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Component %s has no template for property assignment."), *ComponentName), TEXT("COMPONENT_TEMPLATE_MISSING"));
                         return;
                     }
 
                     FString PropertyError;
                     if (!ApplyPropertyOverrides(Template, *PropertyOverrides, AccumulatedWarnings, PropertyError))
                     {
-                        SendAutomationError(RequestId, PropertyError, TEXT("COMPONENT_PROPERTY_FAILED"));
+                        SendAutomationError(RequestingSocket, RequestId, PropertyError, TEXT("COMPONENT_PROPERTY_FAILED"));
                         return;
                     }
 
@@ -1162,13 +1259,13 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 }
                 else
                 {
-                    SendAutomationError(RequestId, FString::Printf(TEXT("Component %s not found for property assignment."), *ComponentName), TEXT("COMPONENT_NOT_FOUND"));
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Component %s not found for property assignment."), *ComponentName), TEXT("COMPONENT_NOT_FOUND"));
                     return;
                 }
             }
             else
             {
-                SendAutomationError(RequestId, FString::Printf(TEXT("Unknown SCS operation type: %s"), *OperationType), TEXT("UNKNOWN_OPERATION"));
+                SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown SCS operation type: %s"), *OperationType), TEXT("UNKNOWN_OPERATION"));
                 return;
             }
 
@@ -1180,49 +1277,150 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         }
 
-        bool bSaveResult = false;
-        if (bSave)
+        // Defer compile and save operations to avoid Task Graph recursion
+        if (bCompile || bSave)
         {
-            bSaveResult = UEditorAssetLibrary::SaveLoadedAsset(Blueprint);
-            if (!bSaveResult)
+            AsyncTask(ENamedThreads::GameThread, [this, RequestId, Blueprint, bCompile, bSave, NormalizedBlueprintPath, OperationSummaries, &AccumulatedWarnings, RequestingSocket]() {
+                bool bSaveResult = false;
+                if (bSave)
+                {
+                    bSaveResult = UEditorAssetLibrary::SaveLoadedAsset(Blueprint);
+                    if (!bSaveResult)
+                    {
+                        AccumulatedWarnings.Add(TEXT("Blueprint failed to save; please check output log."));
+                    }
+                }
+
+                if (bCompile)
+                {
+                    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+                }
+
+                TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+                ResultPayload->SetStringField(TEXT("blueprintPath"), NormalizedBlueprintPath);
+                ResultPayload->SetArrayField(TEXT("operations"), OperationSummaries);
+                ResultPayload->SetBoolField(TEXT("compiled"), bCompile);
+                ResultPayload->SetBoolField(TEXT("saved"), bSave && bSaveResult);
+
+                if (AccumulatedWarnings.Num() > 0)
+                {
+                    TArray<TSharedPtr<FJsonValue>> WarningValues;
+                    WarningValues.Reserve(AccumulatedWarnings.Num());
+                    for (const FString& Warning : AccumulatedWarnings)
+                    {
+                        WarningValues.Add(MakeShared<FJsonValueString>(Warning));
+                    }
+                    ResultPayload->SetArrayField(TEXT("warnings"), WarningValues);
+                }
+
+                const FString Message = FString::Printf(TEXT("Processed %d SCS operation(s)."), OperationSummaries.Num());
+                SendAutomationResponse(RequestingSocket, RequestId, true, Message, ResultPayload, FString());
+            });
+        }
+        else
+        {
+            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+            ResultPayload->SetStringField(TEXT("blueprintPath"), NormalizedBlueprintPath);
+            ResultPayload->SetArrayField(TEXT("operations"), OperationSummaries);
+            ResultPayload->SetBoolField(TEXT("compiled"), false);
+            ResultPayload->SetBoolField(TEXT("saved"), false);
+
+            if (AccumulatedWarnings.Num() > 0)
             {
-                AccumulatedWarnings.Add(TEXT("Blueprint failed to save; please check output log."));
+                TArray<TSharedPtr<FJsonValue>> WarningValues;
+                WarningValues.Reserve(AccumulatedWarnings.Num());
+                for (const FString& Warning : AccumulatedWarnings)
+                {
+                    WarningValues.Add(MakeShared<FJsonValueString>(Warning));
+                }
+                ResultPayload->SetArrayField(TEXT("warnings"), WarningValues);
             }
+
+            const FString Message = FString::Printf(TEXT("Processed %d SCS operation(s)."), OperationSummaries.Num());
+            SendAutomationResponse(RequestingSocket, RequestId, true, Message, ResultPayload, FString());
         }
-
-        if (bCompile)
-        {
-            FKismetEditorUtilities::CompileBlueprint(Blueprint);
-        }
-
-        TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-        ResultPayload->SetStringField(TEXT("blueprintPath"), NormalizedBlueprintPath);
-        ResultPayload->SetArrayField(TEXT("operations"), OperationSummaries);
-        ResultPayload->SetBoolField(TEXT("compiled"), bCompile);
-        ResultPayload->SetBoolField(TEXT("saved"), bSave && bSaveResult);
-
-        if (AccumulatedWarnings.Num() > 0)
-        {
-            TArray<TSharedPtr<FJsonValue>> WarningValues;
-            WarningValues.Reserve(AccumulatedWarnings.Num());
-            for (const FString& Warning : AccumulatedWarnings)
-            {
-                WarningValues.Add(MakeShared<FJsonValueString>(Warning));
-            }
-            ResultPayload->SetArrayField(TEXT("warnings"), WarningValues);
-        }
-
-        const FString Message = FString::Printf(TEXT("Processed %d SCS operation(s)."), OperationSummaries.Num());
-        SendAutomationResponse(RequestId, true, Message, ResultPayload, FString());
         return;
     }
 
-    SendAutomationError(RequestId, FString::Printf(TEXT("Unknown automation action: %s"), *Action), TEXT("UNKNOWN_ACTION"));
+    if (Action.Equals(TEXT("import_asset_deferred"), ESearchCase::IgnoreCase))
+    {
+        if (!Payload.IsValid())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("import_asset_deferred payload missing."), TEXT("INVALID_PAYLOAD"));
+            return;
+        }
+
+        FString SourcePath;
+        if (!Payload->TryGetStringField(TEXT("sourcePath"), SourcePath) || SourcePath.TrimStartAndEnd().IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("import_asset_deferred requires a non-empty sourcePath."), TEXT("INVALID_SOURCE_PATH"));
+            return;
+        }
+
+        FString DestinationPath;
+        if (!Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath) || DestinationPath.TrimStartAndEnd().IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("import_asset_deferred requires a non-empty destinationPath."), TEXT("INVALID_DESTINATION_PATH"));
+            return;
+        }
+
+        // Sanitize destination path (remove trailing slash) and normalize UE path
+        DestinationPath = DestinationPath.Replace(TEXT("/"), TEXT("/")).Replace(TEXT("//"), TEXT("/"));
+        if (DestinationPath.EndsWith(TEXT("/")))
+        {
+            DestinationPath = DestinationPath.LeftChop(1);
+        }
+        // Map /Content -> /Game for UE asset destinations
+        if (DestinationPath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase))
+        {
+            DestinationPath = FString::Printf(TEXT("/Game%s"), *DestinationPath.RightChop(7));
+        }
+
+        // Defer the asset import to avoid Task Graph recursion by scheduling it for the next frame
+        FCoreDelegates::OnEndFrame.AddLambda([this, RequestId, SourcePath, DestinationPath, RequestingSocket]() {
+            // Create the import task
+            UAssetImportTask* Task = NewObject<UAssetImportTask>();
+            Task->Filename = SourcePath;
+            Task->DestinationPath = DestinationPath;
+
+            // Execute the import with default settings
+            FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+            TArray<UAssetImportTask*> Tasks = { Task };
+            AssetToolsModule.Get().ImportAssetTasks(Tasks);
+
+            // Prepare response
+            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+            ResultPayload->SetStringField(TEXT("sourcePath"), SourcePath);
+            ResultPayload->SetStringField(TEXT("destinationPath"), DestinationPath);
+
+            if (Task->ImportedObjectPaths.Num() > 0)
+            {
+                ResultPayload->SetNumberField(TEXT("imported"), Task->ImportedObjectPaths.Num());
+                TArray<TSharedPtr<FJsonValue>> PathsArray;
+                for (const FString& Path : Task->ImportedObjectPaths)
+                {
+                    PathsArray.Add(MakeShared<FJsonValueString>(Path));
+                }
+                ResultPayload->SetArrayField(TEXT("paths"), PathsArray);
+
+                const FString Message = FString::Printf(TEXT("Imported %d assets to %s"), Task->ImportedObjectPaths.Num(), *DestinationPath);
+                SendAutomationResponse(RequestingSocket, RequestId, true, Message, ResultPayload, FString());
+            }
+            else
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("No assets were imported"), TEXT("IMPORT_FAILED"));
+            }
+        });
+
+        return;
+    }
+
+    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown automation action: %s"), *Action), TEXT("UNKNOWN_ACTION"));
 }
 
-void UMcpAutomationBridgeSubsystem::SendAutomationResponse(const FString& RequestId, const bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode)
+void UMcpAutomationBridgeSubsystem::SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode)
 {
-    if (!ActiveSocket.IsValid() || !ActiveSocket->IsConnected())
+    if (!TargetSocket.IsValid() || !TargetSocket->IsConnected())
     {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Unable to send automation response (socket not connected)."));
         return;
@@ -1249,14 +1447,17 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(const FString& Reques
     const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
     FJsonSerializer::Serialize(Response, Writer);
 
-    ActiveSocket->Send(Serialized);
+    TargetSocket->Send(Serialized);
+    
+    // Clean up the request tracking
+    PendingRequestsToSockets.Remove(RequestId);
 }
 
-void UMcpAutomationBridgeSubsystem::SendAutomationError(const FString& RequestId, const FString& Message, const FString& ErrorCode)
+void UMcpAutomationBridgeSubsystem::SendAutomationError(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const FString& Message, const FString& ErrorCode)
 {
     const FString ResolvedError = ErrorCode.IsEmpty() ? TEXT("AUTOMATION_ERROR") : ErrorCode;
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Automation request failed (%s): %s"), *ResolvedError, *Message);
-    SendAutomationResponse(RequestId, false, Message, nullptr, ResolvedError);
+    SendAutomationResponse(TargetSocket, RequestId, false, Message, nullptr, ResolvedError);
 }
 
 void UMcpAutomationBridgeSubsystem::StartBridge()
@@ -1287,15 +1488,21 @@ void UMcpAutomationBridgeSubsystem::StopBridge()
     bReconnectEnabled = false;
     TimeUntilReconnect = 0.0f;
 
-    if (ActiveSocket.IsValid())
+    // Close all active sockets
+    for (TSharedPtr<FMcpBridgeWebSocket>& Socket : ActiveSockets)
     {
-        ActiveSocket->OnConnected().RemoveAll(this);
-        ActiveSocket->OnConnectionError().RemoveAll(this);
-        ActiveSocket->OnClosed().RemoveAll(this);
-        ActiveSocket->OnMessage().RemoveAll(this);
-        ActiveSocket->Close();
-        ActiveSocket.Reset();
+        if (Socket.IsValid())
+        {
+            Socket->OnConnected().RemoveAll(this);
+            Socket->OnConnectionError().RemoveAll(this);
+            Socket->OnClosed().RemoveAll(this);
+            Socket->OnMessage().RemoveAll(this);
+            Socket->OnHeartbeat().RemoveAll(this);
+            Socket->Close();
+        }
     }
+    ActiveSockets.Empty();
+    PendingRequestsToSockets.Empty();
 
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Automation bridge stopped."));
 }
@@ -1317,15 +1524,21 @@ void UMcpAutomationBridgeSubsystem::ForceReconnect(const FString& Reason, float 
     const float EffectiveDelay = ReconnectDelayOverride >= 0.0f ? ReconnectDelayOverride : AutoReconnectDelaySeconds;
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Forcing automation bridge reconnect (delay %.2f s): %s"), EffectiveDelay, Reason.IsEmpty() ? TEXT("no reason provided") : *Reason);
 
-    if (ActiveSocket.IsValid())
+    // Close all active sockets
+    for (TSharedPtr<FMcpBridgeWebSocket>& Socket : ActiveSockets)
     {
-        ActiveSocket->OnConnected().RemoveAll(this);
-        ActiveSocket->OnConnectionError().RemoveAll(this);
-        ActiveSocket->OnClosed().RemoveAll(this);
-        ActiveSocket->OnMessage().RemoveAll(this);
-        ActiveSocket->Close();
-        ActiveSocket.Reset();
+        if (Socket.IsValid())
+        {
+            Socket->OnConnected().RemoveAll(this);
+            Socket->OnConnectionError().RemoveAll(this);
+            Socket->OnClosed().RemoveAll(this);
+            Socket->OnMessage().RemoveAll(this);
+            Socket->OnHeartbeat().RemoveAll(this);
+            Socket->Close();
+        }
     }
+    ActiveSockets.Empty();
+    PendingRequestsToSockets.Empty();
 
     ResetHeartbeatTracking();
     BridgeState = EMcpAutomationBridgeState::Disconnected;
@@ -1346,17 +1559,19 @@ void UMcpAutomationBridgeSubsystem::SendControlMessage(const TSharedPtr<FJsonObj
         return;
     }
 
-    if (!ActiveSocket.IsValid() || !ActiveSocket->IsConnected())
-    {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Skipping control message send; socket not connected."));
-        return;
-    }
-
     FString Serialized;
     const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
     FJsonSerializer::Serialize(Message.ToSharedRef(), Writer);
 
     UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("Outbound control message: %s"), *Serialized);
-    ActiveSocket->Send(Serialized);
+
+    // Send control message to all connected sockets
+    for (const TSharedPtr<FMcpBridgeWebSocket>& Socket : ActiveSockets)
+    {
+        if (Socket.IsValid() && Socket->IsConnected())
+        {
+            Socket->Send(Serialized);
+        }
+    }
 }
 

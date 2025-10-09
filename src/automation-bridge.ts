@@ -27,6 +27,7 @@ export interface AutomationBridgeOptions {
   serverVersion?: string;
   heartbeatIntervalMs?: number;
   maxPendingRequests?: number;
+  maxConcurrentConnections?: number;
 }
 
 export interface AutomationBridgeMessage {
@@ -106,9 +107,9 @@ export class AutomationBridge extends EventEmitter {
   private readonly serverVersion: string;
   private readonly heartbeatIntervalMs: number;
   private readonly maxPendingRequests: number;
-  private activeSocket?: WebSocket;
-  private activePort?: number;
-  private activeProtocol?: string;
+  private readonly maxConcurrentConnections: number;
+  private activeSockets = new Map<WebSocket, { port: number; connectedAt: Date; protocol?: string }>();
+  private primarySocket?: WebSocket; // Primary socket for sending requests
   private connectedAt?: Date;
   private requestCounter = 0;
   private readonly pendingRequests = new Map<string, PendingRequest>();
@@ -185,6 +186,8 @@ export class AutomationBridge extends EventEmitter {
     this.heartbeatIntervalMs = resolvedHeartbeat > 0 ? resolvedHeartbeat : 0;
     const resolvedMaxPending = options.maxPendingRequests ?? this.DEFAULT_MAX_PENDING_REQUESTS;
     this.maxPendingRequests = Math.max(1, resolvedMaxPending);
+    const resolvedMaxConnections = options.maxConcurrentConnections ?? 10; // Allow up to 10 concurrent connections
+    this.maxConcurrentConnections = Math.max(1, resolvedMaxConnections);
   }
 
   override on<K extends keyof AutomationBridgeEvents>(
@@ -280,7 +283,7 @@ export class AutomationBridge extends EventEmitter {
   /** Stops the WebSocket server and active connection. */
   stop(): void {
     if (this.isConnected()) {
-      this.send({
+      this.broadcast({
         type: 'bridge_shutdown',
         sessionId: this.sessionId,
         timestamp: new Date().toISOString(),
@@ -288,11 +291,12 @@ export class AutomationBridge extends EventEmitter {
       });
     }
     this.stopHeartbeat();
-    if (this.activeSocket) {
-      this.activeSocket.removeAllListeners();
-      this.activeSocket.close(1001, 'Server shutdown');
-      this.activeSocket = undefined;
+    for (const [socket] of this.activeSockets) {
+      socket.removeAllListeners();
+      socket.close(1001, 'Server shutdown');
     }
+    this.activeSockets.clear();
+    this.primarySocket = undefined;
     for (const server of this.wsServers.values()) {
       try {
         server.close();
@@ -304,15 +308,13 @@ export class AutomationBridge extends EventEmitter {
     this.wsServers.clear();
     this.listeningPorts.clear();
     this.connectedAt = undefined;
-    this.activePort = undefined;
-    this.activeProtocol = undefined;
     this.lastHandshakeAck = undefined;
     this.rejectAllPending(new Error('Automation bridge server stopped'));
   }
 
   /** Returns whether the automation bridge has an active, authenticated socket. */
   isConnected(): boolean {
-    return Boolean(this.activeSocket && this.activeSocket.readyState === WebSocket.OPEN);
+    return this.activeSockets.size > 0;
   }
 
   /** Returns diagnostic metadata for health endpoints. */
@@ -324,6 +326,14 @@ export class AutomationBridge extends EventEmitter {
       ageMs: Math.max(0, now - pending.requestedAt.getTime())
     }));
 
+    // Get info about all active connections
+    const connectionInfos = Array.from(this.activeSockets.entries()).map(([socket, info]) => ({
+      port: info.port,
+      connectedAt: info.connectedAt.toISOString(),
+      protocol: info.protocol || null,
+      readyState: socket.readyState
+    }));
+
     return {
       enabled: this.enabled,
       host: this.host,
@@ -331,9 +341,9 @@ export class AutomationBridge extends EventEmitter {
       configuredPorts: [...this.ports],
       listeningPorts: Array.from(this.listeningPorts.values()),
       connected: this.isConnected(),
-      connectedAt: this.connectedAt?.toISOString() ?? null,
-      activePort: this.activePort ?? null,
-      negotiatedProtocol: this.activeProtocol ?? null,
+      connectedAt: connectionInfos.length > 0 ? connectionInfos[0].connectedAt : null,
+      activePort: connectionInfos.length > 0 ? connectionInfos[0].port : null,
+      negotiatedProtocol: connectionInfos.length > 0 ? connectionInfos[0].protocol : null,
       supportedProtocols: [...this.negotiatedProtocols],
       supportedOpcodes: [...this.DEFAULT_SUPPORTED_OPCODES],
       expectedResponseOpcodes: [...this.DEFAULT_RESPONSE_OPCODES],
@@ -358,38 +368,54 @@ export class AutomationBridge extends EventEmitter {
     };
   }
 
-  /** Sends a JSON-serializable payload to the plugin if connected. */
+  /** Sends a JSON-serializable payload to the primary socket if connected. */
   send(payload: AutomationBridgeMessage): boolean {
-    if (!this.isConnected()) {
-      log.warn('Attempted to send automation message without an active connection');
-      return false;
-    }
-    const socket = this.activeSocket;
-    if (!socket) {
-      log.warn('Automation bridge socket disappeared before send');
+    if (!this.primarySocket || this.primarySocket.readyState !== WebSocket.OPEN) {
+      log.warn('Attempted to send automation message without an active primary connection');
       return false;
     }
     try {
-      socket.send(JSON.stringify(payload));
+      this.primarySocket.send(JSON.stringify(payload));
       return true;
     } catch (error) {
       log.error('Failed to send automation message', error);
       const errObj = error instanceof Error ? error : new Error(String(error));
-      const errorWithPort = Object.assign(errObj, { port: this.activePort });
+      const primaryInfo = this.activeSockets.get(this.primarySocket);
+      const errorWithPort = Object.assign(errObj, { port: primaryInfo?.port });
       this.emitAutomation('error', errorWithPort);
       return false;
     }
   }
 
+  /** Broadcasts a message to all connected sockets. */
+  private broadcast(payload: AutomationBridgeMessage): boolean {
+    if (this.activeSockets.size === 0) {
+      log.warn('Attempted to broadcast automation message without any active connections');
+      return false;
+    }
+    let sentCount = 0;
+    for (const [socket] of this.activeSockets) {
+      if (socket.readyState === WebSocket.OPEN) {
+        try {
+          socket.send(JSON.stringify(payload));
+          sentCount++;
+        } catch (error) {
+          log.error('Failed to broadcast automation message to socket', error);
+        }
+      }
+    }
+    return sentCount > 0;
+  }
+
   private handleConnection(socket: WebSocket, port: number): void {
-    if (this.activeSocket && this.activeSocket.readyState === WebSocket.OPEN) {
-      const previousPort = this.activePort;
+    // Check if we've reached the maximum concurrent connections
+    if (this.activeSockets.size >= this.maxConcurrentConnections) {
       log.warn(
-        `Existing automation bridge connection detected on port ${previousPort ?? 'unknown'}; closing previous socket.`
+        `Maximum concurrent connections (${this.maxConcurrentConnections}) reached; rejecting new connection from port ${port}.`
       );
-      this.stopHeartbeat();
-      this.activeSocket.close(4001, 'Superseded by new connection');
-      this.rejectAllPending(new Error('Automation bridge connection superseded by new client.'));
+      socket.close(4001, 'Maximum concurrent connections reached');
+      this.emitAutomation('handshakeFailed', { reason: 'max-connections-reached', port });
+      return;
     }
 
     let handshakeComplete = false;
@@ -446,7 +472,7 @@ export class AutomationBridge extends EventEmitter {
         this.lastHandshakeMetadata = metadata;
         this.lastHandshakeFailure = undefined;
         this.lastMessageAt = now;
-  const ackPayload = this.createHandshakeAck(parsed as Record<string, unknown>);
+          const ackPayload = this.createHandshakeAck(parsed as Record<string, unknown>, port, socket);
         this.lastHandshakeAck = ackPayload;
     this.send(ackPayload);
     this.startHeartbeat();
@@ -474,30 +500,51 @@ export class AutomationBridge extends EventEmitter {
 
     socket.on('close', (code, reasonBuffer) => {
       const reason = reasonBuffer.toString('utf8');
-      if (socket === this.activeSocket) {
-        this.activeSocket = undefined;
-        this.connectedAt = undefined;
-        this.activePort = undefined;
+      const socketInfo = this.activeSockets.get(socket);
+      if (socketInfo) {
+        this.activeSockets.delete(socket);
+        // If this was the primary socket, choose a new primary
+        if (socket === this.primarySocket) {
+          this.primarySocket = this.activeSockets.size > 0 ? this.activeSockets.keys().next().value : undefined;
+          if (this.activeSockets.size === 0) {
+            this.stopHeartbeat();
+          }
+        }
+        clearTimeout(handshakeTimeout);
+        this.lastDisconnect = { code, reason, at: new Date() };
+        this.emitAutomation('disconnected', {
+          code,
+          reason,
+          port: socketInfo.port,
+          protocol: socketInfo.protocol || null
+        });
+        log.info(`Automation bridge socket closed (code=${code}, reason=${reason})`);
+        // Only reject pending requests if this was the last connection
+        if (this.activeSockets.size === 0) {
+          this.rejectAllPending(new Error(`Automation bridge connection closed (${code}): ${reason || 'no reason'}`));
+        }
       }
-      clearTimeout(handshakeTimeout);
-      this.stopHeartbeat();
-      this.lastDisconnect = { code, reason, at: new Date() };
-      this.emitAutomation('disconnected', {
-        code,
-        reason,
-        port,
-        protocol: socket.protocol || this.activeProtocol || null
-      });
-      log.info(`Automation bridge socket closed (code=${code}, reason=${reason})`);
-      this.rejectAllPending(new Error(`Automation bridge connection closed (${code}): ${reason || 'no reason'}`));
     });
   }
 
   private registerSocket(socket: WebSocket, port: number) {
-    this.activeSocket = socket;
-    this.activePort = port;
-    this.activeProtocol = socket.protocol || undefined;
-    this.connectedAt = new Date();
+    const socketInfo = {
+      port,
+      connectedAt: new Date(),
+      protocol: socket.protocol || undefined
+    };
+    this.activeSockets.set(socket, socketInfo);
+
+    // Set as primary socket if this is the first connection
+    if (!this.primarySocket) {
+      this.primarySocket = socket;
+      this.connectedAt = socketInfo.connectedAt;
+    }
+
+    // Handle WebSocket pong frames for heartbeat tracking
+    socket.on('pong', () => {
+      this.lastMessageAt = new Date();
+    });
   }
 
   private sanitizeHandshakeMetadata(payload: Record<string, unknown>): Record<string, unknown> {
@@ -509,7 +556,7 @@ export class AutomationBridge extends EventEmitter {
     return sanitized;
   }
 
-  private createHandshakeAck(handshake: Record<string, unknown>): AutomationBridgeMessage {
+  private createHandshakeAck(handshake: Record<string, unknown>, port: number, socket: WebSocket): AutomationBridgeMessage {
     const handshakeVersionRaw =
       handshake['protocolVersion'] ?? handshake['protocol_version'] ?? 1;
     const protocolVersion =
@@ -531,8 +578,10 @@ export class AutomationBridge extends EventEmitter {
       maxPendingRequests: this.maxPendingRequests,
       supportedProtocols: [...this.negotiatedProtocols],
       availablePorts: [...this.ports],
-      activePort: this.activePort ?? null,
-      protocol: this.activeProtocol ?? null
+      activePort: port,
+      protocol: socket.protocol || null,
+      concurrentConnections: this.activeSockets.size + 1, // +1 for the connecting socket
+      maxConcurrentConnections: this.maxConcurrentConnections
     };
   }
 
@@ -545,7 +594,6 @@ export class AutomationBridge extends EventEmitter {
         this.handleBridgePing(message);
         break;
       case 'bridge_pong':
-      case 'bridge_heartbeat':
         // Heartbeat acknowledgements require no action beyond updating timestamps.
         break;
       case 'bridge_goodbye':
@@ -596,16 +644,18 @@ export class AutomationBridge extends EventEmitter {
     }
 
     this.heartbeatTimer = setInterval(() => {
-      if (!this.isConnected()) {
+      if (!this.isConnected() || !this.primarySocket) {
         this.stopHeartbeat();
         return;
       }
 
-      this.send({
-        type: 'bridge_heartbeat',
-        sessionId: this.sessionId,
-        timestamp: new Date().toISOString()
-      });
+      // Use WebSocket ping control frame instead of JSON data frame to avoid fragmentation
+      try {
+        this.primarySocket.ping();
+      } catch (error) {
+        log.warn('Failed to send heartbeat ping', error);
+        this.stopHeartbeat();
+      }
     }, this.heartbeatIntervalMs);
   }
 
@@ -645,7 +695,7 @@ export class AutomationBridge extends EventEmitter {
       throw new Error('Automation bridge not connected');
     }
 
-    const timeoutMs = Math.max(1000, options.timeoutMs ?? 15000);
+    const timeoutMs = Math.max(1000, options.timeoutMs ?? 60000);
     const requestId = this.generateRequestId();
 
     const requestPayload: AutomationBridgeMessage = {

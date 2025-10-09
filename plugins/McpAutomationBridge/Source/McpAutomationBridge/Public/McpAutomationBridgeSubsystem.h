@@ -58,13 +58,14 @@ private:
     bool Tick(float DeltaTime);
 
     void AttemptConnection();
-    void HandleConnected();
-    void HandleConnectionError(const FString& Error);
-    void HandleClosed(int32 StatusCode, const FString& Reason, bool bWasClean);
-    void HandleMessage(const FString& Message);
-    void ProcessAutomationRequest(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload);
-    void SendAutomationResponse(const FString& RequestId, bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result = nullptr, const FString& ErrorCode = FString());
-    void SendAutomationError(const FString& RequestId, const FString& Message, const FString& ErrorCode);
+    void HandleConnected(TSharedPtr<FMcpBridgeWebSocket> Socket);
+    void HandleConnectionError(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Error);
+    void HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket, int32 StatusCode, const FString& Reason, bool bWasClean);
+    void HandleMessage(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Message);
+    void HandleHeartbeat(TSharedPtr<FMcpBridgeWebSocket> Socket);
+    void ProcessAutomationRequest(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    void SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result = nullptr, const FString& ErrorCode = FString());
+    void SendAutomationError(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const FString& Message, const FString& ErrorCode);
 
     void StartBridge();
     void StopBridge();
@@ -72,7 +73,8 @@ private:
     bool bBridgeAvailable = false;
     EMcpAutomationBridgeState BridgeState = EMcpAutomationBridgeState::Disconnected;
     FTSTicker::FDelegateHandle TickerHandle;
-    TSharedPtr<FMcpBridgeWebSocket> ActiveSocket;
+    TArray<TSharedPtr<FMcpBridgeWebSocket>> ActiveSockets;
+    TMap<FString, TSharedPtr<FMcpBridgeWebSocket>> PendingRequestsToSockets;
     float TimeUntilReconnect = 0.0f;
     float AutoReconnectDelaySeconds = 5.0f;
     FString CapabilityToken;
@@ -90,4 +92,8 @@ private:
     void ResetHeartbeatTracking();
     void ForceReconnect(const FString& Reason, float ReconnectDelayOverride = -1.0f);
     void SendControlMessage(const TSharedPtr<FJsonObject>& Message);
+
+private:
+    /** Guards against reentrant automation request processing */
+    bool bProcessingAutomationRequest = false;
 };

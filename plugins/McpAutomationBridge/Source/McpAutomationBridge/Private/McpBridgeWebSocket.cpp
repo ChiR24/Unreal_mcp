@@ -200,7 +200,24 @@ FMcpBridgeWebSocket::FMcpBridgeWebSocket(const FString& InUrl, const FString& In
     : Url(InUrl)
     , Protocols(InProtocols)
     , Headers(InHeaders)
+    , bServerMode(false)
 {
+}
+
+FMcpBridgeWebSocket::FMcpBridgeWebSocket(int32 InPort)
+    : Port(InPort)
+    , Protocols({ TEXT("mcp-automation") })
+    , bServerMode(true)
+{
+}
+
+FMcpBridgeWebSocket::FMcpBridgeWebSocket(FSocket* InClientSocket)
+    : Socket(InClientSocket)
+    , Port(0)
+    , bServerMode(false)
+    , bServerAcceptedConnection(true)
+{
+    bConnected = true;
 }
 
 FMcpBridgeWebSocket::~FMcpBridgeWebSocket()
@@ -252,6 +269,28 @@ void FMcpBridgeWebSocket::Connect()
     }
 }
 
+void FMcpBridgeWebSocket::Listen()
+{
+    if (Thread || !bServerMode)
+    {
+        return;
+    }
+
+    bStopping = false;
+    StopEvent = FPlatformProcess::GetSynchEventFromPool(true);
+    Thread = FRunnableThread::Create(this, TEXT("FMcpBridgeWebSocketServerWorker"), 0, TPri_Normal);
+    if (!Thread)
+    {
+        DispatchOnGameThread([WeakThis = SelfWeakPtr]
+        {
+            if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
+            {
+                Pinned->ConnectionErrorDelegate.Broadcast(TEXT("Failed to create WebSocket server worker thread."));
+            }
+        });
+    }
+}
+
 void FMcpBridgeWebSocket::Close(int32 StatusCode, const FString& Reason)
 {
     bStopping = true;
@@ -292,6 +331,16 @@ bool FMcpBridgeWebSocket::IsConnected() const
     return bConnected;
 }
 
+bool FMcpBridgeWebSocket::IsListening() const
+{
+    return bListening;
+}
+
+void FMcpBridgeWebSocket::SendHeartbeatPing()
+{
+    SendControlFrame(OpCodePing, TArray<uint8>());
+}
+
 bool FMcpBridgeWebSocket::Init()
 {
     return true;
@@ -299,9 +348,31 @@ bool FMcpBridgeWebSocket::Init()
 
 uint32 FMcpBridgeWebSocket::Run()
 {
-    if (!PerformHandshake())
+    if (bServerMode)
     {
-        return 0;
+        return RunServer();
+    }
+    else
+    {
+        return RunClient();
+    }
+}
+
+uint32 FMcpBridgeWebSocket::RunClient()
+{
+    if (bServerAcceptedConnection)
+    {
+        if (!PerformServerHandshake())
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        if (!PerformHandshake())
+        {
+            return 0;
+        }
     }
 
     bConnected = true;
@@ -309,7 +380,7 @@ uint32 FMcpBridgeWebSocket::Run()
     {
         if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
         {
-            Pinned->ConnectedDelegate.Broadcast();
+            Pinned->ConnectedDelegate.Broadcast(Pinned);
         }
     });
 
@@ -322,6 +393,103 @@ uint32 FMcpBridgeWebSocket::Run()
     }
 
     TearDown(TEXT("Socket loop finished."), true, 1000);
+    return 0;
+}
+
+uint32 FMcpBridgeWebSocket::RunServer()
+{
+    ISocketSubsystem* SocketSubsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+    ListenSocket = SocketSubsystem->CreateSocket(NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), false);
+    if (!ListenSocket)
+    {
+        DispatchOnGameThread([WeakThis = SelfWeakPtr]
+        {
+            if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
+            {
+                Pinned->ConnectionErrorDelegate.Broadcast(TEXT("Failed to create listen socket."));
+            }
+        });
+        return 0;
+    }
+
+    ListenSocket->SetReuseAddr(true);
+    ListenSocket->SetNonBlocking(false);
+
+    TSharedRef<FInternetAddr> ListenAddr = SocketSubsystem->CreateInternetAddr();
+    ListenAddr->SetAnyAddress();
+    ListenAddr->SetPort(Port);
+
+    if (!ListenSocket->Bind(*ListenAddr))
+    {
+        DispatchOnGameThread([WeakThis = SelfWeakPtr]
+        {
+            if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
+            {
+                Pinned->ConnectionErrorDelegate.Broadcast(TEXT("Failed to bind listen socket."));
+            }
+        });
+        return 0;
+    }
+
+    if (!ListenSocket->Listen(10))
+    {
+        DispatchOnGameThread([WeakThis = SelfWeakPtr]
+        {
+            if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
+            {
+                Pinned->ConnectionErrorDelegate.Broadcast(TEXT("Failed to listen on socket."));
+            }
+        });
+        return 0;
+    }
+
+    bListening = true;
+    DispatchOnGameThread([WeakThis = SelfWeakPtr]
+    {
+        if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
+        {
+            Pinned->ConnectedDelegate.Broadcast(Pinned); // Server ready event
+        }
+    });
+
+    while (!bStopping)
+    {
+        // Accept incoming connections
+        FSocket* ClientSocket = ListenSocket->Accept(TEXT("McpAutomationBridgeClient"));
+        if (ClientSocket)
+        {
+            // Create a new WebSocket instance for this client connection
+            auto ClientWebSocket = MakeShared<FMcpBridgeWebSocket>(ClientSocket);
+            ClientWebSocket->InitializeWeakSelf(ClientWebSocket);
+            ClientWebSocket->bServerMode = false; // Client connections are not in server mode
+            ClientWebSocket->bServerAcceptedConnection = true; // This is a server-accepted connection
+
+            // Start the client WebSocket thread to handle the handshake and communication
+            ClientWebSocket->Connect();
+
+            // Notify that a new client has connected
+            DispatchOnGameThread([WeakThis = SelfWeakPtr, ClientWebSocket]
+            {
+                if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
+                {
+                    Pinned->ClientConnectedDelegate.Broadcast(ClientWebSocket);
+                }
+            });
+        }
+        else
+        {
+            // Sleep briefly to avoid busy waiting
+            FPlatformProcess::Sleep(0.01f);
+        }
+    }
+
+    if (ListenSocket)
+    {
+        ListenSocket->Close();
+        SocketSubsystem->DestroySocket(ListenSocket);
+        ListenSocket = nullptr;
+    }
+
     return 0;
 }
 
@@ -355,7 +523,7 @@ void FMcpBridgeWebSocket::TearDown(const FString& Reason, bool bWasClean, int32 
             {
                 Pinned->ConnectionErrorDelegate.Broadcast(Reason);
             }
-            Pinned->ClosedDelegate.Broadcast(StatusCode, Reason, bWasClean);
+            Pinned->ClosedDelegate.Broadcast(Pinned, StatusCode, Reason, bWasClean);
         }
     });
 }
@@ -543,6 +711,129 @@ bool FMcpBridgeWebSocket::PerformHandshake()
     return true;
 }
 
+bool FMcpBridgeWebSocket::PerformServerHandshake()
+{
+    // Read the client's WebSocket upgrade request
+    TArray<uint8> RequestBuffer;
+    RequestBuffer.Reserve(1024);
+    constexpr int32 TempSize = 256;
+    uint8 Temp[TempSize];
+    bool bRequestComplete = false;
+    FString ClientKey;
+
+    while (!bRequestComplete)
+    {
+        if (bStopping)
+        {
+            return false;
+        }
+
+        int32 BytesRead = 0;
+        if (!Socket->Recv(Temp, TempSize, BytesRead))
+        {
+            TearDown(TEXT("Failed to read WebSocket upgrade request."), false, 4000);
+            return false;
+        }
+
+        if (BytesRead <= 0)
+        {
+            continue;
+        }
+
+        RequestBuffer.Append(Temp, BytesRead);
+
+        // Check if we have a complete HTTP request (double CRLF)
+        if (RequestBuffer.Num() >= 4)
+        {
+            const int32 Count = RequestBuffer.Num();
+            if (RequestBuffer[Count - 4] == '\r' && RequestBuffer[Count - 3] == '\n' && 
+                RequestBuffer[Count - 2] == '\r' && RequestBuffer[Count - 1] == '\n')
+            {
+                bRequestComplete = true;
+            }
+        }
+    }
+
+    FString RequestString = FString(ANSI_TO_TCHAR(reinterpret_cast<const char*>(RequestBuffer.GetData())));
+    TArray<FString> RequestLines;
+    RequestString.ParseIntoArrayLines(RequestLines, false);
+
+    if (RequestLines.Num() == 0)
+    {
+        TearDown(TEXT("Malformed WebSocket upgrade request."), false, 4000);
+        return false;
+    }
+
+    // Parse the request
+    bool bValidUpgrade = false;
+    bool bValidConnection = false;
+    bool bValidVersion = false;
+
+    for (int32 i = 1; i < RequestLines.Num(); ++i)
+    {
+        FString Key, Value;
+        if (RequestLines[i].Split(TEXT(":"), &Key, &Value))
+        {
+            Key = Key.TrimStartAndEnd();
+            Value = Value.TrimStartAndEnd();
+
+            if (Key.Equals(TEXT("Upgrade"), ESearchCase::IgnoreCase) && Value.Equals(TEXT("websocket"), ESearchCase::IgnoreCase))
+            {
+                bValidUpgrade = true;
+            }
+            else if (Key.Equals(TEXT("Connection"), ESearchCase::IgnoreCase) && Value.Equals(TEXT("Upgrade"), ESearchCase::IgnoreCase))
+            {
+                bValidConnection = true;
+            }
+            else if (Key.Equals(TEXT("Sec-WebSocket-Version"), ESearchCase::IgnoreCase) && Value.Equals(TEXT("13"), ESearchCase::CaseSensitive))
+            {
+                bValidVersion = true;
+            }
+            else if (Key.Equals(TEXT("Sec-WebSocket-Key"), ESearchCase::IgnoreCase))
+            {
+                ClientKey = Value;
+            }
+        }
+    }
+
+    if (!bValidUpgrade || !bValidConnection || !bValidVersion || ClientKey.IsEmpty())
+    {
+        TearDown(TEXT("Invalid WebSocket upgrade request."), false, 4000);
+        return false;
+    }
+
+    // Generate the accept key
+    const FString AcceptGuid = TEXT("258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
+    FString AcceptKey;
+    {
+        FTCHARToUTF8 AcceptUtf8(*(ClientKey + AcceptGuid));
+        FSHA1 Hash;
+        Hash.Update(reinterpret_cast<const uint8*>(AcceptUtf8.Get()), AcceptUtf8.Length());
+        Hash.Final();
+        uint8 Digest[FSHA1::DigestSize];
+        Hash.GetHash(Digest);
+        AcceptKey = FBase64::Encode(Digest, FSHA1::DigestSize);
+    }
+
+    // Send the upgrade response
+    FString Response = FString::Printf(TEXT("HTTP/1.1 101 Switching Protocols\r\n"
+                                             "Upgrade: websocket\r\n"
+                                             "Connection: Upgrade\r\n"
+                                             "Sec-WebSocket-Accept: %s\r\n"
+                                             "\r\n"), *AcceptKey);
+
+    FTCHARToUTF8 ResponseUtf8(*Response);
+    int32 BytesSent = 0;
+    if (!Socket->Send(reinterpret_cast<const uint8*>(ResponseUtf8.Get()), ResponseUtf8.Length(), BytesSent) || 
+        BytesSent != ResponseUtf8.Length())
+    {
+        TearDown(TEXT("Failed to send WebSocket upgrade response."), false, 4000);
+        return false;
+    }
+
+    return true;
+}
+
 bool FMcpBridgeWebSocket::ResolveEndpoint(TSharedPtr<FInternetAddr>& OutAddr)
 {
     ISocketSubsystem* SocketSubsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
@@ -682,13 +973,12 @@ bool FMcpBridgeWebSocket::SendControlFrame(const uint8 ControlOpCode, const TArr
 void FMcpBridgeWebSocket::HandleTextPayload(const TArray<uint8>& Payload)
 {
     const FString Message = BytesToStringView(Payload);
-    DispatchOnGameThread([WeakThis = SelfWeakPtr, Message]
+    // Process message directly without dispatching to game thread
+    // The MCP server should handle threading appropriately
+    if (TSharedPtr<FMcpBridgeWebSocket> Pinned = SelfWeakPtr.Pin())
     {
-        if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
-        {
-            Pinned->MessageDelegate.Broadcast(Message);
-        }
-    });
+        Pinned->MessageDelegate.Broadcast(Pinned, Message);
+    }
 }
 
 void FMcpBridgeWebSocket::ResetFragmentState()
@@ -770,19 +1060,30 @@ bool FMcpBridgeWebSocket::ReceiveFrame()
         return false;
     }
 
-    if (OpCode == OpCodePing)
+    // Handle control frames immediately (they must not be fragmented)
+    if ((OpCode & 0x08) != 0)
     {
         if (!bFinalFrame)
         {
-            TearDown(TEXT("Ping frames must not be fragmented."), false, 4002);
+            TearDown(TEXT("Control frames must not be fragmented."), false, 4002);
             return false;
         }
-        SendControlFrame(OpCodePong, Payload);
-        return true;
-    }
 
-    if (OpCode == OpCodePong)
-    {
+        if (OpCode == OpCodePing)
+        {
+            SendControlFrame(OpCodePong, Payload);
+            return true;
+        }
+
+        if (OpCode == OpCodePong)
+        {
+            // In server mode, receiving a pong means the client is responding to our ping
+            // In client mode, receiving a pong means the server responded to our ping
+            HeartbeatDelegate.Broadcast(SelfWeakPtr.Pin());
+            return true;
+        }
+
+        // Unknown control frame
         return true;
     }
 
@@ -828,16 +1129,6 @@ bool FMcpBridgeWebSocket::ReceiveFrame()
     {
         TearDown(TEXT("Binary frames are not supported."), false, 4003);
         return false;
-    }
-
-    if ((OpCode & 0x08) != 0)
-    {
-        if (!bFinalFrame)
-        {
-            TearDown(TEXT("Control frames must not be fragmented."), false, 4002);
-            return false;
-        }
-        return true;
     }
 
     TearDown(TEXT("Unsupported WebSocket opcode."), false, 4003);

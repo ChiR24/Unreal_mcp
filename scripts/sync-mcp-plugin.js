@@ -1,8 +1,12 @@
 #!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const SOURCE_RELATIVE = ['..', 'Public', 'McpAutomationBridge'];
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const SOURCE_RELATIVE = ['..', 'plugins', 'McpAutomationBridge'];
 const sourceDir = path.resolve(__dirname, ...SOURCE_RELATIVE);
 
 function showHelp() {
