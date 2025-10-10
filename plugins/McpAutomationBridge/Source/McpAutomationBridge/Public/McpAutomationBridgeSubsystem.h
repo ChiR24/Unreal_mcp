@@ -59,7 +59,9 @@ private:
 
     void AttemptConnection();
     void HandleConnected(TSharedPtr<FMcpBridgeWebSocket> Socket);
+    void HandleClientConnected(TSharedPtr<FMcpBridgeWebSocket> ClientSocket);
     void HandleConnectionError(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Error);
+    void HandleServerConnectionError(const FString& Error);
     void HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket, int32 StatusCode, const FString& Reason, bool bWasClean);
     void HandleMessage(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Message);
     void HandleHeartbeat(TSharedPtr<FMcpBridgeWebSocket> Socket);
@@ -84,9 +86,19 @@ private:
     FString ServerName;
     FString ServerVersion;
     FString ActiveSessionId;
+    // Environment override values (optional)
+    FString EnvListenPorts;
+    FString EnvListenHost;
+    bool bEnvListenPortsSet = false;
     float HeartbeatTimeoutSeconds = 0.0f;
     double LastHeartbeatTimestamp = 0.0;
     bool bHeartbeatTrackingEnabled = false;
+
+    // Client port (optional), read from settings
+    int32 ClientPort = 0;
+
+    // Whether an incoming capability token is required
+    bool bRequireCapabilityToken = false;
 
     void RecordHeartbeat();
     void ResetHeartbeatTracking();

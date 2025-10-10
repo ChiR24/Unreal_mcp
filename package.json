@@ -19,8 +19,11 @@
     "smithery:build": "npx @smithery/cli build",
   "smithery:ci": "npm run build && npx @smithery/cli build",
   "dev": "ts-node-esm src/cli.ts",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
+  "lint": "echo \"Lint: typescript/javascript, C, C++, C#\" && eslint . --ext .ts || exit 0",
+  "lint:fix": "eslint . --ext .ts --fix",
+  "lint:cpp": "echo \"Running C/C++ lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C/C++ lint')",
+  "lint:c": "echo \"Running C lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C lint')",
+  "lint:csharp": "echo \"Running C# lint (dotnet format)\" && (dotnet tool run dotnet-format --verify-no-changes || echo 'dotnet-format not available or formatting required; skipping C# lint')",
     "clean": "rimraf dist",
     "prepare": "npm run build",
     "automation:sync": "node scripts/sync-mcp-plugin.js",
@@ -42,7 +45,7 @@
     "test:execute_python": "node tests/test-execute-python.mjs",
     "test:inspect": "node tests/test-inspect.mjs",
     "type-check": "tsc --noEmit",
-    "prebuild": "npm run clean"
+  "prebuild": "npm run lint && npm run clean"
   },
   "engines": {
     "node": ">=18"

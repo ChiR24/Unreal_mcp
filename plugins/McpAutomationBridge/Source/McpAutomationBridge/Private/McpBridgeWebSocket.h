@@ -30,7 +30,7 @@ class FMcpBridgeWebSocket final : public TSharedFromThis<FMcpBridgeWebSocket>, p
 {
 public:
     FMcpBridgeWebSocket(const FString& InUrl, const FString& InProtocols, const TMap<FString, FString>& InHeaders);
-    FMcpBridgeWebSocket(int32 InPort);
+    FMcpBridgeWebSocket(int32 InPort, const FString& InHost = FString(), int32 InListenBacklog = 10, float InAcceptSleepSeconds = 0.01f);
     FMcpBridgeWebSocket(FSocket* InClientSocket);
     virtual ~FMcpBridgeWebSocket() override;
 
@@ -43,6 +43,10 @@ public:
     bool Send(const void* Data, SIZE_T Length);
     bool IsConnected() const;
     bool IsListening() const;
+
+    // Accessors for diagnostics
+    FString GetListenHost() const { return ListenHost; }
+    int32 GetPort() const { return Port; }
 
     void SendHeartbeatPing();
 
@@ -85,12 +89,16 @@ private:
     void ResetFragmentState();
     bool ReceiveFrame();
     bool ReceiveExact(uint8* Buffer, SIZE_T Length);
+    FSocket* DetachSocket();
 
     FString Url;
     FSocket* Socket;
     int32 Port;
     FString Protocols;
     TMap<FString, FString> Headers;
+    FString ListenHost;
+
+    // Server tuning (moved later to ensure proper initialization order)
 
     TArray<uint8> PendingReceived;
     TArray<uint8> FragmentAccumulator;
@@ -104,6 +112,12 @@ private:
     FSocket* ListenSocket;
     FRunnableThread* Thread;
     FEvent* StopEvent;
+    FCriticalSection ClientSocketsMutex;
+    TArray<TSharedPtr<FMcpBridgeWebSocket>> ClientSockets;
+
+    // Server tuning
+    int32 ListenBacklog = 10;
+    float AcceptSleepSeconds = 0.01f;
 
     // Connection state
     bool bConnected;

@@ -194,7 +194,8 @@ export function createServer() {
   const automationBridge = new AutomationBridge({
     serverName: CONFIG.SERVER_NAME,
     serverVersion: CONFIG.SERVER_VERSION,
-    heartbeatIntervalMs: CONFIG.AUTOMATION_HEARTBEAT_MS
+    heartbeatIntervalMs: CONFIG.AUTOMATION_HEARTBEAT_MS,
+    clientMode: process.env.MCP_AUTOMATION_CLIENT_MODE === 'true'
   });
   bridge.setAutomationBridge(automationBridge);
   automationBridge.start();
@@ -523,6 +524,8 @@ export function createServer() {
           capabilityTokenRequired: status.capabilityTokenRequired,
           pendingRequests: status.pendingRequests
         },
+        // Detailed active connections for admin/health dashboards
+        connections: status.connections,
         timestamps: {
           connectedAt: status.connectedAt,
           lastHandshakeAt: status.lastHandshakeAt,

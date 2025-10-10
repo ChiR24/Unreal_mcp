@@ -195,6 +195,7 @@ LOG_LEVEL=info                 # debug | info | warn | error
 MCP_AUTOMATION_WS_HOST=127.0.0.1     # (Optional) Host interface for the automation bridge WebSocket server
 MCP_AUTOMATION_WS_PORT=8090          # (Optional) Port for the automation bridge WebSocket server
 MCP_AUTOMATION_WS_PORTS=8090,8091    # (Optional) Comma-separated list of ports to listen on simultaneously
+MCP_AUTOMATION_LISTEN_HOST=0.0.0.0    # (Optional) Host interface the plugin should bind to when listening (0.0.0.0 to accept any interface)
 MCP_AUTOMATION_WS_PROTOCOLS=mcp-automation # (Optional) Preferred WebSocket subprotocols, comma-separated
 MCP_AUTOMATION_CAPABILITY_TOKEN=     # (Optional) Capability token the editor plugin must echo back during handshake
 MCP_AUTOMATION_BRIDGE_ENABLED=true   # Set to false to disable the automation bridge listener entirely

@@ -410,7 +410,7 @@ except Exception as e:
     ).catch((err) => {
       this.log.warn(`Automation bridge connection failed after ${maxAttempts} attempts:`, err.message);
       this.log.warn('⚠️  Ensure Unreal Editor is running with MCP Automation Bridge plugin enabled');
-      this.log.warn('⚠️  Plugin should auto-connect to ws://127.0.0.1:8090 on editor startup');
+      this.log.warn('⚠️  Plugin should listen on ws://127.0.0.1:8091 for MCP server connections');
     });
 
     try {
@@ -1073,7 +1073,7 @@ print('RESULT:' + json.dumps(result))
     const requestedTimeout = timeoutEnv ? Number(timeoutEnv) : Number.NaN;
     const timeoutMs = Number.isFinite(requestedTimeout) && requestedTimeout > 0
       ? requestedTimeout
-      : 45000;
+      : 30000;
 
     const response = await this.automationBridge.sendAutomationRequest(
       'execute_editor_python',

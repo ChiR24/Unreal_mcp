@@ -11,29 +11,34 @@ public class McpAutomationBridge : ModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "EditorSubsystem",
             "Json",
             "JsonUtilities"
         });
 
-        PrivateDependencyModuleNames.AddRange(new string[]
+        // Editor-only dependencies should only be added when building for the editor target
+        if (Target.bBuildEditor)
         {
-            "ApplicationCore",
-            "Slate",
-            "SlateCore",
-            "Projects",
-            "InputCore",
-            "DeveloperSettings",
-            "Sockets",
-            "Networking",
-            "UnrealEd",
-            "PythonScriptPlugin",
-            "EditorScriptingUtilities",
-            "BlueprintGraph",
-            "Kismet",
-            "KismetCompiler",
-            "AssetRegistry",
-            "AssetTools"
-        });
+            PublicDependencyModuleNames.Add("EditorSubsystem");
+            PrivateDependencyModuleNames.AddRange(new string[]
+            {
+                "ApplicationCore",
+                "Slate",
+                "SlateCore",
+                "Projects",
+                "InputCore",
+                "DeveloperSettings",
+                "Settings",
+                "Sockets",
+                "Networking",
+                "UnrealEd",
+                "PythonScriptPlugin",
+                "EditorScriptingUtilities",
+                "BlueprintGraph",
+                "Kismet",
+                "KismetCompiler",
+                "AssetRegistry",
+                "AssetTools"
+            });
+        }
     }
 }

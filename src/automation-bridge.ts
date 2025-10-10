@@ -28,6 +28,10 @@ export interface AutomationBridgeOptions {
   heartbeatIntervalMs?: number;
   maxPendingRequests?: number;
   maxConcurrentConnections?: number;
+  clientMode?: boolean; // New option to enable client mode
+  clientHost?: string; // Host to connect to in client mode
+  clientPort?: number; // Port to connect to in client mode
+  serverFallbackEnabled?: boolean; // Enable legacy server listener alongside client mode
 }
 
 export interface AutomationBridgeMessage {
@@ -67,7 +71,29 @@ export interface AutomationBridgeStatus {
   lastRequestSentAt: string | null;
   pendingRequests: number;
   pendingRequestDetails: Array<{ requestId: string; action: string; ageMs: number }>;
+  /**
+   * Detailed list of current active connections. Each entry includes the
+   * server-side connectionId (internal), optional sessionId reported by the
+   * client during handshake, and the client's remote address/port.
+   */
+  connections: Array<{
+    connectionId: string;
+    sessionId: string | null;
+    remoteAddress: string | null;
+    remotePort: number | null;
+    port: number;
+    connectedAt: string;
+    protocol: string | null;
+    readyState: number;
+    isPrimary: boolean;
+  }>;
   webSocketListening: boolean;
+  serverFallbackEnabled: boolean;
+  serverName: string;
+  serverVersion: string;
+  maxConcurrentConnections: number;
+  maxPendingRequests: number;
+  heartbeatIntervalMs: number;
 }
 
 type PendingRequest = {
@@ -108,7 +134,22 @@ export class AutomationBridge extends EventEmitter {
   private readonly heartbeatIntervalMs: number;
   private readonly maxPendingRequests: number;
   private readonly maxConcurrentConnections: number;
-  private activeSockets = new Map<WebSocket, { port: number; connectedAt: Date; protocol?: string }>();
+  private readonly clientMode: boolean; // New property for client mode
+  private readonly clientHost: string; // Host to connect to in client mode
+  private readonly clientPort: number; // Port to connect to in client mode
+  private readonly serverFallbackEnabled: boolean;
+  private activeSockets = new Map<
+    WebSocket,
+    {
+      connectionId: string;
+      port: number;
+      connectedAt: Date;
+      protocol?: string;
+      sessionId?: string;
+      remoteAddress?: string;
+      remotePort?: number;
+    }
+  >();
   private primarySocket?: WebSocket; // Primary socket for sending requests
   private connectedAt?: Date;
   private requestCounter = 0;
@@ -170,6 +211,8 @@ export class AutomationBridge extends EventEmitter {
       : [];
     this.negotiatedProtocols = Array.from(new Set([...userProtocols, ...envProtocols, ...defaultProtocols]));
     this.port = this.ports[0];
+    this.serverFallbackEnabled =
+      options.serverFallbackEnabled ?? process.env.MCP_AUTOMATION_SERVER_FALLBACK !== 'false';
     this.capabilityToken =
       options.capabilityToken ?? process.env.MCP_AUTOMATION_CAPABILITY_TOKEN ?? undefined;
     this.enabled = options.enabled ?? process.env.MCP_AUTOMATION_BRIDGE_ENABLED !== 'false';
@@ -188,6 +231,9 @@ export class AutomationBridge extends EventEmitter {
     this.maxPendingRequests = Math.max(1, resolvedMaxPending);
     const resolvedMaxConnections = options.maxConcurrentConnections ?? 10; // Allow up to 10 concurrent connections
     this.maxConcurrentConnections = Math.max(1, resolvedMaxConnections);
+    this.clientMode = options.clientMode ?? process.env.MCP_AUTOMATION_CLIENT_MODE === 'true';
+    this.clientHost = options.clientHost ?? process.env.MCP_AUTOMATION_CLIENT_HOST ?? '127.0.0.1';
+  this.clientPort = options.clientPort ?? sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) ?? 8090;
   }
 
   override on<K extends keyof AutomationBridgeEvents>(
@@ -211,12 +257,20 @@ export class AutomationBridge extends EventEmitter {
     return super.off(event, listener as (...args: unknown[]) => void);
   }
 
-  /** Starts the WebSocket server if enabled. */
+  /** Starts the WebSocket server if enabled, or connects as client in client mode. */
   start(): void {
     if (!this.enabled) {
       log.info('Automation bridge disabled by configuration.');
       return;
     }
+
+    // Always operate in client mode - connect to the Unreal plugin server
+    log.info(`Automation bridge connecting to Unreal server at ws://${this.clientHost}:${this.clientPort}`);
+    this.startClient();
+  }
+
+  /** Starts the WebSocket server (legacy server mode). */
+  private startServer(): void {
     const targetPorts = this.ports.length > 0 ? this.ports : [this.port];
 
     for (const port of targetPorts) {
@@ -241,10 +295,11 @@ export class AutomationBridge extends EventEmitter {
         });
   this.wsServers.set(port, server);
 
-  server.on('connection', (socket: WebSocket, request: IncomingMessage) => {
-          const remote = request.socket.remoteAddress ?? 'unknown';
-          log.info(`Automation bridge client connected from ${remote} on port ${port}`);
-          this.handleConnection(socket, port);
+        server.on('connection', (socket: WebSocket, request: IncomingMessage) => {
+          const remoteAddr = request.socket.remoteAddress ?? undefined;
+          const remotePort = (request.socket as any).remotePort ?? undefined;
+          log.info(`Automation bridge client connected from ${remoteAddr ?? 'unknown'} on port ${port}`);
+          this.handleConnection(socket, port, remoteAddr, remotePort);
         });
 
         server.on('error', (err: unknown) => {
@@ -277,6 +332,27 @@ export class AutomationBridge extends EventEmitter {
 
     if (this.wsServers.size === 0) {
       log.warn('Automation bridge could not start any WebSocket listeners.');
+    }
+  }
+
+  /** Starts the WebSocket client to connect to Unreal Engine plugin server. */
+  private startClient(): void {
+    try {
+      const url = `ws://${this.clientHost}:${this.clientPort}`;
+      log.info(`Connecting to Unreal Engine automation server at ${url}`);
+
+      const socket = new WebSocket(url, this.negotiatedProtocols, {
+        headers: this.capabilityToken ? { 'X-MCP-Capability': this.capabilityToken } : undefined,
+        perMessageDeflate: false
+      });
+
+      this.handleClientConnection(socket);
+    } catch (error) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      this.lastError = { message: errorObj.message, at: new Date() };
+      log.error('Failed to create WebSocket client connection', errorObj);
+      const errorWithPort = Object.assign(errorObj, { port: this.clientPort });
+      this.emitAutomation('error', errorWithPort);
     }
   }
 
@@ -328,10 +404,15 @@ export class AutomationBridge extends EventEmitter {
 
     // Get info about all active connections
     const connectionInfos = Array.from(this.activeSockets.entries()).map(([socket, info]) => ({
+      connectionId: info.connectionId,
+      sessionId: info.sessionId ?? null,
+      remoteAddress: info.remoteAddress ?? null,
+      remotePort: info.remotePort ?? null,
       port: info.port,
       connectedAt: info.connectedAt.toISOString(),
       protocol: info.protocol || null,
-      readyState: socket.readyState
+      readyState: socket.readyState,
+      isPrimary: socket === this.primarySocket
     }));
 
     return {
@@ -364,7 +445,15 @@ export class AutomationBridge extends EventEmitter {
       lastRequestSentAt: this.lastRequestSentAt?.toISOString() ?? null,
       pendingRequests: this.pendingRequests.size,
       pendingRequestDetails: pendingSummaries,
-      webSocketListening: this.listeningPorts.size > 0
+      // Expose active connection details for admin/health purposes
+      connections: connectionInfos,
+      webSocketListening: this.listeningPorts.size > 0,
+      serverFallbackEnabled: this.serverFallbackEnabled,
+      serverName: this.serverName,
+      serverVersion: this.serverVersion,
+      maxConcurrentConnections: this.maxConcurrentConnections,
+      maxPendingRequests: this.maxPendingRequests,
+      heartbeatIntervalMs: this.heartbeatIntervalMs
     };
   }
 
@@ -407,7 +496,7 @@ export class AutomationBridge extends EventEmitter {
     return sentCount > 0;
   }
 
-  private handleConnection(socket: WebSocket, port: number): void {
+  private handleConnection(socket: WebSocket, port: number, remoteAddress?: string, remotePort?: number): void {
     // Check if we've reached the maximum concurrent connections
     if (this.activeSockets.size >= this.maxConcurrentConnections) {
       log.warn(
@@ -443,7 +532,7 @@ export class AutomationBridge extends EventEmitter {
         return;
       }
 
-      if (!handshakeComplete) {
+        if (!handshakeComplete) {
         if (parsed.type !== 'bridge_hello') {
           log.warn(`Expected bridge_hello handshake, received ${parsed.type}; closing.`);
           socket.close(4004, 'Handshake expected bridge_hello');
@@ -466,16 +555,18 @@ export class AutomationBridge extends EventEmitter {
         handshakeComplete = true;
         clearTimeout(handshakeTimeout);
         const now = new Date();
-        this.registerSocket(socket, port);
-        this.lastHandshakeAt = now;
+        // Sanitize metadata first so we can store any client-provided sessionId
         const metadata = this.sanitizeHandshakeMetadata(parsed as Record<string, unknown>);
         this.lastHandshakeMetadata = metadata;
         this.lastHandshakeFailure = undefined;
         this.lastMessageAt = now;
-          const ackPayload = this.createHandshakeAck(parsed as Record<string, unknown>, port, socket);
+        // Register the socket with metadata and remote address information
+        this.registerSocket(socket, port, metadata, remoteAddress, remotePort);
+        this.lastHandshakeAt = now;
+        const ackPayload = this.createHandshakeAck(parsed as Record<string, unknown>, port, socket);
         this.lastHandshakeAck = ackPayload;
-    this.send(ackPayload);
-    this.startHeartbeat();
+        this.send(ackPayload);
+        this.startHeartbeat();
         this.emitAutomation('connected', {
           socket,
           metadata,
@@ -527,12 +618,141 @@ export class AutomationBridge extends EventEmitter {
     });
   }
 
-  private registerSocket(socket: WebSocket, port: number) {
+  /** Handles client connection to Unreal Engine plugin server. */
+  private handleClientConnection(socket: WebSocket): void {
+    let handshakeComplete = false;
+    const handshakeTimeout = setTimeout(() => {
+      if (!handshakeComplete) {
+        log.warn('Automation bridge client handshake timed out; closing connection.');
+        socket.close(4002, 'Handshake timeout');
+        this.lastHandshakeFailure = { reason: 'timeout', at: new Date() };
+        this.emitAutomation('handshakeFailed', { reason: 'timeout', port: this.clientPort });
+      }
+    }, 5000);
+
+    socket.on('open', () => {
+      log.info('Automation bridge client connected, sending handshake');
+      // Send bridge_hello to initiate handshake
+      const helloPayload: AutomationBridgeMessage = {
+        type: 'bridge_hello',
+        capabilityToken: this.capabilityToken || undefined
+      };
+      socket.send(JSON.stringify(helloPayload));
+    });
+
+    socket.on('message', (data, isBinary) => {
+      let parsed: AutomationBridgeMessage;
+      try {
+        const text = typeof data === 'string' ? data : data.toString('utf8');
+        log.debug(`[AutomationBridge Client] Received message (binary=${isBinary}, length=${text.length}): ${text.substring(0, 200)}`);
+        parsed = JSON.parse(text);
+      } catch (error) {
+        const text = typeof data === 'string' ? data : data.toString('utf8');
+        log.error(`Received non-JSON automation message from server (binary=${isBinary}); closing connection. Data: ${text.substring(0, 500)}`, error);
+        socket.close(4003, 'Invalid JSON payload');
+        this.lastHandshakeFailure = { reason: 'invalid-json', at: new Date() };
+        this.emitAutomation('handshakeFailed', { reason: 'invalid-json', port: this.clientPort });
+        return;
+      }
+
+      if (!handshakeComplete) {
+        if (parsed.type !== 'bridge_ack') {
+          log.warn(`Expected bridge_ack handshake, received ${parsed.type}; closing.`);
+          socket.close(4004, 'Handshake expected bridge_ack');
+          this.lastHandshakeFailure = { reason: 'invalid-handshake', at: new Date() };
+          this.emitAutomation('handshakeFailed', { reason: 'invalid-handshake', port: this.clientPort });
+          return;
+        }
+
+        handshakeComplete = true;
+        clearTimeout(handshakeTimeout);
+        const now = new Date();
+        const metadata = this.sanitizeHandshakeMetadata(parsed as Record<string, unknown>);
+        this.lastHandshakeMetadata = metadata;
+        this.lastHandshakeAck = parsed;
+        this.lastHandshakeFailure = undefined;
+        this.lastMessageAt = now;
+        // Attempt to extract remote address/port from the underlying socket
+        const underlying: any = (socket as any)._socket || (socket as any).socket;
+        const remoteAddr = underlying?.remoteAddress ?? undefined;
+        const remotePort = underlying?.remotePort ?? undefined;
+        this.registerSocket(socket, this.clientPort, metadata, remoteAddr, remotePort);
+        this.startHeartbeat();
+        this.emitAutomation('connected', {
+          socket,
+          metadata,
+          port: this.clientPort,
+          protocol: socket.protocol || null
+        });
+        return;
+      }
+
+      this.handleAutomationMessage(parsed);
+      this.lastMessageAt = new Date();
+      this.emitAutomation('message', parsed);
+    });
+
+    socket.on('error', (error) => {
+      log.error('Automation bridge client socket error', error);
+      const errObj = error instanceof Error ? error : new Error(String(error));
+      this.lastError = { message: errObj.message, at: new Date() };
+      const errWithPort = Object.assign(errObj, { port: this.clientPort });
+      this.emitAutomation('error', errWithPort);
+    });
+
+    socket.on('close', (code, reasonBuffer) => {
+      const reason = reasonBuffer.toString('utf8');
+      const socketInfo = this.activeSockets.get(socket);
+      if (socketInfo) {
+        this.activeSockets.delete(socket);
+        // If this was the primary socket, choose a new primary
+        if (socket === this.primarySocket) {
+          this.primarySocket = this.activeSockets.size > 0 ? this.activeSockets.keys().next().value : undefined;
+          if (this.activeSockets.size === 0) {
+            this.stopHeartbeat();
+          }
+        }
+        clearTimeout(handshakeTimeout);
+        this.lastDisconnect = { code, reason, at: new Date() };
+        this.emitAutomation('disconnected', {
+          code,
+          reason,
+          port: socketInfo.port,
+          protocol: socketInfo.protocol || null
+        });
+        log.info(`Automation bridge client socket closed (code=${code}, reason=${reason})`);
+        // Only reject pending requests if this was the last connection
+        if (this.activeSockets.size === 0) {
+          this.rejectAllPending(new Error(`Automation bridge connection closed (${code}): ${reason || 'no reason'}`));
+        }
+      }
+    });
+
+    // Handle WebSocket pong frames for heartbeat tracking
+    socket.on('pong', () => {
+      this.lastMessageAt = new Date();
+    });
+  }
+
+  private registerSocket(
+    socket: WebSocket,
+    port: number,
+    metadata?: Record<string, unknown>,
+    remoteAddress?: string,
+    remotePort?: number
+  ) {
+    const connectionId = randomUUID();
+    const sessionId = metadata && typeof metadata.sessionId === 'string' ? (metadata.sessionId as string) : undefined;
     const socketInfo = {
+      connectionId,
       port,
       connectedAt: new Date(),
-      protocol: socket.protocol || undefined
+      protocol: socket.protocol || undefined,
+      sessionId,
+      remoteAddress: remoteAddress ?? undefined,
+      remotePort: typeof remotePort === 'number' ? remotePort : undefined
     };
+
     this.activeSockets.set(socket, socketInfo);
 
     // Set as primary socket if this is the first connection
@@ -580,7 +800,9 @@ export class AutomationBridge extends EventEmitter {
       availablePorts: [...this.ports],
       activePort: port,
       protocol: socket.protocol || null,
-      concurrentConnections: this.activeSockets.size + 1, // +1 for the connecting socket
+  // activeSockets already includes the connecting socket by the time we
+  // build the handshake ack, so use the map size directly.
+  concurrentConnections: this.activeSockets.size,
       maxConcurrentConnections: this.maxConcurrentConnections
     };
   }
@@ -683,7 +905,7 @@ export class AutomationBridge extends EventEmitter {
     return `req-${Date.now().toString(36)}-${this.requestCounter.toString(36)}`;
   }
 
-  public async sendAutomationRequest(
+    public async sendAutomationRequest(
     action: string,
     payload: Record<string, unknown> = {},
     options: { timeoutMs?: number } = {}
@@ -695,7 +917,12 @@ export class AutomationBridge extends EventEmitter {
       throw new Error('Automation bridge not connected');
     }
 
-    const timeoutMs = Math.max(1000, options.timeoutMs ?? 60000);
+  // Default timeout for automation requests. Allow override via
+  // MCP_AUTOMATION_REQUEST_TIMEOUT_MS (ms). Default raised to 120s to
+  // accommodate heavy editor operations like blueprint creation.
+  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
+  const defaultTimeout = Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
+  const timeoutMs = Math.max(1000, options.timeoutMs ?? defaultTimeout);
     const requestId = this.generateRequestId();
 
     const requestPayload: AutomationBridgeMessage = {

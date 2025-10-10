@@ -13,7 +13,7 @@
   "CanContainContent": false,
   "IsBetaVersion": true,
   "IsExperimentalVersion": true,
-  "EnabledByDefault": false,
+  "EnabledByDefault": true,
   "SupportsUEBuildSystem": true,
   "Modules": [
     {
@@ -22,7 +22,6 @@
       "LoadingPhase": "Default"
     }
   ],
-  "WhitelistPlatforms": [],
   "BlacklistPlatforms": [],
   "Plugins": [
     {

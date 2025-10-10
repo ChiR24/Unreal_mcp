@@ -1,4 +1,5 @@
 #include "McpBridgeWebSocket.h"
+#include "McpAutomationBridgeSubsystem.h"
 
 #include "Async/Async.h"
 #include "Containers/StringConv.h"
@@ -14,6 +15,9 @@
 #include "String/LexFromString.h"
 #include "Sockets.h"
 #include "SocketSubsystem.h"
+#include "IPAddress.h"
+#include "Logging/LogMacros.h"
+#include "HAL/PlatformAtomics.h"
 
 namespace
 {
@@ -194,30 +198,93 @@ void DispatchOnGameThread(TFunction<void()>&& Fn)
 
     AsyncTask(ENamedThreads::GameThread, MoveTemp(Fn));
 }
+
+FString DescribeSocketError(ISocketSubsystem* SocketSubsystem, const TCHAR* Context)
+{
+    if (!SocketSubsystem)
+    {
+        return FString::Printf(TEXT("%s (no socket subsystem)"), Context);
+    }
+
+    const ESocketErrors LastErrorCode = SocketSubsystem->GetLastErrorCode();
+    const FString Description = SocketSubsystem->GetSocketError(LastErrorCode);
+    return FString::Printf(TEXT("%s (error=%d, %s)"), Context, static_cast<int32>(LastErrorCode), *Description);
+}
 }
 
 FMcpBridgeWebSocket::FMcpBridgeWebSocket(const FString& InUrl, const FString& InProtocols, const TMap<FString, FString>& InHeaders)
     : Url(InUrl)
+    , Socket(nullptr)
+    , Port(0)
     , Protocols(InProtocols)
     , Headers(InHeaders)
+    , ListenHost()
+    , PendingReceived()
+    , FragmentAccumulator()
+    , bFragmentMessageActive(false)
+    , SelfWeakPtr()
     , bServerMode(false)
+    , bServerAcceptedConnection(false)
+    , ListenSocket(nullptr)
+    , Thread(nullptr)
+    , StopEvent(nullptr)
+    , ClientSockets()
+    , ListenBacklog(10)
+    , AcceptSleepSeconds(0.01f)
+    , bConnected(false)
+    , bListening(false)
+    , bStopping(false)
 {
 }
 
-FMcpBridgeWebSocket::FMcpBridgeWebSocket(int32 InPort)
-    : Port(InPort)
-    , Protocols({ TEXT("mcp-automation") })
+FMcpBridgeWebSocket::FMcpBridgeWebSocket(int32 InPort, const FString& InHost, int32 InListenBacklog, float InAcceptSleepSeconds)
+    : Url()
+    , Socket(nullptr)
+    , Port(InPort)
+    , Protocols(TEXT("mcp-automation"))
+    , Headers()
+    , ListenHost(InHost)
+    , PendingReceived()
+    , FragmentAccumulator()
+    , bFragmentMessageActive(false)
+    , SelfWeakPtr()
     , bServerMode(true)
+    , bServerAcceptedConnection(false)
+    , ListenSocket(nullptr)
+    , Thread(nullptr)
+    , StopEvent(nullptr)
+    , ClientSockets()
+    , ListenBacklog(InListenBacklog)
+    , AcceptSleepSeconds(InAcceptSleepSeconds)
+    , bConnected(false)
+    , bListening(false)
+    , bStopping(false)
 {
 }
 
 FMcpBridgeWebSocket::FMcpBridgeWebSocket(FSocket* InClientSocket)
-    : Socket(InClientSocket)
+    : Url()
+    , Socket(InClientSocket)
     , Port(0)
+    , Protocols(TEXT("mcp-automation"))
+    , Headers()
+    , ListenHost()
+    , PendingReceived()
+    , FragmentAccumulator()
+    , bFragmentMessageActive(false)
+    , SelfWeakPtr()
     , bServerMode(false)
     , bServerAcceptedConnection(true)
+    , ListenSocket(nullptr)
+    , Thread(nullptr)
+    , StopEvent(nullptr)
+    , ClientSockets()
+    , ListenBacklog(10)
+    , AcceptSleepSeconds(0.01f)
+    , bConnected(true)
+    , bListening(false)
+    , bStopping(false)
 {
-    bConnected = true;
 }
 
 FMcpBridgeWebSocket::~FMcpBridgeWebSocket()
@@ -234,12 +301,16 @@ FMcpBridgeWebSocket::~FMcpBridgeWebSocket()
         FPlatformProcess::ReturnSynchEventToPool(StopEvent);
         StopEvent = nullptr;
     }
-    if (Socket)
+    if (FSocket* LocalSocket = DetachSocket())
     {
-        Socket->Close();
-        ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(Socket);
-        Socket = nullptr;
+        LocalSocket->Close();
+        ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(LocalSocket);
     }
+}
+
+FSocket* FMcpBridgeWebSocket::DetachSocket()
+{
+    return static_cast<FSocket*>(FPlatformAtomics::InterlockedExchangePtr(reinterpret_cast<void**>(&Socket), nullptr));
 }
 
 void FMcpBridgeWebSocket::InitializeWeakSelf(const TSharedPtr<FMcpBridgeWebSocket>& InShared)
@@ -278,9 +349,11 @@ void FMcpBridgeWebSocket::Listen()
 
     bStopping = false;
     StopEvent = FPlatformProcess::GetSynchEventFromPool(true);
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Spawning MCP automation server thread for %s:%d"), *ListenHost, Port);
     Thread = FRunnableThread::Create(this, TEXT("FMcpBridgeWebSocketServerWorker"), 0, TPri_Normal);
     if (!Thread)
     {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Failed to create server thread for MCP automation bridge."));
         DispatchOnGameThread([WeakThis = SelfWeakPtr]
         {
             if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
@@ -299,14 +372,10 @@ void FMcpBridgeWebSocket::Close(int32 StatusCode, const FString& Reason)
         StopEvent->Trigger();
     }
 
-    if (Socket && bConnected)
+    if (FSocket* LocalSocket = DetachSocket())
     {
-        SendCloseFrame(StatusCode, Reason);
-    }
-
-    if (Socket)
-    {
-        Socket->Close();
+        LocalSocket->Close();
+        ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(LocalSocket);
     }
 }
 
@@ -376,6 +445,7 @@ uint32 FMcpBridgeWebSocket::RunClient()
     }
 
     bConnected = true;
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("FMcpBridgeWebSocket connection established (serverAccepted=%s)."), bServerAcceptedConnection ? TEXT("true") : TEXT("false"));
     DispatchOnGameThread([WeakThis = SelfWeakPtr]
     {
         if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
@@ -399,14 +469,17 @@ uint32 FMcpBridgeWebSocket::RunClient()
 uint32 FMcpBridgeWebSocket::RunServer()
 {
     ISocketSubsystem* SocketSubsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("FMcpBridgeWebSocket::RunServer begin (host=%s, port=%d)"), *ListenHost, Port);
     ListenSocket = SocketSubsystem->CreateSocket(NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), false);
     if (!ListenSocket)
     {
-        DispatchOnGameThread([WeakThis = SelfWeakPtr]
+        const FString ErrorMessage = DescribeSocketError(SocketSubsystem, TEXT("Failed to create listen socket"));
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"), *ErrorMessage);
+        DispatchOnGameThread([WeakThis = SelfWeakPtr, ErrorMessage]
         {
             if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
             {
-                Pinned->ConnectionErrorDelegate.Broadcast(TEXT("Failed to create listen socket."));
+                Pinned->ConnectionErrorDelegate.Broadcast(ErrorMessage);
             }
         });
         return 0;
@@ -414,37 +487,67 @@ uint32 FMcpBridgeWebSocket::RunServer()
 
     ListenSocket->SetReuseAddr(true);
     ListenSocket->SetNonBlocking(false);
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Listen socket created."));
 
     TSharedRef<FInternetAddr> ListenAddr = SocketSubsystem->CreateInternetAddr();
-    ListenAddr->SetAnyAddress();
+
+    bool bResolvedHost = false;
+    if (!ListenHost.IsEmpty())
+    {
+        FString HostToBind = ListenHost;
+        if (HostToBind.Equals(TEXT("localhost"), ESearchCase::IgnoreCase))
+        {
+            HostToBind = TEXT("127.0.0.1");
+        }
+
+        bool bIsValidIp = false;
+        ListenAddr->SetIp(*HostToBind, bIsValidIp);
+        if (bIsValidIp)
+        {
+            bResolvedHost = true;
+        }
+    }
+
+    if (!bResolvedHost)
+    {
+        ListenAddr->SetAnyAddress();
+    }
+
     ListenAddr->SetPort(Port);
 
     if (!ListenSocket->Bind(*ListenAddr))
     {
-        DispatchOnGameThread([WeakThis = SelfWeakPtr]
+        const FString ErrorMessage = DescribeSocketError(SocketSubsystem, TEXT("Failed to bind listen socket"));
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"), *ErrorMessage);
+        DispatchOnGameThread([WeakThis = SelfWeakPtr, ErrorMessage]
         {
             if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
             {
-                Pinned->ConnectionErrorDelegate.Broadcast(TEXT("Failed to bind listen socket."));
+                Pinned->ConnectionErrorDelegate.Broadcast(ErrorMessage);
             }
         });
         return 0;
     }
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Listen socket bound to %s."), *ListenAddr->ToString(false));
 
-    if (!ListenSocket->Listen(10))
+    if (!ListenSocket->Listen(ListenBacklog > 0 ? ListenBacklog : 10))
     {
-        DispatchOnGameThread([WeakThis = SelfWeakPtr]
+        const FString ErrorMessage = DescribeSocketError(SocketSubsystem, TEXT("Failed to listen on socket"));
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"), *ErrorMessage);
+        DispatchOnGameThread([WeakThis = SelfWeakPtr, ErrorMessage]
         {
             if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
             {
-                Pinned->ConnectionErrorDelegate.Broadcast(TEXT("Failed to listen on socket."));
+                Pinned->ConnectionErrorDelegate.Broadcast(ErrorMessage);
             }
         });
         return 0;
     }
 
     bListening = true;
-    DispatchOnGameThread([WeakThis = SelfWeakPtr]
+    const FString BoundAddress = ListenAddr->ToString(false);
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("MCP Automation Bridge listening on %s"), *BoundAddress);
+    DispatchOnGameThread([WeakThis = SelfWeakPtr, BoundAddress]
     {
         if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
         {
@@ -464,22 +567,54 @@ uint32 FMcpBridgeWebSocket::RunServer()
             ClientWebSocket->bServerMode = false; // Client connections are not in server mode
             ClientWebSocket->bServerAcceptedConnection = true; // This is a server-accepted connection
 
-            // Start the client WebSocket thread to handle the handshake and communication
-            ClientWebSocket->Connect();
-
-            // Notify that a new client has connected
-            DispatchOnGameThread([WeakThis = SelfWeakPtr, ClientWebSocket]
             {
-                if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin())
+                FScopeLock Lock(&ClientSocketsMutex);
+                ClientSockets.Add(ClientWebSocket);
+            }
+
+            TWeakPtr<FMcpBridgeWebSocket> LocalWeakThis = SelfWeakPtr;
+            auto RemoveFromClientList = [LocalWeakThis, ClientWebSocket]
+            {
+                if (TSharedPtr<FMcpBridgeWebSocket> Pinned = LocalWeakThis.Pin())
                 {
-                    Pinned->ClientConnectedDelegate.Broadcast(ClientWebSocket);
+                    FScopeLock Lock(&Pinned->ClientSocketsMutex);
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Removing client socket from server tracking (remaining before remove: %d)."), Pinned->ClientSockets.Num());
+                    Pinned->ClientSockets.Remove(ClientWebSocket);
+                }
+            };
+
+            ClientWebSocket->OnConnected().AddLambda([LocalWeakThis, ClientWebSocket](TSharedPtr<FMcpBridgeWebSocket>)
+            {
+                if (TSharedPtr<FMcpBridgeWebSocket> Pinned = LocalWeakThis.Pin())
+                {
+                    DispatchOnGameThread([ParentWeak = LocalWeakThis, ClientSocket = ClientWebSocket]
+                    {
+                        if (TSharedPtr<FMcpBridgeWebSocket> DispatchPinned = ParentWeak.Pin())
+                        {
+                            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Broadcasting client connected delegate."));
+                            DispatchPinned->ClientConnectedDelegate.Broadcast(ClientSocket);
+                        }
+                    });
                 }
             });
+
+            ClientWebSocket->OnClosed().AddLambda([RemoveFromClientList](TSharedPtr<FMcpBridgeWebSocket>, int32, const FString&, bool)
+            {
+                RemoveFromClientList();
+            });
+
+            ClientWebSocket->OnConnectionError().AddLambda([RemoveFromClientList](const FString&)
+            {
+                RemoveFromClientList();
+            });
+
+            // Start the client WebSocket thread to handle the handshake and communication
+            ClientWebSocket->Connect();
         }
         else
         {
             // Sleep briefly to avoid busy waiting
-            FPlatformProcess::Sleep(0.01f);
+                FPlatformProcess::Sleep(AcceptSleepSeconds > 0.0f ? AcceptSleepSeconds : 0.01f);
         }
     }
 
@@ -504,11 +639,10 @@ void FMcpBridgeWebSocket::Stop()
 
 void FMcpBridgeWebSocket::TearDown(const FString& Reason, bool bWasClean, int32 StatusCode)
 {
-    if (Socket)
+    if (FSocket* LocalSocket = DetachSocket())
     {
-        Socket->Close();
-        ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(Socket);
-        Socket = nullptr;
+        LocalSocket->Close();
+        ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(LocalSocket);
     }
 
     const bool bWasConnected = bConnected;
@@ -731,6 +865,7 @@ bool FMcpBridgeWebSocket::PerformServerHandshake()
         int32 BytesRead = 0;
         if (!Socket->Recv(Temp, TempSize, BytesRead))
         {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Server handshake recv failed while awaiting upgrade request."));
             TearDown(TEXT("Failed to read WebSocket upgrade request."), false, 4000);
             return false;
         }
@@ -760,6 +895,7 @@ bool FMcpBridgeWebSocket::PerformServerHandshake()
 
     if (RequestLines.Num() == 0)
     {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Server handshake received empty upgrade request."));
         TearDown(TEXT("Malformed WebSocket upgrade request."), false, 4000);
         return false;
     }
@@ -768,6 +904,7 @@ bool FMcpBridgeWebSocket::PerformServerHandshake()
     bool bValidUpgrade = false;
     bool bValidConnection = false;
     bool bValidVersion = false;
+    FString RequestedProtocols;
 
     for (int32 i = 1; i < RequestLines.Num(); ++i)
     {
@@ -793,11 +930,20 @@ bool FMcpBridgeWebSocket::PerformServerHandshake()
             {
                 ClientKey = Value;
             }
+            else if (Key.Equals(TEXT("Sec-WebSocket-Protocol"), ESearchCase::IgnoreCase))
+            {
+                RequestedProtocols = Value;
+            }
         }
     }
 
     if (!bValidUpgrade || !bValidConnection || !bValidVersion || ClientKey.IsEmpty())
     {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Server handshake validation failed (upgrade=%s, connection=%s, version=%s, hasKey=%s)."),
+            bValidUpgrade ? TEXT("true") : TEXT("false"),
+            bValidConnection ? TEXT("true") : TEXT("false"),
+            bValidVersion ? TEXT("true") : TEXT("false"),
+            ClientKey.IsEmpty() ? TEXT("false") : TEXT("true"));
         TearDown(TEXT("Invalid WebSocket upgrade request."), false, 4000);
         return false;
     }
@@ -815,21 +961,64 @@ bool FMcpBridgeWebSocket::PerformServerHandshake()
         AcceptKey = FBase64::Encode(Digest, FSHA1::DigestSize);
     }
 
+    FString SelectedProtocol;
+    if (!Protocols.IsEmpty() && !RequestedProtocols.IsEmpty())
+    {
+        TArray<FString> RequestedList;
+        RequestedProtocols.ParseIntoArray(RequestedList, TEXT(","), true);
+
+        TArray<FString> SupportedList;
+        Protocols.ParseIntoArray(SupportedList, TEXT(","), true);
+
+        for (const FString& Requested : RequestedList)
+        {
+            const FString TrimmedRequested = Requested.TrimStartAndEnd();
+            for (const FString& Supported : SupportedList)
+            {
+                if (TrimmedRequested.Equals(Supported.TrimStartAndEnd(), ESearchCase::IgnoreCase))
+                {
+                    SelectedProtocol = Supported.TrimStartAndEnd();
+                    break;
+                }
+            }
+            if (!SelectedProtocol.IsEmpty())
+            {
+                break;
+            }
+        }
+    }
+
+    if (!RequestedProtocols.IsEmpty() && SelectedProtocol.IsEmpty())
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Server handshake failed: no matching subprotocol. Requested=%s Supported=%s"), *RequestedProtocols, *Protocols);
+        TearDown(TEXT("No matching WebSocket subprotocol."), false, 4403);
+        return false;
+    }
+
     // Send the upgrade response
     FString Response = FString::Printf(TEXT("HTTP/1.1 101 Switching Protocols\r\n"
                                              "Upgrade: websocket\r\n"
                                              "Connection: Upgrade\r\n"
-                                             "Sec-WebSocket-Accept: %s\r\n"
-                                             "\r\n"), *AcceptKey);
+                                             "Sec-WebSocket-Accept: %s\r\n"), *AcceptKey);
+
+    if (!SelectedProtocol.IsEmpty())
+    {
+        Response += FString::Printf(TEXT("Sec-WebSocket-Protocol: %s\r\n"), *SelectedProtocol);
+    }
+
+    Response += TEXT("\r\n");
 
     FTCHARToUTF8 ResponseUtf8(*Response);
     int32 BytesSent = 0;
     if (!Socket->Send(reinterpret_cast<const uint8*>(ResponseUtf8.Get()), ResponseUtf8.Length(), BytesSent) || 
         BytesSent != ResponseUtf8.Length())
     {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Server handshake failed: unable to send upgrade response (sent %d expected %d)."), BytesSent, ResponseUtf8.Length());
         TearDown(TEXT("Failed to send WebSocket upgrade response."), false, 4000);
         return false;
     }
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Server handshake completed; subprotocol=%s"), SelectedProtocol.IsEmpty() ? TEXT("(none)") : *SelectedProtocol);
 
     return true;
 }
@@ -899,35 +1088,44 @@ bool FMcpBridgeWebSocket::SendTextFrame(const void* Data, SIZE_T Length)
     const uint8 Header = 0x80 | OpCodeText;
     Frame.Add(Header);
 
+    const bool bMask = !bServerAcceptedConnection;
+
     if (Length <= 125)
     {
-        Frame.Add(0x80 | static_cast<uint8>(Length));
+        Frame.Add((bMask ? 0x80 : 0x00) | static_cast<uint8>(Length));
     }
     else if (Length <= 0xFFFF)
     {
-        Frame.Add(0x80 | 126);
+        Frame.Add((bMask ? 0x80 : 0x00) | 126);
         const uint16 SizeShort = ToNetwork16(static_cast<uint16>(Length));
         Frame.Append(reinterpret_cast<const uint8*>(&SizeShort), sizeof(uint16));
     }
     else
     {
-        Frame.Add(0x80 | 127);
+        Frame.Add((bMask ? 0x80 : 0x00) | 127);
         const uint64 SizeLong = ToNetwork64(static_cast<uint64>(Length));
         Frame.Append(reinterpret_cast<const uint8*>(&SizeLong), sizeof(uint64));
     }
 
-    uint8 MaskKey[4];
-    for (uint8& Byte : MaskKey)
+    if (bMask)
     {
-        Byte = static_cast<uint8>(FMath::RandRange(0, 255));
-    }
-    Frame.Append(MaskKey, 4);
+        uint8 MaskKey[4];
+        for (uint8& Byte : MaskKey)
+        {
+            Byte = static_cast<uint8>(FMath::RandRange(0, 255));
+        }
+        Frame.Append(MaskKey, 4);
 
-    const int64 Offset = Frame.Num();
-    Frame.AddUninitialized(Length);
-    for (SIZE_T Index = 0; Index < Length; ++Index)
+        const int64 Offset = Frame.Num();
+        Frame.AddUninitialized(Length);
+        for (SIZE_T Index = 0; Index < Length; ++Index)
+        {
+            Frame[Offset + Index] = Raw[Index] ^ MaskKey[Index % 4];
+        }
+    }
+    else
     {
-        Frame[Offset + Index] = Raw[Index] ^ MaskKey[Index % 4];
+        Frame.Append(Raw, static_cast<int32>(Length));
     }
 
     FScopeLock Guard(&SendMutex);
@@ -951,20 +1149,28 @@ bool FMcpBridgeWebSocket::SendControlFrame(const uint8 ControlOpCode, const TArr
     TArray<uint8> Frame;
     Frame.Reserve(2 + 4 + Payload.Num());
     Frame.Add(0x80 | (ControlOpCode & 0x0F));
-    Frame.Add(0x80 | static_cast<uint8>(Payload.Num()));
+    const bool bMask = !bServerAcceptedConnection;
+    Frame.Add((bMask ? 0x80 : 0x00) | static_cast<uint8>(Payload.Num()));
 
-    uint8 MaskKey[4];
-    for (uint8& Byte : MaskKey)
+    if (bMask)
     {
-        Byte = static_cast<uint8>(FMath::RandRange(0, 255));
+        uint8 MaskKey[4];
+        for (uint8& Byte : MaskKey)
+        {
+            Byte = static_cast<uint8>(FMath::RandRange(0, 255));
+        }
+
+        Frame.Append(MaskKey, 4);
+        const int32 PayloadOffset = Frame.Num();
+        Frame.AddUninitialized(Payload.Num());
+        for (int32 Index = 0; Index < Payload.Num(); ++Index)
+        {
+            Frame[PayloadOffset + Index] = Payload[Index] ^ MaskKey[Index % 4];
+        }
     }
-
-    Frame.Append(MaskKey, 4);
-    const int32 PayloadOffset = Frame.Num();
-    Frame.AddUninitialized(Payload.Num());
-    for (int32 Index = 0; Index < Payload.Num(); ++Index)
+    else if (Payload.Num() > 0)
     {
-        Frame[PayloadOffset + Index] = Payload[Index] ^ MaskKey[Index % 4];
+        Frame.Append(Payload);
     }
 
     return SendFrame(Frame);

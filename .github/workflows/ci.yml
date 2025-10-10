@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint (TS + C/C++ + C#)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install cpplint
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install cpplint
+
+      - name: Install dotnet-format
+        run: |
+          dotnet tool install -g dotnet-format || dotnet tool update -g dotnet-format
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint (TypeScript/JavaScript)
+        run: |
+          echo "Running ESLint (fail on warnings)"
+          npx eslint . --ext .ts --max-warnings=0
+
+      - name: Run cpplint (C / C++)
+        run: |
+          FILES=$(git ls-files "plugins/**/*.cpp" "plugins/**/*.h" "plugins/**/*.c" || true)
+          if [ -z "$FILES" ]; then
+            echo "No C/C++ files to lint - skipping cpplint"
+          else
+            python -m cpplint $FILES
+          fi
+
+      - name: Run dotnet-format (C#)
+        run: |
+          FILES=$(git ls-files "**/*.csproj" "**/*.sln" || true)
+          if [ -z "$FILES" ]; then
+            echo "No C# projects/solutions found - skipping dotnet-format"
+          else
+            dotnet format --verify-no-changes --verbosity minimal
+          fi
+
+  native-build:
+    name: Native plugin build (Windows)
+    runs-on: windows-latest
+    needs: lint
+    env:
+      UE_ENGINE_DIR: ${{ secrets.UE_ENGINE_DIR }}
+      UE_PROJECT_PATH: ${{ secrets.UE_PROJECT_PATH }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Locate UProject and validate Engine path
+        shell: pwsh
+        run: |
+          Write-Host "UE_ENGINE_DIR: $env:UE_ENGINE_DIR"
+          # Locate UProject: use env override or search the repo
+          if ($env:UE_PROJECT_PATH -and (Test-Path $env:UE_PROJECT_PATH)) {
+            Write-Host "Using provided UProject: $env:UE_PROJECT_PATH"
+            echo "UPROJECT_PATH=$env:UE_PROJECT_PATH" >> $env:GITHUB_ENV
+          } else {
+            $found = Get-ChildItem -Path $PWD -Filter *.uproject -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($null -eq $found) {
+              Write-Host "No .uproject found in the repository; skipping native build"
+              exit 0
+            }
+            Write-Host "Found UProject at: $($found.FullName)"
+            echo "UPROJECT_PATH=$($found.FullName)" >> $env:GITHUB_ENV
+          }
+
+          if (-not $env:UE_ENGINE_DIR) {
+            Write-Host "UE_ENGINE_DIR is not set. To run native builds in CI, set the repository secret UE_ENGINE_DIR to the path of an installed Unreal Engine on the runner. Skipping native build."
+            exit 0
+          }
+          if (-not (Test-Path $env:UE_ENGINE_DIR)) {
+            Write-Host "UE_ENGINE_DIR path does not exist ($env:UE_ENGINE_DIR). Skipping native build."
+            exit 0
+          }
+
+      - name: Run native plugin build (Unreal Build Tool)
+        shell: pwsh
+        run: |
+          $buildScript = Join-Path $env:UE_ENGINE_DIR "Engine\Build\BatchFiles\Build.bat"
+          if (-not (Test-Path $buildScript)) {
+            Write-Host "Build script not found at $buildScript; skipping native build"
+            exit 0
+          }
+
+          $uproject = $env:UPROJECT_PATH
+          Write-Host "Invoking Build.bat for project: $uproject"
+
+          $logFile = "native-build-output.log"
+          # Quote the project path argument to handle spaces
+          & $buildScript "Development" "Win64" "-Project=`"$uproject`"" "-TargetType=Editor" "-Progress" "-NoEngineChanges" "-NoHotReloadFromIDE" 2>&1 | Tee-Object -FilePath $logFile
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-build-log
+          path: native-build-output.log
+          retention-days: 7

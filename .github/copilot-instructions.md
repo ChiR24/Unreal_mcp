@@ -1,5 +1,24 @@
 # Unreal MCP – AI Agent Guide
 
+## Quick Start — Actionable Checklist for AI agents
+- Read the two-process architecture first: the Node MCP server (src/) and the Unreal Editor plugin (plugins/McpAutomationBridge/Source/). Key files:
+  - Node server: `src/index.ts`, `src/automation-bridge.ts`, `src/unreal-bridge.ts`, `src/tools/**` (handlers & definitions)
+  - UE plugin: `plugins/McpAutomationBridge/Source/McpAutomationBridge/Public/McpAutomationBridgeSettings.h`,
+    `Private/McpAutomationBridgeSubsystem.cpp`, `Private/McpBridgeWebSocket.{h,cpp}`
+- Running locally (order matters):
+  1. Build and start the Editor plugin (Unreal native build or open Editor with built plugin).
+  2. Start the MCP server/tests: `npm run test:blueprint` or `node tests/run-unreal-tool-tests.mjs`.
+  3. If Editor not available, run tests in mock mode: set `UNREAL_MCP_MOCK_MODE=1`.
+- Important env vars and defaults agents must know: `MCP_AUTOMATION_WS_PORTS` (defaults: `8090,8091`), `MCP_AUTOMATION_WS_HOST` (default `127.0.0.1`), `UNREAL_MCP_WAIT_PORT_MS` (test port-wait timeout), `MCP_AUTOMATION_CAPABILITY_TOKEN`.
+- Quick debugging commands (PowerShell):
+  - Check listening ports: `netstat -ano | findstr :8090` (replace port)
+  - Clean plugin build artifacts: remove `Plugins/McpAutomationBridge/Binaries` and `Plugins/McpAutomationBridge/Intermediate` before a rebuild.
+- When editing C++:
+  - Always update ctor signatures in both header and .cpp and keep initializer order matching declaration order.
+  - If you change a delegate signature, update all `AddUObject`/`AddLambda` callsites (use lambdas capturing TWeakPtr to avoid signature mismatches and cycles).
+  - UENUMs must be declared at global scope (UHT will fail otherwise).
+
+
 ## Architecture Overview
 - **MCP Server** (`src/index.ts`): Boots with consolidated tool routing (`src/tools/consolidated-tool-definitions.ts`, `src/tools/consolidated-tool-handlers.ts`) to 14 multi-action tools wrapping specialized classes in `src/tools/*`.
 - **Unreal Bridge** (`src/unreal-bridge.ts`): Manages automation bridge connection, command queuing, and safety logic with on-demand connection via `ensureConnectedOnDemand()`.

@@ -1305,6 +1305,68 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
             });
             return cleanObject(res);
           }
+          case 'add_variable': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide details for manage_blueprint.add_variable',
+              {
+                name: { type: 'string', title: 'Blueprint Name' },
+                variableName: { type: 'string', title: 'Variable Name' },
+                variableType: { type: 'string', title: 'Variable Type' }
+              }
+            );
+            const res = await tools.blueprintTools.addVariable({
+              blueprintName: args.name,
+              variableName: args.variableName,
+              variableType: args.variableType || 'Float',
+              defaultValue: args.defaultValue,
+              category: args.category,
+              isReplicated: args.isReplicated,
+              isPublic: args.isPublic,
+              variablePinType: args.variablePinType
+            });
+            return cleanObject(res);
+          }
+          case 'add_function': {
+            const res = await tools.blueprintTools.addFunction({
+              blueprintName: args.name,
+              functionName: args.functionName,
+              inputs: args.inputs,
+              outputs: args.outputs,
+              isPublic: args.isPublic,
+              category: args.category
+            });
+            return cleanObject(res);
+          }
+          case 'add_event': {
+            const res = await tools.blueprintTools.addEvent({
+              blueprintName: args.name,
+              eventType: args.eventType || 'Custom',
+              customEventName: args.customEventName,
+              parameters: args.parameters
+            });
+            return cleanObject(res);
+          }
+            case 'set_variable_metadata': {
+              const res = await tools.blueprintTools.setVariableMetadata({
+                blueprintName: args.name,
+                variableName: args.variableName,
+                metadata: args.metadata
+              });
+              return cleanObject(res);
+            }
+            case 'add_construction_script': {
+              const res = await tools.blueprintTools.addConstructionScript({
+                blueprintName: args.name,
+                scriptName: args.scriptName
+              });
+              return cleanObject(res);
+            }
+          case 'compile': {
+            const res = await tools.blueprintTools.compileBlueprint({ blueprintName: args.name, saveAfterCompile: args.saveAfterCompile });
+            return cleanObject(res);
+          }
           default:
             throw new Error(`Unknown blueprint action: ${args.action}`);
         }

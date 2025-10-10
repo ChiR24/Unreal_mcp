@@ -332,14 +332,98 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
 {
     Super::Initialize(Collection);
     const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
-    EndpointUrl = Settings->EndpointUrl;
-    CapabilityToken = Settings->CapabilityToken;
+    // Apply logging preferences from Project Settings if configured
+    if (Settings)
+    {
+        auto MapVerbosity = [](EMcpLogVerbosity In) -> ELogVerbosity::Type
+        {
+            switch (In)
+            {
+            case EMcpLogVerbosity::NoLogging: return ELogVerbosity::NoLogging;
+            case EMcpLogVerbosity::Fatal: return ELogVerbosity::Fatal;
+            case EMcpLogVerbosity::Error: return ELogVerbosity::Error;
+            case EMcpLogVerbosity::Warning: return ELogVerbosity::Warning;
+            case EMcpLogVerbosity::Display: return ELogVerbosity::Display;
+            case EMcpLogVerbosity::Log: return ELogVerbosity::Log;
+            case EMcpLogVerbosity::Verbose: return ELogVerbosity::Verbose;
+            case EMcpLogVerbosity::VeryVerbose: return ELogVerbosity::VeryVerbose;
+            default: return ELogVerbosity::Log;
+            }
+        };
+
+        // Informational log about selected verbosity
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Configured log verbosity (Project Settings): %d"), static_cast<int32>(Settings->LogVerbosity));
+
+        if (Settings->bApplyLogVerbosityToAll)
+        {
+            const ELogVerbosity::Type Mapped = MapVerbosity(Settings->LogVerbosity);
+            // Apply to the plugin's primary log category
+            LogMcpAutomationBridgeSubsystem.SetVerbosity(Mapped);
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Applied selected log verbosity to McpAutomationBridge subsystem."));
+        }
+    }
+    EndpointUrl = Settings->EndpointUrl.IsEmpty() ? EndpointUrl : Settings->EndpointUrl;
+    CapabilityToken = Settings->CapabilityToken.IsEmpty() ? CapabilityToken : Settings->CapabilityToken;
     AutoReconnectDelaySeconds = FMath::Max(Settings->AutoReconnectDelay, 0.0f);
     bReconnectEnabled = AutoReconnectDelaySeconds > 0.0f;
+    // Heartbeat tuning
+    if (Settings->HeartbeatTimeoutSeconds > 0.0f)
+    {
+        HeartbeatTimeoutSeconds = Settings->HeartbeatTimeoutSeconds;
+    }
+    // ClientPort is optional; if unset, fall back to environment or safe default
+    if (Settings->ClientPort > 0)
+    {
+        ClientPort = Settings->ClientPort;
+    }
+    else
+    {
+        const FString EnvClient = FPlatformMisc::GetEnvironmentVariable(TEXT("MCP_AUTOMATION_CLIENT_PORT"));
+        const int32 Parsed = EnvClient.IsEmpty() ? 0 : FCString::Atoi(*EnvClient);
+        ClientPort = Parsed > 0 ? Parsed : 0;
+    }
+    bRequireCapabilityToken = Settings->bRequireCapabilityToken;
     TimeUntilReconnect = 0.0f;
     ResetHeartbeatTracking();
     ServerName.Reset();
     ServerVersion.Reset();
+    // Allow environment override for listen ports (e.g., MCP_AUTOMATION_WS_PORTS="8090,8091")
+    {
+        // Respect settings when present; otherwise check environment variables.
+        if (!Settings->ListenPorts.IsEmpty())
+        {
+            EnvListenPorts = Settings->ListenPorts;
+            bEnvListenPortsSet = true;
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ListenPorts set via Project Settings: %s"), *EnvListenPorts);
+        }
+        else
+        {
+            const FString EnvPorts = FPlatformMisc::GetEnvironmentVariable(TEXT("MCP_AUTOMATION_WS_PORTS"));
+            if (!EnvPorts.IsEmpty())
+            {
+                EnvListenPorts = EnvPorts;
+                bEnvListenPortsSet = true;
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("MCP_AUTOMATION_WS_PORTS override detected: %s"), *EnvListenPorts);
+            }
+        }
+
+        if (!Settings->ListenHost.IsEmpty())
+        {
+            EnvListenHost = Settings->ListenHost;
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ListenHost set via Project Settings: %s"), *EnvListenHost);
+        }
+        else
+        {
+            const FString EnvHost = FPlatformMisc::GetEnvironmentVariable(TEXT("MCP_AUTOMATION_LISTEN_HOST"));
+            if (!EnvHost.IsEmpty())
+            {
+                EnvListenHost = EnvHost;
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("MCP_AUTOMATION_LISTEN_HOST override detected: %s"), *EnvListenHost);
+            }
+        }
+    }
+
+    // Prefer always-listen behavior so the plugin is always open like Remote Control API
     StartBridge();
 }
 
@@ -425,25 +509,159 @@ void UMcpAutomationBridgeSubsystem::AttemptConnection()
 
     ResetHeartbeatTracking();
 
-    // In server mode, we don't need an endpoint URL - we listen on a fixed port
-    const int32 ListenPort = 8091;
+    // Parse host/port from EndpointUrl or use defaults
+    int32 ListenPort = 8091;
+    FString ListenHost = TEXT("127.0.0.1");
+    if (!EndpointUrl.IsEmpty())
+    {
+        const FString TrimmedUrl = EndpointUrl.TrimStartAndEnd();
+        FString HostPortString = TrimmedUrl;
 
-    // Create server socket that listens for MCP client connections
-    auto ServerSocket = MakeShared<FMcpBridgeWebSocket>(ListenPort);
+        // Strip scheme if present (ws://, wss://, etc.)
+        const int32 SchemeSeparatorIndex = TrimmedUrl.Find(TEXT("://"));
+        if (SchemeSeparatorIndex != INDEX_NONE)
+        {
+            HostPortString = TrimmedUrl.Mid(SchemeSeparatorIndex + 3);
+        }
 
-    ServerSocket->InitializeWeakSelf(ServerSocket);
+        // Remove path/query portion after first '/'
+        int32 PathSeparatorIndex = INDEX_NONE;
+        if (HostPortString.FindChar('/', PathSeparatorIndex))
+        {
+            HostPortString = HostPortString.Left(PathSeparatorIndex);
+        }
 
-    // For server mode, we handle client connections instead of our own connection
-    ServerSocket->OnClientConnected().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleClientConnected);
-    ServerSocket->OnConnectionError().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleConnectionError);
-    ServerSocket->OnClosed().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleClosed);
-    ServerSocket->OnMessage().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleMessage);
-    ServerSocket->OnHeartbeat().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleHeartbeat);
+        HostPortString = HostPortString.TrimStartAndEnd();
 
-    ActiveSockets.Add(ServerSocket);
+        FString ParsedHost = HostPortString;
+        FString ParsedPort;
+
+        if (!HostPortString.IsEmpty())
+        {
+            if (HostPortString.StartsWith(TEXT("[")))
+            {
+                // IPv6 literal: [::1]:port
+                int32 ClosingBracketIndex = INDEX_NONE;
+                if (HostPortString.FindChar(']', ClosingBracketIndex))
+                {
+                    ParsedHost = HostPortString.Mid(1, ClosingBracketIndex - 1);
+                    if (ClosingBracketIndex + 1 < HostPortString.Len() && HostPortString[ClosingBracketIndex + 1] == ':')
+                    {
+                        ParsedPort = HostPortString.Mid(ClosingBracketIndex + 2);
+                    }
+                }
+            }
+            else
+            {
+                HostPortString.Split(TEXT(":"), &ParsedHost, &ParsedPort, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            }
+
+            ParsedHost = ParsedHost.TrimStartAndEnd();
+            if (!ParsedHost.IsEmpty())
+            {
+                ListenHost = ParsedHost;
+            }
+
+            ParsedPort = ParsedPort.TrimStartAndEnd();
+            if (!ParsedPort.IsEmpty())
+            {
+                const int32 CandidatePort = FCString::Atoi(*ParsedPort);
+                if (CandidatePort > 0)
+                {
+                    ListenPort = CandidatePort;
+                }
+            }
+        }
+    }
+
+    // Decide whether to operate in listen (server) mode or client mode
+    const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+    bool bShouldAlwaysListen = Settings ? Settings->bAlwaysListen : true;
+
+    // If configured to connect to an endpoint (client mode) and the project is NOT set to always listen,
+    // create an outgoing WebSocket and attempt to connect. Otherwise create server listening sockets.
+    if (!EndpointUrl.IsEmpty() && !bShouldAlwaysListen)
+    {
+        // Build headers (include capability token if present)
+        TMap<FString, FString> Headers;
+        if (!CapabilityToken.IsEmpty())
+        {
+            Headers.Add(TEXT("X-MCP-Capability"), CapabilityToken);
+        }
+
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Attempting MCP automation bridge client connection to %s"), *EndpointUrl);
+
+        auto ClientSocket = MakeShared<FMcpBridgeWebSocket>(EndpointUrl, TEXT("mcp-automation"), Headers);
+        ClientSocket->InitializeWeakSelf(ClientSocket);
+        ClientSocket->OnConnected().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleConnected);
+        // OnConnectionError expects a single FString parameter. Use a lambda that captures a weak
+        // pointer to the client socket and forwards the call to our handler which needs the socket
+        // pointer as the first parameter. Capturing a weak pointer avoids creating a circular
+        // shared_ptr reference between the socket and the delegate.
+        {
+            TWeakPtr<FMcpBridgeWebSocket> WeakClient = ClientSocket;
+            ClientSocket->OnConnectionError().AddLambda([WeakClient, this](const FString& Error)
+            {
+                if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakClient.Pin())
+                {
+                    this->HandleConnectionError(Pinned, Error);
+                }
+            });
+        }
+        ClientSocket->OnClosed().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleClosed);
+        ClientSocket->OnMessage().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleMessage);
+        ClientSocket->OnHeartbeat().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleHeartbeat);
+
+        ActiveSockets.Add(ClientSocket);
+        ClientSocket->Connect();
+        BridgeState = EMcpAutomationBridgeState::Connecting;
+        return;
+    }
+
+    // Build list of ports to listen on (respect user-configured ListenPorts env or settings)
+    TArray<int32> PortsToListen;
+    if (Settings && !Settings->ListenPorts.IsEmpty())
+    {
+        TArray<FString> Parts;
+        Settings->ListenPorts.ParseIntoArray(Parts, TEXT(","), true);
+        for (const FString& Part : Parts)
+        {
+            const int32 Candidate = FCString::Atoi(*Part);
+            if (Candidate > 0) PortsToListen.Add(Candidate);
+        }
+    }
+    
+    if (PortsToListen.Num() == 0)
+    {
+        PortsToListen.Add(ListenPort);
+    }
+
+    // Use configured listen host if provided; otherwise bind to 0.0.0.0 to accept remote connections
+    FString BindHost = ListenHost;
+    if (Settings && !Settings->ListenHost.IsEmpty())
+    {
+        BindHost = Settings->ListenHost;
+    }
+    if (BindHost.IsEmpty())
+    {
+        BindHost = TEXT("0.0.0.0");
+    }
+
+    // Determine listen backlog & accept sleep from settings or environment
+    const int32 ConfigBacklog = Settings->ListenBacklog > 0 ? Settings->ListenBacklog : (bEnvListenPortsSet ? 10 : 10);
+    const float ConfigAcceptSleep = Settings->AcceptSleepSeconds > 0.0f ? Settings->AcceptSleepSeconds : 0.01f;
+
+    for (int32 Port : PortsToListen)
+    {
+        auto ServerSocket = MakeShared<FMcpBridgeWebSocket>(Port, BindHost, ConfigBacklog, ConfigAcceptSleep);
+        ServerSocket->InitializeWeakSelf(ServerSocket);
+        ServerSocket->OnClientConnected().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleClientConnected);
+        ServerSocket->OnConnectionError().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleServerConnectionError);
+        ActiveSockets.Add(ServerSocket);
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Starting MCP automation server listening on %s:%d"), *BindHost, Port);
+        ServerSocket->Listen();
+    }
     BridgeState = EMcpAutomationBridgeState::Connecting;
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Starting MCP automation server on port %d"), ListenPort);
-    ServerSocket->Listen();
 }
 
 void UMcpAutomationBridgeSubsystem::HandleConnected(TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -519,13 +737,16 @@ void UMcpAutomationBridgeSubsystem::HandleClientConnected(TSharedPtr<FMcpBridgeW
         Writer->WriteValue(TEXT("serverVersion"), TEXT("1.0.0"));
         Writer->WriteValue(TEXT("serverName"), TEXT("Unreal Engine MCP Automation Bridge"));
         Writer->WriteValue(TEXT("sessionId"), FGuid::NewGuid().ToString());
-        Writer->WriteValue(TEXT("heartbeatIntervalMs"), 30000); // 30 second heartbeat
+    const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+    const int32 HeartbeatMs = (Settings && Settings->HeartbeatIntervalMs > 0) ? Settings->HeartbeatIntervalMs : 30000;
+    Writer->WriteValue(TEXT("heartbeatIntervalMs"), HeartbeatMs);
         Writer->WriteObjectEnd();
         Writer->Close();
     }
 
     if (ClientSocket.IsValid())
     {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Sending bridge_ack to automation client."));
         ClientSocket->Send(HelloPayload);
     }
 
@@ -564,6 +785,49 @@ void UMcpAutomationBridgeSubsystem::HandleConnectionError(TSharedPtr<FMcpBridgeW
         Socket->OnClosed().RemoveAll(this);
         Socket->OnMessage().RemoveAll(this);
         Socket->OnHeartbeat().RemoveAll(this);
+    }
+}
+
+void UMcpAutomationBridgeSubsystem::HandleServerConnectionError(const FString& Error)
+{
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Automation bridge server connection error: %s"), *Error);
+    BridgeState = EMcpAutomationBridgeState::Disconnected;
+    TimeUntilReconnect = AutoReconnectDelaySeconds;
+    ResetHeartbeatTracking();
+    
+    // For server errors, clean up any listening server sockets (support multiple listening ports)
+    if (ActiveSockets.Num() > 0)
+    {
+        TArray<TSharedPtr<FMcpBridgeWebSocket>> ToRemove;
+        for (const TSharedPtr<FMcpBridgeWebSocket>& Socket : ActiveSockets)
+        {
+            if (!Socket.IsValid()) continue;
+
+            // If this socket is a listening/server socket, tear it down
+            if (Socket->IsListening())
+            {
+                Socket->OnClientConnected().RemoveAll(this);
+                Socket->OnConnectionError().RemoveAll(this);
+                Socket->OnClosed().RemoveAll(this);
+                Socket->OnMessage().RemoveAll(this);
+                Socket->OnHeartbeat().RemoveAll(this);
+                Socket->Close();
+                ToRemove.Add(Socket);
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Closed listening server socket on %s:%d due to server error."), *Socket->GetListenHost(), Socket->GetPort());
+            }
+        }
+
+        // Remove closed server sockets from active list
+        for (const TSharedPtr<FMcpBridgeWebSocket>& R : ToRemove)
+        {
+            ActiveSockets.Remove(R);
+        }
+
+        // If we removed everything or only clients remain, but server state is invalid, clear pending requests to prevent leaks
+        if (ActiveSockets.Num() == 0)
+        {
+            PendingRequestsToSockets.Empty();
+        }
     }
 }
 
@@ -976,10 +1240,33 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         }
 
         FString BlueprintPath;
+        // Accept either a single blueprintPath string or an array of blueprintCandidates
+        TArray<FString> CandidatePaths;
+        // We will read the blueprintCandidates array below if needed; presence alone
+        // is checked when the blueprintPath string is empty.
         if (!Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) || BlueprintPath.TrimStartAndEnd().IsEmpty())
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_modify_scs requires a non-empty blueprintPath."), TEXT("INVALID_BLUEPRINT"));
-            return;
+            // If no single blueprintPath was provided, accept array of candidates
+            const TArray<TSharedPtr<FJsonValue>>* CandidateArray = nullptr;
+            if (!Payload->TryGetArrayField(TEXT("blueprintCandidates"), CandidateArray) || CandidateArray == nullptr || CandidateArray->Num() == 0)
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_modify_scs requires a non-empty blueprintPath or blueprintCandidates."), TEXT("INVALID_BLUEPRINT"));
+                return;
+            }
+            for (const TSharedPtr<FJsonValue>& Value : *CandidateArray)
+            {
+                if (!Value.IsValid()) continue;
+                FString Candidate = Value->AsString();
+                if (!Candidate.TrimStartAndEnd().IsEmpty())
+                {
+                    CandidatePaths.Add(Candidate);
+                }
+            }
+            if (CandidatePaths.Num() == 0)
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_modify_scs blueprintCandidates array provided but contains no valid strings."), TEXT("INVALID_BLUEPRINT_CANDIDATES"));
+                return;
+            }
         }
 
         const TArray<TSharedPtr<FJsonValue>>* OperationsArray = nullptr;
@@ -991,17 +1278,70 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
 
         FString NormalizedBlueprintPath;
         FString LoadError;
-        UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedBlueprintPath, LoadError);
+    UBlueprint* Blueprint = nullptr;
+    TArray<FString> TriedCandidates;
+        // Try explicit blueprintPath first
+        if (!BlueprintPath.IsEmpty())
+        {
+            TriedCandidates.Add(BlueprintPath);
+            Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedBlueprintPath, LoadError);
+            if (Blueprint)
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Loaded blueprint from explicit path: %s -> %s"), *BlueprintPath, *NormalizedBlueprintPath);
+            }
+        }
+        // If that failed and we have candidate paths, try them in order
+        if (!Blueprint && CandidatePaths.Num() > 0)
+        {
+            for (const FString& Candidate : CandidatePaths)
+            {
+                TriedCandidates.Add(Candidate);
+                FString CandidateNormalized;
+                FString CandidateError;
+                UBlueprint* TryBp = LoadBlueprintAsset(Candidate, CandidateNormalized, CandidateError);
+                if (TryBp)
+                {
+                    Blueprint = TryBp;
+                    NormalizedBlueprintPath = CandidateNormalized;
+                    LoadError.Empty();
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Loaded blueprint candidate: %s -> %s"), *Candidate, *CandidateNormalized);
+                    break;
+                }
+                // accumulate last error for fallback
+                LoadError = CandidateError;
+            }
+        }
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+            // Provide diagnostics about the candidates we tried
+            TSharedPtr<FJsonObject> ErrPayload = MakeShared<FJsonObject>();
+            if (TriedCandidates.Num() > 0)
+            {
+                TArray<TSharedPtr<FJsonValue>> TriedValues;
+                for (const FString& C : TriedCandidates)
+                {
+                    TriedValues.Add(MakeShared<FJsonValueString>(C));
+                }
+                ErrPayload->SetArrayField(TEXT("triedCandidates"), TriedValues);
+            }
+            SendAutomationResponse(RequestingSocket, RequestId, false, LoadError, ErrPayload, TEXT("BLUEPRINT_NOT_FOUND"));
             return;
         }
 
         USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
         if (!SCS)
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint does not expose a SimpleConstructionScript."), TEXT("SCS_UNAVAILABLE"));
+            TSharedPtr<FJsonObject> ErrPayload = MakeShared<FJsonObject>();
+            if (TriedCandidates.Num() > 0)
+            {
+                TArray<TSharedPtr<FJsonValue>> TriedValues;
+                for (const FString& C : TriedCandidates)
+                {
+                    TriedValues.Add(MakeShared<FJsonValueString>(C));
+                }
+                ErrPayload->SetArrayField(TEXT("triedCandidates"), TriedValues);
+            }
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Blueprint does not expose a SimpleConstructionScript."), ErrPayload, TEXT("SCS_UNAVAILABLE"));
             return;
         }
 
@@ -1087,6 +1427,43 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 if (!ComponentClass)
                 {
                     ComponentClass = FindObject<UClass>(nullptr, *ComponentClassPath);
+                }
+                // If still unresolved, try common /Script/ packages and static load as fallbacks
+                if (!ComponentClass)
+                {
+                    const TArray<FString> Prefixes = { TEXT("/Script/Engine."), TEXT("/Script/UMG."), TEXT("/Script/Paper2D.") };
+                    for (const FString& Prefix : Prefixes)
+                    {
+                        const FString Guess = Prefix + ComponentClassPath;
+                        UClass* TryClass = FindObject<UClass>(nullptr, *Guess);
+                        if (!TryClass)
+                        {
+                            TryClass = StaticLoadClass(UActorComponent::StaticClass(), nullptr, *Guess);
+                        }
+                        if (TryClass)
+                        {
+                            ComponentClass = TryClass;
+                            break;
+                        }
+                    }
+                }
+                // As last resort, scan loaded classes by short name (fast in editor builds)
+                if (!ComponentClass)
+                {
+                    for (TObjectIterator<UClass> It; It; ++It)
+                    {
+                        UClass* Candidate = *It;
+                        if (!Candidate) continue;
+                        const FString ShortName = Candidate->GetName();
+                        if (ShortName.Equals(ComponentClassPath, ESearchCase::IgnoreCase) || Candidate->GetFName().ToString().Equals(ComponentClassPath, ESearchCase::IgnoreCase))
+                        {
+                            if (Candidate->IsChildOf(UActorComponent::StaticClass()))
+                            {
+                                ComponentClass = Candidate;
+                                break;
+                            }
+                        }
+                    }
                 }
                 if (!ComponentClass)
                 {
@@ -1201,7 +1578,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                     OperationSummary->SetStringField(TEXT("warning"), TEXT("Component not found"));
                 }
             }
-            else if (NormalizedType == TEXT("set_component_properties"))
+            else if (NormalizedType == TEXT("set_component_properties") || NormalizedType == TEXT("modify_component"))
             {
                 FString ComponentName;
                 if (!OperationObject->TryGetStringField(TEXT("componentName"), ComponentName) || ComponentName.TrimStartAndEnd().IsEmpty())
@@ -1211,9 +1588,22 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 }
 
                 const TSharedPtr<FJsonObject>* PropertyOverrides = nullptr;
-                if (!OperationObject->TryGetObjectField(TEXT("properties"), PropertyOverrides) || PropertyOverrides == nullptr || !PropertyOverrides->IsValid())
+                const TSharedPtr<FJsonObject>* TransformObject = nullptr;
+                const bool hasProps = OperationObject->TryGetObjectField(TEXT("properties"), PropertyOverrides) && PropertyOverrides && PropertyOverrides->IsValid();
+                const bool hasTransform = OperationObject->TryGetObjectField(TEXT("transform"), TransformObject) && TransformObject && TransformObject->IsValid();
+
+                // For set_component_properties, a properties object is required.
+                // For modify_component, allow transform-only updates (properties optional)
+                if (NormalizedType == TEXT("set_component_properties") && !hasProps)
                 {
                     SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("set_component_properties operation at index %d missing properties object."), Index), TEXT("INVALID_PROPERTIES"));
+                    return;
+                }
+
+                // If this is modify_component and neither properties nor transform present, it's invalid.
+                if (NormalizedType == TEXT("modify_component") && !hasProps && !hasTransform)
+                {
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("modify_component operation at index %d requires either properties or transform."), Index), TEXT("INVALID_OPERATION"));
                     return;
                 }
 
@@ -1263,6 +1653,51 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                     return;
                 }
             }
+            else if (NormalizedType == TEXT("attach_component"))
+                {
+                    FString AttachComponentName;
+                    if (!OperationObject->TryGetStringField(TEXT("componentName"), AttachComponentName) || AttachComponentName.TrimStartAndEnd().IsEmpty())
+                    {
+                        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("attach_component operation at index %d missing componentName."), Index), TEXT("INVALID_COMPONENT_NAME"));
+                        return;
+                    }
+
+                    FString ParentName;
+                    if (!OperationObject->TryGetStringField(TEXT("parentComponent"), ParentName))
+                    {
+                        OperationObject->TryGetStringField(TEXT("attachTo"), ParentName);
+                    }
+                    if (ParentName.TrimStartAndEnd().IsEmpty())
+                    {
+                        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("attach_component operation at index %d missing parentComponent."), Index), TEXT("INVALID_PARENT_COMPONENT"));
+                        return;
+                    }
+
+                    USCS_Node* ChildNode = FindScsNodeByName(SCS, AttachComponentName);
+                    if (!ChildNode)
+                    {
+                        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Child component %s not found for attach."), *AttachComponentName), TEXT("COMPONENT_NOT_FOUND"));
+                        return;
+                    }
+
+                    USCS_Node* ParentNode = FindScsNodeByName(SCS, ParentName);
+                    if (!ParentNode)
+                    {
+                        AccumulatedWarnings.Add(FString::Printf(TEXT("Parent component %s not found; attach skipped for %s."), *ParentName, *AttachComponentName));
+                        OperationSummary->SetBoolField(TEXT("success"), false);
+                        OperationSummary->SetStringField(TEXT("componentName"), AttachComponentName);
+                        OperationSummary->SetStringField(TEXT("warning"), TEXT("Parent not found"));
+                        OperationSummaries.Add(MakeShared<FJsonValueObject>(OperationSummary));
+                        continue;
+                    }
+
+                    // Remove from previous parent if necessary, then attach to new parent
+                    ParentNode->AddChildNode(ChildNode);
+                    bAnyChanges = true;
+                    OperationSummary->SetBoolField(TEXT("success"), true);
+                    OperationSummary->SetStringField(TEXT("componentName"), AttachComponentName);
+                    OperationSummary->SetStringField(TEXT("attachedTo"), ParentName);
+                }
             else
             {
                 SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown SCS operation type: %s"), *OperationType), TEXT("UNKNOWN_OPERATION"));
@@ -1280,7 +1715,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         // Defer compile and save operations to avoid Task Graph recursion
         if (bCompile || bSave)
         {
-            AsyncTask(ENamedThreads::GameThread, [this, RequestId, Blueprint, bCompile, bSave, NormalizedBlueprintPath, OperationSummaries, &AccumulatedWarnings, RequestingSocket]() {
+            AsyncTask(ENamedThreads::GameThread, [this, RequestId, Blueprint, bCompile, bSave, NormalizedBlueprintPath, OperationSummaries, &AccumulatedWarnings, RequestingSocket, TriedCandidates]() {
                 bool bSaveResult = false;
                 if (bSave)
                 {
@@ -1298,6 +1733,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
 
                 TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
                 ResultPayload->SetStringField(TEXT("blueprintPath"), NormalizedBlueprintPath);
+                ResultPayload->SetStringField(TEXT("matchedCandidate"), NormalizedBlueprintPath);
                 ResultPayload->SetArrayField(TEXT("operations"), OperationSummaries);
                 ResultPayload->SetBoolField(TEXT("compiled"), bCompile);
                 ResultPayload->SetBoolField(TEXT("saved"), bSave && bSaveResult);
@@ -1313,6 +1749,16 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                     ResultPayload->SetArrayField(TEXT("warnings"), WarningValues);
                 }
 
+                if (TriedCandidates.Num() > 0)
+                {
+                    TArray<TSharedPtr<FJsonValue>> TriedValues;
+                    for (const FString& C : TriedCandidates)
+                    {
+                        TriedValues.Add(MakeShared<FJsonValueString>(C));
+                    }
+                    ResultPayload->SetArrayField(TEXT("triedCandidates"), TriedValues);
+                }
+
                 const FString Message = FString::Printf(TEXT("Processed %d SCS operation(s)."), OperationSummaries.Num());
                 SendAutomationResponse(RequestingSocket, RequestId, true, Message, ResultPayload, FString());
             });
@@ -1321,6 +1767,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         {
             TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
             ResultPayload->SetStringField(TEXT("blueprintPath"), NormalizedBlueprintPath);
+            ResultPayload->SetStringField(TEXT("matchedCandidate"), NormalizedBlueprintPath);
             ResultPayload->SetArrayField(TEXT("operations"), OperationSummaries);
             ResultPayload->SetBoolField(TEXT("compiled"), false);
             ResultPayload->SetBoolField(TEXT("saved"), false);
@@ -1334,6 +1781,16 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                     WarningValues.Add(MakeShared<FJsonValueString>(Warning));
                 }
                 ResultPayload->SetArrayField(TEXT("warnings"), WarningValues);
+            }
+
+            if (TriedCandidates.Num() > 0)
+            {
+                TArray<TSharedPtr<FJsonValue>> TriedValues;
+                for (const FString& C : TriedCandidates)
+                {
+                    TriedValues.Add(MakeShared<FJsonValueString>(C));
+                }
+                ResultPayload->SetArrayField(TEXT("triedCandidates"), TriedValues);
             }
 
             const FString Message = FString::Printf(TEXT("Processed %d SCS operation(s)."), OperationSummaries.Num());
@@ -1465,9 +1922,11 @@ void UMcpAutomationBridgeSubsystem::StartBridge()
     if (!TickerHandle.IsValid())
     {
         const FTickerDelegate TickDelegate = FTickerDelegate::CreateUObject(this, &UMcpAutomationBridgeSubsystem::Tick);
-        TickerHandle = FTSTicker::GetCoreTicker().AddTicker(TickDelegate, 0.25f);
+        const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+        const float Interval = (Settings && Settings->TickerIntervalSeconds > 0.0f) ? Settings->TickerIntervalSeconds : 0.25f;
+        TickerHandle = FTSTicker::GetCoreTicker().AddTicker(TickDelegate, Interval);
     }
-
+    // Mark the bridge as available so AttemptConnection() will run.
     bBridgeAvailable = true;
     bReconnectEnabled = AutoReconnectDelaySeconds > 0.0f;
     TimeUntilReconnect = 0.0f;
