@@ -309,7 +309,7 @@ export function createServer() {
   const audioTools = new AudioTools(bridge);
   const uiTools = new UITools(bridge);
   const rcTools = new RcTools(bridge);
-  const sequenceTools = new SequenceTools(bridge);
+  const sequenceTools = new SequenceTools(bridge, automationBridge);
   const introspectionTools = new IntrospectionTools(bridge);
   const visualTools = new VisualTools(bridge);
   const engineTools = new EngineTools(bridge);
@@ -570,9 +570,25 @@ export function createServer() {
 // Handle tool listing - consolidated tools only
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     log.info('Serving consolidated tools');
-    return {
-      tools: consolidatedToolDefinitions
-    };
+    // Return a sanitized copy of tool definitions to clients. Some client
+    // SDKs attempt to treat an "outputSchema" as a Zod schema and call
+    // `.parse()` on it, which fails when the server provides a JSON Schema
+    // object. To remain compatible with diverse client SDKs, strip
+    // non-serializable or ambiguous schema objects (outputSchema) from the
+    // tool listing while keeping the server-side validation of those
+    // schemas intact.
+    const sanitized = (consolidatedToolDefinitions as any[]).map((t) => {
+      try {
+        const copy = JSON.parse(JSON.stringify(t));
+        // Remove outputSchema so clients won't accidentally treat it as a
+        // Zod schema instance and attempt to call `.parse()` on it.
+        delete copy.outputSchema;
+        return copy;
+      } catch (_e) {
+        return t;
+      }
+    });
+    return { tools: sanitized };
   });
 
   // Handle tool calls - consolidated tools only (13)

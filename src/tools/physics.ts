@@ -702,9 +702,11 @@ print('RESULT:' + json.dumps(result))
         const missingPlugins = await this.bridge.ensurePluginsEnabled(dependencies, 'physics.configureVehicle');
         if (missingPlugins.length > 0) {
           const missingList = missingPlugins.join(', ');
+          // Surface explicit error when required engine plugins are missing.
           return {
             success: false,
-            error: `Required Unreal plugins not enabled: ${missingList}`,
+            error: 'MISSING_ENGINE_PLUGINS',
+            message: `Required Unreal plugins not enabled: ${missingList}`,
             warnings: [
               `Enable ${missingList} in the editor (Edit > Plugins) and restart the session before running physics.configureVehicle.`
             ]

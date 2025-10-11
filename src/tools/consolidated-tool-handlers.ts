@@ -183,9 +183,13 @@ function decideAutomationTransport(
 
   return {
     useAutomation: true,
-    allowFallback: true,
+    // Fallbacks to alternative transport (Python / other plugin hooks) are
+    // disabled to ensure the server relies on the configured Automation
+    // Bridge plugin exclusively. Tools should fail early if the plugin
+    // does not implement the requested action.
+    allowFallback: false,
     explicitAutomation,
-    fallbackReason: 'Automation bridge request failed; retrying via Python wrapper.'
+    fallbackReason: 'Automation bridge request failed and fallbacks are disabled; plugin must implement this action.'
   };
 }
 
@@ -456,7 +460,9 @@ export async function handleConsolidatedToolCall(
             return cleanObject(res);
           }
           default:
-            throw new Error(`Unknown asset action: ${args.action}`);
+            // Return a structured error so callers can detect unsupported
+            // actions and provide fallbacks instead of crashing.
+            return cleanObject({ success: false, error: `Unknown asset action: ${args.action}`, message: `Action not implemented: ${args.action}` });
         }
 
       // 2. ACTOR CONTROL
@@ -531,7 +537,9 @@ export async function handleConsolidatedToolCall(
             return cleanObject(res);
           }
           default:
-            throw new Error(`Unknown actor action: ${args.action}`);
+            // Return structured error instead of throwing so clients can
+            // gracefully handle missing actor actions (older servers).
+            return cleanObject({ success: false, error: `Unknown actor action: ${args.action}`, message: `Action not implemented: ${args.action}` });
         }
 
       // 3. EDITOR CONTROL
@@ -625,7 +633,9 @@ export async function handleConsolidatedToolCall(
             return cleanObject(res);
           }
           default:
-            throw new Error(`Unknown editor action: ${args.action}`);
+            // Return structured error to allow clients to fallback when
+            // the editor action isn't implemented by the server/plugin.
+            return cleanObject({ success: false, error: `Unknown editor action: ${args.action}`, message: `Action not implemented: ${args.action}` });
         }
 
       // 4. LEVEL MANAGER
@@ -1221,7 +1231,8 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
               name: args.name,
               blueprintType: args.blueprintType || 'Actor',
               savePath: args.savePath,
-              parentClass: args.parentClass
+              parentClass: args.parentClass,
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
             });
             return cleanObject(res);
           }
@@ -1346,7 +1357,8 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
               category: args.category,
               isReplicated: args.isReplicated,
               isPublic: args.isPublic,
-              variablePinType: args.variablePinType
+              variablePinType: args.variablePinType,
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
             });
             return cleanObject(res);
           }
@@ -1374,15 +1386,17 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
               const res = await tools.blueprintTools.setVariableMetadata({
                 blueprintName: args.name,
                 variableName: args.variableName,
-                metadata: args.metadata
+                metadata: args.metadata,
+                timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
               });
               return cleanObject(res);
             }
             case 'add_construction_script': {
-              const res = await tools.blueprintTools.addConstructionScript({
-                blueprintName: args.name,
-                scriptName: args.scriptName
-              });
+                const res = await tools.blueprintTools.addConstructionScript({
+                  blueprintName: args.name,
+                  scriptName: args.scriptName,
+                  timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+                });
               return cleanObject(res);
             }
           case 'compile': {

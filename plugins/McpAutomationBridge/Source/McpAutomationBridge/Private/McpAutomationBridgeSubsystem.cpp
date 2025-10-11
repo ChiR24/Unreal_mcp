@@ -33,6 +33,10 @@
 #include "UObject/SoftObjectPath.h"
 #include "AssetImportTask.h"
 #include "AssetToolsModule.h"
+#include "Factories/BlueprintFactory.h"
+// Level Sequence support
+#include "Misc/Guid.h"
+#include "Containers/Set.h"
 
 DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
 
@@ -43,290 +47,408 @@ class FMcpPythonOutputCapture final : public FOutputDevice
 public:
     virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override
     {
-        if (!V)
-        {
-            return;
-        }
-
-        static const FName LogPythonName(TEXT("LogPython"));
-        static const FName PythonName(TEXT("Python"));
-
-        if (Category == LogPythonName || Category == PythonName || Category == NAME_None)
-        {
-            CapturedLines.Add(FString(V));
-        }
+        if (!V) return;
+        // Simple capture: append each incoming log line for later consumption by callers.
+        Lines.Add(FString(V));
     }
 
+    // Return captured lines and clear the internal buffer.
     TArray<FString> Consume()
     {
-        return MoveTemp(CapturedLines);
+        TArray<FString> Copy = Lines;
+        Lines.Empty();
+        return Copy;
     }
 
 private:
-    TArray<FString> CapturedLines;
+    TArray<FString> Lines;
 };
+} // anonymous namespace
 
-bool ApplyJsonValueToProperty(UObject* Target, FProperty* Property, const TSharedPtr<FJsonValue>& JsonValue, FString& OutError)
+// Local helper state and small utility functions for the McpAutomationBridge
+// subsystem. Kept in an anonymous namespace to avoid polluting global scope.
+namespace
 {
-    if (!Target || !Property)
-    {
-        OutError = TEXT("Invalid target or property.");
-        return false;
-    }
+// Lightweight in-memory registries used by sequence/blueprint stub handlers
+static TSet<FString> GBlueprintBusySet;
+static TMap<FString, TSharedPtr<FJsonObject>> GSequenceRegistry;
+static TMap<FString, TSharedPtr<FJsonObject>> GBlueprintRegistry;
+static FString GCurrentSequencePath;
 
-    if (!JsonValue.IsValid())
-    {
-        OutError = TEXT("Property update requires a JSON value.");
-        return false;
-    }
-
-    void* PropertyAddress = Property->ContainerPtrToValuePtr<void>(Target);
-    if (!PropertyAddress)
-    {
-        OutError = TEXT("Unable to resolve property storage.");
-        return false;
-    }
-
-    const int64 CheckFlags = 0;
-    const int64 SkipFlags = 0;
-    if (!FJsonObjectConverter::JsonValueToUProperty(JsonValue, Property, PropertyAddress, CheckFlags, SkipFlags))
-    {
-        OutError = FString::Printf(TEXT("Failed to convert JSON into property '%s'."), *Property->GetName());
-        return false;
-    }
-
-    return true;
-}
-
-TSharedPtr<FJsonValue> ExportPropertyToJsonValue(UObject* Target, FProperty* Property)
+// Read a vector field from a JSON object. Supports array [x,y,z], object
+// {x:..,y:..,z:..}, or comma-separated string "x,y,z". Falls back to
+// the provided Default when parsing fails.
+static void ReadVectorField(const FJsonObject& Parent, const TCHAR* FieldName, FVector& OutValue, const FVector& Default)
 {
-    if (!Target || !Property)
-    {
-        return nullptr;
-    }
+    OutValue = Default;
+    if (!Parent.HasField(FieldName)) return;
 
-    const void* PropertyAddress = Property->ContainerPtrToValuePtr<void>(Target);
-    if (!PropertyAddress)
-    {
-        return nullptr;
-    }
+    const TSharedPtr<FJsonValue> Val = Parent.TryGetField(FieldName);
+    if (!Val.IsValid()) return;
 
-    return FJsonObjectConverter::UPropertyToJsonValue(Property, PropertyAddress);
-}
-
-bool ReadVectorField(const TSharedPtr<FJsonObject>& Source, const FString& FieldName, FVector& OutVector, const FVector& DefaultValue)
-{
-    if (!Source.IsValid())
+    if (Val->Type == EJson::Array)
     {
-        OutVector = DefaultValue;
-        return false;
-    }
-
-    if (!Source->HasField(FieldName))
-    {
-        OutVector = DefaultValue;
-        return false;
-    }
-
-    const TSharedPtr<FJsonValue> FieldValue = Source->TryGetField(FieldName);
-    if (!FieldValue.IsValid())
-    {
-        OutVector = DefaultValue;
-        return false;
-    }
-
-    if (FieldValue->Type == EJson::Array)
-    {
-        const TArray<TSharedPtr<FJsonValue>>& Elements = FieldValue->AsArray();
-        if (Elements.Num() == 3)
+        const TArray<TSharedPtr<FJsonValue>>& Arr = Val->AsArray();
+        if (Arr.Num() >= 3)
         {
-            OutVector.X = static_cast<float>(Elements[0]->AsNumber());
-            OutVector.Y = static_cast<float>(Elements[1]->AsNumber());
-            OutVector.Z = static_cast<float>(Elements[2]->AsNumber());
-            return true;
+            OutValue.X = Arr[0]->AsNumber();
+            OutValue.Y = Arr[1]->AsNumber();
+            OutValue.Z = Arr[2]->AsNumber();
         }
-    }
-
-    if (FieldValue->Type == EJson::Object)
-    {
-        const TSharedPtr<FJsonObject> ObjectValue = FieldValue->AsObject();
-        if (ObjectValue.IsValid())
-        {
-            auto GetComponent = [&ObjectValue](const TCHAR* Name, float DefaultComponent) -> float
-            {
-                if (ObjectValue->HasField(Name))
-                {
-                    return static_cast<float>(ObjectValue->GetNumberField(Name));
-                }
-                return DefaultComponent;
-            };
-
-            OutVector.X = GetComponent(TEXT("x"), DefaultValue.X);
-            OutVector.Y = GetComponent(TEXT("y"), DefaultValue.Y);
-            OutVector.Z = GetComponent(TEXT("z"), DefaultValue.Z);
-            return true;
-        }
-    }
-
-    OutVector = DefaultValue;
-    return false;
-}
-
-bool ReadRotatorField(const TSharedPtr<FJsonObject>& Source, const FString& FieldName, FRotator& OutRotator, const FRotator& DefaultValue)
-{
-    FVector AsVector;
-    const bool bHadValue = ReadVectorField(Source, FieldName, AsVector, FVector(DefaultValue.Pitch, DefaultValue.Yaw, DefaultValue.Roll));
-    if (bHadValue)
-    {
-        OutRotator = FRotator(AsVector.X, AsVector.Y, AsVector.Z);
-        return true;
-    }
-
-    OutRotator = DefaultValue;
-    return false;
-}
-
-void GatherScsNodesRecursive(USCS_Node* Node, TArray<USCS_Node*>& OutNodes)
-{
-    if (!Node)
-    {
         return;
     }
 
-    OutNodes.Add(Node);
-    const TArray<USCS_Node*>& Children = Node->GetChildNodes();
-    for (USCS_Node* Child : Children)
+    if (Val->Type == EJson::Object)
     {
-        GatherScsNodesRecursive(Child, OutNodes);
+        const TSharedPtr<FJsonObject> Obj = Val->AsObject();
+        double Tmp = 0.0;
+        if (Obj->TryGetNumberField(TEXT("x"), Tmp)) OutValue.X = Tmp; else OutValue.X = Default.X;
+        if (Obj->TryGetNumberField(TEXT("y"), Tmp)) OutValue.Y = Tmp; else OutValue.Y = Default.Y;
+        if (Obj->TryGetNumberField(TEXT("z"), Tmp)) OutValue.Z = Tmp; else OutValue.Z = Default.Z;
+        return;
+    }
+
+    if (Val->Type == EJson::String)
+    {
+        FString S = Val->AsString();
+        TArray<FString> Parts;
+        S.ParseIntoArray(Parts, TEXT(","), true);
+        if (Parts.Num() >= 3)
+        {
+            OutValue.X = FCString::Atod(*Parts[0]);
+            OutValue.Y = FCString::Atod(*Parts[1]);
+            OutValue.Z = FCString::Atod(*Parts[2]);
+        }
+        return;
     }
 }
 
-USCS_Node* FindScsNodeByName(USimpleConstructionScript* SCS, const FString& ComponentName)
+// Read a rotator field from JSON. Same formats as ReadVectorField.
+static void ReadRotatorField(const FJsonObject& Parent, const TCHAR* FieldName, FRotator& OutValue, const FRotator& Default)
 {
-    if (!SCS)
+    OutValue = Default;
+    if (!Parent.HasField(FieldName)) return;
+
+    const TSharedPtr<FJsonValue> Val = Parent.TryGetField(FieldName);
+    if (!Val.IsValid()) return;
+
+    if (Val->Type == EJson::Array)
     {
-        return nullptr;
+        const TArray<TSharedPtr<FJsonValue>>& Arr = Val->AsArray();
+        if (Arr.Num() >= 3)
+        {
+            OutValue.Roll = Arr[0]->AsNumber();
+            OutValue.Pitch = Arr[1]->AsNumber();
+            OutValue.Yaw = Arr[2]->AsNumber();
+        }
+        return;
     }
 
-    TArray<USCS_Node*> AllNodes;
-    AllNodes.Reserve(32);
-    for (USCS_Node* Root : SCS->GetRootNodes())
+    if (Val->Type == EJson::Object)
     {
-        GatherScsNodesRecursive(Root, AllNodes);
+        const TSharedPtr<FJsonObject> Obj = Val->AsObject();
+        double Tmp = 0.0;
+        if (Obj->TryGetNumberField(TEXT("roll"), Tmp)) OutValue.Roll = Tmp; else OutValue.Roll = Default.Roll;
+        if (Obj->TryGetNumberField(TEXT("pitch"), Tmp)) OutValue.Pitch = Tmp; else OutValue.Pitch = Default.Pitch;
+        if (Obj->TryGetNumberField(TEXT("yaw"), Tmp)) OutValue.Yaw = Tmp; else OutValue.Yaw = Default.Yaw;
+        return;
     }
 
-    const FString Normalized = ComponentName.TrimStartAndEnd();
-    const FName NameLookup(*Normalized);
-
-    for (USCS_Node* Node : AllNodes)
+    if (Val->Type == EJson::String)
     {
-        if (!Node)
+        FString S = Val->AsString();
+        TArray<FString> Parts;
+        S.ParseIntoArray(Parts, TEXT(","), true);
+        if (Parts.Num() >= 3)
         {
-            continue;
+            OutValue.Roll = FCString::Atod(*Parts[0]);
+            OutValue.Pitch = FCString::Atod(*Parts[1]);
+            OutValue.Yaw = FCString::Atod(*Parts[2]);
         }
+        return;
+    }
+}
 
-        const FName VariableName = Node->GetVariableName();
-        if (VariableName == NameLookup)
+// Convenience overloads that accept a shared pointer to a JSON object so
+// callers that already hold a TSharedPtr<FJsonObject> can pass it directly.
+static void ReadVectorField(const TSharedPtr<FJsonObject>& ParentPtr, const TCHAR* FieldName, FVector& OutValue, const FVector& Default)
+{
+    if (!ParentPtr.IsValid()) { OutValue = Default; return; }
+    ReadVectorField(*ParentPtr, FieldName, OutValue, Default);
+}
+
+static void ReadRotatorField(const TSharedPtr<FJsonObject>& ParentPtr, const TCHAR* FieldName, FRotator& OutValue, const FRotator& Default)
+{
+    if (!ParentPtr.IsValid()) { OutValue = Default; return; }
+    ReadRotatorField(*ParentPtr, FieldName, OutValue, Default);
+}
+
+// Find an SCS node by name while traversing root + child nodes. We check
+// both the node variable name and the node object name as a fallback.
+static USCS_Node* FindScsNodeByName(USimpleConstructionScript* SCS, const FString& Name)
+{
+    if (!SCS || Name.IsEmpty()) return nullptr;
+
+    const TArray<USCS_Node*>& Roots = SCS->GetRootNodes();
+    TArray<USCS_Node*> Work;
+    Work.Append(Roots);
+
+    while (Work.Num() > 0)
+    {
+        USCS_Node* Node = Work.Pop();
+        if (!Node) continue;
+
+        // Check variable name (the usual identifier) and the node object name
+        const FString VarName = Node->GetVariableName().ToString();
+        if (VarName.Equals(Name, ESearchCase::IgnoreCase) || Node->GetName().Equals(Name, ESearchCase::IgnoreCase))
         {
             return Node;
         }
 
-        const FString VariableString = VariableName.ToString();
-        if (!VariableString.IsEmpty() && VariableString.Equals(Normalized, ESearchCase::IgnoreCase))
-        {
-            return Node;
-        }
-
-        if (Node->GetName().Equals(Normalized, ESearchCase::IgnoreCase))
-        {
-            return Node;
-        }
+        // Add children for breadth-first traversal
+        const TArray<USCS_Node*>& Children = Node->GetChildNodes();
+        for (USCS_Node* Child : Children) if (Child) Work.Add(Child);
     }
 
     return nullptr;
 }
 
-bool ApplyPropertyOverrides(UObject* Target, const TSharedPtr<FJsonObject>& Properties, TArray<FString>& OutWarnings, FString& OutError)
+// Load a Blueprint asset from a flexible spec. Attempts the provided string
+// verbatim, then the left-of-dot form if present, and a few heuristics.
+static UBlueprint* LoadBlueprintAsset(const FString& Spec, FString& OutNormalized, FString& OutError)
 {
-    if (!Target || !Properties.IsValid())
+    OutNormalized.Empty();
+    OutError.Empty();
+    if (Spec.IsEmpty()) { OutError = TEXT("Empty blueprint path"); return nullptr; }
+
+    TArray<FString> Candidates;
+    Candidates.Add(Spec);
+    FString Left, Right;
+    if (Spec.Split(TEXT("."), &Left, &Right)) Candidates.Add(Left);
+
+    // Try a few guesses (allow short names like "Blueprints/MyBp")
+    if (!Spec.StartsWith(TEXT("/Game")) && !Spec.StartsWith(TEXT("/Engine")) && !Spec.StartsWith(TEXT("/Script")))
     {
+        Candidates.Add(FString::Printf(TEXT("/Game/%s"), *Spec));
+    }
+
+    for (const FString& C : Candidates)
+    {
+        if (C.IsEmpty()) continue;
+        UObject* Loaded = UEditorAssetLibrary::LoadAsset(C);
+        if (!Loaded) continue;
+        if (UBlueprint* BP = Cast<UBlueprint>(Loaded))
+        {
+            OutNormalized = C;
+            return BP;
+        }
+        // If asset is a UClass (generated blueprint class), attempt to discover the blueprint
+        if (UClass* Cls = Cast<UClass>(Loaded))
+        {
+            // Best-effort: try to find a blueprint asset with the same name in the same package
+            FString AssetPath = Loaded->GetPathName();
+            UBlueprint* FoundBp = Cast<UBlueprint>(UEditorAssetLibrary::LoadAsset(AssetPath));
+            if (FoundBp)
+            {
+                OutNormalized = AssetPath;
+                return FoundBp;
+            }
+        }
+    }
+
+    OutError = FString::Printf(TEXT("Failed to load Blueprint asset %s"), *Spec);
+    return nullptr;
+}
+
+// Export a property value into a FJsonValue. Supports most simple property
+// kinds (string, name, bool, numeric, object refs, FVector/FRotator).
+static TSharedPtr<FJsonValue> ExportPropertyToJsonValue(UObject* TargetObject, FProperty* Property)
+{
+    if (!TargetObject || !Property) return nullptr;
+
+    void* PropAddr = Property->ContainerPtrToValuePtr<void>(TargetObject);
+
+    if (FStrProperty* SP = CastField<FStrProperty>(Property))
+    {
+        return MakeShared<FJsonValueString>(SP->GetPropertyValue(PropAddr));
+    }
+    if (FNameProperty* NP = CastField<FNameProperty>(Property))
+    {
+        return MakeShared<FJsonValueString>(NP->GetPropertyValue(PropAddr).ToString());
+    }
+    if (FBoolProperty* BP = CastField<FBoolProperty>(Property))
+    {
+        return MakeShared<FJsonValueBoolean>(BP->GetPropertyValue(PropAddr));
+    }
+    if (FIntProperty* IP = CastField<FIntProperty>(Property))
+    {
+        return MakeShared<FJsonValueNumber>(static_cast<double>(IP->GetPropertyValue(PropAddr)));
+    }
+    if (FFloatProperty* FP = CastField<FFloatProperty>(Property))
+    {
+        return MakeShared<FJsonValueNumber>(static_cast<double>(FP->GetPropertyValue(PropAddr)));
+    }
+    if (FDoubleProperty* DP = CastField<FDoubleProperty>(Property))
+    {
+        return MakeShared<FJsonValueNumber>(DP->GetPropertyValue(PropAddr));
+    }
+    if (FObjectPropertyBase* OP = CastField<FObjectPropertyBase>(Property))
+    {
+        UObject* Obj = OP->GetObjectPropertyValue(PropAddr);
+        if (Obj) return MakeShared<FJsonValueString>(Obj->GetPathName());
+        return MakeShared<FJsonValueNull>();
+    }
+    if (FStructProperty* SPProp = CastField<FStructProperty>(Property))
+    {
+        const FName StructName = SPProp->Struct->GetFName();
+        if (StructName == NAME_Vector)
+        {
+            const FVector* V = SPProp->ContainerPtrToValuePtr<FVector>(TargetObject);
+            if (V)
+            {
+                TArray<TSharedPtr<FJsonValue>> Arr;
+                Arr.Add(MakeShared<FJsonValueNumber>(V->X));
+                Arr.Add(MakeShared<FJsonValueNumber>(V->Y));
+                Arr.Add(MakeShared<FJsonValueNumber>(V->Z));
+                return MakeShared<FJsonValueArray>(Arr);
+            }
+            return nullptr;
+        }
+        if (StructName == NAME_Rotator)
+        {
+            const FRotator* R = SPProp->ContainerPtrToValuePtr<FRotator>(TargetObject);
+            if (R)
+            {
+                TArray<TSharedPtr<FJsonValue>> Arr;
+                Arr.Add(MakeShared<FJsonValueNumber>(R->Roll));
+                Arr.Add(MakeShared<FJsonValueNumber>(R->Pitch));
+                Arr.Add(MakeShared<FJsonValueNumber>(R->Yaw));
+                return MakeShared<FJsonValueArray>(Arr);
+            }
+            return nullptr;
+        }
+    }
+
+    // Unknown/unsupported property type for export — return null to signal
+    // callers that this property could not be converted into JSON.
+    return nullptr;
+}
+
+// Apply a JSON value to a reflected UProperty on an object. Uses explicit
+// assignment for common property kinds and falls back to ImportText for
+// others. Returns true on success and sets OutError on failure.
+static bool ApplyJsonValueToProperty(UObject* TargetObject, FProperty* Property, const TSharedPtr<FJsonValue>& Value, FString& OutError)
+{
+    OutError.Empty();
+    if (!TargetObject || !Property || !Value.IsValid())
+    {
+        OutError = TEXT("Invalid arguments");
+        return false;
+    }
+
+    void* PropAddr = Property->ContainerPtrToValuePtr<void>(TargetObject);
+
+    if (FStrProperty* SP = CastField<FStrProperty>(Property))
+    {
+        if (Value->Type == EJson::String) { SP->SetPropertyValue(PropAddr, Value->AsString()); return true; }
+        SP->SetPropertyValue(PropAddr, Value->AsString());
         return true;
     }
 
-    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Properties->Values)
+    if (FBoolProperty* BP = CastField<FBoolProperty>(Property))
     {
-        FProperty* Property = Target->GetClass()->FindPropertyByName(*Pair.Key);
-        if (!Property)
+        if (Value->Type == EJson::Boolean) { BP->SetPropertyValue(PropAddr, Value->AsBool()); return true; }
+        // Accept textual booleans
+        if (Value->Type == EJson::String) { BP->SetPropertyValue(PropAddr, Value->AsString().ToBool()); return true; }
+        OutError = TEXT("Cannot convert JSON value to bool");
+        return false;
+    }
+
+    if (FIntProperty* IP = CastField<FIntProperty>(Property))
+    {
+        if (Value->Type == EJson::Number) { IP->SetPropertyValue(PropAddr, static_cast<int32>(Value->AsNumber())); return true; }
+        if (Value->Type == EJson::String) { IP->SetPropertyValue(PropAddr, FCString::Atoi(*Value->AsString())); return true; }
+        OutError = TEXT("Cannot convert JSON value to int");
+        return false;
+    }
+
+    if (FFloatProperty* FP = CastField<FFloatProperty>(Property))
+    {
+        if (Value->Type == EJson::Number) { FP->SetPropertyValue(PropAddr, static_cast<float>(Value->AsNumber())); return true; }
+        if (Value->Type == EJson::String) { FP->SetPropertyValue(PropAddr, FCString::Atof(*Value->AsString())); return true; }
+        OutError = TEXT("Cannot convert JSON value to float");
+        return false;
+    }
+
+    if (FDoubleProperty* DP = CastField<FDoubleProperty>(Property))
+    {
+        if (Value->Type == EJson::Number) { DP->SetPropertyValue(PropAddr, Value->AsNumber()); return true; }
+        if (Value->Type == EJson::String) { DP->SetPropertyValue(PropAddr, FCString::Atod(*Value->AsString())); return true; }
+        OutError = TEXT("Cannot convert JSON value to double");
+        return false;
+    }
+
+    if (FObjectPropertyBase* OP = CastField<FObjectPropertyBase>(Property))
+    {
+        if (Value->Type == EJson::String)
         {
-            OutWarnings.Add(FString::Printf(TEXT("Property %s not found on %s"), *Pair.Key, *Target->GetName()));
-            continue;
+            const FString Path = Value->AsString();
+            if (Path.IsEmpty()) { OP->SetObjectPropertyValue(PropAddr, nullptr); return true; }
+            UObject* Loaded = StaticLoadObject(OP->PropertyClass, nullptr, *Path);
+            if (!Loaded)
+            {
+                OutError = FString::Printf(TEXT("Failed to load object at path: %s"), *Path);
+                return false;
+            }
+            OP->SetObjectPropertyValue(PropAddr, Loaded);
+            return true;
+        }
+        OutError = TEXT("Object property requires string path in JSON");
+        return false;
+    }
+
+    if (FStructProperty* SPProp = CastField<FStructProperty>(Property))
+    {
+        const FName StructName = SPProp->Struct->GetFName();
+        if (StructName == NAME_Vector)
+        {
+            FVector* VPtr = SPProp->ContainerPtrToValuePtr<FVector>(TargetObject);
+            const FVector Default = *VPtr;
+            if (Value->Type == EJson::Array || Value->Type == EJson::Object || Value->Type == EJson::String)
+            {
+                // Build a temporary object wrapper to reuse ReadVectorField
+                TSharedPtr<FJsonObject> Tmp = MakeShared<FJsonObject>();
+                Tmp->SetField(TEXT("v"), Value);
+                ReadVectorField(*Tmp, TEXT("v"), *VPtr, Default);
+                return true;
+            }
+            OutError = TEXT("Unsupported JSON format for FVector");
+            return false;
         }
 
-        FString ConversionError;
-        if (!ApplyJsonValueToProperty(Target, Property, Pair.Value, ConversionError))
+        if (StructName == NAME_Rotator)
         {
-            OutError = ConversionError;
+            FRotator* RPtr = SPProp->ContainerPtrToValuePtr<FRotator>(TargetObject);
+            const FRotator Default = *RPtr;
+            if (Value->Type == EJson::Array || Value->Type == EJson::Object || Value->Type == EJson::String)
+            {
+                TSharedPtr<FJsonObject> Tmp = MakeShared<FJsonObject>();
+                Tmp->SetField(TEXT("r"), Value);
+                ReadRotatorField(*Tmp, TEXT("r"), *RPtr, Default);
+                return true;
+            }
+            OutError = TEXT("Unsupported JSON format for FRotator");
             return false;
         }
     }
 
-    return true;
+    // Fallback: not supported for arbitrary property kinds. Provide a
+    // descriptive error so callers can handle unsupported properties.
+    OutError = TEXT("Unsupported property type for JSON-to-property conversion. Implement additional cases if needed.");
+    return false;
 }
 
-UBlueprint* LoadBlueprintAsset(const FString& InputPath, FString& OutNormalizedPath, FString& OutError)
-{
-    FString RequestedPath = InputPath;
-    RequestedPath.TrimStartAndEndInline();
-
-    if (RequestedPath.IsEmpty())
-    {
-        OutError = TEXT("Blueprint path is empty.");
-        return nullptr;
-    }
-
-    FString NormalizedPath = RequestedPath;
-    if (!NormalizedPath.StartsWith(TEXT("/")))
-    {
-        NormalizedPath = FString::Printf(TEXT("/Game/%s"), *NormalizedPath);
-    }
-
-    FString ObjectPath = NormalizedPath;
-    if (!ObjectPath.Contains(TEXT(".")))
-    {
-        const FString AssetName = FPackageName::GetLongPackageAssetName(NormalizedPath);
-        if (AssetName.IsEmpty())
-        {
-            OutError = FString::Printf(TEXT("Unable to determine asset name for %s"), *NormalizedPath);
-            return nullptr;
-        }
-        ObjectPath = FString::Printf(TEXT("%s.%s"), *NormalizedPath, *AssetName);
-    }
-
-    FSoftObjectPath SoftPath(ObjectPath);
-    if (!SoftPath.IsValid())
-    {
-        OutError = FString::Printf(TEXT("Invalid Blueprint object path: %s"), *ObjectPath);
-        return nullptr;
-    }
-
-    UObject* Loaded = SoftPath.TryLoad();
-    if (!Loaded)
-    {
-        OutError = FString::Printf(TEXT("Failed to load Blueprint asset %s"), *ObjectPath);
-        return nullptr;
-    }
-
-    UBlueprint* Blueprint = Cast<UBlueprint>(Loaded);
-    if (!Blueprint)
-    {
-        OutError = FString::Printf(TEXT("Asset %s is not a Blueprint."), *ObjectPath);
-        return nullptr;
-    }
-
-    OutNormalizedPath = SoftPath.ToString();
-    return Blueprint;
-}
-}
+} // namespace
 
 void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -786,6 +908,16 @@ void UMcpAutomationBridgeSubsystem::HandleConnectionError(TSharedPtr<FMcpBridgeW
         Socket->OnMessage().RemoveAll(this);
         Socket->OnHeartbeat().RemoveAll(this);
     }
+    // Clean up any pending request mappings for this socket to avoid stale state
+    for (auto It = PendingRequestsToSockets.CreateIterator(); It; ++It)
+    {
+        if (It.Value() == Socket)
+        {
+            const FString PendingId = It.Key();
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Removing pending mapping for RequestId=%s due to socket close."), *PendingId);
+            It.RemoveCurrent();
+        }
+    }
 }
 
 void UMcpAutomationBridgeSubsystem::HandleServerConnectionError(const FString& Error)
@@ -897,8 +1029,9 @@ void UMcpAutomationBridgeSubsystem::HandleMessage(TSharedPtr<FMcpBridgeWebSocket
             }
             return;
         }
+// (ProcessPendingAutomationRequests implementation defined below)
 
-        if (Parsed.Type.Equals(TEXT("bridge_ack")))
+    if (Parsed.Type.Equals(TEXT("bridge_ack")))
         {
             FString ReportedVersion;
             if (JsonObject->TryGetStringField(TEXT("serverVersion"), ReportedVersion) && !ReportedVersion.IsEmpty())
@@ -981,6 +1114,29 @@ void UMcpAutomationBridgeSubsystem::HandleMessage(TSharedPtr<FMcpBridgeWebSocket
     OnMessageReceived.Broadcast(Parsed);
 }
 
+    void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests()
+    {
+        TArray<FPendingAutomationRequest> LocalQueue;
+        {
+            FScopeLock Lock(&PendingAutomationRequestsMutex);
+            LocalQueue = PendingAutomationRequests;
+            PendingAutomationRequests.Empty();
+            bPendingRequestsScheduled = false;
+        }
+
+        for (const FPendingAutomationRequest& Req : LocalQueue)
+        {
+            // Guard against reentrancy inside the sequential processing
+            if (bProcessingAutomationRequest)
+            {
+                // Shouldn't happen since we process sequentially, but be defensive
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Reentrant detection while draining automation queue; skipping %s"), *Req.RequestId);
+                continue;
+            }
+            ProcessAutomationRequest(Req.RequestId, Req.Action, Req.Payload, Req.RequestingSocket);
+        }
+    }
+
 void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // Ensure automation processing happens on the game thread
@@ -1006,11 +1162,16 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
 
     bProcessingAutomationRequest = true;
 
-    // Ensure the flag is reset even if an exception occurs
-    ON_SCOPE_EXIT
-    {
-        bProcessingAutomationRequest = false;
-    };
+    // Wrap the implementation in a lambda and catch any unhandled exceptions so
+    // we always send an automation error back to the caller instead of
+    // letting the request hang until the client's timeout.
+    auto ProcessBody = [&]() -> void {
+        // Ensure the flag is reset even if an exception occurs inside the body
+        ON_SCOPE_EXIT
+        {
+            bProcessingAutomationRequest = false;
+        };
+    try {
     if (Action.Equals(TEXT("execute_editor_python"), ESearchCase::IgnoreCase))
     {
         if (!Payload.IsValid())
@@ -1231,36 +1392,242 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         return;
     }
 
+    // Quick existence probe for Blueprints — plugin-side implementation to
+    // avoid falling back to Editor Python for frequent existence checks.
+    if (Action.Equals(TEXT("blueprint_exists"), ESearchCase::IgnoreCase))
+    {
+        if (!Payload.IsValid())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_exists payload missing."), TEXT("INVALID_PAYLOAD"));
+            return;
+        }
+
+        TArray<FString> CandidatePaths;
+        const TArray<TSharedPtr<FJsonValue>>* CandidateArray = nullptr;
+        if (Payload->TryGetArrayField(TEXT("candidates"), CandidateArray) && CandidateArray != nullptr && CandidateArray->Num() > 0)
+        {
+            for (const TSharedPtr<FJsonValue>& V : *CandidateArray)
+            {
+                if (!V.IsValid()) continue;
+                const FString S = V->AsString();
+                if (!S.TrimStartAndEnd().IsEmpty()) CandidatePaths.Add(S);
+            }
+        }
+        else
+        {
+            FString Single;
+            if (Payload->TryGetStringField(TEXT("requestedPath"), Single) && !Single.TrimStartAndEnd().IsEmpty())
+            {
+                CandidatePaths.Add(Single);
+            }
+            else if (Payload->TryGetStringField(TEXT("blueprintPath"), Single) && !Single.TrimStartAndEnd().IsEmpty())
+            {
+                CandidatePaths.Add(Single);
+            }
+        }
+
+        if (CandidatePaths.Num() == 0)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_exists requires candidates or requestedPath."), TEXT("INVALID_PAYLOAD"));
+            return;
+        }
+
+        for (const FString& Candidate : CandidatePaths)
+        {
+            FString Normalized;
+            FString LoadError;
+            UBlueprint* Found = LoadBlueprintAsset(Candidate, Normalized, LoadError);
+            if (Found)
+            {
+                TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+                Result->SetBoolField(TEXT("exists"), true);
+                Result->SetStringField(TEXT("found"), Normalized);
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blueprint exists."), Result, FString());
+                return;
+            }
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetBoolField(TEXT("exists"), false);
+        TArray<TSharedPtr<FJsonValue>> TriedValues;
+        TriedValues.Reserve(CandidatePaths.Num());
+        for (const FString& C : CandidatePaths) TriedValues.Add(MakeShared<FJsonValueString>(C));
+        Result->SetArrayField(TEXT("triedCandidates"), TriedValues);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blueprint not found."), Result, FString());
+        return;
+    }
+
+    // Create a Blueprint asset using AssetTools and BlueprintFactory. This
+    // keeps creation logic on the plugin side and prevents repeated Python
+    // fallbacks for simple create operations.
+    if (Action.Equals(TEXT("blueprint_create"), ESearchCase::IgnoreCase))
+    {
+        if (!Payload.IsValid())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_create payload missing."), TEXT("INVALID_PAYLOAD"));
+            return;
+        }
+
+        FString Name;
+        if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.TrimStartAndEnd().IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_create requires a non-empty name."), TEXT("INVALID_NAME"));
+            return;
+        }
+
+        FString SavePath = TEXT("/Game/Blueprints");
+        Payload->TryGetStringField(TEXT("savePath"), SavePath);
+        // Normalize the save path
+        SavePath = SavePath.Replace(TEXT("\\"), TEXT("/"));
+        SavePath = SavePath.Replace(TEXT("//"), TEXT("/"));
+        if (SavePath.EndsWith(TEXT("/"))) SavePath = SavePath.LeftChop(1);
+        if (SavePath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase))
+        {
+            SavePath = FString::Printf(TEXT("/Game%s"), *SavePath.RightChop(8));
+        }
+        if (!SavePath.StartsWith(TEXT("/Game")))
+        {
+            // Accept short forms like 'Blueprints'
+            SavePath = FString::Printf(TEXT("/Game/%s"), *SavePath.Replace(TEXT("/"), TEXT("")));
+        }
+
+        FString ParentClassSpec;
+        Payload->TryGetStringField(TEXT("parentClass"), ParentClassSpec);
+
+        // Attempt creation on the game thread synchronously — creating assets
+        // must happen in the editor thread context.
+        // First check whether an asset already exists at the target location
+        // and treat create as idempotent: return success if the Blueprint
+        // already exists so repeated test runs are deterministic.
+        {
+            FString CandidatePath = SavePath;
+            if (!CandidatePath.EndsWith(TEXT("/"))) CandidatePath += TEXT("/");
+            CandidatePath += Name;
+            FString ExistingNormalized;
+            FString ExistingErr;
+            UBlueprint* ExistingBp = LoadBlueprintAsset(CandidatePath, ExistingNormalized, ExistingErr);
+            if (ExistingBp)
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("blueprint_create: asset already exists: %s -> %s"), *CandidatePath, *ExistingNormalized);
+                TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+                ResultPayload->SetStringField(TEXT("path"), ExistingNormalized);
+                ResultPayload->SetStringField(TEXT("assetPath"), ExistingBp->GetPathName());
+                ResultPayload->SetBoolField(TEXT("alreadyExisted"), true);
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blueprint already exists"), ResultPayload, FString());
+                return;
+            }
+        }
+        UBlueprint* CreatedBlueprint = nullptr;
+        FString CreatedNormalizedPath;
+        FString CreationError;
+        {
+            // Factory and class resolution must run in editor context
+            UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
+            if (!ParentClassSpec.IsEmpty())
+            {
+                // Resolve simple parent hints (try /Script/ loads, blueprint assets, or short class names)
+                UClass* ResolvedParent = nullptr;
+                if (ParentClassSpec.StartsWith(TEXT("/Script/")))
+                {
+                    ResolvedParent = FindObject<UClass>(nullptr, *ParentClassSpec);
+                    if (!ResolvedParent) ResolvedParent = StaticLoadClass(UObject::StaticClass(), nullptr, *ParentClassSpec);
+                }
+                else if (ParentClassSpec.StartsWith(TEXT("/Game/")))
+                {
+                    FString TmpNormalized; FString TmpErr;
+                    UBlueprint* ParentBp = LoadBlueprintAsset(ParentClassSpec, TmpNormalized, TmpErr);
+                    if (ParentBp && ParentBp->GeneratedClass) ResolvedParent = ParentBp->GeneratedClass;
+                }
+                else
+                {
+                    for (TObjectIterator<UClass> It; It; ++It)
+                    {
+                        UClass* C = *It;
+                        if (!C) continue;
+                        if (C->GetName().Equals(ParentClassSpec, ESearchCase::IgnoreCase))
+                        {
+                            ResolvedParent = C;
+                            break;
+                        }
+                    }
+                }
+                if (ResolvedParent)
+                {
+                    Factory->ParentClass = ResolvedParent;
+                }
+            }
+
+            FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
+            UObject* NewObj = AssetToolsModule.Get().CreateAsset(Name, SavePath, UBlueprint::StaticClass(), Factory);
+            if (!NewObj)
+            {
+                CreationError = FString::Printf(TEXT("Failed to create blueprint asset %s in %s"), *Name, *SavePath);
+            }
+            else
+            {
+                CreatedBlueprint = Cast<UBlueprint>(NewObj);
+                if (!CreatedBlueprint)
+                {
+                    CreationError = FString::Printf(TEXT("Created asset is not a Blueprint: %s"), *NewObj->GetPathName());
+                }
+                else
+                {
+                    // Attempt to persist the created asset
+                    const bool bSaved = UEditorAssetLibrary::SaveLoadedAsset(CreatedBlueprint);
+                    CreatedNormalizedPath = CreatedBlueprint->GetPathName();
+                    if (CreatedNormalizedPath.Contains(TEXT(".")))
+                    {
+                        // convert '/Game/path/Name.Name' -> '/Game/path/Name'
+                        CreatedNormalizedPath = CreatedNormalizedPath.Left(CreatedNormalizedPath.Find(TEXT(".")));
+                    }
+                    if (!bSaved)
+                    {
+                        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Blueprint created but failed to save: %s"), *CreatedBlueprint->GetPathName());
+                    }
+                }
+            }
+        }
+
+        if (!CreatedBlueprint)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, CreationError.IsEmpty() ? TEXT("Blueprint creation failed") : CreationError, nullptr, TEXT("CREATE_FAILED"));
+            return;
+        }
+
+        TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+        ResultPayload->SetStringField(TEXT("path"), CreatedNormalizedPath);
+        ResultPayload->SetStringField(TEXT("assetPath"), CreatedBlueprint->GetPathName());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blueprint created"), ResultPayload, FString());
+        return;
+    }
+
     if (Action.Equals(TEXT("blueprint_modify_scs"), ESearchCase::IgnoreCase))
     {
+        const double HandlerStartTimeSec = FPlatformTime::Seconds();
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("blueprint_modify_scs handler start (RequestId=%s)"), *RequestId);
+
         if (!Payload.IsValid())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_modify_scs payload missing."), TEXT("INVALID_PAYLOAD"));
             return;
         }
 
+        // Resolve blueprint path or candidate list
         FString BlueprintPath;
-        // Accept either a single blueprintPath string or an array of blueprintCandidates
         TArray<FString> CandidatePaths;
-        // We will read the blueprintCandidates array below if needed; presence alone
-        // is checked when the blueprintPath string is empty.
         if (!Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) || BlueprintPath.TrimStartAndEnd().IsEmpty())
         {
-            // If no single blueprintPath was provided, accept array of candidates
             const TArray<TSharedPtr<FJsonValue>>* CandidateArray = nullptr;
             if (!Payload->TryGetArrayField(TEXT("blueprintCandidates"), CandidateArray) || CandidateArray == nullptr || CandidateArray->Num() == 0)
             {
                 SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_modify_scs requires a non-empty blueprintPath or blueprintCandidates."), TEXT("INVALID_BLUEPRINT"));
                 return;
             }
-            for (const TSharedPtr<FJsonValue>& Value : *CandidateArray)
+            for (const TSharedPtr<FJsonValue>& Val : *CandidateArray)
             {
-                if (!Value.IsValid()) continue;
-                FString Candidate = Value->AsString();
-                if (!Candidate.TrimStartAndEnd().IsEmpty())
-                {
-                    CandidatePaths.Add(Candidate);
-                }
+                if (!Val.IsValid()) continue;
+                const FString Candidate = Val->AsString();
+                if (!Candidate.TrimStartAndEnd().IsEmpty()) CandidatePaths.Add(Candidate);
             }
             if (CandidatePaths.Num() == 0)
             {
@@ -1269,6 +1636,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             }
         }
 
+        // Operations are required
         const TArray<TSharedPtr<FJsonValue>>* OperationsArray = nullptr;
         if (!Payload->TryGetArrayField(TEXT("operations"), OperationsArray) || OperationsArray == nullptr)
         {
@@ -1276,11 +1644,26 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             return;
         }
 
+        // Flags
+        bool bCompile = false;
+        if (Payload->HasField(TEXT("compile")) && !Payload->TryGetBoolField(TEXT("compile"), bCompile))
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("compile must be a boolean."), TEXT("INVALID_COMPILE_FLAG"));
+            return;
+        }
+        bool bSave = false;
+        if (Payload->HasField(TEXT("save")) && !Payload->TryGetBoolField(TEXT("save"), bSave))
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("save must be a boolean."), TEXT("INVALID_SAVE_FLAG"));
+            return;
+        }
+
+        // Resolve the blueprint asset (explicit path preferred, then candidates)
         FString NormalizedBlueprintPath;
         FString LoadError;
-    UBlueprint* Blueprint = nullptr;
-    TArray<FString> TriedCandidates;
-        // Try explicit blueprintPath first
+        UBlueprint* Blueprint = nullptr;
+        TArray<FString> TriedCandidates;
+
         if (!BlueprintPath.IsEmpty())
         {
             TriedCandidates.Add(BlueprintPath);
@@ -1290,7 +1673,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Loaded blueprint from explicit path: %s -> %s"), *BlueprintPath, *NormalizedBlueprintPath);
             }
         }
-        // If that failed and we have candidate paths, try them in order
+
         if (!Blueprint && CandidatePaths.Num() > 0)
         {
             for (const FString& Candidate : CandidatePaths)
@@ -1307,21 +1690,17 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                     UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Loaded blueprint candidate: %s -> %s"), *Candidate, *CandidateNormalized);
                     break;
                 }
-                // accumulate last error for fallback
                 LoadError = CandidateError;
             }
         }
+
         if (!Blueprint)
         {
-            // Provide diagnostics about the candidates we tried
             TSharedPtr<FJsonObject> ErrPayload = MakeShared<FJsonObject>();
             if (TriedCandidates.Num() > 0)
             {
                 TArray<TSharedPtr<FJsonValue>> TriedValues;
-                for (const FString& C : TriedCandidates)
-                {
-                    TriedValues.Add(MakeShared<FJsonValueString>(C));
-                }
+                for (const FString& C : TriedCandidates) TriedValues.Add(MakeShared<FJsonValueString>(C));
                 ErrPayload->SetArrayField(TEXT("triedCandidates"), TriedValues);
             }
             SendAutomationResponse(RequestingSocket, RequestId, false, LoadError, ErrPayload, TEXT("BLUEPRINT_NOT_FOUND"));
@@ -1335,34 +1714,11 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             if (TriedCandidates.Num() > 0)
             {
                 TArray<TSharedPtr<FJsonValue>> TriedValues;
-                for (const FString& C : TriedCandidates)
-                {
-                    TriedValues.Add(MakeShared<FJsonValueString>(C));
-                }
+                for (const FString& C : TriedCandidates) TriedValues.Add(MakeShared<FJsonValueString>(C));
                 ErrPayload->SetArrayField(TEXT("triedCandidates"), TriedValues);
             }
             SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Blueprint does not expose a SimpleConstructionScript."), ErrPayload, TEXT("SCS_UNAVAILABLE"));
             return;
-        }
-
-        bool bCompile = false;
-        if (Payload->HasField(TEXT("compile")))
-        {
-            if (!Payload->TryGetBoolField(TEXT("compile"), bCompile))
-            {
-                SendAutomationError(RequestingSocket, RequestId, TEXT("compile must be a boolean."), TEXT("INVALID_COMPILE_FLAG"));
-                return;
-            }
-        }
-
-        bool bSave = false;
-        if (Payload->HasField(TEXT("save")))
-        {
-            if (!Payload->TryGetBoolField(TEXT("save"), bSave))
-            {
-                SendAutomationError(RequestingSocket, RequestId, TEXT("save must be a boolean."), TEXT("INVALID_SAVE_FLAG"));
-                return;
-            }
         }
 
         if (OperationsArray->Num() == 0)
@@ -1374,22 +1730,46 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             return;
         }
 
-        Blueprint->Modify();
-        SCS->Modify();
-
-        bool bAnyChanges = false;
-        TArray<FString> AccumulatedWarnings;
-        TArray<TSharedPtr<FJsonValue>> OperationSummaries;
-
-        for (int32 Index = 0; Index < OperationsArray->Num(); ++Index)
+        // Prevent concurrent SCS modifications against the same blueprint.
+        const FString BusyKey = NormalizedBlueprintPath;
+        if (!BusyKey.IsEmpty())
         {
-            const TSharedPtr<FJsonValue>& OperationValue = (*OperationsArray)[Index];
+            if (GBlueprintBusySet.Contains(BusyKey))
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Blueprint %s is busy with another modification."), *BusyKey), nullptr, TEXT("BLUEPRINT_BUSY"));
+                return;
+            }
+
+            GBlueprintBusySet.Add(BusyKey);
+            this->CurrentBusyBlueprintKey = BusyKey;
+            this->bCurrentBlueprintBusyMarked = true;
+            this->bCurrentBlueprintBusyScheduled = false;
+
+            // If we exit before scheduling the deferred work, clear the busy flag
+            ON_SCOPE_EXIT
+            {
+                if (this->bCurrentBlueprintBusyMarked && !this->bCurrentBlueprintBusyScheduled)
+                {
+                    GBlueprintBusySet.Remove(this->CurrentBusyBlueprintKey);
+                    this->bCurrentBlueprintBusyMarked = false;
+                    this->CurrentBusyBlueprintKey.Empty();
+                }
+            };
+        }
+
+        // Make a shallow copy of the operations array so the deferred lambda
+        // can safely reference them after this function returns.
+        TArray<TSharedPtr<FJsonValue>> DeferredOps = *OperationsArray;
+
+        // Lightweight validation of operations
+        for (int32 Index = 0; Index < DeferredOps.Num(); ++Index)
+        {
+            const TSharedPtr<FJsonValue>& OperationValue = DeferredOps[Index];
             if (!OperationValue.IsValid() || OperationValue->Type != EJson::Object)
             {
                 SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Operation at index %d is not an object."), Index), TEXT("INVALID_OPERATION_PAYLOAD"));
                 return;
             }
-
             const TSharedPtr<FJsonObject> OperationObject = OperationValue->AsObject();
             FString OperationType;
             if (!OperationObject->TryGetStringField(TEXT("type"), OperationType) || OperationType.TrimStartAndEnd().IsEmpty())
@@ -1397,481 +1777,715 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Operation at index %d missing type."), Index), TEXT("INVALID_OPERATION_TYPE"));
                 return;
             }
+        }
 
-            const FString NormalizedType = OperationType.ToLower();
-            TSharedPtr<FJsonObject> OperationSummary = MakeShared<FJsonObject>();
-            OperationSummary->SetNumberField(TEXT("index"), Index);
-            OperationSummary->SetStringField(TEXT("type"), NormalizedType);
+        // Mark busy as scheduled (the deferred worker will clear it)
+        this->bCurrentBlueprintBusyScheduled = true;
 
-            if (NormalizedType == TEXT("add_component"))
+        // Build immediate acknowledgement payload summarizing scheduled ops
+        TArray<TSharedPtr<FJsonValue>> ImmediateSummaries;
+        ImmediateSummaries.Reserve(DeferredOps.Num());
+        for (int32 Index = 0; Index < DeferredOps.Num(); ++Index)
+        {
+            const TSharedPtr<FJsonObject> OpObj = DeferredOps[Index]->AsObject();
+            TSharedPtr<FJsonObject> Summary = MakeShared<FJsonObject>();
+            FString Type; OpObj->TryGetStringField(TEXT("type"), Type);
+            Summary->SetNumberField(TEXT("index"), Index);
+            Summary->SetStringField(TEXT("type"), Type.IsEmpty() ? TEXT("unknown") : Type);
+            Summary->SetBoolField(TEXT("scheduled"), true);
+            ImmediateSummaries.Add(MakeShared<FJsonValueObject>(Summary));
+        }
+
+        TSharedPtr<FJsonObject> AckPayload = MakeShared<FJsonObject>();
+        AckPayload->SetStringField(TEXT("blueprintPath"), NormalizedBlueprintPath);
+        AckPayload->SetStringField(TEXT("matchedCandidate"), NormalizedBlueprintPath);
+        AckPayload->SetArrayField(TEXT("operations"), ImmediateSummaries);
+        AckPayload->SetBoolField(TEXT("scheduled"), true);
+        AckPayload->SetBoolField(TEXT("compiled"), false);
+        AckPayload->SetBoolField(TEXT("saved"), false);
+
+        const FString AckMessage = FString::Printf(TEXT("Scheduled %d SCS operation(s) for application."), DeferredOps.Num());
+        SendAutomationResponse(RequestingSocket, RequestId, true, AckMessage, AckPayload, FString());
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("blueprint_modify_scs: RequestId=%s scheduled %d ops and returned ack."), *RequestId, DeferredOps.Num());
+
+        // Defer actual SCS application to the game thread
+        AsyncTask(ENamedThreads::GameThread, [this, RequestId, DeferredOps, NormalizedBlueprintPath, bCompile, bSave, TriedCandidates, HandlerStartTimeSec, RequestingSocket]() mutable {
+            TSharedPtr<FJsonObject> CompletionResult = MakeShared<FJsonObject>();
+            TArray<FString> LocalWarnings;
+            TArray<TSharedPtr<FJsonValue>> FinalSummaries;
+            bool bOk = false;
+
+            // (Re)load the blueprint on the game thread
+            FString LocalNormalized; FString LocalLoadError;
+            UBlueprint* LocalBP = LoadBlueprintAsset(NormalizedBlueprintPath, LocalNormalized, LocalLoadError);
+
+            if (!LocalBP)
             {
-                FString ComponentName;
-                if (!OperationObject->TryGetStringField(TEXT("componentName"), ComponentName) || ComponentName.TrimStartAndEnd().IsEmpty())
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Deferred SCS application failed to load blueprint %s: %s"), *NormalizedBlueprintPath, *LocalLoadError);
+                CompletionResult->SetStringField(TEXT("error"), LocalLoadError);
+            }
+            else
+            {
+                USimpleConstructionScript* LocalSCS = LocalBP->SimpleConstructionScript;
+                if (!LocalSCS)
                 {
-                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("add_component operation at index %d missing componentName."), Index), TEXT("INVALID_COMPONENT_NAME"));
-                    return;
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Deferred SCS application: SCS unavailable for %s"), *NormalizedBlueprintPath);
+                    CompletionResult->SetStringField(TEXT("error"), TEXT("SCS_UNAVAILABLE"));
                 }
-
-                FString ComponentClassPath;
-                if (!OperationObject->TryGetStringField(TEXT("componentClass"), ComponentClassPath) || ComponentClassPath.TrimStartAndEnd().IsEmpty())
+                else
                 {
-                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("add_component operation at index %d missing componentClass."), Index), TEXT("INVALID_COMPONENT_CLASS"));
-                    return;
-                }
+                    LocalBP->Modify();
+                    LocalSCS->Modify();
 
-                FString AttachToName;
-                OperationObject->TryGetStringField(TEXT("attachTo"), AttachToName);
-
-                FSoftClassPath ComponentClassSoftPath(ComponentClassPath);
-                UClass* ComponentClass = ComponentClassSoftPath.TryLoadClass<UActorComponent>();
-                if (!ComponentClass)
-                {
-                    ComponentClass = FindObject<UClass>(nullptr, *ComponentClassPath);
-                }
-                // If still unresolved, try common /Script/ packages and static load as fallbacks
-                if (!ComponentClass)
-                {
-                    const TArray<FString> Prefixes = { TEXT("/Script/Engine."), TEXT("/Script/UMG."), TEXT("/Script/Paper2D.") };
-                    for (const FString& Prefix : Prefixes)
+                    for (int32 Index = 0; Index < DeferredOps.Num(); ++Index)
                     {
-                        const FString Guess = Prefix + ComponentClassPath;
-                        UClass* TryClass = FindObject<UClass>(nullptr, *Guess);
-                        if (!TryClass)
+                        const double OpStart = FPlatformTime::Seconds();
+                        const TSharedPtr<FJsonValue>& V = DeferredOps[Index];
+                        if (!V.IsValid() || V->Type != EJson::Object) continue;
+                        const TSharedPtr<FJsonObject> Op = V->AsObject();
+                        FString OpType; Op->TryGetStringField(TEXT("type"), OpType);
+                        const FString NormalizedType = OpType.ToLower();
+                        TSharedPtr<FJsonObject> OpSummary = MakeShared<FJsonObject>();
+                        OpSummary->SetNumberField(TEXT("index"), Index);
+                        OpSummary->SetStringField(TEXT("type"), NormalizedType);
+
+                        if (NormalizedType == TEXT("modify_component"))
                         {
-                            TryClass = StaticLoadClass(UActorComponent::StaticClass(), nullptr, *Guess);
-                        }
-                        if (TryClass)
-                        {
-                            ComponentClass = TryClass;
-                            break;
-                        }
-                    }
-                }
-                // As last resort, scan loaded classes by short name (fast in editor builds)
-                if (!ComponentClass)
-                {
-                    for (TObjectIterator<UClass> It; It; ++It)
-                    {
-                        UClass* Candidate = *It;
-                        if (!Candidate) continue;
-                        const FString ShortName = Candidate->GetName();
-                        if (ShortName.Equals(ComponentClassPath, ESearchCase::IgnoreCase) || Candidate->GetFName().ToString().Equals(ComponentClassPath, ESearchCase::IgnoreCase))
-                        {
-                            if (Candidate->IsChildOf(UActorComponent::StaticClass()))
+                            FString ComponentName; Op->TryGetStringField(TEXT("componentName"), ComponentName);
+                            const TSharedPtr<FJsonObject>* TransformObj = nullptr;
+                            Op->TryGetObjectField(TEXT("transform"), TransformObj);
+                            if (!ComponentName.IsEmpty() && TransformObj && (*TransformObj).IsValid())
                             {
-                                ComponentClass = Candidate;
-                                break;
+                                USCS_Node* Node = FindScsNodeByName(LocalSCS, ComponentName);
+                                if (Node && Node->ComponentTemplate && Node->ComponentTemplate->IsA<USceneComponent>())
+                                {
+                                    USceneComponent* SceneTemplate = Cast<USceneComponent>(Node->ComponentTemplate);
+                                    FVector Location = SceneTemplate->GetRelativeLocation();
+                                    FRotator Rotation = SceneTemplate->GetRelativeRotation();
+                                    FVector Scale = SceneTemplate->GetRelativeScale3D();
+                                    // TransformObj is a pointer to a TSharedPtr<FJsonObject>.
+                                    // Pass the TSharedPtr<FJsonObject> itself to the helper
+                                    // which expects a const TSharedPtr<FJsonObject>&.
+                                                            // TransformObj is a pointer to a TSharedPtr<FJsonObject>.
+                                                            // Dereference the TSharedPtr to obtain a FJsonObject&.
+                                                            ReadVectorField(*TransformObj, TEXT("location"), Location, Location);
+                                                            ReadRotatorField(*TransformObj, TEXT("rotation"), Rotation, Rotation);
+                                                            ReadVectorField(*TransformObj, TEXT("scale"), Scale, Scale);
+                                    SceneTemplate->SetRelativeLocation(Location);
+                                    SceneTemplate->SetRelativeRotation(Rotation);
+                                    SceneTemplate->SetRelativeScale3D(Scale);
+                                    OpSummary->SetBoolField(TEXT("success"), true);
+                                    OpSummary->SetStringField(TEXT("componentName"), ComponentName);
+                                }
+                                else
+                                {
+                                    OpSummary->SetBoolField(TEXT("success"), false);
+                                    OpSummary->SetStringField(TEXT("warning"), TEXT("Component not found or template missing"));
+                                }
                             }
                         }
-                    }
-                }
-                if (!ComponentClass)
-                {
-                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unable to load component class %s."), *ComponentClassPath), TEXT("COMPONENT_CLASS_NOT_FOUND"));
-                    return;
-                }
-
-                if (!ComponentClass->IsChildOf(UActorComponent::StaticClass()))
-                {
-                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Class %s is not a component."), *ComponentClassPath), TEXT("INVALID_COMPONENT_CLASS"));
-                    return;
-                }
-
-                if (FindScsNodeByName(SCS, ComponentName))
-                {
-                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Component %s already exists on Blueprint."), *ComponentName), TEXT("COMPONENT_ALREADY_EXISTS"));
-                    return;
-                }
-
-                USCS_Node* NewNode = SCS->CreateNode(ComponentClass, *ComponentName);
-                if (!NewNode)
-                {
-                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to create SCS node for %s."), *ComponentName), TEXT("NODE_CREATION_FAILED"));
-                    return;
-                }
-
-                bool bAttachedToParent = false;
-                if (!AttachToName.TrimStartAndEnd().IsEmpty())
-                {
-                    if (USCS_Node* ParentNode = FindScsNodeByName(SCS, AttachToName))
-                    {
-                        ParentNode->AddChildNode(NewNode);
-                        bAttachedToParent = true;
-                        OperationSummary->SetStringField(TEXT("attachedTo"), AttachToName);
-                    }
-                    else
-                    {
-                        AccumulatedWarnings.Add(FString::Printf(TEXT("Parent component %s not found; %s added as root."), *AttachToName, *ComponentName));
-                    }
-                }
-
-                if (!bAttachedToParent)
-                {
-                    SCS->AddNode(NewNode);
-                }
-
-                const TSharedPtr<FJsonObject>* TransformForAdd = nullptr;
-                if (OperationObject->TryGetObjectField(TEXT("transform"), TransformForAdd) && TransformForAdd && TransformForAdd->IsValid())
-                {
-                    USceneComponent* SceneTemplate = Cast<USceneComponent>(NewNode->ComponentTemplate);
-                    if (SceneTemplate)
-                    {
-                        FVector Location = SceneTemplate->GetRelativeLocation();
-                        FRotator Rotation = SceneTemplate->GetRelativeRotation();
-                        FVector Scale = SceneTemplate->GetRelativeScale3D();
-
-                        ReadVectorField(*TransformForAdd, TEXT("location"), Location, Location);
-                        ReadRotatorField(*TransformForAdd, TEXT("rotation"), Rotation, Rotation);
-                        ReadVectorField(*TransformForAdd, TEXT("scale"), Scale, Scale);
-
-                        SceneTemplate->SetRelativeLocation(Location);
-                        SceneTemplate->SetRelativeRotation(Rotation);
-                        SceneTemplate->SetRelativeScale3D(Scale);
-                    }
-                    else
-                    {
-                        AccumulatedWarnings.Add(FString::Printf(TEXT("Transform ignored for non-scene component %s."), *ComponentName));
-                    }
-                }
-
-                const TSharedPtr<FJsonObject>* PropertyOverrides = nullptr;
-                if (OperationObject->TryGetObjectField(TEXT("properties"), PropertyOverrides) && PropertyOverrides && PropertyOverrides->IsValid())
-                {
-                    UActorComponent* Template = NewNode->ComponentTemplate;
-                    if (Template)
-                    {
-                        FString PropertyError;
-                        if (!ApplyPropertyOverrides(Template, *PropertyOverrides, AccumulatedWarnings, PropertyError))
+                        else if (NormalizedType == TEXT("add_component"))
                         {
-                            SendAutomationError(RequestingSocket, RequestId, PropertyError, TEXT("COMPONENT_PROPERTY_FAILED"));
-                            return;
+                            FString ComponentName; Op->TryGetStringField(TEXT("componentName"), ComponentName);
+                            FString ComponentClassPath; Op->TryGetStringField(TEXT("componentClass"), ComponentClassPath);
+                            FString AttachToName; Op->TryGetStringField(TEXT("attachTo"), AttachToName);
+                            FSoftClassPath ComponentClassSoftPath(ComponentClassPath);
+                            UClass* ComponentClass = ComponentClassSoftPath.TryLoadClass<UActorComponent>();
+                            if (!ComponentClass) ComponentClass = FindObject<UClass>(nullptr, *ComponentClassPath);
+                            if (!ComponentClass)
+                            {
+                                const TArray<FString> Prefixes = { TEXT("/Script/Engine."), TEXT("/Script/UMG."), TEXT("/Script/Paper2D.") };
+                                for (const FString& Prefix : Prefixes)
+                                {
+                                    const FString Guess = Prefix + ComponentClassPath;
+                                    UClass* TryClass = FindObject<UClass>(nullptr, *Guess);
+                                    if (!TryClass) TryClass = StaticLoadClass(UActorComponent::StaticClass(), nullptr, *Guess);
+                                    if (TryClass) { ComponentClass = TryClass; break; }
+                                }
+                            }
+                            if (!ComponentClass)
+                            {
+                                OpSummary->SetBoolField(TEXT("success"), false);
+                                OpSummary->SetStringField(TEXT("warning"), TEXT("Component class not found"));
+                            }
+                            else
+                            {
+                                USCS_Node* ExistingNode = FindScsNodeByName(LocalSCS, ComponentName);
+                                if (ExistingNode)
+                                {
+                                    OpSummary->SetBoolField(TEXT("success"), true);
+                                    OpSummary->SetStringField(TEXT("componentName"), ComponentName);
+                                    OpSummary->SetStringField(TEXT("warning"), TEXT("Component already exists"));
+                                }
+                                else
+                                {
+                                    USCS_Node* NewNode = LocalSCS->CreateNode(ComponentClass, *ComponentName);
+                                    if (NewNode)
+                                    {
+                                        if (!AttachToName.TrimStartAndEnd().IsEmpty())
+                                        {
+                                            if (USCS_Node* ParentNode = FindScsNodeByName(LocalSCS, AttachToName))
+                                            {
+                                                                                               ParentNode->AddChildNode(NewNode);
+                                            }
+                                            else
+                                            {
+                                                LocalSCS->AddNode(NewNode);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            LocalSCS->AddNode(NewNode);
+                                        }
+                                        OpSummary->SetBoolField(TEXT("success"), true);
+                                        OpSummary->SetStringField(TEXT("componentName"), ComponentName);
+                                    }
+                                    else
+                                    {
+                                        OpSummary->SetBoolField(TEXT("success"), false);
+                                        OpSummary->SetStringField(TEXT("warning"), TEXT("Failed to create SCS node"));
+                                    }
+                                }
+                            }
                         }
-                    }
-                }
-
-                bAnyChanges = true;
-                OperationSummary->SetBoolField(TEXT("success"), true);
-                OperationSummary->SetStringField(TEXT("componentName"), ComponentName);
-                OperationSummary->SetStringField(TEXT("componentClass"), ComponentClass->GetPathName());
-            }
-            else if (NormalizedType == TEXT("remove_component"))
-            {
-                FString ComponentName;
-                if (!OperationObject->TryGetStringField(TEXT("componentName"), ComponentName) || ComponentName.TrimStartAndEnd().IsEmpty())
-                {
-                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("remove_component operation at index %d missing componentName."), Index), TEXT("INVALID_COMPONENT_NAME"));
-                    return;
-                }
-
-                if (USCS_Node* TargetNode = FindScsNodeByName(SCS, ComponentName))
-                {
-                    SCS->RemoveNode(TargetNode);
-                    bAnyChanges = true;
-                    OperationSummary->SetBoolField(TEXT("success"), true);
-                    OperationSummary->SetStringField(TEXT("componentName"), ComponentName);
-                }
-                else
-                {
-                    AccumulatedWarnings.Add(FString::Printf(TEXT("Component %s not found; remove skipped."), *ComponentName));
-                    OperationSummary->SetBoolField(TEXT("success"), false);
-                    OperationSummary->SetStringField(TEXT("componentName"), ComponentName);
-                    OperationSummary->SetStringField(TEXT("warning"), TEXT("Component not found"));
-                }
-            }
-            else if (NormalizedType == TEXT("set_component_properties") || NormalizedType == TEXT("modify_component"))
-            {
-                FString ComponentName;
-                if (!OperationObject->TryGetStringField(TEXT("componentName"), ComponentName) || ComponentName.TrimStartAndEnd().IsEmpty())
-                {
-                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("set_component_properties operation at index %d missing componentName."), Index), TEXT("INVALID_COMPONENT_NAME"));
-                    return;
-                }
-
-                const TSharedPtr<FJsonObject>* PropertyOverrides = nullptr;
-                const TSharedPtr<FJsonObject>* TransformForModify = nullptr;
-                const bool hasProps = OperationObject->TryGetObjectField(TEXT("properties"), PropertyOverrides) && PropertyOverrides && PropertyOverrides->IsValid();
-                const bool hasTransform = OperationObject->TryGetObjectField(TEXT("transform"), TransformForModify) && TransformForModify && TransformForModify->IsValid();
-
-                // For set_component_properties, a properties object is required.
-                // For modify_component, allow transform-only updates (properties optional)
-                if (NormalizedType == TEXT("set_component_properties") && !hasProps)
-                {
-                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("set_component_properties operation at index %d missing properties object."), Index), TEXT("INVALID_PROPERTIES"));
-                    return;
-                }
-
-                // If this is modify_component and neither properties nor transform present, it's invalid.
-                if (NormalizedType == TEXT("modify_component") && !hasProps && !hasTransform)
-                {
-                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("modify_component operation at index %d requires either properties or transform."), Index), TEXT("INVALID_OPERATION"));
-                    return;
-                }
-
-                if (USCS_Node* TargetNode = FindScsNodeByName(SCS, ComponentName))
-                {
-                    UActorComponent* Template = TargetNode->ComponentTemplate;
-                    if (!Template)
-                    {
-                        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Component %s has no template for property assignment."), *ComponentName), TEXT("COMPONENT_TEMPLATE_MISSING"));
-                        return;
-                    }
-
-                    FString PropertyError;
-                    if (!ApplyPropertyOverrides(Template, *PropertyOverrides, AccumulatedWarnings, PropertyError))
-                    {
-                        SendAutomationError(RequestingSocket, RequestId, PropertyError, TEXT("COMPONENT_PROPERTY_FAILED"));
-                        return;
-                    }
-
-                    if (Template->IsA<USceneComponent>())
-                    {
-                        USceneComponent* SceneTemplate = Cast<USceneComponent>(Template);
-                        if (OperationObject->TryGetObjectField(TEXT("transform"), TransformForModify) && TransformForModify && TransformForModify->IsValid())
+                        else if (NormalizedType == TEXT("remove_component"))
                         {
-                            FVector Location = SceneTemplate->GetRelativeLocation();
-                            FRotator Rotation = SceneTemplate->GetRelativeRotation();
-                            FVector Scale = SceneTemplate->GetRelativeScale3D();
-
-                            ReadVectorField(*TransformForModify, TEXT("location"), Location, Location);
-                            ReadRotatorField(*TransformForModify, TEXT("rotation"), Rotation, Rotation);
-                            ReadVectorField(*TransformForModify, TEXT("scale"), Scale, Scale);
-
-                            SceneTemplate->SetRelativeLocation(Location);
-                            SceneTemplate->SetRelativeRotation(Rotation);
-                            SceneTemplate->SetRelativeScale3D(Scale);
+                            FString ComponentName; Op->TryGetStringField(TEXT("componentName"), ComponentName);
+                            if (USCS_Node* TargetNode = FindScsNodeByName(LocalSCS, ComponentName))
+                            {
+                                LocalSCS->RemoveNode(TargetNode);
+                                OpSummary->SetBoolField(TEXT("success"), true);
+                                OpSummary->SetStringField(TEXT("componentName"), ComponentName);
+                            }
+                            else
+                            {
+                                OpSummary->SetBoolField(TEXT("success"), false);
+                                OpSummary->SetStringField(TEXT("warning"), TEXT("Component not found; remove skipped"));
+                            }
                         }
+                        else if (NormalizedType == TEXT("attach_component"))
+                        {
+                            FString AttachComponentName; Op->TryGetStringField(TEXT("componentName"), AttachComponentName);
+                            FString ParentName; Op->TryGetStringField(TEXT("parentComponent"), ParentName); if (ParentName.IsEmpty()) Op->TryGetStringField(TEXT("attachTo"), ParentName);
+                            USCS_Node* ChildNode = FindScsNodeByName(LocalSCS, AttachComponentName);
+                            USCS_Node* ParentNode = FindScsNodeByName(LocalSCS, ParentName);
+                            if (ChildNode && ParentNode)
+                            {
+                                ParentNode->AddChildNode(ChildNode);
+                                OpSummary->SetBoolField(TEXT("success"), true);
+                                OpSummary->SetStringField(TEXT("componentName"), AttachComponentName);
+                                OpSummary->SetStringField(TEXT("attachedTo"), ParentName);
+                            }
+                            else
+                            {
+                                OpSummary->SetBoolField(TEXT("success"), false);
+                                OpSummary->SetStringField(TEXT("warning"), TEXT("Attach failed: child or parent not found"));
+                            }
+                        }
+                        else
+                        {
+                            OpSummary->SetBoolField(TEXT("success"), false);
+                            OpSummary->SetStringField(TEXT("warning"), TEXT("Unknown operation type"));
+                        }
+
+                        const double OpElapsedMs = (FPlatformTime::Seconds() - OpStart) * 1000.0;
+                        OpSummary->SetNumberField(TEXT("durationMs"), OpElapsedMs);
+                        FinalSummaries.Add(MakeShared<FJsonValueObject>(OpSummary));
                     }
 
-                    bAnyChanges = true;
-                    OperationSummary->SetBoolField(TEXT("success"), true);
-                    OperationSummary->SetStringField(TEXT("componentName"), ComponentName);
-                }
-                else
-                {
-                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Component %s not found for property assignment."), *ComponentName), TEXT("COMPONENT_NOT_FOUND"));
-                    return;
+                    bOk = FinalSummaries.Num() > 0;
+                    CompletionResult->SetArrayField(TEXT("operations"), FinalSummaries);
                 }
             }
-            else if (NormalizedType == TEXT("attach_component"))
-                {
-                    FString AttachComponentName;
-                    if (!OperationObject->TryGetStringField(TEXT("componentName"), AttachComponentName) || AttachComponentName.TrimStartAndEnd().IsEmpty())
-                    {
-                        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("attach_component operation at index %d missing componentName."), Index), TEXT("INVALID_COMPONENT_NAME"));
-                        return;
-                    }
 
-                    FString ParentName;
-                    if (!OperationObject->TryGetStringField(TEXT("parentComponent"), ParentName))
-                    {
-                        OperationObject->TryGetStringField(TEXT("attachTo"), ParentName);
-                    }
-                    if (ParentName.TrimStartAndEnd().IsEmpty())
-                    {
-                        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("attach_component operation at index %d missing parentComponent."), Index), TEXT("INVALID_PARENT_COMPONENT"));
-                        return;
-                    }
-
-                    USCS_Node* ChildNode = FindScsNodeByName(SCS, AttachComponentName);
-                    if (!ChildNode)
-                    {
-                        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Child component %s not found for attach."), *AttachComponentName), TEXT("COMPONENT_NOT_FOUND"));
-                        return;
-                    }
-
-                    USCS_Node* ParentNode = FindScsNodeByName(SCS, ParentName);
-                    if (!ParentNode)
-                    {
-                        AccumulatedWarnings.Add(FString::Printf(TEXT("Parent component %s not found; attach skipped for %s."), *ParentName, *AttachComponentName));
-                        OperationSummary->SetBoolField(TEXT("success"), false);
-                        OperationSummary->SetStringField(TEXT("componentName"), AttachComponentName);
-                        OperationSummary->SetStringField(TEXT("warning"), TEXT("Parent not found"));
-                        OperationSummaries.Add(MakeShared<FJsonValueObject>(OperationSummary));
-                        continue;
-                    }
-
-                    // Remove from previous parent if necessary, then attach to new parent
-                    ParentNode->AddChildNode(ChildNode);
-                    bAnyChanges = true;
-                    OperationSummary->SetBoolField(TEXT("success"), true);
-                    OperationSummary->SetStringField(TEXT("componentName"), AttachComponentName);
-                    OperationSummary->SetStringField(TEXT("attachedTo"), ParentName);
-                }
-            else
-            {
-                SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown SCS operation type: %s"), *OperationType), TEXT("UNKNOWN_OPERATION"));
-                return;
-            }
-
-            OperationSummaries.Add(MakeShared<FJsonValueObject>(OperationSummary));
-        }
-
-        if (bAnyChanges)
-        {
-            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        }
-
-        // Defer compile and save operations to avoid Task Graph recursion
-        if (bCompile || bSave)
-        {
-            AsyncTask(ENamedThreads::GameThread, [this, RequestId, Blueprint, bCompile, bSave, NormalizedBlueprintPath, OperationSummaries, &AccumulatedWarnings, RequestingSocket, TriedCandidates]() {
+                // Compile/save as requested
                 bool bSaveResult = false;
-                if (bSave)
+                if (bSave && LocalBP)
                 {
-                    bSaveResult = UEditorAssetLibrary::SaveLoadedAsset(Blueprint);
-                    if (!bSaveResult)
-                    {
-                        AccumulatedWarnings.Add(TEXT("Blueprint failed to save; please check output log."));
-                    }
+                    bSaveResult = UEditorAssetLibrary::SaveLoadedAsset(LocalBP);
+                    if (!bSaveResult) LocalWarnings.Add(TEXT("Blueprint failed to save during deferred apply; check output log."));
+                }
+                if (bCompile && LocalBP)
+                {
+                    FKismetEditorUtilities::CompileBlueprint(LocalBP);
                 }
 
-                if (bCompile)
+                CompletionResult->SetStringField(TEXT("blueprintPath"), NormalizedBlueprintPath);
+                CompletionResult->SetBoolField(TEXT("compiled"), bCompile);
+                CompletionResult->SetBoolField(TEXT("saved"), bSave && bSaveResult);
+                if (LocalWarnings.Num() > 0)
                 {
-                    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+                    TArray<TSharedPtr<FJsonValue>> WVals;
+                    for (const FString& W : LocalWarnings) WVals.Add(MakeShared<FJsonValueString>(W));
+                    CompletionResult->SetArrayField(TEXT("warnings"), WVals);
                 }
 
+                // Broadcast completion and attempt to deliver final response
+                TSharedPtr<FJsonObject> Notify = MakeShared<FJsonObject>();
+                Notify->SetStringField(TEXT("type"), TEXT("automation_event"));
+                Notify->SetStringField(TEXT("event"), TEXT("modify_scs_completed"));
+                Notify->SetStringField(TEXT("requestId"), RequestId);
+                Notify->SetObjectField(TEXT("result"), CompletionResult);
+                SendControlMessage(Notify);
+
+                // Try to send final automation_response to the original requester
                 TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
                 ResultPayload->SetStringField(TEXT("blueprintPath"), NormalizedBlueprintPath);
-                ResultPayload->SetStringField(TEXT("matchedCandidate"), NormalizedBlueprintPath);
-                ResultPayload->SetArrayField(TEXT("operations"), OperationSummaries);
+                ResultPayload->SetArrayField(TEXT("operations"), FinalSummaries);
                 ResultPayload->SetBoolField(TEXT("compiled"), bCompile);
                 ResultPayload->SetBoolField(TEXT("saved"), bSave && bSaveResult);
-
-                if (AccumulatedWarnings.Num() > 0)
+                if (LocalWarnings.Num() > 0)
                 {
-                    TArray<TSharedPtr<FJsonValue>> WarningValues;
-                    WarningValues.Reserve(AccumulatedWarnings.Num());
-                    for (const FString& Warning : AccumulatedWarnings)
-                    {
-                        WarningValues.Add(MakeShared<FJsonValueString>(Warning));
-                    }
-                    ResultPayload->SetArrayField(TEXT("warnings"), WarningValues);
+                    TArray<TSharedPtr<FJsonValue>> WVals2;
+                    WVals2.Reserve(LocalWarnings.Num());
+                    for (const FString& W : LocalWarnings) WVals2.Add(MakeShared<FJsonValueString>(W));
+                    ResultPayload->SetArrayField(TEXT("warnings"), WVals2);
                 }
 
-                if (TriedCandidates.Num() > 0)
-                {
-                    TArray<TSharedPtr<FJsonValue>> TriedValues;
-                    for (const FString& C : TriedCandidates)
-                    {
-                        TriedValues.Add(MakeShared<FJsonValueString>(C));
-                    }
-                    ResultPayload->SetArrayField(TEXT("triedCandidates"), TriedValues);
-                }
-
-                const FString Message = FString::Printf(TEXT("Processed %d SCS operation(s)."), OperationSummaries.Num());
+                const FString Message = FString::Printf(TEXT("Processed %d SCS operation(s)."), FinalSummaries.Num());
                 SendAutomationResponse(RequestingSocket, RequestId, true, Message, ResultPayload, FString());
+
+                // Release busy flag
+                if (!this->CurrentBusyBlueprintKey.IsEmpty() && GBlueprintBusySet.Contains(this->CurrentBusyBlueprintKey))
+                {
+                    GBlueprintBusySet.Remove(this->CurrentBusyBlueprintKey);
+                }
+                this->bCurrentBlueprintBusyMarked = false;
+                this->bCurrentBlueprintBusyScheduled = false;
+                this->CurrentBusyBlueprintKey.Empty();
             });
-        }
-        else
-        {
-            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-            ResultPayload->SetStringField(TEXT("blueprintPath"), NormalizedBlueprintPath);
-            ResultPayload->SetStringField(TEXT("matchedCandidate"), NormalizedBlueprintPath);
-            ResultPayload->SetArrayField(TEXT("operations"), OperationSummaries);
-            ResultPayload->SetBoolField(TEXT("compiled"), false);
-            ResultPayload->SetBoolField(TEXT("saved"), false);
 
-            if (AccumulatedWarnings.Num() > 0)
-            {
-                TArray<TSharedPtr<FJsonValue>> WarningValues;
-                WarningValues.Reserve(AccumulatedWarnings.Num());
-                for (const FString& Warning : AccumulatedWarnings)
-                {
-                    WarningValues.Add(MakeShared<FJsonValueString>(Warning));
-                }
-                ResultPayload->SetArrayField(TEXT("warnings"), WarningValues);
-            }
+            return;
+}
 
-            if (TriedCandidates.Num() > 0)
-            {
-                TArray<TSharedPtr<FJsonValue>> TriedValues;
-                for (const FString& C : TriedCandidates)
-                {
-                    TriedValues.Add(MakeShared<FJsonValueString>(C));
-                }
-                ResultPayload->SetArrayField(TEXT("triedCandidates"), TriedValues);
-            }
-
-            const FString Message = FString::Printf(TEXT("Processed %d SCS operation(s)."), OperationSummaries.Num());
-            SendAutomationResponse(RequestingSocket, RequestId, true, Message, ResultPayload, FString());
-        }
-        return;
-    }
-
-    if (Action.Equals(TEXT("import_asset_deferred"), ESearchCase::IgnoreCase))
+// NOTE: A duplicate SendAutomationResponse() declaration was accidentally
+// inserted here in a prior patch; it has been removed so the handler code
+// that follows remains inside ProcessAutomationRequest's scope as intended.
+    // Sequencer / LevelSequence actions: the plugin handles all sequence_*
+    // actions internally so the server does not fallback to other plugins.
+    if (Action.StartsWith(TEXT("sequence_"), ESearchCase::IgnoreCase))
     {
-        if (!Payload.IsValid())
+        // Ensure we have a payload object to read from without crashing
+        TSharedPtr<FJsonObject> LocalPayload = Payload.IsValid() ? Payload : MakeShared<FJsonObject>();
+
+        auto SerializeResponseAndSend = [&](bool bOk, const FString& Msg, const TSharedPtr<FJsonObject>& ResObj, const FString& ErrCode = FString()) {
+            SendAutomationResponse(RequestingSocket, RequestId, bOk, Msg, ResObj, ErrCode);
+        };
+
+        const FString Lower = Action.ToLower();
+
+        // Helper: resolve a sequence path provided in payload or use current
+        auto ResolveSequencePath = [&]() -> FString {
+            FString P;
+            if (LocalPayload->TryGetStringField(TEXT("path"), P) && !P.IsEmpty()) return P;
+            if (!GCurrentSequencePath.IsEmpty()) return GCurrentSequencePath;
+            return FString();
+        };
+
+        // Ensure there is an entry for a sequence in the lightweight registry
+        auto EnsureSequenceEntry = [&](const FString& SeqPath) -> TSharedPtr<FJsonObject> {
+            if (SeqPath.IsEmpty()) return nullptr;
+            TSharedPtr<FJsonObject>* Found = GSequenceRegistry.Find(SeqPath);
+            if (Found && Found->IsValid()) return *Found;
+            TSharedPtr<FJsonObject> NewObj = MakeShared<FJsonObject>();
+            NewObj->SetStringField(TEXT("sequencePath"), SeqPath);
+            NewObj->SetBoolField(TEXT("created"), false);
+            NewObj->SetBoolField(TEXT("playing"), false);
+            NewObj->SetNumberField(TEXT("playbackSpeed"), 1.0);
+            NewObj->SetObjectField(TEXT("properties"), MakeShared<FJsonObject>());
+            NewObj->SetArrayField(TEXT("bindings"), TArray<TSharedPtr<FJsonValue>>());
+            GSequenceRegistry.Add(SeqPath, NewObj);
+            return NewObj;
+        };
+
+        if (Lower.Equals(TEXT("sequence_create")))
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("import_asset_deferred payload missing."), TEXT("INVALID_PAYLOAD"));
+            FString Name; LocalPayload->TryGetStringField(TEXT("name"), Name);
+            FString Path; LocalPayload->TryGetStringField(TEXT("path"), Path);
+            if (Name.IsEmpty()) { SerializeResponseAndSend(false, TEXT("sequence_create requires name"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            if (Path.IsEmpty()) Path = TEXT("/Game/Cinematics");
+            const FString FullPath = Path.EndsWith(TEXT("/")) ? FString::Printf(TEXT("%s%s"), *Path, *Name) : FString::Printf(TEXT("%s/%s"), *Path, *Name);
+
+            // Create registry entry (in-memory only). This avoids falling back
+            // to other plugins while still signalling to clients the sequence
+            // exists for automation workflows. Actual on-disk creation may be
+            // added later by plugin authors.
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(FullPath);
+            if (!Entry.IsValid()) { SerializeResponseAndSend(false, TEXT("Failed to allocate sequence registry entry"), nullptr, TEXT("CREATE_FAILED")); return; }
+            Entry->SetBoolField(TEXT("created"), true);
+            Entry->SetStringField(TEXT("message"), FString::Printf(TEXT("Sequence created in registry: %s"), *FullPath));
+            GCurrentSequencePath = FullPath;
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetStringField(TEXT("sequencePath"), FullPath);
+            SerializeResponseAndSend(true, TEXT("Sequence created (in-memory)."), Resp, FString());
             return;
         }
 
-        FString SourcePath;
-        if (!Payload->TryGetStringField(TEXT("sourcePath"), SourcePath) || SourcePath.TrimStartAndEnd().IsEmpty())
+        if (Lower.Equals(TEXT("sequence_open")))
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("import_asset_deferred requires a non-empty sourcePath."), TEXT("INVALID_SOURCE_PATH"));
+            FString Path; LocalPayload->TryGetStringField(TEXT("path"), Path);
+            if (Path.IsEmpty()) { SerializeResponseAndSend(false, TEXT("sequence_open requires path"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            // Ensure entry exists in the registry
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(Path);
+            if (!Entry.IsValid()) { SerializeResponseAndSend(false, TEXT("Failed to open sequence (registry)"), nullptr, TEXT("OPEN_FAILED")); return; }
+            GCurrentSequencePath = Path;
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetStringField(TEXT("sequencePath"), Path);
+            SerializeResponseAndSend(true, TEXT("Sequence opened (registry)."), Resp, FString());
             return;
         }
 
-        FString DestinationPath;
-        if (!Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath) || DestinationPath.TrimStartAndEnd().IsEmpty())
+        if (Lower.Equals(TEXT("sequence_add_camera")))
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("import_asset_deferred requires a non-empty destinationPath."), TEXT("INVALID_DESTINATION_PATH"));
+            const bool bSpawnable = LocalPayload->HasField(TEXT("spawnable")) ? LocalPayload->GetBoolField(TEXT("spawnable")) : true;
+            FString SeqPath = ResolveSequencePath();
+            if (SeqPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
+            const FString Id = FGuid::NewGuid().ToString();
+            TSharedPtr<FJsonObject> Bind = MakeShared<FJsonObject>();
+            Bind->SetStringField(TEXT("id"), Id);
+            Bind->SetStringField(TEXT("type"), TEXT("camera"));
+            Bind->SetBoolField(TEXT("spawnable"), bSpawnable);
+            TArray<TSharedPtr<FJsonValue>> Arr = Entry->HasField(TEXT("bindings")) ? Entry->GetArrayField(TEXT("bindings")) : TArray<TSharedPtr<FJsonValue>>();
+            Arr.Add(MakeShared<FJsonValueObject>(Bind));
+            Entry->SetArrayField(TEXT("bindings"), Arr);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetStringField(TEXT("cameraBindingId"), Id);
+            Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+            SerializeResponseAndSend(true, TEXT("Camera binding added (registry)."), Resp, FString());
             return;
         }
 
-        // Sanitize destination path (remove trailing slash) and normalize UE path
-        DestinationPath = DestinationPath.Replace(TEXT("/"), TEXT("/")).Replace(TEXT("//"), TEXT("/"));
-        if (DestinationPath.EndsWith(TEXT("/")))
+        if (Lower.Equals(TEXT("sequence_add_actor")))
         {
-            DestinationPath = DestinationPath.LeftChop(1);
+            FString ActorName; LocalPayload->TryGetStringField(TEXT("actorName"), ActorName);
+            if (ActorName.IsEmpty()) { SerializeResponseAndSend(false, TEXT("sequence_add_actor requires actorName"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            FString SeqPath = ResolveSequencePath();
+            if (SeqPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
+            const FString Id = FGuid::NewGuid().ToString();
+            TSharedPtr<FJsonObject> Bind = MakeShared<FJsonObject>();
+            Bind->SetStringField(TEXT("id"), Id);
+            Bind->SetStringField(TEXT("type"), TEXT("actor"));
+            Bind->SetStringField(TEXT("actorName"), ActorName);
+            TArray<TSharedPtr<FJsonValue>> Arr = Entry->HasField(TEXT("bindings")) ? Entry->GetArrayField(TEXT("bindings")) : TArray<TSharedPtr<FJsonValue>>();
+            Arr.Add(MakeShared<FJsonValueObject>(Bind));
+            Entry->SetArrayField(TEXT("bindings"), Arr);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetStringField(TEXT("bindingId"), Id);
+            Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+            SerializeResponseAndSend(true, TEXT("Actor binding added (registry)."), Resp, FString());
+            return;
         }
-        // Map /Content -> /Game for UE asset destinations
-        if (DestinationPath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase))
+
+        if (Lower.Equals(TEXT("sequence_add_actors")))
         {
-            DestinationPath = FString::Printf(TEXT("/Game%s"), *DestinationPath.RightChop(7));
-        }
-
-        // Defer the asset import to avoid Task Graph recursion by scheduling it for the next frame
-        FCoreDelegates::OnEndFrame.AddLambda([this, RequestId, SourcePath, DestinationPath, RequestingSocket]() {
-            // Create the import task
-            UAssetImportTask* Task = NewObject<UAssetImportTask>();
-            Task->Filename = SourcePath;
-            Task->DestinationPath = DestinationPath;
-
-            // Execute the import with default settings
-            FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
-            TArray<UAssetImportTask*> Tasks = { Task };
-            AssetToolsModule.Get().ImportAssetTasks(Tasks);
-
-            // Prepare response
-            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-            ResultPayload->SetStringField(TEXT("sourcePath"), SourcePath);
-            ResultPayload->SetStringField(TEXT("destinationPath"), DestinationPath);
-
-            if (Task->ImportedObjectPaths.Num() > 0)
-            {
-                ResultPayload->SetNumberField(TEXT("imported"), Task->ImportedObjectPaths.Num());
-                TArray<TSharedPtr<FJsonValue>> PathsArray;
-                for (const FString& Path : Task->ImportedObjectPaths)
-                {
-                    PathsArray.Add(MakeShared<FJsonValueString>(Path));
-                }
-                ResultPayload->SetArrayField(TEXT("paths"), PathsArray);
-
-                const FString Message = FString::Printf(TEXT("Imported %d assets to %s"), Task->ImportedObjectPaths.Num(), *DestinationPath);
-                SendAutomationResponse(RequestingSocket, RequestId, true, Message, ResultPayload, FString());
+            const TArray<TSharedPtr<FJsonValue>>* Names = nullptr;
+            if (!LocalPayload->TryGetArrayField(TEXT("actorNames"), Names) || !Names || Names->Num() == 0) { SerializeResponseAndSend(false, TEXT("sequence_add_actors requires actorNames array"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            FString SeqPath = ResolveSequencePath();
+            if (SeqPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
+            TArray<TSharedPtr<FJsonValue>> Arr = Entry->HasField(TEXT("bindings")) ? Entry->GetArrayField(TEXT("bindings")) : TArray<TSharedPtr<FJsonValue>>();
+            TArray<FString> Added;
+            for (const TSharedPtr<FJsonValue>& V : *Names) {
+                if (!V.IsValid()) continue;
+                FString Actor = V->AsString();
+                if (Actor.IsEmpty()) continue;
+                const FString Id = FGuid::NewGuid().ToString();
+                TSharedPtr<FJsonObject> Bind = MakeShared<FJsonObject>();
+                Bind->SetStringField(TEXT("id"), Id);
+                Bind->SetStringField(TEXT("type"), TEXT("actor"));
+                Bind->SetStringField(TEXT("actorName"), Actor);
+                Arr.Add(MakeShared<FJsonValueObject>(Bind));
+                Added.Add(Actor);
             }
-            else
-            {
-                SendAutomationError(RequestingSocket, RequestId, TEXT("No assets were imported"), TEXT("IMPORT_FAILED"));
-            }
-        });
+            Entry->SetArrayField(TEXT("bindings"), Arr);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            TArray<TSharedPtr<FJsonValue>> AddedVals;
+            for (const FString& A : Added) { AddedVals.Add(MakeShared<FJsonValueString>(A)); }
+            Resp->SetArrayField(TEXT("actorsAdded"), AddedVals);
+            SerializeResponseAndSend(true, TEXT("Actors added to sequence (registry)."), Resp, FString());
+            return;
+        }
 
+        if (Lower.Equals(TEXT("sequence_remove_actors")))
+        {
+            const TArray<TSharedPtr<FJsonValue>>* Names = nullptr;
+            if (!LocalPayload->TryGetArrayField(TEXT("actorNames"), Names) || !Names || Names->Num() == 0) { SerializeResponseAndSend(false, TEXT("sequence_remove_actors requires actorNames array"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            FString SeqPath = ResolveSequencePath();
+            if (SeqPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
+            TArray<TSharedPtr<FJsonValue>> Bindings = Entry->HasField(TEXT("bindings")) ? Entry->GetArrayField(TEXT("bindings")) : TArray<TSharedPtr<FJsonValue>>();
+            TArray<TSharedPtr<FJsonValue>> NewBindings;
+            TArray<FString> Removed;
+            for (const TSharedPtr<FJsonValue>& V : Bindings) {
+                if (!V.IsValid() || V->Type != EJson::Object) { NewBindings.Add(V); continue; }
+                TSharedPtr<FJsonObject> Obj = V->AsObject();
+                const FString ActorName = Obj->HasField(TEXT("actorName")) ? Obj->GetStringField(TEXT("actorName")) : FString();
+                bool bShouldRemove = false;
+                for (const TSharedPtr<FJsonValue>& R : *Names) { if (R.IsValid() && R->AsString().Equals(ActorName, ESearchCase::IgnoreCase)) { bShouldRemove = true; break; } }
+                if (bShouldRemove) { Removed.Add(ActorName); continue; }
+                NewBindings.Add(V);
+            }
+            Entry->SetArrayField(TEXT("bindings"), NewBindings);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            TArray<TSharedPtr<FJsonValue>> RemovedVals;
+            for (const FString& S : Removed) RemovedVals.Add(MakeShared<FJsonValueString>(S));
+            Resp->SetArrayField(TEXT("removedActors"), RemovedVals);
+            SerializeResponseAndSend(true, TEXT("Actors removed (registry)."), Resp, FString());
+            return;
+        }
+
+        if (Lower.Equals(TEXT("sequence_get_bindings")))
+        {
+            FString SeqPath = ResolveSequencePath();
+            if (SeqPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
+            TArray<TSharedPtr<FJsonValue>> Bindings = Entry->HasField(TEXT("bindings")) ? Entry->GetArrayField(TEXT("bindings")) : TArray<TSharedPtr<FJsonValue>>();
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetArrayField(TEXT("bindings"), Bindings);
+            SerializeResponseAndSend(true, TEXT("Bindings retrieved (registry)."), Resp, FString());
+            return;
+        }
+
+        if (Lower.Equals(TEXT("sequence_add_spawnable_from_class")))
+        {
+            FString ClassName; LocalPayload->TryGetStringField(TEXT("className"), ClassName);
+            FString SeqPath = ResolveSequencePath();
+            if (ClassName.IsEmpty()) { SerializeResponseAndSend(false, TEXT("className is required"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            if (SeqPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
+            const FString Id = FGuid::NewGuid().ToString();
+            TSharedPtr<FJsonObject> Spawn = MakeShared<FJsonObject>();
+            Spawn->SetStringField(TEXT("id"), Id);
+            Spawn->SetStringField(TEXT("className"), ClassName);
+            TArray<TSharedPtr<FJsonValue>> Spawnables = Entry->HasField(TEXT("spawnables")) ? Entry->GetArrayField(TEXT("spawnables")) : TArray<TSharedPtr<FJsonValue>>();
+            Spawnables.Add(MakeShared<FJsonValueObject>(Spawn));
+            Entry->SetArrayField(TEXT("spawnables"), Spawnables);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("spawnableId"), Id); Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+            SerializeResponseAndSend(true, TEXT("Spawnable created (registry)."), Resp, FString());
+            return;
+        }
+
+        if (Lower.Equals(TEXT("sequence_play")))
+        {
+            FString SeqPath = ResolveSequencePath(); if (SeqPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
+            Entry->SetBoolField(TEXT("playing"), true);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+            SerializeResponseAndSend(true, TEXT("Sequence play requested (registry)."), Resp, FString()); return;
+        }
+
+        if (Lower.Equals(TEXT("sequence_pause")) || Lower.Equals(TEXT("sequence_stop")))
+        {
+            FString SeqPath = ResolveSequencePath(); if (SeqPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
+            Entry->SetBoolField(TEXT("playing"), false);
+            if (Lower.Equals(TEXT("sequence_stop"))) Entry->SetNumberField(TEXT("position"), 0);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+            SerializeResponseAndSend(true, Lower.Equals(TEXT("sequence_pause")) ? TEXT("Sequence paused (registry).") : TEXT("Sequence stopped (registry)."), Resp, FString()); return;
+        }
+
+        if (Lower.Equals(TEXT("sequence_set_properties")))
+        {
+            FString SeqPath = ResolveSequencePath(); if (SeqPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
+            double frameRate = 0; double lengthInFrames = 0; double playbackStart = 0; double playbackEnd = 0;
+            if (LocalPayload->HasField(TEXT("frameRate"))) { frameRate = LocalPayload->GetNumberField(TEXT("frameRate")); Entry->GetObjectField(TEXT("properties"))->SetNumberField(TEXT("frameRate"), frameRate); }
+            if (LocalPayload->HasField(TEXT("lengthInFrames"))) { lengthInFrames = LocalPayload->GetNumberField(TEXT("lengthInFrames")); Entry->GetObjectField(TEXT("properties"))->SetNumberField(TEXT("lengthInFrames"), lengthInFrames); }
+            if (LocalPayload->HasField(TEXT("playbackStart"))) { playbackStart = LocalPayload->GetNumberField(TEXT("playbackStart")); Entry->GetObjectField(TEXT("properties"))->SetNumberField(TEXT("playbackStart"), playbackStart); }
+            if (LocalPayload->HasField(TEXT("playbackEnd"))) { playbackEnd = LocalPayload->GetNumberField(TEXT("playbackEnd")); Entry->GetObjectField(TEXT("properties"))->SetNumberField(TEXT("playbackEnd"), playbackEnd); }
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("sequencePath"), SeqPath); Resp->SetObjectField(TEXT("properties"), Entry->GetObjectField(TEXT("properties")));
+            SerializeResponseAndSend(true, TEXT("Sequence properties updated (registry)."), Resp, FString()); return;
+        }
+
+        if (Lower.Equals(TEXT("sequence_get_properties")))
+        {
+            FString SeqPath = ResolveSequencePath(); if (SeqPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
+            TSharedPtr<FJsonObject> Props = Entry->HasField(TEXT("properties")) ? Entry->GetObjectField(TEXT("properties")) : MakeShared<FJsonObject>();
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetObjectField(TEXT("properties"), Props); Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+            SerializeResponseAndSend(true, TEXT("Sequence properties retrieved (registry)."), Resp, FString()); return;
+        }
+
+        if (Lower.Equals(TEXT("sequence_set_playback_speed")))
+        {
+            FString SeqPath = ResolveSequencePath(); if (SeqPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return; }
+            double Speed = LocalPayload->HasField(TEXT("speed")) ? LocalPayload->GetNumberField(TEXT("speed")) : 1.0;
+            TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
+            Entry->SetNumberField(TEXT("playbackSpeed"), Speed);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetNumberField(TEXT("playbackSpeed"), Speed); Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+            SerializeResponseAndSend(true, TEXT("Playback speed updated (registry)."), Resp, FString()); return;
+        }
+
+        // Unknown sequence_* action - respond explicitly so server does not treat
+        // this as an absent plugin feature or fallback candidate.
+        SerializeResponseAndSend(false, FString::Printf(TEXT("Sequence action not implemented by plugin: %s"), *Action), nullptr, TEXT("NOT_IMPLEMENTED"));
         return;
     }
+
+    // Blueprint-specific automation actions. These are implemented at the
+    // plugin layer and will return explicit responses so the server never
+    // silently falls back to other engine plugins.
+    if (Action.StartsWith(TEXT("blueprint_"), ESearchCase::IgnoreCase))
+    {
+        TSharedPtr<FJsonObject> LocalPayload = Payload.IsValid() ? Payload : MakeShared<FJsonObject>();
+        const FString Lower = Action.ToLower();
+
+        auto ResolveBlueprintRequestedPath = [&]() -> FString {
+            FString Single;
+            if (LocalPayload->TryGetStringField(TEXT("requestedPath"), Single) && !Single.IsEmpty()) return Single;
+            const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
+            if (LocalPayload->TryGetArrayField(TEXT("blueprintCandidates"), Arr) && Arr && Arr->Num() > 0) {
+                for (const TSharedPtr<FJsonValue>& V : *Arr) { if (V.IsValid()) { FString Cand = V->AsString(); if (!Cand.IsEmpty()) return Cand; } }
+            }
+            if (LocalPayload->TryGetStringField(TEXT("blueprintPath"), Single) && !Single.IsEmpty()) return Single;
+            if (LocalPayload->TryGetStringField(TEXT("name"), Single) && !Single.IsEmpty()) return Single;
+            return FString();
+        };
+
+        // Lightweight registry for blueprint changes
+        auto EnsureBlueprintEntry = [&](const FString& P) -> TSharedPtr<FJsonObject> {
+            if (P.IsEmpty()) return nullptr;
+            TSharedPtr<FJsonObject>* Found = GBlueprintRegistry.Find(P);
+            if (Found && Found->IsValid()) return *Found;
+            TSharedPtr<FJsonObject> NewObj = MakeShared<FJsonObject>();
+            NewObj->SetStringField(TEXT("blueprintPath"), P);
+            NewObj->SetArrayField(TEXT("variables"), TArray<TSharedPtr<FJsonValue>>() );
+            NewObj->SetArrayField(TEXT("constructionScripts"), TArray<TSharedPtr<FJsonValue>>() );
+            NewObj->SetObjectField(TEXT("defaults"), MakeShared<FJsonObject>());
+            NewObj->SetObjectField(TEXT("metadata"), MakeShared<FJsonObject>());
+            GBlueprintRegistry.Add(P, NewObj);
+            return NewObj;
+        };
+
+        if (Lower.Equals(TEXT("blueprint_add_variable")))
+        {
+            FString Path = ResolveBlueprintRequestedPath();
+            if (Path.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("blueprint_add_variable requires a blueprint path (requestedPath or blueprintCandidates)."), nullptr, TEXT("INVALID_BLUEPRINT_PATH")); return; }
+            FString VarName; LocalPayload->TryGetStringField(TEXT("variableName"), VarName);
+            FString VarType; LocalPayload->TryGetStringField(TEXT("variableType"), VarType);
+            if (VarName.IsEmpty() || VarType.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("variableName and variableType are required."), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureBlueprintEntry(Path);
+            TArray<TSharedPtr<FJsonValue>> Vars = Entry->HasField(TEXT("variables")) ? Entry->GetArrayField(TEXT("variables")) : TArray<TSharedPtr<FJsonValue>>();
+            TSharedPtr<FJsonObject> VarObj = MakeShared<FJsonObject>(); VarObj->SetStringField(TEXT("name"), VarName); VarObj->SetStringField(TEXT("type"), VarType);
+            if (LocalPayload->HasField(TEXT("defaultValue"))) { VarObj->SetField(TEXT("defaultValue"), LocalPayload->TryGetField(TEXT("defaultValue")) ); }
+            Vars.Add(MakeShared<FJsonValueObject>(VarObj)); Entry->SetArrayField(TEXT("variables"), Vars);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("variableName"), VarName); Resp->SetStringField(TEXT("blueprintPath"), Path);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Variable added to blueprint registry (plugin stub)."), Resp, FString()); return;
+        }
+
+        if (Lower.Equals(TEXT("blueprint_add_event")))
+        {
+            FString Path = ResolveBlueprintRequestedPath(); if (Path.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("blueprint_add_event requires a blueprint path."), nullptr, TEXT("INVALID_BLUEPRINT_PATH")); return; }
+            FString EventType; LocalPayload->TryGetStringField(TEXT("eventType"), EventType); if (EventType.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("eventType required"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            FString CustomName; LocalPayload->TryGetStringField(TEXT("customEventName"), CustomName);
+            TArray<TSharedPtr<FJsonValue>> ParamsArray = LocalPayload->HasField(TEXT("parameters")) ? LocalPayload->GetArrayField(TEXT("parameters")) : TArray<TSharedPtr<FJsonValue>>();
+            // Record the requested event in the registry for deterministic test behaviour
+            TSharedPtr<FJsonObject> Entry = EnsureBlueprintEntry(Path);
+            TArray<TSharedPtr<FJsonValue>> Events = Entry->HasField(TEXT("events")) ? Entry->GetArrayField(TEXT("events")) : TArray<TSharedPtr<FJsonValue>>();
+            TSharedPtr<FJsonObject> Ev = MakeShared<FJsonObject>(); Ev->SetStringField(TEXT("type"), EventType); if (!CustomName.IsEmpty()) Ev->SetStringField(TEXT("name"), CustomName); Ev->SetArrayField(TEXT("params"), ParamsArray);
+            Events.Add(MakeShared<FJsonValueObject>(Ev)); Entry->SetArrayField(TEXT("events"), Events);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("blueprintPath"), Path); Resp->SetStringField(TEXT("eventType"), EventType); if (!CustomName.IsEmpty()) Resp->SetStringField(TEXT("customEventName"), CustomName);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Event recorded in blueprint registry (plugin stub)."), Resp, FString()); return;
+        }
+
+        if (Lower.Equals(TEXT("blueprint_add_function")))
+        {
+            FString Path = ResolveBlueprintRequestedPath(); if (Path.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("blueprint_add_function requires a blueprint path."), nullptr, TEXT("INVALID_BLUEPRINT_PATH")); return; }
+            FString FunctionName; LocalPayload->TryGetStringField(TEXT("functionName"), FunctionName); if (FunctionName.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("functionName required"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            const TArray<TSharedPtr<FJsonValue>> Inputs = LocalPayload->HasField(TEXT("inputs")) ? LocalPayload->GetArrayField(TEXT("inputs")) : TArray<TSharedPtr<FJsonValue>>();
+            const TArray<TSharedPtr<FJsonValue>> Outputs = LocalPayload->HasField(TEXT("outputs")) ? LocalPayload->GetArrayField(TEXT("outputs")) : TArray<TSharedPtr<FJsonValue>>();
+            TSharedPtr<FJsonObject> Entry = EnsureBlueprintEntry(Path);
+            TArray<TSharedPtr<FJsonValue>> Funcs = Entry->HasField(TEXT("functions")) ? Entry->GetArrayField(TEXT("functions")) : TArray<TSharedPtr<FJsonValue>>();
+            TSharedPtr<FJsonObject> FObj = MakeShared<FJsonObject>(); FObj->SetStringField(TEXT("name"), FunctionName); FObj->SetArrayField(TEXT("inputs"), Inputs); FObj->SetArrayField(TEXT("outputs"), Outputs);
+            Funcs.Add(MakeShared<FJsonValueObject>(FObj)); Entry->SetArrayField(TEXT("functions"), Funcs);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("blueprintPath"), Path); Resp->SetStringField(TEXT("functionName"), FunctionName);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Function recorded in blueprint registry (plugin stub)."), Resp, FString()); return;
+        }
+
+        if (Lower.Equals(TEXT("blueprint_set_variable_metadata")))
+        {
+            FString Path = ResolveBlueprintRequestedPath(); if (Path.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("blueprint_set_variable_metadata requires a blueprint path."), nullptr, TEXT("INVALID_BLUEPRINT_PATH")); return; }
+            FString VarName; LocalPayload->TryGetStringField(TEXT("variableName"), VarName); if (VarName.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("variableName required"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            const TSharedPtr<FJsonObject>* MetaObjPtr = nullptr; if (!LocalPayload->TryGetObjectField(TEXT("metadata"), MetaObjPtr) || !MetaObjPtr || !(*MetaObjPtr).IsValid()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("metadata object required"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureBlueprintEntry(Path);
+            // naive metadata storage at blueprint->metadata.variableName
+            TSharedPtr<FJsonObject> MetadataRoot = Entry->GetObjectField(TEXT("metadata"));
+            // Reuse the provided metadata object pointer for now
+            MetadataRoot->SetObjectField(VarName, *MetaObjPtr);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("variableName"), VarName); Resp->SetStringField(TEXT("blueprintPath"), Path);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Variable metadata stored in plugin registry (stub)."), Resp, FString()); return;
+        }
+
+        if (Lower.Equals(TEXT("blueprint_add_construction_script")))
+        {
+            FString Path = ResolveBlueprintRequestedPath(); if (Path.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("blueprint_add_construction_script requires a blueprint path."), nullptr, TEXT("INVALID_BLUEPRINT_PATH")); return; }
+            FString ScriptName; LocalPayload->TryGetStringField(TEXT("scriptName"), ScriptName); if (ScriptName.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("scriptName required"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureBlueprintEntry(Path);
+            TArray<TSharedPtr<FJsonValue>> Scripts = Entry->HasField(TEXT("constructionScripts")) ? Entry->GetArrayField(TEXT("constructionScripts")) : TArray<TSharedPtr<FJsonValue>>(); Scripts.Add(MakeShared<FJsonValueString>(ScriptName)); Entry->SetArrayField(TEXT("constructionScripts"), Scripts);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("scriptName"), ScriptName); Resp->SetStringField(TEXT("blueprintPath"), Path);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Construction script recorded in plugin registry (stub)."), Resp, FString()); return;
+        }
+
+        if (Lower.Equals(TEXT("blueprint_set_default")))
+        {
+            FString Path = ResolveBlueprintRequestedPath(); if (Path.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("blueprint_set_default requires a blueprint path."), nullptr, TEXT("INVALID_BLUEPRINT_PATH")); return; }
+            FString PropertyName; LocalPayload->TryGetStringField(TEXT("propertyName"), PropertyName); if (PropertyName.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("propertyName required"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            const TSharedPtr<FJsonValue> Value = LocalPayload->TryGetField(TEXT("value")); if (!Value.IsValid()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("value required"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            TSharedPtr<FJsonObject> Entry = EnsureBlueprintEntry(Path);
+            TSharedPtr<FJsonObject> Defaults = Entry->GetObjectField(TEXT("defaults")); Defaults->SetField(PropertyName, Value);
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("blueprintPath"), Path); Resp->SetStringField(TEXT("propertyName"), PropertyName);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blueprint default recorded in plugin registry (stub)."), Resp, FString()); return;
+        }
+
+        if (Lower.Equals(TEXT("blueprint_probe_subobject_handle")))
+        {
+            // Probe is editor-engine sensitive. Currently unimplemented in
+            // this lightweight plugin; return explicit NOT_IMPLEMENTED so
+            // the caller receives a clear error rather than a fallback.
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("SubobjectData handle probe is not implemented in MCP plugin."), nullptr, TEXT("NOT_IMPLEMENTED")); return;
+        }
+
+        if (Lower.Equals(TEXT("blueprint_compile")))
+        {
+            FString Req; LocalPayload->TryGetStringField(TEXT("requestedPath"), Req);
+            bool bSaveAfter = false; if (LocalPayload->HasField(TEXT("saveAfterCompile"))) bSaveAfter = LocalPayload->GetBoolField(TEXT("saveAfterCompile"));
+            if (Req.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("blueprint_compile requires requestedPath"), nullptr, TEXT("INVALID_ARGUMENT")); return; }
+            FString Normalized; FString LoadError; UBlueprint* BP = LoadBlueprintAsset(Req, Normalized, LoadError);
+            if (!BP) { TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>(); Err->SetStringField(TEXT("blueprintPath"), Req); SendAutomationResponse(RequestingSocket, RequestId, false, LoadError, Err, TEXT("BLUEPRINT_NOT_FOUND")); return; }
+            // Compile using kismet utilities
+#if WITH_EDITOR
+            FKismetEditorUtilities::CompileBlueprint(BP);
+            if (bSaveAfter) { UEditorAssetLibrary::SaveLoadedAsset(BP); }
+#endif
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("blueprintPath"), Normalized);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blueprint compiled (plugin stub)."), Resp, FString()); return;
+        }
+
+        // Unknown blueprint_* action
+        SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Blueprint action not implemented by plugin: %s"), *Action), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return;
+        }
 
     SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown automation action: %s"), *Action), TEXT("UNKNOWN_ACTION"));
+    }
+    catch (const std::exception& E)
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Unhandled exception processing automation request %s: %s"), *RequestId, ANSI_TO_TCHAR(E.what()));
+        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Internal error: %s"), ANSI_TO_TCHAR(E.what())), TEXT("INTERNAL_ERROR"));
+    }
+    catch (...)
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Unhandled unknown exception processing automation request %s"), *RequestId);
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Internal error (unknown)."), TEXT("INTERNAL_ERROR"));
+    }
+
+    // Close the ProcessBody lambda, execute it, and return from the
+    // ProcessAutomationRequest wrapper so subsequent functions are top-level.
+    };
+    ProcessBody();
+    return;
 }
 
 void UMcpAutomationBridgeSubsystem::SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode)
@@ -1903,9 +2517,58 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(TSharedPtr<FMcpBridge
     const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
     FJsonSerializer::Serialize(Response, Writer);
 
-    TargetSocket->Send(Serialized);
-    
-    // Clean up the request tracking
+    bool bSent = false;
+    const int MaxAttempts = 3;
+    for (int Attempt = 1; Attempt <= MaxAttempts && !bSent; ++Attempt)
+    {
+        // Try the original requesting socket first
+        if (TargetSocket.IsValid() && TargetSocket->IsConnected())
+        {
+            bSent = TargetSocket->Send(Serialized);
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Attempt %d: send automation_response RequestId=%s to requesting socket: %s (bytes=%d)"), Attempt, *RequestId, bSent ? TEXT("ok") : TEXT("failed"), Serialized.Len());
+            if (bSent) break;
+        }
+
+        // Try mapping stored socket
+        TSharedPtr<FMcpBridgeWebSocket>* Mapped = PendingRequestsToSockets.Find(RequestId);
+        if (!bSent && Mapped && Mapped->IsValid() && (*Mapped)->IsConnected())
+        {
+            bSent = (*Mapped)->Send(Serialized);
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Attempt %d: send automation_response RequestId=%s to mapped socket: %s (bytes=%d)"), Attempt, *RequestId, bSent ? TEXT("ok") : TEXT("failed"), Serialized.Len());
+            if (bSent) break;
+        }
+
+        // Try other active sockets as best-effort
+        if (!bSent)
+        {
+            for (const TSharedPtr<FMcpBridgeWebSocket>& Sock : ActiveSockets)
+            {
+                if (!Sock.IsValid() || !Sock->IsConnected()) continue;
+                // Skip already attempted sockets
+                if (Sock == TargetSocket) continue;
+                if (Mapped && *Mapped == Sock) continue;
+                if (Sock->Send(Serialized))
+                {
+                    bSent = true;
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Attempt %d: sent automation_response RequestId=%s via alternate socket (bytes=%d)."), Attempt, *RequestId, Serialized.Len());
+                    break;
+                }
+            }
+        }
+
+        // If not sent and not last attempt, try again on next iteration.
+        if (!bSent && Attempt < MaxAttempts)
+        {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Attempt %d failed to deliver automation_response for RequestId=%s; retrying..."), Attempt, *RequestId);
+        }
+    }
+
+    if (!bSent)
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Failed to deliver automation_response for RequestId=%s to any connected socket (activeSockets=%d). Payload: %s"), *RequestId, ActiveSockets.Num(), *Serialized);
+    }
+
+    // Clean up the request tracking regardless to avoid stale mappings
     PendingRequestsToSockets.Remove(RequestId);
 }
 

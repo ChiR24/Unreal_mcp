@@ -5,6 +5,7 @@
 #include "Templates/SharedPointer.h"
 #include "Dom/JsonObject.h"
 #include "Logging/LogMacros.h"
+#include "HAL/CriticalSection.h"
 #include "McpAutomationBridgeSubsystem.generated.h"
 
 UENUM(BlueprintType)
@@ -97,6 +98,13 @@ private:
     // Client port (optional), read from settings
     int32 ClientPort = 0;
 
+    // Track a blueprint currently being modified by this subsystem request
+    // so scope-exit handlers can reliably clear busy state without
+    // attempting to capture local variables inside macros.
+    FString CurrentBusyBlueprintKey;
+    bool bCurrentBlueprintBusyMarked = false;
+    bool bCurrentBlueprintBusyScheduled = false;
+
     // Whether an incoming capability token is required
     bool bRequireCapabilityToken = false;
 
@@ -104,6 +112,22 @@ private:
     void ResetHeartbeatTracking();
     void ForceReconnect(const FString& Reason, float ReconnectDelayOverride = -1.0f);
     void SendControlMessage(const TSharedPtr<FJsonObject>& Message);
+
+    // Pending automation request queue (thread-safe). Inbound socket threads
+    // will enqueue requests here; the queue is drained sequentially on the
+    // game thread to ensure deterministic processing order and avoid
+    // reentrancy issues.
+    struct FPendingAutomationRequest
+    {
+        FString RequestId;
+        FString Action;
+        TSharedPtr<FJsonObject> Payload;
+        TSharedPtr<FMcpBridgeWebSocket> RequestingSocket;
+    };
+    TArray<FPendingAutomationRequest> PendingAutomationRequests;
+    FCriticalSection PendingAutomationRequestsMutex;
+    bool bPendingRequestsScheduled = false;
+    void ProcessPendingAutomationRequests();
 
 private:
     /** Guards against reentrant automation request processing */

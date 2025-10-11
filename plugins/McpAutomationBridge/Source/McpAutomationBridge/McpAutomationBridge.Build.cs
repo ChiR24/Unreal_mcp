@@ -38,6 +38,16 @@ public class McpAutomationBridge : ModuleRules
                 "KismetCompiler",
                 "AssetRegistry",
                 "AssetTools"
+                });
+
+            // Sequencer / LevelSequence editor modules (editor-only)
+            PrivateDependencyModuleNames.AddRange(new string[]
+            {
+                "LevelSequence",
+                "LevelSequenceEditor",
+                "Sequencer",
+                "MovieScene",
+                "MovieSceneTools"
             });
         }
     }

@@ -1062,7 +1062,7 @@ print('RESULT:' + json.dumps(result))
   }
 
   // Execute a Python command via the Automation Bridge
-  async executePython(command: string): Promise<any> {
+  async executePython(command: string, timeoutMs?: number): Promise<any> {
     const trimmedCommand = command.trim();
 
     if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
@@ -1073,15 +1073,15 @@ print('RESULT:' + json.dumps(result))
     // Fall back to the general automation request timeout or 120s to accommodate
     // long-running Editor operations (blueprint creation, compilation, etc.).
     const timeoutEnv = process.env.MCP_AUTOMATION_PYTHON_TIMEOUT_MS ?? process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS;
-    const requestedTimeout = timeoutEnv ? Number(timeoutEnv) : Number.NaN;
-    const timeoutMs = Number.isFinite(requestedTimeout) && requestedTimeout > 0
+    const requestedTimeout = typeof timeoutMs === 'number' && timeoutMs > 0 ? Number(timeoutMs) : (timeoutEnv ? Number(timeoutEnv) : Number.NaN);
+    const finalTimeoutMs = Number.isFinite(requestedTimeout) && requestedTimeout > 0
       ? requestedTimeout
       : 120000;
 
     const response = await this.automationBridge.sendAutomationRequest(
       'execute_editor_python',
       { script: trimmedCommand },
-      { timeoutMs: Math.max(1000, timeoutMs) }
+      { timeoutMs: Math.max(1000, finalTimeoutMs) }
     );
 
     if (response.success === false) {
@@ -1141,7 +1141,7 @@ print('RESULT:' + json.dumps(result))
    * Execute Python script and parse the result
    */
   // Expose for internal consumers (resources) that want parsed RESULT blocks
-  public async executePythonWithResult(script: string): Promise<any> {
+  public async executePythonWithResult(script: string, timeoutMs?: number): Promise<any> {
     try {
       // Wrap script to capture output so we can parse RESULT: lines reliably
       const wrappedScript = `
@@ -1159,7 +1159,7 @@ finally:
       `.trim()
         .replace(/\r?\n/g, '\n');
 
-      const response = await this.executePython(wrappedScript);
+  const response = await this.executePython(wrappedScript, timeoutMs);
 
       // Extract textual output from various response shapes
       let out = '';

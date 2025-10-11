@@ -5,6 +5,16 @@ import { Logger } from './utils/logger.js';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 
+function FStringSafe(val: unknown): string {
+  try {
+    if (val === undefined || val === null) return '';
+    if (typeof val === 'string') return val;
+    return JSON.stringify(val);
+  } catch {
+    try { return String(val); } catch { return ''; }
+  }
+}
+
 const require = createRequire(import.meta.url);
 const packageInfo: { name?: string; version?: string } = (() => {
   try {
@@ -821,6 +831,41 @@ export class AutomationBridge extends EventEmitter {
       case 'bridge_goodbye':
         log.info('Automation bridge client initiated shutdown.', message);
         break;
+      case 'automation_event': {
+        // Some plugin handlers may emit an 'automation_event' to signal
+        // completion of a long-running request (for example, modify_scs
+        // may schedule a deferred apply and later notify completion).
+        // If the event includes a requestId that matches a pending
+        // automation request, resolve it as a success using the
+        // provided result payload.
+        const evt: any = message as any;
+        const reqId = typeof evt.requestId === 'string' ? evt.requestId : undefined;
+        if (reqId) {
+          const pending = this.pendingRequests.get(reqId);
+          if (pending) {
+            try {
+              clearTimeout(pending.timeout);
+              this.pendingRequests.delete(reqId);
+              const synthetic: AutomationBridgeResponseMessage = {
+                type: 'automation_response',
+                requestId: reqId,
+                success: evt.result && typeof evt.result.success === 'boolean' ? !!evt.result.success : true,
+                message: typeof evt.result?.message === 'string' ? evt.result.message : (typeof evt.message === 'string' ? evt.message : FStringSafe(evt.event)),
+                error: typeof evt.result?.error === 'string' ? evt.result.error : undefined,
+                result: evt.result ?? evt.payload ?? undefined
+              };
+              log.info(`automation_event resolved pending request ${reqId} (event=${String(evt.event || '')})`);
+              pending.resolve(synthetic);
+            } catch (e) {
+              log.warn(`Failed to resolve pending automation request from automation_event ${reqId}: ${String(e)}`);
+            }
+            return;
+          }
+        }
+        // No pending request matched; treat as a generic event.
+        log.debug('Received automation_event (no pending request):', message);
+        break;
+      }
       default:
         log.debug('Received automation bridge message with no handler', message);
         break;
@@ -836,7 +881,7 @@ export class AutomationBridge extends EventEmitter {
 
     const pending = this.pendingRequests.get(requestId);
     if (!pending) {
-      log.warn(`No pending automation request found for requestId=${requestId}`);
+      log.warn(`No pending automation request found for requestId=${requestId}; pendingRequests=${this.pendingRequests.size}. Response payload truncated: ${JSON.stringify(response).substring(0, 1000)}`);
       return;
     }
 
@@ -926,7 +971,9 @@ export class AutomationBridge extends EventEmitter {
   // Ensure blueprint and Python-heavy actions have a minimum timeout
   const lowerAction = (action || '').toLowerCase();
   if (lowerAction.includes('blueprint') || lowerAction.includes('execute_editor_python') || lowerAction.includes('modify_scs')) {
-    defaultTimeout = Math.max(defaultTimeout, 120000);
+    // Blueprint & Python-heavy operations can be long; prefer a larger
+    // default timeout to accommodate large editor ops (compile/save, I/O).
+    defaultTimeout = Math.max(defaultTimeout, 300000); // 5 minutes
   }
   const timeoutMs = Math.max(1000, options.timeoutMs ?? defaultTimeout);
     const requestId = this.generateRequestId();
@@ -954,6 +1001,7 @@ export class AutomationBridge extends EventEmitter {
     });
 
     this.lastRequestSentAt = new Date();
+    log.info(`sendAutomationRequest: requestId=${requestId}, action=${action}, timeoutMs=${timeoutMs}`);
     const sent = this.send(requestPayload);
     if (!sent) {
       const pending = this.pendingRequests.get(requestId);
