@@ -478,9 +478,10 @@ Supported actions: create, add_component, set_default, modify_scs.`,
       properties: {
         action: { 
           type: 'string', 
-          enum: ['create', 'add_component', 'set_default', 'modify_scs'],
+          enum: ['create', 'add_component', 'set_default', 'modify_scs', 'ensure_exists', 'probe_handle'],
           description: 'Blueprint action'
         },
+        componentClass: { type: 'string', description: 'Optional component class name for probe_handle (e.g., StaticMeshComponent)' },
         name: { type: 'string', description: 'Name for the blueprint asset. Required for create action. For add_component, this is the blueprint asset name or path.' },
         blueprintPath: { type: 'string', description: 'Alternative blueprint identifier for modify_scs when different from name.' },
         blueprintType: { 

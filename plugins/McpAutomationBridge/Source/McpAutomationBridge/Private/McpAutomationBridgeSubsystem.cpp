@@ -1510,8 +1510,8 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                     SCS->AddNode(NewNode);
                 }
 
-                const TSharedPtr<FJsonObject>* TransformObject = nullptr;
-                if (OperationObject->TryGetObjectField(TEXT("transform"), TransformObject) && TransformObject && TransformObject->IsValid())
+                const TSharedPtr<FJsonObject>* TransformForAdd = nullptr;
+                if (OperationObject->TryGetObjectField(TEXT("transform"), TransformForAdd) && TransformForAdd && TransformForAdd->IsValid())
                 {
                     USceneComponent* SceneTemplate = Cast<USceneComponent>(NewNode->ComponentTemplate);
                     if (SceneTemplate)
@@ -1520,9 +1520,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                         FRotator Rotation = SceneTemplate->GetRelativeRotation();
                         FVector Scale = SceneTemplate->GetRelativeScale3D();
 
-                        ReadVectorField(*TransformObject, TEXT("location"), Location, Location);
-                        ReadRotatorField(*TransformObject, TEXT("rotation"), Rotation, Rotation);
-                        ReadVectorField(*TransformObject, TEXT("scale"), Scale, Scale);
+                        ReadVectorField(*TransformForAdd, TEXT("location"), Location, Location);
+                        ReadRotatorField(*TransformForAdd, TEXT("rotation"), Rotation, Rotation);
+                        ReadVectorField(*TransformForAdd, TEXT("scale"), Scale, Scale);
 
                         SceneTemplate->SetRelativeLocation(Location);
                         SceneTemplate->SetRelativeRotation(Rotation);
@@ -1588,9 +1588,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 }
 
                 const TSharedPtr<FJsonObject>* PropertyOverrides = nullptr;
-                const TSharedPtr<FJsonObject>* TransformObject = nullptr;
+                const TSharedPtr<FJsonObject>* TransformForModify = nullptr;
                 const bool hasProps = OperationObject->TryGetObjectField(TEXT("properties"), PropertyOverrides) && PropertyOverrides && PropertyOverrides->IsValid();
-                const bool hasTransform = OperationObject->TryGetObjectField(TEXT("transform"), TransformObject) && TransformObject && TransformObject->IsValid();
+                const bool hasTransform = OperationObject->TryGetObjectField(TEXT("transform"), TransformForModify) && TransformForModify && TransformForModify->IsValid();
 
                 // For set_component_properties, a properties object is required.
                 // For modify_component, allow transform-only updates (properties optional)
@@ -1626,16 +1626,15 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                     if (Template->IsA<USceneComponent>())
                     {
                         USceneComponent* SceneTemplate = Cast<USceneComponent>(Template);
-                        const TSharedPtr<FJsonObject>* TransformObject = nullptr;
-                        if (OperationObject->TryGetObjectField(TEXT("transform"), TransformObject) && TransformObject && TransformObject->IsValid())
+                        if (OperationObject->TryGetObjectField(TEXT("transform"), TransformForModify) && TransformForModify && TransformForModify->IsValid())
                         {
                             FVector Location = SceneTemplate->GetRelativeLocation();
                             FRotator Rotation = SceneTemplate->GetRelativeRotation();
                             FVector Scale = SceneTemplate->GetRelativeScale3D();
 
-                            ReadVectorField(*TransformObject, TEXT("location"), Location, Location);
-                            ReadRotatorField(*TransformObject, TEXT("rotation"), Rotation, Rotation);
-                            ReadVectorField(*TransformObject, TEXT("scale"), Scale, Scale);
+                            ReadVectorField(*TransformForModify, TEXT("location"), Location, Location);
+                            ReadRotatorField(*TransformForModify, TEXT("rotation"), Rotation, Rotation);
+                            ReadVectorField(*TransformForModify, TEXT("scale"), Scale, Scale);
 
                             SceneTemplate->SetRelativeLocation(Location);
                             SceneTemplate->SetRelativeRotation(Rotation);

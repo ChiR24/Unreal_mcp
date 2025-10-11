@@ -1284,6 +1284,28 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
 
             return cleanObject(res);
           }
+          case 'ensure_exists': {
+            // Ensure a blueprint asset exists (wait until the editor registry reports it)
+            const blueprintCandidate = typeof args.blueprintPath === 'string' ? args.blueprintPath : args.name;
+            const blueprintPath = typeof blueprintCandidate === 'string' && blueprintCandidate.trim().length > 0
+              ? blueprintCandidate.trim()
+              : undefined;
+            if (!blueprintPath) {
+              throw new Error('blueprintPath (or name) is required for ensure_exists');
+            }
+            const res = await tools.blueprintTools.waitForBlueprint(blueprintPath, typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined);
+            return cleanObject(res);
+          }
+          case 'probe_handle': {
+            // Probe SubobjectDataSubsystem handle shape when Editor is available
+            const componentClass = typeof args.componentClass === 'string' ? args.componentClass : undefined;
+            try {
+              const res = await tools.blueprintTools.probeSubobjectDataHandle({ componentClass });
+              return cleanObject(res);
+            } catch (err) {
+              return cleanObject({ success: false, error: `Probe failed: ${err}`, message: 'Probe failed (is Unreal Editor running?)' });
+            }
+          }
           case 'set_default': {
             await elicitMissingPrimitiveArgs(
               tools,
@@ -1367,8 +1389,9 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
             const res = await tools.blueprintTools.compileBlueprint({ blueprintName: args.name, saveAfterCompile: args.saveAfterCompile });
             return cleanObject(res);
           }
-          default:
-            throw new Error(`Unknown blueprint action: ${args.action}`);
+      default:
+        // Return a structured error so clients can detect missing action support
+        return cleanObject({ success: false, error: `Unknown blueprint action: ${args.action}`, message: `Action not implemented: ${args.action}` });
         }
 
 // 8. ENVIRONMENT BUILDER

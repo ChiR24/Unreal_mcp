@@ -1069,11 +1069,14 @@ print('RESULT:' + json.dumps(result))
       throw new Error('Automation bridge not connected');
     }
 
-    const timeoutEnv = process.env.MCP_AUTOMATION_PYTHON_TIMEOUT_MS;
+    // Allow controlling Python execution timeout via MCP_AUTOMATION_PYTHON_TIMEOUT_MS
+    // Fall back to the general automation request timeout or 120s to accommodate
+    // long-running Editor operations (blueprint creation, compilation, etc.).
+    const timeoutEnv = process.env.MCP_AUTOMATION_PYTHON_TIMEOUT_MS ?? process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS;
     const requestedTimeout = timeoutEnv ? Number(timeoutEnv) : Number.NaN;
     const timeoutMs = Number.isFinite(requestedTimeout) && requestedTimeout > 0
       ? requestedTimeout
-      : 30000;
+      : 120000;
 
     const response = await this.automationBridge.sendAutomationRequest(
       'execute_editor_python',

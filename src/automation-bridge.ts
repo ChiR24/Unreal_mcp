@@ -918,10 +918,16 @@ export class AutomationBridge extends EventEmitter {
     }
 
   // Default timeout for automation requests. Allow override via
-  // MCP_AUTOMATION_REQUEST_TIMEOUT_MS (ms). Default raised to 120s to
-  // accommodate heavy editor operations like blueprint creation.
+  // MCP_AUTOMATION_REQUEST_TIMEOUT_MS (ms). Default is 120s but for
+  // blueprint-related or Python-executing actions we enforce at least
+  // 120s to avoid spurious 60s timeouts on large editor ops.
   const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  const defaultTimeout = Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
+  let defaultTimeout = Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
+  // Ensure blueprint and Python-heavy actions have a minimum timeout
+  const lowerAction = (action || '').toLowerCase();
+  if (lowerAction.includes('blueprint') || lowerAction.includes('execute_editor_python') || lowerAction.includes('modify_scs')) {
+    defaultTimeout = Math.max(defaultTimeout, 120000);
+  }
   const timeoutMs = Math.max(1000, options.timeoutMs ?? defaultTimeout);
     const requestId = this.generateRequestId();
 
