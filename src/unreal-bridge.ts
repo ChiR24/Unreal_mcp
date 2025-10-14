@@ -1,6 +1,7 @@
 import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import { escapePythonString } from './utils/python.js';
+import { allowPythonFallbackFromEnv } from './utils/env.js';
 import type { AutomationBridge } from './automation-bridge.js';
 
 // RcMessage interface reserved for future WebSocket message handling
@@ -94,221 +95,136 @@ export class UnrealBridge {
     ['lit_only', 'LightingOnly']
   ]);
   
-  // Python script templates for EditorLevelLibrary access
+  // Python script templates for essential editor helpers. Keep this map
+  // intentionally small: most operations should be implemented natively
+  // in the Automation Bridge plugin and routed via executeEditorFunction.
   private readonly PYTHON_TEMPLATES: Record<string, PythonScriptTemplate> = {
     GET_ALL_ACTORS: {
       name: 'get_all_actors',
       script: `
-import unreal
-import json
-
-# Use EditorActorSubsystem instead of deprecated EditorLevelLibrary
+import unreal, json
 try:
-   subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-   if subsys:
-       actors = subsys.get_all_level_actors()
-       result = [{'name': a.get_name(), 'class': a.get_class().get_name(), 'path': a.get_path_name()} for a in actors]
-       print(f"RESULT:{json.dumps(result)}")
-   else:
-       print("RESULT:[]")
+  subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+  actors = []
+  if subsys:
+    for a in subsys.get_all_level_actors():
+      if a:
+        actors.append({'name': a.get_name(), 'label': a.get_actor_label(), 'path': a.get_path_name(), 'class': a.get_class().get_path_name() if a.get_class() else ''})
+  print('RESULT:' + json.dumps({'success': True, 'actors': actors, 'count': len(actors)}))
 except Exception as e:
-   print(f"RESULT:{json.dumps({'error': str(e)})}")
+  print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
       `.trim()
     },
     SPAWN_ACTOR_AT_LOCATION: {
       name: 'spawn_actor',
       script: `
-import unreal
-import json
-
-location = unreal.Vector({x}, {y}, {z})
-rotation = unreal.Rotator({pitch}, {yaw}, {roll})
-
+import unreal, json
 try:
-   # Use EditorActorSubsystem instead of deprecated EditorLevelLibrary
-   subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-   if subsys:
-       # Try to load asset class
-       actor_class = unreal.EditorAssetLibrary.load_asset("{class_path}")
-       if actor_class:
-           spawned = subsys.spawn_actor_from_object(actor_class, location, rotation)
-           if spawned:
-               print(f"RESULT:{json.dumps({'success': True, 'actor': spawned.get_name(), 'location': [{x}, {y}, {z}]}})}")
-           else:
-               print(f"RESULT:{json.dumps({'success': False, 'error': 'Failed to spawn actor'})}")
-       else:
-           print(f"RESULT:{json.dumps({'success': False, 'error': 'Failed to load actor class: {class_path}'})}")
-   else:
-       print(f"RESULT:{json.dumps({'success': False, 'error': 'EditorActorSubsystem not available'})}")
+  location = unreal.Vector({x}, {y}, {z})
+  rotation = unreal.Rotator({pitch}, {yaw}, {roll})
+  subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+  if not subsys:
+    print('RESULT:' + json.dumps({'success': False, 'error': 'EditorActorSubsystem not available'}))
+  else:
+    asset = unreal.EditorAssetLibrary.load_asset(r"{class_path}") if "{class_path}" else None
+    cls = asset if asset and hasattr(asset, 'GeneratedClass') else None
+    spawned = None
+    if cls:
+      spawned = subsys.spawn_actor_from_object(cls, location, rotation)
+    if spawned:
+      print('RESULT:' + json.dumps({'success': True, 'actorName': spawned.get_actor_label(), 'actorPath': spawned.get_path_name()}))
+    else:
+      print('RESULT:' + json.dumps({'success': False, 'error': 'Spawn failed'}))
 except Exception as e:
-   print(f"RESULT:{json.dumps({'success': False, 'error': str(e)})}")
+  print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
       `.trim()
     },
     DELETE_ACTOR: {
       name: 'delete_actor',
       script: `
-import unreal
-import json
-
+import unreal, json
 try:
-   subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-   if subsys:
-       actors = subsys.get_all_level_actors()
-       found = False
-       for actor in actors:
-           if not actor:
-               continue
-           label = actor.get_actor_label()
-           name = actor.get_name()
-           if label == "{actor_name}" or name == "{actor_name}" or label.lower().startswith("{actor_name}".lower()+"_"):
-               success = subsys.destroy_actor(actor)
-               print(f"RESULT:{json.dumps({'success': success, 'deleted': label})}")
-               found = True
-               break
-       if not found:
-           print(f"RESULT:{json.dumps({'success': False, 'error': 'Actor not found: {actor_name}'})}")
-   else:
-       print(f"RESULT:{json.dumps({'success': False, 'error': 'EditorActorSubsystem not available'})}")
+  subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+  if not subsys:
+    print('RESULT:' + json.dumps({'success': False, 'error': 'EditorActorSubsystem not available'}))
+  else:
+    target = None
+    for a in subsys.get_all_level_actors():
+      if not a: continue
+      if a.get_actor_label() == "{actor_name}" or a.get_name() == "{actor_name}":
+        target = a
+        break
+    if not target:
+      print('RESULT:' + json.dumps({'success': False, 'error': 'Actor not found'}))
+    else:
+      ok = subsys.destroy_actor(target)
+      print('RESULT:' + json.dumps({'success': bool(ok), 'deleted': target.get_actor_label()}))
 except Exception as e:
-   print(f"RESULT:{json.dumps({'success': False, 'error': str(e)})}")
+  print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
       `.trim()
     },
     CREATE_ASSET: {
       name: 'create_asset',
       script: `
-import unreal
-import json
-
+import unreal, json
 try:
-   asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-   if asset_tools:
-       # Create factory based on asset type
-       factory_class = getattr(unreal, '{factory_class}', None)
-       asset_class = getattr(unreal, '{asset_class}', None)
-
-       if factory_class and asset_class:
-           factory = factory_class()
-           # Clean up the path - remove trailing slashes and normalize
-           package_path = "{package_path}".rstrip('/').replace('//', '/')
-
-           # Ensure package path is valid (starts with /Game or /Engine)
-           if not package_path.startswith('/Game') and not package_path.startswith('/Engine'):
-               if not package_path.startswith('/'):
-                   package_path = f"/Game/{package_path}"
-               else:
-                   package_path = f"/Game{package_path}"
-
-           # Create full asset path for verification
-           full_asset_path = f"{package_path}/{asset_name}" if package_path != "/Game" else f"/Game/{asset_name}"
-
-           # Create the asset with cleaned path
-           asset = asset_tools.create_asset("{asset_name}", package_path, asset_class, factory)
-           if asset:
-               # Save the asset
-               saved = unreal.EditorAssetLibrary.save_asset(asset.get_path_name())
-               # Enhanced verification with retry logic
-                asset_path = asset.get_path_name()
-                verification_attempts = 0
-                max_verification_attempts = 5
-                asset_verified = False
-
-                while verification_attempts < max_verification_attempts and not asset_verified:
-                    verification_attempts += 1
-                    # Wait a bit for the asset to be fully saved
-                    import time
-                    time.sleep(0.1)
-
-                    # Check if asset exists
-                    asset_exists = unreal.EditorAssetLibrary.does_asset_exist(asset_path)
-
-                    if asset_exists:
-                        asset_verified = True
-                    elif verification_attempts < max_verification_attempts:
-                        # Try to reload the asset registry
-                        try:
-                            unreal.AssetRegistryHelpers.get_asset_registry().scan_modified_asset_files([asset_path])
-                        except:
-                            pass
-
-                if asset_verified:
-                    print(f"RESULT:{json.dumps({'success': saved, 'path': asset_path, 'verified': True})}")
-                else:
-                    print(f"RESULT:{json.dumps({'success': saved, 'path': asset_path, 'warning': 'Asset created but verification pending'})}")
-           else:
-               print(f"RESULT:{json.dumps({'success': False, 'error': 'Failed to create asset'})}")
-       else:
-           print(f"RESULT:{json.dumps({'success': False, 'error': 'Invalid factory or asset class'})}")
-   else:
-       print(f"RESULT:{json.dumps({'success': False, 'error': 'AssetToolsHelpers not available'})}")
+  asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+  factory = getattr(unreal, '{factory_class}', None)
+  asset_class = getattr(unreal, '{asset_class}', None)
+  package_path = '{package_path}'.rstrip('/')
+  if not package_path.startswith('/Game') and not package_path.startswith('/Engine'):
+    package_path = '/Game/' + package_path.strip('/')
+  asset = asset_tools.create_asset('{asset_name}', package_path, asset_class, factory() if factory else None)
+  if asset:
+    unreal.EditorAssetLibrary.save_asset(asset.get_path_name())
+    print('RESULT:' + json.dumps({'success': True, 'path': asset.get_path_name()}))
+  else:
+    print('RESULT:' + json.dumps({'success': False, 'error': 'Create asset failed'}))
 except Exception as e:
-   print(f"RESULT:{json.dumps({'success': False, 'error': str(e)})}")
+  print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
       `.trim()
     },
     SET_VIEWPORT_CAMERA: {
       name: 'set_viewport_camera',
       script: `
-import unreal
-import json
-
-location = unreal.Vector({x}, {y}, {z})
-rotation = unreal.Rotator({pitch}, {yaw}, {roll})
-
+import unreal, json
 try:
-   # Use UnrealEditorSubsystem for viewport operations (UE5.1+)
-   ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-   les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-
-   if ues:
-       ues.set_level_viewport_camera_info(location, rotation)
-       try:
-           if les:
-               les.editor_invalidate_viewports()
-       except Exception:
-           pass
-       print(f"RESULT:{json.dumps({'success': True, 'location': [{x}, {y}, {z}], 'rotation': [{pitch}, {yaw}, {roll}]}})}")
-   else:
-       print(f"RESULT:{json.dumps({'success': False, 'error': 'UnrealEditorSubsystem not available'})}")
+  location = unreal.Vector({x}, {y}, {z})
+  rotation = unreal.Rotator({pitch}, {yaw}, {roll})
+  ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+  if ues:
+    ues.set_level_viewport_camera_info(location, rotation)
+    print('RESULT:' + json.dumps({'success': True}))
+  else:
+    print('RESULT:' + json.dumps({'success': False, 'error': 'UnrealEditorSubsystem not available'}))
 except Exception as e:
-   print(f"RESULT:{json.dumps({'success': False, 'error': str(e)})}")
+  print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
       `.trim()
     },
     BUILD_LIGHTING: {
       name: 'build_lighting',
       script: `
-import unreal
-import json
-
+import unreal, json
 try:
-   les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-   if les:
-       # Use UE 5.6 enhanced lighting quality settings
-       quality_map = {
-           'Preview': unreal.LightingBuildQuality.PREVIEW,
-           'Medium': unreal.LightingBuildQuality.MEDIUM,
-           'High': unreal.LightingBuildQuality.HIGH,
-           'Production': unreal.LightingBuildQuality.PRODUCTION
-       }
-       q = quality_map.get('{quality}', unreal.LightingBuildQuality.PREVIEW)
-       les.build_light_maps(q, True)
-       print(f"RESULT:{json.dumps({'success': True, 'quality': '{quality}', 'method': 'LevelEditorSubsystem'})}")
-   else:
-       print(f"RESULT:{json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'})}")
+  les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+  if les:
+    les.build_visible_level_lighting()
+    print('RESULT:' + json.dumps({'success': True, 'message': 'Build requested'}))
+  else:
+    print('RESULT:' + json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'}))
 except Exception as e:
-   print(f"RESULT:{json.dumps({'success': False, 'error': str(e)})}")
+  print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
       `.trim()
     },
     SAVE_ALL_DIRTY_PACKAGES: {
       name: 'save_dirty_packages',
       script: `
-import unreal
-import json
-
+import unreal, json
 try:
-   # Use UE 5.6 enhanced saving with better error handling
-   saved = unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
-   print(f"RESULT:{json.dumps({'success': bool(saved), 'saved_count': saved if isinstance(saved, int) else 0, 'message': 'All dirty packages saved'})}")
+  saved = unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+  print('RESULT:' + json.dumps({'success': True, 'saved': bool(saved)}))
 except Exception as e:
-   print(f"RESULT:{json.dumps({'success': False, 'error': str(e), 'message': 'Failed to save dirty packages'})}")
+  print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
       `.trim()
     }
   };
@@ -528,9 +444,7 @@ except Exception as e:
   }
 
   async ensurePluginsEnabled(pluginNames: string[], context?: string): Promise<string[]> {
-    if (!pluginNames || pluginNames.length === 0) {
-      return [];
-    }
+    if (!pluginNames || pluginNames.length === 0) return [];
 
     const now = Date.now();
     const pluginsToCheck = pluginNames.filter((name) => {
@@ -544,7 +458,7 @@ except Exception as e:
     });
 
     if (pluginsToCheck.length > 0) {
-    const python = `
+      const python = `
 import unreal
 import json
 
@@ -552,55 +466,32 @@ plugins = ${JSON.stringify(pluginsToCheck)}
 status = {}
 
 def is_plugin_enabled(plugin_name):
-  # Try PluginBlueprintLibrary first (most reliable for checking mounted/enabled status)
-  try:
-    lib = unreal.PluginBlueprintLibrary
-    if lib:
-      # Check if plugin is mounted (loaded and available)
-      if hasattr(lib, 'is_plugin_mounted') and callable(lib.is_plugin_mounted):
-        mounted = lib.is_plugin_mounted(plugin_name)
-        if mounted:
-          return True
-      # Also check enabled plugin names list
-      if hasattr(lib, 'get_enabled_plugin_names') and callable(lib.get_enabled_plugin_names):
-        enabled_names = lib.get_enabled_plugin_names()
-        if enabled_names and plugin_name in enabled_names:
-          return True
-  except Exception:
-    pass
-  
-  # Fallback: Try PluginManager
   try:
     pm = unreal.PluginManager.get() if hasattr(unreal, 'PluginManager') else None
-    if pm:
-      if hasattr(pm, 'is_plugin_enabled') and callable(pm.is_plugin_enabled):
-        if pm.is_plugin_enabled(plugin_name):
-          return True
-      if hasattr(pm, 'find_plugin') and callable(pm.find_plugin):
-        plugin = pm.find_plugin(plugin_name)
-        if plugin and hasattr(plugin, 'is_enabled') and callable(plugin.is_enabled):
-          if plugin.is_enabled():
-            return True
+    if pm and hasattr(pm, 'is_plugin_enabled') and callable(pm.is_plugin_enabled):
+      return pm.is_plugin_enabled(plugin_name)
   except Exception:
     pass
-  
-  # Fallback: Try subsystem
+  try:
+    lib = unreal.PluginBlueprintLibrary
+    if lib and hasattr(lib, 'get_enabled_plugin_names') and callable(lib.get_enabled_plugin_names):
+      names = lib.get_enabled_plugin_names()
+      return plugin_name in names
+  except Exception:
+    pass
   try:
     ps = unreal.get_editor_subsystem(unreal.PluginsEditorSubsystem)
-    if ps:
-      if hasattr(ps, 'is_plugin_enabled') and callable(ps.is_plugin_enabled):
-        if ps.is_plugin_enabled(plugin_name):
-          return True
+    if ps and hasattr(ps, 'is_plugin_enabled') and callable(ps.is_plugin_enabled):
+      return ps.is_plugin_enabled(plugin_name)
   except Exception:
     pass
-  
   return False
 
-for plugin_name in plugins:
+for p in plugins:
   try:
-    status[plugin_name] = bool(is_plugin_enabled(plugin_name))
+    status[p] = bool(is_plugin_enabled(p))
   except Exception:
-    status[plugin_name] = False
+    status[p] = False
 
 print('RESULT:' + json.dumps(status))
 `.trim();
@@ -615,14 +506,8 @@ print('RESULT:' + json.dumps(status))
         } else {
           this.log.warn('Failed to parse plugin status response', { context, pluginsToCheck });
         }
-      } catch (error) {
-        this.log.warn('Plugin status check failed', { context, pluginsToCheck, error: (error as Error)?.message ?? error });
-      }
-    }
-
-    for (const name of pluginNames) {
-      if (!this.pluginStatusCache.has(name)) {
-        this.pluginStatusCache.set(name, { enabled: false, timestamp: now });
+      } catch (_err) {
+        this.log.debug('Plugin status probe failed:', (_err as Error)?.message ?? _err);
       }
     }
 
@@ -637,7 +522,7 @@ print('RESULT:' + json.dumps(status))
     objectPath: string;
     propertyName: string;
     timeoutMs?: number;
-    allowFallback?: boolean;
+    allowAlternate?: boolean;
   }): Promise<Record<string, any>> {
   const { objectPath, propertyName, timeoutMs } = params;
     if (!objectPath || typeof objectPath !== 'string') {
@@ -730,7 +615,7 @@ print('RESULT:' + json.dumps(status))
     value: unknown;
     markDirty?: boolean;
     timeoutMs?: number;
-    allowFallback?: boolean;
+    allowAlternate?: boolean;
   }): Promise<Record<string, any>> {
   const { objectPath, propertyName, value, markDirty, timeoutMs } = params;
     if (!objectPath || typeof objectPath !== 'string') {
@@ -1065,6 +950,15 @@ print('RESULT:' + json.dumps(result))
   async executePython(command: string, timeoutMs?: number): Promise<any> {
     const trimmedCommand = command.trim();
 
+    // By default, executing arbitrary Python via the automation bridge is
+    // disabled to encourage use of native automation actions implemented
+    // by the editor plugin. Set MCP_ALLOW_PYTHON_FALLBACKS=1 to opt in
+    // for legacy Python fallbacks (deprecated).
+    const allowEnv = allowPythonFallbackFromEnv();
+    if (!allowEnv) {
+      throw new Error('Editor Python execution via automation_bridge is disabled by default. Set MCP_ALLOW_PYTHON_FALLBACKS=1 to opt in (deprecated).');
+    }
+
     if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
       throw new Error('Automation bridge not connected');
     }
@@ -1109,32 +1003,262 @@ print('RESULT:' + json.dumps(result))
    * Enhanced Editor Function Access
    * Use Python scripting as a bridge to access modern Editor Subsystem functions
    */
-  async executeEditorFunction(functionName: string, params?: Record<string, any>): Promise<any> {
+  async executeEditorFunction(functionName: string, params?: Record<string, any>, options?: { allowPythonFallback?: boolean }): Promise<any> {
     const template = this.PYTHON_TEMPLATES[functionName];
-    if (!template) {
-      throw new Error(`Unknown editor function: ${functionName}`);
+  const allowPythonFallback = options?.allowPythonFallback ?? allowPythonFallbackFromEnv();
+
+    // First, attempt to invoke a native plugin handler for this well-known
+    // function. The plugin exposes a lightweight 'execute_editor_function'
+    // action that implements common templates natively. If the plugin does
+    // not implement the action, decide whether to fall back to the Python
+    // template (deprecated) based on allowPythonFallback and whether a
+    // template exists for this function.
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp: any = await this.automationBridge.sendAutomationRequest('execute_editor_function', {
+          functionName,
+          params: params ?? {}
+        });
+        if (resp && resp.success !== false) {
+          return resp.result ?? resp;
+        }
+        const errTxt = String(resp?.error ?? resp?.message ?? '');
+        if (!(errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION'))) {
+          // Plugin explicitly returned an error for this known function
+          return resp;
+        }
+        // Unknown plugin action -> conditionally fall through to Python fallback
+        if (!allowPythonFallback || !template) {
+          // Return structured failure indicating plugin does not implement this action
+          return { success: false, error: 'UNKNOWN_PLUGIN_ACTION' };
+        }
+      } catch (err) {
+        // If the plugin call threw due to connection or other reasons, decide
+        // whether to fall back to Python or surface bridge-unavailable.
+        if (!allowPythonFallback || !template) {
+          this.log.debug(`executeEditorFunction plugin call failed for ${functionName}, automation bridge unavailable:`, (err as Error)?.message ?? err);
+          return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE' };
+        }
+        this.log.debug(`executeEditorFunction plugin call failed for ${functionName}, falling back to Python as configured:`, (err as Error)?.message ?? err);
+      }
+    } else {
+      if (!allowPythonFallback || !template) {
+        return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE' };
+      }
     }
 
+    // Fallback: execute the Python template (deprecated). Replace params
+    // placeholders in the template and execute using executePythonWithResult.
+    if (!template) {
+      return { success: false, error: 'UNKNOWN_EDITOR_FUNCTION_AND_NO_TEMPLATE' };
+    }
     let script = template.script;
-    
-    // Replace parameters in the script
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         const placeholder = `{${key}}`;
         script = script.replace(new RegExp(placeholder, 'g'), String(value));
       }
     }
-
     try {
-      // Execute Python script with result parsing
       const result = await this.executePythonWithResult(script);
       return result;
     } catch (error) {
       this.log.error(`Failed to execute editor function ${functionName}:`, error);
-      
-      // Fallback to console command if Python fails
-      return this.executeFallbackCommand(functionName, params);
+      throw error;
     }
+  }
+
+  /**
+   * Execute an arbitrary Python script via the plugin if available. This
+   * centralizes raw Python execution so callsites do not directly invoke
+   * executePythonWithResult. The plugin may accept, reject, or map the
+   * script; when rejected we optionally fall back to the raw executor.
+   */
+  public async executeEditorPython(script: string, options?: { allowPythonFallback?: boolean; timeoutMs?: number }): Promise<any> {
+    // Centralized mapping: map common editor Python templates to native
+    // plugin handlers. Raw Python execution has been removed from the
+    // plugin; callers must use executeEditorFunction for supported
+    // operations. This method attempts to detect well-known templates
+    // and invoke the corresponding native handler.
+    const map = this.mapScriptToEditorFunction(script);
+    if (map) {
+      try {
+        // If mapping designates a direct plugin action, call it via
+        // automationBridge.sendAutomationRequest so plugin-level actions
+        // (e.g. blueprint_probe_subobject_handle, import_asset_deferred)
+        // can be invoked without relying on the editor-function shim.
+        if ('type' in map && (map as any).type === 'plugin' && typeof (this.automationBridge as any)?.sendAutomationRequest === 'function') {
+          try {
+            const resp: any = await (this.automationBridge as any).sendAutomationRequest((map as any).actionName ?? (map as any).functionName ?? '', map.params ?? {}, options?.timeoutMs ? { timeoutMs: options.timeoutMs } : undefined);
+            return resp && resp.success !== false ? (resp.result ?? resp) : resp;
+          } catch (err) {
+            this.log.debug(`executeEditorPython -> plugin-action mapping for ${(map as any).actionName ?? (map as any).functionName} failed:`, (err as Error)?.message ?? err);
+            return { success: false, error: 'MAPPED_PLUGIN_ACTION_FAILED', message: String((err as Error)?.message ?? err) };
+          }
+        }
+
+        // Default to the editor-function path
+        return await this.executeEditorFunction((map as any).functionName ?? (map as any).actionName ?? '', map.params ?? {}, { allowPythonFallback: options?.allowPythonFallback });
+      } catch (err) {
+        this.log.debug(`executeEditorPython -> executeEditorFunction mapping for ${(map as any).functionName} failed:`, (err as Error)?.message ?? err);
+        return { success: false, error: 'MAPPED_FUNCTION_FAILED', message: String((err as Error)?.message ?? err) };
+      }
+    }
+
+    // No mapping found — raw Python execution is no longer supported.
+    return {
+      success: false,
+      error: 'PYTHON_FALLBACK_REMOVED',
+      message: 'Direct execution of arbitrary Python has been disabled. Convert the call to executeEditorFunction or implement a native handler in the plugin.'
+    };
+  }
+
+  /**
+   * Attempt to map an ad-hoc Python script to a known editor function
+   * so the server can call the plugin-native handler instead of sending
+   * raw Python. Returns null when no mapping exists.
+   */
+  private mapScriptToEditorFunction(script: string): { functionName: string; params?: Record<string, any> } | { type: 'plugin'; actionName: string; params?: Record<string, any> } | null {
+    if (!script || typeof script !== 'string') return null;
+    const lower = script.toLowerCase();
+
+    // GET_ALL_ACTORS
+    if (lower.includes('get_all_level_actors')) {
+      return { functionName: 'GET_ALL_ACTORS' };
+    }
+
+    // BUILD_LIGHTING
+    if (lower.includes('build_light_maps') || lower.includes('buildvisiblelevellighting') || lower.includes('buildlighting')) {
+      const match = script.match(/LightingBuildQuality\.([A-Za-z0-9_]+)/i);
+      let quality = 'High';
+      if (match && match[1]) {
+        const token = match[1].toUpperCase();
+        const map: Record<string, string> = { 'QUALITY_PREVIEW': 'Preview', 'QUALITY_MEDIUM': 'Medium', 'QUALITY_HIGH': 'High', 'QUALITY_PRODUCTION': 'Production' };
+        quality = map[token] ?? token;
+      }
+      const withCaptures = /buildreflectioncaptures\s*=\s*True|buildreflectioncaptures\s*\)|buildreflectioncaptures\s*,\s*True/i.test(script);
+      return { functionName: 'BUILD_LIGHTING', params: { quality, buildReflectionCaptures: Boolean(withCaptures) } };
+    }
+
+    // ASSET_EXISTS
+    if (lower.includes('editorassetlibrary.does_asset_exist') || lower.includes('does_asset_exist(')) {
+      const m = script.match(/['"]([^'"]+)['"]/);
+      const path = m ? m[1] : '';
+      return { functionName: 'ASSET_EXISTS', params: { path } };
+    }
+
+    // SET_VIEWPORT_CAMERA
+    if (lower.includes('set_level_viewport_camera_info') || lower.includes('set_level_viewport_camera')) {
+      const vec = script.match(/unreal\.Vector\s*\(\s*([^)]+)\)/i);
+      const rot = script.match(/unreal\.Rotator\s*\(\s*([^)]+)\)/i);
+      const parseTriple = (txt?: string) => {
+        if (!txt) return [0, 0, 0];
+        return txt.split(',').map(p => Number(p.trim() || 0)).slice(0, 3).map(n => Number.isFinite(n) ? n : 0);
+      };
+      const [x, y, z] = parseTriple(vec?.[1]);
+      const [pitch, yaw, roll] = parseTriple(rot?.[1]);
+      return { functionName: 'SET_VIEWPORT_CAMERA', params: { x, y, z, pitch, yaw, roll } };
+    }
+
+    // SPAWN_ACTOR (try to extract class path or class name + location)
+    if (lower.includes('spawn_actor_from_class') || lower.includes('spawn_actor(')) {
+      // Prefer quoted asset/class paths
+      let classPath = '';
+      const loadMatch = script.match(/load_asset\s*\(\s*r?['"]([^'"]+)['"]\s*\)/i);
+      if (loadMatch && loadMatch[1]) classPath = loadMatch[1];
+      // Look for `= unreal.ClassName` assignments
+      if (!classPath) {
+        const assignMatch = script.match(/=\s*unreal\.([A-Za-z0-9_]+)/i);
+        if (assignMatch && assignMatch[1]) classPath = `/Script/Engine.${assignMatch[1]}`;
+      }
+      // Parse first Vector occurrence for location
+      const vec = script.match(/unreal\.Vector\s*\(\s*([^)]+)\)/i);
+      const parseTriple = (txt?: string) => {
+        if (!txt) return [0, 0, 0];
+        return txt.split(',').map(p => Number(p.trim() || 0)).slice(0, 3).map(n => Number.isFinite(n) ? n : 0);
+      };
+      const [x, y, z] = parseTriple(vec?.[1]);
+      return { functionName: 'SPAWN_ACTOR_AT_LOCATION', params: { classPath, x, y, z } };
+    }
+
+    // SAVE_ALL_DIRTY_PACKAGES
+    if (lower.includes('save_dirty_packages') || lower.includes('save_dirty_packages(')) {
+      return { functionName: 'SAVE_ALL_DIRTY_PACKAGES' };
+    }
+
+    // CREATE_ASSET heuristics
+    if (script.includes('asset_tools.create_asset') || script.includes('get_asset_tools()')) {
+      const m = script.match(/create_asset\s*\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]/i);
+      const assetName = m ? m[1] : undefined;
+      const packagePath = m ? m[2] : undefined;
+      return { functionName: 'CREATE_ASSET', params: { asset_name: assetName, package_path: packagePath } };
+    }
+
+    // IMPORT ASSET
+    if (script.includes('AssetImportTask') || script.includes('import_asset_tasks') || script.includes('import_asset')) {
+      // Best-effort: extract source/destination paths
+      const srcMatch = script.match(/task\.filename\s*=\s*r?["']([^"']+)["']/i) || script.match(/['"]sourcePath['"]\s*:\s*['"]([^'"]+)['"]/i);
+      const dstMatch = script.match(/task\.destination_path\s*=\s*r?["']([^"']+)["']/i) || script.match(/['"]destinationPath['"]\s*:\s*['"]([^'"]+)['"]/i);
+      return { type: 'plugin', actionName: 'import_asset_deferred', params: { sourcePath: srcMatch ? srcMatch[1] : undefined, destinationPath: dstMatch ? dstMatch[1] : undefined } };
+    }
+
+    // DUPLICATE / DELETE ASSET
+    if (script.includes('duplicate_asset') || script.includes('duplicate_asset(') || script.includes('duplicate_asset(')) {
+      const src = (script.match(/duplicate_asset\s*\(\s*r?["']([^"']+)["']\s*,\s*r?["']([^"']+)["']/i) || [])[1];
+      const dst = (script.match(/duplicate_asset\s*\(\s*r?["']([^"']+)["']\s*,\s*r?["']([^"']+)["']/i) || [])[2];
+      return { type: 'plugin', actionName: 'duplicate_asset', params: { sourcePath: src, destinationPath: dst } };
+    }
+
+    if (script.includes('delete_asset') || script.includes('delete_loaded_asset') || script.includes('delete_asset(')) {
+      const pm = script.match(/delete_asset\s*\(\s*r?["']([^"']+)["']\s*\)/i) || script.match(/delete_loaded_asset\s*\(\s*r?["']([^"']+)["']\s*\)/i) || [];
+      const path = pm[1] || undefined;
+      return { type: 'plugin', actionName: 'delete_asset', params: { path } };
+    }
+
+    // MATERIAL creation heuristics
+    if (script.includes('MaterialFactoryNew') || script.includes('create_material') || script.includes('create_material_instance')) {
+      if (script.includes('MaterialInstanceConstantFactoryNew') || script.includes('create_material_instance')) {
+        const nameMatch = script.match(/asset_tools\.create_asset\(\s*asset_name\s*=\s*['"]([^'"]+)['"]/i) || script.match(/name\s*=\s*r?["']([^"']+)["']/i);
+        const destMatch = script.match(/package_path\s*=\s*r?["']([^"']+)["']/i) || script.match(/dest\s*=\s*r?["']([^"']+)["']/i);
+        return { functionName: 'CREATE_MATERIAL_INSTANCE', params: { name: nameMatch ? nameMatch[1] : undefined, package_path: destMatch ? destMatch[1] : undefined } };
+      }
+      const nameMatch = script.match(/asset_tools\.create_asset\(\s*asset_name\s*=\s*['"]([^'"]+)['"]/i) || script.match(/name\s*=\s*r?["']([^"']+)["']/i);
+      const destMatch = script.match(/package_path\s*=\s*r?["']([^"']+)["']/i) || script.match(/dest\s*=\s*r?["']([^"']+)["']/i);
+      return { functionName: 'CREATE_MATERIAL', params: { name: nameMatch ? nameMatch[1] : undefined, destinationPath: destMatch ? destMatch[1] : undefined } };
+    }
+
+    // ANIMATION BLUEPRINT creation heuristics
+    if (script.includes('AnimBlueprintFactory') || (script.includes('create_asset') && script.includes('AnimBlueprint'))) {
+      const nameMatch = script.match(/asset_tools\.create_asset\(\s*asset_name\s*=\s*['"]([^'"]+)['"]/i) || script.match(/name\s*=\s*r?["']([^"']+)["']/i);
+      const destMatch = script.match(/package_path\s*=\s*r?["']([^"']+)["']/i) || script.match(/path\s*=\s*r?["']([^"']+)["']/i);
+      const skeletonMatch = script.match(/target_skeleton\s*=\s*[^,\n]+/i) || script.match(/skeletonPath['"]\s*:\s*['"]([^'"]+)['"]/i);
+      return { functionName: 'CREATE_ANIMATION_BLUEPRINT', params: { name: nameMatch ? nameMatch[1] : undefined, package_path: destMatch ? destMatch[1] : undefined, skeleton_path: skeletonMatch ? skeletonMatch[1] : undefined } };
+    }
+
+    // REMOTE CONTROL presets and expose patterns
+    if (script.includes('RemoteControlPresetFactory') || script.includes('get_remote_control') || script.includes('RemoteControlFunctionLibrary')) {
+      if (script.includes('expose_property') || script.includes('expose_actor')) {
+        return { functionName: 'RC_EXPOSE_PROPERTY', params: {} };
+      }
+      if (script.includes('list_assets') && script.includes('RemoteControlPreset')) {
+        return { functionName: 'RC_LIST_PRESETS' };
+      }
+      if (script.includes('create_asset') && script.includes('RemoteControlPreset')) {
+        return { functionName: 'RC_CREATE_PRESET' };
+      }
+    }
+
+    // Resolve parent class / blueprint parent resolution probes
+    if (script.includes('resolve_parent') || script.includes('parentSpec') || script.includes('parentClass')) {
+      return { type: 'plugin', actionName: 'blueprint_resolve_parent', params: {} };
+    }
+
+    // Blueprint add component / modify_scs patterns
+    if (script.includes('add_component_to_blueprint') || script.includes('add_component(') || script.includes('blueprint_modify_scs')) {
+      return { functionName: 'ADD_COMPONENT_TO_BLUEPRINT', params: {} };
+    }
+
+    return null;
   }
 
   /**
@@ -1208,7 +1332,7 @@ finally:
         }
       }
 
-      // Fallback to previous regex approach (best-effort)
+  // Try previous regex approach (best-effort)
       const matches = Array.from(out.matchAll(/RESULT:({[\s\S]*})/g));
       if (matches.length > 0) {
         const last = matches[matches.length - 1][1];
@@ -1217,11 +1341,13 @@ finally:
 
       // If no RESULT: marker, return the best-effort textual output or original response
       return typeof response !== 'undefined' ? response : out;
-    } catch {
-      this.log.warn('Python execution failed, trying direct execution');
-      return this.executePython(script);
+    } catch (err) {
+  this.log.warn('Python execution failed and alternate mechanisms are disabled; propagating error', err);
+      throw err;
     }
   }
+
+  
 
   /**
    * Get the Unreal Engine version via Python and parse major/minor/patch.
@@ -1253,9 +1379,9 @@ print('RESULT:' + json.dumps({'version': ver, 'major': major, 'minor': minor, 'p
       return value;
     } catch (error) {
       this.log.warn('Failed to get engine version via Python', error);
-      const fallback = { version: 'unknown', major: 0, minor: 0, patch: 0, isUE56OrAbove: false };
-      this.engineVersionCache = { value: fallback, timestamp: now };
-      return fallback;
+  const defaultVersion = { version: 'unknown', major: 0, minor: 0, patch: 0, isUE56OrAbove: false };
+  this.engineVersionCache = { value: defaultVersion, timestamp: now };
+  return defaultVersion;
     }
   }
 
@@ -1304,24 +1430,52 @@ print('RESULT:' + json.dumps(flags))
   }
 
   /**
-   * Fallback commands when Python is not available
+   * Check whether an asset exists in the editor (plugin-first, Python
+   * fallback only when explicitly permitted). Returns true when the asset
+   * exists, false otherwise.
    */
-  private async executeFallbackCommand(functionName: string, params?: Record<string, any>): Promise<any> {
+  async assetExists(assetPath: string): Promise<boolean> {
+    if (!assetPath || typeof assetPath !== 'string') return false;
+
+    try {
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+      const result = await this.executeEditorFunction('ASSET_EXISTS', { path: assetPath }, { allowPythonFallback });
+      if (result && typeof result === 'object') {
+        if (typeof result.exists === 'boolean') return result.exists;
+        if (typeof (result as any).result === 'object' && typeof (result as any).result.exists === 'boolean') return (result as any).result.exists;
+      }
+      if (typeof result === 'boolean') return result;
+    } catch (err) {
+      this.log.debug('assetExists plugin/editor function call failed or was rejected:', (err as Error)?.message ?? err);
+    }
+    return false;
+  }
+
+  /**
+   * Alternate commands when Python is not available
+   */
+  private async executeAlternateCommand(functionName: string, params?: Record<string, any>): Promise<any> {
     switch (functionName) {
       case 'SPAWN_ACTOR_AT_LOCATION':
-        return this.executeConsoleCommand(
-          `summon ${params?.class_path || 'StaticMeshActor'} ${params?.x || 0} ${params?.y || 0} ${params?.z || 0}`
-        );
+        return this.executeEditorFunction('SPAWN_ACTOR_AT_LOCATION', {
+          class_path: params?.class_path || 'StaticMeshActor',
+          params: { location: { x: params?.x || 0, y: params?.y || 0, z: params?.z || 0 }, rotation: params?.rotation }
+        });
       
       case 'DELETE_ACTOR':
-        // Use Python-based deletion to avoid unsafe console command and improve reliability
-        return this.executePythonWithResult(this.PYTHON_TEMPLATES.DELETE_ACTOR.script.replace('{actor_name}', String(params?.actor_name || '')));
+        // Prefer plugin-native delete (or executeEditorFunction fallback) over direct Python
+        return this.executeEditorFunction('DELETE_ACTOR', { actor_name: params?.actor_name });
       
       case 'BUILD_LIGHTING':
-        return this.executeConsoleCommand('BuildLighting');
+        // Prefer plugin / LevelEditorSubsystem to run a lighting build; fall back to console if unavailable.
+        try {
+          return await this.executeEditorFunction('BUILD_LIGHTING', { quality: params?.quality });
+        } catch (_err) {
+          return this.executeConsoleCommand('BuildLighting');
+        }
       
       default:
-        throw new Error(`No fallback available for ${functionName}`);
+        throw new Error(`No alternate available for ${functionName}`);
     }
   }
 

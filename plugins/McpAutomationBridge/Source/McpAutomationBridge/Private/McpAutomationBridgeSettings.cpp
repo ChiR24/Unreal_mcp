@@ -25,6 +25,11 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     // Default logging behavior
     LogVerbosity = EMcpLogVerbosity::Log;
     bApplyLogVerbosityToAll = false;
+    // Deprecated Python fallbacks should be disabled by default
+    bAllowPythonFallbacks = false;
+    // Extra gating for Python fallback execution
+    bAllowAllPythonFallbacks = false;
+    AllowedPythonScriptAllowlist = TArray<FString>();
 }
 
 FText UMcpAutomationBridgeSettings::GetSectionText() const

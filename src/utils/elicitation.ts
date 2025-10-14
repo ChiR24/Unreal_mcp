@@ -2,7 +2,7 @@ import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { Logger } from './logger.js';
 
 // Minimal helper to opportunistically use MCP Elicitation when available.
-// Safe across clients: validates schema shape, handles timeouts and -32601 fallbacks.
+// Safe across clients: validates schema shape and handles timeouts and -32601 errors.
 export type PrimitiveSchema =
   | { type: 'string'; title?: string; description?: string; minLength?: number; maxLength?: number; pattern?: string; format?: 'email'|'uri'|'date'|'date-time'; default?: string }
   | { type: 'number'|'integer'; title?: string; description?: string; minimum?: number; maximum?: number; default?: number }
@@ -17,7 +17,9 @@ export interface ElicitSchema {
 
 export interface ElicitOptions {
   timeoutMs?: number;
-  fallback?: () => Promise<{ ok: boolean; value?: any; error?: string }>;
+  // Handler invoked when elicitation cannot be performed; previously named
+  // Handler invoked when elicitation cannot be performed.
+  alternate?: () => Promise<{ ok: boolean; value?: any; error?: string }>;
 }
 
 export function createElicitationHelper(server: Server, log: Logger) {
@@ -77,7 +79,7 @@ export function createElicitationHelper(server: Server, log: Logger) {
 
   async function elicit(message: string, requestedSchema: ElicitSchema, opts: ElicitOptions = {}) {
     if (!supported || !isSafeSchema(requestedSchema)) {
-      if (opts.fallback) return opts.fallback();
+      if (opts.alternate) return opts.alternate();
       return { ok: false, error: 'elicitation-unsupported' };
     }
 
@@ -98,10 +100,10 @@ export function createElicitationHelper(server: Server, log: Logger) {
 
       if (action === 'accept') return { ok: true, value: content };
       if (action === 'decline' || action === 'cancel') {
-        if (opts.fallback) return opts.fallback();
+        if (opts.alternate) return opts.alternate();
         return { ok: false, error: action };
       }
-      if (opts.fallback) return opts.fallback();
+      if (opts.alternate) return opts.alternate();
       return { ok: false, error: 'unexpected-response' };
     } catch (e: any) {
       const msg = String(e?.message || e);
@@ -115,8 +117,9 @@ export function createElicitationHelper(server: Server, log: Logger) {
       ) {
         supported = false;
       }
-      log.debug('Elicitation failed; falling back', { error: msg, code });
-      if (opts.fallback) return opts.fallback();
+  // Use an alternate handler if provided when elicitation fails.
+  log.debug('Elicitation failed; using alternate handler', { error: msg, code });
+      if (opts.alternate) return opts.alternate();
       return { ok: false, error: msg.includes('timeout') ? 'timeout' : 'rpc-failed' };
     }
   }

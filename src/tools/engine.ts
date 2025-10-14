@@ -1,5 +1,6 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { loadEnv } from '../types/env.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 import { spawn } from 'child_process';
 
 export class EngineTools {
@@ -22,8 +23,13 @@ export class EngineTools {
 
   async quitEditor() {
     try {
-      // Use Python SystemLibrary.quit_editor if available
-      await this.bridge.executePython('import unreal; unreal.SystemLibrary.quit_editor()');
+  // Use plugin-first wrapper to request quitting the editor. Fall back
+  // to Python only when explicitly allowed by env (deprecated).
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const resp = await (this.bridge as any).executeEditorPython('import unreal; unreal.SystemLibrary.quit_editor()', { allowPythonFallback });
+      if (resp && (resp as any).success === false) {
+        return { success: false, error: (resp as any).error || (resp as any).message || 'Plugin rejected quit request' };
+      }
       return { success: true, message: 'Quit command sent' };
     } catch (err: any) {
       return { success: false, error: String(err?.message || err) };

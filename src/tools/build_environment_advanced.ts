@@ -1,5 +1,6 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { interpretStandardResult, coerceBoolean, coerceNumber, coerceString, coerceStringArray } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 /**
  * Advanced Build Environment Tools
@@ -138,7 +139,8 @@ except Exception as e:
 print(f"RESULT:{json.dumps(result)}")
 `.trim();
 
-        const response = await this.bridge.executePython(pythonScript);
+    const allowPythonFallback = allowPythonFallbackFromEnv();
+    const response = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback });
         const interpreted = interpretStandardResult(response, {
             successMessage: `Created procedural terrain '${params.name}'`,
             failureMessage: `Failed to create procedural terrain '${params.name}'`
@@ -372,7 +374,8 @@ except Exception as e:
 print(f"RESULT:{json.dumps(result)}")
 `.trim();
 
-        const response = await this.bridge.executePython(pythonScript);
+    const allowPythonFallback = allowPythonFallbackFromEnv();
+    const response = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback });
         const interpreted = interpretStandardResult(response, {
             successMessage: `Created procedural foliage volume '${params.name}'`,
             failureMessage: `Failed to create procedural foliage volume '${params.name}'`
@@ -517,7 +520,8 @@ except Exception as e:
 print(f"RESULT:{json.dumps(result)}")
 `.trim();
 
-        const response = await this.bridge.executePython(pythonScript);
+    const allowPythonFallback = allowPythonFallbackFromEnv();
+    const response = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback });
         const interpreted = interpretStandardResult(response, {
             successMessage: 'Foliage instances added',
             failureMessage: 'Failed to add foliage instances'
@@ -668,7 +672,8 @@ except Exception as e:
 print(f"RESULT:{json.dumps(result)}")
 `.trim();
 
-        const response = await this.bridge.executePython(pythonScript);
+    const allowPythonFallback = allowPythonFallbackFromEnv();
+    const response = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback });
         const interpreted = interpretStandardResult(response, {
             successMessage: `Created landscape grass type '${params.name}'`,
             failureMessage: `Failed to create landscape grass type '${params.name}'`

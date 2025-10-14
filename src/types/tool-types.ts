@@ -23,6 +23,7 @@ export interface ManageAssetResponse extends BaseToolResponse {
   assets?: AssetInfo[];
   paths?: string[];
   materialPath?: string;
+  materialInstancePath?: string;
 }
 
 // Actor Control Types
@@ -166,12 +167,20 @@ export interface ToolParameters {
 }
 
 // Consolidated tool action types
-export type AssetAction = 'list' | 'import' | 'create_material';
+export type AssetAction = 'list' | 'import' | 'create_material' | 'create_material_instance';
 export type ActorAction = 'spawn' | 'delete' | 'apply_force';
 export type EditorAction = 'play' | 'stop' | 'set_camera' | 'set_view_mode';
 export type LevelAction = 'load' | 'save' | 'stream' | 'create_light' | 'build_lighting';
 export type AnimationAction = 'create_animation_bp' | 'play_montage' | 'setup_ragdoll';
-export type EffectAction = 'particle' | 'niagara' | 'debug_shape';
+export type EffectAction =
+  | 'particle'
+  | 'niagara'
+  | 'debug_shape'
+  | 'spawn_niagara'
+  | 'set_niagara_parameter'
+  | 'clear_debug_shapes'
+  | 'create_dynamic_light'
+  | 'cleanup';
 export type BlueprintAction = 'create' | 'add_component';
 export type EnvironmentAction = 'create_landscape' | 'sculpt' | 'add_foliage' | 'paint_foliage';
 export type SystemAction = 'profile' | 'show_fps' | 'set_quality' | 'play_sound' | 'create_widget' | 'show_widget';
@@ -187,6 +196,8 @@ export interface ConsolidatedToolParams {
     destinationPath?: string;
     name?: string;
     path?: string;
+    parentMaterial?: string;
+    parameters?: Record<string, any>;
   };
 
   control_actor: {
@@ -242,6 +253,20 @@ export interface ConsolidatedToolParams {
     shape?: string;
     size?: number;
     color?: [number, number, number, number];
+    // Dynamic light support
+    lightName?: string;
+    lightType?: 'Point' | 'Spot' | 'Directional' | 'Rect' | string;
+    intensity?: number;
+    rotation?: Rotation3D;
+    pulse?: { enabled?: boolean; frequency?: number };
+    // Cleanup filter for actor cleanup
+    filter?: string;
+    // Niagara parameter helpers
+    systemName?: string;
+    parameterName?: string;
+    parameterType?: string;
+    value?: any;
+    isUserParameter?: boolean;
     duration?: number;
   };
 

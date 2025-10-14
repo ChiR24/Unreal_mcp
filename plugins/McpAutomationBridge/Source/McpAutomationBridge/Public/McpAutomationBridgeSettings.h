@@ -92,6 +92,29 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Debug", meta = (ClampMin = "0.0"))
     float TickerIntervalSeconds;
 
+    /**
+     * When true, allow editor Python fallback handlers (deprecated).
+     *
+     * NOTE: Python-based fallbacks are legacy and less reliable across engine
+     * versions. Prefer native C++ automation handlers implemented in the
+     * plugin. This option exists only to ease migration and debugging and
+     * defaults to false.
+     */
+    UPROPERTY(config, EditAnywhere, Category = "Compatibility")
+    bool bAllowPythonFallbacks;
+
+    /** When true, allow any Python script to be executed when Python fallbacks
+     * are enabled. This is an audited, explicit opt-in for migration and
+     * debugging. Default is false — prefer native handlers. */
+    UPROPERTY(config, EditAnywhere, Category = "Compatibility")
+    bool bAllowAllPythonFallbacks;
+
+    /** Optional list of allowed Python template fingerprints or substrings.
+     * If non-empty, only scripts containing one of these substrings will be
+     * permitted when Python fallbacks are enabled (audited allowlist). */
+    UPROPERTY(config, EditAnywhere, Category = "Compatibility")
+    TArray<FString> AllowedPythonScriptAllowlist;
+
     virtual FName GetCategoryName() const override { return FName(TEXT("Plugins")); }
     virtual FText GetSectionText() const override;
 

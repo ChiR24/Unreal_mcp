@@ -16,13 +16,28 @@ export class Logger {
   }
 
   debug(...args: any[]) {
-    if (this.shouldLog('debug')) console.error(`[${this.scope}]`, ...args);
+    if (!this.shouldLog('debug')) return;
+    if (typeof console.debug === 'function') {
+      console.debug(`[${this.scope}]`, ...args);
+    } else {
+      console.log(`[${this.scope}]`, ...args);
+    }
   }
   info(...args: any[]) {
-    if (this.shouldLog('info')) console.error(`[${this.scope}]`, ...args);
+    if (!this.shouldLog('info')) return;
+    if (typeof console.info === 'function') {
+      console.info(`[${this.scope}]`, ...args);
+    } else {
+      console.log(`[${this.scope}]`, ...args);
+    }
   }
   warn(...args: any[]) {
-    if (this.shouldLog('warn')) console.error(`[${this.scope}]`, ...args);
+    if (!this.shouldLog('warn')) return;
+    if (typeof console.warn === 'function') {
+      console.warn(`[${this.scope}]`, ...args);
+    } else {
+      console.log(`[${this.scope}]`, ...args);
+    }
   }
   error(...args: any[]) {
     if (this.shouldLog('error')) console.error(`[${this.scope}]`, ...args);

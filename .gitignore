@@ -60,3 +60,5 @@ verify-*.js
 mcp-publisher.exe
 PUBLISH.md
 validate-server.js
+.windsurf/rules/copilot-instructions.md
+tmp/

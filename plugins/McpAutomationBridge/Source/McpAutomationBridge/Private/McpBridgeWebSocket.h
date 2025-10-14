@@ -69,6 +69,14 @@ public:
     FMcpBridgeWebSocketHeartbeatEvent& OnHeartbeat() { return HeartbeatDelegate; }
     FMcpBridgeWebSocketClientConnectedEvent& OnClientConnected() { return ClientConnectedDelegate; }
 
+    // Notify the socket implementation that the message handler has been
+    // registered on the game thread. This is used to avoid a race where the
+    // client may send the initial application-level handshake immediately
+    // after the WebSocket upgrade completes and before game-thread handlers
+    // are attached. The server thread will wait briefly for this signal
+    // before it begins draining frames.
+    void NotifyMessageHandlerRegistered();
+
     // FRunnable
     virtual bool Init() override;
     virtual uint32 Run() override;
@@ -128,4 +136,14 @@ private:
     FString HostHeader;
     FString HandshakePath;
     FString HandshakeKey;
+    
+    // Synchronization event used to coordinate between the server socket
+    // worker thread and the game thread. When a server-accepted connection
+    // completes the HTTP/WebSocket upgrade the worker thread will wait for
+    // the game thread to attach message handlers (OnMessage) so that the
+    // initial application-level handshake (bridge_hello) is not lost.
+    FEvent* HandlerReadyEvent;
+    // Set to true by the game thread when it has registered the message
+    // handler for this client connection.
+    TAtomic<bool> bHandlerRegistered;
 };

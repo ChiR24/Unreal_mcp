@@ -1,6 +1,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay } from '../utils/validation.js';
 import { bestEffortInterpretedText, coerceString, coerceStringArray, interpretStandardResult } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class PhysicsTools {
   constructor(private bridge: UnrealBridge) {}
@@ -53,13 +54,14 @@ if not result['success']:
                 result['assetName'] = str(first_mesh.asset_name)
 
 if not result['success']:
-    result['fallback'] = '/Engine/EngineMeshes/SkeletalCube'
+  result['alternate'] = '/Engine/EngineMeshes/SkeletalCube'
 
 print('RESULT:' + json.dumps(result))
 `;
 
     try {
-      const response = await this.bridge.executePython(pythonScript);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback });
       const interpreted = interpretStandardResult(response, {
         successMessage: 'Skeletal mesh discovery complete',
         failureMessage: 'Failed to discover skeletal mesh'
@@ -72,9 +74,9 @@ print('RESULT:' + json.dumps(result))
         }
       }
 
-      const fallback = coerceString(interpreted.payload.fallback);
-      if (fallback) {
-        return fallback;
+      const alternate = coerceString(interpreted.payload.alternate);
+      if (alternate) {
+        return alternate;
       }
 
       const detail = bestEffortInterpretedText(interpreted);
@@ -183,7 +185,7 @@ print('RESULT:' + json.dumps(result))
       // IMPORTANT: Physics assets require a SKELETAL MESH, not a skeleton
       // UE5 uses: /Game/Characters/Mannequins/Meshes/SKM_Manny_Simple or SKM_Quinn_Simple
       // UE4 used: /Game/Mannequin/Character/Mesh/SK_Mannequin (which no longer exists)
-      // Fallback: /Engine/EngineMeshes/SkeletalCube
+  // Alternate path: /Engine/EngineMeshes/SkeletalCube
       
       // Common skeleton paths that should be replaced with actual skeletal mesh paths
       const skeletonToMeshMap: { [key: string]: string } = {
@@ -380,7 +382,7 @@ try:
             else:
               physics_asset = unreal.EditorSkeletalMeshLibrary.create_physics_asset(skeletal_mesh)
           except Exception as method1_modern_error:
-            record_warning(f"Modern creation path fallback: {method1_modern_error}")
+            record_warning(f"Modern creation path failure: {method1_modern_error}")
             # Final fallback to deprecated API
             physics_asset = unreal.EditorSkeletalMeshLibrary.create_physics_asset(skeletal_mesh)
         except Exception as e:
@@ -498,7 +500,8 @@ print('RESULT:' + json.dumps(result))
       
       // Execute Python and interpret response
       try {
-        const response = await this.bridge.executePython(pythonScript);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback });
         const interpreted = interpretStandardResult(response, {
           successMessage: `Ragdoll physics setup completed for ${sanitizedParams.name}`,
           failureMessage: `Failed to setup ragdoll for ${sanitizedParams.name}`
@@ -881,7 +884,8 @@ except Exception as e:
 print(f"RESULT:{json.dumps(result)}")
       `.trim();
       
-      const response = await this.bridge.executePython(pythonCode);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(pythonCode, { allowPythonFallback });
       const interpreted = interpretStandardResult(response, {
         successMessage: `Applied ${params.forceType} to ${params.actorName}`,
         failureMessage: 'Force application failed'
@@ -898,22 +902,22 @@ print(f"RESULT:{json.dumps(result)}")
         };
       }
 
-  const fallbackText = bestEffortInterpretedText(interpreted) ?? '';
-      if (/Applied/i.test(fallbackText)) {
+  const bestEffortText = bestEffortInterpretedText(interpreted) ?? '';
+      if (/Applied/i.test(bestEffortText)) {
         return {
           success: true,
-          message: fallbackText || interpreted.message,
+          message: bestEffortText || interpreted.message,
           availableActors,
           details: interpreted.details
         };
       }
 
-      if (/not found/i.test(fallbackText) || /error/i.test(fallbackText)) {
+      if (/not found/i.test(bestEffortText) || /error/i.test(bestEffortText)) {
         return {
           success: false,
-          error: interpreted.error ?? (fallbackText || 'Force application failed'),
+          error: interpreted.error ?? (bestEffortText || 'Force application failed'),
           availableActors,
-          details: interpreted.details ?? (fallbackText ? [fallbackText] : undefined)
+          details: interpreted.details ?? (bestEffortText ? [bestEffortText] : undefined)
         };
       }
 
@@ -921,7 +925,7 @@ print(f"RESULT:{json.dumps(result)}")
         success: false,
         error: interpreted.error ?? 'No valid result from Python',
         availableActors,
-        details: interpreted.details ?? (fallbackText ? [fallbackText] : undefined)
+  details: interpreted.details ?? (bestEffortText ? [bestEffortText] : undefined)
       };
     } catch (err) {
       return { success: false, error: `Failed to apply force: ${err}` };

@@ -1,8 +1,11 @@
 // Performance tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
 import { coerceBoolean, coerceNumber, interpretStandardResult } from '../utils/result-helpers.js';
+import { Logger } from '../utils/logger.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class PerformanceTools {
+  private log = new Logger('PerformanceTools');
   constructor(private bridge: UnrealBridge) {}
 
   // Start profiling
@@ -61,8 +64,8 @@ export class PerformanceTools {
     enabled: boolean;
     verbose?: boolean;
   }) {
-    const startTime = Date.now();
-    console.log('[PerformanceTools] Starting showFPS with params:', params);
+  const startTime = Date.now();
+  this.log.debug('Starting showFPS with params:', params);
     
     try {
       // Use stat fps as requested - shows FPS counter
@@ -71,9 +74,9 @@ export class PerformanceTools {
         ? (params.verbose ? 'stat unit' : 'stat fps')
         : 'stat none';
       
-      console.log(`[PerformanceTools] Executing command: ${command}`);
+  this.log.debug(`Executing command: ${command}`);
       await this.bridge.executeConsoleCommand(command);
-      console.log(`[PerformanceTools] Command completed in ${Date.now() - startTime}ms`);
+  this.log.debug(`Command completed in ${Date.now() - startTime}ms`);
       return { 
         success: true, 
         message: params.enabled ? 'FPS display enabled' : 'FPS display disabled',
@@ -187,7 +190,7 @@ print('RESULT:' + json.dumps(result))
 
     // Always try to apply through Python for consistency
     try {
-      const pyResp = await this.bridge.executePython(py);
+  const pyResp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallbackFromEnv() });
       const interpreted = interpretStandardResult(pyResp, {
         successMessage: `${params.category} quality set to level ${requestedLevel}`,
         failureMessage: `Failed to set ${params.category} quality`

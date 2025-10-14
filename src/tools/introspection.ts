@@ -1,6 +1,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { Logger } from '../utils/logger.js';
 import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export interface ObjectInfo {
   class: string;
@@ -372,7 +373,10 @@ except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
     const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(py),
+      () => {
+        const allowPythonFallback = allowPythonFallbackFromEnv();
+        return (this.bridge as any).executeEditorPython(py, { allowPythonFallback });
+      },
       'inspectObject'
     );
     
@@ -550,7 +554,10 @@ except Exception as e:
 `.trim();
 
     const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(py),
+      () => {
+        const allowPythonFallback = allowPythonFallbackFromEnv();
+        return (this.bridge as any).executeEditorPython(py, { allowPythonFallback });
+      },
       'callFunction'
     );
     
@@ -637,7 +644,10 @@ except Exception as e:
 `.trim();
 
     const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(py),
+      () => {
+        const allowPythonFallback = allowPythonFallbackFromEnv();
+        return (this.bridge as any).executeEditorPython(py, { allowPythonFallback });
+      },
       'getCDO'
     );
     
@@ -704,7 +714,10 @@ except Exception as e:
 `.trim();
 
     const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(py),
+      () => {
+        const allowPythonFallback = allowPythonFallbackFromEnv();
+        return (this.bridge as any).executeEditorPython(py, { allowPythonFallback });
+      },
       'findObjectsByClass'
     );
     

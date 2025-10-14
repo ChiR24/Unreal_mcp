@@ -6,6 +6,7 @@ import {
   coerceString,
   coerceStringArray
 } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 type CreateAnimationBlueprintSuccess = {
   success: true;
@@ -75,7 +76,7 @@ export class AnimationTools {
         skeletonPath: params.skeletonPath
       });
 
-      const response = await this.bridge.executePython(script);
+  const response = await (this.bridge as any).executeEditorPython(script, { allowPythonFallback: allowPythonFallbackFromEnv() });
       return this.parseAnimationBlueprintResponse(response, assetName, assetPath);
     } catch (err) {
       const error = `Failed to create Animation Blueprint: ${err}`;
@@ -328,7 +329,7 @@ export class AnimationTools {
         blendOutTime: params.blendOutTime ?? 0.25
       });
 
-      const response = await this.bridge.executePython(script);
+  const response = await (this.bridge as any).executeEditorPython(script, { allowPythonFallback: allowPythonFallbackFromEnv() });
       const interpreted = interpretStandardResult(response, {
         successMessage: `Animation ${params.animationType} triggered on ${params.actorName}`,
         failureMessage: `Failed to play animation on ${params.actorName}`

@@ -162,13 +162,12 @@ export function resolveBlueprintCandidates(rawName: string | undefined): { prima
       pushUnique(`/Game/Blueprints/${remainder}`);
       pushUnique(`/Game/${remainder}`);
     }
-    // Keep the original normalized input as a fallback.
+    // Keep the original normalized input as a final candidate.
     pushUnique(normalizedInput);
     // Also include a leading-slash variant if not present.
     pushUnique(normalizedInput.startsWith('/') ? normalizedInput : `/${withoutLeading}`);
   } else {
-    // Bare name: prefer common content roots first, then fall back to
-    // the raw name and a leading-slash variant.
+    // Bare name: prefer common content roots first, then try the raw name and a leading-slash variant.
     pushUnique(`/Game/Blueprints/${withoutLeading}`);
     pushUnique(`/Game/${withoutLeading}`);
     pushUnique(normalizedInput);
@@ -178,17 +177,7 @@ export function resolveBlueprintCandidates(rawName: string | undefined): { prima
   return { primary: ordered[0], candidates: ordered };
 }
 
-export function shouldAttemptPythonFallback(errorCode?: string, message?: string): boolean {
-  const normalizedCode = (errorCode ?? '').toUpperCase();
-  const normalizedMessage = (message ?? '').toLowerCase();
-  if (!normalizedCode && !normalizedMessage) return false;
-  if (normalizedCode.includes('AUTOMATION_BRIDGE')) return true;
-  if (normalizedMessage.includes('automation bridge')) return true;
-  if (normalizedCode.includes('SCS_UNAVAILABLE') || normalizedMessage.includes('simpleconstructionscript') || normalizedMessage.includes('scs_unavailable')) return true;
-  if (normalizedCode.includes('COMPONENT_CLASS_NOT_FOUND') || normalizedMessage.includes('unable to load component class')) return true;
-  if (normalizedCode.includes('PROPERTY_NOT_FOUND') || (normalizedMessage.includes('property') && normalizedMessage.includes('not found'))) return true;
-  return false;
-}
+ 
 
 export function inferVariableTypeFromValue(value: unknown): string | undefined {
   if (value === null || value === undefined) return undefined;

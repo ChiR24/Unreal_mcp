@@ -2,6 +2,7 @@
 import JSON5 from 'json5';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { escapePythonString } from '../utils/python.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class AudioTools {
   constructor(private bridge: UnrealBridge) {}
@@ -196,7 +197,7 @@ export class AudioTools {
   const pitchLiteral = toPyNumber(params.settings?.pitch);
   const loopingLiteral = toPyBool(params.settings?.looping);
 
-  const py = `
+  const _py = `
 import unreal
 import json
 
@@ -336,7 +337,18 @@ finally:
   print('RESULT:' + json.dumps(payload))
 `.trim();
     try {
-      const resp = await this.bridge.executePython(py);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const payload = {
+        name: params.name,
+        package_path: path,
+        wave_path: wavePath,
+        attenuation_path: attenuationPath,
+        attach_wave: !!params.wavePath,
+        volume: params.settings?.volume ?? null,
+        pitch: params.settings?.pitch ?? null,
+        looping: params.settings?.looping ?? null
+      };
+      const resp = await this.bridge.executeEditorFunction('CREATE_SOUND_CUE', payload as any, { allowPythonFallback });
       return this.interpretResult(resp, {
         successMessage: 'Sound cue created',
         failureMessage: 'Failed to create SoundCue'
@@ -359,7 +371,7 @@ finally:
     const startTime = params.startTime ?? 0.0;
     const soundPath = params.soundPath ?? '';
 
-  const py = `
+  const _py = `
 import unreal
 import json
 
@@ -429,7 +441,17 @@ finally:
   print('RESULT:' + json.dumps(payload))
 `.trim();
     try {
-      const resp = await this.bridge.executePythonWithResult(py);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const payload = {
+        path: soundPath,
+        x: params.location?.[0] ?? 0,
+        y: params.location?.[1] ?? 0,
+        z: params.location?.[2] ?? 0,
+        volume,
+        pitch,
+        startTime
+      };
+      const resp = await this.bridge.executeEditorFunction('PLAY_SOUND_AT_LOCATION', payload as any, { allowPythonFallback });
       return this.interpretResult(resp, {
         successMessage: 'Sound played',
         failureMessage: 'Failed to play sound'
@@ -451,7 +473,7 @@ finally:
     const startTime = params.startTime ?? 0.0;
     const soundPath = params.soundPath ?? '';
 
-  const py = `
+  const _py = `
 import unreal
 import json
 
@@ -558,7 +580,14 @@ finally:
   print('RESULT:' + json.dumps(payload))
 `.trim();
     try {
-      const resp = await this.bridge.executePythonWithResult(py);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const payload = {
+        path: soundPath,
+        volume,
+        pitch,
+        startTime
+      };
+      const resp = await this.bridge.executeEditorFunction('PLAY_SOUND_2D', payload as any, { allowPythonFallback });
       return this.interpretResult(resp, {
         successMessage: 'Sound2D played',
         failureMessage: 'Failed to play sound2D'
@@ -779,7 +808,7 @@ finally:
   `.trim();
       
       try {
-        const resp = await this.bridge.executePython(py);
+  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallbackFromEnv() });
         const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
         const m = out.match(/RESULT:({.*})/);
         if (m) {

@@ -1,5 +1,6 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { coerceBoolean, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class AssetResources {
   constructor(private bridge: UnrealBridge) {}
@@ -177,7 +178,8 @@ except Exception as e:
     print("RESULT:" + json.dumps({'success': False, 'error': str(e), 'path': _dir}))
 `.trim();
 
-      const resp = await this.bridge.executePython(py);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback });
       const interpreted = interpretStandardResult(resp, {
         successMessage: 'Directory contents retrieved',
         failureMessage: 'Failed to list directory contents'
@@ -235,8 +237,8 @@ except Exception as e:
         assets: [],
         error: errorMessage,
         warning: 'AssetRegistry query failed. Ensure the MCP Automation Bridge is connected.',
-        transport: 'automation_bridge',
-        method: 'asset_registry_fallback'
+  transport: 'automation_bridge',
+  method: 'asset_registry_alternate'
       };
     }
 
@@ -270,7 +272,8 @@ try:
 except Exception as e:
     print("RESULT:{'success': False, 'error': '" + str(e) + "'}")
 `.trim();
-    const resp = await this.bridge.executePython(py);
+  const allowPythonFallback2 = allowPythonFallbackFromEnv();
+  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallback2 });
     const interpreted = interpretStandardResult(resp, {
       successMessage: 'Asset existence verified',
       failureMessage: 'Failed to verify asset existence'

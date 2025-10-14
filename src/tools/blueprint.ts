@@ -3,11 +3,9 @@ import { AutomationBridge } from '../automation-bridge.js';
 import { Logger } from '../utils/logger.js';
 import { validateAssetParams, concurrencyDelay } from '../utils/validation.js';
 import { coerceString } from '../utils/result-helpers.js';
-// No Python fallbacks: Blueprint operations must be implemented by the
-// Automation Bridge plugin. Fallbacks to editor Python or other engine
-// plugins have been removed to let a dedicated MCP plugin implement the
-// behavior deterministically.
-import * as BlueprintProbes from './blueprint/python-probes.js';
+// Blueprint operations must be implemented by the Automation Bridge plugin.
+// No per-tool Python fallback code is present; caller should rely on the
+// plugin or receive explicit errors (e.g. UNKNOWN_PLUGIN_ACTION).
 
 /**
  * BlueprintTools — plugin-first implementation
@@ -83,24 +81,43 @@ export class BlueprintTools {
       const validation = validateAssetParams({ name: params.name, savePath: params.savePath || '/Game/Blueprints' });
       if (!validation.valid) return { success: false, message: `Failed to create blueprint: ${validation.error}`, error: validation.error };
       const sanitized = validation.sanitized;
-      const payload = { name: sanitized.name, blueprintType: params.blueprintType ?? 'Actor', savePath: sanitized.savePath ?? '/Game/Blueprints', parentClass: params.parentClass };
+  const payload: Record<string, unknown> = { name: sanitized.name, blueprintType: params.blueprintType ?? 'Actor', savePath: sanitized.savePath ?? '/Game/Blueprints', parentClass: params.parentClass };
       await concurrencyDelay();
 
       // Require Automation Bridge plugin to implement blueprint_create.
+      // If the plugin is unavailable or does not implement the action,
+      // return an explicit error so callers know to enable or update the plugin.
       if (!this.automationBridge) {
         return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge is not available; blueprint_create cannot be performed' } as const;
       }
-      const res = await this.sendAction('blueprint_create', payload, params.timeoutMs);
-      if (res && res.success) {
-        this.pluginBlueprintActionsAvailable = true;
-      }
-      if (!res.success && this.isUnknownActionResponse(res)) {
-        // Do not fall back to Python — surface a clear error so the plugin
-        // owner can implement the action in their MCP plugin.
-        this.pluginBlueprintActionsAvailable = false;
+
+      if (this.pluginBlueprintActionsAvailable === false) {
         return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_create' } as const;
       }
-      return res;
+
+      // Try the plugin first with a shorter, configurable timeout so we
+      // can fail fast and optionally fall back to Python creation.
+      const envPluginTimeout = Number(process.env.MCP_AUTOMATION_PLUGIN_CREATE_TIMEOUT_MS ?? process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '15000');
+      const pluginTimeout = Number.isFinite(envPluginTimeout) && envPluginTimeout > 0 ? envPluginTimeout : 15000;
+      try {
+        const res = await this.sendAction('blueprint_create', payload, typeof params.timeoutMs === 'number' ? params.timeoutMs : pluginTimeout);
+        if (res && res.success) {
+          this.pluginBlueprintActionsAvailable = true;
+          return res;
+        }
+        if (res && this.isUnknownActionResponse(res)) {
+          this.pluginBlueprintActionsAvailable = false;
+          return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_create' } as const;
+        }
+        return res as any;
+      } catch (err: any) {
+        const errTxt = String(err ?? '');
+        const isTimeout = errTxt.includes('Request timed out') || errTxt.includes('-32001') || errTxt.toLowerCase().includes('timeout');
+        if (isTimeout) {
+          this.pluginBlueprintActionsAvailable = false;
+        }
+        return { success: false, error: String(err), message: String(err) } as const;
+      }
     } catch (err: any) {
       return { success: false, error: String(err), message: String(err) };
     }
@@ -156,9 +173,11 @@ export class BlueprintTools {
   async waitForBlueprint(blueprintRef: string | string[], timeoutMs?: number) {
     const candidates = Array.isArray(blueprintRef) ? blueprintRef : this.buildCandidates(blueprintRef as string | undefined);
     if (!candidates || candidates.length === 0) return { success: false, error: 'Invalid blueprint reference', checked: [] } as any;
-    // Try plugin probe first unless we already know it's unavailable
+    // Require plugin probe only: do not fallback to Python probes. If the
+    // plugin is known not to implement blueprint actions, surface a clear
+    // error to callers so plugin implementers can add the missing action.
     if (this.pluginBlueprintActionsAvailable === false) {
-      return await BlueprintProbes.waitForBlueprint(this.bridge, candidates, timeoutMs);
+      return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_exists' } as any;
     }
 
     const start = Date.now();
@@ -173,10 +192,10 @@ export class BlueprintTools {
             return { success: true, found: r.result.found ?? candidate } as any;
           }
           if (r && r.success === false && this.isUnknownActionResponse(r)) {
-            // Plugin does not implement blueprint_exists — cache and fall back
+            // Plugin does not implement blueprint_exists — cache and surface
+            // an explicit error (do not fall back to Python probes).
             this.pluginBlueprintActionsAvailable = false;
-            this.log.info('Automation plugin does not implement blueprint_exists; falling back to Python probe');
-            return await BlueprintProbes.waitForBlueprint(this.bridge, candidates, timeoutMs);
+            return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_exists' } as any;
           }
         } catch (_e) {
           // ignore and try next candidate
@@ -187,9 +206,25 @@ export class BlueprintTools {
     }
     // Timeout — if plugin available we tried, otherwise fallback to Python probe
     if (this.pluginBlueprintActionsAvailable === null) {
-      return await BlueprintProbes.waitForBlueprint(this.bridge, candidates, timeoutMs);
+      return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin availability unknown; blueprint_exists not implemented by plugin' } as any;
     }
     return { success: false, error: `Timeout waiting for blueprint after ${tot}ms`, checked: candidates } as any;
+  }
+
+  async getBlueprint(params: { blueprintName: string; timeoutMs?: number; }) {
+    const candidates = this.buildCandidates(params.blueprintName);
+    const primary = candidates[0];
+    if (!primary) return { success: false, error: 'Invalid blueprint name' } as const;
+    try {
+      const pluginResp = await this.sendAction('blueprint_get', { blueprintCandidates: candidates, requestedPath: primary }, params.timeoutMs);
+      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_get' } as const;
+      }
+      return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_GET_FAILED', message: pluginResp?.message ?? 'Failed to get blueprint via automation bridge' } as const;
+    } catch (err: any) {
+      return { success: false, error: String(err), message: String(err) } as const;
+    }
   }
 
   async probeSubobjectDataHandle(opts: { componentClass?: string } = {}) {

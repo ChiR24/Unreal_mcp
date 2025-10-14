@@ -1,9 +1,13 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation-bridge.js';
 import { sanitizeAssetName, validateAssetParams } from '../utils/validation.js';
 import { interpretStandardResult, coerceString } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class NiagaraTools {
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+
+  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
   /**
    * Create Niagara System (real asset via Python)
@@ -22,13 +26,32 @@ export class NiagaraTools {
   }) {
     try {
     const path = params.savePath || '/Game/Effects/Niagara';
+    // Prefer plugin-first creation
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const res: any = await this.automationBridge.sendAutomationRequest('create_niagara_system', { name: params.name, savePath: path, template: params.template }, { timeoutMs: 60000 });
+        if (res && res.success !== false) {
+          return { success: true, path: res.path || res.result?.path || `${path}/${params.name}`, message: res.message || 'Niagara system created' } as any;
+        }
+        const errTxt = String(res?.error ?? res?.message ?? '');
+        if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+          // Fall through to Python fallback when plugin does not implement
+        } else {
+          return { success: false, message: res?.message ?? 'Niagara create failed', error: res?.error ?? 'CREATE_NIAGARA_FAILED' } as any;
+        }
+      } catch (_e) {
+        // fall through to Python fallback below
+      }
+    }
+
+    // Fallback: Python creation (deprecated; requires server opt-in)
     const python = `
 import unreal
 import json
 
 path = r"${path}"
 name = r"${params.name}"
-full_path = f"{path}/{name}"
+full_path = f"${path}/${params.name}"
 
 if unreal.EditorAssetLibrary.does_asset_exist(full_path):
     print('RESULT:' + json.dumps({'success': True, 'path': full_path, 'existing': True}))
@@ -50,22 +73,23 @@ else:
         else:
             print('RESULT:' + json.dumps({'success': False, 'error': 'AssetTools create_asset failed'}))
 `.trim();
-      const resp = await this.bridge.executePython(python);
-      const interpreted = interpretStandardResult(resp, {
-        successMessage: `Niagara system ${params.name} created`,
-        failureMessage: `Failed to create Niagara system ${params.name}`
-      });
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const resp = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
+    const interpreted = interpretStandardResult(resp, {
+      successMessage: `Niagara system ${params.name} created`,
+      failureMessage: `Failed to create Niagara system ${params.name}`
+    });
 
-      if (!interpreted.success) {
-        return { success: false, error: interpreted.error ?? interpreted.message };
-      }
+    if (!interpreted.success) {
+      return { success: false, error: interpreted.error ?? interpreted.message };
+    }
 
-      const pathFromPayload = coerceString(interpreted.payload.path) ?? `${path}/${params.name}`;
-      return {
-        success: true,
-        path: pathFromPayload,
-        message: interpreted.message
-      };
+    const pathFromPayload = coerceString(interpreted.payload.path) ?? `${path}/${params.name}`;
+    return {
+      success: true,
+      path: pathFromPayload,
+      message: interpreted.message
+    };
     } catch (err) {
       return { success: false, error: `Failed to create Niagara system: ${err}` };
     }
@@ -136,6 +160,27 @@ else:
     try {
       const paramType = params.isUserParameter ? 'User' : 'System';
       let valueStr = '';
+      // Prefer plugin transport when available
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp: any = await this.automationBridge.sendAutomationRequest('set_niagara_parameter', {
+            systemName: params.systemName,
+            parameterName: params.parameterName,
+            parameterType: params.parameterType,
+            value: params.value,
+            isUserParameter: params.isUserParameter === true
+          });
+          if (resp && resp.success !== false) return { success: true, message: resp.message || `Parameter ${params.parameterName} set on ${params.systemName}`, applied: resp.applied ?? resp.result?.applied } as any;
+          const errTxt = String(resp?.error ?? resp?.message ?? '');
+          if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+            // fall through to console fallback
+          } else {
+            return { success: false, message: resp?.message ?? 'Set parameter failed', error: resp?.error ?? 'SET_PARAMETER_FAILED' } as any;
+          }
+        } catch (_e) {
+          // fall back to console execution below
+        }
+      }
       switch (params.parameterType) {
         case 'Float': case 'Int': case 'Bool': valueStr = String(params.value); break;
         case 'Vector': { const v = params.value as number[]; valueStr = `${v[0]} ${v[1]} ${v[2]}`; break; }
@@ -193,7 +238,8 @@ p = r"${fullPath}"
 exists = bool(unreal.EditorAssetLibrary.does_asset_exist(p))
 print('RESULT:' + json.dumps({'success': True, 'exists': exists}))
 `.trim();
-      const verifyResp = await this.bridge.executePython(verifyPy);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const verifyResp = await (this.bridge as any).executeEditorPython(verifyPy, { allowPythonFallback });
       const verifyResult = interpretStandardResult(verifyResp, {
         successMessage: 'Niagara asset verification complete',
         failureMessage: `Failed to verify Niagara asset at ${fullPath}`
@@ -255,6 +301,30 @@ print('RESULT:' + json.dumps({'success': True, 'exists': exists}))
   }) {
     try {
       const loc = Array.isArray(params.location) ? { x: params.location[0], y: params.location[1], z: params.location[2] } : params.location;
+      // Prefer plugin transport when available
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp: any = await this.automationBridge.sendAutomationRequest('spawn_niagara', {
+            systemPath: params.systemPath,
+            location: [loc.x ?? 0, loc.y ?? 0, loc.z ?? 0],
+            rotation: params.rotation,
+            scale: params.scale,
+            autoDestroy: params.autoDestroy,
+            attachToActor: params.attachToActor
+          });
+          if (resp && resp.success !== false) {
+            return { success: true, message: resp.message || 'Niagara effect spawned', actor: resp.actor || resp.result?.actor } as any;
+          }
+          const errTxt = String(resp?.error ?? resp?.message ?? '');
+          if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+            // fall through to Python fallback
+          } else {
+            return { success: false, message: resp?.message ?? 'Spawn failed', error: resp?.error ?? 'SPAWN_FAILED' } as any;
+          }
+        } catch (_e) {
+          // fall through to Python fallback
+        }
+      }
       const rot = params.rotation || [0, 0, 0];
       const scl = Array.isArray(params.scale) ? params.scale : (typeof params.scale === 'number' ? [params.scale, params.scale, params.scale] : [1, 1, 1]);
     const py = `
@@ -288,7 +358,8 @@ if unreal.EditorAssetLibrary.does_asset_exist(sys_path):
 else:
   print('RESULT:' + json.dumps({'success': False, 'error': 'System asset not found'}))
 `.trim();
-    const resp = await this.bridge.executePython(py);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback });
     const interpreted = interpretStandardResult(resp, {
       successMessage: 'Niagara effect spawned',
       failureMessage: 'Failed to spawn Niagara effect'

@@ -16,20 +16,20 @@ export interface PromptTemplate {
   }>;
 }
 
-function clampChoice(value: unknown, choices: string[], fallback: string): string {
+function clampChoice(value: unknown, choices: string[], defaultChoice: string): string {
   if (typeof value === 'string') {
     const normalized = value.toLowerCase();
     if (choices.includes(normalized)) {
       return normalized;
     }
   }
-  return fallback;
+  return defaultChoice;
 }
 
-function coerceNumber(value: unknown, fallback: number, min?: number, max?: number): number {
+function coerceNumber(value: unknown, defaultValue: number, min?: number, max?: number): number {
   const num = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(num)) {
-    return fallback;
+    return defaultValue;
   }
   if (min !== undefined && num < min) {
     return min;

@@ -235,6 +235,8 @@ FMcpBridgeWebSocket::FMcpBridgeWebSocket(const FString& InUrl, const FString& In
     , bListening(false)
     , bStopping(false)
 {
+    HandlerReadyEvent = nullptr;
+    bHandlerRegistered = false;
 }
 
 FMcpBridgeWebSocket::FMcpBridgeWebSocket(int32 InPort, const FString& InHost, int32 InListenBacklog, float InAcceptSleepSeconds)
@@ -260,6 +262,8 @@ FMcpBridgeWebSocket::FMcpBridgeWebSocket(int32 InPort, const FString& InHost, in
     , bListening(false)
     , bStopping(false)
 {
+    HandlerReadyEvent = nullptr;
+    bHandlerRegistered = false;
 }
 
 FMcpBridgeWebSocket::FMcpBridgeWebSocket(FSocket* InClientSocket)
@@ -285,11 +289,18 @@ FMcpBridgeWebSocket::FMcpBridgeWebSocket(FSocket* InClientSocket)
     , bListening(false)
     , bStopping(false)
 {
+    HandlerReadyEvent = nullptr;
+    bHandlerRegistered = false;
 }
 
 FMcpBridgeWebSocket::~FMcpBridgeWebSocket()
 {
     Close();
+    if (HandlerReadyEvent)
+    {
+        FPlatformProcess::ReturnSynchEventToPool(HandlerReadyEvent);
+        HandlerReadyEvent = nullptr;
+    }
     if (Thread)
     {
         Thread->WaitForCompletion();
@@ -311,6 +322,15 @@ FMcpBridgeWebSocket::~FMcpBridgeWebSocket()
 FSocket* FMcpBridgeWebSocket::DetachSocket()
 {
     return static_cast<FSocket*>(FPlatformAtomics::InterlockedExchangePtr(reinterpret_cast<void**>(&Socket), nullptr));
+}
+
+void FMcpBridgeWebSocket::NotifyMessageHandlerRegistered()
+{
+    bHandlerRegistered = true;
+    if (HandlerReadyEvent)
+    {
+        HandlerReadyEvent->Trigger();
+    }
 }
 
 void FMcpBridgeWebSocket::InitializeWeakSelf(const TSharedPtr<FMcpBridgeWebSocket>& InShared)
@@ -453,6 +473,35 @@ uint32 FMcpBridgeWebSocket::RunClient()
             Pinned->ConnectedDelegate.Broadcast(Pinned);
         }
     });
+
+    // If this connection was accepted by the server thread (i.e. a remote
+    // client connected to the plugin), wait a short time for the game
+    // thread to attach message handlers. The client is likely to send the
+    // application-level 'bridge_hello' immediately after the upgrade; if
+    // the game thread hasn't attached its OnMessage handler yet we risk
+    // losing that first frame. Wait up to a moderate timeout for the
+    // handler registration signal.
+    if (bServerAcceptedConnection)
+    {
+        // Lazily create the event used to wait for the handler if it
+        // hasn't been allocated yet. Use the event pool to avoid
+        // continuously allocating objects.
+        if (!HandlerReadyEvent)
+        {
+            HandlerReadyEvent = FPlatformProcess::GetSynchEventFromPool(true);
+        }
+
+        constexpr double MaxWaitSeconds = 0.5; // 500 ms
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Awaiting message handler registration for new client connection (max %.0f ms)."), MaxWaitSeconds * 1000.0);
+        if (HandlerReadyEvent->Wait(FTimespan::FromSeconds(MaxWaitSeconds)))
+        {
+            // Event triggered by game thread
+        }
+        if (!bHandlerRegistered)
+        {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Message handler registration not observed in time; proceeding without explicit synchronization."));
+        }
+    }
 
     while (!bStopping)
     {

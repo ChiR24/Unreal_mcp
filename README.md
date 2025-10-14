@@ -173,6 +173,16 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 - **Input Flexibility** - Vectors/rotators accept object or array format
 - **Asset Caching** - 10-second TTL for improved performance
 
+### Plugin-first design & Python fallbacks
+
+The server follows a plugin-first approach: known Python templates are mapped to native plugin or editor-function handlers in `src/unreal-bridge.ts` (see `mapScriptToEditorFunction`) and are dispatched to the Automation Bridge plugin when available. Raw Editor Python execution is retained only as an explicit, opt-in fallback to preserve safety and reproducibility.
+
+Configuration and runtime defaults are centralized:
+- Defaults and protocol-level values are tracked in `src/constants.ts`.
+- Boolean env parsing and canonical helpers live in `src/utils/env.ts` (for example `allowPythonFallbackFromEnv()`), which is used throughout the tools to decide whether to run guarded Python fallbacks.
+
+To enable the guarded Python fallback behavior for development or CI, set `MCP_ALLOW_PYTHON_FALLBACKS=true`. Prefer implementing plugin-native handlers (under `plugins/McpAutomationBridge/Source/`) for production workflows — plugin-native operations are more reliable and testable than Python fallbacks.
+
 ## Supported Asset Types
 
 Blueprints, Materials, Textures, Static/Skeletal Meshes, Levels, Sounds, Particles, Niagara Systems
@@ -198,8 +208,15 @@ MCP_AUTOMATION_WS_PORTS=8090,8091    # (Optional) Comma-separated list of ports 
 MCP_AUTOMATION_LISTEN_HOST=0.0.0.0    # (Optional) Host interface the plugin should bind to when listening (0.0.0.0 to accept any interface)
 MCP_AUTOMATION_WS_PROTOCOLS=mcp-automation # (Optional) Preferred WebSocket subprotocols, comma-separated
 MCP_AUTOMATION_CAPABILITY_TOKEN=     # (Optional) Capability token the editor plugin must echo back during handshake
+MCP_ALLOW_PYTHON_FALLBACKS=false     # (Optional) When true, the server may run guarded Editor Python fallbacks for operations not implemented in the plugin
 MCP_AUTOMATION_BRIDGE_ENABLED=true   # Set to false to disable the automation bridge listener entirely
 ```
+
+Note on configuration precedence
+- Environment variables (.env / system env) override runtime defaults defined in `src/constants.ts`. The constants file documents safe defaults and provides typed fallbacks when env values are absent (useful for local dev, tests, and CI). Keep secrets in `.env` or a secret manager — do not store secrets in `src/constants.ts`.
+
+Mock mode
+- For offline development or CI without an Editor, set `UNREAL_MCP_MOCK_MODE=1` to run tests and tools against a local mock bridge. This is useful for unit tests and continuous integration where launching the Editor is impractical.
 
 ### Docker
 

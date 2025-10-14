@@ -11,6 +11,7 @@ import {
   interpretStandardResult
 } from '../utils/result-helpers.js';
 import { escapePythonString } from '../utils/python.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class AssetTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
@@ -22,38 +23,26 @@ export class AssetTools {
   private async executeAssetPython(script: string, timeoutMs?: number): Promise<any> {
     const trimmed = script.trim();
 
-    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
-      try {
-        const response = await this.automationBridge.sendAutomationRequest(
-          'execute_editor_python',
-          { script: trimmed },
-          { timeoutMs }
-        );
-
-        if (response.success === false) {
-          return {
-            success: false,
-            message: response.message || 'Automation bridge execution failed',
-            error: response.error || response.message || 'AUTOMATION_BRIDGE_FAILURE'
-          };
-        }
-
-        if (response.result !== undefined && response.result !== null) {
-          return response.result;
-        }
-
-        if (response.success === true || response.success === undefined) {
-          return {
-            success: true,
-            message: response.message || 'Automation bridge executed Python script'
-          };
-        }
-      } catch (_err) {
-        // Fall back to Remote Control execution if the automation bridge call fails
+    // Prefer plugin-native helpers for common asset tasks. If the script
+    // maps to a known template, route through executeEditorFunction which
+    // will prefer plugin handlers and only run Python when allowed.
+    try {
+      // Heuristic: if script mentions asset.delete or EditorAssetLibrary.delete_asset, use template
+      const lower = trimmed.toLowerCase();
+      if (lower.includes('delete_asset') || lower.includes('delete_assets')) {
+        const allowPythonFallback = allowPythonFallbackFromEnv();
+        // Attempt plugin/template first
+        return await this.bridge.executeEditorFunction('DELETE_ASSET', { script: trimmed }, { allowPythonFallback });
       }
+    } catch (_err) {
+      // ignore and fall through to raw Python execution
     }
 
-    return this.bridge.executePythonWithResult(trimmed);
+    // Centralize Python execution through the UnrealBridge helper which
+    // encapsulates parsing RESULT: payloads and respects server-side
+    // Python fallback gating (MCP_ALLOW_PYTHON_FALLBACKS).
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  return this.bridge.executeEditorPython(trimmed, { allowPythonFallback, timeoutMs });
   }
 
   async importAsset(sourcePath: string, destinationPath: string) {
@@ -218,7 +207,7 @@ except Exception as e:
 print('RESULT:' + json.dumps(result))
 `.trim();
       
-      const pyResp = await this.bridge.executePython(pythonCode);
+  const pyResp = await (this.bridge as any).executeEditorPython(pythonCode, { allowPythonFallback: allowPythonFallbackFromEnv() });
 
       const interpreted = interpretStandardResult(pyResp, {
         successMessage: `Imported assets to ${cleanDest}`,
@@ -265,10 +254,34 @@ print('RESULT:' + json.dumps(result))
     save?: boolean;
     timeoutMs?: number;
   }) {
-    const escapedSource = escapePythonString(params.sourcePath);
-    const escapedDestination = escapePythonString(params.destinationPath);
-    const escapedNewName = escapePythonString(params.newName ?? '');
-    const script = `
+  // Prefer plugin transport when available
+  if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+    try {
+    const resp: any = await this.automationBridge.sendAutomationRequest('duplicate_asset', {
+      sourcePath: params.sourcePath,
+      destinationPath: params.destinationPath,
+      newName: params.newName,
+      overwrite: params.overwrite === true,
+      save: params.save === true
+    }, { timeoutMs: params.timeoutMs });
+    if (resp && resp.success !== false) return { success: true, message: resp.message || `Duplicated asset to ${params.destinationPath}`, path: resp.path || resp.result?.path, overwritten: resp.overwritten || resp.result?.overwritten, warnings: resp.warnings } as any;
+    // If plugin returned explicit unknown action, fall through to Python fallback
+    const errTxt = String(resp?.error ?? resp?.message ?? '');
+    if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+      // fall through to Python
+    } else {
+      return { success: false, message: resp?.message ?? 'Duplicate failed', error: resp?.error ?? 'DUPLICATE_FAILED' } as any;
+    }
+    } catch (_e) {
+    // Fall back to python-local implementation below when plugin unresponsive
+    }
+  }
+
+  // Existing Python fallback (kept unchanged)
+  const escapedSource = escapePythonString(params.sourcePath);
+  const escapedDestination = escapePythonString(params.destinationPath);
+  const escapedNewName = escapePythonString(params.newName ?? '');
+  const script = `
 import unreal, json
 
 source_path = r"${escapedSource}"
@@ -278,87 +291,87 @@ overwrite_existing = ${params.overwrite ? 'True' : 'False'}
 save_new_asset = ${params.save ? 'True' : 'False'}
 
 result = {
-    'success': False,
-    'message': '',
-    'error': '',
-    'source': source_path,
-    'path': ''
+  'success': False,
+  'message': '',
+  'error': '',
+  'source': source_path,
+  'path': ''
 }
 
 asset_lib = unreal.EditorAssetLibrary
 
 if not asset_lib.does_asset_exist(source_path):
-    result['error'] = f"Source asset not found: {source_path}"
+  result['error'] = f"Source asset not found: {source_path}"
 else:
-    original_name = source_path.split('/')[-1]
-    asset_name = requested_name.strip() or original_name
-    if not asset_name:
-        result['error'] = 'Unable to determine asset name'
+  original_name = source_path.split('/')[-1]
+  asset_name = requested_name.strip() or original_name
+  if not asset_name:
+    result['error'] = 'Unable to determine asset name'
+  else:
+    folder = target_folder or source_path.rsplit('/', 1)[0]
+    folder = folder.rstrip('/')
+    if not folder:
+      result['error'] = 'Destination path is empty'
     else:
-        folder = target_folder or source_path.rsplit('/', 1)[0]
-        folder = folder.rstrip('/')
-        if not folder:
-            result['error'] = 'Destination path is empty'
-        else:
-            new_path = f"{folder}/{asset_name}"
-            if not overwrite_existing and asset_lib.does_asset_exist(new_path):
-                result['error'] = f"Asset already exists at {new_path}"
-                result['conflictPath'] = new_path
-            else:
-                overwritten = False
-                if overwrite_existing and asset_lib.does_asset_exist(new_path):
-                    if not asset_lib.delete_asset(new_path):
-                        result['error'] = f"Failed to remove existing asset at {new_path}"
-                    else:
-                        overwritten = True
-                if not result['error']:
-                    duplicated = asset_lib.duplicate_asset(source_path, new_path)
-                    if duplicated:
-                        result['success'] = True
-                        result['path'] = new_path
-                        result['message'] = f"Duplicated asset to {new_path}"
-                        result['overwritten'] = overwritten
-                        if save_new_asset:
-                            try:
-                                asset_lib.save_asset(new_path, False)
-                            except Exception as save_err:
-                                result.setdefault('warnings', []).append(f"Save failed for {new_path}: {save_err}")
-                    else:
-                        result['error'] = 'DuplicateAsset returned False'
+      new_path = f"{folder}/{asset_name}"
+      if not overwrite_existing and asset_lib.does_asset_exist(new_path):
+        result['error'] = f"Asset already exists at {new_path}"
+        result['conflictPath'] = new_path
+      else:
+        overwritten = False
+        if overwrite_existing and asset_lib.does_asset_exist(new_path):
+          if not asset_lib.delete_asset(new_path):
+            result['error'] = f"Failed to remove existing asset at {new_path}"
+          else:
+            overwritten = True
+        if not result['error']:
+          duplicated = asset_lib.duplicate_asset(source_path, new_path)
+          if duplicated:
+            result['success'] = True
+            result['path'] = new_path
+            result['message'] = f"Duplicated asset to {new_path}"
+            result['overwritten'] = overwritten
+            if save_new_asset:
+              try:
+                asset_lib.save_asset(new_path, False)
+              except Exception as save_err:
+                result.setdefault('warnings', []).append(f"Save failed for {new_path}: {save_err}")
+          else:
+            result['error'] = 'DuplicateAsset returned False'
 
 if not result['success'] and not result['error']:
-    result['error'] = 'Duplicate operation failed'
+  result['error'] = 'Duplicate operation failed'
 
 if result.get('error'):
-    result['message'] = result['error']
+  result['message'] = result['error']
 else:
-    result['error'] = None
+  result['error'] = None
 
 if 'warnings' in result and not result['warnings']:
-    result.pop('warnings')
+  result.pop('warnings')
 
 print('RESULT:' + json.dumps(result))
 `.trim();
 
-    const pyResult = await this.executeAssetPython(script, params.timeoutMs);
-    const interpreted = interpretStandardResult(pyResult, {
-      successMessage: `Duplicated asset to ${params.destinationPath}`,
-      failureMessage: 'Failed to duplicate asset'
-    });
+  const pyResult = await this.executeAssetPython(script, params.timeoutMs);
+  const interpreted = interpretStandardResult(pyResult, {
+    successMessage: `Duplicated asset to ${params.destinationPath}`,
+    failureMessage: 'Failed to duplicate asset'
+  });
 
-    const payload = interpreted.payload ?? {};
+  const payload = interpreted.payload ?? {};
 
-    return {
-      success: interpreted.success,
-      message: interpreted.message,
-      error: interpreted.error,
-      sourcePath: params.sourcePath,
-      path: coerceString(payload.path),
-      conflictPath: coerceString(payload.conflictPath),
-      overwritten: coerceBoolean(payload.overwritten),
-      warnings: interpreted.warnings,
-      details: interpreted.details
-    };
+  return {
+    success: interpreted.success,
+    message: interpreted.message,
+    error: interpreted.error,
+    sourcePath: params.sourcePath,
+    path: coerceString(payload.path),
+    conflictPath: coerceString(payload.conflictPath),
+    overwritten: coerceBoolean(payload.overwritten),
+    warnings: interpreted.warnings,
+    details: interpreted.details
+  };
   }
 
   async renameAsset(params: {
@@ -366,6 +379,24 @@ print('RESULT:' + json.dumps(result))
     newName: string;
     timeoutMs?: number;
   }) {
+    // Prefer plugin transport when available
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp: any = await this.automationBridge.sendAutomationRequest('rename_asset', {
+          assetPath: params.assetPath,
+          newName: params.newName
+        }, { timeoutMs: params.timeoutMs });
+        if (resp && resp.success !== false) return { success: true, message: resp.message || `Renamed asset to ${resp.path || params.newName}`, path: resp.path || resp.result?.path, conflictPath: resp.conflictPath || resp.result?.conflictPath, warnings: resp.warnings } as any;
+        const errTxt = String(resp?.error ?? resp?.message ?? '');
+        if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+          // fall through to Python fallback
+        } else {
+          return { success: false, message: resp?.message ?? 'Rename failed', error: resp?.error ?? 'RENAME_FAILED' } as any;
+        }
+      } catch (_e) {
+        // Fall back to python-local implementation
+      }
+    }
     const escapedSource = escapePythonString(params.assetPath);
     const escapedNewName = escapePythonString(params.newName);
     const script = `
@@ -412,7 +443,7 @@ else:
 print('RESULT:' + json.dumps(result))
 `.trim();
 
-    const pyResult = await this.executeAssetPython(script, params.timeoutMs);
+  const pyResult = await this.executeAssetPython(script, params.timeoutMs);
     const interpreted = interpretStandardResult(pyResult, {
       successMessage: 'Asset renamed successfully',
       failureMessage: 'Failed to rename asset'
@@ -438,6 +469,26 @@ print('RESULT:' + json.dumps(result))
     fixupRedirectors?: boolean;
     timeoutMs?: number;
   }) {
+    // Prefer plugin transport when available
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp: any = await this.automationBridge.sendAutomationRequest('move_asset', {
+          assetPath: params.assetPath,
+          destinationPath: params.destinationPath,
+          newName: params.newName,
+          fixupRedirectors: params.fixupRedirectors === true
+        }, { timeoutMs: params.timeoutMs });
+        if (resp && resp.success !== false) return { success: true, message: resp.message || `Moved asset to ${resp.path || params.destinationPath}`, path: resp.path || resp.result?.path, conflictPath: resp.conflictPath || resp.result?.conflictPath, warnings: resp.warnings } as any;
+        const errTxt = String(resp?.error ?? resp?.message ?? '');
+        if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+          // fall through to Python fallback
+        } else {
+          return { success: false, message: resp?.message ?? 'Move failed', error: resp?.error ?? 'MOVE_FAILED' } as any;
+        }
+      } catch (_e) {
+        // fall back to python
+      }
+    }
     const escapedSource = escapePythonString(params.assetPath);
     const escapedDestination = escapePythonString(params.destinationPath);
     const escapedNewName = escapePythonString(params.newName ?? '');
@@ -529,6 +580,21 @@ print('RESULT:' + json.dumps(result))
     timeoutMs?: number;
   }) {
     const paths = Array.isArray(params.assetPaths) ? params.assetPaths : [params.assetPaths];
+    // Try plugin first
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp: any = await this.automationBridge.sendAutomationRequest('delete_assets', { paths, fixupRedirectors: params.fixupRedirectors === true }, { timeoutMs: params.timeoutMs });
+        if (resp && resp.success !== false) return { success: true, message: resp.message || `Deleted ${resp.deleted?.length ?? 0} assets`, deleted: resp.deleted || resp.result?.deleted || [], missing: resp.missing || resp.result?.missing || [], failed: resp.failed || resp.result?.failed || [], warnings: resp.warnings } as any;
+        const errTxt = String(resp?.error ?? resp?.message ?? '');
+        if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+          // fall through to python fallback
+        } else {
+          return { success: false, message: resp?.message ?? 'Delete failed', error: resp?.error ?? 'DELETE_FAILED' } as any;
+        }
+      } catch (_e) {
+        // fall back to python
+      }
+    }
     const serializedPaths = '[' + paths.map((entry) => `r"${escapePythonString(entry)}"`).join(', ') + ']';
     const script = `
 import unreal, json
@@ -629,11 +695,30 @@ except Exception as err:
 print('RESULT:' + json.dumps(result))
       `.trim();
 
-      const resp = await this.bridge.executePythonWithResult(python);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+      // Try plugin-first save
+      try {
+        const res = await this.bridge.executeEditorFunction('SAVE_ASSET', { path: assetPath }, { allowPythonFallback });
+        if (res && typeof res === 'object' && (res.success === true || (res.result && res.result.success === true))) {
+          const saved = Boolean(res.saved ?? (res.result && res.result.saved));
+          return { success: true, saved };
+        }
+        // If plugin indicated failure and Python fallback not allowed, return
+        if (!allowPythonFallback) {
+          return { success: false, error: (res as any)?.error ?? 'Failed to save asset (plugin)'};
+        }
+      } catch (_e) {
+        // fall through to Python fallback if allowed
+      }
+
+      // Fallback to Python when explicitly allowed
+      if (!allowPythonFallback) {
+        return { success: false, error: 'PYTHON_FALLBACK_DISABLED' };
+      }
+  const resp = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
       if (resp && typeof resp === 'object' && coerceBoolean((resp as any).success, false)) {
         return { success: true, saved: coerceBoolean((resp as any).saved, false) };
       }
-
       return { success: false, error: (resp as any)?.error ?? 'Failed to save asset' };
     } catch (err) {
       return { error: `Failed to save asset: ${err}` };

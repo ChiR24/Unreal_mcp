@@ -1,5 +1,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation-bridge.js';
 import { loadEnv } from '../types/env.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 import { Logger } from '../utils/logger.js';
 import { coerceStringArray, interpretStandardResult } from '../utils/result-helpers.js';
 import { promises as fs } from 'fs';
@@ -8,7 +10,9 @@ import path from 'path';
 export class VisualTools {
   private env = loadEnv();
   private log = new Logger('VisualTools');
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+
+  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
   // Take a screenshot of viewport (high res or standard). Returns path and base64 (truncated)
   async takeScreenshot(params: { resolution?: string }) {
@@ -156,7 +160,8 @@ print('RESULT:' + json.dumps(finalize()))
   .replace(/\r?\n/g, '\n');
 
     try {
-      const response = await this.bridge.executePython(python);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
       const interpreted = interpretStandardResult(response, {
         successMessage: 'Collected screenshot directories',
         failureMessage: 'Failed to collect screenshot directories'
@@ -185,10 +190,10 @@ print('RESULT:' + json.dumps(finalize()))
 
       if (interpreted.rawText) {
         try {
-          const fallback = JSON.parse(interpreted.rawText);
-          const fallbackDirs = coerceStringArray(fallback);
-          if (fallbackDirs?.length) {
-            return fallbackDirs;
+          const parsed = JSON.parse(interpreted.rawText);
+          const candidateDirs = coerceStringArray(parsed);
+          if (candidateDirs?.length) {
+            return candidateDirs;
           }
         } catch {}
       }
@@ -226,7 +231,7 @@ print('RESULT:' + json.dumps(finalize()))
       addCandidate(dir);
     }
 
-    // Fallback: common locations relative to current working directory
+  // Alternate: common locations relative to current working directory
     addCandidate(path.join(process.cwd(), 'Saved', 'Screenshots'));
     addCandidate(path.join(process.cwd(), 'Saved', 'Screenshots', 'Windows'));
     addCandidate(path.join(process.cwd(), 'Saved', 'Screenshots', 'WindowsEditor'));
@@ -277,5 +282,68 @@ print('RESULT:' + json.dumps(finalize()))
     }
     const chosen = latestSince || latest;
     return chosen?.path || null;
+  }
+
+  async cleanupActors(filter: string) {
+    try {
+      if (!filter || typeof filter !== 'string' || filter.trim().length === 0) return { success: false, error: 'filter required' };
+      const cleaned = filter.trim();
+
+      // Try automation bridge plugin-first
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp: any = await this.automationBridge.sendAutomationRequest('cleanup', { filter: cleaned });
+          if (resp && resp.success !== false) {
+            return { success: true, removed: resp.removed ?? resp.result?.removed, message: resp.message || `Cleanup removed ${resp.removed ?? resp.result?.removed ?? 0}` } as any;
+          }
+          const errTxt = String(resp?.error ?? resp?.message ?? '');
+          if (!(errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION'))) {
+            return { success: false, error: resp?.error ?? resp?.message ?? 'CLEANUP_FAILED' } as any;
+          }
+        } catch (_e) {
+          // fall back to python below
+        }
+      }
+
+      const py = `
+import unreal, json
+removed = []
+try:
+    subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    if subsys:
+        actors = subsys.get_all_level_actors()
+        for a in actors:
+            try:
+                label = a.get_actor_label()
+                if label and label.lower().startswith(r"${cleaned}".lower()):
+                    try:
+                        subsys.destroy_actor(a)
+                        removed.append(label)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+    print('RESULT:' + json.dumps({'success': True, 'removed': len(removed), 'removedActors': removed}))
+except Exception as e:
+    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
+`.trim();
+
+  const allowPythonFallback2 = allowPythonFallbackFromEnv();
+  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallback2 });
+      try {
+        const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
+        const m = out.match(/RESULT:({.*})/);
+        if (m) {
+          const parsed = JSON.parse(m[1].replace(/'/g, '"'));
+          if (parsed.success) {
+            return { success: true, removed: parsed.removed, removedActors: parsed.removedActors };
+          }
+          return { success: false, error: parsed.error ?? 'Cleanup failure' };
+        }
+      } catch {}
+      return { success: false, error: 'Cleanup failed (no RESULT JSON)' };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
   }
 }

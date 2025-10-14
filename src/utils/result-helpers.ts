@@ -20,7 +20,7 @@ export function interpretStandardResult(
   const payload = (parsed.data ?? {}) as StandardResultPayload & Record<string, unknown>;
   const success = payload.success === true;
   const rawText = typeof parsed.text === 'string' ? parsed.text : String(parsed.text ?? '');
-  const cleanedText = cleanResultText(rawText, { fallback: undefined });
+  const cleanedText = cleanResultText(rawText, { defaultValue: undefined });
 
   const messageFromPayload = typeof payload.message === 'string' ? payload.message.trim() : '';
   const errorFromPayload = typeof payload.error === 'string' ? payload.error.trim() : '';
@@ -43,11 +43,11 @@ export function interpretStandardResult(
 
 export function cleanResultText(
   text: string | undefined,
-  options: { tag?: string; fallback?: string } = {}
+  options: { tag?: string; defaultValue?: string } = {}
 ): string | undefined {
-  const { tag = 'RESULT:', fallback } = options;
+  const { tag = 'RESULT:', defaultValue } = options;
   if (!text) {
-    return fallback;
+    return defaultValue;
   }
 
   const cleaned = stripTaggedResultLines(text, tag).trim();
@@ -55,12 +55,12 @@ export function cleanResultText(
     return cleaned;
   }
 
-  return fallback;
+  return defaultValue;
 }
 
 export function bestEffortInterpretedText(
   interpreted: Pick<InterpretedStandardResult, 'cleanText' | 'rawText'>,
-  fallback?: string
+  defaultValue?: string
 ): string | undefined {
   const cleaned = interpreted.cleanText?.trim();
   if (cleaned) {
@@ -72,7 +72,7 @@ export function bestEffortInterpretedText(
     return raw;
   }
 
-  return fallback;
+  return defaultValue;
 }
 
 export function coerceString(value: unknown): string | undefined {
@@ -103,7 +103,7 @@ export function coerceStringArray(value: unknown): string[] | undefined {
   return items.length > 0 ? items : undefined;
 }
 
-export function coerceBoolean(value: unknown, fallback?: boolean): boolean | undefined {
+export function coerceBoolean(value: unknown, defaultValue?: boolean): boolean | undefined {
   if (typeof value === 'boolean') {
     return value;
   }
@@ -127,7 +127,7 @@ export function coerceBoolean(value: unknown, fallback?: boolean): boolean | und
     }
   }
 
-  return fallback;
+  return defaultValue;
 }
 
 export function coerceNumber(value: unknown): number | undefined {

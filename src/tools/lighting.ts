@@ -1,10 +1,14 @@
 // Lighting tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation-bridge.js';
 import { parseStandardResult } from '../utils/python-output.js';
 import { escapePythonString } from '../utils/python.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class LightingTools {
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+
+  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
   private ensurePythonSpawnSucceeded(label: string, result: any) {
     let logs = '';
@@ -23,14 +27,14 @@ export class LightingTools {
     const executed = result?.ReturnValue === true || result?.ReturnValue === 'true';
     if (executed) return;
 
-    // Fallback: if no ReturnValue but success-like logs exist, accept
+  // If no ReturnValue but success-like logs exist, accept
     if (/spawned/i.test(logs)) return;
 
     // Otherwise, uncertain
     throw new Error(`Uncertain spawn result for '${label}'. Engine logs:\n${logs}`);
   }
 
-  private normalizeName(value: unknown, fallback?: string): string {
+  private normalizeName(value: unknown, defaultName?: string): string {
     if (typeof value === 'string') {
       const trimmed = value.trim();
       if (trimmed.length > 0) {
@@ -38,10 +42,10 @@ export class LightingTools {
       }
     }
 
-    if (typeof fallback === 'string') {
-      const trimmedFallback = fallback.trim();
-      if (trimmedFallback.length > 0) {
-        return trimmedFallback;
+    if (typeof defaultName === 'string') {
+      const trimmedDefault = defaultName.trim();
+      if (trimmedDefault.length > 0) {
+        return trimmedDefault;
       }
     }
 
@@ -153,8 +157,9 @@ else:
   print("Failed to spawn directional light '${escapedName}'")
 `;
 
-    // Execute the Python script via bridge (UE 5.6-compatible)
-    const result = await this.bridge.executePython(pythonScript);
+  // Execute the Python script via bridge (UE 5.6-compatible)
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const result = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback });
 
     this.ensurePythonSpawnSucceeded(name, result);
     return { success: true, message: `Directional light '${name}' spawned` };
@@ -279,7 +284,7 @@ else:
 `;
 
     // Execute the Python script via bridge (UE 5.6-compatible)
-    const result = await this.bridge.executePython(pythonScript);
+  const result = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback: allowPythonFallbackFromEnv() });
 
     this.ensurePythonSpawnSucceeded(name, result);
     return { success: true, message: `Point light '${name}' spawned at ${location.join(', ')}` };
@@ -426,7 +431,7 @@ else:
 `;
 
     // Execute the Python script via bridge (UE 5.6-compatible)
-  const result = await this.bridge.executePython(pythonScript);
+  const result = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback: allowPythonFallbackFromEnv() });
 
   this.ensurePythonSpawnSucceeded(name, result);
   return { success: true, message: `Spot light '${name}' spawned at ${params.location.join(', ')}` };
@@ -442,6 +447,7 @@ else:
     intensity?: number;
     color?: [number, number, number];
   }) {
+    
     const name = this.normalizeName(params.name);
     const escapedName = escapePythonString(name);
 
@@ -556,10 +562,69 @@ else:
 `;
 
     // Execute the Python script via bridge (UE 5.6-compatible)
-    const result = await this.bridge.executePython(pythonScript);
+  const result = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback: allowPythonFallbackFromEnv() });
 
     this.ensurePythonSpawnSucceeded(name, result);
     return { success: true, message: `Rect light '${name}' spawned at ${params.location.join(', ')}` };
+  }
+
+  /**
+   * Create dynamic light (plugin-first when available)
+   */
+  async createDynamicLight(params: {
+    name?: string;
+    lightType?: 'Point' | 'Spot' | 'Directional' | 'Rect' | string;
+    location?: [number, number, number] | { x: number; y: number; z: number };
+    rotation?: [number, number, number];
+    intensity?: number;
+    color?: [number, number, number, number] | { r: number; g: number; b: number; a?: number };
+    pulse?: { enabled?: boolean; frequency?: number };
+  }) {
+    try {
+      const name = typeof params.name === 'string' && params.name.trim().length > 0 ? params.name.trim() : `DynamicLight_${Date.now() % 10000}`;
+      const lightTypeRaw = typeof params.lightType === 'string' && params.lightType.trim().length > 0 ? params.lightType.trim() : 'Point';
+      const location = Array.isArray(params.location) ? { x: params.location[0], y: params.location[1], z: params.location[2] } : (params.location || { x: 0, y: 0, z: 100 });
+
+      // Try plugin-first transport
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp: any = await this.automationBridge.sendAutomationRequest('create_dynamic_light', {
+            lightName: name,
+            lightType: lightTypeRaw,
+            location,
+            rotation: params.rotation,
+            intensity: params.intensity,
+            color: params.color,
+            pulse: params.pulse
+          });
+          if (resp && resp.success !== false) {
+            return { success: true, message: resp.message || `Dynamic light ${name} created`, actor: resp.actor || resp.result?.actor } as any;
+          }
+          const errTxt = String(resp?.error ?? resp?.message ?? '');
+          if (!(errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION'))) {
+            return { success: false, error: resp?.error ?? resp?.message ?? 'CREATE_DYNAMIC_LIGHT_FAILED' } as any;
+          }
+        } catch (_e) {
+          // fall back to Python/bridge implementation below
+        }
+      }
+
+      // Fallback to existing Python-based spawners
+      const typeNorm = (lightTypeRaw || 'Point').toLowerCase();
+      switch (typeNorm) {
+        case 'directional': case 'directionallight':
+          return await this.createDirectionalLight({ name, intensity: params.intensity, color: Array.isArray(params.color) ? [params.color[0], params.color[1], params.color[2]] as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined), rotation: params.rotation as any });
+        case 'spot': case 'spotlight':
+          return await this.createSpotLight({ name, location: (location as any) as [number, number, number], rotation: params.rotation as any, intensity: params.intensity, innerCone: undefined, outerCone: undefined, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined) });
+        case 'rect': case 'rectlight':
+          return await this.createRectLight({ name, location: (location as any) as [number, number, number], rotation: params.rotation as any, width: undefined, height: undefined, intensity: params.intensity, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined) });
+        case 'point': default:
+          return await this.createPointLight({ name, location: (location as any) as [number, number, number], intensity: params.intensity, radius: undefined, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined), castShadows: undefined });
+      }
+
+    } catch (err) {
+      return { success: false, error: `Failed to create dynamic light: ${err}` };
+    }
   }
 
   // Create sky light
@@ -727,7 +792,7 @@ except Exception as run_err:
   result["error"] = str(run_err)
   finish()
 `.trim();
-  const resp = await this.bridge.executePython(python);
+  const resp = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback: allowPythonFallbackFromEnv() });
   const parsed = parseStandardResult(resp).data;
   if (parsed) {
     if (parsed.success) {
@@ -748,13 +813,13 @@ except Exception as run_err:
 
   // Remove duplicate SkyLights and keep only one (named target label)
   async ensureSingleSkyLight(params?: { name?: string; recapture?: boolean }) {
-  const fallbackName = 'MCP_Test_Sky';
-  const name = this.normalizeName(params?.name, fallbackName);
+    const defaultName = 'MCP_Test_Sky';
+  const name = this.normalizeName(params?.name, defaultName);
     const escapedName = escapePythonString(name);
     const recapture = !!params?.recapture;
     const py = `\nimport unreal, json\nactor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nactors = actor_sub.get_all_level_actors() if actor_sub else []\nskies = []\nfor a in actors:\n    try:\n        if a.get_class().get_name() == 'SkyLight':\n            skies.append(a)\n    except Exception: pass\nkeep = None\n# Prefer one with matching label; otherwise keep the first\nfor a in skies:\n    try:\n        label = a.get_actor_label()\n        if label == "${escapedName}":\n            keep = a\n            break\n    except Exception: pass\nif keep is None and len(skies) > 0:\n    keep = skies[0]\n# Rename the kept one if needed\nif keep is not None:\n    try: keep.set_actor_label("${escapedName}")\n    except Exception: pass\n# Destroy all others using the correct non-deprecated API\nremoved = 0\nfor a in skies:\n    if keep is not None and a == keep:\n        continue\n    try:\n        # Use EditorActorSubsystem.destroy_actor instead of deprecated EditorLevelLibrary\n        actor_sub.destroy_actor(a)\n        removed += 1\n    except Exception: pass\n# Optionally recapture\nif keep is not None and ${recapture ? 'True' : 'False'}:\n    try:\n        comp = keep.get_component_by_class(unreal.SkyLightComponent)\n        if comp: comp.recapture_sky()\n    except Exception: pass\nprint('RESULT:' + json.dumps({'success': True, 'removed': removed, 'kept': True if keep else False}))\n`.trim();
 
-    const resp = await this.bridge.executePython(py);
+  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallbackFromEnv() });
     let out = '';
     if (resp?.LogOutput && Array.isArray((resp as any).LogOutput)) {
       out = (resp as any).LogOutput.map((l: any) => l.Output || '').join('');
@@ -1012,7 +1077,7 @@ print('RESULT:' + json.dumps({'success': True, 'messages': messages, 'flags': {
 `.trim();
 
     // Execute the disable script first and parse messages for diagnostics
-    const preResp = await this.bridge.executePython(disablePrecomputedPy);
+  const preResp = await (this.bridge as any).executeEditorPython(disablePrecomputedPy, { allowPythonFallback: allowPythonFallbackFromEnv() });
     try {
       const preOut = typeof preResp === 'string' ? preResp : JSON.stringify(preResp);
       const pm = preOut.match(/RESULT:({.*})/);
@@ -1054,13 +1119,13 @@ try:
         try:
             unreal.SystemLibrary.execute_console_command(None, 'BuildLighting Quality=${q}')
             ${params.buildReflectionCaptures ? "unreal.SystemLibrary.execute_console_command(None, 'BuildReflectionCaptures')" : ''}
-            print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via console command (fallback)'}))
+            print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via console command'}))
         except Exception as e2:
             print('RESULT:' + json.dumps({'success': False, 'error': f'Build failed: {str(e2)}'}))
 except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
-    const resp = await this.bridge.executePython(py);
+  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallbackFromEnv() });
     const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
     const m = out.match(/RESULT:({.*})/);
     if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: parsed.message } : { success: false, error: parsed.error }; } catch {} }
@@ -1306,7 +1371,7 @@ result = create_lighting_enabled_level()
 print('RESULT:' + json.dumps(result))
 `.trim();
     
-    const resp = await this.bridge.executePython(py);
+  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallbackFromEnv() });
     const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
     const m = out.match(/RESULT:({.*})/);
     if (m) { 
@@ -1345,7 +1410,7 @@ if actor:
 else:
     print("RESULT:{'success': False, 'error': 'Failed to spawn LightmassImportanceVolume'}")
 `.trim();
-    const resp = await this.bridge.executePython(py);
+  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallbackFromEnv() });
     const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
     const m = out.match(/RESULT:({.*})/);
   if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: `LightmassImportanceVolume '${name}' created` } : { success: false, error: parsed.error }; } catch {} }
@@ -1428,7 +1493,7 @@ else:
         ${params.fogHeight !== undefined ? `\n        try:\n            L = fog.get_actor_location()\n            fog.set_actor_location(unreal.Vector(L.x, L.y, ${params.fogHeight}))\n        except Exception: pass\n        ` : ''}
     print("RESULT:{'success': True}")\nexcept Exception as e:\n    print("RESULT:{'success': False, 'error': '%s'}" % str(e))\n`.trim();
 
-    const resp = await this.bridge.executePython(py);
+  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallbackFromEnv() });
     const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
     const m = out.match(/RESULT:({.*})/);
     if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: 'Volumetric fog configured' } : { success: false, error: parsed.error }; } catch {} }

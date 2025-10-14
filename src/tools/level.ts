@@ -6,6 +6,7 @@ import {
   coerceString,
   interpretStandardResult
 } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class LevelTools {
   constructor(private bridge: UnrealBridge) {}
@@ -65,7 +66,8 @@ print("RESULT:" + json.dumps(result))
 `.trim();
 
       try {
-        const response = await this.bridge.executePython(python);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
         const interpreted = interpretStandardResult(response, {
           successMessage: 'Streaming level added',
           failureMessage: 'Failed to add streaming level'
@@ -154,7 +156,8 @@ print("RESULT:" + json.dumps(result))
 `.trim();
 
       try {
-        const response = await this.bridge.executePython(python);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
         const interpreted = interpretStandardResult(response, {
           successMessage: `Level ${params.levelPath} loaded`,
           failureMessage: `Failed to load level ${params.levelPath}`
@@ -290,14 +293,14 @@ try:
           result["warnings"].append(f"EditorAssetLibrary.is_asset_dirty failed: {check_error}")
           is_dirty = None
       if is_dirty is None and world is not None:
-        # Fallback: inspect the current level via the active world (avoids deprecated EditorLevelLibrary)
+  # Inspect the current level via the active world (avoids deprecated EditorLevelLibrary)
         try:
           level = world.get_current_level() if hasattr(world, 'get_current_level') else None
           package = level.get_outermost() if level and hasattr(level, 'get_outermost') else None
           if package and hasattr(package, 'is_dirty'):
             is_dirty = package.is_dirty()
-        except Exception as fallback_error:
-          result["warnings"].append(f"Fallback dirty check failed: {fallback_error}")
+        except Exception as inspect_error:
+          result["warnings"].append(f"Dirty check failed: {inspect_error}")
     if is_dirty is False:
       result["success"] = True
       result["skipped"] = True
@@ -334,7 +337,8 @@ print_result(result)
 `.trim();
 
     try {
-      const response = await this.bridge.executePython(python);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
       const interpreted = interpretStandardResult(response, {
         successMessage: 'Level saved',
         failureMessage: 'Failed to save level'
@@ -445,7 +449,8 @@ print("RESULT:" + json.dumps(result))
 `.trim();
 
     try {
-      const response = await this.bridge.executePython(python);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
       const interpreted = interpretStandardResult(response, {
         successMessage: 'Level created',
         failureMessage: 'Failed to create level'
@@ -553,9 +558,9 @@ try:
 
     if not streaming_levels:
       try:
-        fallback_levels = getattr(world, 'streaming_levels', None)
-        if fallback_levels is not None:
-          streaming_levels = list(fallback_levels)
+        streaming_levels_candidate = getattr(world, 'streaming_levels', None)
+        if streaming_levels_candidate is not None:
+          streaming_levels = list(streaming_levels_candidate)
       except Exception as attr_error:
         result["warnings"].append(f"streaming_levels attribute unavailable: {attr_error}")
 
@@ -654,7 +659,8 @@ print("RESULT:" + json.dumps(result))
 `.trim();
 
     try {
-      const response = await this.bridge.executePython(python);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+      const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
       const interpreted = interpretStandardResult(response, {
         successMessage: 'Streaming level updated',
         failureMessage: 'Streaming level update failed'
@@ -892,7 +898,8 @@ print("RESULT:" + json.dumps(result))
 `.trim();
 
     try {
-      const response = await this.bridge.executePython(python);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
       const interpreted = interpretStandardResult(response, {
         successMessage: params.rebuildAll ? 'Navigation rebuild started' : 'Navigation update started',
         failureMessage: 'Navigation build failed'

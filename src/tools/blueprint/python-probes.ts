@@ -7,64 +7,26 @@ import { UnrealBridge } from '../../unreal-bridge.js';
  * that accepts a bridge instance.
  */
 export async function waitForBlueprint(bridge: UnrealBridge, blueprintCandidates: string | string[], timeoutMs?: number) {
+  // Plugin-first: ask the automation plugin to probe blueprints. If the
+  // plugin does not implement blueprint_exists, return UNKNOWN_PLUGIN_ACTION
+  // so callers can migrate to plugin handlers.
   const candidatesArray = Array.isArray(blueprintCandidates) ? blueprintCandidates : [blueprintCandidates];
-  const candidatesPayload = JSON.stringify({ candidates: candidatesArray, timeoutMs: typeof timeoutMs === 'number' ? timeoutMs : undefined });
-  const python = `
-import unreal, json, time
-payload = json.loads(r'''${candidatesPayload}''')
-result = { 'success': False, 'found': None, 'checked': [], 'warnings': [] }
-start = time.time()
-timeout = payload.get('timeoutMs') or ${Number(process.env.MCP_AUTOMATION_SCS_TIMEOUT_MS ?? process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000')}
-timeout = float(timeout) / 1000.0
-# Poll at a conservative rate to avoid log spam when invalid paths are
-# provided. Each iteration will attempt a small set of normalized path
-# variants for each candidate.
-poll_interval = 1.0
-  while time.time() - start < timeout:
-    for raw in payload.get('candidates', []):
-      # Normalize and skip empty candidates
-      try:
-        s = str(raw).strip()
-      except Exception:
-        s = ''
-      if not s:
-        continue
-      # Prefer absolute /Game/ paths first, then common variants
-      to_check = []
-      if s.startswith('/'):
-        to_check.append(s)
-      else:
-        # Only probe common absolute content roots. Avoid passing bare
-        # names like 'BP_TestPawn' to EditorAssetLibrary which will
-        # produce repeated error logs when polled frequently.
-        to_check.append(f"/Game/Blueprints/{s}")
-        to_check.append(f"/Game/{s}")
-      # Try each candidate/variant once per poll loop
-      for p in to_check:
-        try:
-          result['checked'].append(p)
-          if unreal.EditorAssetLibrary.does_asset_exist(p):
-            result['success'] = True
-            result['found'] = p
-            print('RESULT:' + json.dumps(result))
-            raise SystemExit
-        except Exception as e:
-          try:
-            result['warnings'].append(str(e))
-          except Exception:
-            pass
-    # Conservative polling interval to avoid rapid repeated queries that
-    # produce engine log spam when callers pass invalid or bare names.
-    time.sleep(poll_interval)
-print('RESULT:' + json.dumps(result))
-`.trim();
-
-  try {
-  const resp = await bridge.executePythonWithResult(python, typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : undefined);
-    return resp as Record<string, any>;
-  } catch (err) {
-    return { success: false, error: String(err) } as any;
+  // Use the plugin transport first
+  const automationBridge = (bridge as any).automationBridge as any;
+  if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
+    try {
+      const resp: any = await automationBridge.sendAutomationRequest('blueprint_exists', { candidates: candidatesArray }, { timeoutMs });
+      if (resp && resp.success) return resp.result ?? resp;
+      const errTxt = String(resp?.error ?? resp?.message ?? '');
+      if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_exists' } as any;
+      }
+      return { success: false, error: resp?.error ?? resp?.message ?? 'BLUEPRINT_EXISTS_FAILED' } as any;
+    } catch (err) {
+      return { success: false, error: String(err) } as any;
+    }
   }
+  return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge not available; blueprint existence probe cannot be performed' } as any;
 }
 
 /**
@@ -73,7 +35,7 @@ print('RESULT:' + json.dumps(result))
  */
 export async function resolveParentClass(bridge: UnrealBridge, parentSpec: string, blueprintType: string) {
   const payload = JSON.stringify({ parentSpec, blueprintType });
-  const python = `
+  const _py = `
 import unreal, json
 payload = json.loads(r'''${payload}''')
 result = {'success': False, 'resolved': '', 'error': ''}
@@ -129,11 +91,22 @@ except Exception as e:
 print('RESULT:' + json.dumps(result))
 `.trim();
 
-  try {
-  return await bridge.executePythonWithResult(python, undefined);
-  } catch (err) {
-    return { success: false, error: String(err) } as any;
+  // Plugin-first: expose blueprint parent resolution via automation action
+  const automationBridge = (bridge as any).automationBridge as any;
+  if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
+    try {
+      const resp: any = await automationBridge.sendAutomationRequest('blueprint_resolve_parent', { parentSpec, blueprintType });
+      if (resp && resp.success) return resp.result ?? resp;
+      const errTxt = String(resp?.error ?? resp?.message ?? '');
+      if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_resolve_parent' } as any;
+      }
+      return { success: false, error: resp?.error ?? resp?.message ?? 'RESOLVE_PARENT_FAILED' } as any;
+    } catch (err) {
+      return { success: false, error: String(err) } as any;
+    }
   }
+  return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge not available; parent class resolution cannot be performed' } as any;
 }
 
 /**
@@ -144,7 +117,7 @@ print('RESULT:' + json.dumps(result))
 export async function probeSubobjectDataHandle(bridge: UnrealBridge, componentClass?: string) {
   const cls = (componentClass || 'StaticMeshComponent').toString();
   const payload = JSON.stringify({ componentClass: cls });
-  const py = `
+  const _py = `
 import unreal, json, time
 payload = json.loads(r'''${payload}''')
 result = {
@@ -254,10 +227,22 @@ except Exception as e:
 print('RESULT:' + json.dumps(result))
 `.trim();
 
-  try {
-    const resp = await bridge.executePythonWithResult(py);
-    return resp as Record<string, any>;
-  } catch (err) {
-    return { success: false, error: String(err) } as any;
+  // Plugin-first: delegate probing to the plugin if available (native
+  // SubobjectDataSubsystem probing is implemented there). If the plugin
+  // does not implement subobject probing, surface explicit error.
+  const automationBridge = (bridge as any).automationBridge as any;
+  if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
+    try {
+      const resp: any = await automationBridge.sendAutomationRequest('blueprint_probe_subobject_handle', { componentClass: componentClass }, { timeoutMs: 120000 });
+      if (resp && resp.success) return resp.result ?? resp;
+      const errTxt = String(resp?.error ?? resp?.message ?? '');
+      if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_probe_subobject_handle' } as any;
+      }
+      return { success: false, error: resp?.error ?? resp?.message ?? 'PROBE_SUBOBJECT_HANDLE_FAILED' } as any;
+    } catch (err) {
+      return { success: false, error: String(err) } as any;
+    }
   }
+  return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge not available; subobject data probe cannot be performed' } as any;
 }

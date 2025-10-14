@@ -1,6 +1,7 @@
 // UI tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
 import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class UITools {
   constructor(private bridge: UnrealBridge) {}
@@ -12,53 +13,33 @@ export class UITools {
     savePath?: string;
   }) {
     const path = params.savePath || '/Game/UI/Widgets';
-    const py = `
-import unreal
-import json
-name = r"${params.name}"
-path = r"${path}"
-try:
-    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-    try:
-        factory = unreal.WidgetBlueprintFactory()
-    except Exception:
-        factory = None
-    if not factory:
-        print('RESULT:' + json.dumps({'success': False, 'error': 'WidgetBlueprintFactory unavailable'}))
-    else:
-        # Try setting parent_class in a version-tolerant way
-        try:
-            factory.parent_class = unreal.UserWidget
-        except Exception:
-            try:
-                factory.set_editor_property('parent_class', unreal.UserWidget)
-            except Exception:
-                pass
-        asset = asset_tools.create_asset(asset_name=name, package_path=path, asset_class=unreal.WidgetBlueprint, factory=factory)
-        if asset:
-            unreal.EditorAssetLibrary.save_asset(f"{path}/{name}")
-            print('RESULT:' + json.dumps({'success': True}))
-        else:
-            print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to create WidgetBlueprint'}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
+    // Plugin-first: attempt to create the widget asset via the Automation
+    // Bridge plugin using the generic CREATE_ASSET function. If the plugin
+    // does not implement the action the bridge will fall back to executing
+    // the Python template (deprecated and gated by server opt-in).
     try {
-      const resp = await this.bridge.executePython(py);
-      const interpreted = interpretStandardResult(resp, {
-        successMessage: 'Widget blueprint created',
-        failureMessage: 'Failed to create WidgetBlueprint'
-      });
+      const payload = {
+        asset_name: params.name,
+        package_path: path,
+        factory_class: 'WidgetBlueprintFactory',
+        asset_class: 'unreal.WidgetBlueprint'
+      } as Record<string, any>;
 
-      if (interpreted.success) {
-        return { success: true, message: interpreted.message };
+      const resp = await this.bridge.executeEditorFunction('CREATE_ASSET', payload as any);
+      const result = resp && typeof resp === 'object' ? (resp.result ?? resp) : resp;
+
+      // Interpret common success shapes returned by plugin or Python template
+      if (result && (result.success === true || result.created === true || Boolean(result.path))) {
+        return { success: true, message: result.message ?? `Widget created at ${result.path ?? `${path}/${params.name}`}` };
       }
 
-      return {
-        success: false,
-        error: interpreted.error ?? 'Failed to create widget blueprint',
-        details: bestEffortInterpretedText(interpreted)
-      };
+      // If plugin/template returned a structured failure, surface it
+      if (result && result.success === false) {
+        return { success: false, error: result.error ?? result.message ?? 'Failed to create widget blueprint', details: result };
+      }
+
+      // Fallback: if no structured response, return generic failure
+      return { success: false, error: 'Failed to create widget blueprint' };
     } catch (e) {
       return { success: false, error: `Failed to create widget blueprint: ${e}` };
     }
@@ -192,7 +173,7 @@ except Exception as e:
       return { success: false, error: 'widgetName is required' };
     }
 
-    const verifyScript = `
+  const _verifyScript = `
 import unreal, json
 name = r"${widgetName}"
 candidates = []
@@ -211,8 +192,23 @@ for path in candidates:
 print('RESULT:' + json.dumps({'success': bool(found_path), 'path': found_path, 'candidates': candidates}))
 `.trim();
 
-    const verify = await this.bridge.executePythonWithResult(verifyScript);
-    if (!verify?.success) {
+    // Use plugin-first asset existence check (fallback to Python only when allowed)
+    const candidates = [] as string[];
+    if (widgetName.startsWith('/Game/')) {
+      candidates.push(widgetName);
+    } else {
+      candidates.push(`/Game/UI/Widgets/${widgetName}`);
+      candidates.push(`/Game/${widgetName}`);
+    }
+    let found = '';
+    for (const cand of candidates) {
+      try {
+        if (await this.bridge.assetExists(cand)) { found = cand; break; }
+      } catch (_e) {
+        // ignore and continue
+      }
+    }
+    if (!found) {
       return { success: false, error: `Widget asset not found for ${widgetName}` };
     }
 
@@ -242,7 +238,7 @@ print('RESULT:' + json.dumps({'success': bool(found_path), 'path': found_path, '
     const playerIndex = params.playerIndex ?? 0;
     
     // Use Python API to create and add widget to viewport
-    const py = `
+  const _py = `
 import unreal
 import json
 widget_path = r"${params.widgetClass}"
@@ -298,21 +294,16 @@ except Exception as e:
 `.trim();
     
     try {
-      const resp = await this.bridge.executePython(py);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const resp = await this.bridge.executeEditorFunction('ADD_WIDGET_TO_VIEWPORT', { widget_path: params.widgetClass, z_order: zOrder, player_index: playerIndex } as any, { allowPythonFallback });
       const interpreted = interpretStandardResult(resp, {
         successMessage: `Widget added to viewport with z-order ${zOrder}`,
         failureMessage: 'Failed to add widget to viewport'
       });
-
       if (interpreted.success) {
         return { success: true, message: interpreted.message };
       }
-
-      return {
-        success: false,
-        error: interpreted.error ?? 'Failed to add widget to viewport',
-        details: bestEffortInterpretedText(interpreted)
-      };
+      return { success: false, error: interpreted.error ?? 'Failed to add widget to viewport', details: bestEffortInterpretedText(interpreted) };
     } catch (e) {
       return { success: false, error: `Failed to add widget to viewport: ${e}` };
     }

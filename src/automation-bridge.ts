@@ -2,6 +2,14 @@ import { EventEmitter } from 'node:events';
 import type { IncomingMessage } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Logger } from './utils/logger.js';
+import {
+  DEFAULT_AUTOMATION_HOST,
+  DEFAULT_AUTOMATION_PORT,
+  DEFAULT_NEGOTIATED_PROTOCOLS,
+  DEFAULT_HEARTBEAT_INTERVAL_MS,
+  DEFAULT_HANDSHAKE_TIMEOUT_MS,
+  DEFAULT_MAX_PENDING_REQUESTS
+} from './constants.js';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 
@@ -41,7 +49,7 @@ export interface AutomationBridgeOptions {
   clientMode?: boolean; // New option to enable client mode
   clientHost?: string; // Host to connect to in client mode
   clientPort?: number; // Port to connect to in client mode
-  serverFallbackEnabled?: boolean; // Enable legacy server listener alongside client mode
+  serverLegacyEnabled?: boolean; // Enable legacy server listener alongside client mode
 }
 
 export interface AutomationBridgeMessage {
@@ -98,7 +106,7 @@ export interface AutomationBridgeStatus {
     isPrimary: boolean;
   }>;
   webSocketListening: boolean;
-  serverFallbackEnabled: boolean;
+  serverLegacyEnabled: boolean;
   serverName: string;
   serverVersion: string;
   maxConcurrentConnections: number;
@@ -136,8 +144,7 @@ export class AutomationBridge extends EventEmitter {
   private readonly DEFAULT_SUPPORTED_OPCODES = ['automation_request'];
   private readonly DEFAULT_RESPONSE_OPCODES = ['automation_response'];
   private readonly DEFAULT_CAPABILITIES = ['python', 'console_commands'];
-  private readonly DEFAULT_HEARTBEAT_INTERVAL_MS = 30000;
-  private readonly DEFAULT_MAX_PENDING_REQUESTS = 32;
+  // Heartbeat / pending-request defaults moved to shared constants
   private readonly sessionId = randomUUID();
   private readonly serverName: string;
   private readonly serverVersion: string;
@@ -147,7 +154,7 @@ export class AutomationBridge extends EventEmitter {
   private readonly clientMode: boolean; // New property for client mode
   private readonly clientHost: string; // Host to connect to in client mode
   private readonly clientPort: number; // Port to connect to in client mode
-  private readonly serverFallbackEnabled: boolean;
+  private readonly serverLegacyEnabled: boolean;
   private activeSockets = new Map<
     WebSocket,
     {
@@ -173,10 +180,12 @@ export class AutomationBridge extends EventEmitter {
   private lastMessageAt?: Date;
   private lastRequestSentAt?: Date;
   private heartbeatTimer?: NodeJS.Timeout;
+  // Coalescing map for identical, idempotent requests (e.g. blueprint_exists)
+  private readonly coalescedRequests = new Map<string, Promise<AutomationBridgeResponseMessage>>();
 
   constructor(options: AutomationBridgeOptions = {}) {
     super();
-    this.host = options.host ?? process.env.MCP_AUTOMATION_WS_HOST ?? '127.0.0.1';
+  this.host = options.host ?? process.env.MCP_AUTOMATION_WS_HOST ?? DEFAULT_AUTOMATION_HOST;
     const sanitizePort = (value: unknown): number | null => {
       if (typeof value === 'number' && Number.isInteger(value)) {
         return value > 0 && value <= 65535 ? value : null;
@@ -188,7 +197,7 @@ export class AutomationBridge extends EventEmitter {
       return null;
     };
 
-    const fallbackPort = sanitizePort(options.port ?? process.env.MCP_AUTOMATION_WS_PORT) ?? 8090;
+  const defaultPort = sanitizePort(options.port ?? process.env.MCP_AUTOMATION_WS_PORT) ?? DEFAULT_AUTOMATION_PORT;
     const configuredPortValues: Array<number | string> | undefined = options.ports
       ? options.ports
       : process.env.MCP_AUTOMATION_WS_PORTS
@@ -202,15 +211,15 @@ export class AutomationBridge extends EventEmitter {
           .filter((port): port is number => port !== null)
       : [];
 
-    if (!sanitizedPorts.includes(fallbackPort)) {
-      sanitizedPorts.unshift(fallbackPort);
+    if (!sanitizedPorts.includes(defaultPort)) {
+      sanitizedPorts.unshift(defaultPort);
     }
     if (sanitizedPorts.length === 0) {
-      sanitizedPorts.push(8090);
+      sanitizedPorts.push(DEFAULT_AUTOMATION_PORT);
     }
 
     this.ports = Array.from(new Set(sanitizedPorts));
-    const defaultProtocols = ['mcp-automation'];
+  const defaultProtocols = DEFAULT_NEGOTIATED_PROTOCOLS;
     const userProtocols = Array.isArray(options.protocols)
       ? options.protocols.filter((proto) => typeof proto === 'string' && proto.trim().length > 0)
       : [];
@@ -221,8 +230,8 @@ export class AutomationBridge extends EventEmitter {
       : [];
     this.negotiatedProtocols = Array.from(new Set([...userProtocols, ...envProtocols, ...defaultProtocols]));
     this.port = this.ports[0];
-    this.serverFallbackEnabled =
-      options.serverFallbackEnabled ?? process.env.MCP_AUTOMATION_SERVER_FALLBACK !== 'false';
+    this.serverLegacyEnabled =
+      options.serverLegacyEnabled ?? process.env.MCP_AUTOMATION_SERVER_LEGACY !== 'false';
     this.capabilityToken =
       options.capabilityToken ?? process.env.MCP_AUTOMATION_CAPABILITY_TOKEN ?? undefined;
     this.enabled = options.enabled ?? process.env.MCP_AUTOMATION_BRIDGE_ENABLED !== 'false';
@@ -235,15 +244,15 @@ export class AutomationBridge extends EventEmitter {
       ?? packageInfo.version
       ?? process.env.npm_package_version
       ?? '0.0.0';
-    const resolvedHeartbeat = options.heartbeatIntervalMs ?? this.DEFAULT_HEARTBEAT_INTERVAL_MS;
+  const resolvedHeartbeat = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
     this.heartbeatIntervalMs = resolvedHeartbeat > 0 ? resolvedHeartbeat : 0;
-    const resolvedMaxPending = options.maxPendingRequests ?? this.DEFAULT_MAX_PENDING_REQUESTS;
-    this.maxPendingRequests = Math.max(1, resolvedMaxPending);
+  const resolvedMaxPending = options.maxPendingRequests ?? DEFAULT_MAX_PENDING_REQUESTS;
+  this.maxPendingRequests = Math.max(1, resolvedMaxPending);
     const resolvedMaxConnections = options.maxConcurrentConnections ?? 10; // Allow up to 10 concurrent connections
     this.maxConcurrentConnections = Math.max(1, resolvedMaxConnections);
     this.clientMode = options.clientMode ?? process.env.MCP_AUTOMATION_CLIENT_MODE === 'true';
-    this.clientHost = options.clientHost ?? process.env.MCP_AUTOMATION_CLIENT_HOST ?? '127.0.0.1';
-  this.clientPort = options.clientPort ?? sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) ?? 8090;
+    this.clientHost = options.clientHost ?? process.env.MCP_AUTOMATION_CLIENT_HOST ?? DEFAULT_AUTOMATION_HOST;
+  this.clientPort = options.clientPort ?? sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) ?? DEFAULT_AUTOMATION_PORT;
   }
 
   override on<K extends keyof AutomationBridgeEvents>(
@@ -458,7 +467,7 @@ export class AutomationBridge extends EventEmitter {
       // Expose active connection details for admin/health purposes
       connections: connectionInfos,
       webSocketListening: this.listeningPorts.size > 0,
-      serverFallbackEnabled: this.serverFallbackEnabled,
+  serverLegacyEnabled: this.serverLegacyEnabled,
       serverName: this.serverName,
       serverVersion: this.serverVersion,
       maxConcurrentConnections: this.maxConcurrentConnections,
@@ -525,24 +534,33 @@ export class AutomationBridge extends EventEmitter {
         this.lastHandshakeFailure = { reason: 'timeout', at: new Date() };
         this.emitAutomation('handshakeFailed', { reason: 'timeout', port });
       }
-    }, 5000);
+    }, DEFAULT_HANDSHAKE_TIMEOUT_MS);
 
     socket.on('message', (data, isBinary) => {
       let parsed: AutomationBridgeMessage;
-      try {
+        try {
         const text = typeof data === 'string' ? data : data.toString('utf8');
-        log.debug(`[AutomationBridge] Received message (binary=${isBinary}, length=${text.length}): ${text.substring(0, 200)}`);
         parsed = JSON.parse(text);
-      } catch (error) {
-        const text = typeof data === 'string' ? data : data.toString('utf8');
-        log.error(`Received non-JSON automation message (binary=${isBinary}); closing connection. Data: ${text.substring(0, 500)}`, error);
-        socket.close(4003, 'Invalid JSON payload');
-        this.lastHandshakeFailure = { reason: 'invalid-json', at: new Date() };
-        this.emitAutomation('handshakeFailed', { reason: 'invalid-json', port });
-        return;
-      }
+        // For important automation messages (responses/requests/events) log
+        // at info level so test runners can observe them without enabling
+        // verbose debug globally.
+        if (parsed && (parsed.type === 'automation_response' || parsed.type === 'automation_request' || parsed.type === 'automation_event')) {
+          const rid = (parsed as any).requestId ?? 'n/a';
+          const action = (parsed as any).action ?? '';
+          log.info(`[AutomationBridge] Received ${parsed.type}${action ? ` action=${action}` : ''} requestId=${rid} length=${text.length}`);
+        } else {
+          log.debug(`[AutomationBridge] Received message (binary=${isBinary}, length=${text.length}): ${text.substring(0, 200)}`);
+        }
+        } catch (_error) {
+          const text = typeof data === 'string' ? data : data.toString('utf8');
+          log.error(`Received non-JSON automation message (binary=${isBinary}); closing connection. Data: ${text.substring(0, 500)}`, _error as any);
+          socket.close(4003, 'Invalid JSON payload');
+          this.lastHandshakeFailure = { reason: 'invalid-json', at: new Date() };
+          this.emitAutomation('handshakeFailed', { reason: 'invalid-json', port });
+          return;
+        }
 
-        if (!handshakeComplete) {
+  if (!handshakeComplete) {
         if (parsed.type !== 'bridge_hello') {
           log.warn(`Expected bridge_hello handshake, received ${parsed.type}; closing.`);
           socket.close(4004, 'Handshake expected bridge_hello');
@@ -551,8 +569,8 @@ export class AutomationBridge extends EventEmitter {
           return;
         }
 
-        if (this.capabilityToken && parsed.capabilityToken !== this.capabilityToken) {
-          log.warn('Automation bridge capability token mismatch; closing connection.');
+  if (this.capabilityToken && parsed.capabilityToken !== this.capabilityToken) {
+          log.warn('Automation bridge capability token mismatch; closing connection. Received token=%s, expected=%s', String(parsed.capabilityToken ?? '<none>'), '<REDACTED>');
           socket.send(
             JSON.stringify({ type: 'bridge_error', error: 'INVALID_CAPABILITY_TOKEN' })
           );
@@ -568,6 +586,12 @@ export class AutomationBridge extends EventEmitter {
         // Sanitize metadata first so we can store any client-provided sessionId
         const metadata = this.sanitizeHandshakeMetadata(parsed as Record<string, unknown>);
         this.lastHandshakeMetadata = metadata;
+        // Log handshake metadata at info level (token redacted by sanitizeHandshakeMetadata)
+        try {
+          log.info(`Automation bridge handshake succeeded (port=${port}) metadata=${JSON.stringify(metadata)}`);
+        } catch (_e) {
+          log.info('Automation bridge handshake succeeded (port=%d) [metadata redaction failed]', port);
+        }
         this.lastHandshakeFailure = undefined;
         this.lastMessageAt = now;
         // Register the socket with metadata and remote address information
@@ -638,7 +662,7 @@ export class AutomationBridge extends EventEmitter {
         this.lastHandshakeFailure = { reason: 'timeout', at: new Date() };
         this.emitAutomation('handshakeFailed', { reason: 'timeout', port: this.clientPort });
       }
-    }, 5000);
+    }, DEFAULT_HANDSHAKE_TIMEOUT_MS);
 
     socket.on('open', () => {
       log.info('Automation bridge client connected, sending handshake');
@@ -656,9 +680,9 @@ export class AutomationBridge extends EventEmitter {
         const text = typeof data === 'string' ? data : data.toString('utf8');
         log.debug(`[AutomationBridge Client] Received message (binary=${isBinary}, length=${text.length}): ${text.substring(0, 200)}`);
         parsed = JSON.parse(text);
-      } catch (error) {
+      } catch (_error) {
         const text = typeof data === 'string' ? data : data.toString('utf8');
-        log.error(`Received non-JSON automation message from server (binary=${isBinary}); closing connection. Data: ${text.substring(0, 500)}`, error);
+        log.error(`Received non-JSON automation message from server (binary=${isBinary}); closing connection. Data: ${text.substring(0, 500)}`, _error as any);
         socket.close(4003, 'Invalid JSON payload');
         this.lastHandshakeFailure = { reason: 'invalid-json', at: new Date() };
         this.emitAutomation('handshakeFailed', { reason: 'invalid-json', port: this.clientPort });
@@ -679,6 +703,11 @@ export class AutomationBridge extends EventEmitter {
         const now = new Date();
         const metadata = this.sanitizeHandshakeMetadata(parsed as Record<string, unknown>);
         this.lastHandshakeMetadata = metadata;
+        try {
+          log.info(`Automation bridge client handshake ack received (port=${this.clientPort}) metadata=${JSON.stringify(metadata)}`);
+        } catch (_e) {
+          log.info('Automation bridge client handshake ack received (port=%d) [metadata redaction failed]', this.clientPort);
+        }
         this.lastHandshakeAck = parsed;
         this.lastHandshakeFailure = undefined;
         this.lastMessageAt = now;
@@ -976,6 +1005,37 @@ export class AutomationBridge extends EventEmitter {
     defaultTimeout = Math.max(defaultTimeout, 300000); // 5 minutes
   }
   const timeoutMs = Math.max(1000, options.timeoutMs ?? defaultTimeout);
+
+    // Helper: stable stringify to produce deterministic cache keys for payloads
+    const stableStringify = (value: unknown): string => {
+      const replacer = (_key: string, val: any) => {
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          const sorted: any = {};
+          Object.keys(val).sort().forEach((k) => { sorted[k] = val[k]; });
+          return sorted;
+        }
+        return val;
+      };
+      try { return JSON.stringify(value, replacer); } catch { return String(value); }
+    };
+
+    // Coalesce identical frequent read-only requests to avoid spamming the editor
+  const COALESCE_ACTIONS = new Set(['blueprint_exists']);
+    let coalesceKey: string | undefined;
+    if (COALESCE_ACTIONS.has(action)) {
+      try {
+        coalesceKey = `${action}:${stableStringify(payload)}`;
+        const existing = this.coalescedRequests.get(coalesceKey);
+        if (existing) {
+          log.debug(`Coalescing automation request for action=${action}`);
+          return existing;
+        }
+      } catch (_err) {
+        // ignore failures to stringify payloads when building a coalesce key
+        coalesceKey = undefined;
+      }
+    }
+
     const requestId = this.generateRequestId();
 
     const requestPayload: AutomationBridgeMessage = {
@@ -1001,7 +1061,13 @@ export class AutomationBridge extends EventEmitter {
     });
 
     this.lastRequestSentAt = new Date();
-    log.info(`sendAutomationRequest: requestId=${requestId}, action=${action}, timeoutMs=${timeoutMs}`);
+    // Avoid noisy logs for very frequent probe actions
+  const FREQUENT_ACTIONS = new Set(['blueprint_exists']);
+    if (FREQUENT_ACTIONS.has(action)) {
+      log.debug(`sendAutomationRequest: requestId=${requestId}, action=${action}, timeoutMs=${timeoutMs}`);
+    } else {
+      log.info(`sendAutomationRequest: requestId=${requestId}, action=${action}, timeoutMs=${timeoutMs}`);
+    }
     const sent = this.send(requestPayload);
     if (!sent) {
       const pending = this.pendingRequests.get(requestId);
@@ -1010,6 +1076,15 @@ export class AutomationBridge extends EventEmitter {
         this.pendingRequests.delete(requestId);
       }
       throw new Error('Failed to dispatch automation request');
+    }
+
+    // Register coalesced promise so other callers with the same action+payload
+    // will reuse the same in-flight request instead of sending duplicates.
+    if (coalesceKey) {
+      this.coalescedRequests.set(coalesceKey, pendingPromise);
+      // Ensure we remove the coalesced entry when the promise settles
+      const localKey = coalesceKey;
+      pendingPromise.finally(() => { if (localKey) { this.coalescedRequests.delete(localKey); } }).catch(() => {});
     }
 
     return pendingPromise;

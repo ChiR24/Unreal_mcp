@@ -1,6 +1,7 @@
 // Debug visualization tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
 import { bestEffortInterpretedText, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 import { parseStandardResult } from '../utils/python-output.js';
 
 export class DebugVisualizationTools {
@@ -38,7 +39,7 @@ except Exception as e:
       .replace(/\r?\n/g, '\n');
 
     try {
-      const response = await this.bridge.executePython(script);
+  const response = await (this.bridge as any).executeEditorPython(script, { allowPythonFallback: allowPythonFallbackFromEnv() });
       let interpreted = interpretStandardResult(response, {
         successMessage: `${action} executed`,
         failureMessage: `${action} failed`

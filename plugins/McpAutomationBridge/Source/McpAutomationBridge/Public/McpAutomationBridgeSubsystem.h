@@ -55,6 +55,19 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "MCP Automation")
     FMcpAutomationMessageReceived OnMessageReceived;
 
+    /**
+     * Deprecated: Controls whether editor Python fallbacks (execute_editor_python)
+     * are accepted and executed by the plugin. Default is false. When disabled
+     * the plugin will reject execute_editor_python requests with
+     * PYTHON_FALLBACK_DISABLED so callers can fail-fast and prefer native
+     * automation actions implemented by the plugin.
+     */
+    UFUNCTION(BlueprintCallable, Category = "MCP Automation")
+    void SetAllowEditorPythonExecution(bool bEnable);
+
+    UFUNCTION(BlueprintCallable, Category = "MCP Automation")
+    bool IsEditorPythonExecutionAllowed() const { return bAllowPythonFallbacks; }
+
 private:
     bool Tick(float DeltaTime);
 
@@ -108,6 +121,17 @@ private:
     // Whether an incoming capability token is required
     bool bRequireCapabilityToken = false;
 
+    /** When true, allow any Python script to be executed when Python fallbacks
+     * are enabled. This is an additional, explicit opt-in beyond the
+     * deprecated bAllowPythonFallbacks flag and restricts ExecPythonCommand
+     * to administrators who intentionally enable it. Default: false. */
+    bool bAllowAllPythonFallbacks = false;
+
+    /** If non-empty, only Python scripts containing one of these substrings
+     * will be permitted when Python fallbacks are enabled. Acts as an
+     * audited allowlist for remaining Python fallbacks. */
+    TArray<FString> AllowedPythonScriptAllowlist;
+
     void RecordHeartbeat();
     void ResetHeartbeatTracking();
     void ForceReconnect(const FString& Reason, float ReconnectDelayOverride = -1.0f);
@@ -129,7 +153,39 @@ private:
     bool bPendingRequestsScheduled = false;
     void ProcessPendingAutomationRequests();
 
+    // Action handlers (implemented in separate translation units)
+    bool HandleExecuteEditorPython(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    /**
+     * Handle lightweight, well-known editor function invocations sent from the
+     * server. This action is intended as a native replacement for the
+     * execute_editor_python fallback for common scripted templates (spawn,
+     * delete, list actors, set viewport camera, asset existence checks, etc.).
+     * When the plugin implements a native function we will handle it here and
+     * avoid executing arbitrary Python inside the editor.
+     */
+    bool HandleExecuteEditorFunction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleSetObjectProperty(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleGetObjectProperty(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleBlueprintAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleSequenceAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Effect-related automation actions (Niagara, debug shapes, dynamic lights)
+    bool HandleEffectAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Asset-related automation actions implemented by the plugin (editor-only operations)
+    bool HandleAssetAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Actor/editor control actions implemented by the plugin
+    bool HandleControlActorAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleControlEditorAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+    // Persist an audit entry for allowed raw Python executions so administrators
+    // can review which scripts were executed via the deprecated fallback.
+    void AppendAuditLog(const FString& RequestId, uint32 ScriptHash, const FString& RequesterAddr, const FString& ScriptSnippet);
+
 private:
+    /** When true, the subsystem will permit executing editor Python via the
+     * execute_editor_python handler. This is intended to be a temporary,
+     * opt-in compatibility flag for migration and debugging; prefer native
+     * plugin handlers and keep this disabled in production. */
+    bool bAllowPythonFallbacks = false;
     /** Guards against reentrant automation request processing */
     bool bProcessingAutomationRequest = false;
 };

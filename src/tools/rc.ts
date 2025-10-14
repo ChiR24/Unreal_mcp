@@ -2,6 +2,7 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { Logger } from '../utils/logger.js';
 import { interpretStandardResult } from '../utils/result-helpers.js';
 import { escapePythonString } from '../utils/python.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export interface RCPreset {
   id: string;
@@ -98,7 +99,7 @@ export class RcTools {
     };
   }
 
-  private coerceToNumber(value: unknown, fallback = 0): number {
+  private coerceToNumber(value: unknown, defaultValue = 0): number {
     if (typeof value === 'number' && Number.isFinite(value)) {
       return value;
     }
@@ -108,7 +109,7 @@ export class RcTools {
         return parsed;
       }
     }
-    return fallback;
+    return defaultValue;
   }
 
   private normalizeVector(value: any): { X: number; Y: number; Z: number } {
@@ -154,7 +155,7 @@ export class RcTools {
     if (!path.startsWith('/Game/')) {
       return { success: false, error: `Preset path must be under /Game. Received: ${path}` };
     }
-    const python = `
+    const _py = `
 import unreal, json
 import time
 name = r"${name}"
@@ -202,24 +203,23 @@ try:
                 print('RESULT:' + json.dumps({'success': False, 'error': f'Create asset failed: {str(e)}'}))
             raise SystemExit(0)
         
-        if asset:
-            # Save with suppressed validation warnings
-            try:
-                unreal.EditorAssetLibrary.save_asset(full_path, only_if_is_dirty=False)
-                print('RESULT:' + json.dumps({'success': True, 'presetPath': full_path}))
-            except Exception as save_err:
-                # Asset was created but save had warnings - still consider success
-                print('RESULT:' + json.dumps({'success': True, 'presetPath': full_path, 'warning': 'Asset created with validation warnings'}))
-        else:
-            print('RESULT:' + json.dumps({'success': False, 'error': 'Preset creation returned None'}))
+    if asset:
+      # Save with suppressed validation warnings
+      try:
+        unreal.EditorAssetLibrary.save_asset(full_path, only_if_is_dirty=False)
+        # Save succeeded; report creation success
+        print('RESULT:' + json.dumps({'success': True, 'presetPath': full_path}))
+      except Exception as save_err:
+        # Asset was created but save had warnings - still consider success
+        print('RESULT:' + json.dumps({'success': True, 'presetPath': full_path, 'warning': 'Asset created with validation warnings', 'saveError': str(save_err)}))
+    else:
+      print('RESULT:' + json.dumps({'success': False, 'error': 'Preset creation returned None'}))
 except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
-    const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(python),
-      'createPreset'
-    );
-    
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+    const payload = { name, path };
+    const resp = await this.executeWithRetry(() => this.bridge.executeEditorFunction('RC_CREATE_PRESET', payload as any, { allowPythonFallback }), 'createPreset');
     const result = this.parsePythonResult(resp, 'createPreset');
     
     // Cache the preset if successful
@@ -238,7 +238,7 @@ except Exception as e:
 
   // Expose an actor by label/name into a preset
   async exposeActor(params: { presetPath: string; actorName: string }) {
-  const python = `
+  const _py = `
 import unreal
 import json
 
@@ -304,11 +304,9 @@ try:
 except Exception as e:
   print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
-    const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(python),
-      'exposeActor'
-    );
-    
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+    const payload = { presetPath: params.presetPath, actorName: params.actorName };
+    const resp = await this.executeWithRetry(() => this.bridge.executeEditorFunction('RC_EXPOSE_ACTOR', payload as any, { allowPythonFallback }), 'exposeActor');
     const result = this.parsePythonResult(resp, 'exposeActor');
     
     // Clear cache for this preset to force refresh
@@ -321,12 +319,10 @@ except Exception as e:
 
   // Expose a property on an object into a preset
   async exposeProperty(params: { presetPath: string; objectPath: string; propertyName: string }) {
-    const python = `\nimport unreal, json\npreset_path = r"${params.presetPath}"\nobj_path = r"${params.objectPath}"\nprop_name = r"${params.propertyName}"\ntry:\n    preset = unreal.EditorAssetLibrary.load_asset(preset_path)\n    obj = unreal.load_object(None, obj_path)\n    if not preset or not obj:\n        print('RESULT:' + json.dumps({'success': False, 'error': 'Preset or object not found'}))\n    else:\n        try:\n            # Expose with default optional args struct (cannot pass None)\n            args = unreal.RemoteControlOptionalExposeArgs()\n            unreal.RemoteControlFunctionLibrary.expose_property(preset, obj, prop_name, args)\n            unreal.EditorAssetLibrary.save_asset(preset_path)\n            print('RESULT:' + json.dumps({'success': True}))\n        except Exception as e:\n            print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))\nexcept Exception as e:\n    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))\n`.trim();
-    const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(python),
-      'exposeProperty'
-    );
-    
+    const _py = `\nimport unreal, json\npreset_path = r"${params.presetPath}"\nobj_path = r"${params.objectPath}"\nprop_name = r"${params.propertyName}"\ntry:\n    preset = unreal.EditorAssetLibrary.load_asset(preset_path)\n    obj = unreal.load_object(None, obj_path)\n    if not preset or not obj:\n        print('RESULT:' + json.dumps({'success': False, 'error': 'Preset or object not found'}))\n    else:\n        try:\n            # Expose with default optional args struct (cannot pass None)\n            args = unreal.RemoteControlOptionalExposeArgs()\n            unreal.RemoteControlFunctionLibrary.expose_property(preset, obj, prop_name, args)\n            unreal.EditorAssetLibrary.save_asset(preset_path)\n            print('RESULT:' + json.dumps({'success': True}))\n        except Exception as e:\n            print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))\nexcept Exception as e:\n    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))\n`.trim();
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+    const payload = { presetPath: params.presetPath, objectPath: params.objectPath, propertyName: params.propertyName };
+    const resp = await this.executeWithRetry(() => this.bridge.executeEditorFunction('RC_EXPOSE_PROPERTY', payload as any, { allowPythonFallback }), 'exposeProperty');
     const result = this.parsePythonResult(resp, 'exposeProperty');
     
     // Clear cache for this preset to force refresh
@@ -339,7 +335,7 @@ except Exception as e:
 
   // List exposed fields (best-effort)
   async listFields(params: { presetPath: string }) {
-    const python = `
+  const _py = `
 import unreal, json
 preset_path = r"${params.presetPath}"
 try:
@@ -373,11 +369,8 @@ try:
 except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
-    const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(python),
-      'listFields'
-    );
-    
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+    const resp = await this.executeWithRetry(() => this.bridge.executeEditorFunction('RC_LIST_FIELDS', { presetPath: params.presetPath } as any, { allowPythonFallback }), 'listFields');
     return this.parsePythonResult(resp, 'listFields');
   }
 
@@ -461,7 +454,7 @@ except Exception as e:
    * List all available Remote Control presets
    */
   async listPresets(): Promise<{ success: boolean; presets?: RCPreset[]; error?: string }> {
-    const python = `
+  const _py = `
 import unreal, json
 try:
     presets = []
@@ -489,8 +482,9 @@ except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
 
+  const allowPythonFallback = allowPythonFallbackFromEnv();
     const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(python),
+      () => (this.bridge as any).executeEditorPython(_py, { allowPythonFallback }),
       'listPresets'
     );
     
@@ -510,7 +504,7 @@ except Exception as e:
    * Delete a Remote Control preset
    */
   async deletePreset(presetId: string): Promise<{ success: boolean; error?: string }> {
-    const python = `
+  const _py = `
 import unreal, json
 preset_id = r"${presetId}"
 try:
@@ -526,11 +520,8 @@ except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
 
-    const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(python),
-      'deletePreset'
-    );
-    
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+    const resp = await this.executeWithRetry(() => this.bridge.executeEditorFunction('RC_DELETE_PRESET', { presetId } as any, { allowPythonFallback }), 'deletePreset');
     const result = this.parsePythonResult(resp, 'deletePreset');
     
     // Remove from cache if successful
@@ -552,7 +543,7 @@ except Exception as e:
     const parameters = params.parameters ?? {};
     const paramsJson = JSON.stringify(parameters ?? {});
 
-    const python = `
+  const _python = `
 import unreal, json
 
 result = {
@@ -622,28 +613,15 @@ print('RESULT:' + json.dumps(result))
     `.trim();
 
     try {
-      const automationResult = await this.bridge.executePythonWithResult(python);
-      if (automationResult && automationResult.success) {
-        return {
-          success: true,
-          result: automationResult.result,
-          transport: 'automation_bridge'
-        };
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+      const paramsJson = JSON.stringify(parameters ?? {});
+      const resp = await this.bridge.executeEditorFunction('RC_CALL_FUNCTION', { presetPath: params.presetPath, functionName: params.functionName, paramsJson } as any, { allowPythonFallback });
+      if (resp && resp.success) {
+        return { success: true, result: resp.result, transport: 'automation_bridge' };
       }
-
-      const errorPayload = (automationResult && typeof automationResult === 'object') ? automationResult : undefined;
-      const errorMessage = errorPayload?.error || errorPayload?.message || 'Automation bridge function call failed';
-      return {
-        success: false,
-        error: errorMessage,
-        transport: 'automation_bridge'
-      };
+      return { success: false, error: resp?.error || resp?.message || 'Automation bridge function call failed', transport: 'automation_bridge' };
     } catch (err: any) {
-      return {
-        success: false,
-        error: err?.message || String(err),
-        transport: 'automation_bridge'
-      };
+      return { success: false, error: err?.message || String(err), transport: 'automation_bridge' };
     }
   }
 
@@ -651,7 +629,7 @@ print('RESULT:' + json.dumps(result))
    * Validate connection to Remote Control
    */
   async validateConnection(): Promise<boolean> {
-    const python = `
+  const _py = `
 import unreal, json
 
 result = {
@@ -673,7 +651,8 @@ print('RESULT:' + json.dumps(result))
     `.trim();
 
     try {
-      const resp = await this.bridge.executePythonWithResult(python);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+      const resp = await this.bridge.executeEditorFunction('RC_VALIDATE_CONNECTION', {}, { allowPythonFallback });
       return Boolean(resp?.success);
     } catch (err: any) {
       this.log.warn('validateConnection via automation failed', err?.message || err);

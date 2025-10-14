@@ -16,7 +16,7 @@ Supported actions: list, import, create_material, duplicate, rename, move, delet
       properties: {
         action: { 
           type: 'string', 
-          enum: ['list', 'import', 'create_material', 'duplicate', 'rename', 'move', 'delete'],
+    enum: ['list', 'import', 'create_material', 'create_material_instance', 'duplicate', 'rename', 'move', 'delete'],
           description: 'Action to perform'
         },
         // For list
@@ -36,9 +36,11 @@ Supported actions: list, import, create_material, duplicate, rename, move, delet
         save: { type: 'boolean', description: 'Save newly created assets after duplication.' },
         fixupRedirectors: { type: 'boolean', description: 'Run redirector fixup for affected folders after move/delete actions.' },
         timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds for automation-bridge-backed asset operations.' },
-        // For create_material
-        name: { type: 'string', description: 'Name for the new material asset. Example: "MyMaterial"' },
-        path: { type: 'string', description: 'Content path where material will be saved. Example: "/Game/Materials"' }
+  // For create_material and create_material_instance
+  name: { type: 'string', description: 'Name for the new material asset or instance. Example: "MyMaterial"' },
+  path: { type: 'string', description: 'Content path where material will be saved. Example: "/Game/Materials"' },
+  parentMaterial: { type: 'string', description: 'Parent material (asset path) for material instances. Example: "/Game/Materials/M_MasterMaterial"' },
+  parameters: { type: 'object', additionalProperties: true, description: 'Optional material parameter overrides for instances (name->value map).' }
       },
       required: ['action']
     },
@@ -60,7 +62,8 @@ Supported actions: list, import, create_material, duplicate, rename, move, delet
           }
         },
         paths: { type: 'array', items: { type: 'string' }, description: 'Imported asset paths (for import)' },
-        materialPath: { type: 'string', description: 'Created material path (for create_material)' },
+  materialPath: { type: 'string', description: 'Created material path (for create_material)' },
+  materialInstancePath: { type: 'string', description: 'Created material instance path (for create_material_instance)' },
         path: { type: 'string', description: 'Resulting asset path for duplicate, rename, or move actions' },
         conflictPath: { type: 'string', description: 'Conflicting asset path when the operation could not proceed' },
         overwritten: { type: 'boolean', description: 'Whether an existing asset was overwritten during duplication' },
@@ -408,7 +411,16 @@ Supported actions: niagara, particle, debug_shape.`,
       properties: {
         action: { 
           type: 'string', 
-          enum: ['particle', 'niagara', 'debug_shape'],
+          enum: [
+            'particle',
+            'niagara',
+            'debug_shape',
+            'spawn_niagara',
+            'set_niagara_parameter',
+            'clear_debug_shapes',
+            'create_dynamic_light',
+            'cleanup'
+          ],
           description: 'Effect type'
         },
         // Common
@@ -440,7 +452,21 @@ Supported actions: niagara, particle, debug_shape.`,
           items: { type: 'number' },
           description: 'RGBA color array with values 0-255 (e.g., [255, 0, 0, 255] for red). Optional, defaults to white.'
         },
-        duration: { type: 'number', description: 'How long debug shape persists in seconds. 0 means one frame, -1 means permanent until cleared. Optional, defaults to 0.' }
+        duration: { type: 'number', description: 'How long debug shape persists in seconds. 0 means one frame, -1 means permanent until cleared. Optional, defaults to 0.' },
+        // Dynamic light parameters (create_dynamic_light)
+        lightName: { type: 'string', description: 'Optional name for the dynamic light actor (create_dynamic_light).' },
+        lightType: { type: 'string', description: 'Light type for create_dynamic_light: Point, Spot, Directional, Rect.' },
+        intensity: { type: 'number', description: 'Light intensity for create_dynamic_light (engine units). Optional.' },
+        rotation: { type: 'object', description: 'Rotation for directional/spot/rect lights (pitch,yaw,roll).', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } } },
+        pulse: { type: 'object', description: 'Optional pulsing behavior for dynamic lights.', properties: { enabled: { type: 'boolean' }, frequency: { type: 'number' } } },
+        // Cleanup (actor removal) filter
+        filter: { type: 'string', description: 'Label filter prefix used by cleanup to remove spawned effect actors (create_effect.cleanup).' },
+        // Niagara parameter helpers
+        systemName: { type: 'string', description: 'Niagara system name (set_niagara_parameter).' },
+        parameterName: { type: 'string', description: 'Niagara parameter name (set_niagara_parameter).' },
+        parameterType: { type: 'string', description: 'Niagara parameter type (Float, Vector, Color, Bool, Int).' },
+        value: { description: 'Value to set for set_niagara_parameter (type dependent).' },
+        isUserParameter: { type: 'boolean', description: 'Whether the parameter is a user-exposed parameter (set_niagara_parameter).' }
       },
       required: ['action']
     },
@@ -478,7 +504,7 @@ Supported actions: create, add_component, set_default, modify_scs.`,
       properties: {
         action: { 
           type: 'string', 
-          enum: ['create', 'add_component', 'set_default', 'modify_scs', 'ensure_exists', 'probe_handle'],
+          enum: ['create', 'add_component', 'set_default', 'modify_scs', 'ensure_exists', 'probe_handle', 'add_variable', 'add_function', 'add_event', 'add_construction_script', 'set_variable_metadata', 'get'],
           description: 'Blueprint action'
         },
         componentClass: { type: 'string', description: 'Optional component class name for probe_handle (e.g., StaticMeshComponent)' },

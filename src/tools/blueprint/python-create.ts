@@ -1,220 +1,212 @@
 import { UnrealBridge } from '../../unreal-bridge.js';
 import { AutomationBridge } from '../../automation-bridge.js';
-import { escapePythonString } from '../../utils/python.js';
 import { coerceString } from '../../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../../utils/env.js';
 
 /**
- * Create a Blueprint asset using Editor Python. Returns the parsed Python
- * RESULT: payload (success/message/path/etc) as an object.
+ * Create a Blueprint asset. Prefers the automation bridge action
+ * `blueprint_create`. If the plugin reports UNKNOWN_PLUGIN_ACTION and
+ * Python fallbacks are enabled, this will call the centralized
+ * CREATE_BLUEPRINT editor-function (the plugin may implement that
+ * natively or run a guarded Python template).
  */
-export async function createBlueprintViaPython(bridge: UnrealBridge, automationBridge: AutomationBridge | undefined, params: { name: string; blueprintType: string; savePath?: string; parentClass?: string; timeoutMs?: number; }) {
+export async function createBlueprintViaPython(
+  bridge: UnrealBridge,
+  automationBridge: AutomationBridge | undefined,
+  params: { name: string; blueprintType?: string; savePath?: string; parentClass?: string; timeoutMs?: number; }
+) {
   const name = coerceString(params.name) ?? '';
   const savePath = coerceString(params.savePath) || '/Game/Blueprints';
   const parent = coerceString(params.parentClass) ?? '';
 
-  const escapedName = escapePythonString(name);
-  const escapedPath = escapePythonString(savePath);
-  const escapedParent = escapePythonString(parent);
+  const allowPython = allowPythonFallbackFromEnv();
+  const automation = automationBridge ?? (bridge as any).automationBridge as AutomationBridge | undefined;
+  if (!automation || typeof automation.sendAutomationRequest !== 'function') {
+    return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge is not available; blueprint_create cannot be performed' } as any;
+  }
 
-  const pythonScript = `
-import unreal, json, time, traceback
-
-def ensure_asset_persistence(asset_path):
-  try:
-    editor_lib = unreal.EditorAssetLibrary
-    for _ in range(50):
-      if editor_lib.does_asset_exist(asset_path):
-        return True
-      time.sleep(0.2)
-    return False
-  except Exception:
-    return False
-
-result = {'success': False, 'message': '', 'path': ''}
-asset_path = "${escapedPath}"
-asset_name = "${escapedName}"
-full_path = f"{asset_path}/{asset_name}"
-
-try:
-  factory = unreal.BlueprintFactory()
-  explicit_parent = "${escapedParent}"
-  if explicit_parent.strip():
-    try:
-      if explicit_parent.startswith('/Script/'):
-        parent_cls = unreal.load_class(None, explicit_parent)
-      elif explicit_parent.startswith('/Game/'):
-        parent_asset = unreal.EditorAssetLibrary.load_asset(explicit_parent)
-        parent_cls = parent_asset.generated_class() if parent_asset and hasattr(parent_asset, 'generated_class') else None
-      else:
-        parent_cls = getattr(unreal, explicit_parent, None)
-    except Exception:
-      parent_cls = None
-    if parent_cls:
-      try:
-        factory.set_editor_property('parent_class', parent_cls)
-      except Exception:
-        pass
-
-  try:
-    tools = unreal.AssetToolsHelpers.get_asset_tools()
-    asset = tools.create_asset(asset_name, asset_path, unreal.Blueprint, factory)
-  except Exception as e:
-    asset = None
-
-  if not asset:
-    result['success'] = False
-    result['message'] = f'Failed to create blueprint: {full_path}'
-    result['path'] = full_path
-  else:
-    result['path'] = full_path
-    result['message'] = f'Blueprint created at {full_path}'
-    result['success'] = True
-    # Attempt to persist and verify
-    try:
-      unreal.EditorAssetLibrary.save_loaded_asset(full_path)
-    except Exception:
-      pass
-    if not ensure_asset_persistence(full_path):
-      result['warnings'] = ['Created but asset registry did not report asset yet']
-
-except Exception as e:
-  result['success'] = False
-  result['message'] = str(e)
-  result['error'] = str(e)
-
-print('RESULT:' + json.dumps(result))
-`.trim();
+  const envTimeout = Number(process.env.MCP_AUTOMATION_PLUGIN_CREATE_TIMEOUT_MS ?? process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '15000');
+  const pluginTimeout = Number.isFinite(envTimeout) && envTimeout > 0 ? envTimeout : 15000;
+  const timeout = typeof params.timeoutMs === 'number' && params.timeoutMs > 0 ? params.timeoutMs : pluginTimeout;
 
   try {
-    if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
-      const envTimeoutCreate = Number(process.env.MCP_AUTOMATION_PYTHON_TIMEOUT_MS ?? process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-      const timeoutCreate = Number.isFinite(envTimeoutCreate) && envTimeoutCreate > 0 ? envTimeoutCreate : 120000;
-      const requested = typeof params.timeoutMs === 'number' && params.timeoutMs > 0 ? params.timeoutMs : timeoutCreate;
-      const resp = await automationBridge.sendAutomationRequest('execute_editor_python', { script: pythonScript }, { timeoutMs: requested });
-      return resp?.result ?? resp;
+    const resp: any = await automation.sendAutomationRequest('blueprint_create', { name, blueprintType: params.blueprintType ?? 'Actor', savePath, parentClass: parent }, { timeoutMs: timeout });
+    if (resp && resp.success !== false) return resp.result ?? resp;
+
+    const errTxt = String(resp?.error ?? resp?.message ?? '');
+    if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+      if (!allowPython) return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_create' } as any;
+      try {
+  const funcResp: any = await (bridge as any).executeEditorFunction('CREATE_BLUEPRINT', { payload: JSON.stringify({ name, blueprintType: params.blueprintType ?? 'Actor', savePath, parentClass: parent }) }, { allowPythonFallback: allowPython });
+        if (funcResp && funcResp.success !== false) return funcResp.result ?? funcResp;
+        return { success: false, error: funcResp?.error ?? funcResp?.message ?? 'PYTHON_EXEC_FAILED' } as any;
+      } catch (pyErr) {
+        return { success: false, error: String(pyErr), message: String(pyErr) } as any;
+      }
     }
-    return await bridge.executePythonWithResult(pythonScript);
+
+    return { success: false, error: resp?.error ?? resp?.message ?? 'BLUEPRINT_CREATE_FAILED' } as any;
   } catch (err) {
-    return { success: false, error: String(err), message: String(err), path: `${savePath}/${name}` };
+    // If the automation bridge call threw, try the guarded editor-function fallback
+    if (!allowPython) return { success: false, error: String(err), message: String(err), path: `${savePath}/${name}` } as any;
+    try {
+  const funcResp: any = await (bridge as any).executeEditorFunction('CREATE_BLUEPRINT', { payload: JSON.stringify({ name, blueprintType: params.blueprintType ?? 'Actor', savePath, parentClass: parent }) }, { allowPythonFallback: allowPython });
+      if (funcResp && funcResp.success !== false) return funcResp.result ?? funcResp;
+      return { success: false, error: funcResp?.error ?? 'PYTHON_EXEC_FAILED' } as any;
+    } catch (pyErr) {
+      return { success: false, error: String(pyErr), message: String(pyErr), path: `${savePath}/${name}` } as any;
+    }
   }
 }
 
 /**
- * Add a member variable using Python (BlueprintEditorLibrary). Returns python RESULT.
+ * Add a variable to a Blueprint. Prefers plugin action
+ * `blueprint_add_variable`. Falls back to editor-function
+ * `BLUEPRINT_ADD_VARIABLE` only when allowed by env.
  */
-export async function addVariableViaPython(bridge: UnrealBridge, params: { blueprintName: string; variableName: string; variableType: string; defaultValue?: any; category?: string; isReplicated?: boolean; isPublic?: boolean; variablePinType?: Record<string, unknown>; }, timeoutMs?: number) {
+export async function addVariableViaPython(
+  bridge: UnrealBridge,
+  params: { blueprintName: string; variableName: string; variableType: string; defaultValue?: any; category?: string; isReplicated?: boolean; isPublic?: boolean; variablePinType?: Record<string, unknown>; },
+  timeoutMs?: number
+) {
   const payload = JSON.stringify(params);
-  const script = `
-import unreal, json
-payload = json.loads(r'''${payload}''')
-res = {'success': False, 'message': '', 'error': ''}
-bel = getattr(unreal, 'BlueprintEditorLibrary', None)
-if not bel:
-  res['error'] = 'BlueprintEditorLibrary not available'
-else:
-  try:
-    bp = None
-    for p in (payload.get('blueprintCandidates') or [payload.get('blueprintName')]):
-      try:
-        bp = unreal.EditorAssetLibrary.load_asset(p)
-        if bp: break
-      except Exception:
-        bp = None
-    if not bp:
-      res['error'] = 'Blueprint not found'
-    else:
-      # Try add_member_variable_with_value
-      try:
-        if hasattr(bel, 'add_member_variable_with_value'):
-          bel.add_member_variable_with_value(bp, payload.get('variableName'), None, payload.get('defaultValue'))
-          res['success'] = True
-          res['message'] = 'Variable added'
-        else:
-          res['error'] = 'API unavailable'
-      except Exception as e:
-        res['error'] = str(e)
-  except Exception as e:
-    res['error'] = str(e)
-print('RESULT:' + json.dumps(res))
-`.trim();
+  const allowPython = allowPythonFallbackFromEnv();
+  const automation = (bridge as any).automationBridge as AutomationBridge | undefined;
+
+  if (!automation || typeof automation.sendAutomationRequest !== 'function') {
+    return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge is not available; cannot add variable' } as any;
+  }
 
   try {
-    try {
-      const t = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : undefined;
-      return await bridge.executePythonWithResult(script, t);
-    } catch (err) {
-      return { success: false, error: String(err) };
+    const resp: any = await automation.sendAutomationRequest('blueprint_add_variable', {
+      blueprintName: params.blueprintName,
+      variableName: params.variableName,
+      variableType: params.variableType,
+      defaultValue: params.defaultValue,
+      category: params.category,
+      isReplicated: params.isReplicated,
+      isPublic: params.isPublic,
+      variablePinType: params.variablePinType
+    }, { timeoutMs });
+
+    if (resp && resp.success !== false) return resp.result ?? resp;
+
+    const errTxt = String(resp?.error ?? resp?.message ?? '');
+    if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+      if (!allowPython) return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_add_variable' } as any;
+      try {
+  const funcResp: any = await (bridge as any).executeEditorFunction('BLUEPRINT_ADD_VARIABLE', { payload }, { allowPythonFallback: allowPython });
+        if (funcResp && funcResp.success !== false) return funcResp.result ?? funcResp;
+        return { success: false, error: funcResp?.error ?? funcResp?.message ?? 'PYTHON_EXEC_FAILED' } as any;
+      } catch (pyErr) {
+        return { success: false, error: String(pyErr) } as any;
+      }
     }
+
+    return { success: false, error: resp?.error ?? resp?.message ?? 'BLUEPRINT_ADD_VARIABLE_FAILED' } as any;
   } catch (err) {
-    return { success: false, error: String(err) };
+    if (!allowPython) return { success: false, error: String(err) } as any;
+    try {
+  const funcResp: any = await (bridge as any).executeEditorFunction('BLUEPRINT_ADD_VARIABLE', { payload }, { allowPythonFallback: allowPython });
+      if (funcResp && funcResp.success !== false) return funcResp.result ?? funcResp;
+      return { success: false, error: funcResp?.error ?? 'PYTHON_EXEC_FAILED' } as any;
+    } catch (pyErr) {
+      return { success: false, error: String(pyErr) } as any;
+    }
   }
 }
 
-export async function setVariableMetadataViaPython(bridge: UnrealBridge, params: { blueprintName: string; variableName: string; metadata: Record<string, unknown>; }, timeoutMs?: number) {
+/**
+ * Set metadata for a Blueprint variable. Prefers plugin action
+ * `blueprint_set_variable_metadata`. Falls back to editor-function
+ * `BLUEPRINT_SET_VARIABLE_METADATA` only when allowed by env.
+ */
+export async function setVariableMetadataViaPython(
+  bridge: UnrealBridge,
+  params: { blueprintName: string; variableName: string; metadata: Record<string, unknown>; },
+  timeoutMs?: number
+) {
   const payload = JSON.stringify(params);
-  const script = `
-import unreal, json
-payload = json.loads(r'''${payload}''')
-res = {'success': False, 'error': '', 'message': ''}
-try:
-  bp = unreal.EditorAssetLibrary.load_asset(payload.get('blueprintName'))
-  if not bp:
-    res['error'] = 'Blueprint not found'
-  else:
-    bel = getattr(unreal, 'BlueprintEditorLibrary', None)
-    if bel and hasattr(bel, 'set_member_variable_meta_data'):
-      for k,v in (payload.get('metadata') or {}).items():
-        try:
-          bel.set_member_variable_meta_data(bp, payload.get('variableName'), k, str(v))
-        except Exception:
-          pass
-      res['success'] = True
-      res['message'] = 'Variable metadata updated'
-    else:
-      res['error'] = 'BlueprintEditorLibrary metadata API unavailable'
-except Exception as e:
-  res['error'] = str(e)
-print('RESULT:' + json.dumps(res))
-`.trim();
+  const allowPython = allowPythonFallbackFromEnv();
+  const automation = (bridge as any).automationBridge as AutomationBridge | undefined;
+
+  if (!automation || typeof automation.sendAutomationRequest !== 'function') {
+    return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge is not available; cannot set variable metadata' } as any;
+  }
 
   try {
-    const t = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : undefined;
-    return await bridge.executePythonWithResult(script, t);
+    const resp: any = await automation.sendAutomationRequest('blueprint_set_variable_metadata', { blueprintName: params.blueprintName, variableName: params.variableName, metadata: params.metadata }, { timeoutMs });
+    if (resp && resp.success !== false) return resp.result ?? resp;
+
+    const errTxt = String(resp?.error ?? resp?.message ?? '');
+    if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+      if (!allowPython) return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_set_variable_metadata' } as any;
+      try {
+  const funcResp: any = await (bridge as any).executeEditorFunction('BLUEPRINT_SET_VARIABLE_METADATA', { payload }, { allowPythonFallback: allowPython });
+        if (funcResp && funcResp.success !== false) return funcResp.result ?? funcResp;
+        return { success: false, error: funcResp?.error ?? funcResp?.message ?? 'PYTHON_EXEC_FAILED' } as any;
+      } catch (pyErr) {
+        return { success: false, error: String(pyErr) } as any;
+      }
+    }
+
+    return { success: false, error: resp?.error ?? resp?.message ?? 'SET_VARIABLE_METADATA_FAILED' } as any;
   } catch (err) {
-    return { success: false, error: String(err) };
+    if (!allowPython) return { success: false, error: String(err) } as any;
+    try {
+  const funcResp: any = await (bridge as any).executeEditorFunction('BLUEPRINT_SET_VARIABLE_METADATA', { payload }, { allowPythonFallback: allowPython });
+      if (funcResp && funcResp.success !== false) return funcResp.result ?? funcResp;
+      return { success: false, error: funcResp?.error ?? 'PYTHON_EXEC_FAILED' } as any;
+    } catch (pyErr) {
+      return { success: false, error: String(pyErr) } as any;
+    }
   }
 }
 
-export async function addConstructionScriptViaPython(bridge: UnrealBridge, params: { blueprintName: string; scriptName: string; }, timeoutMs?: number) {
+/**
+ * Add a construction script entry (or manipulate the construction script)
+ * for a Blueprint. Prefers `blueprint_add_construction_script` and falls
+ * back to the editor-function `BLUEPRINT_ADD_CONSTRUCTION_SCRIPT` when
+ * allowed.
+ */
+export async function addConstructionScriptViaPython(
+  bridge: UnrealBridge,
+  params: { blueprintName: string; scriptName: string; },
+  timeoutMs?: number
+) {
   const payload = JSON.stringify(params);
-  const script = `
-import unreal, json
-payload = json.loads(r'''${payload}''')
-res = {'success': False, 'error': '', 'message': ''}
-try:
-  bp = unreal.EditorAssetLibrary.load_asset(payload.get('blueprintName'))
-  if not bp:
-    res['error'] = 'Blueprint not found'
-  else:
-    bel = getattr(unreal, 'BlueprintEditorLibrary', None)
-    if bel and hasattr(bel, 'add_function_to_blueprint'):
-      try:
-        bel.add_function_to_blueprint(bp, payload.get('scriptName'))
-        res['success'] = True
-        res['message'] = 'Construction script placeholder created as function'
-      except Exception as e:
-        res['error'] = str(e)
-    else:
-      res['error'] = 'BlueprintEditorLibrary function creation API unavailable'
-except Exception as e:
-  res['error'] = str(e)
-print('RESULT:' + json.dumps(res))
-`.trim();
+  const allowPython = allowPythonFallbackFromEnv();
+  const automation = (bridge as any).automationBridge as AutomationBridge | undefined;
+
+  if (!automation || typeof automation.sendAutomationRequest !== 'function') {
+    return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge is not available; cannot add construction script' } as any;
+  }
 
   try {
-    const t = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : undefined;
-    return await bridge.executePythonWithResult(script, t);
+    const resp: any = await automation.sendAutomationRequest('blueprint_add_construction_script', { blueprintName: params.blueprintName, scriptName: params.scriptName }, { timeoutMs });
+    if (resp && resp.success !== false) return resp.result ?? resp;
+
+    const errTxt = String(resp?.error ?? resp?.message ?? '');
+    if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+      if (!allowPython) return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_add_construction_script' } as any;
+      try {
+  const funcResp: any = await (bridge as any).executeEditorFunction('BLUEPRINT_ADD_CONSTRUCTION_SCRIPT', { payload }, { allowPythonFallback: allowPython });
+        if (funcResp && funcResp.success !== false) return funcResp.result ?? funcResp;
+        return { success: false, error: funcResp?.error ?? funcResp?.message ?? 'PYTHON_EXEC_FAILED' } as any;
+      } catch (pyErr) {
+        return { success: false, error: String(pyErr) } as any;
+      }
+    }
+
+    return { success: false, error: resp?.error ?? resp?.message ?? 'ADD_CONSTRUCTION_SCRIPT_FAILED' } as any;
   } catch (err) {
-    return { success: false, error: String(err) };
+    if (!allowPython) return { success: false, error: String(err) } as any;
+    try {
+  const funcResp: any = await (bridge as any).executeEditorFunction('BLUEPRINT_ADD_CONSTRUCTION_SCRIPT', { payload }, { allowPythonFallback: allowPython });
+      if (funcResp && funcResp.success !== false) return funcResp.result ?? funcResp;
+      return { success: false, error: funcResp?.error ?? 'PYTHON_EXEC_FAILED' } as any;
+    } catch (pyErr) {
+      return { success: false, error: String(pyErr) } as any;
+    }
   }
 }

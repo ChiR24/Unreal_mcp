@@ -161,29 +161,20 @@ async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
   if (!bridge.isConnected) {
     return false;
   }
-  try {
-    // Use a safe echo command that doesn't affect any settings
-    await bridge.executeConsoleCommand('echo MCP Server Health Check');
-    metrics.connectionStatus = 'connected';
-    metrics.lastHealthCheck = new Date();
-    lastHealthSuccessAt = Date.now();
-    return true;
-  } catch (err1) {
-    // Fallback: minimal Python ping (if Python plugin is enabled)
     try {
-      await bridge.executePython("import sys; sys.stdout.write('OK')");
+      // Use a safe echo command that doesn't affect any settings
+      await bridge.executeConsoleCommand('echo MCP Server Health Check');
       metrics.connectionStatus = 'connected';
       metrics.lastHealthCheck = new Date();
       lastHealthSuccessAt = Date.now();
       return true;
-    } catch (err2) {
+    } catch (err1) {
       metrics.connectionStatus = 'error';
       metrics.lastHealthCheck = new Date();
       // Avoid noisy warnings when engine may be shutting down; log at debug
-      log.debug('Health check failed (console and python):', err1, err2);
+      log.debug('Health check failed (console):', err1);
       return false;
     }
-  }
 }
 
 export function createServer() {
@@ -287,17 +278,17 @@ export function createServer() {
 
   // Resources
   const assetResources = new AssetResources(bridge);
-  const actorResources = new ActorResources(bridge);
+  const actorResources = new ActorResources(bridge, automationBridge);
   const levelResources = new LevelResources(bridge);
   
   // Tools
   const actorTools = new ActorTools(bridge);
   const assetTools = new AssetTools(bridge, automationBridge);
   const editorTools = new EditorTools(bridge);
-  const materialTools = new MaterialTools(bridge);
+  const materialTools = new MaterialTools(bridge, automationBridge);
   const animationTools = new AnimationTools(bridge);
   const physicsTools = new PhysicsTools(bridge);
-  const niagaraTools = new NiagaraTools(bridge);
+  const niagaraTools = new NiagaraTools(bridge, automationBridge);
   const blueprintTools = new BlueprintTools(bridge, automationBridge);
   const levelTools = new LevelTools(bridge);
   const lightingTools = new LightingTools(bridge);
@@ -323,9 +314,7 @@ export function createServer() {
       capabilities: {
         resources: {},
         tools: {},
-        prompts: {
-          listChanged: false
-        },
+        prompts: {},
         logging: {}
       }
     }

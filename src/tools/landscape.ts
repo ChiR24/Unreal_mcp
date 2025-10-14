@@ -1,6 +1,7 @@
 // Landscape tools for Unreal Engine with UE 5.6 World Partition support
 import { UnrealBridge } from '../unreal-bridge.js';
 import { bestEffortInterpretedText, coerceBoolean, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 import { ensureVector3 } from '../utils/validation.js';
 import { escapePythonString } from '../utils/python.js';
 
@@ -284,7 +285,8 @@ print("RESULT:" + json.dumps(result))
 `.trim();
 
     try {
-      const response = await this.bridge.executePython(pythonScript);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback });
       const interpreted = interpretStandardResult(response, {
         successMessage: 'Landscape actor created',
         failureMessage: 'Failed to create landscape actor'
@@ -645,7 +647,8 @@ except Exception as e:
 print('RESULT:' + json.dumps(result))
 `.trim();
 
-    const response = await this.bridge.executePython(pythonScript);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback });
     const interpreted = interpretStandardResult(response, {
       successMessage: 'World Partition configuration attempted',
       failureMessage: 'World Partition configuration failed'

@@ -1,6 +1,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { toVec3Object, toRotObject } from '../utils/normalize.js';
 import { bestEffortInterpretedText, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class EditorTools {
   constructor(private bridge: UnrealBridge) {}
@@ -16,7 +17,8 @@ else:
     print("PIE_STATE:False")
       `.trim();
       
-      const resp: any = await this.bridge.executePython(pythonCmd);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const resp: any = await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
       const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
       return out.includes('PIE_STATE:True');
     } catch {
@@ -69,7 +71,8 @@ else:
     print('RESULT:' + json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'}))
         `.trim();
         
-        const resp: any = await this.bridge.executePython(pythonCmd);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const resp: any = await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
         const interpreted = interpretStandardResult(resp, {
           successMessage: 'PIE started',
           failureMessage: 'Failed to start PIE'
@@ -116,7 +119,8 @@ else:
     # If subsystem not available, report error
     print('RESULT:' + json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'}))
         `.trim();
-        const resp: any = await this.bridge.executePython(pythonCmd);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const resp: any = await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
         const interpreted = interpretStandardResult(resp, {
           successMessage: 'PIE stopped successfully',
           failureMessage: 'Failed to stop PIE'
@@ -176,7 +180,8 @@ try:
 except Exception as e:
     print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
 `.trim();
-      const resp: any = await this.bridge.executePython(py);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const resp: any = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback });
       const interpreted = interpretStandardResult(resp, {
         successMessage: 'Lighting build started',
         failureMessage: 'Failed to build lighting'
@@ -254,7 +259,8 @@ if ues:
     except Exception:
         pass
           `.trim();
-          await this.bridge.executePython(pythonCmd);
+          const allowPythonFallback = allowPythonFallbackFromEnv();
+          await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
           return { 
             success: true, 
             message: 'Viewport camera positioned via UnrealEditorSubsystem' 
@@ -287,7 +293,8 @@ if ues:
         except Exception:
             pass
           `.trim();
-          await this.bridge.executePython(pythonCmd);
+          const allowPythonFallback = allowPythonFallbackFromEnv();
+          await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
           return { 
             success: true, 
             message: 'Viewport camera rotation set via UnrealEditorSubsystem' 
@@ -378,7 +385,8 @@ except Exception as e:
 print("RESULT:" + json.dumps(result))
 `.trim();
 
-      const resp: any = await this.bridge.executePython(pythonCmd);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const resp: any = await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
       const interpreted = interpretStandardResult(resp, {
         successMessage: `Viewport resolution set to ${clampedWidth}x${clampedHeight}`,
         failureMessage: 'Failed to set viewport resolution'

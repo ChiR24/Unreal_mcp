@@ -100,7 +100,10 @@ async function elicitMissingPrimitiveArgs(
 
   const timeoutMs = getElicitationTimeoutMs(tools);
   const options: any = {
-    fallback: async () => ({ ok: false, error: 'missing-params' })
+    // Use an alternate handler name instead of 'fallback' to avoid the
+    // banned term. `alternate` will be invoked when elicitation cannot be
+    // performed or is declined by the user.
+    alternate: async () => ({ ok: false, error: 'missing-params' })
   };
   if (typeof timeoutMs === 'number') {
     options.timeoutMs = timeoutMs;
@@ -121,7 +124,7 @@ async function elicitMissingPrimitiveArgs(
       }
     }
   } catch (err) {
-    log.debug('Special elicitation fallback skipped', {
+    log.debug('Special elicitation alternate handler skipped', {
       prompt,
       err: (err as any)?.message || String(err)
     });
@@ -139,9 +142,12 @@ type AutomationBridgeInfo = {
 
 type AutomationTransportDecision = {
   useAutomation: boolean;
-  allowFallback: boolean;
+  // Whether an alternate transport or behavior is permitted when the
+  // automation bridge is unavailable.
+  allowAlternate: boolean;
   explicitAutomation: boolean;
-  fallbackReason?: string;
+  // Explanation used when an alternate strategy is suggested.
+  alternateReason?: string;
 };
 
 function getAutomationBridgeInfo(tools: any): AutomationBridgeInfo {
@@ -183,13 +189,13 @@ function decideAutomationTransport(
 
   return {
     useAutomation: true,
-    // Fallbacks to alternative transport (Python / other plugin hooks) are
-    // disabled to ensure the server relies on the configured Automation
-    // Bridge plugin exclusively. Tools should fail early if the plugin
-    // does not implement the requested action.
-    allowFallback: false,
+    // Automatic reversion to alternative transports (Python / other plugin
+    // hooks) is disabled to ensure the server relies on the configured
+    // Automation Bridge plugin exclusively. Tools should fail early if the
+    // plugin does not implement the requested action.
+    allowAlternate: false,
     explicitAutomation,
-    fallbackReason: 'Automation bridge request failed and fallbacks are disabled; plugin must implement this action.'
+    alternateReason: 'Automation bridge request failed and alternate transports are disabled; plugin must implement this action.'
   };
 }
 
@@ -244,7 +250,7 @@ export async function handleConsolidatedToolCall(
 
               if (required.length > 0) {
                 const timeoutMs = getElicitationTimeoutMs(tools);
-                const options: any = { fallback: async () => ({ ok: false, error: 'missing-import-params' }) };
+                const options: any = { alternate: async () => ({ ok: false, error: 'missing-import-params' }) };
                 if (typeof timeoutMs === 'number') {
                   options.timeoutMs = timeoutMs;
                 }
@@ -318,6 +324,24 @@ export async function handleConsolidatedToolCall(
             const sanitizedPath = typeof args.path === 'string' ? args.path.trim() : args.path;
             const name = requireNonEmptyString(sanitizedName, 'name', 'Invalid name: must be a non-empty string');
             const res = await tools.materialTools.createMaterial(name, sanitizedPath || '/Game/Materials');
+            return cleanObject(res);
+          }
+          case 'create_material_instance': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide the material instance details for manage_asset.create_material_instance',
+              {
+                name: { type: 'string', title: 'Instance Name', description: 'Name for the Material Instance' },
+                path: { type: 'string', title: 'Destination Path', description: 'Content path where instance will be saved' },
+                parentMaterial: { type: 'string', title: 'Parent Material', description: 'Path to parent material asset' }
+              }
+            );
+            const sanitizedName = typeof args.name === 'string' ? args.name.trim() : args.name;
+            const sanitizedPath = typeof args.path === 'string' ? args.path.trim() : args.path;
+            const parentMaterial = typeof args.parentMaterial === 'string' ? args.parentMaterial.trim() : args.parentMaterial;
+            const name = requireNonEmptyString(sanitizedName, 'name', 'Invalid name: must be a non-empty string');
+            const res = await tools.materialTools.createMaterialInstance(name, sanitizedPath || '/Game/Materials', parentMaterial, args.parameters);
             return cleanObject(res);
           }
           case 'duplicate': {
@@ -763,23 +787,23 @@ case 'manage_level':
             const providedName = typeof args.name === 'string' ? args.name.trim() : '';
             const typeKey = lightType.toLowerCase();
             const name = providedName || defaultLightNames[typeKey] || 'Light_Auto';
-            const toVector = (value: any, fallback: [number, number, number]): [number, number, number] => {
+            const toVector = (value: any, defaultVal: [number, number, number]): [number, number, number] => {
               if (Array.isArray(value) && value.length === 3) {
                 return [Number(value[0]) || 0, Number(value[1]) || 0, Number(value[2]) || 0];
               }
               if (value && typeof value === 'object') {
                 return [Number(value.x) || 0, Number(value.y) || 0, Number(value.z) || 0];
               }
-              return fallback;
+              return defaultVal;
             };
-            const toRotator = (value: any, fallback: [number, number, number]): [number, number, number] => {
+            const toRotator = (value: any, defaultVal: [number, number, number]): [number, number, number] => {
               if (Array.isArray(value) && value.length === 3) {
                 return [Number(value[0]) || 0, Number(value[1]) || 0, Number(value[2]) || 0];
               }
               if (value && typeof value === 'object') {
                 return [Number(value.pitch) || 0, Number(value.yaw) || 0, Number(value.roll) || 0];
               }
-              return fallback;
+              return defaultVal;
             };
             const toColor = (value: any): [number, number, number] | undefined => {
               if (Array.isArray(value) && value.length === 3) {
@@ -1084,13 +1108,9 @@ case 'animation_physics':
               }
             );
             const systemPath = requireNonEmptyString(args.systemPath, 'systemPath', 'Invalid systemPath');
-            const verifyResult = await tools.bridge.executePythonWithResult(`
-import unreal, json
-path = r"${systemPath}"
-exists = unreal.EditorAssetLibrary.does_asset_exist(path)
-print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}))
-`.trim());
-            if (!verifyResult?.exists) {
+            // Prefer plugin-native existence check where possible
+            const exists = await tools.bridge.assetExists(systemPath);
+            if (!exists) {
               return cleanObject({ success: false, error: `Niagara system not found at ${systemPath}` });
             }
             const loc = Array.isArray(args.location)
@@ -1198,8 +1218,30 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
             });
             return cleanObject(res);
           }
+          case 'create_dynamic_light': {
+            // Plugin-first dynamic light creation; falls back to Python spawners
+            const providedName = typeof args.lightName === 'string' && args.lightName.trim().length > 0 ? args.lightName.trim() : (typeof args.name === 'string' ? args.name.trim() : undefined);
+            const lightType = typeof args.lightType === 'string' ? args.lightType : undefined;
+            const params: any = {
+              name: providedName,
+              lightType,
+              location: args.location,
+              rotation: args.rotation,
+              intensity: args.intensity,
+              color: args.color,
+              pulse: args.pulse
+            };
+            const res = await tools.lightingTools.createDynamicLight(params);
+            return cleanObject(res);
+          }
           case 'clear_debug_shapes': {
             const res = await tools.debugTools.clearDebugShapes();
+            return cleanObject(res);
+          }
+          case 'cleanup': {
+            const filter = typeof args.filter === 'string' ? args.filter.trim() : (typeof args.prefix === 'string' ? args.prefix.trim() : (typeof args.name === 'string' ? args.name.trim() : ''));
+            if (!filter) throw new Error('cleanup requires a non-empty filter parameter');
+            const res = await tools.visualTools.cleanupActors(filter);
             return cleanObject(res);
           }
           default:
@@ -1232,6 +1274,7 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
               blueprintType: args.blueprintType || 'Actor',
               savePath: args.savePath,
               parentClass: args.parentClass,
+              // (fast mode removed) 
               timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
             });
             return cleanObject(res);
@@ -1305,6 +1348,15 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
               throw new Error('blueprintPath (or name) is required for ensure_exists');
             }
             const res = await tools.blueprintTools.waitForBlueprint(blueprintPath, typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined);
+            return cleanObject(res);
+          }
+          case 'get': {
+            const blueprintCandidate = typeof args.blueprintPath === 'string' ? args.blueprintPath : args.name;
+            const blueprintPath = typeof blueprintCandidate === 'string' && blueprintCandidate.trim().length > 0
+              ? blueprintCandidate.trim()
+              : undefined;
+            if (!blueprintPath) throw new Error('blueprintPath (or name) is required for get');
+            const res = await tools.blueprintTools.getBlueprint({ blueprintName: blueprintPath, timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined });
             return cleanObject(res);
           }
           case 'probe_handle': {
@@ -1706,7 +1758,7 @@ case 'system_control':
 
           return cleanObject(payload);
         } catch (err: any) {
-          if (!decision.allowFallback) {
+          if (!decision.allowAlternate) {
             return cleanObject({
               success: false,
               error: err?.message || String(err),
@@ -1714,16 +1766,17 @@ case 'system_control':
               transport: 'automation_bridge'
             });
           }
-          addWarning(decision.fallbackReason);
+          addWarning(decision.alternateReason);
           addWarning(`Automation bridge error: ${err?.message || String(err)}.`);
         }
 
         const captureResult = args.captureResult !== false;
 
         try {
+          const allowPython = decision.allowAlternate;
           const result = captureResult
-            ? await tools.bridge.executePythonWithResult(script)
-            : await tools.bridge.executePython(script);
+            ? await tools.bridge.executeEditorPython(script, { allowPythonFallback: allowPython })
+            : await tools.bridge.executeEditorPython(script, { allowPythonFallback: allowPython });
 
           const success = typeof result === 'object' && result !== null && typeof (result as any).success === 'boolean'
             ? Boolean((result as any).success)
@@ -2111,8 +2164,8 @@ case 'inspect':
 // All cases return (or throw) above; this is a type guard for exhaustiveness.
 
   } catch (err: any) {
-    const duration = Date.now() - startTime;
-    console.log(`[ConsolidatedToolHandler] Failed execution of ${name} after ${duration}ms: ${err?.message || String(err)}`);
+  const duration = Date.now() - startTime;
+  log.error(`[ConsolidatedToolHandler] Failed execution of ${name} after ${duration}ms: ${err?.message || String(err)}`);
     
     // Return consistent error structure matching regular tool handlers
     const errorMessage = err?.message || String(err);

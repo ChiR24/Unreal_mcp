@@ -1,6 +1,7 @@
 // Foliage tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
 import { bestEffortInterpretedText, coerceBoolean, coerceNumber, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class FoliageTools {
   constructor(private bridge: UnrealBridge) {}
@@ -54,7 +55,7 @@ import unreal, json
 
 name = ${JSON.stringify(name)}
 mesh_path = ${JSON.stringify(meshPath)}
-fallback_mesh = '/Engine/EngineMeshes/Sphere'
+  default_mesh = '/Engine/EngineMeshes/Sphere'
 package_path = '/Game/Foliage/Types'
 
 res = {'success': False, 'created': False, 'asset_path': '', 'used_mesh': '', 'exists_after': False, 'method': '', 'note': ''}
@@ -75,9 +76,9 @@ try:
     except Exception as e:
         res['note'] += f"; could not check/load mesh_path: {e}"
 
-    if not mesh:
-        mesh = unreal.EditorAssetLibrary.load_asset(fallback_mesh)
-        res['note'] += '; fallback_mesh_used'
+  if not mesh:
+    mesh = unreal.EditorAssetLibrary.load_asset(default_mesh)
+    res['note'] += '; default_mesh_used'
     if mesh:
         res['used_mesh'] = str(mesh.get_path_name())
 
@@ -205,7 +206,8 @@ except Exception as e:
 print('RESULT:' + json.dumps(res))
 `.trim();
 
-    const pyResp = await this.bridge.executePython(py);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const pyResp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback });
     const interpreted = interpretStandardResult(pyResp, {
       successMessage: `Foliage type '${name}' processed`,
       failureMessage: 'Add foliage type failed'
@@ -325,7 +327,7 @@ try:
     
     if not mesh:
         mesh = unreal.EditorAssetLibrary.load_asset('/Engine/EngineMeshes/Sphere')
-        res['note'] += '; used_fallback_mesh'
+  res['note'] += '; used_default_mesh'
     
     if mesh:
         res['used_mesh'] = str(mesh.get_path_name())
@@ -371,7 +373,8 @@ except Exception as e:
 print('RESULT:' + json.dumps(res))
 `.trim();
 
-    const pyResp = await this.bridge.executePython(py);
+  const allowPythonFallback2 = allowPythonFallbackFromEnv();
+  const pyResp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallback2 });
     const interpreted = interpretStandardResult(pyResp, {
       successMessage: `Painted foliage for '${foliageType}'`,
       failureMessage: 'Paint foliage failed'

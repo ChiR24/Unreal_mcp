@@ -2,6 +2,7 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { ensureRotation, ensureVector3 } from '../utils/validation.js';
 import { coerceString, coerceVector3, interpretStandardResult } from '../utils/result-helpers.js';
 import { escapePythonString } from '../utils/python.js';
+import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class ActorTools {
   constructor(private bridge: UnrealBridge) {}
@@ -256,7 +257,8 @@ print('RESULT:' + json.dumps(finalize()))
 `.trim();
 
     try {
-      const response = await this.bridge.executePython(pythonCmd);
+  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const response = await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
       const interpreted = interpretStandardResult(response, {
         successMessage: `Spawned actor ${className}`,
         failureMessage: `Failed to spawn actor ${className}`
@@ -321,7 +323,8 @@ else:
     print("PIE_INACTIVE")
         `.trim();
         
-        const pieCheckResult = await this.bridge.executePython(pieCheckPython);
+  const allowPythonFallbackPie = allowPythonFallbackFromEnv();
+  const pieCheckResult = await (this.bridge as any).executeEditorPython(pieCheckPython, { allowPythonFallback: allowPythonFallbackPie });
         const outputStr = typeof pieCheckResult === 'string' ? pieCheckResult : JSON.stringify(pieCheckResult);
         
         if (outputStr.includes('PIE_ACTIVE')) {
