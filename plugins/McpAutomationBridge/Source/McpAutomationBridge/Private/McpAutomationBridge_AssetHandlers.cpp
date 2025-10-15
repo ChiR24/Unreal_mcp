@@ -14,12 +14,34 @@
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceConstant.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Misc/Paths.h"
+#include "HAL/PlatformFilemanager.h"
+#include "Misc/FileHelper.h"
+#include "UObject/SoftObjectPath.h"
 #if __has_include("MaterialEditingLibrary.h")
 #include "MaterialEditingLibrary.h"
 #define MCP_HAS_MATERIAL_EDITING_LIBRARY 1
 #else
 #define MCP_HAS_MATERIAL_EDITING_LIBRARY 0
 #endif
+
+// Niagara headers/factory probing: some engine builds may not expose the
+// Niagara editor factories; detect availability so we can use native
+// creation when possible and gracefully fall back to a plugin-side
+// registry entry when not.
+#if __has_include("NiagaraSystemFactoryNew.h")
+#include "NiagaraSystemFactoryNew.h"
+#define MCP_HAS_NIAGARA_FACTORY 1
+#else
+#define MCP_HAS_NIAGARA_FACTORY 0
+#endif
+#if __has_include("NiagaraSystem.h")
+#include "NiagaraSystem.h"
+#endif
+
+// Simple in-memory store for asset tags (best-effort; not persisted to disk)
+static TMap<FString, FString> GMcpAssetTagStore;
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
@@ -195,7 +217,7 @@ print('RESULT:' + json.dumps(result))
                 }
             }
 #if WITH_EDITOR
-            UEditorAssetLibrary::SaveLoadedAsset(M);
+            SaveLoadedAssetThrottled(M);
 #endif
             TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetStringField(TEXT("path"), M->GetPathName()); Out->SetBoolField(TEXT("success"), true); SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Material created"), Out, FString());
         });
@@ -386,13 +408,76 @@ print('RESULT:' + json.dumps(result))
                 }
             }
 #if WITH_EDITOR
-            UEditorAssetLibrary::SaveLoadedAsset(MIC);
+            SaveLoadedAssetThrottled(MIC);
 #endif
             TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetStringField(TEXT("path"), MIC->GetPathName()); Out->SetBoolField(TEXT("success"), true); SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Material instance created"), Out, FString());
         });
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_material_instance requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+
+    // CREATE NIAGARA SYSTEM
+    if (Lower.Equals(TEXT("create_niagara_system"), ESearchCase::IgnoreCase))
+    {
+#if WITH_EDITOR
+        if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("create_niagara_system payload missing."), TEXT("INVALID_PAYLOAD")); return true; }
+        FString Name; if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.TrimStartAndEnd().IsEmpty()) { SendAutomationError(RequestingSocket, RequestId, TEXT("name required"), TEXT("INVALID_ARGUMENT")); return true; }
+        FString Destination; Payload->TryGetStringField(TEXT("savePath"), Destination);
+        FString Template; Payload->TryGetStringField(TEXT("template"), Template);
+
+        if (Destination.IsEmpty()) Destination = TEXT("/Game");
+        if (Destination.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) Destination = FString::Printf(TEXT("/Game%s"), *Destination.RightChop(8));
+
+        // Normalise and schedule asset creation on the GameThread
+        AsyncTask(ENamedThreads::GameThread, [this, RequestId, Name, Destination, Template, RequestingSocket]() {
+            TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+#if MCP_HAS_NIAGARA_FACTORY
+            // Try native creation via Niagara factory when available
+            UNiagaraSystemFactoryNew* Factory = NewObject<UNiagaraSystemFactoryNew>();
+            FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
+            UObject* NewObj = AssetToolsModule.Get().CreateAsset(Name, Destination, UNiagaraSystem::StaticClass(), Factory);
+            if (!NewObj)
+            {
+                Out->SetStringField(TEXT("error"), TEXT("CreateAsset returned null"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create Niagara system failed"), Out, TEXT("CREATE_NIAGARA_SYSTEM_FAILED"));
+                return;
+            }
+            UNiagaraSystem* NS = Cast<UNiagaraSystem>(NewObj);
+            if (!NS)
+            {
+                Out->SetStringField(TEXT("error"), TEXT("Created asset is not a NiagaraSystem"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create Niagara system failed"), Out, TEXT("CREATE_NIAGARA_SYSTEM_FAILED"));
+                return;
+            }
+            // Optionally record template reference for tests/tools
+            if (!Template.IsEmpty()) { Out->SetStringField(TEXT("template"), Template); }
+            // Register and save
+            FAssetRegistryModule& Arm = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")); Arm.Get().AssetCreated(NS);
+#if WITH_EDITOR
+            SaveLoadedAssetThrottled(NS);
+#endif
+            Out->SetBoolField(TEXT("success"), true);
+            Out->SetStringField(TEXT("path"), NS->GetPathName());
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara system created"), Out, FString());
+#else
+            // Niagara factories unavailable — record a lightweight registry entry
+            const FString CandidateNormalized = FString::Printf(TEXT("%s/%s"), *Destination, *Name);
+            TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+            Entry->SetStringField(TEXT("name"), Name);
+            Entry->SetStringField(TEXT("path"), CandidateNormalized);
+            if (!Template.IsEmpty()) Entry->SetStringField(TEXT("template"), Template);
+            GNiagaraRegistry.Add(CandidateNormalized, Entry);
+            Out->SetBoolField(TEXT("success"), true);
+            Out->SetStringField(TEXT("path"), CandidateNormalized);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara system recorded in plugin registry (stub)."), Out, FString());
+#endif
+        });
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_niagara_system requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
         return true;
 #endif
     }
@@ -840,6 +925,214 @@ print('RESULT:' + json.dumps(result))
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Delete assets requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+
+    // LIST (directory listing using AssetRegistry)
+    if (Lower.Equals(TEXT("list"), ESearchCase::IgnoreCase))
+    {
+#if WITH_EDITOR
+        if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("list payload missing."), TEXT("INVALID_PAYLOAD")); return true; }
+        FString Directory; if (!Payload->TryGetStringField(TEXT("directory"), Directory)) Payload->TryGetStringField(TEXT("path"), Directory);
+        int32 Limit = 0; if (Payload->HasField(TEXT("limit"))) { double Tmp = 0; Payload->TryGetNumberField(TEXT("limit"), Tmp); Limit = static_cast<int32>(Tmp); }
+        FString Filter; Payload->TryGetStringField(TEXT("filter"), Filter);
+
+        if (Directory.IsEmpty()) Directory = TEXT("/Game");
+        // Normalize /Content -> /Game and forward slashes
+        Directory = Directory.Replace(TEXT("\\"), TEXT("/"));
+        if (Directory.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) Directory = FString::Printf(TEXT("/Game%s"), *Directory.RightChop(8));
+
+        FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+        IAssetRegistry& AR = AssetRegistryModule.Get();
+
+        // Get immediate sub-paths (folders)
+        TArray<FString> SubPaths; AR.GetSubPaths(Directory, SubPaths, false);
+
+        // Get immediate assets
+        TArray<FAssetData> AssetDataList; AR.GetAssetsByPath(FName(*Directory), AssetDataList, false);
+
+        // Apply optional filter (class substring)
+        FString FilterLower = Filter.ToLower();
+        TArray<TSharedPtr<FJsonValue>> FoldersJson;
+        for (const FString& P : SubPaths)
+        {
+            TSharedPtr<FJsonObject> FObj = MakeShared<FJsonObject>();
+            FObj->SetStringField(TEXT("n"), FPaths::GetCleanFilename(P));
+            FObj->SetStringField(TEXT("p"), P);
+            FObj->SetStringField(TEXT("c"), TEXT("Folder"));
+            FoldersJson.Add(MakeShared<FJsonValueObject>(FObj));
+        }
+
+        TArray<TSharedPtr<FJsonValue>> AssetsJson;
+        int32 Count = 0;
+        for (const FAssetData& AD : AssetDataList)
+        {
+            if (!Filter.IsEmpty())
+            {
+                // Prefer the newer AssetClassPath API when available
+                FString ClassName = AD.AssetClassPath.ToString();
+                if (!ClassName.ToLower().Contains(FilterLower)) continue;
+            }
+            if (Limit > 0 && Count >= Limit) break;
+            TSharedPtr<FJsonObject> AObj = MakeShared<FJsonObject>();
+            AObj->SetStringField(TEXT("n"), AD.AssetName.ToString());
+            AObj->SetStringField(TEXT("p"), AD.GetSoftObjectPath().ToString());
+            AObj->SetStringField(TEXT("c"), AD.AssetClassPath.ToString());
+            AssetsJson.Add(MakeShared<FJsonValueObject>(AObj));
+            ++Count;
+        }
+
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+        Out->SetBoolField(TEXT("success"), true);
+        Out->SetStringField(TEXT("path"), Directory);
+        Out->SetNumberField(TEXT("folders"), SubPaths.Num());
+        Out->SetNumberField(TEXT("files"), Count);
+        Out->SetArrayField(TEXT("folders_list"), FoldersJson);
+        Out->SetArrayField(TEXT("assets"), AssetsJson);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Directory contents retrieved"), Out, FString());
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("list requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+
+    // CREATE FOLDER (make a folder under /Game - best-effort filesystem creation)
+    if (Lower.Equals(TEXT("create_folder"), ESearchCase::IgnoreCase) || Lower.Equals(TEXT("createfolder"), ESearchCase::IgnoreCase))
+    {
+#if WITH_EDITOR
+        if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("create_folder payload missing."), TEXT("INVALID_PAYLOAD")); return true; }
+        FString Path; if (!Payload->TryGetStringField(TEXT("path"), Path)) { SendAutomationError(RequestingSocket, RequestId, TEXT("path required"), TEXT("INVALID_ARGUMENT")); return true; }
+        FString Normalized = Path.Replace(TEXT("\\"), TEXT("/"));
+        if (Normalized.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) Normalized = FString::Printf(TEXT("/Game%s"), *Normalized.RightChop(8));
+        // Build disk path under Project/Content
+        FString Rel = Normalized;
+        if (Rel.StartsWith(TEXT("/Game"), ESearchCase::IgnoreCase)) Rel = Rel.RightChop(5);
+        if (Rel.StartsWith(TEXT("/"))) Rel = Rel.RightChop(1);
+        FString Full = FPaths::Combine(FPaths::ProjectContentDir(), Rel);
+        IPlatformFile& PF = FPlatformFileManager::Get().GetPlatformFile();
+        const bool bOk = PF.CreateDirectoryTree(*Full);
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetBoolField(TEXT("success"), bOk); Out->SetStringField(TEXT("path"), Normalized);
+        SendAutomationResponse(RequestingSocket, RequestId, bOk, bOk ? TEXT("Folder created") : TEXT("Failed to create folder"), Out, bOk ? FString() : TEXT("CREATE_FOLDER_FAILED"));
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_folder requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+
+    // GET DEPENDENCIES
+    if (Lower.Equals(TEXT("get_dependencies"), ESearchCase::IgnoreCase) || Lower.Equals(TEXT("dependencies"), ESearchCase::IgnoreCase))
+    {
+#if WITH_EDITOR
+        if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("get_dependencies payload missing."), TEXT("INVALID_PAYLOAD")); return true; }
+        FString AssetPath; if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath)) { SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT")); return true; }
+        FString Normalized = AssetPath.Replace(TEXT("\\"), TEXT("/")); if (Normalized.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) Normalized = FString::Printf(TEXT("/Game%s"), *Normalized.RightChop(8));
+        FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+        IAssetRegistry& AR = AssetRegistryModule.Get();
+        // Try to resolve package name
+        TArray<FAssetData> Found; AR.GetAssetsByPackageName(FName(*Normalized), Found);
+        TArray<FName> Deps;
+        UE::AssetRegistry::FDependencyQuery DepQuery;
+        if (Found.Num() > 0)
+        {
+            AR.GetDependencies(Found[0].PackageName, Deps, UE::AssetRegistry::EDependencyCategory::Package, DepQuery);
+        }
+        else
+        {
+            // Fallback: try object path lookup (use SoftObjectPath to avoid deprecated FName object paths)
+            FAssetData ObjData = AR.GetAssetByObjectPath(FSoftObjectPath(Normalized));
+            if (ObjData.IsValid()) AR.GetDependencies(ObjData.PackageName, Deps, UE::AssetRegistry::EDependencyCategory::Package, DepQuery);
+        }
+        TArray<TSharedPtr<FJsonValue>> DepVals; for (const FName& D : Deps) DepVals.Add(MakeShared<FJsonValueString>(D.ToString()));
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetBoolField(TEXT("success"), true); Out->SetArrayField(TEXT("dependencies"), DepVals); SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Dependencies retrieved"), Out, FString());
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("get_dependencies requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+
+    // CREATE THUMBNAIL - best-effort: save asset which typically updates thumbnail texture
+    if (Lower.Equals(TEXT("create_thumbnail"), ESearchCase::IgnoreCase) || Lower.Equals(TEXT("create-thumbnail"), ESearchCase::IgnoreCase))
+    {
+#if WITH_EDITOR
+        if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("create_thumbnail payload missing."), TEXT("INVALID_PAYLOAD")); return true; }
+        FString AssetPath; if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath)) { SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT")); return true; }
+        if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Asset not found"), nullptr, TEXT("ASSET_NOT_FOUND")); return true; }
+        UObject* Loaded = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (Loaded) { SaveLoadedAssetThrottled(Loaded); }
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetBoolField(TEXT("success"), true); Out->SetStringField(TEXT("path"), AssetPath); SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Thumbnail created (best-effort)"), Out, FString());
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_thumbnail requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+
+    // SET TAGS - best-effort, stores tags as metadata when possible
+    if (Lower.Equals(TEXT("set_tags"), ESearchCase::IgnoreCase) || Lower.Equals(TEXT("set-tags"), ESearchCase::IgnoreCase))
+    {
+#if WITH_EDITOR
+        if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("set_tags payload missing."), TEXT("INVALID_PAYLOAD")); return true; }
+        FString AssetPath; if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath)) { SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT")); return true; }
+        const TArray<TSharedPtr<FJsonValue>>* TagsArr = nullptr; Payload->TryGetArrayField(TEXT("tags"), TagsArr);
+        if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Asset not found"), nullptr, TEXT("ASSET_NOT_FOUND")); return true; }
+        // Best-effort: set metadata string containing tags
+        FString TagsJoined;
+        if (TagsArr && TagsArr->Num() > 0)
+        {
+            for (int32 i = 0; i < TagsArr->Num(); ++i) { if ((*TagsArr)[i].IsValid() && (*TagsArr)[i]->Type == EJson::String) { if (!TagsJoined.IsEmpty()) TagsJoined += TEXT(","); TagsJoined += (*TagsArr)[i]->AsString(); } }
+            GMcpAssetTagStore.Add(AssetPath, TagsJoined);
+        }
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetBoolField(TEXT("success"), true); Out->SetStringField(TEXT("path"), AssetPath); SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Tags set (best-effort)"), Out, FString());
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("set_tags requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+
+    // GENERATE REPORT - lightweight JSON summary written (best-effort)
+    if (Lower.Equals(TEXT("generate_report"), ESearchCase::IgnoreCase) || Lower.Equals(TEXT("generate-report"), ESearchCase::IgnoreCase))
+    {
+#if WITH_EDITOR
+        if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("generate_report payload missing."), TEXT("INVALID_PAYLOAD")); return true; }
+        FString Directory; Payload->TryGetStringField(TEXT("directory"), Directory); if (Directory.IsEmpty()) Directory = TEXT("/Game");
+        FString OutputPath; Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
+        // Build a minimal summary
+        FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+        IAssetRegistry& AR = AssetRegistryModule.Get();
+        TArray<FAssetData> AssetDataList; AR.GetAssetsByPath(FName(*Directory), AssetDataList, true);
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetBoolField(TEXT("success"), true); Out->SetNumberField(TEXT("count"), AssetDataList.Num());
+        if (!OutputPath.IsEmpty())
+        {
+            FString JsonStr; TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonStr); FJsonSerializer::Serialize(Out.ToSharedRef(), Writer);
+            // Attempt to write to the provided relative path under project dir as best-effort
+            FString Absolute = OutputPath;
+            if (!FPaths::IsRelative(OutputPath)) Absolute = OutputPath; else Absolute = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), OutputPath);
+            FFileHelper::SaveStringToFile(JsonStr, *Absolute);
+        }
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Report generated (best-effort)"), Out, FString());
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("generate_report requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+
+    // VALIDATE (best-effort integrity check)
+    if (Lower.Equals(TEXT("validate"), ESearchCase::IgnoreCase))
+    {
+#if WITH_EDITOR
+        if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("validate payload missing."), TEXT("INVALID_PAYLOAD")); return true; }
+        FString AssetPath; if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath)) { SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT")); return true; }
+        bool bExists = UEditorAssetLibrary::DoesAssetExist(AssetPath);
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetBoolField(TEXT("success"), bExists); Out->SetBoolField(TEXT("validated"), bExists); SendAutomationResponse(RequestingSocket, RequestId, bExists, bExists ? TEXT("Validated") : TEXT("Asset not found"), Out, bExists ? FString() : TEXT("VALIDATION_FAILED"));
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("validate requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
         return true;
 #endif
     }

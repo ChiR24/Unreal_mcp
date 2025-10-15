@@ -66,6 +66,15 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Debug")
     bool bApplyLogVerbosityToAll;
 
+    /** When true, emit extra per-socket telemetry for control/response delivery
+     * attempts. This is intended for short-term debugging of intermittent
+     * delivery failures and is off by default to avoid log spam. When enabled
+     * the subsystem will raise aggregated delivery summaries to Log level and
+     * include per-socket details for inspection.
+     */
+    UPROPERTY(config, EditAnywhere, Category = "Debug")
+    bool bEnableSocketTelemetry;
+
     /** When true, the plugin will open multiple listen sockets provided by ListenPorts. */
     UPROPERTY(config, EditAnywhere, Category = "Connection")
     bool bMultiListen;

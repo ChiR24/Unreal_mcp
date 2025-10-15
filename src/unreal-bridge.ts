@@ -784,6 +784,52 @@ print('RESULT:' + json.dumps(status))
     }
     
     const executeCommand = async (): Promise<any> => {
+      // First attempt to execute via the plugin's native handler if the
+      // automation bridge is available. This avoids executing arbitrary
+      // Python inside the editor when the plugin can handle simple
+      // console commands natively.
+      if (this.automationBridge && this.automationBridge.isConnected()) {
+        try {
+          const pluginResp: any = await this.automationBridge.sendAutomationRequest('execute_console_command', { command: cmdTrimmed }, { timeoutMs: 30000 });
+          if (pluginResp && pluginResp.success) {
+            // Plugin handled the command; return the plugin result shape.
+            return { ...(pluginResp as any), transport: 'automation_bridge' };
+          }
+          // If plugin explicitly reports NOT_IMPLEMENTED, only fall back
+          // to Python when caller allowed it. Otherwise surface plugin's
+          // error to the caller so they can diagnose missing plugin
+          // features.
+          if (pluginResp && pluginResp.error === 'NOT_IMPLEMENTED') {
+            if (!allowPython) {
+              throw new Error('Plugin does not implement console commands and Python fallback is disabled');
+            }
+            // else fall through to python fallback
+          } else {
+            // Plugin returned an error; prefer plugin's error unless
+            // Python fallback allowed and plugin failed transiently.
+            if (!allowPython) {
+              const errMsg = pluginResp?.message || pluginResp?.error || 'Plugin execution failed';
+              throw new Error(errMsg);
+            }
+            // otherwise continue to python fallback
+          }
+        } catch (err) {
+          const errMsg = String((err as Error)?.message ?? String(err)).toLowerCase();
+          // Deterministic failures (e.g. command not executed) are not
+          // actionable by retries — log them at debug level to avoid
+          // excessive warnings in normal test runs.
+          if (errMsg.includes('command not executed') || errMsg.includes('exec_failed') || errMsg.includes('not implemented')) {
+            this.log.debug('Plugin execute_console_command failed (non-retryable):', errMsg, err);
+          } else {
+            this.log.warn('Plugin execute_console_command failed; falling back to python if allowed', err);
+          }
+          if (!allowPython) {
+            throw err;
+          }
+          // else continue to python fallback
+        }
+      }
+
       const escaped = escapePythonString(cmdTrimmed);
       const automationScript = `
 import unreal
@@ -1125,6 +1171,17 @@ print('RESULT:' + json.dumps(result))
     // GET_ALL_ACTORS
     if (lower.includes('get_all_level_actors')) {
       return { functionName: 'GET_ALL_ACTORS' };
+    }
+
+    // ASSET REGISTRY DIRECTORY LISTING -> map to plugin-native 'list' action
+    if (lower.includes('get_assets_by_path') && lower.includes('get_sub_paths')) {
+      // Try to extract the directory literal (pattern used by templates)
+      const dirMatch = script.match(/_dir\s*=\s*r?['"]([^'"]+)['"]/i);
+      const limitMatch = script.match(/assets_data\s*\[:\s*(\d+)\]/i);
+      const dir = dirMatch ? dirMatch[1] : '/Game';
+      const params: any = { directory: dir };
+      if (limitMatch && limitMatch[1]) params.limit = parseInt(limitMatch[1], 10);
+      return { type: 'plugin', actionName: 'list', params };
     }
 
     // BUILD_LIGHTING
@@ -1624,17 +1681,36 @@ print('RESULT:' + json.dumps(flags))
         const result = await item.command();
         item.resolve(result);
       } catch (error: any) {
-        // Retry logic for transient failures
-        const msg = (error?.message || String(error)).toLowerCase();
-        const notConnected = msg.includes('not connected to unreal');
-        if (item.retryCount === undefined) {
-          item.retryCount = 0;
-        }
-        
-        if (!notConnected && item.retryCount < 3) {
+        // Enhanced retry policy: only retry on transient transport/timeouts
+        // and avoid retrying deterministic command failures such as
+        // EXEC_FAILED/Command not executed or client-side validation errors.
+        const msgRaw = error?.message ?? String(error);
+        const msg = String(msgRaw).toLowerCase();
+        if (item.retryCount === undefined) item.retryCount = 0;
+
+        const isTransient = (
+          msg.includes('timeout') ||
+          msg.includes('timed out') ||
+          msg.includes('connect') ||
+          msg.includes('econnrefused') ||
+          msg.includes('econnreset') ||
+          msg.includes('broken pipe') ||
+          msg.includes('automation bridge') ||
+          msg.includes('not connected')
+        );
+
+        const isDeterministicFailure = (
+          msg.includes('command not executed') ||
+          msg.includes('exec_failed') ||
+          msg.includes('invalid command') ||
+          msg.includes('invalid argument') ||
+          msg.includes('unknown_plugin_action') ||
+          msg.includes('unknown action')
+        );
+
+        if (isTransient && item.retryCount < 3) {
           item.retryCount++;
-          this.log.warn(`Command failed, retrying (${item.retryCount}/3)`);
-          
+          this.log.warn(`Command failed (transient), retrying (${item.retryCount}/3)`);
           // Re-add to queue with increased priority
           this.commandQueue.unshift({
             command: item.command,
@@ -1643,10 +1719,14 @@ print('RESULT:' + json.dumps(flags))
             priority: Math.max(1, item.priority - 1),
             retryCount: item.retryCount
           });
-          
           // Add extra delay before retry
           await this.delay(500);
         } else {
+          if (isDeterministicFailure) {
+            // Log once at warning level and do not retry deterministic
+            // failures to avoid noisy repeated attempts.
+            this.log.warn(`Command failed (non-retryable): ${msgRaw}`);
+          }
           item.reject(error);
         }
       }

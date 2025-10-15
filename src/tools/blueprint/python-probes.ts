@@ -15,7 +15,7 @@ export async function waitForBlueprint(bridge: UnrealBridge, blueprintCandidates
   const automationBridge = (bridge as any).automationBridge as any;
   if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
     try {
-      const resp: any = await automationBridge.sendAutomationRequest('blueprint_exists', { candidates: candidatesArray }, { timeoutMs });
+  const resp: any = await automationBridge.sendAutomationRequest('blueprint_exists', { blueprintCandidates: candidatesArray, requestedPath: candidatesArray && candidatesArray.length ? candidatesArray[0] : undefined }, { timeoutMs });
       if (resp && resp.success) return resp.result ?? resp;
       const errTxt = String(resp?.error ?? resp?.message ?? '');
       if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {

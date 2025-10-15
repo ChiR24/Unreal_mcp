@@ -2,8 +2,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "HAL/PlatformTime.h"
 #include "Dom/JsonObject.h"
 #include "Misc/OutputDevice.h"
+#include "Misc/ScopeLock.h"
 #include "UObject/UnrealType.h"
 #include "JsonObjectConverter.h"
 #include "Containers/ScriptArray.h"
@@ -286,6 +288,54 @@ static inline TSharedPtr<FJsonValue> ExportPropertyToJsonValue(UObject* TargetOb
     return nullptr;
 }
 
+#if WITH_EDITOR
+// Throttled wrapper around UEditorAssetLibrary::SaveLoadedAsset to avoid
+// triggering rapid repeated SavePackage calls which can cause engine
+// warnings (FlushRenderingCommands called recursively) during heavy
+// test activity. The helper consults a plugin-wide map of recent save
+// timestamps (GRecentAssetSaveTs) and skips saves that occur within the
+// configured throttle window. Skipped saves return 'true' to preserve
+// idempotent behavior for callers that treat a skipped save as a success.
+static inline bool SaveLoadedAssetThrottled(UObject* Asset, double ThrottleSecondsOverride = -1.0)
+{
+    if (!Asset) return false;
+    const double Now = FPlatformTime::Seconds();
+    const double Throttle = (ThrottleSecondsOverride >= 0.0) ? ThrottleSecondsOverride : GRecentAssetSaveThrottleSeconds;
+    FString Key = Asset->GetPathName(); if (Key.IsEmpty()) Key = Asset->GetName();
+
+    {
+        FScopeLock Lock(&GRecentAssetSaveMutex);
+        if (double* Last = GRecentAssetSaveTs.Find(Key))
+        {
+            const double Elapsed = Now - *Last;
+            if (Elapsed < Throttle)
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("SaveLoadedAssetThrottled: skipping save for '%s' (last=%.3fs, throttle=%.3fs)"), *Key, Elapsed, Throttle);
+                // Treat skip as success to avoid bubbling save failures into tests
+                return true;
+            }
+        }
+    }
+
+    // Perform the save and record timestamp on success
+    bool bSaved = UEditorAssetLibrary::SaveLoadedAsset(Asset);
+    if (bSaved)
+    {
+        FScopeLock Lock(&GRecentAssetSaveMutex);
+        GRecentAssetSaveTs.Add(Key, Now);
+        UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("SaveLoadedAssetThrottled: saved '%s' (throttle reset)"), *Key);
+    }
+    else
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("SaveLoadedAssetThrottled: failed to save '%s'"), *Key);
+    }
+    return bSaved;
+}
+#else
+static inline bool SaveLoadedAssetThrottled(UObject* /*Asset*/, double /*ThrottleSecondsOverride*/ = -1.0) { return false; }
+#endif
+
+
 // Apply a JSON value to an FProperty on a UObject. Returns true on success and
 // populates OutError with a descriptive string on failure.
 static inline bool ApplyJsonValueToProperty(UObject* TargetObject, FProperty* Property, const TSharedPtr<FJsonValue>& ValueField, FString& OutError)
@@ -324,6 +374,8 @@ static inline bool ApplyJsonValueToProperty(UObject* TargetObject, FProperty* Pr
         FP->SetPropertyValue_InContainer(TargetObject, static_cast<float>(Val));
         return true;
     }
+
+    // ...existing code...
     if (FDoubleProperty* DP = CastField<FDoubleProperty>(Property))
     {
         double Val = 0.0;

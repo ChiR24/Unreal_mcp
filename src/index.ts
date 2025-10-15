@@ -466,18 +466,31 @@ export function createServer() {
         try { versionInfo = await bridge.getEngineVersion(); } catch {}
         try { featureFlags = await bridge.getFeatureFlags(); } catch {}
       }
+
+      const responseTimes = metrics.responseTimes.slice(-25);
+      const automationSummary = {
+        connected: automationStatus.connected,
+        activePort: automationStatus.activePort,
+        pendingRequests: automationStatus.pendingRequests,
+        listeningPorts: automationStatus.listeningPorts,
+        lastHandshakeAt: automationStatus.lastHandshakeAt,
+        lastRequestSentAt: automationStatus.lastRequestSentAt,
+        maxPendingRequests: automationStatus.maxPendingRequests,
+        maxConcurrentConnections: automationStatus.maxConcurrentConnections
+      };
+
       const health = {
         status: metrics.connectionStatus,
-        uptime: Math.floor(uptimeMs / 1000),
+        uptimeSeconds: Math.floor(uptimeMs / 1000),
         performance: {
           totalRequests: metrics.totalRequests,
           successfulRequests: metrics.successfulRequests,
           failedRequests: metrics.failedRequests,
-          successRate: metrics.totalRequests > 0 ? 
-            (metrics.successfulRequests / metrics.totalRequests * 100).toFixed(2) + '%' : 'N/A',
-          averageResponseTime: Math.round(metrics.averageResponseTime) + 'ms'
+          successRate: metrics.totalRequests > 0 ? Number(((metrics.successfulRequests / metrics.totalRequests) * 100).toFixed(2)) : null,
+          averageResponseTimeMs: Math.round(metrics.averageResponseTime),
+          recentResponseTimesMs: responseTimes
         },
-        lastHealthCheck: metrics.lastHealthCheck.toISOString(),
+        lastHealthCheckIso: metrics.lastHealthCheck.toISOString(),
         unrealConnection: {
           status: bridge.isConnected ? 'connected' : 'disconnected',
           host: process.env.UE_HOST || 'localhost',
@@ -489,10 +502,14 @@ export function createServer() {
             automationBridgeConnected: automationStatus.connected
           }
         },
-        recentErrors: metrics.recentErrors.slice(-5),
-        automationBridge: automationStatus
+        recentErrors: metrics.recentErrors.slice(-10),
+        automationBridge: automationSummary,
+        raw: {
+          metrics,
+          automationStatus
+        }
       };
-      
+
       return {
         contents: [{
           uri,

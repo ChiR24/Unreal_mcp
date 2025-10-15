@@ -68,6 +68,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "MCP Automation")
     bool IsEditorPythonExecutionAllowed() const { return bAllowPythonFallbacks; }
 
+    // Public helpers for sending automation responses/errors. These need to be
+    // callable from out-of-line helper functions and translation-unit-level
+    // handlers that receive a UMcpAutomationBridgeSubsystem* (e.g. static
+    // blueprint helper routines). They were previously declared private which
+    // prevented those helpers from invoking them via a 'Self' pointer.
+    void SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result = nullptr, const FString& ErrorCode = FString());
+    void SendAutomationError(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const FString& Message, const FString& ErrorCode);
+
 private:
     bool Tick(float DeltaTime);
 
@@ -80,8 +88,6 @@ private:
     void HandleMessage(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Message);
     void HandleHeartbeat(TSharedPtr<FMcpBridgeWebSocket> Socket);
     void ProcessAutomationRequest(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-    void SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result = nullptr, const FString& ErrorCode = FString());
-    void SendAutomationError(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const FString& Message, const FString& ErrorCode);
 
     void StartBridge();
     void StopBridge();

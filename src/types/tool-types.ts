@@ -277,6 +277,12 @@ export interface ConsolidatedToolParams {
     componentType?: string;
     componentName?: string;
     savePath?: string;
+    // Optional: wait until the plugin's background completion event before returning
+    waitForCompletion?: boolean;
+    // Convenience: apply changes and force save, then wait for completion
+    applyAndSave?: boolean;
+    // Optional override for event wait timeout in milliseconds
+    waitForCompletionTimeoutMs?: number;
   };
 
   build_environment: {

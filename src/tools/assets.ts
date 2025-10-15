@@ -725,6 +725,121 @@ print('RESULT:' + json.dumps(result))
     }
   }
 
+  // Create a folder (plugin-first)
+  async createFolder(folderPath: string) {
+    if (!folderPath || typeof folderPath !== 'string') return { success: false, error: 'Invalid folderPath' };
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp: any = await this.automationBridge.sendAutomationRequest('create_folder', { path: folderPath });
+        if (resp && resp.success !== false) return { success: true, message: resp.message || 'Folder created', path: resp.path || resp.result?.path } as any;
+        const errTxt = String(resp?.error ?? resp?.message ?? '');
+        if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+          // No plugin support - cannot create folder in editor
+          return { success: false, error: 'PLUGIN_UNSUPPORTED' } as any;
+        }
+        return { success: false, error: resp?.error ?? resp?.message ?? 'CREATE_FOLDER_FAILED' } as any;
+      } catch (_e) {
+        return { success: false, error: 'AUTOMATION_ERROR' } as any;
+      }
+    }
+    return { success: false, error: 'Automation bridge not connected' } as any;
+  }
+
+  async getDependencies(params: { assetPath: string }) {
+    const assetPath = params?.assetPath;
+    if (!assetPath || typeof assetPath !== 'string') return { success: false, error: 'Invalid assetPath' };
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp: any = await this.automationBridge.sendAutomationRequest('get_dependencies', { assetPath });
+        if (resp && resp.success !== false) return { success: true, dependencies: (resp.dependencies || resp.result?.dependencies || []) } as any;
+        const errTxt = String(resp?.error ?? resp?.message ?? '');
+        if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+          return { success: false, error: 'PLUGIN_UNSUPPORTED' } as any;
+        }
+        return { success: false, error: resp?.error ?? resp?.message ?? 'GET_DEPENDENCIES_FAILED' } as any;
+      } catch (_e) {
+        return { success: false, error: 'AUTOMATION_ERROR' } as any;
+      }
+    }
+    return { success: false, error: 'Automation bridge not connected' } as any;
+  }
+
+  async createThumbnail(params: { assetPath: string }) {
+    const assetPath = params?.assetPath;
+    if (!assetPath || typeof assetPath !== 'string') return { success: false, error: 'Invalid assetPath' };
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp: any = await this.automationBridge.sendAutomationRequest('create_thumbnail', { assetPath });
+        if (resp && resp.success !== false) return { success: true, message: resp.message || 'Thumbnail created' } as any;
+        const errTxt = String(resp?.error ?? resp?.message ?? '');
+        if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+          return { success: false, error: 'PLUGIN_UNSUPPORTED' } as any;
+        }
+        return { success: false, error: resp?.error ?? resp?.message ?? 'CREATE_THUMBNAIL_FAILED' } as any;
+      } catch (_e) {
+        return { success: false, error: 'AUTOMATION_ERROR' } as any;
+      }
+    }
+    return { success: false, error: 'Automation bridge not connected' } as any;
+  }
+
+  async setTags(params: { assetPath: string; tags: string[] }) {
+    const assetPath = params?.assetPath; const tags = Array.isArray(params?.tags) ? params.tags : [];
+    if (!assetPath || typeof assetPath !== 'string') return { success: false, error: 'Invalid assetPath' };
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp: any = await this.automationBridge.sendAutomationRequest('set_tags', { assetPath, tags });
+        if (resp && resp.success !== false) return { success: true, message: resp.message || 'Tags set' } as any;
+        const errTxt = String(resp?.error ?? resp?.message ?? '');
+        if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+          return { success: false, error: 'PLUGIN_UNSUPPORTED' } as any;
+        }
+        return { success: false, error: resp?.error ?? resp?.message ?? 'SET_TAGS_FAILED' } as any;
+      } catch (_e) {
+        return { success: false, error: 'AUTOMATION_ERROR' } as any;
+      }
+    }
+    return { success: false, error: 'Automation bridge not connected' } as any;
+  }
+
+  async generateReport(params: { directory: string; reportType?: string; outputPath?: string }) {
+    const dir = params?.directory || '/Game';
+    const outputPath = params?.outputPath;
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp: any = await this.automationBridge.sendAutomationRequest('generate_report', { directory: dir, reportType: params?.reportType, outputPath });
+        if (resp && resp.success !== false) return { success: true, message: resp.message || 'Report generated', path: resp.path || resp.result?.path } as any;
+        const errTxt = String(resp?.error ?? resp?.message ?? '');
+        if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+          return { success: false, error: 'PLUGIN_UNSUPPORTED' } as any;
+        }
+        return { success: false, error: resp?.error ?? resp?.message ?? 'GENERATE_REPORT_FAILED' } as any;
+      } catch (_e) {
+        return { success: false, error: 'AUTOMATION_ERROR' } as any;
+      }
+    }
+    return { success: false, error: 'Automation bridge not connected' } as any;
+  }
+
+  async validate(params: { assetPath: string }) {
+    const assetPath = params?.assetPath;
+    if (!assetPath || typeof assetPath !== 'string') return { success: false, error: 'Invalid assetPath' };
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp: any = await this.automationBridge.sendAutomationRequest('validate', { assetPath });
+        if (resp && resp.success !== false) return { success: true, validated: resp.validated ?? true } as any;
+        const errTxt = String(resp?.error ?? resp?.message ?? '');
+        if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
+          return { success: false, error: 'PLUGIN_UNSUPPORTED' } as any;
+        }
+        return { success: false, error: resp?.error ?? resp?.message ?? 'VALIDATE_FAILED' } as any;
+      } catch (_e) {
+        return { success: false, error: 'AUTOMATION_ERROR' } as any;
+      }
+    }
+    return { success: false, error: 'Automation bridge not connected' } as any;
+  }
+
   private async createTestFBX(filePath: string): Promise<void> {
     // Create a minimal valid FBX ASCII file for testing
     const fbxContent = `; FBX 7.5.0 project file

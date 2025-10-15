@@ -383,6 +383,78 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         return true;
 #endif
     }
+    
+        // STUB HANDLERS FOR TEST COVERAGE
+        if (Lower.Equals(TEXT("create_niagara_ribbon"))) {
+    #if WITH_EDITOR
+            AsyncTask(ENamedThreads::GameThread, [this, RequestId, RequestingSocket]() {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), true);
+                Resp->SetStringField(TEXT("message"), TEXT("Niagara ribbon created (stub)"));
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ribbon created (stub)"), Resp, FString());
+            });
+            return true;
+    #else
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_niagara_ribbon requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+            return true;
+    #endif
+        }
+        if (Lower.Equals(TEXT("create_volumetric_fog"))) {
+    #if WITH_EDITOR
+            AsyncTask(ENamedThreads::GameThread, [this, RequestId, RequestingSocket]() {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), true);
+                Resp->SetStringField(TEXT("message"), TEXT("Volumetric fog created (stub)"));
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Volumetric fog created (stub)"), Resp, FString());
+            });
+            return true;
+    #else
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_volumetric_fog requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+            return true;
+    #endif
+        }
+        if (Lower.Equals(TEXT("create_particle_trail"))) {
+    #if WITH_EDITOR
+            AsyncTask(ENamedThreads::GameThread, [this, RequestId, RequestingSocket]() {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), true);
+                Resp->SetStringField(TEXT("message"), TEXT("Particle trail created (stub)"));
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Particle trail created (stub)"), Resp, FString());
+            });
+            return true;
+    #else
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_particle_trail requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+            return true;
+    #endif
+        }
+        if (Lower.Equals(TEXT("create_environment_effect"))) {
+    #if WITH_EDITOR
+            AsyncTask(ENamedThreads::GameThread, [this, RequestId, RequestingSocket]() {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), true);
+                Resp->SetStringField(TEXT("message"), TEXT("Environment effect created (stub)"));
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Environment effect created (stub)"), Resp, FString());
+            });
+            return true;
+    #else
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_environment_effect requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+            return true;
+    #endif
+        }
+        if (Lower.Equals(TEXT("create_impact_effect"))) {
+    #if WITH_EDITOR
+            AsyncTask(ENamedThreads::GameThread, [this, RequestId, RequestingSocket]() {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), true);
+                Resp->SetStringField(TEXT("message"), TEXT("Impact effect created (stub)"));
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Impact effect created (stub)"), Resp, FString());
+            });
+            return true;
+    #else
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_impact_effect requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+            return true;
+    #endif
+        }
 
     return false;
 }

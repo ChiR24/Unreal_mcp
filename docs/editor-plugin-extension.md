@@ -34,6 +34,40 @@ To lift several Remote Control limitations (SimpleConstructionScript authoring, 
 - `set_object_property` &mdash; coerces JSON payloads into `FProperty` values using `FJsonObjectConverter`, marks the owning package dirty (unless `markDirty` is false), and emits a normalized response. When coupled with `inspect.set_property` + `transport = automation_bridge`, this unlocks typed property edits without relying on Remote Control.
 - `get_object_property` &mdash; serializes the requested property into JSON and returns it to the server. `inspect.get_property` can target this path by setting `transport = automation_bridge`, providing a safe read channel when Remote Control is disabled.
 
+## Tool Coverage Matrix
+
+| Consolidated Tool | Actions | Automation Bridge Coverage | Python Fallback Required | Notes |
+|-------------------|---------|-----------------------------|---------------------------|-------|
+| `manage_asset` | `list` | ❌ | ✅ | `AssetResources.list()` reads via Python; bridge registry RPCs are future work. |
+| | `import` | ✅ | ⚠️ optional | Uses `import_asset_deferred` bridge action; Python import runs when bridge reports `UNKNOWN_PLUGIN_ACTION`. |
+| | `create_material` | ✅ | ⚠️ optional | Prefers bridge `create_material`; Python template gated by `MCP_ALLOW_PYTHON_FALLBACKS`. |
+| | `create_material_instance` | ✅ | ⚠️ optional | `executeEditorFunction('CREATE_ASSET')` defers to plugin; Python executed only when bridge declines. |
+| | `duplicate` / `rename` / `move` / `delete` | ✅ | ⚠️ optional | Bridge RPCs present; legacy Python path retained for offline usage. |
+| `control_actor` | `spawn` | ⚠️ partial | ✅ | Currently executes guarded Python spawn helper; bridge spawn action on roadmap. |
+| | `delete` | ✅ | ⚠️ optional | `DELETE_ACTOR` executeEditorFunction provided by plugin; Python fallback rarely triggered. |
+| | `apply_force` | ⚠️ partial | ✅ | Physics force still scripted in Python; bridge physics RPC planned. |
+| `control_editor` | `play` / `stop` / `pause` | ⚠️ partial | ✅ | Hybrid console/Python LevelEditorSubsystem flow; bridge session management pending. |
+| | `set_camera` / `set_camera_position` | ⚠️ partial | ✅ | Python `UnrealEditorSubsystem` drives viewport; awaiting bridge camera endpoints. |
+| | `set_view_mode` | ✅ | ⚠️ optional | Bridge validates safe viewmodes; Python fallback only if bridge absent. |
+| | `console_command` | ✅ | ❌ | Uses bridge console queue exclusively; no Python executed. |
+| `manage_level` | `load` / `save` / `stream` | ✅ | ⚠️ optional | Bridge covers core level ops; Python invoked when RPC missing. |
+| | `create_level` | ✅ | ⚠️ optional | `CREATE_LEVEL` editor function resolves via plugin first. |
+| | `create_light` | ⚠️ partial | ✅ | Actor spawn script sets up lights today; plugin extensions targeted. |
+| | `build_lighting` | ⚠️ partial | ✅ | Attempts plugin `BUILD_LIGHTING`; reverts to console/Python when unsupported. |
+| `animation_physics` | `create_animation_bp` / `play_montage` / `setup_ragdoll` / `configure_vehicle` | ⚠️ partial | ✅ | Heavy Python templates until Blueprint/Skeletal subsystems land in plugin. |
+| `create_effect` | ⚠️ partial | ✅ | Niagara helpers rely on Python; bridge emitters under design. |
+| `manage_blueprint` | ⚠️ partial | ✅ | Blueprint authoring currently Python-only; SCS bridge work tracked in roadmap. |
+| `build_environment` / `build_environment_advanced` | ⚠️ partial | ✅ | Landscape/foliage automation still Python-based. |
+| `system_control` / `performance` / `engine` | ✅ | ❌ | Primarily console/bridge requests; Python disabled. |
+| `console_command` | ✅ | ❌ | Direct console command execution through bridge. |
+| `execute_python` | ✅ | ✅ | Bridge transports script payload; Python execution by design. |
+| `manage_rc` | ✅ | ❌ | Remote Control preset tooling implemented entirely in plugin. |
+| `manage_sequence` | ⚠️ partial | ✅ | Sequencer helpers scripted in Python; bridge timeline APIs tracked. |
+| `inspect` | `list` / `get_property` / `set_property` | ✅ | ⚠️ optional | Plugin handles property IO; Python fallback available when explicitly enabled. |
+| `visual` / `ui` / `audio` / `niagara` | ⚠️ partial | ✅ | Mixed console + Python flows; bridge feature parity pending. |
+
+Legend: ✅ = fully handled by automation bridge; ❌ = no Python usage; ⚠️ partial = bridge partially available or scheduled; Python column indicates whether guarded fallback executes when enabled.
+
 ## Incremental Plan
 1. **Prototype Messaging** – implement a minimal editor command (e.g., resolve Blueprint CDO path) to validate transport reliability.
 2. **SCS Writer** – add functions to create/remove components on Blueprints and commit nodes to disk.

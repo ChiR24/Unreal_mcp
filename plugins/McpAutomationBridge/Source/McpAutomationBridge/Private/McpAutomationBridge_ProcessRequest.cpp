@@ -14,11 +14,14 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
     // the queuing/scope-exit safety logic expected by callers.
 
     // Ensure automation processing happens on the game thread
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest invoked (thread=%s) RequestId=%s action=%s activeSockets=%d pendingQueue=%d"),
+    // This trace is intentionally verbose — routine requests can be high
+    // frequency and will otherwise flood the logs. Developers can enable
+    // Verbose logging to see these messages when required.
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest invoked (thread=%s) RequestId=%s action=%s activeSockets=%d pendingQueue=%d"),
         IsInGameThread() ? TEXT("GameThread") : TEXT("SocketThread"), *RequestId, *Action, ActiveSockets.Num(), PendingAutomationRequests.Num());
     if (!IsInGameThread())
     {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Scheduling ProcessAutomationRequest on GameThread: RequestId=%s action=%s"), *RequestId, *Action);
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Scheduling ProcessAutomationRequest on GameThread: RequestId=%s action=%s"), *RequestId, *Action);
         AsyncTask(ENamedThreads::GameThread, [WeakThis = TWeakObjectPtr<UMcpAutomationBridgeSubsystem>(this), RequestId, Action, Payload, RequestingSocket]()
         {
             if (UMcpAutomationBridgeSubsystem* Pinned = WeakThis.Get())
@@ -29,7 +32,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         return;
     }
 
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Starting ProcessAutomationRequest on GameThread: RequestId=%s action=%s bProcessingAutomationRequest=%s"), *RequestId, *Action, bProcessingAutomationRequest ? TEXT("true") : TEXT("false"));
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Starting ProcessAutomationRequest on GameThread: RequestId=%s action=%s bProcessingAutomationRequest=%s"), *RequestId, *Action, bProcessingAutomationRequest ? TEXT("true") : TEXT("false"));
 
     // Diagnostic convenience
     const FString LowerAction = Action.ToLower();
@@ -47,7 +50,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             PendingAutomationRequests.Add(MoveTemp(P));
             bPendingRequestsScheduled = true;
         }
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Enqueued automation request %s for action %s (processing in progress)."), *RequestId, *Action);
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Enqueued automation request %s for action %s (processing in progress)."), *RequestId, *Action);
         return;
     }
 

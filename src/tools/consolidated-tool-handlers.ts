@@ -222,6 +222,13 @@ export async function handleConsolidatedToolCall(
             const res = await tools.assetResources.list(args.directory || '/Game', false);
             return cleanObject(res);
           }
+          case 'create_folder': {
+            if (typeof args.path !== 'string' || args.path.trim() === '') {
+              throw new Error('Invalid path: must be a non-empty string');
+            }
+            const res = await tools.assetTools.createFolder(args.path.trim());
+            return cleanObject(res);
+          }
           case 'import': {
             let sourcePath = typeof args.sourcePath === 'string' ? args.sourcePath.trim() : '';
             let destinationPath = typeof args.destinationPath === 'string' ? args.destinationPath.trim() : '';
@@ -483,6 +490,46 @@ export async function handleConsolidatedToolCall(
             });
             return cleanObject(res);
           }
+          case 'get_dependencies': {
+            if (typeof args.assetPath !== 'string' || args.assetPath.trim() === '') {
+              throw new Error('Invalid assetPath: must be a non-empty string');
+            }
+            const res = await tools.assetTools.getDependencies({ assetPath: args.assetPath.trim() });
+            return cleanObject(res);
+          }
+
+          case 'create_thumbnail': {
+            if (typeof args.assetPath !== 'string' || args.assetPath.trim() === '') {
+              throw new Error('Invalid assetPath: must be a non-empty string');
+            }
+            const res = await tools.assetTools.createThumbnail({ assetPath: args.assetPath.trim() });
+            return cleanObject(res);
+          }
+
+          case 'set_tags': {
+            if (typeof args.assetPath !== 'string' || args.assetPath.trim() === '') {
+              throw new Error('Invalid assetPath: must be a non-empty string');
+            }
+            const tags = Array.isArray(args.tags) ? args.tags.filter((t: any) => typeof t === 'string') : [];
+            const res = await tools.assetTools.setTags({ assetPath: args.assetPath.trim(), tags });
+            return cleanObject(res);
+          }
+
+          case 'generate_report': {
+            const directory = typeof args.directory === 'string' ? args.directory.trim() : '/Game';
+            const outputPath = typeof args.outputPath === 'string' ? args.outputPath.trim() : undefined;
+            const res = await tools.assetTools.generateReport({ directory, reportType: typeof args.reportType === 'string' ? args.reportType : undefined, outputPath });
+            return cleanObject(res);
+          }
+
+          case 'validate': {
+            if (typeof args.assetPath !== 'string' || args.assetPath.trim() === '') {
+              throw new Error('Invalid assetPath: must be a non-empty string');
+            }
+            const res = await tools.assetTools.validate({ assetPath: args.assetPath.trim() });
+            return cleanObject(res);
+          }
+
           default:
             // Return a structured error so callers can detect unsupported
             // actions and provide fallbacks instead of crashing.
@@ -1274,8 +1321,9 @@ case 'animation_physics':
               blueprintType: args.blueprintType || 'Actor',
               savePath: args.savePath,
               parentClass: args.parentClass,
-              // (fast mode removed) 
-              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined,
+              waitForCompletion: !!args.waitForCompletion,
+              waitForCompletionTimeoutMs: typeof args.waitForCompletionTimeoutMs === 'number' ? args.waitForCompletionTimeoutMs : undefined
             });
             return cleanObject(res);
           }
@@ -1302,6 +1350,8 @@ case 'animation_physics':
                 }
               }
             );
+            // If applyAndSave is requested, ensure save=true and wait for completion
+            const applySave = !!args.applyAndSave;
             const res = await tools.blueprintTools.addComponent({
               blueprintName: args.name,
               componentType: args.componentType,
@@ -1310,8 +1360,10 @@ case 'animation_physics':
               transform: args.transform,
               properties: args.properties,
               compile: typeof args.compile === 'boolean' ? args.compile : undefined,
-              save: typeof args.save === 'boolean' ? args.save : undefined,
-              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+              save: applySave ? true : (typeof args.save === 'boolean' ? args.save : undefined),
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined,
+              waitForCompletion: applySave ? true : !!args.waitForCompletion,
+              waitForCompletionTimeoutMs: typeof args.waitForCompletionTimeoutMs === 'number' ? args.waitForCompletionTimeoutMs : undefined
             });
             return cleanObject(res);
           }
@@ -1328,12 +1380,15 @@ case 'animation_physics':
               throw new Error('operations array is required for modify_scs');
             }
 
+            const applySaveMs = !!args.applyAndSave;
             const res = await tools.blueprintTools.modifyConstructionScript({
               blueprintPath,
               operations: args.operations,
               compile: typeof args.compile === 'boolean' ? args.compile : undefined,
-              save: typeof args.save === 'boolean' ? args.save : undefined,
-              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+              save: applySaveMs ? true : (typeof args.save === 'boolean' ? args.save : undefined),
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined,
+              waitForCompletion: applySaveMs ? true : !!args.waitForCompletion,
+              waitForCompletionTimeoutMs: typeof args.waitForCompletionTimeoutMs === 'number' ? args.waitForCompletionTimeoutMs : undefined
             });
 
             return cleanObject(res);
@@ -1410,8 +1465,23 @@ case 'animation_physics':
               isReplicated: args.isReplicated,
               isPublic: args.isPublic,
               variablePinType: args.variablePinType,
-              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined,
+              waitForCompletion: !!args.waitForCompletion,
+              waitForCompletionTimeoutMs: typeof args.waitForCompletionTimeoutMs === 'number' ? args.waitForCompletionTimeoutMs : undefined
             });
+            return cleanObject(res);
+          }
+          case 'remove_event': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide details for manage_blueprint.remove_event',
+              {
+                name: { type: 'string', title: 'Blueprint Name' },
+                eventName: { type: 'string', title: 'Event Name' }
+              }
+            );
+            const res = await tools.blueprintTools.removeEvent({ blueprintName: args.name, eventName: args.eventName, timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined, waitForCompletion: !!args.waitForCompletion, waitForCompletionTimeoutMs: typeof args.waitForCompletionTimeoutMs === 'number' ? args.waitForCompletionTimeoutMs : undefined });
             return cleanObject(res);
           }
           case 'add_function': {
@@ -1421,7 +1491,9 @@ case 'animation_physics':
               inputs: args.inputs,
               outputs: args.outputs,
               isPublic: args.isPublic,
-              category: args.category
+              category: args.category,
+              waitForCompletion: !!args.waitForCompletion,
+              waitForCompletionTimeoutMs: typeof args.waitForCompletionTimeoutMs === 'number' ? args.waitForCompletionTimeoutMs : undefined
             });
             return cleanObject(res);
           }
@@ -1430,7 +1502,9 @@ case 'animation_physics':
               blueprintName: args.name,
               eventType: args.eventType || 'Custom',
               customEventName: args.customEventName,
-              parameters: args.parameters
+              parameters: args.parameters,
+              waitForCompletion: !!args.waitForCompletion,
+              waitForCompletionTimeoutMs: typeof args.waitForCompletionTimeoutMs === 'number' ? args.waitForCompletionTimeoutMs : undefined
             });
             return cleanObject(res);
           }
@@ -1439,7 +1513,9 @@ case 'animation_physics':
                 blueprintName: args.name,
                 variableName: args.variableName,
                 metadata: args.metadata,
-                timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+                timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined,
+                waitForCompletion: !!args.waitForCompletion,
+                waitForCompletionTimeoutMs: typeof args.waitForCompletionTimeoutMs === 'number' ? args.waitForCompletionTimeoutMs : undefined
               });
               return cleanObject(res);
             }
@@ -1447,7 +1523,9 @@ case 'animation_physics':
                 const res = await tools.blueprintTools.addConstructionScript({
                   blueprintName: args.name,
                   scriptName: args.scriptName,
-                  timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+                  timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined,
+                  waitForCompletion: !!args.waitForCompletion,
+                  waitForCompletionTimeoutMs: typeof args.waitForCompletionTimeoutMs === 'number' ? args.waitForCompletionTimeoutMs : undefined
                 });
               return cleanObject(res);
             }

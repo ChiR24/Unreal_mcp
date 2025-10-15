@@ -185,7 +185,18 @@ FString BytesToStringView(const TArray<uint8>& Data)
     {
         return FString();
     }
-    return FString(UTF8_TO_TCHAR(reinterpret_cast<const char*>(Data.GetData())));
+    // Convert UTF-8 bytes to TCHAR using an explicit length-aware converter
+    // to avoid reading beyond the provided buffer. The previous implementation
+    // used a null-terminated style conversion which could read past the
+    // payload and include stray bytes from subsequent socket reads, causing
+    // JSON parse failures on the receiving side.
+    const ANSICHAR* Utf8Ptr = reinterpret_cast<const ANSICHAR*>(Data.GetData());
+    FUTF8ToTCHAR Converter(Utf8Ptr, Data.Num());
+    if (Converter.Length() <= 0)
+    {
+        return FString();
+    }
+    return FString(Converter.Length(), Converter.Get());
 }
 
 void DispatchOnGameThread(TFunction<void()>&& Fn)
@@ -615,6 +626,10 @@ uint32 FMcpBridgeWebSocket::RunServer()
             ClientWebSocket->InitializeWeakSelf(ClientWebSocket);
             ClientWebSocket->bServerMode = false; // Client connections are not in server mode
             ClientWebSocket->bServerAcceptedConnection = true; // This is a server-accepted connection
+            // Annotate the accepted client socket with the server listening port
+            // so diagnostic logs and handshake acknowledgements report a
+            // meaningful activePort instead of 0.
+            ClientWebSocket->Port = Port;
 
             {
                 FScopeLock Lock(&ClientSocketsMutex);
@@ -627,7 +642,7 @@ uint32 FMcpBridgeWebSocket::RunServer()
                 if (TSharedPtr<FMcpBridgeWebSocket> Pinned = LocalWeakThis.Pin())
                 {
                     FScopeLock Lock(&Pinned->ClientSocketsMutex);
-                    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Removing client socket from server tracking (remaining before remove: %d)."), Pinned->ClientSockets.Num());
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("Removing client socket from server tracking (remaining before remove: %d)."), Pinned->ClientSockets.Num());
                     Pinned->ClientSockets.Remove(ClientWebSocket);
                 }
             };
@@ -904,6 +919,7 @@ bool FMcpBridgeWebSocket::PerformServerHandshake()
     bool bRequestComplete = false;
     FString ClientKey;
 
+    int32 HeaderEndIndex = -1;
     while (!bRequestComplete)
     {
         if (bStopping)
@@ -914,7 +930,10 @@ bool FMcpBridgeWebSocket::PerformServerHandshake()
         int32 BytesRead = 0;
         if (!Socket->Recv(Temp, TempSize, BytesRead))
         {
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Server handshake recv failed while awaiting upgrade request."));
+            // This may occur when a client connects but immediately closes
+            // or when a non-WebSocket probe connects; log at Verbose to avoid
+            // spamming warnings for transient or benign network activity.
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Server handshake recv failed while awaiting upgrade request (benign or client closed)."));
             TearDown(TEXT("Failed to read WebSocket upgrade request."), false, 4000);
             return false;
         }
@@ -926,14 +945,21 @@ bool FMcpBridgeWebSocket::PerformServerHandshake()
 
         RequestBuffer.Append(Temp, BytesRead);
 
-        // Check if we have a complete HTTP request (double CRLF)
+        // Check if we have a complete HTTP request (double CRLF) anywhere
+        // in the buffer. Clients may send additional bytes immediately after
+        // the headers (for example, the first WebSocket frame), so search
+        // the whole buffer and capture any trailing bytes beyond the header
+        // terminator into PendingReceived for the frame parser.
         if (RequestBuffer.Num() >= 4)
         {
-            const int32 Count = RequestBuffer.Num();
-            if (RequestBuffer[Count - 4] == '\r' && RequestBuffer[Count - 3] == '\n' && 
-                RequestBuffer[Count - 2] == '\r' && RequestBuffer[Count - 1] == '\n')
+            for (int32 Idx = 0; Idx + 3 < RequestBuffer.Num(); ++Idx)
             {
-                bRequestComplete = true;
+                if (RequestBuffer[Idx] == '\r' && RequestBuffer[Idx + 1] == '\n' && RequestBuffer[Idx + 2] == '\r' && RequestBuffer[Idx + 3] == '\n')
+                {
+                    HeaderEndIndex = Idx + 4;
+                    bRequestComplete = true;
+                    break;
+                }
             }
         }
     }
@@ -947,6 +973,20 @@ bool FMcpBridgeWebSocket::PerformServerHandshake()
         UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Server handshake received empty upgrade request."));
         TearDown(TEXT("Malformed WebSocket upgrade request."), false, 4000);
         return false;
+    }
+
+    // If there were any bytes received after the HTTP header terminator,
+    // preserve them so the frame parser can consume an arriving WebSocket
+    // frame that arrived in the same TCP packet as the upgrade request.
+    if (HeaderEndIndex > 0 && HeaderEndIndex < RequestBuffer.Num())
+    {
+        const int32 ExtraCount = RequestBuffer.Num() - HeaderEndIndex;
+        if (ExtraCount > 0)
+        {
+            FScopeLock Guard(&ReceiveMutex);
+            PendingReceived.Append(RequestBuffer.GetData() + HeaderEndIndex, ExtraCount);
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Server handshake: preserved %d extra bytes after upgrade request for subsequent frame parsing."), ExtraCount);
+        }
     }
 
     // Parse the request

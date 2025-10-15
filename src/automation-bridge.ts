@@ -120,6 +120,16 @@ type PendingRequest = {
   timeout: NodeJS.Timeout;
   action: string;
   requestedAt: Date;
+  // If waitForEvent is true the initial automation_response will be
+  // stored when received and the pending request will remain open until
+  // a matching automation_event with the same requestId is delivered.
+  waitForEvent?: boolean;
+  // Timer used while waiting for the completion event
+  eventTimeout?: NodeJS.Timeout | undefined;
+  // Optional event timeout override (ms)
+  eventTimeoutMs?: number | undefined;
+  // Store the initial automation_response when waiting for a completion event
+  initialResponse?: AutomationBridgeResponseMessage | undefined;
 };
 
 type AutomationBridgeEvents = {
@@ -873,7 +883,9 @@ export class AutomationBridge extends EventEmitter {
           const pending = this.pendingRequests.get(reqId);
           if (pending) {
             try {
+              // Clear both the initial response timeout and any event timeout
               clearTimeout(pending.timeout);
+              if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
               this.pendingRequests.delete(reqId);
               const synthetic: AutomationBridgeResponseMessage = {
                 type: 'automation_response',
@@ -912,6 +924,49 @@ export class AutomationBridge extends EventEmitter {
     if (!pending) {
       log.warn(`No pending automation request found for requestId=${requestId}; pendingRequests=${this.pendingRequests.size}. Response payload truncated: ${JSON.stringify(response).substring(0, 1000)}`);
       return;
+    }
+
+    // If the caller requested waiting for a completion event, defer
+    // resolution until the automation_event matching this requestId
+    // arrives. However, if the response already indicates a final on-disk
+    // save (result.saved===true) or a definitive failure, resolve now.
+    if (pending.waitForEvent) {
+      // If we have not yet seen an initial response for this request,
+      // treat this response as the initial acknowledgement and store it
+      // while we await the completion event. If we have already stored
+      // an initial response and we receive another automation_response,
+      // treat the latter as the final completion response and resolve.
+      if (!pending.initialResponse) {
+        // Clear the initial response timeout — we received a response.
+        clearTimeout(pending.timeout);
+        const r: any = response.result ?? response;
+        const savedFlag = r && typeof r.saved !== 'undefined' ? r.saved : undefined;
+        // If the plugin reports a final persisted state or a failure,
+        // resolve immediately instead of waiting for an event.
+        if (response.success === false || savedFlag === true) {
+          this.pendingRequests.delete(requestId);
+          pending.resolve(response);
+          return;
+        }
+        // Store initial response and wait for an automation_event or
+        // a subsequent automation_response to mark completion.
+        pending.initialResponse = response;
+        const evtMs = pending.eventTimeoutMs && pending.eventTimeoutMs > 0 ? pending.eventTimeoutMs : 300000; // default 5 minutes
+        pending.eventTimeout = setTimeout(() => {
+          if (this.pendingRequests.has(requestId)) this.pendingRequests.delete(requestId);
+          try { pending.reject(new Error(`Timed out waiting for completion event for request ${requestId} after ${evtMs}ms`)); } catch {};
+        }, evtMs);
+        // Leave the pending entry in the map so automation_event or
+        // another automation_response can complete it.
+        return;
+      } else {
+        // We previously stored an initial response and now received a
+        // second automation_response; treat this as the final result.
+        if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
+        this.pendingRequests.delete(requestId);
+        pending.resolve(response);
+        return;
+      }
     }
 
     clearTimeout(pending.timeout);
@@ -982,7 +1037,7 @@ export class AutomationBridge extends EventEmitter {
     public async sendAutomationRequest(
     action: string,
     payload: Record<string, unknown> = {},
-    options: { timeoutMs?: number } = {}
+    options: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number } = {}
   ): Promise<AutomationBridgeResponseMessage> {
     if (!this.enabled) {
       throw new Error('Automation bridge disabled');
@@ -1056,7 +1111,9 @@ export class AutomationBridge extends EventEmitter {
         reject,
         timeout,
         action,
-        requestedAt: new Date()
+        requestedAt: new Date(),
+        waitForEvent: !!options.waitForEvent,
+        eventTimeoutMs: typeof options.waitForEventTimeoutMs === 'number' && options.waitForEventTimeoutMs > 0 ? options.waitForEventTimeoutMs : undefined
       });
     });
 

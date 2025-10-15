@@ -13,6 +13,24 @@
 // Define the subsystem log category declared in the public header.
 DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
 
+// Sanitize incoming text for logging: replace control characters with
+// '?' and truncate long messages so logs remain readable and do not
+// attempt to render unprintable glyphs in the editor which can spam
+// Slate font warnings.
+static inline FString SanitizeForLog(const FString& In)
+{
+    if (In.IsEmpty()) return FString();
+    FString Out; Out.Reserve(FMath::Min<int32>(In.Len(), 1024));
+    for (int32 i = 0; i < In.Len(); ++i)
+    {
+        const TCHAR C = In[i];
+        if (C >= 32 && C != 127) Out.AppendChar(C);
+        else Out.AppendChar('?');
+    }
+    if (Out.Len() > 512) Out = Out.Left(512) + TEXT("[TRUNCATED]");
+    return Out;
+}
+
 void UMcpAutomationBridgeSubsystem::AttemptConnection()
 {
     if (!bBridgeAvailable)
@@ -121,7 +139,7 @@ void UMcpAutomationBridgeSubsystem::AttemptConnection()
             });
 
             // Store and start listening
-            ActiveSockets.Add(ServerSocket);
+            if (!ActiveSockets.Contains(ServerSocket)) ActiveSockets.Add(ServerSocket);
             ServerSocket->Listen();
         }
     }
@@ -215,7 +233,14 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(TSharedPtr<FMcpBridge
     const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
     FJsonSerializer::Serialize(Response, Writer);
 
+    // Optional per-socket telemetry (disabled by default). When enabled the
+    // subsystem will emit a Log-level delivery summary and per-socket details
+    // to aid debugging intermittent delivery failures.
+    const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+    const bool bSocketTelemetryEnabled = Settings && Settings->bEnableSocketTelemetry;
+
     bool bSent = false;
+    TArray<FString> AttemptDetails;
     const int MaxAttempts = 3;
     // Locate any socket mapped to this RequestId (if present) so we can
     // attempt delivery even if the immediate TargetSocket is not valid.
@@ -226,11 +251,15 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(TSharedPtr<FMcpBridge
         if (TargetSocket.IsValid() && TargetSocket->IsConnected())
         {
             const int32 TargetPortCandidate = TargetSocket->GetPort();
-            bSent = TargetSocket->Send(Serialized);
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Attempt %d: send automation_response RequestId=%s to requesting socket (port=%d): %s (bytes=%d)"), Attempt, *RequestId, TargetPortCandidate, bSent ? TEXT("ok") : TEXT("failed"), Serialized.Len());
-            if (bSent)
+            const bool bSockSent = TargetSocket->Send(Serialized);
+            // Record attempt details for optional telemetry and keep per-socket
+            // verbose traces at VeryVerbose so normal logs aren't flooded.
+            AttemptDetails.Add(FString::Printf(TEXT("Attempt %d -> requesting socket=%p port=%d connected=%s listening=%s sent=%s bytes=%d"), Attempt, (void*)TargetSocket.Get(), TargetPortCandidate, TargetSocket->IsConnected() ? TEXT("true") : TEXT("false"), TargetSocket->IsListening() ? TEXT("true") : TEXT("false"), bSockSent ? TEXT("ok") : TEXT("failed"), Serialized.Len()));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("Attempt %d: send automation_response RequestId=%s to requesting socket (port=%d): %s (bytes=%d)"), Attempt, *RequestId, TargetPortCandidate, bSockSent ? TEXT("ok") : TEXT("failed"), Serialized.Len());
+            if (bSockSent)
             {
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("automation_response RequestId=%s delivered to requesting socket."), *RequestId);
+                UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("automation_response RequestId=%s delivered to requesting socket."), *RequestId);
+                bSent = true;
                 break;
             }
         }
@@ -239,11 +268,13 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(TSharedPtr<FMcpBridge
         if (!bSent && Mapped && Mapped->IsValid() && (*Mapped)->IsConnected())
         {
             const int32 MappedPortCandidate = (*Mapped)->GetPort();
-            bSent = (*Mapped)->Send(Serialized);
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Attempt %d: send automation_response RequestId=%s to mapped socket (port=%d): %s (bytes=%d)"), Attempt, *RequestId, MappedPortCandidate, bSent ? TEXT("ok") : TEXT("failed"), Serialized.Len());
-            if (bSent)
+            const bool bSockSent = (*Mapped)->Send(Serialized);
+            AttemptDetails.Add(FString::Printf(TEXT("Attempt %d -> mapped socket=%p port=%d connected=%s listening=%s sent=%s bytes=%d"), Attempt, (void*)(*Mapped).Get(), MappedPortCandidate, (*Mapped)->IsConnected() ? TEXT("true") : TEXT("false"), (*Mapped)->IsListening() ? TEXT("true") : TEXT("false"), bSockSent ? TEXT("ok") : TEXT("failed"), Serialized.Len()));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("Attempt %d: send automation_response RequestId=%s to mapped socket (port=%d): %s (bytes=%d)"), Attempt, *RequestId, MappedPortCandidate, bSockSent ? TEXT("ok") : TEXT("failed"), Serialized.Len());
+            if (bSockSent)
             {
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("automation_response RequestId=%s delivered to mapped socket."), *RequestId);
+                UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("automation_response RequestId=%s delivered to mapped socket."), *RequestId);
+                bSent = true;
                 break;
             }
         }
@@ -258,12 +289,14 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(TSharedPtr<FMcpBridge
                 if (Sock == TargetSocket) continue;
                 if (Mapped && *Mapped == Sock) continue;
                 const int32 AltPort = Sock->GetPort();
-                if (Sock->Send(Serialized))
-                {
-                    bSent = true;
-                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Attempt %d: sent automation_response RequestId=%s via alternate socket (port=%d, bytes=%d)."), Attempt, *RequestId, AltPort, Serialized.Len());
-                    break;
-                }
+                    const bool bAltSent = Sock->Send(Serialized);
+                    AttemptDetails.Add(FString::Printf(TEXT("Attempt %d -> alt socket=%p port=%d connected=%s listening=%s sent=%s bytes=%d"), Attempt, (void*)Sock.Get(), AltPort, Sock->IsConnected() ? TEXT("true") : TEXT("false"), Sock->IsListening() ? TEXT("true") : TEXT("false"), bAltSent ? TEXT("ok") : TEXT("failed"), Serialized.Len()));
+                    if (bAltSent)
+                    {
+                        bSent = true;
+                        UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("Attempt %d: sent automation_response RequestId=%s via alternate socket (port=%d, bytes=%d)."), Attempt, *RequestId, AltPort, Serialized.Len());
+                        break;
+                    }
             }
         }
 
@@ -277,6 +310,14 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(TSharedPtr<FMcpBridge
         if (!bSent)
         {
             UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Failed to deliver automation_response for RequestId=%s to any connected socket (activeSockets=%d)."), *RequestId, ActiveSockets.Num());
+
+            // If socket telemetry is enabled, emit the per-attempt details so
+            // operators can correlate failures with socket lifecycle state.
+            if (bSocketTelemetryEnabled && AttemptDetails.Num() > 0)
+            {
+                const FString Joined = FString::Join(AttemptDetails, TEXT("\n"));
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("automation_response RequestId=%s delivery attempts:\n%s"), *RequestId, *Joined);
+            }
 
             // As a robust fallback, broadcast an automation_event that contains
             // the original requestId and a small result object describing the
@@ -310,7 +351,7 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(TSharedPtr<FMcpBridge
 void UMcpAutomationBridgeSubsystem::SendAutomationError(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const FString& Message, const FString& ErrorCode)
 {
     const FString ResolvedError = ErrorCode.IsEmpty() ? TEXT("AUTOMATION_ERROR") : ErrorCode;
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Automation request failed (%s): %s"), *ResolvedError, *Message);
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Automation request failed (%s): %s"), *ResolvedError, *SanitizeForLog(Message));
     SendAutomationResponse(TargetSocket, RequestId, false, Message, nullptr, ResolvedError);
 }
 
@@ -495,7 +536,13 @@ void UMcpAutomationBridgeSubsystem::HandleClientConnected(TSharedPtr<FMcpBridgeW
 
     ClientSocket->OnHeartbeat().AddUObject(this, &UMcpAutomationBridgeSubsystem::HandleHeartbeat);
 
-    ActiveSockets.Add(ClientSocket);
+    // Avoid adding the same socket pointer more than once — duplicates
+    // cause repeated broadcast attempts and noisy logs. Use pointer
+    // identity to deduplicate.
+    if (!ActiveSockets.Contains(ClientSocket))
+    {
+        ActiveSockets.Add(ClientSocket);
+    }
     bBridgeAvailable = true;
     BridgeState = EMcpAutomationBridgeState::Connected;
 
@@ -579,14 +626,14 @@ void UMcpAutomationBridgeSubsystem::HandleMessage(TSharedPtr<FMcpBridgeWebSocket
     TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Message);
     if (!FJsonSerializer::Deserialize(Reader, RootObj) || !RootObj.IsValid())
     {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Failed to parse incoming automation message JSON: %s"), *Message);
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Failed to parse incoming automation message JSON: %s"), *SanitizeForLog(Message));
         return;
     }
 
     FString Type;
     if (!RootObj->TryGetStringField(TEXT("type"), Type))
     {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Incoming message missing 'type' field: %s"), *Message);
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Incoming message missing 'type' field: %s"), *SanitizeForLog(Message));
         return;
     }
 
@@ -605,7 +652,7 @@ void UMcpAutomationBridgeSubsystem::HandleMessage(TSharedPtr<FMcpBridgeWebSocket
 
         if (RequestId.IsEmpty() || Action.IsEmpty())
         {
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("automation_request missing requestId or action: %s"), *Message);
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("automation_request missing requestId or action: %s"), *SanitizeForLog(Message));
             return;
         }
 
@@ -837,22 +884,71 @@ void UMcpAutomationBridgeSubsystem::SendControlMessage(const TSharedPtr<FJsonObj
 
     // Send control message to all connected sockets. Log per-socket send
     // success so tests can determine whether broadcasts reached clients.
+    int32 SentCount = 0;
+    int32 FailedCount = 0;
+    // Optional per-socket telemetry (off by default)
+    const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+    const bool bSocketTelemetryEnabled = Settings && Settings->bEnableSocketTelemetry;
+    TArray<FString> AttemptDetails;
+    // Try to deliver to mapped socket for this requestId first (if present)
+    FString RequestId;
+    if (Message->TryGetStringField(TEXT("requestId"), RequestId) && !RequestId.IsEmpty())
+    {
+        TSharedPtr<FMcpBridgeWebSocket>* Mapped = PendingRequestsToSockets.Find(RequestId);
+        if (Mapped && Mapped->IsValid() && (*Mapped)->IsConnected())
+        {
+            const bool bOk = (*Mapped)->Send(Serialized);
+            if (bOk) { SentCount++; }
+            else { FailedCount++; }
+            // Record details for optional telemetry and emit a VeryVerbose per-socket
+            // trace so routine broadcasts remain quiet under normal logging.
+            AttemptDetails.Add(FString::Printf(TEXT("mapped=%p port=%d connected=%s listening=%s sent=%s bytes=%d"), (void*)(*Mapped).Get(), (*Mapped)->GetPort(), (*Mapped)->IsConnected() ? TEXT("true") : TEXT("false"), (*Mapped)->IsListening() ? TEXT("true") : TEXT("false"), bOk ? TEXT("ok") : TEXT("failed"), Serialized.Len()));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("Control message event=%s requestId=%s -> mapped socket(port=%d): %s (bytes=%d)"), *Message->GetStringField(TEXT("event")), *RequestId, (*Mapped)->GetPort(), bOk ? TEXT("ok") : TEXT("failed"), Serialized.Len());
+        }
+    }
+
+    // Broadcast to remaining sockets (skip any pointer we've already tried)
+    TSet<TSharedPtr<FMcpBridgeWebSocket>> Tried;
+    if (!RequestId.IsEmpty()) { if (TSharedPtr<FMcpBridgeWebSocket>* TFound = PendingRequestsToSockets.Find(RequestId)) if (TFound && TFound->IsValid()) Tried.Add(*TFound); }
+
     for (const TSharedPtr<FMcpBridgeWebSocket>& Socket : ActiveSockets)
     {
         if (!Socket.IsValid()) continue;
-        const int32 Port = Socket->GetPort();
-        if (!Socket->IsConnected())
-        {
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Control message not sent to socket(port=%d): socket not connected."), Port);
-            continue;
-        }
+        if (Tried.Contains(Socket)) continue;
+        if (!Socket->IsConnected()) { UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("Control message not sent to socket(port=%d): socket not connected."), Socket->GetPort()); continue; }
         const bool bOk = Socket->Send(Serialized);
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Control message event=%s requestId=%s -> socket(port=%d): %s (bytes=%d)"),
-            *Message->GetStringField(TEXT("event")),
-            Message->HasField(TEXT("requestId")) ? *Message->GetStringField(TEXT("requestId")) : TEXT("n/a"),
-            Port,
-            bOk ? TEXT("ok") : TEXT("failed"),
-            Serialized.Len());
+        if (bOk) { SentCount++; }
+        else { FailedCount++; }
+        // Record per-socket attempt info for telemetry and emit a VeryVerbose
+        // trace so tests/developers can opt-in for deeper delivery inspection.
+        AttemptDetails.Add(FString::Printf(TEXT("socket=%p port=%d connected=%s listening=%s sent=%s bytes=%d"), (void*)Socket.Get(), Socket->GetPort(), Socket->IsConnected() ? TEXT("true") : TEXT("false"), Socket->IsListening() ? TEXT("true") : TEXT("false"), bOk ? TEXT("ok") : TEXT("failed"), Serialized.Len()));
+        UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose, TEXT("Control message event=%s requestId=%s -> socket(port=%d): %s (bytes=%d)"), *Message->GetStringField(TEXT("event")), Message->HasField(TEXT("requestId")) ? *Message->GetStringField(TEXT("requestId")) : TEXT("n/a"), Socket->GetPort(), bOk ? TEXT("ok") : TEXT("failed"), Serialized.Len());
+    }
+
+    // Summarize broadcast result at Warning level only when nothing was
+    // delivered. Partial delivery failures are demoted to Verbose by default
+    // to avoid log spam; enabling socket telemetry will raise the summary to
+    // Log and include per-socket details.
+    if (SentCount == 0)
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Control message event=%s requestId=%s could not be delivered to any socket (active=%d failed=%d)."), *Message->GetStringField(TEXT("event")), Message->HasField(TEXT("requestId")) ? *Message->GetStringField(TEXT("requestId")) : TEXT("n/a"), ActiveSockets.Num(), FailedCount);
+        if (bSocketTelemetryEnabled && AttemptDetails.Num() > 0)
+        {
+            const FString Joined = FString::Join(AttemptDetails, TEXT("\n"));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Control message event=%s requestId=%s delivery attempts:\n%s"), *Message->GetStringField(TEXT("event")), Message->HasField(TEXT("requestId")) ? *Message->GetStringField(TEXT("requestId")) : TEXT("n/a"), *Joined);
+        }
+    }
+    else if (FailedCount > 0)
+    {
+        if (bSocketTelemetryEnabled)
+        {
+            const FString Joined = FString::Join(AttemptDetails, TEXT("\n"));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Control message event=%s requestId=%s delivered to %d sockets (failed on %d). Details:\n%s"), *Message->GetStringField(TEXT("event")), Message->HasField(TEXT("requestId")) ? *Message->GetStringField(TEXT("requestId")) : TEXT("n/a"), SentCount, FailedCount, *Joined);
+        }
+        else
+        {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Control message event=%s requestId=%s delivered to %d sockets (failed on %d)."), *Message->GetStringField(TEXT("event")), Message->HasField(TEXT("requestId")) ? *Message->GetStringField(TEXT("requestId")) : TEXT("n/a"), SentCount, FailedCount);
+        }
     }
 }
 

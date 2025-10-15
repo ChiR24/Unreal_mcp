@@ -35,14 +35,89 @@
 bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString Lower = Action.ToLower();
-    if (!Lower.Equals(TEXT("execute_editor_function"), ESearchCase::IgnoreCase) && !Lower.Contains(TEXT("execute_editor_function"))) return false;
+    // Accept either the generic execute_editor_function action or the
+    // more specific execute_console_command action. This allows the
+    // Node-side bridge to prefer a native console command path and avoid
+    // Python fallbacks for health checks and other simple diagnostics.
+    if (!Lower.Equals(TEXT("execute_editor_function"), ESearchCase::IgnoreCase) && !Lower.Contains(TEXT("execute_editor_function"))
+        && !Lower.Equals(TEXT("execute_console_command")) && !Lower.Contains(TEXT("execute_console_command"))) return false;
 
     if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("execute_editor_function payload missing."), TEXT("INVALID_PAYLOAD")); return true; }
 
+    // Handle native console command action first — console commands
+    // carry a top-level `command` (or params.command) and should not
+    // be treated as a generic execute_editor_function requiring a
+    // functionName field.
+    if (Lower.Equals(TEXT("execute_console_command")) || Lower.Contains(TEXT("execute_console_command")))
+    {
+        // Accept either a top-level 'command' string or nested params.command
+        FString Cmd;
+        if (!Payload->TryGetStringField(TEXT("command"), Cmd))
+        {
+            const TSharedPtr<FJsonObject>* ParamsPtr = nullptr;
+            if (Payload->TryGetObjectField(TEXT("params"), ParamsPtr) && ParamsPtr && (*ParamsPtr).IsValid())
+            {
+                (*ParamsPtr)->TryGetStringField(TEXT("command"), Cmd);
+            }
+        }
+        if (Cmd.IsEmpty()) { SendAutomationError(RequestingSocket, RequestId, TEXT("command required"), TEXT("INVALID_ARGUMENT")); return true; }
+
+        AsyncTask(ENamedThreads::GameThread, [this, RequestId, Cmd, RequestingSocket]() {
+            if (!GEditor)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+                return;
+            }
+
+            bool bOk = false;
+            if (GEngine)
+            {
+                // Prefer using the global editor Exec when available — this
+                // reliably executes console commands in the editor context.
+                if (GEditor && GEditor->Exec(nullptr, *Cmd))
+                {
+                    bOk = true;
+                }
+                else if (GEngine)
+                {
+                    for (const FWorldContext& Ctx : GEngine->GetWorldContexts())
+                    {
+                        UWorld* W = Ctx.World();
+                        if (!W) continue;
+                        // Use GEngine->Exec(World, Cmd) to execute the command
+                        // in the context of the world. This avoids relying on a
+                        // particular UWorld::Exec overload and is broadly
+                        // supported across engine versions.
+                        bOk = GEngine->Exec(W, *Cmd);
+                        if (bOk) break;
+                    }
+                }
+            }
+
+            TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+            Out->SetStringField(TEXT("command"), Cmd);
+            Out->SetBoolField(TEXT("success"), bOk);
+            SendAutomationResponse(RequestingSocket, RequestId, bOk, bOk ? TEXT("Command executed") : TEXT("Command not executed"), Out, bOk ? FString() : TEXT("EXEC_FAILED"));
+        });
+        return true;
+    }
+
+    // For other execute_editor_function cases require functionName
     FString FunctionName; Payload->TryGetStringField(TEXT("functionName"), FunctionName);
     if (FunctionName.IsEmpty()) { SendAutomationError(RequestingSocket, RequestId, TEXT("functionName required"), TEXT("INVALID_ARGUMENT")); return true; }
 
     const FString FN = FunctionName.ToUpper();
+        // Accept either a top-level 'command' string or nested params.command
+        FString Cmd;
+        if (!Payload->TryGetStringField(TEXT("command"), Cmd))
+        {
+            const TSharedPtr<FJsonObject>* ParamsPtr = nullptr;
+            if (Payload->TryGetObjectField(TEXT("params"), ParamsPtr) && ParamsPtr && (*ParamsPtr).IsValid())
+            {
+                (*ParamsPtr)->TryGetStringField(TEXT("command"), Cmd);
+            }
+        }
+        // (Console handling moved earlier)
 
 #if WITH_EDITOR
     // Dispatch a handful of well-known functions to native handlers
@@ -289,7 +364,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         AsyncTask(ENamedThreads::GameThread, [this, RequestId, AssetPath, RequestingSocket]() {
             bool bOk = false;
 #if WITH_EDITOR
-            bOk = UEditorAssetLibrary::SaveLoadedAsset(UEditorAssetLibrary::LoadAsset(AssetPath));
+            bOk = SaveLoadedAssetThrottled(UEditorAssetLibrary::LoadAsset(AssetPath));
 #endif
             TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetStringField(TEXT("path"), AssetPath); Out->SetBoolField(TEXT("success"), bOk);
             SendAutomationResponse(RequestingSocket, RequestId, bOk, bOk ? TEXT("Asset saved") : TEXT("Save failed"), Out, bOk ? FString() : TEXT("SAVE_FAILED"));
@@ -523,7 +598,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         FAssetToolsModule& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
         UObject* Created = AssetTools.Get().CreateAsset(Name, Package, USoundCue::StaticClass(), FactoryInstance);
         if (!Created) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to create SoundCue"), nullptr, TEXT("CREATE_FAILED")); return; }
-        UEditorAssetLibrary::SaveLoadedAsset(Created);
+    SaveLoadedAssetThrottled(Created);
         TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetStringField(TEXT("path"), Created->GetPathName()); Out->SetBoolField(TEXT("success"), true); SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("SoundCue created"), Out, FString());
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create sound cue requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));

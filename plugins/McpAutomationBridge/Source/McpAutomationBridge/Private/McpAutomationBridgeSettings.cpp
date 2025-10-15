@@ -25,6 +25,8 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     // Default logging behavior
     LogVerbosity = EMcpLogVerbosity::Log;
     bApplyLogVerbosityToAll = false;
+    // Per-socket telemetry (off by default to avoid noise)
+    bEnableSocketTelemetry = false;
     // Deprecated Python fallbacks should be disabled by default
     bAllowPythonFallbacks = false;
     // Extra gating for Python fallback execution
