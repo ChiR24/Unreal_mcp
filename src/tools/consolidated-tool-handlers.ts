@@ -189,10 +189,6 @@ function decideAutomationTransport(
 
   return {
     useAutomation: true,
-    // Automatic reversion to alternative transports (Python / other plugin
-    // hooks) is disabled to ensure the server relies on the configured
-    // Automation Bridge plugin exclusively. Tools should fail early if the
-    // plugin does not implement the requested action.
     allowAlternate: false,
     explicitAutomation,
     alternateReason: 'Automation bridge request failed and alternate transports are disabled; plugin must implement this action.'
@@ -450,7 +446,8 @@ export async function handleConsolidatedToolCall(
             });
             return cleanObject(res);
           }
-          case 'delete': {
+          case 'delete':
+          case 'delete_assets': {
             if (!args.assetPath && !Array.isArray(args.assetPaths)) {
               await elicitMissingPrimitiveArgs(
                 tools,
@@ -537,7 +534,53 @@ export async function handleConsolidatedToolCall(
         }
 
       // 2. ACTOR CONTROL
-      case 'control_actor':
+      case 'control_actor': {
+        const automationInfo = getAutomationBridgeInfo(tools);
+        const automationBridge = automationInfo.instance;
+        if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
+          throw new Error('Automation bridge not connected for control_actor');
+        }
+        const sendAutomationRequest = automationBridge.sendAutomationRequest.bind(automationBridge);
+
+        const sendActorRequest = async (payload: Record<string, unknown>, defaultMessage: string) => {
+          const response = await sendAutomationRequest('control_actor', payload);
+          const payloadResult = (response && typeof response === 'object') ? (response.result ?? response) : {};
+          const responseSuccess = response?.success !== false;
+          const payloadSuccess = payloadResult?.success !== false;
+          const success = responseSuccess && payloadSuccess;
+          const message = typeof payloadResult?.message === 'string'
+            ? payloadResult.message
+            : (typeof response?.message === 'string' ? response.message : defaultMessage);
+          const error = typeof payloadResult?.error === 'string'
+            ? payloadResult.error
+            : (typeof response?.error === 'string' ? response.error : undefined);
+          const warnings = Array.isArray(payloadResult?.warnings) ? payloadResult.warnings : undefined;
+          const details = Array.isArray(payloadResult?.details) ? payloadResult.details : undefined;
+
+          if (!success) {
+            return cleanObject({
+              success: false,
+              message: message ?? defaultMessage,
+              error: error ?? 'CONTROL_ACTOR_FAILED',
+              warnings,
+              details
+            });
+          }
+
+          const merged: Record<string, unknown> = {
+            ...payloadResult,
+            success: true,
+            message: message ?? defaultMessage
+          };
+          if (warnings && merged.warnings === undefined) {
+            merged.warnings = warnings;
+          }
+          if (details && merged.details === undefined) {
+            merged.details = details;
+          }
+          return cleanObject(merged);
+        };
+
         switch (requireAction(args)) {
           case 'spawn': {
             await elicitMissingPrimitiveArgs(
@@ -557,33 +600,49 @@ export async function handleConsolidatedToolCall(
             const actorNameInput = typeof args.actorName === 'string' && args.actorName.trim() !== ''
               ? args.actorName
               : (typeof args.name === 'string' ? args.name : undefined);
-            const res = await tools.actorTools.spawn({
-              classPath,
-              location: args.location,
-              rotation: args.rotation,
-              actorName: actorNameInput
-            });
-            return cleanObject(res);
+            return await sendActorRequest(
+              {
+                action: 'spawn',
+                classPath,
+                actorName: actorNameInput,
+                location: args.location,
+                rotation: args.rotation
+              },
+              `Spawned actor ${actorNameInput ?? classPath}`
+            );
           }
           case 'delete': {
-            await elicitMissingPrimitiveArgs(
-              tools,
-              args,
-              'Which actor should control_actor.delete remove?',
-              {
-                actorName: {
-                  type: 'string',
-                  title: 'Actor Name',
-                  description: 'Exact label of the actor to delete'
+            const namesArray = Array.isArray(args.actorNames)
+              ? args.actorNames.filter((value: any) => typeof value === 'string' && value.trim().length > 0)
+              : undefined;
+
+            if (!namesArray || namesArray.length === 0) {
+              await elicitMissingPrimitiveArgs(
+                tools,
+                args,
+                'Which actor should control_actor.delete remove?',
+                {
+                  actorName: {
+                    type: 'string',
+                    title: 'Actor Name',
+                    description: 'Exact label of the actor to delete'
+                  }
                 }
-              }
-            );
+              );
+            }
+
             const actorNameArg = typeof args.actorName === 'string' && args.actorName.trim() !== ''
               ? args.actorName
               : (typeof args.name === 'string' ? args.name : undefined);
-            const actorName = requireNonEmptyString(actorNameArg, 'actorName', 'Invalid actorName');
-            const res = await tools.bridge.executeEditorFunction('DELETE_ACTOR', { actor_name: actorName });
-            return cleanObject(res);
+
+            const payload: Record<string, unknown> = { action: 'delete' };
+            if (namesArray && namesArray.length > 0) {
+              payload.actorNames = namesArray;
+            } else {
+              payload.actorName = requireNonEmptyString(actorNameArg, 'actorName', 'Invalid actorName');
+            }
+
+            return await sendActorRequest(payload, 'Deleted actors');
           }
           case 'apply_force': {
             await elicitMissingPrimitiveArgs(
@@ -600,18 +659,128 @@ export async function handleConsolidatedToolCall(
             );
             const actorName = requireNonEmptyString(args.actorName, 'actorName', 'Invalid actorName');
             const vector = requireVector3Components(args.force, 'Invalid force: must have numeric x,y,z');
-            const res = await tools.physicsTools.applyForce({
-              actorName,
-              forceType: 'Force',
-              vector
-            });
-            return cleanObject(res);
+            return await sendActorRequest(
+              {
+                action: 'apply_force',
+                actorName,
+                force: { x: vector[0], y: vector[1], z: vector[2] }
+              },
+              `Applied force to ${actorName}`
+            );
+          }
+          case 'set_transform': {
+            const actorName = requireNonEmptyString(args.actorName, 'actorName', 'Invalid actorName');
+            return await sendActorRequest(
+              {
+                action: 'set_transform',
+                actorName,
+                location: args.location,
+                rotation: args.rotation,
+                scale: args.scale
+              },
+              `Updated transform for ${actorName}`
+            );
+          }
+          case 'add_component': {
+            const actorName = requireNonEmptyString(args.actorName, 'actorName', 'Invalid actorName');
+            const componentType = requireNonEmptyString(args.componentType, 'componentType', 'Invalid componentType');
+            return await sendActorRequest(
+              {
+                action: 'add_component',
+                actorName,
+                componentType,
+                componentName: typeof args.componentName === 'string' ? args.componentName.trim() : undefined,
+                properties: args.properties
+              },
+              `Component added to ${actorName}`
+            );
+          }
+          case 'set_component_properties': {
+            const actorName = requireNonEmptyString(args.actorName, 'actorName', 'Invalid actorName');
+            const componentName = requireNonEmptyString(args.componentName, 'componentName', 'Invalid componentName');
+            return await sendActorRequest(
+              {
+                action: 'set_component_properties',
+                actorName,
+                componentName,
+                properties: args.properties
+              },
+              `Updated component ${componentName}`
+            );
+          }
+          case 'get_components': {
+            const actorName = requireNonEmptyString(args.actorName, 'actorName', 'Invalid actorName');
+            return await sendActorRequest(
+              {
+                action: 'get_components',
+                actorName
+              },
+              `Retrieved components for ${actorName}`
+            );
+          }
+          case 'duplicate': {
+            const actorName = requireNonEmptyString(args.actorName, 'actorName', 'Invalid actorName');
+            return await sendActorRequest(
+              {
+                action: 'duplicate',
+                actorName,
+                newName: typeof args.newName === 'string' && args.newName.trim() !== '' ? args.newName.trim() : undefined,
+                offset: args.offset
+              },
+              `Duplicated actor ${actorName}`
+            );
+          }
+          case 'find_by_tag': {
+            const tag = requireNonEmptyString(args.tag, 'tag', 'Invalid tag');
+            return await sendActorRequest(
+              {
+                action: 'find_by_tag',
+                tag,
+                matchType: typeof args.matchType === 'string' ? args.matchType : undefined
+              },
+              `Actors with tag ${tag}`
+            );
+          }
+          case 'spawn_blueprint': {
+            const blueprintPath = requireNonEmptyString(args.blueprintPath, 'blueprintPath', 'Invalid blueprintPath');
+            return await sendActorRequest(
+              {
+                action: 'spawn_blueprint',
+                blueprintPath,
+                actorName: typeof args.actorName === 'string' ? args.actorName.trim() : undefined,
+                location: args.location,
+                rotation: args.rotation
+              },
+              `Spawned blueprint ${blueprintPath}`
+            );
+          }
+          case 'set_blueprint_variables': {
+            const actorName = requireNonEmptyString(args.actorName, 'actorName', 'Invalid actorName');
+            return await sendActorRequest(
+              {
+                action: 'set_blueprint_variables',
+                actorName,
+                variables: args.variables
+              },
+              `Updated variables on ${actorName}`
+            );
+          }
+          case 'create_snapshot': {
+            const actorName = requireNonEmptyString(args.actorName, 'actorName', 'Invalid actorName');
+            const snapshotName = requireNonEmptyString(args.snapshotName, 'snapshotName', 'Invalid snapshotName');
+            return await sendActorRequest(
+              {
+                action: 'create_snapshot',
+                actorName,
+                snapshotName
+              },
+              `Snapshot ${snapshotName} captured`
+            );
           }
           default:
-            // Return structured error instead of throwing so clients can
-            // gracefully handle missing actor actions (older servers).
             return cleanObject({ success: false, error: `Unknown actor action: ${args.action}`, message: `Action not implemented: ${args.action}` });
         }
+      }
 
       // 3. EDITOR CONTROL
       case 'control_editor':
@@ -702,6 +871,39 @@ export async function handleConsolidatedToolCall(
           case 'stop_pie': {
             const res = await tools.editorTools.stopPlayInEditor();
             return cleanObject(res);
+          }
+          case 'resume': {
+            // Prefer native resume if available, else toggle pause
+            if (typeof tools.editorTools?.resumePlayInEditor === 'function') {
+              const res = await tools.editorTools.resumePlayInEditor();
+              return cleanObject(res);
+            }
+            const res = await tools.bridge.executeConsoleCommand('pause');
+            return cleanObject(res);
+          }
+          case 'step_frame': {
+            // Step one frame forward during PIE pause using EditorTools when available
+            if (typeof tools.editorTools?.stepPIEFrame === 'function') {
+              const steps = typeof args.steps === 'number' && Number.isFinite(args.steps) && args.steps > 0 ? Math.floor(args.steps) : 1;
+              const res = await tools.editorTools.stepPIEFrame(steps);
+              return cleanObject(res);
+            }
+            // Console fallback for a single step
+            await tools.bridge.executeConsoleCommand('Step=1');
+            return cleanObject({ success: true, message: 'Advanced PIE by 1 frame' });
+          }
+          case 'create_bookmark': {
+            const bookmarkName = typeof args.bookmarkName === 'string' ? args.bookmarkName : `Bookmark_${Date.now()}`;
+            // Camera bookmarks are typically handled by the editor
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Bookmark creation not implemented - requires editor plugin support', bookmarkName });
+          }
+          case 'jump_to_bookmark': {
+            const bookmarkName = requireNonEmptyString(args.bookmarkName, 'bookmarkName', 'Missing required parameter: bookmarkName');
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Bookmark navigation not implemented - requires editor plugin support', bookmarkName });
+          }
+          case 'set_preferences': {
+            const preferences = args.preferences || {};
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Editor preferences update not implemented - requires editor plugin support', preferences });
           }
           default:
             // Return structured error to allow clients to fallback when
@@ -932,6 +1134,38 @@ case 'manage_level':
             const res = await tools.lightingTools.buildLighting({ quality: args.quality || 'High', buildReflectionCaptures: true });
             return cleanObject(res);
           }
+          case 'export_level': {
+            const levelPath = args.levelPath || args.levelName;
+            const outputPath = args.outputPath || args.filePath;
+            if (!levelPath) {
+              return cleanObject({ success: false, error: 'levelPath is required for export_level' });
+            }
+            if (!outputPath) {
+              return cleanObject({ success: false, error: 'outputPath is required for export_level' });
+            }
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Level export not implemented - requires plugin support', levelPath, outputPath });
+          }
+          case 'import_level': {
+            const filePath = args.filePath || args.sourcePath;
+            if (!filePath) {
+              return cleanObject({ success: false, error: 'filePath is required for import_level' });
+            }
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Level import not implemented - requires plugin support', filePath });
+          }
+          case 'list_levels': {
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Level listing not implemented - requires plugin support', levels: [] });
+          }
+          case 'get_summary': {
+            const levelPath = args.levelPath || args.levelName;
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Level summary not implemented - requires plugin support', levelPath });
+          }
+          case 'delete': {
+            const levelPath = args.levelPath || args.levelName;
+            if (!levelPath) {
+              return cleanObject({ success: false, error: 'levelPath is required for delete' });
+            }
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Level deletion not implemented - requires plugin support', levelPath });
+          }
           default:
             throw new Error(`Unknown level action: ${args.action}`);
         }
@@ -1118,6 +1352,82 @@ case 'animation_physics':
             });
             return cleanObject(res);
           }
+          case 'create_blend_space': {
+            const name = args.blendSpaceName || args.name || 'BS_Default';
+            const savePath = args.savePath || args.path;
+            const res = await tools.animationTools.createBlendSpace({ 
+              name, 
+              savePath,
+              skeletonPath: args.skeletonPath,
+              dimensions: args.dimensions,
+              horizontalAxis: args.horizontalAxis ? {
+                name: args.horizontalAxis.name || args.xAxis || 'Speed',
+                minValue: args.horizontalAxis.minValue ?? 0,
+                maxValue: args.horizontalAxis.maxValue ?? 100
+              } : undefined,
+              verticalAxis: args.verticalAxis ? {
+                name: args.verticalAxis.name || args.yAxis || 'Direction',
+                minValue: args.verticalAxis.minValue ?? 0,
+                maxValue: args.verticalAxis.maxValue ?? 100
+              } : undefined,
+              samples: args.animations || args.samples
+            });
+            return cleanObject(res);
+          }
+          case 'create_state_machine': {
+            const name = args.name || 'StateMachine_Default';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'State machine creation not implemented - requires plugin support', name });
+          }
+          case 'setup_ik': {
+            const actorName = args.actorName || 'DefaultActor';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'IK setup not implemented - requires plugin support', actorName });
+          }
+          case 'create_procedural_anim': {
+            const name = args.name || 'ProceduralAnim_Default';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Procedural animation creation not implemented - requires plugin support', name });
+          }
+          case 'create_anim_blueprint': {
+            const name = args.blueprintName || args.name || 'ABP_Default';
+            const skeletonPath = args.targetSkeleton || args.skeletonPath;
+            if (!skeletonPath) {
+              return cleanObject({ success: false, error: 'skeletonPath is required for create_anim_blueprint' });
+            }
+            const res = await tools.animationTools.createAnimationBlueprint({ 
+              name, 
+              skeletonPath, 
+              savePath: args.savePath || args.path 
+            });
+            return cleanObject(res);
+          }
+          case 'activate_ragdoll': {
+            const actorName = args.actorName || 'DefaultActor';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Ragdoll activation not implemented - requires plugin support', actorName });
+          }
+          case 'create_blend_tree': {
+            const name = args.name || 'BlendTree_Default';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Blend tree creation not implemented - requires plugin support', name });
+          }
+          case 'setup_retargeting': {
+            const sourceSkeleton = args.sourceSkeleton;
+            const targetSkeleton = args.targetSkeleton;
+            if (!sourceSkeleton || !targetSkeleton) {
+              return cleanObject({ success: false, error: 'sourceSkeleton and targetSkeleton are required for setup_retargeting' });
+            }
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Retargeting setup not implemented - requires plugin support', sourceSkeleton, targetSkeleton });
+          }
+          case 'setup_physics_simulation': {
+            const actorName = args.actorName || 'DefaultActor';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Physics simulation setup not implemented - requires plugin support', actorName });
+          }
+          case 'create_animation_asset': {
+            const name = args.name || 'Anim_Default';
+            const assetType = args.assetType || 'Sequence';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Animation asset creation not implemented - requires plugin support', name, assetType });
+          }
+          case 'cleanup': {
+            const filter = args.filter || 'AnimationAssets';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Animation cleanup not implemented - requires plugin support', filter });
+          }
           default:
             throw new Error(`Unknown animation/physics action: ${args.action}`);
         }
@@ -1126,6 +1436,7 @@ case 'animation_physics':
       case 'create_effect':
         switch (requireAction(args)) {
           case 'particle': {
+            const effectType = args.effectType || args.preset || 'Default';
             await elicitMissingPrimitiveArgs(
               tools,
               args,
@@ -1134,11 +1445,11 @@ case 'animation_physics':
                 effectType: {
                   type: 'string',
                   title: 'Effect Type',
-                  description: 'Preset effect type to spawn (e.g., Fire, Smoke)'
+                  description: 'Preset effect type to spawn (e.g., Fire, Smoke, Default)'
                 }
               }
             );
-            const res = await tools.niagaraTools.createEffect({ effectType: args.effectType, name: args.name, location: args.location, scale: args.scale, customParameters: args.customParameters });
+            const res = await tools.niagaraTools.createEffect({ effectType, name: args.name, location: args.location, scale: args.scale, customParameters: args.customParameters });
             return cleanObject(res);
           }
           case 'niagara': {
@@ -1177,7 +1488,12 @@ case 'animation_physics':
             const originalShapeLabel = String(shapeInput).trim() || 'shape';
             const loc = args.location || { x: 0, y: 0, z: 0 };
             const size = args.size || 100;
-            const color = args.color || [255, 0, 0, 255];
+            const colorInput = args.color || [255, 0, 0, 255];
+            const color = Array.isArray(colorInput) 
+              ? colorInput 
+              : (colorInput && typeof colorInput === 'object' 
+                ? [colorInput.r || 255, colorInput.g || 0, colorInput.b || 0, colorInput.a || 255]
+                : [255, 0, 0, 255]);
             const duration = args.duration || 5;
             if (shape === 'line') {
               const end = args.end || { x: loc.x + size, y: loc.y, z: loc.z };
@@ -1266,7 +1582,6 @@ case 'animation_physics':
             return cleanObject(res);
           }
           case 'create_dynamic_light': {
-            // Plugin-first dynamic light creation; falls back to Python spawners
             const providedName = typeof args.lightName === 'string' && args.lightName.trim().length > 0 ? args.lightName.trim() : (typeof args.name === 'string' ? args.name.trim() : undefined);
             const lightType = typeof args.lightType === 'string' ? args.lightType : undefined;
             const params: any = {
@@ -1290,6 +1605,26 @@ case 'animation_physics':
             if (!filter) throw new Error('cleanup requires a non-empty filter parameter');
             const res = await tools.visualTools.cleanupActors(filter);
             return cleanObject(res);
+          }
+          case 'create_volumetric_fog': {
+            const fogName = args.fogName || 'VolumetricFog_Default';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Volumetric fog creation not implemented - requires plugin support', fogName });
+          }
+          case 'create_particle_trail': {
+            const trailName = args.trailName || 'ParticleTrail_Default';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Particle trail creation not implemented - requires plugin support', trailName });
+          }
+          case 'create_environment_effect': {
+            const effectType = args.effectType || 'Default';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Environment effect creation not implemented - requires plugin support', effectType });
+          }
+          case 'create_impact_effect': {
+            const surfaceType = args.surfaceType || 'Default';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Impact effect creation not implemented - requires plugin support', surfaceType });
+          }
+          case 'create_niagara_ribbon': {
+            const ribbonName = args.ribbonName || 'NiagaraRibbon_Default';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Niagara ribbon creation not implemented - requires plugin support', ribbonName });
           }
           default:
             throw new Error(`Unknown effect action: ${args.action}`);
@@ -1316,10 +1651,11 @@ case 'animation_physics':
                 }
               }
             );
+            const savePath = typeof args.path === 'string' ? args.path : args.savePath;
             const res = await tools.blueprintTools.createBlueprint({
-              name: args.name,
+              name: args.name || args.path,
               blueprintType: args.blueprintType || 'Actor',
-              savePath: args.savePath,
+              savePath,
               parentClass: args.parentClass,
               timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined,
               waitForCompletion: !!args.waitForCompletion,
@@ -1446,18 +1782,27 @@ case 'animation_physics':
             return cleanObject(res);
           }
           case 'add_variable': {
+            const blueprintCandidate = typeof args.blueprintPath === 'string' ? args.blueprintPath : args.name;
+            const blueprintName = typeof blueprintCandidate === 'string' && blueprintCandidate.trim().length > 0
+              ? blueprintCandidate.trim()
+              : undefined;
+            
             await elicitMissingPrimitiveArgs(
               tools,
               args,
               'Provide details for manage_blueprint.add_variable',
               {
-                name: { type: 'string', title: 'Blueprint Name' },
                 variableName: { type: 'string', title: 'Variable Name' },
                 variableType: { type: 'string', title: 'Variable Type' }
               }
             );
+            
+            if (!blueprintName) {
+              throw new Error('Invalid blueprint name');
+            }
+            
             const res = await tools.blueprintTools.addVariable({
-              blueprintName: args.name,
+              blueprintName,
               variableName: args.variableName,
               variableType: args.variableType || 'Float',
               defaultValue: args.defaultValue,
@@ -1533,6 +1878,191 @@ case 'animation_physics':
             const res = await tools.blueprintTools.compileBlueprint({ blueprintName: args.name, saveAfterCompile: args.saveAfterCompile });
             return cleanObject(res);
           }
+          case 'get_scs': {
+            const blueprintPath = args.blueprintPath || args.name;
+            if (!blueprintPath) {
+              throw new Error('blueprintPath or name is required for get_scs');
+            }
+            const res = await tools.blueprintTools.getBlueprintSCS({
+              blueprintPath,
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+            });
+            return cleanObject(res);
+          }
+          case 'add_scs_component': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide details for manage_blueprint.add_scs_component',
+              {
+                name: {
+                  type: 'string',
+                  title: 'Blueprint Name',
+                  description: 'Blueprint asset to modify'
+                },
+                componentType: {
+                  type: 'string',
+                  title: 'Component Class',
+                  description: 'Component class to add (e.g., StaticMeshComponent)'
+                },
+                componentName: {
+                  type: 'string',
+                  title: 'Component Name',
+                  description: 'Name for the new SCS component'
+                }
+              }
+            );
+            const blueprintPath = args.blueprintPath || args.name;
+            if (!blueprintPath) {
+              throw new Error('blueprintPath or name is required for add_scs_component');
+            }
+            const res = await tools.blueprintTools.addSCSComponent({
+              blueprintPath,
+              componentClass: args.componentType || args.componentClass,
+              componentName: args.componentName,
+              parentComponent: args.attachTo,
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+            });
+            return cleanObject(res);
+          }
+          case 'remove_scs_component': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide details for manage_blueprint.remove_scs_component',
+              {
+                name: {
+                  type: 'string',
+                  title: 'Blueprint Name',
+                  description: 'Blueprint asset to modify'
+                },
+                componentName: {
+                  type: 'string',
+                  title: 'Component Name',
+                  description: 'Name of the SCS component to remove'
+                }
+              }
+            );
+            const blueprintPath = args.blueprintPath || args.name;
+            if (!blueprintPath) {
+              throw new Error('blueprintPath or name is required for remove_scs_component');
+            }
+            const res = await tools.blueprintTools.removeSCSComponent({
+              blueprintPath,
+              componentName: args.componentName,
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+            });
+            return cleanObject(res);
+          }
+          case 'reparent_scs_component': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide details for manage_blueprint.reparent_scs_component',
+              {
+                name: {
+                  type: 'string',
+                  title: 'Blueprint Name',
+                  description: 'Blueprint asset to modify'
+                },
+                componentName: {
+                  type: 'string',
+                  title: 'Component Name',
+                  description: 'Name of the SCS component to reparent'
+                },
+                newParent: {
+                  type: 'string',
+                  title: 'New Parent',
+                  description: 'New parent component name'
+                }
+              }
+            );
+            const blueprintPath = args.blueprintPath || args.name;
+            if (!blueprintPath) {
+              throw new Error('blueprintPath or name is required for reparent_scs_component');
+            }
+            const res = await tools.blueprintTools.reparentSCSComponent({
+              blueprintPath,
+              componentName: args.componentName,
+              newParent: args.newParent,
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+            });
+            return cleanObject(res);
+          }
+          case 'set_scs_transform': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide details for manage_blueprint.set_scs_transform',
+              {
+                name: {
+                  type: 'string',
+                  title: 'Blueprint Name',
+                  description: 'Blueprint asset to modify'
+                },
+                componentName: {
+                  type: 'string',
+                  title: 'Component Name',
+                  description: 'Name of the SCS component to modify'
+                }
+              }
+            );
+            const blueprintPath = args.blueprintPath || args.name;
+            if (!blueprintPath) {
+              throw new Error('blueprintPath or name is required for set_scs_transform');
+            }
+            const res = await tools.blueprintTools.setSCSComponentTransform({
+              blueprintPath,
+              componentName: args.componentName,
+              location: Array.isArray(args.location) && args.location.length === 3 
+                ? [args.location[0], args.location[1], args.location[2]] as [number, number, number]
+                : undefined,
+              rotation: Array.isArray(args.rotation) && args.rotation.length === 3
+                ? [args.rotation[0], args.rotation[1], args.rotation[2]] as [number, number, number]
+                : undefined,
+              scale: Array.isArray(args.scale) && args.scale.length === 3
+                ? [args.scale[0], args.scale[1], args.scale[2]] as [number, number, number]
+                : undefined,
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+            });
+            return cleanObject(res);
+          }
+          case 'set_scs_property': {
+            await elicitMissingPrimitiveArgs(
+              tools,
+              args,
+              'Provide details for manage_blueprint.set_scs_property',
+              {
+                name: {
+                  type: 'string',
+                  title: 'Blueprint Name',
+                  description: 'Blueprint asset to modify'
+                },
+                componentName: {
+                  type: 'string',
+                  title: 'Component Name',
+                  description: 'Name of the SCS component to modify'
+                },
+                propertyName: {
+                  type: 'string',
+                  title: 'Property Name',
+                  description: 'Name of the property to set'
+                }
+              }
+            );
+            const blueprintPath = args.blueprintPath || args.name;
+            if (!blueprintPath) {
+              throw new Error('blueprintPath or name is required for set_scs_property');
+            }
+            const res = await tools.blueprintTools.setSCSComponentProperty({
+              blueprintPath,
+              componentName: args.componentName,
+              propertyName: args.propertyName,
+              propertyValue: args.propertyValue ?? args.value,
+              timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
+            });
+            return cleanObject(res);
+          }
       default:
         // Return a structured error so clients can detect missing action support
         return cleanObject({ success: false, error: `Unknown blueprint action: ${args.action}`, message: `Action not implemented: ${args.action}` });
@@ -1605,6 +2135,36 @@ case 'animation_physics':
               maxScale: args.maxScale
             });
             return cleanObject(res);
+          }
+          case 'generate_lods': {
+            const assetPath = args.assetPath || args.meshPath;
+            if (!assetPath) {
+              return cleanObject({ success: false, error: 'assetPath or meshPath is required for generate_lods' });
+            }
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'LOD generation not implemented - requires plugin support', assetPath, lodCount: args.lodCount || 3 });
+          }
+          case 'bake_lightmap': {
+            const area = args.area || 'entire level';
+            const quality = args.quality || 'Production';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Lightmap baking not implemented - requires plugin support', area, quality });
+          }
+          case 'export_snapshot': {
+            const outputPath = args.outputPath || args.filePath;
+            if (!outputPath) {
+              return cleanObject({ success: false, error: 'outputPath is required for export_snapshot' });
+            }
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Environment snapshot export not implemented - requires plugin support', outputPath });
+          }
+          case 'import_snapshot': {
+            const filePath = args.filePath || args.sourcePath;
+            if (!filePath) {
+              return cleanObject({ success: false, error: 'filePath is required for import_snapshot' });
+            }
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Environment snapshot import not implemented - requires plugin support', filePath });
+          }
+          case 'delete': {
+            const target = args.target || args.name || 'environment asset';
+            return cleanObject({ success: false, error: 'NOT_IMPLEMENTED', message: 'Environment asset deletion not implemented - requires plugin support', target });
           }
           default:
             throw new Error(`Unknown environment action: ${args.action}`);
@@ -1686,6 +2246,18 @@ case 'system_control':
             const res = await tools.engineTools.quitEditor();
             return cleanObject(res);
           }
+          case 'execute_command': {
+            const command = requireNonEmptyString(args.command, 'command', 'Missing required parameter: command');
+            const res = await tools.bridge.executeConsoleCommand(command);
+            return cleanObject(res);
+          }
+          case 'set_cvar': {
+            const cvar = requireNonEmptyString(args.cvar, 'cvar', 'Missing required parameter: cvar');
+            const value = args.value !== undefined ? args.value : '';
+            const command = `${cvar} ${value}`;
+            const res = await tools.bridge.executeConsoleCommand(command);
+            return cleanObject(res);
+          }
           default:
             throw new Error(`Unknown system action: ${args.action}`);
         }
@@ -1725,16 +2297,9 @@ case 'system_control':
       // 11. PYTHON EXECUTION
       case 'execute_python': {
         const automationInfo = getAutomationBridgeInfo(tools);
-        const decision = decideAutomationTransport(args.transport, automationInfo);
+        decideAutomationTransport(args.transport, automationInfo);
         const automationBridge = automationInfo.instance;
         const warnings: string[] = [];
-
-        const addWarning = (value?: string) => {
-          if (!value) return;
-          if (!warnings.includes(value)) {
-            warnings.push(value);
-          }
-        };
 
         const hasTemplate = typeof args.template === 'string' && args.template.trim().length > 0;
         if (hasTemplate) {
@@ -1836,62 +2401,12 @@ case 'system_control':
 
           return cleanObject(payload);
         } catch (err: any) {
-          if (!decision.allowAlternate) {
-            return cleanObject({
-              success: false,
-              error: err?.message || String(err),
-              message: 'Automation bridge execution failed',
-              transport: 'automation_bridge'
-            });
-          }
-          addWarning(decision.alternateReason);
-          addWarning(`Automation bridge error: ${err?.message || String(err)}.`);
-        }
-
-        const captureResult = args.captureResult !== false;
-
-        try {
-          const allowPython = decision.allowAlternate;
-          const result = captureResult
-            ? await tools.bridge.executeEditorPython(script, { allowPythonFallback: allowPython })
-            : await tools.bridge.executeEditorPython(script, { allowPythonFallback: allowPython });
-
-          const success = typeof result === 'object' && result !== null && typeof (result as any).success === 'boolean'
-            ? Boolean((result as any).success)
-            : true;
-          const existingWarnings = Array.isArray((result as any)?.warnings)
-            ? (result as any).warnings
-            : undefined;
-          const message = typeof (result as any)?.message === 'string'
-            ? (result as any).message
-            : (typeof result === 'string' ? result : captureResult ? 'Python script executed' : 'Python command sent');
-          const error = success ? undefined : (typeof (result as any)?.error === 'string' ? (result as any).error : 'Python execution reported failure');
-
-          const payload: Record<string, unknown> = {
-            success,
-            result,
-            message,
-            error,
-            transport: 'automation_bridge'
-          };
-
-          const combinedWarnings = [...(existingWarnings ?? []), ...warnings].filter(Boolean);
-          if (combinedWarnings.length > 0) {
-            payload.warnings = combinedWarnings;
-          }
-
-          return cleanObject(payload);
-        } catch (err: any) {
-          const payload: Record<string, unknown> = {
+          return cleanObject({
             success: false,
             error: err?.message || String(err),
-            message: 'Python execution failed',
+            message: 'Automation bridge execution failed',
             transport: 'automation_bridge'
-          };
-          if (warnings.length > 0) {
-            payload.warnings = warnings;
-          }
-          return cleanObject(payload);
+          });
         }
       }
 
@@ -1923,6 +2438,7 @@ case 'system_control':
             break;
             
           case 'list':
+          case 'list_presets':
             // List all presets - implement via RcTools
             rcResult = await tools.rcTools.listPresets();
             break;
@@ -2027,8 +2543,95 @@ case 'system_control':
             };
             break;
             
+          case 'add_property':
+            {
+              const presetPathAdd = args.presetPath || args.presetId;
+              if (!presetPathAdd) throw new Error('Missing required parameter: presetPath or presetId');
+              if (!args.propertyName) throw new Error('Missing required parameter: propertyName');
+              
+              // Expose property is similar to add_property
+              rcResult = await tools.rcTools.exposeProperty({ 
+                presetPath: presetPathAdd,
+                objectPath: args.objectPath || presetPathAdd,
+                propertyName: args.propertyName 
+              });
+              if (rcResult.success) {
+                rcResult.message = `Property '${args.propertyName}' added to preset`;
+              }
+            }
+            break;
+            
+          case 'update_property':
+            {
+              const presetPathUpdate = args.presetPath || args.presetId;
+              const propNameUpdate = args.propertyName || args.propertyLabel;
+              
+              if (!presetPathUpdate) throw new Error('Missing required parameter: presetPath or presetId');
+              if (!propNameUpdate) throw new Error('Missing required parameter: propertyName');
+              
+              // For now, treat update as a set operation
+              rcResult = await tools.rcTools.setProperty({ 
+                objectPath: args.objectPath || presetPathUpdate,
+                propertyName: propNameUpdate,
+                value: args.value,
+                displayName: args.displayName
+              });
+              if (rcResult.success) {
+                rcResult.message = `Property '${propNameUpdate}' updated in preset`;
+              }
+            }
+            break;
+            
+          case 'export_preset':
+            {
+              const presetPathExport = args.presetPath || args.presetId;
+              if (!presetPathExport) throw new Error('Missing required parameter: presetPath or presetId');
+              if (!args.filePath) throw new Error('Missing required parameter: filePath');
+              
+              // Placeholder - requires plugin support
+              rcResult = { 
+                success: false,
+                error: 'NOT_IMPLEMENTED',
+                message: 'Preset export not implemented - requires plugin support',
+                filePath: args.filePath
+              };
+            }
+            break;
+            
+          case 'import_preset':
+            {
+              if (!args.filePath) throw new Error('Missing required parameter: filePath');
+              
+              // Placeholder - requires plugin support
+              rcResult = { 
+                success: false,
+                error: 'NOT_IMPLEMENTED',
+                message: 'Preset import not implemented - requires plugin support',
+                filePath: args.filePath
+              };
+            }
+            break;
+            
+          case 'remove_property':
+            {
+              const presetPathRemove = args.presetPath || args.presetId;
+              const propNameRemove = args.propertyName || args.propertyLabel;
+              
+              if (!presetPathRemove) throw new Error('Missing required parameter: presetPath or presetId');
+              if (!propNameRemove) throw new Error('Missing required parameter: propertyName');
+              
+              // Placeholder - requires plugin support for removing exposed properties
+              rcResult = { 
+                success: false,
+                error: 'NOT_IMPLEMENTED',
+                message: 'Property removal from preset not implemented - requires plugin support',
+                propertyName: propNameRemove
+              };
+            }
+            break;
+            
           default:
-            throw new Error(`Unknown RC action: ${rcAction}. Valid actions are: create_preset, expose_actor, expose_property, list_fields, set_property, get_property, or their simplified versions: create, list, delete, expose, get_exposed, set_value, get_value, call_function`);
+            throw new Error(`Unknown RC action: ${rcAction}. Valid actions are: create_preset, expose_actor, expose_property, list_fields, set_property, get_property, or their simplified versions: create, list, delete, expose, get_exposed, set_value, get_value, call_function, add_property, update_property, export_preset, import_preset, remove_property`);
         }
         
         // Return result directly - MCP formatting will be handled by response validator
@@ -2045,6 +2648,7 @@ case 'system_control':
           
           switch (action) {
             case 'create':
+            case 'create_sequence':
               return await sequenceTools.create({ name: args.name, path: args.path });
             case 'open':
               return await sequenceTools.open({ path: args.path });
@@ -2082,6 +2686,22 @@ case 'system_control':
             case 'set_playback_speed':
               if (args.speed === undefined) throw new Error('Missing required parameter: speed');
               return await sequenceTools.setPlaybackSpeed({ speed: args.speed });
+            case 'add_track':
+              return { success: false, error: 'NOT_IMPLEMENTED', message: 'Track addition not implemented - requires plugin support', trackType: args.trackType };
+            case 'set_keyframe':
+              return { success: false, error: 'NOT_IMPLEMENTED', message: 'Keyframe setting not implemented - requires plugin support', frame: args.frame };
+            case 'remove_keyframe':
+              return { success: false, error: 'NOT_IMPLEMENTED', message: 'Keyframe removal not implemented - requires plugin support', frame: args.frame };
+            case 'list':
+              return { success: false, error: 'NOT_IMPLEMENTED', message: 'Sequence listing not implemented - requires plugin support', sequences: [] };
+            case 'duplicate':
+              return { success: false, error: 'NOT_IMPLEMENTED', message: 'Sequence duplication not implemented - requires plugin support', originalPath: args.path };
+            case 'rename':
+              return { success: false, error: 'NOT_IMPLEMENTED', message: 'Sequence rename not implemented - requires plugin support', newName: args.newName };
+            case 'get_metadata':
+              return { success: false, error: 'NOT_IMPLEMENTED', message: 'Sequence metadata retrieval not implemented - requires plugin support', metadata: {} };
+            case 'delete':
+              return { success: false, error: 'NOT_IMPLEMENTED', message: 'Sequence deletion not implemented - requires plugin support', path: args.path };
             default:
               throw new Error(`Unknown sequence action: ${action}`);
           }

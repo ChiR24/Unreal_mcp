@@ -1,26 +1,30 @@
-import { parseStandardResult, StandardResultPayload, stripTaggedResultLines } from './python-output.js';
-
+// Generic result interpretation for automation bridge responses
 export interface InterpretedStandardResult {
   success: boolean;
   message: string;
   error?: string;
   warnings?: string[];
   details?: string[];
-  payload: StandardResultPayload & Record<string, unknown>;
+  payload: Record<string, unknown>;
   cleanText?: string;
   rawText: string;
   raw: unknown;
 }
 
+/**
+ * Interprets automation bridge responses into a standard format
+ * @deprecated Python execution removed - this now handles generic automation bridge responses
+ */
 export function interpretStandardResult(
   response: unknown,
   defaults: { successMessage: string; failureMessage: string }
 ): InterpretedStandardResult {
-  const parsed = parseStandardResult(response);
-  const payload = (parsed.data ?? {}) as StandardResultPayload & Record<string, unknown>;
+  // Handle automation bridge response format
+  const payload = (response && typeof response === 'object' ? response : {}) as Record<string, unknown>;
   const success = payload.success === true;
-  const rawText = typeof parsed.text === 'string' ? parsed.text : String(parsed.text ?? '');
-  const cleanedText = cleanResultText(rawText, { defaultValue: undefined });
+  const rawText = typeof payload.message === 'string' ? payload.message : 
+                  typeof payload.output === 'string' ? payload.output :
+                  String(payload.result ?? '');
 
   const messageFromPayload = typeof payload.message === 'string' ? payload.message.trim() : '';
   const errorFromPayload = typeof payload.error === 'string' ? payload.error.trim() : '';
@@ -35,22 +39,26 @@ export function interpretStandardResult(
     warnings: coerceStringArray(payload.warnings),
     details: coerceStringArray(payload.details),
     payload,
-    cleanText: cleanedText,
+    cleanText: rawText || undefined,
     rawText,
-    raw: parsed.raw
+    raw: response
   };
 }
 
+/**
+ * Cleans result text by removing tags
+ * @deprecated Python-specific - now just returns trimmed text
+ */
 export function cleanResultText(
   text: string | undefined,
   options: { tag?: string; defaultValue?: string } = {}
 ): string | undefined {
-  const { tag = 'RESULT:', defaultValue } = options;
+  const { defaultValue } = options;
   if (!text) {
     return defaultValue;
   }
 
-  const cleaned = stripTaggedResultLines(text, tag).trim();
+  const cleaned = text.trim();
   if (cleaned.length > 0) {
     return cleaned;
   }
@@ -68,7 +76,7 @@ export function bestEffortInterpretedText(
   }
 
   const raw = interpreted.rawText?.trim?.();
-  if (raw && !raw.startsWith('RESULT:')) {
+  if (raw) {
     return raw;
   }
 

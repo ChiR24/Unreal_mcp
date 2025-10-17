@@ -17,8 +17,6 @@ FString GCurrentSequencePath;
 
 TMap<FString, TSharedPtr<FJsonObject>> GNiagaraRegistry;
 
-FCriticalSection GPythonExecMutex;
-TMap<FString, TArray<TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>>> GPythonExecInflight;
 // Recent asset save tracking (throttle across plugin to avoid frequent SavePackage calls)
 TMap<FString, double> GRecentAssetSaveTs;
 FCriticalSection GRecentAssetSaveMutex;

@@ -25,7 +25,6 @@ import { DebugVisualizationTools } from './tools/debug.js';
 import { PerformanceTools } from './tools/performance.js';
 import { AudioTools } from './tools/audio.js';
 import { UITools } from './tools/ui.js';
-import { RcTools } from './tools/rc.js';
 import { SequenceTools } from './tools/sequence.js';
 import { IntrospectionTools } from './tools/introspection.js';
 import { VisualTools } from './tools/visual.js';
@@ -299,11 +298,10 @@ export function createServer() {
   const performanceTools = new PerformanceTools(bridge);
   const audioTools = new AudioTools(bridge);
   const uiTools = new UITools(bridge);
-  const rcTools = new RcTools(bridge);
   const sequenceTools = new SequenceTools(bridge, automationBridge);
   const introspectionTools = new IntrospectionTools(bridge);
   const visualTools = new VisualTools(bridge);
-  const engineTools = new EngineTools(bridge);
+  const engineTools = new EngineTools(bridge, automationBridge);
 
   const server = new Server(
     {
@@ -367,12 +365,6 @@ export function createServer() {
           uri: 'ue://level',
           name: 'Current Level',
           description: 'Information about the current level',
-          mimeType: 'application/json'
-        },
-        {
-          uri: 'ue://exposed',
-          name: 'Remote Control Exposed',
-          description: 'List all exposed properties via Remote Control',
           mimeType: 'application/json'
         },
         {
@@ -446,16 +438,6 @@ export function createServer() {
       };
     }
     
-    if (uri === 'ue://exposed') {
-      return {
-        contents: [{
-          uri,
-          mimeType: 'text/plain',
-          text: 'Remote Control exposed properties are no longer available; tools now rely on the automation bridge.'
-        }]
-      };
-    }
-    
     if (uri === 'ue://health') {
       const uptimeMs = Date.now() - metrics.uptime;
       const automationStatus = automationBridge.getStatus();
@@ -493,11 +475,10 @@ export function createServer() {
         lastHealthCheckIso: metrics.lastHealthCheck.toISOString(),
         unrealConnection: {
           status: bridge.isConnected ? 'connected' : 'disconnected',
-          host: process.env.UE_HOST || 'localhost',
           transport: 'automation_bridge',
           engineVersion: versionInfo,
           features: {
-            pythonEnabled: featureFlags.pythonEnabled === true,
+            pythonEnabled: false,
             subsystems: featureFlags.subsystems || {},
             automationBridgeConnected: automationStatus.connected
           }
@@ -629,7 +610,6 @@ export function createServer() {
       performanceTools,
       audioTools,
       uiTools,
-      rcTools,
       sequenceTools,
       introspectionTools,
       visualTools,
@@ -824,7 +804,6 @@ export function createServer() {
 
 // Export configuration schema for Smithery session UI and validation
 export const configSchema = z.object({
-  ueHost: z.string().optional().default('127.0.0.1').describe('Unreal Engine host (used for display and telemetry only)'),
   logLevel: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info').describe('Runtime log level'),
   projectPath: z.string().optional().default('C:/Users/YourName/Documents/Unreal Projects/YourProject').describe('Absolute path to your Unreal .uproject file')
 });
@@ -834,9 +813,8 @@ export const configSchema = z.object({
 export default function createServerDefault({ config }: { config?: any } = {}) {
   try {
     if (config) {
-      if (typeof config.ueHost === 'string' && config.ueHost.trim()) process.env.UE_HOST = config.ueHost;
-  if (typeof config.logLevel === 'string') process.env.LOG_LEVEL = config.logLevel;
-  if (typeof config.projectPath === 'string' && config.projectPath.trim()) process.env.UE_PROJECT_PATH = config.projectPath;
+      if (typeof config.logLevel === 'string') process.env.LOG_LEVEL = config.logLevel;
+      if (typeof config.projectPath === 'string' && config.projectPath.trim()) process.env.UE_PROJECT_PATH = config.projectPath;
     }
   } catch (e) {
     // Non-fatal: log and continue (console to avoid circular logger dependencies at top-level)

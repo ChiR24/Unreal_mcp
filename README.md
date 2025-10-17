@@ -6,7 +6,7 @@
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.6-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
 
-A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine through the Automation Bridge plugin and Python subsystem APIs. Built with TypeScript and designed for game development automation.
+A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine through the native C++ Automation Bridge plugin. Built with TypeScript and C++ for high-performance game development automation.
 
 ## Features
 
@@ -26,39 +26,35 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - Node.js 18+
 - Unreal Engine 5.0-5.6
 - Required UE Plugins (enable via **Edit ▸ Plugins**):
-  - **MCP Automation Bridge** – WebSocket automation transport (ships inside `Public/McpAutomationBridge`)
-  - **Python Editor Script Plugin** – exposes Python runtime for automation
-  - **Editor Scripting Utilities** – unlocks Editor Actor/Asset subsystems used throughout the tools
-  - **Remote Control API** – required for Remote Control preset tooling
-  - **Sequencer** *(built-in)* – keep enabled for cinematic tools
-  - **Level Sequence Editor** – required for `manage_sequence` operations
+  - **MCP Automation Bridge** – Native C++ WebSocket automation transport (ships inside `plugins/McpAutomationBridge`)
+  - **Editor Scripting Utilities** – Unlocks Editor Actor/Asset subsystems for native tool operations
+  - **Sequencer** *(built-in)* – Keep enabled for cinematic tools
+  - **Level Sequence Editor** – Required for `manage_sequence` operations
 
-> 💡 After toggling any plugin, restart the editor to finalize activation. Keep `Editor Scripting Utilities` and `Python Editor Script Plugin` enabled prior to connecting, otherwise many subsystem-based tools (actor spawning, audio, foliage, UI widgets) will refuse to run for safety.
+> 💡 After toggling any plugin, restart the editor to finalize activation. The MCP Automation Bridge provides all automation capabilities through native C++ handlers.
 
 ### Plugin feature map
 
 | Plugin | Location | Used By | Notes |
 |--------|----------|---------|-------|
-| MCP Automation Bridge | Project Plugins ▸ MCP Automation Bridge | All transport, console, Python tools | Primary automation transport consumed by the MCP server |
-| Python Editor Script Plugin | Scripting | Landscapes, lighting, audio, physics, sequences, UI | Required for every Python execution path |
-| Editor Scripting Utilities | Scripting | Actors, foliage, assets, landscapes, UI | Supplies Editor Actor/Asset subsystems in UE5.6 |
-| Remote Control API | Developer Tools ▸ Remote Control | `manage_rc` tools | Required for Remote Control preset workflows |
+| MCP Automation Bridge | Project Plugins ▸ MCP Automation Bridge | All automation operations | Primary C++ automation transport with native handlers |
+| Editor Scripting Utilities | Scripting | Asset/Actor subsystem operations | Supplies Editor Actor/Asset subsystems |
 | Sequencer | Built-in | Sequencer tools | Ensure not disabled in project settings |
-| Level Sequence Editor | Animation | Sequencer tools | Activate before calling `manage_sequence` operations |
+| Level Sequence Editor | Animation | Sequencer tools | Required for `manage_sequence` operations |
 
 > Tools such as `physics.configureVehicle` accept an optional `pluginDependencies` array so you can list the specific Unreal plugins your project relies on (for example, Chaos Vehicles or third-party vehicle frameworks). When provided, the server will verify those plugins are active before running the configuration.
 
-### Optional MCP Automation Bridge plugin
-- Location: `Public/McpAutomationBridge`
+### MCP Automation Bridge plugin
+- Location: `plugins/McpAutomationBridge`
 - Installation: copy the folder into your project's `Plugins/` directory and regenerate project files.
 - Sync helper: run `npm run automation:sync -- --engine "X:/Unreal_Engine/UE_5.6/Engine/Plugins" --project "X:/Newfolder(2)/Game/Unreal/Trial/Plugins" --clean-engine --clean-project` after repo updates to copy the latest bridge build into both plugin folders and strip legacy entries (such as `SupportedTargetPlatforms: ["Editor"]`) that trigger startup warnings.
 - Verification: run `npm run automation:verify -- --project "C:/Path/To/YourProject/Plugins" --config "C:/Path/To/YourProject/Config/DefaultEngine.ini"` to confirm the plugin files and automation bridge environment variables are in place before launching Unreal.
-- Configuration: enable **MCP Automation Bridge** in **Edit ▸ Plugins**, restart the editor, then set the endpoint/token under **Edit ▸ Project Settings ▸ Plugins ▸ MCP Automation Bridge**. The bridge ships with its own lightweight WebSocket client, so you no longer need the engine’s WebSockets plugin enabled.
+- Configuration: enable **MCP Automation Bridge** in **Edit ▸ Plugins**, restart the editor, then set the endpoint/token under **Edit ▸ Project Settings ▸ Plugins ▸ MCP Automation Bridge**. The bridge ships with its own lightweight WebSocket client, so you no longer need the engine's WebSockets plugin enabled.
 - Startup: after configuration, the Output Log should show a successful connection and the `bridge_started` broadcast; `SendRawMessage` becomes available to Blueprint and C++ callers for manual testing.
-- Current scope: manages a WebSocket session to the Node MCP server (`ws://127.0.0.1:8090` by default), performs optional capability-token handshakes, dispatches inbound JSON to the subsystem delegate, implements reconnect backoff, and now responds to `execute_editor_python`, `get_object_property`, and `set_object_property` automation requests.
-- Usage: the consolidated tools require the automation bridge for Python execution and property access. Keep the plugin enabled for all supported workflows.
+- Current scope: manages a WebSocket session to the Node MCP server (`ws://127.0.0.1:8090` by default), performs optional capability-token handshakes, dispatches inbound JSON to native C++ handlers, implements reconnect backoff, and responds to editor functions, property operations, blueprint actions, and more through native implementations.
+- Usage: all consolidated tools use the automation bridge for native C++ execution. Keep the plugin enabled for all workflows.
 - Diagnostics: the `ue://automation-bridge` MCP resource surfaces handshake timestamps, recent disconnects, pending automation requests, and whether the Node listener is running—handy when validating editor connectivity from a client.
-- Roadmap: expand the bridge with the elevated actions defined in `docs/editor-plugin-extension.md` (SCS authoring, typed property marshaling, modal mediation, asset workflows).
+- Roadmap: expand the bridge with elevated actions (SCS authoring, typed property marshaling, modal mediation, asset workflows).
 
 ### Installation
 
@@ -89,20 +85,7 @@ node dist/cli.js
 
 ### Unreal Engine Configuration
 
-Add to your project's `Config/DefaultEngine.ini`:
-
-```ini
-[/Script/PythonScriptPlugin.PythonScriptPluginSettings]
-bRemoteExecution=True
-bAllowRemotePythonExecution=True
-
-[/Script/RemoteControl.RemoteControlSettings]
-bAllowRemoteExecutionOfConsoleCommands=True
-bEnableRemoteExecution=True
-bAllowPythonExecution=True
-```
-
-Then enable Python execution in: Edit > Project Settings > Plugins > Remote Control
+No additional engine configuration required. The MCP Automation Bridge plugin handles all automation through native C++ code.
 
 ## MCP Client Configuration
 
@@ -117,7 +100,6 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
       "command": "npx",
       "args": ["unreal-engine-mcp-server"],
       "env": {
-        "UE_HOST": "127.0.0.1",
         "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject",
         "MCP_AUTOMATION_WS_PORT": "8090"
       }
@@ -135,7 +117,6 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
       "command": "node",
       "args": ["path/to/Unreal_mcp/dist/cli.js"],
       "env": {
-        "UE_HOST": "127.0.0.1",
         "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject",
         "MCP_AUTOMATION_WS_PORT": "8090"
       }
@@ -144,7 +125,7 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 }
 ```
 
-## Available Tools (14)
+## Available Tools (12)
 
 | Tool | Description |
 |------|-------------|
@@ -158,14 +139,12 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 | `build_environment` | Landscapes, terrain, foliage |
 | `system_control` | Profiling, quality, UI, screenshots |
 | `console_command` | Direct console command execution |
-| `execute_python` | Run bespoke Python scripts or bridge templates |
-| `manage_rc` | Remote Control presets |
 | `manage_sequence` | Sequencer/cinematics |
 | `inspect` | Object introspection |
 
 ## Key Features
 
-- **Automation Bridge Transport** - All console and Python execution routes through the MCP Automation Bridge plugin
+- **Native C++ Automation** - All operations route through the MCP Automation Bridge plugin's native C++ handlers
 - **Graceful Degradation** - Server starts even without an active Unreal connection
 - **On-Demand Connection** - Retries automation handshakes with backoff instead of persistent polling
 - **Non-Intrusive Health Checks** - Uses echo commands every 30 seconds while connected
@@ -173,15 +152,11 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 - **Input Flexibility** - Vectors/rotators accept object or array format
 - **Asset Caching** - 10-second TTL for improved performance
 
-### Plugin-first design & Python fallbacks
+### Native C++ Architecture
 
-The server follows a plugin-first approach: known Python templates are mapped to native plugin or editor-function handlers in `src/unreal-bridge.ts` (see `mapScriptToEditorFunction`) and are dispatched to the Automation Bridge plugin when available. Raw Editor Python execution is retained only as an explicit, opt-in fallback to preserve safety and reproducibility.
+The server uses a 100% native C++ approach: all automation operations are implemented as native C++ handlers in the MCP Automation Bridge plugin (under `plugins/McpAutomationBridge/Source/`). This eliminates dependencies and provides better performance, reliability, and type safety.
 
-Configuration and runtime defaults are centralized:
-- Defaults and protocol-level values are tracked in `src/constants.ts`.
-- Boolean env parsing and canonical helpers live in `src/utils/env.ts` (for example `allowPythonFallbackFromEnv()`), which is used throughout the tools to decide whether to run guarded Python fallbacks.
-
-To enable the guarded Python fallback behavior for development or CI, set `MCP_ALLOW_PYTHON_FALLBACKS=true`. Prefer implementing plugin-native handlers (under `plugins/McpAutomationBridge/Source/`) for production workflows — plugin-native operations are more reliable and testable than Python fallbacks.
+Configuration and runtime defaults are centralized in `src/constants.ts`. All operations route through the automation bridge's WebSocket protocol to native plugin handlers.
 
 ## Supported Asset Types
 
@@ -199,17 +174,14 @@ Blueprints, Materials, Textures, Static/Skeletal Meshes, Levels, Sounds, Particl
 ### Environment Variables
 
 ```env
-UE_HOST=127.0.0.1              # Unreal Engine host
 UE_PROJECT_PATH="C:/Users/YourName/Documents/Unreal Projects/YourProject"  # Absolute path to your .uproject file
-LOG_LEVEL=info                 # debug | info | warn | error
-MCP_AUTOMATION_WS_HOST=127.0.0.1     # (Optional) Host interface for the automation bridge WebSocket server
-MCP_AUTOMATION_WS_PORT=8090          # (Optional) Port for the automation bridge WebSocket server
-MCP_AUTOMATION_WS_PORTS=8090,8091    # (Optional) Comma-separated list of ports to listen on simultaneously
-MCP_AUTOMATION_LISTEN_HOST=0.0.0.0    # (Optional) Host interface the plugin should bind to when listening (0.0.0.0 to accept any interface)
-MCP_AUTOMATION_WS_PROTOCOLS=mcp-automation # (Optional) Preferred WebSocket subprotocols, comma-separated
-MCP_AUTOMATION_CAPABILITY_TOKEN=     # (Optional) Capability token the editor plugin must echo back during handshake
-MCP_ALLOW_PYTHON_FALLBACKS=false     # (Optional) When true, the server may run guarded Editor Python fallbacks for operations not implemented in the plugin
-MCP_AUTOMATION_BRIDGE_ENABLED=true   # Set to false to disable the automation bridge listener entirely
+LOG_LEVEL=info                       # debug | info | warn | error
+MCP_AUTOMATION_WS_HOST=127.0.0.1     # Host interface for the automation bridge WebSocket server
+MCP_AUTOMATION_WS_PORT=8090          # Port for the automation bridge WebSocket server
+MCP_AUTOMATION_WS_PORTS=8090,8091    # Comma-separated list of ports to listen on simultaneously
+MCP_AUTOMATION_WS_PROTOCOLS=mcp-automation # Preferred WebSocket subprotocols
+MCP_AUTOMATION_CAPABILITY_TOKEN=     # Optional capability token for handshake security
+MCP_AUTOMATION_BRIDGE_ENABLED=true   # Set to false to disable the automation bridge
 ```
 
 Note on configuration precedence

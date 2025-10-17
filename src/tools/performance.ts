@@ -1,8 +1,6 @@
 // Performance tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
-import { coerceBoolean, coerceNumber, interpretStandardResult } from '../utils/result-helpers.js';
 import { Logger } from '../utils/logger.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class PerformanceTools {
   private log = new Logger('PerformanceTools');
@@ -141,81 +139,10 @@ export class PerformanceTools {
     // Apply the console command directly
     await this.bridge.executeConsoleCommand(setCommand);
     
-    // Skip GameUserSettings entirely to avoid any scalability triggers
-    // Console command already applied with correct priority
-    /* eslint-disable no-useless-escape */
-    const py = `
-import unreal, json
-result = {'success': True, 'category': '${base}', 'requested': ${requestedLevel}, 'actual': ${requestedLevel}, 'method': 'ConsoleOnly'}
-
-# Simply verify the console variable was set correctly
-try:
-    # Try to read the console variable directly to verify it was set
-    # This doesn't trigger any scalability system
-    import sys
-    from io import StringIO
-    
-    # Capture console output
-    old_stdout = sys.stdout
-    sys.stdout = StringIO()
-    
-    # Execute console command to query the value
-    try:
-        unreal.SystemLibrary.execute_console_command(None, 'sg.${base}Quality', None)
-    except:
-        pass
-    
-    # Get the output
-    console_output = sys.stdout.getvalue()
-    sys.stdout = old_stdout
-    
-    # Parse the output to get the actual value
-    if 'sg.${base}Quality' in console_output:
-        # Extract the value from output like 'sg.ShadowQuality = "3"'
-        import re
-        match = re.search(r'sg\.${base}Quality\\s*=\\s*"(\\d+)"', console_output)
-        if match:
-            result['actual'] = int(match.group(1))
-            result['verified'] = True
-    
-    result['method'] = 'ConsoleOnly'
-except Exception as e:
-    # Even on error, the console command was applied
-    result['method'] = 'ConsoleOnly'
-    result['note'] = str(e)
-
-print('RESULT:' + json.dumps(result))
-`.trim();
-    /* eslint-enable no-useless-escape */
-
-    // Always try to apply through Python for consistency
-    try {
-  const pyResp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallbackFromEnv() });
-      const interpreted = interpretStandardResult(pyResp, {
-        successMessage: `${params.category} quality set to level ${requestedLevel}`,
-        failureMessage: `Failed to set ${params.category} quality`
-      });
-
-      if (interpreted.success) {
-        const actual = coerceNumber(interpreted.payload.actual) ?? requestedLevel;
-        const verified = coerceBoolean(interpreted.payload.success, true) === true && actual === requestedLevel;
-        return {
-          success: true,
-          message: interpreted.message,
-          verified,
-          readback: actual,
-          method: (interpreted.payload.method as string) || 'ConsoleOnly'
-        };
-      }
-    } catch {
-      // Ignore Python errors and fall through
-    }
-
-    // If Python fails, the console command was still applied
     return { 
       success: true, 
       message: `${params.category} quality set to level ${requestedLevel}`,
-      method: 'CVarOnly'
+      method: 'Console'
     };
   }
 

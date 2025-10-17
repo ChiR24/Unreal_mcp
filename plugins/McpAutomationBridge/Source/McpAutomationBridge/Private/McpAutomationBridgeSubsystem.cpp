@@ -9,6 +9,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonReader.h"
 #include "Misc/Guid.h"
+#include "HAL/PlatformTime.h"
 
 // Define the subsystem log category declared in the public header.
 DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
@@ -239,6 +240,8 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(TSharedPtr<FMcpBridge
     const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
     const bool bSocketTelemetryEnabled = Settings && Settings->bEnableSocketTelemetry;
 
+    RecordAutomationTelemetry(RequestId, bSuccess, Message, ErrorCode);
+
     bool bSent = false;
     TArray<FString> AttemptDetails;
     const int MaxAttempts = 3;
@@ -348,6 +351,76 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(TSharedPtr<FMcpBridge
         PendingRequestsToSockets.Remove(RequestId);
 }
 
+void UMcpAutomationBridgeSubsystem::RecordAutomationTelemetry(const FString& RequestId, const bool bSuccess, const FString& Message, const FString& ErrorCode)
+{
+    const double NowSeconds = FPlatformTime::Seconds();
+    EmitAutomationTelemetrySummaryIfNeeded(NowSeconds);
+
+    FAutomationRequestTelemetry Entry;
+    if (!ActiveRequestTelemetry.RemoveAndCopyValue(RequestId, Entry))
+    {
+        return;
+    }
+
+    const FString ActionKey = Entry.Action.IsEmpty() ? TEXT("unknown") : Entry.Action;
+    FAutomationActionStats& Stats = AutomationActionTelemetry.FindOrAdd(ActionKey);
+
+    const double DurationSeconds = FMath::Max(0.0, NowSeconds - Entry.StartTimeSeconds);
+    if (bSuccess)
+    {
+        ++Stats.SuccessCount;
+        Stats.TotalSuccessDurationSeconds += DurationSeconds;
+    }
+    else
+    {
+        ++Stats.FailureCount;
+        Stats.TotalFailureDurationSeconds += DurationSeconds;
+    }
+
+    Stats.LastDurationSeconds = DurationSeconds;
+    Stats.LastUpdatedSeconds = NowSeconds;
+
+    const FString SanitizedMsg = SanitizeForLog(Message);
+    const FString SanitizedErr = SanitizeForLog(ErrorCode);
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Automation telemetry action=%s result=%s duration=%.3fs message=%s error=%s"), *ActionKey, bSuccess ? TEXT("success") : TEXT("failure"), DurationSeconds, *SanitizedMsg, *SanitizedErr);
+}
+
+void UMcpAutomationBridgeSubsystem::EmitAutomationTelemetrySummaryIfNeeded(const double NowSeconds)
+{
+    if (TelemetrySummaryIntervalSeconds <= 0.0)
+    {
+        return;
+    }
+
+    if ((NowSeconds - LastTelemetrySummaryLogSeconds) < TelemetrySummaryIntervalSeconds)
+    {
+        return;
+    }
+
+    LastTelemetrySummaryLogSeconds = NowSeconds;
+
+    if (AutomationActionTelemetry.Num() == 0)
+    {
+        return;
+    }
+
+    TArray<FString> Lines;
+    Lines.Reserve(AutomationActionTelemetry.Num());
+
+    for (const TPair<FString, FAutomationActionStats>& Pair : AutomationActionTelemetry)
+    {
+        const FString& ActionKey = Pair.Key;
+        const FAutomationActionStats& Stats = Pair.Value;
+        const double AvgSuccess = Stats.SuccessCount > 0 ? (Stats.TotalSuccessDurationSeconds / Stats.SuccessCount) : 0.0;
+        const double AvgFailure = Stats.FailureCount > 0 ? (Stats.TotalFailureDurationSeconds / Stats.FailureCount) : 0.0;
+        Lines.Add(FString::Printf(TEXT("%s success=%d failure=%d last=%.3fs avgSuccess=%.3fs avgFailure=%.3fs"), *ActionKey, Stats.SuccessCount, Stats.FailureCount, Stats.LastDurationSeconds, AvgSuccess, AvgFailure));
+    }
+
+    Lines.Sort();
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Automation action telemetry summary (%d actions):\n%s"), Lines.Num(), *FString::Join(Lines, TEXT("\n")));
+}
+
 void UMcpAutomationBridgeSubsystem::SendAutomationError(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const FString& Message, const FString& ErrorCode)
 {
     const FString ResolvedError = ErrorCode.IsEmpty() ? TEXT("AUTOMATION_ERROR") : ErrorCode;
@@ -390,21 +463,10 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
         if (Settings->ClientPort > 0) ClientPort = Settings->ClientPort;
         bRequireCapabilityToken = Settings->bRequireCapabilityToken;
         if (Settings->HeartbeatTimeoutSeconds > 0.0f) HeartbeatTimeoutSeconds = Settings->HeartbeatTimeoutSeconds;
-        // Read Python fallback opt-in flag (deprecated)
-        bAllowPythonFallbacks = Settings->bAllowPythonFallbacks;
-    // New stricter allowlist/allow-all toggle for Python fallback behavior
-    bAllowAllPythonFallbacks = Settings->bAllowAllPythonFallbacks;
-    AllowedPythonScriptAllowlist = Settings->AllowedPythonScriptAllowlist;
     }
 
     // Start the bridge services (ticker, sockets) on initialization
     StartBridge();
-}
-
-void UMcpAutomationBridgeSubsystem::SetAllowEditorPythonExecution(bool bEnable)
-{
-    bAllowPythonFallbacks = bEnable;
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("execute_editor_python fallbacks %s by runtime toggle."), bEnable ? TEXT("ENABLED (deprecated)") : TEXT("DISABLED"));
 }
 
 void UMcpAutomationBridgeSubsystem::Deinitialize()
@@ -800,33 +862,6 @@ void UMcpAutomationBridgeSubsystem::HandleHeartbeat(TSharedPtr<FMcpBridgeWebSock
 void UMcpAutomationBridgeSubsystem::RecordHeartbeat()
 {
     LastHeartbeatTimestamp = FPlatformTime::Seconds();
-}
-
-void UMcpAutomationBridgeSubsystem::AppendAuditLog(const FString& RequestId, uint32 ScriptHash, const FString& RequesterAddr, const FString& ScriptSnippet)
-{
-    const FString Dir = FPaths::ProjectSavedDir() / TEXT("McpAutomationBridge");
-    IPlatformFile& PF = FPlatformFileManager::Get().GetPlatformFile();
-    if (!PF.DirectoryExists(*Dir))
-    {
-        PF.CreateDirectoryTree(*Dir);
-    }
-
-    const FString LocalLogPath = Dir / TEXT("python_audit.jsonl");
-    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&*(new FString()));
-    // Build a compact JSON line
-    TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-    Entry->SetStringField(TEXT("timestamp"), FDateTime::Now().ToIso8601());
-    Entry->SetStringField(TEXT("requestId"), RequestId);
-    Entry->SetStringField(TEXT("requester"), RequesterAddr);
-    Entry->SetStringField(TEXT("scriptHash"), FString::Printf(TEXT("%u"), ScriptHash));
-    Entry->SetStringField(TEXT("scriptSnippet"), ScriptSnippet.Left(256));
-    FString Serialized;
-    TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&Serialized);
-    FJsonSerializer::Serialize(Entry.ToSharedRef(), JsonWriter);
-
-    // Append newline and write to file atomically
-    Serialized.AppendChar('\n');
-    FFileHelper::SaveStringToFile(Serialized, *LocalLogPath, FFileHelper::EEncodingOptions::AutoDetect, &IFileManager::Get(), FILEWRITE_Append);
 }
 
 void UMcpAutomationBridgeSubsystem::ResetHeartbeatTracking()

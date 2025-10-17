@@ -4,7 +4,6 @@
 #include "Misc/ScopeExit.h"
 #include "Async/Async.h"
 #if WITH_EDITOR
-#include "IPythonScriptPlugin.h"
 #include "EditorAssetLibrary.h"
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
@@ -67,42 +66,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(const FString& RequestId, 
         if (CleanDest.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) CleanDest = FString::Printf(TEXT("/Game%s"), *CleanDest.RightChop(8));
         if (!CleanDest.StartsWith(TEXT("/Game"))) CleanDest = FString::Printf(TEXT("/Game/%s"), *CleanDest.Replace(TEXT("/"), TEXT("")));
 
-        // Build a minimal python script (similar to the server-side TS implementation)
-        const FString EscapedSource = SourcePath.Replace(TEXT("\\"), TEXT("\\\\")).Replace(TEXT("\""), TEXT("\\\""));
-        const FString EscapedDest = CleanDest.Replace(TEXT("\\"), TEXT("\\\\")).Replace(TEXT("\""), TEXT("\\\""));
-
-        const FString Py = FString::Printf(TEXT(R"PY(
-import unreal
-import json
-
-task = unreal.AssetImportTask()
-task.filename = r"%s"
-task.destination_path = r"%s"
-task.automated = True
-task.save = True
-task.replace_existing = True
-
-options = unreal.FbxImportUI()
-options.import_mesh = True
-options.import_as_skeletal = False
-options.mesh_type_to_import = unreal.FBXImportType.FBXIT_STATIC_MESH
-options.static_mesh_import_data.combine_meshes = True
-options.static_mesh_import_data.generate_lightmap_u_vs = False
-options.static_mesh_import_data.auto_generate_collision = False
-task.options = options
-
-asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-result = {'success': False, 'error': 'No assets imported', 'source': task.filename}
-try:
-    asset_tools.import_asset_tasks([task])
-    if task.imported_object_paths:
-        result = {'success': True, 'imported': len(task.imported_object_paths), 'paths': list(task.imported_object_paths)}
-except Exception as e:
-    result = {'success': False, 'error': str(e), 'source': task.filename}
-
-print('RESULT:' + json.dumps(result))
-)PY"), *EscapedSource, *EscapedDest);
-
 #if WITH_EDITOR
         // Native asset import using AssetTools UAssetImportTask
         AsyncTask(ENamedThreads::GameThread, [this, RequestId, CleanDest, SourcePath, RequestingSocket]() {
@@ -156,47 +119,7 @@ print('RESULT:' + json.dumps(result))
         FString Parent; Payload->TryGetStringField(TEXT("parentMaterial"), Parent);
 
         if (Destination.IsEmpty()) Destination = TEXT("/Game");
-        // Normalize
         if (Destination.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) Destination = FString::Printf(TEXT("/Game%s"), *Destination.RightChop(8));
-
-        const FString EscapedName = Name.Replace(TEXT("\\"), TEXT("\\\\")).Replace(TEXT("\""), TEXT("\\\""));
-        const FString EscapedDest = Destination.Replace(TEXT("\\"), TEXT("\\\\")).Replace(TEXT("\""), TEXT("\\\""));
-        const FString EscapedParent = Parent.Replace(TEXT("\\"), TEXT("\\\\")).Replace(TEXT("\""), TEXT("\\\""));
-
-        const FString PyCreate = FString::Printf(TEXT(R"PY(
-import unreal, json
-result = {'success': False, 'message': '', 'path': None, 'error': None}
-try:
-    name = r"%s"
-    dest = r"%s".rstrip('/')
-    factory = unreal.MaterialFactoryNew()
-    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-    created = asset_tools.create_asset(name, dest, None, factory)
-    if created:
-        path = f"{dest}/{name}"
-        result['success'] = True
-        result['path'] = path
-        result['message'] = f'Created material at {path}'
-        if r"%s":
-            try:
-                parent = unreal.EditorAssetLibrary.load_asset(r"%s")
-                if parent:
-                    created.set_editor_property('parent', parent)
-            except Exception as pe:
-                result.setdefault('warnings', []).append(f'Failed to set parent: {pe}')
-        try:
-            unreal.EditorAssetLibrary.save_asset(result['path'])
-        except Exception:
-            result.setdefault('warnings', []).append('Save failed')
-    else:
-        result['error'] = 'create_asset returned None'
-except Exception as e:
-    result['error'] = str(e)
-
-if result.get('error'):
-    result['message'] = result['error']
-print('RESULT:' + json.dumps(result))
-)PY"), *EscapedName, *EscapedDest, *EscapedParent, *EscapedParent);
 
         AsyncTask(ENamedThreads::GameThread, [this, RequestId, Name, Destination, Parent, RequestingSocket]() {
             // Create material natively via AssetTools and UMaterialFactoryNew
@@ -977,7 +900,7 @@ print('RESULT:' + json.dumps(result))
             if (Limit > 0 && Count >= Limit) break;
             TSharedPtr<FJsonObject> AObj = MakeShared<FJsonObject>();
             AObj->SetStringField(TEXT("n"), AD.AssetName.ToString());
-            AObj->SetStringField(TEXT("p"), AD.GetSoftObjectPath().ToString());
+            AObj->SetStringField(TEXT("p"), AD.ToSoftObjectPath().ToString());
             AObj->SetStringField(TEXT("c"), AD.AssetClassPath.ToString());
             AssetsJson.Add(MakeShared<FJsonValueObject>(AObj));
             ++Count;

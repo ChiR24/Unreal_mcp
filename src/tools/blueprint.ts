@@ -3,23 +3,9 @@ import { AutomationBridge } from '../automation-bridge.js';
 import { Logger } from '../utils/logger.js';
 import { validateAssetParams, concurrencyDelay } from '../utils/validation.js';
 import { coerceString } from '../utils/result-helpers.js';
-// Blueprint operations must be implemented by the Automation Bridge plugin.
-// No per-tool Python fallback code is present; caller should rely on the
-// plugin or receive explicit errors (e.g. UNKNOWN_PLUGIN_ACTION).
 
-/**
- * BlueprintTools — plugin-first implementation
- *
- * This implementation delegates all blueprint operations to the custom
- * Automation Bridge plugin rather than running Editor Python directly.
- * The plugin is expected to implement blueprint_* automation actions.
- */
 export class BlueprintTools {
   private log = new Logger('BlueprintTools');
-  // Cached result of whether the connected Automation Bridge plugin
-  // implements specialized blueprint_* actions. `null` means unknown,
-  // `true` means plugin supports them, `false` means plugin does not
-  // implement these actions and we should fallback to Python probes.
   private pluginBlueprintActionsAvailable: boolean | null = null;
 
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
@@ -81,7 +67,7 @@ export class BlueprintTools {
       const validation = validateAssetParams({ name: params.name, savePath: params.savePath || '/Game/Blueprints' });
       if (!validation.valid) return { success: false, message: `Failed to create blueprint: ${validation.error}`, error: validation.error };
       const sanitized = validation.sanitized;
-  const payload: Record<string, unknown> = { name: sanitized.name, blueprintType: params.blueprintType ?? 'Actor', savePath: sanitized.savePath ?? '/Game/Blueprints', parentClass: params.parentClass };
+  const payload: Record<string, unknown> = { name: sanitized.name, blueprintType: params.blueprintType ?? 'Actor', savePath: sanitized.savePath ?? '/Game/Blueprints', parentClass: params.parentClass, waitForCompletion: !!params.waitForCompletion };
       await concurrencyDelay();
 
       // Require Automation Bridge plugin to implement blueprint_create.
@@ -95,8 +81,6 @@ export class BlueprintTools {
         return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_create' } as const;
       }
 
-      // Try the plugin first with a shorter, configurable timeout so we
-      // can fail fast and optionally fall back to Python creation.
       const envPluginTimeout = Number(process.env.MCP_AUTOMATION_PLUGIN_CREATE_TIMEOUT_MS ?? process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '15000');
       const pluginTimeout = Number.isFinite(envPluginTimeout) && envPluginTimeout > 0 ? envPluginTimeout : 15000;
       try {
@@ -182,9 +166,6 @@ export class BlueprintTools {
   async waitForBlueprint(blueprintRef: string | string[], timeoutMs?: number) {
     const candidates = Array.isArray(blueprintRef) ? blueprintRef : this.buildCandidates(blueprintRef as string | undefined);
     if (!candidates || candidates.length === 0) return { success: false, error: 'Invalid blueprint reference', checked: [] } as any;
-    // Require plugin probe only: do not fallback to Python probes. If the
-    // plugin is known not to implement blueprint actions, surface a clear
-    // error to callers so plugin implementers can add the missing action.
     if (this.pluginBlueprintActionsAvailable === false) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_exists' } as any;
     }
@@ -203,8 +184,6 @@ export class BlueprintTools {
             return { success: true, found: r.result.found ?? candidate } as any;
           }
           if (r && r.success === false && this.isUnknownActionResponse(r)) {
-            // Plugin does not implement blueprint_exists — cache and surface
-            // an explicit error (do not fall back to Python probes).
             this.pluginBlueprintActionsAvailable = false;
             return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_exists' } as any;
           }
@@ -215,7 +194,6 @@ export class BlueprintTools {
       // conservative sleep between rounds
       await new Promise((r) => setTimeout(r, 1000));
     }
-    // Timeout — if plugin available we tried, otherwise fallback to Python probe
     if (this.pluginBlueprintActionsAvailable === null) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin availability unknown; blueprint_exists not implemented by plugin' } as any;
     }
@@ -253,7 +231,6 @@ export class BlueprintTools {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
-  // Try plugin action first; otherwise fall back to Python helpers which accept a concrete blueprintName.
   const pluginResp = await this.sendAction('blueprint_add_variable', { blueprintCandidates: candidates, requestedPath: primary, variableName: params.variableName, variableType: params.variableType, defaultValue: params.defaultValue, category: params.category, isReplicated: params.isReplicated, isPublic: params.isPublic, variablePinType: params.variablePinType }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
     if (pluginResp && pluginResp.success) return pluginResp;
     if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
@@ -262,9 +239,6 @@ export class BlueprintTools {
     return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_ADD_VARIABLE_FAILED', message: pluginResp?.message ?? 'Failed to add variable via automation bridge' } as const;
   }
 
-  // Add event to a Blueprint (BeginPlay or custom). If plugin does not
-  // implement the action, return UNKNOWN_PLUGIN_ACTION so tests fail loudly
-  // and plugin authors can implement the handler.
   async addEvent(params: { blueprintName: string; eventType: string; customEventName?: string; parameters?: Array<{ name: string; type: string }>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
@@ -343,6 +317,244 @@ export class BlueprintTools {
       return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_COMPILE_FAILED', message: pluginResp?.message ?? 'Failed to compile blueprint via automation bridge' } as const;
     } catch (err: any) {
       return { success: false, error: String(err) };
+    }
+  }
+
+  // ========== SCS (Simple Construction Script) Blueprint Authoring ==========
+
+  /**
+   * Get Blueprint SCS structure
+   * Retrieves the complete Simple Construction Script component hierarchy
+   */
+  async getBlueprintSCS(params: { blueprintPath: string; timeoutMs?: number }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) {
+      return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    try {
+      const pluginResp = await this.sendAction('get_blueprint_scs', 
+        { blueprint_path: blueprintPath }, 
+        { timeoutMs: params.timeoutMs });
+      
+      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement get_blueprint_scs' } as const;
+      }
+      return { success: false, error: pluginResp?.error ?? 'GET_SCS_FAILED', message: pluginResp?.message ?? 'Failed to get SCS via automation bridge' } as const;
+    } catch (err: any) {
+      return { success: false, error: String(err), message: String(err) } as const;
+    }
+  }
+
+  /**
+   * Add component to Blueprint SCS
+   * Adds a new component to the Simple Construction Script with optional parent
+   */
+  async addSCSComponent(params: { 
+    blueprintPath: string; 
+    componentClass: string; 
+    componentName: string; 
+    parentComponent?: string;
+    timeoutMs?: number;
+  }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) {
+      return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    const componentClass = coerceString(params.componentClass);
+    if (!componentClass) {
+      return { success: false, error: 'INVALID_COMPONENT_CLASS', message: 'Component class is required' } as const;
+    }
+
+    const componentName = coerceString(params.componentName);
+    if (!componentName) {
+      return { success: false, error: 'INVALID_COMPONENT_NAME', message: 'Component name is required' } as const;
+    }
+
+    try {
+      const payload: Record<string, unknown> = {
+        blueprint_path: blueprintPath,
+        component_class: componentClass,
+        component_name: componentName
+      };
+
+      if (params.parentComponent) {
+        payload.parent_component = params.parentComponent;
+      }
+
+      const pluginResp = await this.sendAction('add_scs_component', payload, { timeoutMs: params.timeoutMs });
+      
+      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement add_scs_component' } as const;
+      }
+      return { success: false, error: pluginResp?.error ?? 'ADD_SCS_COMPONENT_FAILED', message: pluginResp?.message ?? 'Failed to add SCS component via automation bridge' } as const;
+    } catch (err: any) {
+      return { success: false, error: String(err), message: String(err) } as const;
+    }
+  }
+
+  /**
+   * Remove component from Blueprint SCS
+   * Removes a component from the Simple Construction Script
+   */
+  async removeSCSComponent(params: { blueprintPath: string; componentName: string; timeoutMs?: number }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) {
+      return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    const componentName = coerceString(params.componentName);
+    if (!componentName) {
+      return { success: false, error: 'INVALID_COMPONENT_NAME', message: 'Component name is required' } as const;
+    }
+
+    try {
+      const pluginResp = await this.sendAction('remove_scs_component',
+        { blueprint_path: blueprintPath, component_name: componentName },
+        { timeoutMs: params.timeoutMs });
+      
+      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement remove_scs_component' } as const;
+      }
+      return { success: false, error: pluginResp?.error ?? 'REMOVE_SCS_COMPONENT_FAILED', message: pluginResp?.message ?? 'Failed to remove SCS component via automation bridge' } as const;
+    } catch (err: any) {
+      return { success: false, error: String(err), message: String(err) } as const;
+    }
+  }
+
+  /**
+   * Reparent component in Blueprint SCS
+   * Changes the parent of a component in the Simple Construction Script hierarchy
+   */
+  async reparentSCSComponent(params: { 
+    blueprintPath: string; 
+    componentName: string; 
+    newParent: string;
+    timeoutMs?: number;
+  }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) {
+      return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    const componentName = coerceString(params.componentName);
+    if (!componentName) {
+      return { success: false, error: 'INVALID_COMPONENT_NAME', message: 'Component name is required' } as const;
+    }
+
+    try {
+      const pluginResp = await this.sendAction('reparent_scs_component',
+        { 
+          blueprint_path: blueprintPath, 
+          component_name: componentName, 
+          new_parent: params.newParent || ''
+        },
+        { timeoutMs: params.timeoutMs });
+      
+      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement reparent_scs_component' } as const;
+      }
+      return { success: false, error: pluginResp?.error ?? 'REPARENT_SCS_COMPONENT_FAILED', message: pluginResp?.message ?? 'Failed to reparent SCS component via automation bridge' } as const;
+    } catch (err: any) {
+      return { success: false, error: String(err), message: String(err) } as const;
+    }
+  }
+
+  /**
+   * Set component transform in Blueprint SCS
+   * Sets the relative transform of a component in the Simple Construction Script
+   */
+  async setSCSComponentTransform(params: {
+    blueprintPath: string;
+    componentName: string;
+    location?: [number, number, number];
+    rotation?: [number, number, number];
+    scale?: [number, number, number];
+    timeoutMs?: number;
+  }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) {
+      return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    const componentName = coerceString(params.componentName);
+    if (!componentName) {
+      return { success: false, error: 'INVALID_COMPONENT_NAME', message: 'Component name is required' } as const;
+    }
+
+    try {
+      const payload: Record<string, unknown> = {
+        blueprint_path: blueprintPath,
+        component_name: componentName
+      };
+
+      if (params.location) payload.location = params.location;
+      if (params.rotation) payload.rotation = params.rotation;
+      if (params.scale) payload.scale = params.scale;
+
+      const pluginResp = await this.sendAction('set_scs_component_transform', payload, { timeoutMs: params.timeoutMs });
+      
+      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement set_scs_component_transform' } as const;
+      }
+      return { success: false, error: pluginResp?.error ?? 'SET_SCS_TRANSFORM_FAILED', message: pluginResp?.message ?? 'Failed to set SCS component transform via automation bridge' } as const;
+    } catch (err: any) {
+      return { success: false, error: String(err), message: String(err) } as const;
+    }
+  }
+
+  /**
+   * Set component property in Blueprint SCS
+   * Sets a property value on a component in the Simple Construction Script
+   */
+  async setSCSComponentProperty(params: {
+    blueprintPath: string;
+    componentName: string;
+    propertyName: string;
+    propertyValue: any;
+    timeoutMs?: number;
+  }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) {
+      return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    const componentName = coerceString(params.componentName);
+    if (!componentName) {
+      return { success: false, error: 'INVALID_COMPONENT_NAME', message: 'Component name is required' } as const;
+    }
+
+    const propertyName = coerceString(params.propertyName);
+    if (!propertyName) {
+      return { success: false, error: 'INVALID_PROPERTY_NAME', message: 'Property name is required' } as const;
+    }
+
+    try {
+      // Serialize property value to JSON for the C++ handler
+      const propertyValueJson = JSON.stringify({ value: params.propertyValue });
+
+      const pluginResp = await this.sendAction('set_scs_component_property',
+        {
+          blueprint_path: blueprintPath,
+          component_name: componentName,
+          property_name: propertyName,
+          property_value: propertyValueJson
+        },
+        { timeoutMs: params.timeoutMs });
+      
+      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement set_scs_component_property' } as const;
+      }
+      return { success: false, error: pluginResp?.error ?? 'SET_SCS_PROPERTY_FAILED', message: pluginResp?.message ?? 'Failed to set SCS component property via automation bridge' } as const;
+    } catch (err: any) {
+      return { success: false, error: String(err), message: String(err) } as const;
     }
   }
 }

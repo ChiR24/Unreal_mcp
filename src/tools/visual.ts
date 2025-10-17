@@ -1,9 +1,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation-bridge.js';
 import { loadEnv } from '../types/env.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
 import { Logger } from '../utils/logger.js';
-import { coerceStringArray, interpretStandardResult } from '../utils/result-helpers.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -71,135 +69,8 @@ export class VisualTools {
   }
 
   private async getEngineScreenshotDirectories(): Promise<string[]> {
-    const python = `
-import unreal
-import json
-import os
-
-result = {
-  "success": True,
-  "message": "",
-  "error": "",
-  "directories": [],
-  "warnings": [],
-  "details": []
-}
-
-def finalize():
-  data = dict(result)
-  if data.get("success"):
-    if not data.get("message"):
-      data["message"] = "Collected screenshot directories"
-    data.pop("error", None)
-  else:
-    if not data.get("error"):
-      data["error"] = data.get("message") or "Failed to collect screenshot directories"
-    if not data.get("message"):
-      data["message"] = data["error"]
-  if not data.get("warnings"):
-    data.pop("warnings", None)
-  if not data.get("details"):
-    data.pop("details", None)
-  if not data.get("directories"):
-    data.pop("directories", None)
-  return data
-
-def add_path(candidate, note=None):
-  if not candidate:
-    return
-  try:
-    abs_path = os.path.abspath(os.path.normpath(candidate))
-  except Exception as normalize_error:
-    result["warnings"].append(f"Failed to normalize path {candidate}: {normalize_error}")
-    return
-  if abs_path not in result["directories"]:
-    result["directories"].append(abs_path)
-    if note:
-      result["details"].append(f"{note}: {abs_path}")
-    else:
-      result["details"].append(f"Discovered screenshot directory: {abs_path}")
-
-try:
-  automation_dir = unreal.AutomationLibrary.get_screenshot_directory()
-  add_path(automation_dir, "Automation screenshot directory")
-except Exception as automation_error:
-  result["warnings"].append(f"Automation screenshot directory unavailable: {automation_error}")
-
-try:
-  project_saved = unreal.Paths.project_saved_dir()
-  add_path(project_saved, "Project Saved directory")
-  if project_saved:
-    add_path(os.path.join(project_saved, 'Screenshots'), "Project Saved screenshots")
-    add_path(os.path.join(project_saved, 'Screenshots', 'Windows'), "Project Saved Windows screenshots")
-    add_path(os.path.join(project_saved, 'Screenshots', 'WindowsEditor'), "Project Saved WindowsEditor screenshots")
-    try:
-      platform_name = unreal.SystemLibrary.get_platform_user_name()
-      if platform_name:
-        add_path(os.path.join(project_saved, 'Screenshots', platform_name), f"Project Saved screenshots for {platform_name}")
-        add_path(os.path.join(project_saved, 'Screenshots', f"{platform_name}Editor"), f"Project Saved editor screenshots for {platform_name}")
-    except Exception as platform_error:
-      result["warnings"].append(f"Failed to resolve platform-specific screenshot directories: {platform_error}")
-except Exception as saved_error:
-  result["warnings"].append(f"Project Saved directory unavailable: {saved_error}")
-
-try:
-  project_file = unreal.Paths.get_project_file_path()
-  if project_file:
-    project_dir = os.path.dirname(project_file)
-    add_path(os.path.join(project_dir, 'Saved', 'Screenshots'), "Project directory screenshots")
-    add_path(os.path.join(project_dir, 'Saved', 'Screenshots', 'Windows'), "Project directory Windows screenshots")
-    add_path(os.path.join(project_dir, 'Saved', 'Screenshots', 'WindowsEditor'), "Project directory WindowsEditor screenshots")
-except Exception as project_error:
-  result["warnings"].append(f"Project directory screenshots unavailable: {project_error}")
-
-if not result["directories"]:
-  result["warnings"].append("No screenshot directories discovered")
-
-print('RESULT:' + json.dumps(finalize()))
-`.trim()
-  .replace(/\r?\n/g, '\n');
-
-    try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
-      const interpreted = interpretStandardResult(response, {
-        successMessage: 'Collected screenshot directories',
-        failureMessage: 'Failed to collect screenshot directories'
-      });
-
-      if (interpreted.details) {
-        for (const entry of interpreted.details) {
-          this.log.debug(entry);
-        }
-      }
-
-      if (interpreted.warnings) {
-        for (const warning of interpreted.warnings) {
-          this.log.debug(`Screenshot directory warning: ${warning}`);
-        }
-      }
-
-      const directories = coerceStringArray(interpreted.payload.directories);
-      if (directories?.length) {
-        return directories;
-      }
-
-      if (!interpreted.success && interpreted.error) {
-        this.log.warn(`Screenshot path probe failed: ${interpreted.error}`);
-      }
-
-      if (interpreted.rawText) {
-        try {
-          const parsed = JSON.parse(interpreted.rawText);
-          const candidateDirs = coerceStringArray(parsed);
-          if (candidateDirs?.length) {
-            return candidateDirs;
-          }
-        } catch {}
-      }
-    } catch (err) {
-      this.log.debug('Screenshot path probe failed', err);
-    }
+    // Return empty array - screenshot directory discovery will use file system paths
+    // from UE_PROJECT_PATH env variable instead
     return [];
   }
 
@@ -285,63 +156,30 @@ print('RESULT:' + json.dumps(finalize()))
   }
 
   async cleanupActors(filter: string) {
+    if (!filter || typeof filter !== 'string' || filter.trim().length === 0) {
+      return { success: false, error: 'filter required' };
+    }
+    const cleaned = filter.trim();
+
+    if (!this.automationBridge) {
+      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge is not available for cleanup' };
+    }
+
     try {
-      if (!filter || typeof filter !== 'string' || filter.trim().length === 0) return { success: false, error: 'filter required' };
-      const cleaned = filter.trim();
-
-      // Try automation bridge plugin-first
-      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
-        try {
-          const resp: any = await this.automationBridge.sendAutomationRequest('cleanup', { filter: cleaned });
-          if (resp && resp.success !== false) {
-            return { success: true, removed: resp.removed ?? resp.result?.removed, message: resp.message || `Cleanup removed ${resp.removed ?? resp.result?.removed ?? 0}` } as any;
-          }
-          const errTxt = String(resp?.error ?? resp?.message ?? '');
-          if (!(errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION'))) {
-            return { success: false, error: resp?.error ?? resp?.message ?? 'CLEANUP_FAILED' } as any;
-          }
-        } catch (_e) {
-          // fall back to python below
-        }
+      const resp: any = await this.automationBridge.sendAutomationRequest('cleanup', { filter: cleaned });
+      if (resp && resp.success !== false) {
+        return { 
+          success: true, 
+          removed: resp.removed ?? resp.result?.removed ?? 0, 
+          removedActors: resp.removedActors ?? resp.result?.removedActors,
+          message: resp.message || `Cleanup removed ${resp.removed ?? resp.result?.removed ?? 0} actors`
+        };
       }
-
-      const py = `
-import unreal, json
-removed = []
-try:
-    subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    if subsys:
-        actors = subsys.get_all_level_actors()
-        for a in actors:
-            try:
-                label = a.get_actor_label()
-                if label and label.lower().startswith(r"${cleaned}".lower()):
-                    try:
-                        subsys.destroy_actor(a)
-                        removed.append(label)
-                    except Exception:
-                        pass
-            except Exception:
-                pass
-    print('RESULT:' + json.dumps({'success': True, 'removed': len(removed), 'removedActors': removed}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
-
-  const allowPythonFallback2 = allowPythonFallbackFromEnv();
-  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallback2 });
-      try {
-        const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-        const m = out.match(/RESULT:({.*})/);
-        if (m) {
-          const parsed = JSON.parse(m[1].replace(/'/g, '"'));
-          if (parsed.success) {
-            return { success: true, removed: parsed.removed, removedActors: parsed.removedActors };
-          }
-          return { success: false, error: parsed.error ?? 'Cleanup failure' };
-        }
-      } catch {}
-      return { success: false, error: 'Cleanup failed (no RESULT JSON)' };
+      return { 
+        success: false, 
+        error: resp?.error ?? 'CLEANUP_FAILED',
+        message: resp?.message ?? 'Cleanup operation failed'
+      };
     } catch (err) {
       return { success: false, error: String(err) };
     }

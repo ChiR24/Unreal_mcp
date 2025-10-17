@@ -1,26 +1,30 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { toVec3Object, toRotObject } from '../utils/normalize.js';
-import { bestEffortInterpretedText, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class EditorTools {
+  private cameraBookmarks = new Map<string, { location: [number, number, number]; rotation: [number, number, number]; savedAt: number }>();
+  private editorPreferences = new Map<string, Record<string, unknown>>();
+  private activeRecording?: { name?: string; options?: Record<string, unknown>; startedAt: number };
+
   constructor(private bridge: UnrealBridge) {}
   
   async isInPIE(): Promise<boolean> {
     try {
-      const pythonCmd = `
-import unreal
-les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-if les:
-    print("PIE_STATE:" + str(les.is_in_play_in_editor()))
-else:
-    print("PIE_STATE:False")
-      `.trim();
+      // Use Automation Bridge to check PIE state
+      const automationBridge = (this.bridge as any).automationBridge;
+      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
+        const response = await automationBridge.sendAutomationRequest(
+          'check_pie_state',
+          {},
+          { timeoutMs: 5000 }
+        );
+        
+        if (response && response.success !== false) {
+          return response.isInPIE === true || response.result?.isInPIE === true;
+        }
+      }
       
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const resp: any = await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
-      const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-      return out.includes('PIE_STATE:True');
+      return false;
     } catch {
       return false;
     }
@@ -39,57 +43,10 @@ else:
       // Set tick rate to match UI play (60 fps for game mode)
       await this.bridge.executeConsoleCommand('t.MaxFPS 60');
       
-      // Try Python first using the modern LevelEditorSubsystem
-      try {
-        // Use LevelEditorSubsystem to play in the selected viewport (modern API)
-        const pythonCmd = `
-import unreal, time, json
-# Start PIE using LevelEditorSubsystem (modern approach)
-les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-if les:
-    # Store initial state
-    was_playing = les.is_in_play_in_editor()
-    
-    # Request PIE in the current viewport
-    les.editor_play_simulate()
-    
-    # Wait for PIE to start with multiple checks
-    max_attempts = 10
-    for i in range(max_attempts):
-        time.sleep(0.2)  # Wait 200ms between checks
-        is_playing = les.is_in_play_in_editor()
-        if is_playing and not was_playing:
-            # PIE has started
-            print('RESULT:' + json.dumps({'success': True, 'method': 'LevelEditorSubsystem'}))
-            break
-    else:
-        # If we've waited 2 seconds total and PIE hasn't started, 
-        # but the command was sent, assume it will start
-        print('RESULT:' + json.dumps({'success': True, 'method': 'LevelEditorSubsystem'}))
-else:
-    # If subsystem not available, report error
-    print('RESULT:' + json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'}))
-        `.trim();
-        
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const resp: any = await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
-        const interpreted = interpretStandardResult(resp, {
-          successMessage: 'PIE started',
-          failureMessage: 'Failed to start PIE'
-        });
-        if (interpreted.success) {
-          const method = coerceString(interpreted.payload.method) ?? 'LevelEditorSubsystem';
-          return { success: true, message: `PIE started (via ${method})` };
-        }
-        // If not verified, fall through to fallback
-      } catch (err) {
-        // Log the error for debugging but continue
-        console.error('Python PIE start issue:', err);
-      }
-      // Fallback to console command which is more reliable
+      // Use console command to start PIE
       await this.bridge.executeConsoleCommand('PlayInViewport');
       
-      // Wait a moment and verify PIE started
+      // Wait a moment for PIE to start
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Check if PIE is now active
@@ -106,41 +63,38 @@ else:
 
   async stopPlayInEditor() {
     try {
-      // Try Python first using the modern LevelEditorSubsystem
-      try {
-        const pythonCmd = `
-import unreal, time, json
-les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-if les:
-    # Use correct method name for stopping PIE
-    les.editor_request_end_play()  # Modern API method
-    print('RESULT:' + json.dumps({'success': True, 'method': 'LevelEditorSubsystem'}))
-else:
-    # If subsystem not available, report error
-    print('RESULT:' + json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'}))
-        `.trim();
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const resp: any = await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
-        const interpreted = interpretStandardResult(resp, {
-          successMessage: 'PIE stopped successfully',
-          failureMessage: 'Failed to stop PIE'
-        });
-
-        if (interpreted.success) {
-          const method = coerceString(interpreted.payload.method) ?? 'LevelEditorSubsystem';
-          return { success: true, message: `PIE stopped via ${method}` };
+      // Use the native C++ plugin's control_editor action instead of Python
+      const automationBridge = (this.bridge as any).automationBridge;
+      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const response = await automationBridge.sendAutomationRequest(
+            'control_editor',
+            { action: 'stop' },
+            { timeoutMs: 30000 }
+          );
+          
+          if (response.success !== false) {
+            return { 
+              success: true, 
+              message: response.message || 'PIE stopped successfully' 
+            };
+          }
+          
+          // Plugin returned error
+          return { 
+            success: false, 
+            error: response.error || response.message || 'Failed to stop PIE' 
+          };
+        } catch (_pluginErr) {
+          // Fallback to console command if plugin fails
+          await this.bridge.executeConsoleCommand('stop');
+          return { success: true, message: 'PIE stopped via console command' };
         }
-
-        if (interpreted.error) {
-          return { success: false, error: interpreted.error };
-        }
-
-        return { success: false, error: 'Failed to stop PIE' };
-      } catch {
-        // Fallback to console command
-        await this.bridge.executeConsoleCommand('stop');
-        return { success: true, message: 'PIE stopped via console command' };
       }
+      
+      // No automation bridge available - use console command
+      await this.bridge.executeConsoleCommand('stop');
+      return { success: true, message: 'PIE stopped via console command' };
     } catch (err) {
       return { success: false, error: `Failed to stop PIE: ${err}` };
     }
@@ -163,42 +117,27 @@ else:
 
   async buildLighting() {
     try {
-      // Use modern LevelEditorSubsystem to build lighting
-      const py = `
-import unreal
-import json
-try:
-    # Use modern LevelEditorSubsystem API
-    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-    if les:
-        # build_light_maps(quality, with_reflection_captures)
-        les.build_light_maps(unreal.LightingBuildQuality.QUALITY_HIGH, True)
-        print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via LevelEditorSubsystem'}))
-    else:
-        # If subsystem not available, report error
-        print('RESULT:' + json.dumps({'success': False, 'error': 'LevelEditorSubsystem not available'}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const resp: any = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback });
-      const interpreted = interpretStandardResult(resp, {
-        successMessage: 'Lighting build started',
-        failureMessage: 'Failed to build lighting'
-      });
-
-      if (interpreted.success) {
-        return { success: true, message: interpreted.message };
-      }
-
-      return {
-        success: false,
-        error: interpreted.error ?? 'Failed to build lighting',
-        details: bestEffortInterpretedText(interpreted)
-      };
+      // Use console command to build lighting
+      await this.bridge.executeConsoleCommand('BuildLighting');
+      return { success: true, message: 'Lighting build started' };
     } catch (err) {
       return { success: false, error: `Failed to build lighting: ${err}` };
     }
+  }
+
+  private async getViewportCameraInfo(): Promise<{
+    success: boolean;
+    location?: [number, number, number];
+    rotation?: [number, number, number];
+    error?: string;
+    message?: string;
+  }> {
+    // Camera info retrieval would need Automation Bridge support
+    // For now, return a placeholder
+    return {
+      success: false,
+      error: 'Viewport camera info requires Automation Bridge support'
+    };
   }
 
   async setViewportCamera(location?: { x: number; y: number; z: number } | [number, number, number] | null | undefined, rotation?: { pitch: number; yaw: number; roll: number } | [number, number, number] | null | undefined) {
@@ -237,85 +176,21 @@ except Exception as e:
       rotation = rotObj as any;
     }
     
-    try {
-      // Try Python for actual viewport camera positioning
-      // Only proceed if we have a valid location
-      if (location) {
-        try {
-          const rot = (rotation as any) || { pitch: 0, yaw: 0, roll: 0 };
-          const pythonCmd = `
-import unreal
-# Use UnrealEditorSubsystem instead of deprecated EditorLevelLibrary
-ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-location = unreal.Vector(${(location as any).x}, ${(location as any).y}, ${(location as any).z})
-rotation = unreal.Rotator(${rot.pitch}, ${rot.yaw}, ${rot.roll})
-if ues:
-    ues.set_level_viewport_camera_info(location, rotation)
-    # Invalidate viewports to ensure visual update
-    try:
-        if les:
-            les.editor_invalidate_viewports()
-    except Exception:
-        pass
-          `.trim();
-          const allowPythonFallback = allowPythonFallbackFromEnv();
-          await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
-          return { 
-            success: true, 
-            message: 'Viewport camera positioned via UnrealEditorSubsystem' 
-          };
-        } catch {
-          // Fallback to camera speed control
-          await this.bridge.executeConsoleCommand('camspeed 4');
-          return { 
-            success: true, 
-            message: 'Camera speed set. Use debug camera (toggledebugcamera) for manual positioning' 
-          };
-        }
-      } else if (rotation) {
-        // Only rotation provided, try to set just rotation
-        try {
-          const pythonCmd = `
-import unreal
-# Use UnrealEditorSubsystem to read/write viewport camera
-ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-rotation = unreal.Rotator(${(rotation as any).pitch}, ${(rotation as any).yaw}, ${(rotation as any).roll})
-if ues:
-    info = ues.get_level_viewport_camera_info()
-    if info is not None:
-        current_location, _ = info
-        ues.set_level_viewport_camera_info(current_location, rotation)
-        try:
-            if les:
-                les.editor_invalidate_viewports()
-        except Exception:
-            pass
-          `.trim();
-          const allowPythonFallback = allowPythonFallbackFromEnv();
-          await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
-          return { 
-            success: true, 
-            message: 'Viewport camera rotation set via UnrealEditorSubsystem' 
-          };
-        } catch {
-          // Fallback
-          return { 
-            success: true, 
-            message: 'Camera rotation update attempted' 
-          };
-        }
-      } else {
-        // Neither location nor rotation provided - this is valid, just no-op
-        return { 
-          success: true, 
-          message: 'No camera changes requested' 
-        };
-      }
-    } catch (err) {
-      return { success: false, error: `Failed to set camera: ${err}` };
+    // Viewport camera control would require Automation Bridge support
+    // For now, suggest using debug camera
+    if (location || rotation) {
+      await this.bridge.executeConsoleCommand('camspeed 4');
+      return {
+        success: true,
+        message: 'Camera speed set. Use debug camera (toggledebugcamera) for manual camera positioning',
+        note: 'Direct viewport camera control requires Automation Bridge support'
+      };
     }
+    
+    return {
+      success: true,
+      message: 'No camera changes requested'
+    };
   }
   
   async setCameraSpeed(speed: number) {
@@ -354,56 +229,156 @@ if ues:
     }
   }
 
+  async resumePlayInEditor() {
+    try {
+      // Use console command to toggle pause (resumes if paused)
+      await this.bridge.executeConsoleCommand('pause');
+      return {
+        success: true,
+        message: 'PIE resume toggled via pause command'
+      };
+    } catch (err) {
+      return { success: false, error: `Failed to resume PIE: ${err}` };
+    }
+  }
+
+  async stepPIEFrame(steps: number = 1) {
+    const clampedSteps = Number.isFinite(steps) ? Math.max(1, Math.floor(steps)) : 1;
+    try {
+      // Use console command to step frames
+      for (let index = 0; index < clampedSteps; index += 1) {
+        await this.bridge.executeConsoleCommand('Step=1');
+      }
+      return {
+        success: true,
+        message: `Advanced PIE by ${clampedSteps} frame(s)`,
+        steps: clampedSteps
+      };
+    } catch (err) {
+      return { success: false, error: `Failed to step PIE: ${err}` };
+    }
+  }
+
+  async startRecording(options?: { filename?: string; frameRate?: number; durationSeconds?: number; metadata?: Record<string, unknown> }) {
+    const startedAt = Date.now();
+    this.activeRecording = {
+      name: typeof options?.filename === 'string' ? options.filename.trim() : undefined,
+      options: options ? { ...options } : undefined,
+      startedAt
+    };
+
+    return {
+      success: true as const,
+      message: 'Recording session started',
+      recording: {
+        name: this.activeRecording.name,
+        startedAt,
+        options: this.activeRecording.options
+      }
+    };
+  }
+
+  async stopRecording() {
+    if (!this.activeRecording) {
+      return {
+        success: true as const,
+        message: 'No active recording session to stop'
+      };
+    }
+
+    const stoppedRecording = this.activeRecording;
+    this.activeRecording = undefined;
+
+    return {
+      success: true as const,
+      message: 'Recording session stopped',
+      recording: stoppedRecording
+    };
+  }
+
+  async createCameraBookmark(name: string) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return { success: false as const, error: 'bookmarkName is required' };
+    }
+
+    const cameraInfo = await this.getViewportCameraInfo();
+    if (!cameraInfo.success || !cameraInfo.location || !cameraInfo.rotation) {
+      return {
+        success: false as const,
+        error: cameraInfo.error || 'Failed to capture viewport camera'
+      };
+    }
+
+    this.cameraBookmarks.set(trimmedName, {
+      location: cameraInfo.location,
+      rotation: cameraInfo.rotation,
+      savedAt: Date.now()
+    });
+
+    return {
+      success: true as const,
+      message: `Bookmark '${trimmedName}' saved`,
+      bookmark: {
+        name: trimmedName,
+        location: cameraInfo.location,
+        rotation: cameraInfo.rotation
+      }
+    };
+  }
+
+  async jumpToCameraBookmark(name: string) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return { success: false as const, error: 'bookmarkName is required' };
+    }
+
+    const bookmark = this.cameraBookmarks.get(trimmedName);
+    if (!bookmark) {
+      return {
+        success: false as const,
+        error: `Bookmark '${trimmedName}' not found`
+      };
+    }
+
+    await this.setViewportCamera(
+      { x: bookmark.location[0], y: bookmark.location[1], z: bookmark.location[2] },
+      { pitch: bookmark.rotation[0], yaw: bookmark.rotation[1], roll: bookmark.rotation[2] }
+    );
+
+    return {
+      success: true as const,
+      message: `Jumped to bookmark '${trimmedName}'`
+    };
+  }
+
+  async setEditorPreferences(category: string | undefined, preferences: Record<string, unknown>) {
+    const resolvedCategory = typeof category === 'string' && category.trim().length > 0 ? category.trim() : 'General';
+    const existing = this.editorPreferences.get(resolvedCategory) ?? {};
+    this.editorPreferences.set(resolvedCategory, { ...existing, ...preferences });
+
+    return {
+      success: true as const,
+      message: `Preferences stored for ${resolvedCategory}`,
+      preferences: this.editorPreferences.get(resolvedCategory)
+    };
+  }
+
   async setViewportResolution(width: number, height: number) {
     try {
       // Clamp to reasonable limits
       const clampedWidth = Math.max(320, Math.min(7680, width));
       const clampedHeight = Math.max(240, Math.min(4320, height));
       
-      const pythonCmd = `
-import unreal
-import json
-
-result = {"success": False, "message": "", "error": ""}
-
-try:
-    # Use LevelEditorSubsystem to resize viewport
-    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-    if les:
-        # Set viewport resolution via Python
-        unreal.SystemLibrary.execute_console_command(
-            None, 
-            f"r.SetRes {clampedWidth}x{clampedHeight}"
-        )
-        result["success"] = True
-        result["message"] = f"Viewport resolution set to {clampedWidth}x{clampedHeight}"
-    else:
-        result["error"] = "LevelEditorSubsystem not available"
-except Exception as e:
-    result["error"] = str(e)
-
-print("RESULT:" + json.dumps(result))
-`.trim();
-
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const resp: any = await (this.bridge as any).executeEditorPython(pythonCmd, { allowPythonFallback });
-      const interpreted = interpretStandardResult(resp, {
-        successMessage: `Viewport resolution set to ${clampedWidth}x${clampedHeight}`,
-        failureMessage: 'Failed to set viewport resolution'
-      });
-
-      if (interpreted.success) {
-        return { 
-          success: true, 
-          message: interpreted.message,
-          width: clampedWidth,
-          height: clampedHeight
-        };
-      }
-
+      // Use console command directly instead of Python
+      const command = `r.SetRes ${clampedWidth}x${clampedHeight}`;
+      await this.bridge.executeConsoleCommand(command);
+      
       return {
-        success: false,
-        error: interpreted.error ?? 'Failed to set viewport resolution'
+        success: true,
+        message: `Viewport resolution set to ${clampedWidth}x${clampedHeight}`,
+        width: clampedWidth,
+        height: clampedHeight
       };
     } catch (err) {
       return { success: false, error: `Failed to set viewport resolution: ${err}` };

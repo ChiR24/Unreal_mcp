@@ -497,14 +497,16 @@ Use it when you need to:
 - add a component to an existing Blueprint asset with a unique name.
 - tweak Blueprint Class Default Object (CDO) properties when Remote Control cannot.
 - orchestrate multi-step Simple Construction Script edits with compile/save toggles.
+- retrieve, add, remove, reparent, or modify SCS (Simple Construction Script) components.
+- set component transforms and properties within the SCS hierarchy.
 
-Supported actions: create, add_component, set_default, modify_scs.`,
+Supported actions: create, add_component, set_default, modify_scs, get_scs, add_scs_component, remove_scs_component, reparent_scs_component, set_scs_transform, set_scs_property.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: { 
           type: 'string', 
-          enum: ['create', 'add_component', 'set_default', 'modify_scs', 'ensure_exists', 'probe_handle', 'add_variable', 'add_function', 'add_event', 'add_construction_script', 'set_variable_metadata', 'get'],
+          enum: ['create', 'add_component', 'set_default', 'modify_scs', 'ensure_exists', 'probe_handle', 'add_variable', 'add_function', 'add_event', 'add_construction_script', 'set_variable_metadata', 'get', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property'],
           description: 'Blueprint action'
         },
         componentClass: { type: 'string', description: 'Optional component class name for probe_handle (e.g., StaticMeshComponent)' },
@@ -592,7 +594,31 @@ Supported actions: create, add_component, set_default, modify_scs.`,
             },
             required: ['type']
           }
-        }
+        },
+        // SCS (Simple Construction Script) specific properties
+        newParent: { type: 'string', description: 'New parent component name for reparent_scs_component action.' },
+        location: {
+          type: 'array',
+          items: { type: 'number' },
+          minItems: 3,
+          maxItems: 3,
+          description: 'Location vector [X, Y, Z] in centimeters for set_scs_transform action.'
+        },
+        rotation: {
+          type: 'array',
+          items: { type: 'number' },
+          minItems: 3,
+          maxItems: 3,
+          description: 'Rotation vector [Pitch, Yaw, Roll] in degrees for set_scs_transform action.'
+        },
+        scale: {
+          type: 'array',
+          items: { type: 'number' },
+          minItems: 3,
+          maxItems: 3,
+          description: 'Scale vector [X, Y, Z] for set_scs_transform action.'
+        },
+        propertyValue: { description: 'Property value to set for set_scs_property action. Type depends on the property being set.' }
       },
       required: ['action', 'name']
     },
@@ -637,7 +663,31 @@ Supported actions: create, add_component, set_default, modify_scs.`,
             success: { type: 'boolean' },
             error: { type: 'string' }
           }
-        }
+        },
+        // SCS-specific output properties
+        scsComponents: {
+          type: 'array',
+          description: 'List of SCS components for get_scs action.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Component name' },
+              class: { type: 'string', description: 'Component class' },
+              parent: { type: 'string', description: 'Parent component name' },
+              transform: {
+                type: 'object',
+                description: 'Component relative transform',
+                properties: {
+                  location: { type: 'array', items: { type: 'number' }, description: 'Location [X,Y,Z]' },
+                  rotation: { type: 'array', items: { type: 'number' }, description: 'Rotation [Pitch,Yaw,Roll]' },
+                  scale: { type: 'array', items: { type: 'number' }, description: 'Scale [X,Y,Z]' }
+                }
+              }
+            }
+          }
+        },
+        scsHierarchy: { type: 'string', description: 'Text representation of SCS component hierarchy for get_scs action.' },
+        error: { type: 'string', description: 'Error message if operation failed' }
       }
     }
   },

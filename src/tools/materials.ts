@@ -1,8 +1,5 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation-bridge.js';
-import { coerceBoolean, interpretStandardResult } from '../utils/result-helpers.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
-import { escapePythonString } from '../utils/python.js';
 
 export class MaterialTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
@@ -46,127 +43,40 @@ export class MaterialTools {
         return { success: false, error: errorMessage, message: errorMessage };
       }
 
-    const materialPath = `${cleanPath}/${name}`;
-    const payload = { name, cleanPath, materialPath };
-    // Try plugin-first transport if available
-    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
-      try {
-        const resp: any = await this.automationBridge.sendAutomationRequest('create_material', {
-          name,
-          destinationPath: cleanPath
-        });
-        if (resp && resp.success !== false) {
-          return { success: true, path: resp.path || resp.result?.path || materialPath, message: resp.message || `Material ${name} created at ${materialPath}`, warnings: resp.warnings } as any;
-        }
-        const errTxt = String(resp?.error ?? resp?.message ?? '');
-        if (!(errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION'))) {
-          return { success: false, error: resp?.error ?? resp?.message ?? 'CREATE_MATERIAL_FAILED' } as any;
-        }
-      } catch (_e) {
-        // Fall back to Python path below
-      }
-    }
-    const escapedName = escapePythonString(name);
-      const pythonCode = `
-import unreal, json
-
-payload = json.loads(r'''${JSON.stringify(payload)}''')
-result = {
-    'success': False,
-    'message': '',
-    'error': '',
-    'warnings': [],
-    'details': [],
-    'name': payload.get('name') or "${escapedName}",
-    'path': payload.get('materialPath')
-}
-
-material_path = result['path']
-clean_path = payload.get('cleanPath') or '/Game'
-
-try:
-    if unreal.EditorAssetLibrary.does_asset_exist(material_path):
-        result['success'] = True
-        result['exists'] = True
-        result['message'] = f"Material already exists at {material_path}"
-    else:
-        asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-        factory = unreal.MaterialFactoryNew()
-        asset = asset_tools.create_asset(
-            asset_name=payload.get('name'),
-            package_path=clean_path,
-            asset_class=unreal.Material,
-            factory=factory
-        )
-        if asset:
-            unreal.EditorAssetLibrary.save_asset(material_path)
-            result['success'] = True
-            result['created'] = True
-            result['message'] = f"Material created at {material_path}"
-        else:
-            result['error'] = 'Failed to create material'
-            result['message'] = result['error']
-except Exception as exc:
-    result['error'] = str(exc)
-    if not result['message']:
-        result['message'] = result['error']
-
-print('RESULT:' + json.dumps(result))
-`.trim();
-
-  const pyResult = await (this.bridge as any).executeEditorPython(pythonCode, { allowPythonFallback: allowPythonFallbackFromEnv() });
-      const interpreted = interpretStandardResult(pyResult, {
-        successMessage: `Material ${name} processed`,
-        failureMessage: 'Failed to create material'
-      });
-
-      if (interpreted.success) {
-        const exists = coerceBoolean(interpreted.payload.exists, false) === true;
-        const created = coerceBoolean(interpreted.payload.created, false) === true;
-        if (exists) {
-          return { success: true, path: materialPath, message: `Material ${name} already exists at ${materialPath}` };
-        }
-        if (created) {
-          return { success: true, path: materialPath, message: `Material ${name} created at ${materialPath}` };
-        }
-        return { success: true, path: materialPath, message: interpreted.message };
-      }
-
-      if (interpreted.error) {
-        const exists = await this.assetExists(materialPath);
-        if (exists) {
+      const materialPath = `${cleanPath}/${name}`;
+      
+      // Use Automation Bridge for material creation
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp: any = await this.automationBridge.sendAutomationRequest('create_material', {
+            name,
+            destinationPath: cleanPath
+          });
+          
+          if (resp && resp.success !== false) {
+            return {
+              success: true,
+              path: resp.path || resp.result?.path || materialPath,
+              message: resp.message || `Material ${name} created at ${materialPath}`,
+              warnings: resp.warnings
+            };
+          }
+          
           return {
-            success: true,
-            path: materialPath,
-            message: `Material ${name} created at ${materialPath}`,
-            warnings: interpreted.warnings,
-            details: interpreted.details
+            success: false,
+            error: resp?.error ?? resp?.message ?? 'Failed to create material'
+          };
+        } catch (err) {
+          return {
+            success: false,
+            error: `Failed to create material: ${err}`
           };
         }
-        return {
-          success: false,
-          error: interpreted.error,
-          warnings: interpreted.warnings,
-          details: interpreted.details
-        };
       }
-
-      const exists = await this.assetExists(materialPath);
-      if (exists) {
-        return {
-          success: true,
-          path: materialPath,
-          message: `Material ${name} created at ${materialPath}`,
-          warnings: interpreted.warnings,
-          details: interpreted.details
-        };
-      }
-
+      
       return {
         success: false,
-        error: interpreted.message,
-        warnings: interpreted.warnings,
-        details: interpreted.details
+        error: 'Material creation requires Automation Bridge connection'
       };
     } catch (err) {
       return { success: false, error: `Failed to create material: ${err}` };
@@ -241,7 +151,7 @@ print('RESULT:' + json.dumps(result))
         parameters: parameters || {}
       };
 
-  const allowPythonFallback = allowPythonFallbackFromEnv();
+  const allowPythonFallback = false;
 
       // Try a plugin-native asset creation path via executeEditorFunction which will
       // call into plugin handlers first and only run the Python template when

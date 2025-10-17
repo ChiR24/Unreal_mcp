@@ -14,12 +14,6 @@
       },
       "environmentVariables": [
         {
-          "name": "UE_HOST",
-          "description": "Unreal Engine host address (default: 127.0.0.1)",
-          "isRequired": false,
-          "value": "127.0.0.1"
-        },
-        {
           "name": "LOG_LEVEL",
           "description": "Logging level: debug, info, warn, error (default: info)",
           "isRequired": false,
@@ -48,7 +42,6 @@
     "ue5",
     "ue6",
     "game-development",
-    "remote-control",
     "automation",
     "3d",
     "gamedev",

@@ -1,7 +1,6 @@
 // UI tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
 import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
 
 export class UITools {
   constructor(private bridge: UnrealBridge) {}
@@ -173,26 +172,7 @@ export class UITools {
       return { success: false, error: 'widgetName is required' };
     }
 
-  const _verifyScript = `
-import unreal, json
-name = r"${widgetName}"
-candidates = []
-if name.startswith('/Game/'):
-    candidates.append(name)
-else:
-    candidates.append(f"/Game/UI/Widgets/{name}")
-    candidates.append(f"/Game/{name}")
-
-found_path = ''
-for path in candidates:
-    if unreal.EditorAssetLibrary.does_asset_exist(path):
-        found_path = path
-        break
-
-print('RESULT:' + json.dumps({'success': bool(found_path), 'path': found_path, 'candidates': candidates}))
-`.trim();
-
-    // Use plugin-first asset existence check (fallback to Python only when allowed)
+    // Use plugin-first asset existence check
     const candidates = [] as string[];
     if (widgetName.startsWith('/Game/')) {
       candidates.push(widgetName);
@@ -237,65 +217,9 @@ print('RESULT:' + json.dumps({'success': bool(found_path), 'path': found_path, '
     const zOrder = params.zOrder ?? 0;
     const playerIndex = params.playerIndex ?? 0;
     
-    // Use Python API to create and add widget to viewport
-  const _py = `
-import unreal
-import json
-widget_path = r"${params.widgetClass}"
-z_order = ${zOrder}
-player_index = ${playerIndex}
-try:
-    # Load the widget blueprint class
-    if not unreal.EditorAssetLibrary.does_asset_exist(widget_path):
-        print('RESULT:' + json.dumps({'success': False, 'error': f'Widget class not found: {widget_path}'}))
-    else:
-        widget_bp = unreal.EditorAssetLibrary.load_asset(widget_path)
-        if not widget_bp:
-            print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to load widget blueprint'}))
-        else:
-            # Get the generated class from the widget blueprint
-            widget_class = widget_bp.generated_class() if hasattr(widget_bp, 'generated_class') else widget_bp
-            
-      # Get the world and player controller via modern subsystems
-      world = None
-      try:
-        world = unreal.EditorUtilityLibrary.get_editor_world()
-      except Exception:
-        pass
-
-      if not world:
-        editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-        if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
-          world = editor_subsystem.get_editor_world()
-
-      if not world:
-        print('RESULT:' + json.dumps({'success': False, 'error': 'No editor world available. Start a PIE session or enable Editor Scripting Utilities.'}))
-            else:
-                # Try to get player controller
-                try:
-                    player_controller = unreal.GameplayStatics.get_player_controller(world, player_index)
-                except Exception:
-                    player_controller = None
-                
-                if not player_controller:
-                    # If no player controller in PIE, try to get the first one or create a dummy
-                    print('RESULT:' + json.dumps({'success': False, 'error': 'No player controller available. Run in PIE mode first.'}))
-                else:
-                    # Create the widget
-                    widget = unreal.WidgetBlueprintLibrary.create(world, widget_class, player_controller)
-                    if widget:
-                        # Add to viewport
-                        widget.add_to_viewport(z_order)
-                        print('RESULT:' + json.dumps({'success': True}))
-                    else:
-                        print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to create widget instance'}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
-    
     try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const resp = await this.bridge.executeEditorFunction('ADD_WIDGET_TO_VIEWPORT', { widget_path: params.widgetClass, z_order: zOrder, player_index: playerIndex } as any, { allowPythonFallback });
+      const allowPythonFallback = false;
+      const resp = await this.bridge.executeEditorFunction('ADD_WIDGET_TO_VIEWPORT', { widget_path: params.widgetClass, z_order: zOrder, player_index: playerIndex } as any, { allowPythonFallback });
       const interpreted = interpretStandardResult(resp, {
         successMessage: `Widget added to viewport with z-order ${zOrder}`,
         failureMessage: 'Failed to add widget to viewport'

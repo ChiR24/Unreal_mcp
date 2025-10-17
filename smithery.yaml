@@ -1,5 +1,5 @@
 name: "Unreal Engine MCP"
-description: "A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via Remote Control API. Built with TypeScript and designed for game development automation."
+description: "A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via native C++ Automation Bridge. Built with TypeScript and C++ for high-performance game development automation."
 runtime: "typescript"
 env:
   NODE_ENV: "production"
@@ -7,18 +7,6 @@ env:
   UE_PROJECT_PATH: "C:/Users/YourName/Documents/Unreal Projects/YourProject"
 # Session configuration hints (served by the exported Zod configSchema in src/index.ts)
 sessionConfig:
-  ueHost:
-    type: string
-    description: "Unreal Engine host (e.g., 127.0.0.1)"
-    default: "127.0.0.1"
-  ueHttpPort:
-    type: number
-    description: "Remote Control HTTP port"
-    default: 30010
-  ueWsPort:
-    type: number
-    description: "Remote Control WS port"
-    default: 30011
   logLevel:
     type: string
     description: "Server log verbosity"

@@ -125,9 +125,9 @@ static inline FString HexifyUtf8(const FString& In)
     return Hex;
 }
 
-// Lightweight output capture to collect log lines emitted while running
-// Editor Python or other operations that write to GLog.
-struct FMcpPythonOutputCapture : public FOutputDevice
+// Lightweight output capture to collect log lines emitted during
+// automation operations that write to GLog.
+struct FMcpOutputCapture : public FOutputDevice
 {
     TArray<FString> Lines;
     virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override
@@ -189,8 +189,37 @@ static inline TSharedPtr<FJsonValue> ExportPropertyToJsonValue(UObject* TargetOb
     }
     if (FByteProperty* BP = CastField<FByteProperty>(Property))
     {
-        // Byte property may be an enum; return numeric value
-        return MakeShared<FJsonValueNumber>((double)BP->GetPropertyValue_InContainer(TargetObject));
+        // Byte property may be an enum; return enum name if available, else numeric value
+        const uint8 ByteVal = BP->GetPropertyValue_InContainer(TargetObject);
+        if (UEnum* Enum = BP->Enum)
+        {
+            const FString EnumName = Enum->GetNameStringByValue(ByteVal);
+            if (!EnumName.IsEmpty())
+            {
+                return MakeShared<FJsonValueString>(EnumName);
+            }
+        }
+        return MakeShared<FJsonValueNumber>((double)ByteVal);
+    }
+
+    // Enum property (newer engine versions use FEnumProperty instead of FByteProperty for enums)
+    if (FEnumProperty* EP = CastField<FEnumProperty>(Property))
+    {
+        if (UEnum* Enum = EP->GetEnum())
+        {
+            void* ValuePtr = EP->ContainerPtrToValuePtr<void>(TargetObject);
+            if (FNumericProperty* UnderlyingProp = EP->GetUnderlyingProperty())
+            {
+                const int64 EnumVal = UnderlyingProp->GetSignedIntPropertyValue(ValuePtr);
+                const FString EnumName = Enum->GetNameStringByValue(EnumVal);
+                if (!EnumName.IsEmpty())
+                {
+                    return MakeShared<FJsonValueString>(EnumName);
+                }
+                return MakeShared<FJsonValueNumber>((double)EnumVal);
+            }
+        }
+        return MakeShared<FJsonValueNumber>(0.0);
     }
 
     // Object references -> return path if available
@@ -198,6 +227,30 @@ static inline TSharedPtr<FJsonValue> ExportPropertyToJsonValue(UObject* TargetOb
     {
         UObject* O = OP->GetObjectPropertyValue_InContainer(TargetObject);
         if (O) return MakeShared<FJsonValueString>(O->GetPathName());
+        return MakeShared<FJsonValueNull>();
+    }
+
+    // Soft object references (FSoftObjectPtr, FSoftObjectPath)
+    if (FSoftObjectProperty* SOP = CastField<FSoftObjectProperty>(Property))
+    {
+        const void* ValuePtr = SOP->ContainerPtrToValuePtr<void>(TargetObject);
+        const FSoftObjectPtr* SoftObjPtr = static_cast<const FSoftObjectPtr*>(ValuePtr);
+        if (SoftObjPtr && !SoftObjPtr->IsNull())
+        {
+            return MakeShared<FJsonValueString>(SoftObjPtr->ToSoftObjectPath().ToString());
+        }
+        return MakeShared<FJsonValueNull>();
+    }
+
+    // Soft class references (FSoftClassPtr)
+    if (FSoftClassProperty* SCP = CastField<FSoftClassProperty>(Property))
+    {
+        const void* ValuePtr = SCP->ContainerPtrToValuePtr<void>(TargetObject);
+        const FSoftObjectPtr* SoftClassPtr = static_cast<const FSoftObjectPtr*>(ValuePtr);
+        if (SoftClassPtr && !SoftClassPtr->IsNull())
+        {
+            return MakeShared<FJsonValueString>(SoftClassPtr->ToSoftObjectPath().ToString());
+        }
         return MakeShared<FJsonValueNull>();
     }
 
@@ -282,6 +335,105 @@ static inline TSharedPtr<FJsonValue> ExportPropertyToJsonValue(UObject* TargetOb
                 Out.Add(MakeShared<FJsonValueString>(TEXT("<unsupported_array_elem>")));
             }
         }
+        return MakeShared<FJsonValueArray>(Out);
+    }
+
+    // Maps: export as JSON object with key-value pairs
+    if (FMapProperty* MP = CastField<FMapProperty>(Property))
+    {
+        TSharedPtr<FJsonObject> MapObj = MakeShared<FJsonObject>();
+        FScriptMapHelper Helper(MP, MP->ContainerPtrToValuePtr<void>(TargetObject));
+        
+        for (int32 i = 0; i < Helper.Num(); ++i)
+        {
+            if (!Helper.IsValidIndex(i)) continue;
+            
+            // Get key and value pointers
+            const uint8* KeyPtr = Helper.GetKeyPtr(i);
+            const uint8* ValuePtr = Helper.GetValuePtr(i);
+            
+            // Convert key to string (maps typically use string or name keys)
+            FString KeyStr;
+            FProperty* KeyProp = MP->KeyProp;
+            if (FStrProperty* StrKey = CastField<FStrProperty>(KeyProp))
+            {
+                KeyStr = *reinterpret_cast<const FString*>(KeyPtr);
+            }
+            else if (FNameProperty* NameKey = CastField<FNameProperty>(KeyProp))
+            {
+                KeyStr = reinterpret_cast<const FName*>(KeyPtr)->ToString();
+            }
+            else if (FIntProperty* IntKey = CastField<FIntProperty>(KeyProp))
+            {
+                KeyStr = FString::FromInt(*reinterpret_cast<const int32*>(KeyPtr));
+            }
+            else
+            {
+                KeyStr = FString::Printf(TEXT("key_%d"), i);
+            }
+            
+            // Convert value to JSON
+            FProperty* ValueProp = MP->ValueProp;
+            if (FStrProperty* StrVal = CastField<FStrProperty>(ValueProp))
+            {
+                MapObj->SetStringField(KeyStr, *reinterpret_cast<const FString*>(ValuePtr));
+            }
+            else if (FIntProperty* IntVal = CastField<FIntProperty>(ValueProp))
+            {
+                MapObj->SetNumberField(KeyStr, (double)*reinterpret_cast<const int32*>(ValuePtr));
+            }
+            else if (FFloatProperty* FloatVal = CastField<FFloatProperty>(ValueProp))
+            {
+                MapObj->SetNumberField(KeyStr, (double)*reinterpret_cast<const float*>(ValuePtr));
+            }
+            else if (FBoolProperty* BoolVal = CastField<FBoolProperty>(ValueProp))
+            {
+                MapObj->SetBoolField(KeyStr, (*reinterpret_cast<const uint8*>(ValuePtr)) != 0);
+            }
+            else
+            {
+                MapObj->SetStringField(KeyStr, TEXT("<unsupported_value_type>"));
+            }
+        }
+        
+        return MakeShared<FJsonValueObject>(MapObj);
+    }
+
+    // Sets: export as JSON array
+    if (FSetProperty* SP = CastField<FSetProperty>(Property))
+    {
+        TArray<TSharedPtr<FJsonValue>> Out;
+        FScriptSetHelper Helper(SP, SP->ContainerPtrToValuePtr<void>(TargetObject));
+        
+        for (int32 i = 0; i < Helper.Num(); ++i)
+        {
+            if (!Helper.IsValidIndex(i)) continue;
+            
+            const uint8* ElemPtr = Helper.GetElementPtr(i);
+            FProperty* ElemProp = SP->ElementProp;
+            
+            if (FStrProperty* StrElem = CastField<FStrProperty>(ElemProp))
+            {
+                Out.Add(MakeShared<FJsonValueString>(*reinterpret_cast<const FString*>(ElemPtr)));
+            }
+            else if (FNameProperty* NameElem = CastField<FNameProperty>(ElemProp))
+            {
+                Out.Add(MakeShared<FJsonValueString>(reinterpret_cast<const FName*>(ElemPtr)->ToString()));
+            }
+            else if (FIntProperty* IntElem = CastField<FIntProperty>(ElemProp))
+            {
+                Out.Add(MakeShared<FJsonValueNumber>((double)*reinterpret_cast<const int32*>(ElemPtr)));
+            }
+            else if (FFloatProperty* FloatElem = CastField<FFloatProperty>(ElemProp))
+            {
+                Out.Add(MakeShared<FJsonValueNumber>((double)*reinterpret_cast<const float*>(ElemPtr)));
+            }
+            else
+            {
+                Out.Add(MakeShared<FJsonValueString>(TEXT("<unsupported_set_elem>")));
+            }
+        }
+        
         return MakeShared<FJsonValueArray>(Out);
     }
 
@@ -405,12 +557,94 @@ static inline bool ApplyJsonValueToProperty(UObject* TargetObject, FProperty* Pr
     }
     if (FByteProperty* Bp = CastField<FByteProperty>(Property))
     {
+        // Check if this is an enum byte property
+        if (UEnum* Enum = Bp->Enum)
+        {
+            if (ValueField->Type == EJson::String)
+            {
+                // Try to match by name (with or without namespace)
+                const FString InStr = ValueField->AsString();
+                int64 EnumVal = Enum->GetValueByNameString(InStr);
+                if (EnumVal == INDEX_NONE)
+                {
+                    // Try with namespace prefix
+                    const FString FullName = Enum->GenerateFullEnumName(*InStr);
+                    EnumVal = Enum->GetValueByName(FName(*FullName));
+                }
+                if (EnumVal == INDEX_NONE)
+                {
+                    OutError = FString::Printf(TEXT("Invalid enum value '%s' for enum '%s'"), *InStr, *Enum->GetName());
+                    return false;
+                }
+                Bp->SetPropertyValue_InContainer(TargetObject, static_cast<uint8>(EnumVal));
+                return true;
+            }
+            else if (ValueField->Type == EJson::Number)
+            {
+                // Validate numeric value is in range
+                const int64 Val = static_cast<int64>(ValueField->AsNumber());
+                if (!Enum->IsValidEnumValue(Val))
+                {
+                    OutError = FString::Printf(TEXT("Numeric value %lld is not valid for enum '%s'"), Val, *Enum->GetName());
+                    return false;
+                }
+                Bp->SetPropertyValue_InContainer(TargetObject, static_cast<uint8>(Val));
+                return true;
+            }
+            OutError = TEXT("Enum property requires string or number");
+            return false;
+        }
+        // Regular byte property (not an enum)
         int64 Val = 0;
         if (ValueField->Type == EJson::Number) Val = static_cast<int64>(ValueField->AsNumber());
         else if (ValueField->Type == EJson::String) Val = static_cast<int64>(FCString::Atoi64(*ValueField->AsString()));
         else { OutError = TEXT("Unsupported JSON type for byte property"); return false; }
         Bp->SetPropertyValue_InContainer(TargetObject, static_cast<uint8>(Val));
         return true;
+    }
+
+    // Enum property (newer engine versions)
+    if (FEnumProperty* EP = CastField<FEnumProperty>(Property))
+    {
+        if (UEnum* Enum = EP->GetEnum())
+        {
+            void* ValuePtr = EP->ContainerPtrToValuePtr<void>(TargetObject);
+            if (FNumericProperty* UnderlyingProp = EP->GetUnderlyingProperty())
+            {
+                if (ValueField->Type == EJson::String)
+                {
+                    const FString InStr = ValueField->AsString();
+                    int64 EnumVal = Enum->GetValueByNameString(InStr);
+                    if (EnumVal == INDEX_NONE)
+                    {
+                        const FString FullName = Enum->GenerateFullEnumName(*InStr);
+                        EnumVal = Enum->GetValueByName(FName(*FullName));
+                    }
+                    if (EnumVal == INDEX_NONE)
+                    {
+                        OutError = FString::Printf(TEXT("Invalid enum value '%s' for enum '%s'"), *InStr, *Enum->GetName());
+                        return false;
+                    }
+                    UnderlyingProp->SetIntPropertyValue(ValuePtr, EnumVal);
+                    return true;
+                }
+                else if (ValueField->Type == EJson::Number)
+                {
+                    const int64 Val = static_cast<int64>(ValueField->AsNumber());
+                    if (!Enum->IsValidEnumValue(Val))
+                    {
+                        OutError = FString::Printf(TEXT("Numeric value %lld is not valid for enum '%s'"), Val, *Enum->GetName());
+                        return false;
+                    }
+                    UnderlyingProp->SetIntPropertyValue(ValuePtr, Val);
+                    return true;
+                }
+                OutError = TEXT("Enum property requires string or number");
+                return false;
+            }
+        }
+        OutError = TEXT("Enum property has no valid enum definition");
+        return false;
     }
 
     // Object reference
@@ -430,6 +664,80 @@ static inline bool ApplyJsonValueToProperty(UObject* TargetObject, FProperty* Pr
             return true;
         }
         OutError = TEXT("Unsupported JSON type for object property"); return false;
+    }
+
+    // Soft object references (FSoftObjectPtr)
+    if (FSoftObjectProperty* SOP = CastField<FSoftObjectProperty>(Property))
+    {
+        if (ValueField->Type == EJson::String)
+        {
+            const FString Path = ValueField->AsString();
+            void* ValuePtr = SOP->ContainerPtrToValuePtr<void>(TargetObject);
+            FSoftObjectPtr* SoftObjPtr = static_cast<FSoftObjectPtr*>(ValuePtr);
+            if (SoftObjPtr)
+            {
+                if (Path.IsEmpty())
+                {
+                    *SoftObjPtr = FSoftObjectPtr();
+                }
+                else
+                {
+                    *SoftObjPtr = FSoftObjectPath(Path);
+                }
+                return true;
+            }
+            OutError = TEXT("Failed to access soft object property");
+            return false;
+        }
+        else if (ValueField->Type == EJson::Null)
+        {
+            void* ValuePtr = SOP->ContainerPtrToValuePtr<void>(TargetObject);
+            FSoftObjectPtr* SoftObjPtr = static_cast<FSoftObjectPtr*>(ValuePtr);
+            if (SoftObjPtr)
+            {
+                *SoftObjPtr = FSoftObjectPtr();
+                return true;
+            }
+        }
+        OutError = TEXT("Soft object property requires string path or null");
+        return false;
+    }
+
+    // Soft class references (FSoftClassPtr)
+    if (FSoftClassProperty* SCP = CastField<FSoftClassProperty>(Property))
+    {
+        if (ValueField->Type == EJson::String)
+        {
+            const FString Path = ValueField->AsString();
+            void* ValuePtr = SCP->ContainerPtrToValuePtr<void>(TargetObject);
+            FSoftObjectPtr* SoftClassPtr = static_cast<FSoftObjectPtr*>(ValuePtr);
+            if (SoftClassPtr)
+            {
+                if (Path.IsEmpty())
+                {
+                    *SoftClassPtr = FSoftObjectPtr();
+                }
+                else
+                {
+                    *SoftClassPtr = FSoftObjectPath(Path);
+                }
+                return true;
+            }
+            OutError = TEXT("Failed to access soft class property");
+            return false;
+        }
+        else if (ValueField->Type == EJson::Null)
+        {
+            void* ValuePtr = SCP->ContainerPtrToValuePtr<void>(TargetObject);
+            FSoftObjectPtr* SoftClassPtr = static_cast<FSoftObjectPtr*>(ValuePtr);
+            if (SoftClassPtr)
+            {
+                *SoftClassPtr = FSoftObjectPtr();
+                return true;
+            }
+        }
+        OutError = TEXT("Soft class property requires string path or null");
+        return false;
     }
 
     // Structs (Vector/Rotator)
@@ -606,6 +914,129 @@ static inline void ReadRotatorField(const TSharedPtr<FJsonObject>& Obj, const TC
     Out = Default;
 }
 
+// Resolve a nested property path (e.g., "Transform.Location.X" or "MyComponent.Intensity").
+// Returns the final property and target object, or nullptr on failure.
+// OutError is populated with a descriptive error message on failure.
+static inline FProperty* ResolveNestedPropertyPath(UObject* RootObject, const FString& PropertyPath, UObject*& OutTargetObject, FString& OutError)
+{
+    OutError.Empty();
+    OutTargetObject = nullptr;
+    
+    if (!RootObject)
+    {
+        OutError = TEXT("Root object is null");
+        return nullptr;
+    }
+    
+    if (PropertyPath.IsEmpty())
+    {
+        OutError = TEXT("Property path is empty");
+        return nullptr;
+    }
+    
+    // Split the path by dots
+    TArray<FString> PathSegments;
+    PropertyPath.ParseIntoArray(PathSegments, TEXT("."), true);
+    
+    if (PathSegments.Num() == 0)
+    {
+        OutError = TEXT("Invalid property path format");
+        return nullptr;
+    }
+    
+    UObject* CurrentObject = RootObject;
+    FProperty* CurrentProperty = nullptr;
+    
+    for (int32 i = 0; i < PathSegments.Num(); ++i)
+    {
+        const FString& Segment = PathSegments[i];
+        const bool bIsLastSegment = (i == PathSegments.Num() - 1);
+        
+        // Find property in current object's class
+        CurrentProperty = FindFProperty<FProperty>(CurrentObject->GetClass(), FName(*Segment));
+        
+        if (!CurrentProperty)
+        {
+            OutError = FString::Printf(TEXT("Property '%s' not found on object '%s' (segment %d of %d)"), 
+                *Segment, *CurrentObject->GetName(), i + 1, PathSegments.Num());
+            return nullptr;
+        }
+        
+        // If this is the last segment, we've found our target
+        if (bIsLastSegment)
+        {
+            OutTargetObject = CurrentObject;
+            return CurrentProperty;
+        }
+        
+        // Otherwise, we need to traverse deeper
+        // Check if this property is an object or struct that we can traverse into
+        if (FObjectProperty* ObjectProp = CastField<FObjectProperty>(CurrentProperty))
+        {
+            // Get the object value and traverse into it
+            UObject* NextObject = ObjectProp->GetObjectPropertyValue_InContainer(CurrentObject);
+            if (!NextObject)
+            {
+                OutError = FString::Printf(TEXT("Object property '%s' is null (segment %d of %d)"), 
+                    *Segment, i + 1, PathSegments.Num());
+                return nullptr;
+            }
+            CurrentObject = NextObject;
+        }
+        else if (FStructProperty* StructProp = CastField<FStructProperty>(CurrentProperty))
+        {
+            // For structs, we need to continue traversing within the struct's memory
+            // This is more complex - we'll need to look up properties within the struct type
+            if (i + 1 < PathSegments.Num())
+            {
+                const FString& NextSegment = PathSegments[i + 1];
+                void* StructPtr = StructProp->ContainerPtrToValuePtr<void>(CurrentObject);
+                
+                if (!StructPtr || !StructProp->Struct)
+                {
+                    OutError = FString::Printf(TEXT("Invalid struct property '%s'"), *Segment);
+                    return nullptr;
+                }
+                
+                // Find the property within the struct
+                FProperty* StructMemberProp = FindFProperty<FProperty>(StructProp->Struct, FName(*NextSegment));
+                if (!StructMemberProp)
+                {
+                    OutError = FString::Printf(TEXT("Property '%s' not found in struct '%s'"), 
+                        *NextSegment, *StructProp->Struct->GetName());
+                    return nullptr;
+                }
+                
+                // If this is the last segment (next one), return it with a temporary object wrapper
+                // Note: For struct member access, we need to return the property and the
+                // container object, but the property itself will need special handling
+                // since it's embedded in the struct's memory space.
+                i++; // Skip the next segment since we just processed it
+                if (i == PathSegments.Num() - 1)
+                {
+                    // For struct members, we'll create a synthetic approach:
+                    // We return the struct property itself and set a flag or use special handling
+                    // For now, we'll return nullptr and set an error indicating struct member access
+                    // needs special handling. Callers should handle struct members differently.
+                    OutError = FString::Printf(TEXT("Direct struct member access not yet supported: %s.%s"), 
+                        *Segment, *NextSegment);
+                    return nullptr;
+                }
+            }
+        }
+        else
+        {
+            // Property type doesn't support traversal
+            OutError = FString::Printf(TEXT("Cannot traverse into property '%s' of type '%s'"), 
+                *Segment, *CurrentProperty->GetClass()->GetName());
+            return nullptr;
+        }
+    }
+    
+    OutError = TEXT("Unexpected end of property path resolution");
+    return nullptr;
+}
+
 static inline bool IsFastMode(const TSharedPtr<FJsonObject>& Payload)
 {
     if (!Payload.IsValid()) return false;
@@ -734,12 +1165,12 @@ static inline UBlueprint* LoadBlueprintAsset(const FString& Req, FString& OutNor
         BP = Cast<UBlueprint>(Found.GetAsset());
         if (!BP)
         {
-            const FString PathStr = Found.GetSoftObjectPath().ToString();
+            const FString PathStr = Found.ToSoftObjectPath().ToString();
             BP = LoadObject<UBlueprint>(nullptr, *PathStr);
         }
         if (BP)
         {
-            OutNormalized = Found.GetSoftObjectPath().ToString();
+            OutNormalized = Found.ToSoftObjectPath().ToString();
             if (OutNormalized.Contains(TEXT("."))) OutNormalized = OutNormalized.Left(OutNormalized.Find(TEXT(".")));
             return BP;
         }

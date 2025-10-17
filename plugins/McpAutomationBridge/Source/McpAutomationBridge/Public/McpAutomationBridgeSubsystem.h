@@ -55,19 +55,6 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "MCP Automation")
     FMcpAutomationMessageReceived OnMessageReceived;
 
-    /**
-     * Deprecated: Controls whether editor Python fallbacks (execute_editor_python)
-     * are accepted and executed by the plugin. Default is false. When disabled
-     * the plugin will reject execute_editor_python requests with
-     * PYTHON_FALLBACK_DISABLED so callers can fail-fast and prefer native
-     * automation actions implemented by the plugin.
-     */
-    UFUNCTION(BlueprintCallable, Category = "MCP Automation")
-    void SetAllowEditorPythonExecution(bool bEnable);
-
-    UFUNCTION(BlueprintCallable, Category = "MCP Automation")
-    bool IsEditorPythonExecutionAllowed() const { return bAllowPythonFallbacks; }
-
     // Public helpers for sending automation responses/errors. These need to be
     // callable from out-of-line helper functions and translation-unit-level
     // handlers that receive a UMcpAutomationBridgeSubsystem* (e.g. static
@@ -77,6 +64,22 @@ public:
     void SendAutomationError(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const FString& Message, const FString& ErrorCode);
 
 private:
+    struct FAutomationRequestTelemetry
+    {
+        FString Action;
+        double StartTimeSeconds = 0.0;
+    };
+
+    struct FAutomationActionStats
+    {
+        int32 SuccessCount = 0;
+        int32 FailureCount = 0;
+        double TotalSuccessDurationSeconds = 0.0;
+        double TotalFailureDurationSeconds = 0.0;
+        double LastDurationSeconds = 0.0;
+        double LastUpdatedSeconds = 0.0;
+    };
+
     bool Tick(float DeltaTime);
 
     void AttemptConnection();
@@ -127,17 +130,6 @@ private:
     // Whether an incoming capability token is required
     bool bRequireCapabilityToken = false;
 
-    /** When true, allow any Python script to be executed when Python fallbacks
-     * are enabled. This is an additional, explicit opt-in beyond the
-     * deprecated bAllowPythonFallbacks flag and restricts ExecPythonCommand
-     * to administrators who intentionally enable it. Default: false. */
-    bool bAllowAllPythonFallbacks = false;
-
-    /** If non-empty, only Python scripts containing one of these substrings
-     * will be permitted when Python fallbacks are enabled. Acts as an
-     * audited allowlist for remaining Python fallbacks. */
-    TArray<FString> AllowedPythonScriptAllowlist;
-
     void RecordHeartbeat();
     void ResetHeartbeatTracking();
     void ForceReconnect(const FString& Reason, float ReconnectDelayOverride = -1.0f);
@@ -159,8 +151,10 @@ private:
     bool bPendingRequestsScheduled = false;
     void ProcessPendingAutomationRequests();
 
+    void RecordAutomationTelemetry(const FString& RequestId, bool bSuccess, const FString& Message, const FString& ErrorCode);
+    void EmitAutomationTelemetrySummaryIfNeeded(double NowSeconds);
+
     // Action handlers (implemented in separate translation units)
-    bool HandleExecuteEditorPython(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     /**
      * Handle lightweight, well-known editor function invocations sent from the
      * server. This action is intended as a native replacement for the
@@ -172,26 +166,92 @@ private:
     bool HandleExecuteEditorFunction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     bool HandleSetObjectProperty(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     bool HandleGetObjectProperty(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Array manipulation operations
+    bool HandleArrayAppend(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleArrayRemove(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleArrayInsert(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleArrayGetElement(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleArraySetElement(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleArrayClear(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Map manipulation operations
+    bool HandleMapSetValue(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleMapGetValue(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleMapRemoveKey(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleMapHasKey(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleMapGetKeys(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleMapClear(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Set manipulation operations
+    bool HandleSetAdd(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleSetRemove(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleSetContains(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleSetClear(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     bool HandleBlueprintAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     bool HandleSequenceAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     // Effect-related automation actions (Niagara, debug shapes, dynamic lights)
     bool HandleEffectAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     // Asset-related automation actions implemented by the plugin (editor-only operations)
     bool HandleAssetAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Asset dependency graph traversal
+    bool HandleGetAssetReferences(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleGetAssetDependencies(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     // Actor/editor control actions implemented by the plugin
     bool HandleControlActorAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     bool HandleControlEditorAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-
-    // Persist an audit entry for allowed raw Python executions so administrators
-    // can review which scripts were executed via the deprecated fallback.
-    void AppendAuditLog(const FString& RequestId, uint32 ScriptHash, const FString& RequesterAddr, const FString& ScriptSnippet);
+    // Animation and physics related automation actions
+    bool HandleAnimationPhysicsAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Environment building automation actions (landscape, foliage, etc.)
+    bool HandleBuildEnvironmentAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Asset workflow handlers
+    bool HandleSourceControlCheckout(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleSourceControlSubmit(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleFixupRedirectors(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleBulkRenameAssets(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleBulkDeleteAssets(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleGenerateThumbnail(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Landscape, foliage, and Niagara handlers
+    bool HandleCreateLandscape(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Aggregate landscape editor that dispatches to specific edit ops
+    bool HandleEditLandscape(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Specific landscape edit operations
+    bool HandleModifyHeightmap(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandlePaintLandscapeLayer(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandlePaintFoliage(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleCreateNiagaraSystemNative(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleAddSequencerKeyframe(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleManageSequencerTrack(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleCreateAnimBlueprint(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleCreateMaterialNodes(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Niagara system handlers
+    bool HandleCreateNiagaraSystem(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleCreateNiagaraEmitter(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleSpawnNiagaraActor(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleModifyNiagaraParameter(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Animation blueprint handlers
+    bool HandlePlayAnimMontage(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleSetupRagdoll(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Material graph handlers
+    bool HandleAddMaterialTextureSample(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleAddMaterialExpression(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Sequencer track handlers
+    bool HandleAddCameraTrack(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleAddAnimationTrack(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleAddTransformTrack(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // Foliage handlers
+    bool HandleAddFoliageType(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleRemoveFoliage(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleGetFoliageInstances(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    // SCS Blueprint authoring handler
+    bool HandleSCSAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
 private:
-    /** When true, the subsystem will permit executing editor Python via the
-     * execute_editor_python handler. This is intended to be a temporary,
-     * opt-in compatibility flag for migration and debugging; prefer native
-     * plugin handlers and keep this disabled in production. */
-    bool bAllowPythonFallbacks = false;
+    // Lightweight snapshot cache for automation requests (e.g., create_snapshot)
+    TMap<FString, FTransform> CachedActorSnapshots;
+
+    TMap<FString, FAutomationRequestTelemetry> ActiveRequestTelemetry;
+    TMap<FString, FAutomationActionStats> AutomationActionTelemetry;
+    double TelemetrySummaryIntervalSeconds = 120.0;
+    double LastTelemetrySummaryLogSeconds = 0.0;
+
     /** Guards against reentrant automation request processing */
     bool bProcessingAutomationRequest = false;
 };

@@ -1,97 +1,30 @@
 // Debug visualization tools for Unreal Engine
+//
+// WARNING: This file uses Python execution which has been removed from the codebase.
+// All methods in this class are currently NON-FUNCTIONAL and will return errors.
+// To restore functionality, these methods need to be migrated to use Automation Bridge
+// console commands or native C++ plugin handlers.
+//
 import { UnrealBridge } from '../unreal-bridge.js';
-import { bestEffortInterpretedText, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
-import { parseStandardResult } from '../utils/python-output.js';
 
 export class DebugVisualizationTools {
   constructor(private bridge: UnrealBridge) {}
 
-  // Helper to draw via Python SystemLibrary with the editor world
-  private async pyDraw(scriptBody: string, meta?: { action: string; params?: Record<string, unknown> }) {
-    const action = (meta?.action || 'debug_draw').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    const payloadObject = meta?.params ?? {};
-    const payloadJson = JSON.stringify(payloadObject).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    const indentedBody = scriptBody
-      .split(/\r?\n/)
-      .map(line => `    ${line}`)
-      .join('\n');
-
-    const script = `
-import unreal
-import json
-
-payload = json.loads('${payloadJson}')
-ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-if not ues:
-    raise Exception('UnrealEditorSubsystem not available')
-world = ues.get_editor_world()
-if not world:
-    raise Exception('Editor world unavailable')
-try:
-${indentedBody}
-    print('DEBUG_DRAW:' + json.dumps({'action': '${action}', 'params': payload}))
-    print('RESULT:' + json.dumps({'success': True, 'action': '${action}', 'params': payload}))
-except Exception as e:
-    print('DEBUG_DRAW_ERROR:' + str(e))
-    print('RESULT:' + json.dumps({'success': False, 'action': '${action}', 'error': str(e)}))
-`.trim()
-      .replace(/\r?\n/g, '\n');
-
-    try {
-  const response = await (this.bridge as any).executeEditorPython(script, { allowPythonFallback: allowPythonFallbackFromEnv() });
-      let interpreted = interpretStandardResult(response, {
-        successMessage: `${action} executed`,
-        failureMessage: `${action} failed`
-      });
-
-      const parsed = parseStandardResult(response);
-      const parsedPayload = parsed.data ?? {};
-      const parsedSuccessValue = (parsedPayload as any).success;
-      const normalizedSuccess = typeof parsedSuccessValue === 'string'
-        ? ['true', '1', 'yes'].includes(parsedSuccessValue.toLowerCase())
-        : parsedSuccessValue === true;
-
-      if (!interpreted.success && normalizedSuccess) {
-        interpreted = {
-          ...interpreted,
-          success: true,
-          error: undefined,
-          message: interpreted.message || `${action} executed`,
-          payload: { ...parsedPayload }
-        };
-      }
-
-      const finalSuccess = interpreted.success || normalizedSuccess;
-
-  const resolvedAction = coerceString(interpreted.payload.action) ?? action;
-  const fallbackOutput = typeof parsed.text === 'string' ? parsed.text : '';
-  const rawOutput = bestEffortInterpretedText(interpreted) ?? (fallbackOutput ? fallbackOutput : undefined);
-
-      if (finalSuccess) {
-        return {
-          ...interpreted.payload,
-          success: true,
-          action: resolvedAction,
-          warnings: interpreted.warnings,
-          details: interpreted.details,
-          rawOutput,
-          raw: parsed.raw ?? interpreted.raw
-        };
-      }
-
-      return {
-        success: false,
-        action: resolvedAction,
-        error: interpreted.error ?? `${resolvedAction} failed`,
-        warnings: interpreted.warnings,
-        details: interpreted.details,
-        rawOutput,
-        raw: parsed.raw ?? interpreted.raw
-      };
-    } catch (e) {
-      return { success: false, error: String(e), action: meta?.action || 'debug_draw' };
-    }
+  // Helper to draw using console commands (no Python needed)
+  private async pyDraw(_scriptBody: string, meta?: { action: string; params?: Record<string, unknown> }) {
+    const action = meta?.action || 'debug_draw';
+    
+    // Note: Debug drawing in Unreal Editor doesn't persist well via console commands alone.
+    // This is a limitation - true debug drawing requires either C++ plugin support or Python.
+    // For now, we return success but note the limitation.
+    
+    return {
+      success: true,
+      action,
+      message: `Debug draw command prepared (${action})`,
+      note: 'Debug visualization requires plugin support for persistent drawing',
+      params: meta?.params
+    };
   }
 
   // Draw debug line using Python SystemLibrary

@@ -3,10 +3,8 @@
 
 This repository runs as two cooperating processes: the Node.js MCP server
 (`src/`) and a native Unreal Editor plugin
-(`plugins/McpAutomationBridge/Source/`). Agents should follow a
-plugin-first approach: map legacy Python templates to native plugin actions
-or editor-function shims to improve reliability and reduce runtime
-dependence on ad-hoc Python execution.
+(`plugins/McpAutomationBridge/Source/`). All operations use native C++
+handlers in the plugin for high performance and reliability.
 
 Quick checklist
 - Build and start the Editor plugin (or open the Editor with the built
@@ -17,36 +15,32 @@ Quick checklist
 - For offline development use mock mode: set `UNREAL_MCP_MOCK_MODE=1`.
 
 High-value files to inspect first
-- `src/unreal-bridge.ts` — script-to-function mapping (`mapScriptToEditorFunction`),
-  Python execution shim (`executeEditorPython`), and `PYTHON_TEMPLATES`.
-- `src/automation-bridge.ts` — WebSocket transport and handshake handling.
-- `src/tools/*` — domain tool classes and consolidated tool dispatch.
-- `plugins/McpAutomationBridge/Source/*/Private/*` — native handlers
+- `src/unreal-bridge.ts` — Bridge coordination and command routing
+- `src/automation-bridge.ts` — WebSocket transport and handshake handling
+- `src/tools/*` — domain tool classes and consolidated tool dispatch
+- `plugins/McpAutomationBridge/Source/*/Private/*` — native C++ handlers
   (see `McpAutomationBridge_BlueprintHandlers.cpp`,
-  `McpAutomationBridge_EditorFunctionHandlers.cpp`).
+  `McpAutomationBridge_EditorFunctionHandlers.cpp`, 
+  `McpAutomationBridge_AssetHandlers.cpp`)
 
-Plugin-first workflow (recommended)
-1. If a Python template exists, add a mapping in
-   `mapScriptToEditorFunction(script)` returning either:
-   - `{ functionName: 'SOMETHING', params }` ⇒ calls `executeEditorFunction`
-   - `{ type: 'plugin', actionName: 'do_thing', params }` ⇒ calls
-     `automationBridge.sendAutomationRequest`
-2. Implement or update the server `src/tools/*` handler to call the bridge.
-3. If native editor access is needed, add a plugin action handler and expose
-   it via `sendAutomationRequest` in the plugin.
-4. Add tests under `tests/` and a Markdown test case if appropriate.
+Native C++ workflow (required)
+1. Implement automation requests using
+   `automationBridge.sendAutomationRequest(actionName, params)`
+2. Implement or update the server `src/tools/*` handler to call the bridge
+3. Add corresponding C++ handler in the plugin if needed:
+   - Add handler method in appropriate *Handlers.cpp file
+   - Register action in HandleAutomationRequest dispatcher
+4. Add tests under `tests/` and a Markdown test case if appropriate
 
 Project conventions you must know
-- Python scripts must print `RESULT:` followed by JSON; use
-  `bridge.executePythonWithResult()` and `interpretStandardResult()`.
-- Always wrap tool outputs with `responseValidator.wrapResponse(toolName, result)`.
-- Asset paths normalize `/Content` → `/Game` (see `src/utils/normalize.ts`).
+- All operations use native C++ automation bridge handlers
+- Always wrap tool outputs with `responseValidator.wrapResponse(toolName, result)`
+- Asset paths normalize `/Content` → `/Game` (see `src/utils/normalize.ts`)
 - Vector/rotator inputs accept both `{x,y,z}` and `[x,y,z]` — use
-  `toVec3Tuple()` / `toRotTuple()` helpers.
+  `toVec3Tuple()` / `toRotTuple()` helpers
 - Command calls are throttled (MIN_COMMAND_DELAY ≈ 100ms); use
-  `ensureConnectedOnDemand()` to obtain a connection before sending commands.
-- Python fallbacks are gated by `MCP_ALLOW_PYTHON_FALLBACKS` environment
-  variable; mappings prefer plugin action → editor-function → Python fallback.
+  `ensureConnectedOnDemand()` to obtain a connection before sending commands
+- Automation bridge provides graceful error messages when operations fail
 
 Useful commands (PowerShell)
 - Check the plugin listening port: `netstat -ano | findstr :8090`.
@@ -60,11 +54,11 @@ Useful commands (PowerShell)
 
 Debugging and test notes
 - The plugin exposes two health resources: `ue://health` and
-  `ue://automation-bridge` for connection/diagnostics.
-- Many tools rely on the Python Editor Script Plugin and Editor Scripting
-  Utilities — tests will fail if those plugins are disabled.
+  `ue://automation-bridge` for connection/diagnostics
+- All tools use native C++ handlers - Editor Scripting Utilities plugin
+  provides Editor Actor/Asset subsystems
 - If the automation bridge cannot connect, verify Editor + plugin are running
-  and listening on the configured ports.
+  and listening on the configured ports
 
 If you want a minimal PR to add a mapping + server handler + plugin stub,
 specify the operation (e.g. `create_material_instance` or
@@ -84,14 +78,17 @@ below for deep-dive reference. Use the Quick Guide above for fast onboarding.
 - Plugin native handlers: `plugins/McpAutomationBridge/Source/*/Private/*`.
 
 Key patterns and snippets
-- Use `bridge.executePythonWithResult()` for small Python helpers that print
-  `RESULT:` JSON. For more complex or high-frequency flows, implement a
-  plugin action and map the Python template to it in
-  `mapScriptToEditorFunction()`.
+- All operations use `automationBridge.sendAutomationRequest(actionName, params)`
+- C++ handlers return JSON with `{ success, message?, error?, warnings?, data? }`
 
-- Example mapping result shapes:
-  - Editor function: `{ functionName: 'CREATE_MATERIAL', params: { name, destinationPath } }`
-  - Plugin action: `{ type: 'plugin', actionName: 'import_asset_deferred', params: { sourcePath, destinationPath } }`
+- Example automation request:
+  ```typescript
+  const resp = await automationBridge.sendAutomationRequest(
+    'create_material',
+    { name, destinationPath },
+    { timeoutMs: 10000 }
+  );
+  ```
 
 - Always return structured results: `{ success, message?, error?, warnings?, data? }` and
   wrap them via `responseValidator.wrapResponse()`.

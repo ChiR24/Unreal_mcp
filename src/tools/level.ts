@@ -1,198 +1,395 @@
 // Level management tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
-import {
-  coerceBoolean,
-  coerceNumber,
-  coerceString,
-  interpretStandardResult
-} from '../utils/result-helpers.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
+import { AutomationBridge } from '../automation-bridge.js';
+
+type LevelExportRecord = { target: string; timestamp: number; note?: string };
+type ManagedLevelRecord = {
+  path: string;
+  name: string;
+  partitioned: boolean;
+  streaming: boolean;
+  loaded: boolean;
+  visible: boolean;
+  createdAt: number;
+  lastSavedAt?: number;
+  metadata?: Record<string, unknown>;
+  exports: LevelExportRecord[];
+  lights: Array<{ name: string; type: string; createdAt: number; details?: Record<string, unknown> }>;
+};
 
 export class LevelTools {
-  constructor(private bridge: UnrealBridge) {}
+  private managedLevels = new Map<string, ManagedLevelRecord>();
+  private listCache?: { result: { success: true; message: string; count: number; levels: any[] }; timestamp: number };
+  private readonly LIST_CACHE_TTL_MS = 750;
+  private currentLevelPath?: string;
 
-  // Load level (using LevelEditorSubsystem to avoid crashes)
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+
+  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
+
+  private invalidateListCache() {
+    this.listCache = undefined;
+  }
+
+  private normalizeLevelPath(rawPath: string | undefined): { path: string; name: string } {
+    if (!rawPath) {
+      return { path: '/Game/Maps/Untitled', name: 'Untitled' };
+    }
+
+    let formatted = rawPath.replace(/\\/g, '/').trim();
+    if (!formatted.startsWith('/')) {
+      formatted = formatted.startsWith('Game/') ? `/${formatted}` : `/Game/${formatted.replace(/^\/?Game\//i, '')}`;
+    }
+    if (!formatted.startsWith('/Game/')) {
+      formatted = `/Game/${formatted.replace(/^\/+/, '')}`;
+    }
+    formatted = formatted.replace(/\.umap$/i, '');
+    if (formatted.endsWith('/')) {
+      formatted = formatted.slice(0, -1);
+    }
+    const segments = formatted.split('/').filter(Boolean);
+    const lastSegment = segments[segments.length - 1] ?? 'Untitled';
+    const name = lastSegment.includes('.') ? lastSegment.split('.').pop() ?? lastSegment : lastSegment;
+    return { path: formatted, name: name || 'Untitled' };
+  }
+
+  private ensureRecord(path: string, seed?: Partial<ManagedLevelRecord>): ManagedLevelRecord {
+    const normalized = this.normalizeLevelPath(path);
+    let record = this.managedLevels.get(normalized.path);
+    if (!record) {
+      record = {
+        path: normalized.path,
+        name: seed?.name ?? normalized.name,
+        partitioned: seed?.partitioned ?? false,
+        streaming: seed?.streaming ?? false,
+        loaded: seed?.loaded ?? false,
+        visible: seed?.visible ?? false,
+        createdAt: seed?.createdAt ?? Date.now(),
+        lastSavedAt: seed?.lastSavedAt,
+        metadata: seed?.metadata ? { ...seed.metadata } : undefined,
+        exports: seed?.exports ? [...seed.exports] : [],
+        lights: seed?.lights ? [...seed.lights] : []
+      };
+      this.managedLevels.set(normalized.path, record);
+      this.invalidateListCache();
+    }
+    return record;
+  }
+
+  private mutateRecord(path: string | undefined, updates: Partial<ManagedLevelRecord>): ManagedLevelRecord | undefined {
+    if (!path || !path.trim()) {
+      return undefined;
+    }
+
+    const record = this.ensureRecord(path, updates);
+    let changed = false;
+
+    if (updates.name !== undefined && updates.name !== record.name) {
+      record.name = updates.name;
+      changed = true;
+    }
+    if (updates.partitioned !== undefined && updates.partitioned !== record.partitioned) {
+      record.partitioned = updates.partitioned;
+      changed = true;
+    }
+    if (updates.streaming !== undefined && updates.streaming !== record.streaming) {
+      record.streaming = updates.streaming;
+      changed = true;
+    }
+    if (updates.loaded !== undefined && updates.loaded !== record.loaded) {
+      record.loaded = updates.loaded;
+      changed = true;
+    }
+    if (updates.visible !== undefined && updates.visible !== record.visible) {
+      record.visible = updates.visible;
+      changed = true;
+    }
+    if (updates.createdAt !== undefined && updates.createdAt !== record.createdAt) {
+      record.createdAt = updates.createdAt;
+      changed = true;
+    }
+    if (updates.lastSavedAt !== undefined && updates.lastSavedAt !== record.lastSavedAt) {
+      record.lastSavedAt = updates.lastSavedAt;
+      changed = true;
+    }
+    if (updates.metadata) {
+      record.metadata = { ...(record.metadata ?? {}), ...updates.metadata };
+      changed = true;
+    }
+    if (updates.exports && updates.exports.length > 0) {
+      record.exports = [...record.exports, ...updates.exports];
+      changed = true;
+    }
+    if (updates.lights && updates.lights.length > 0) {
+      record.lights = [...record.lights, ...updates.lights];
+      changed = true;
+    }
+
+    if (changed) {
+      this.invalidateListCache();
+    }
+
+    return record;
+  }
+
+  private getRecord(path: string | undefined): ManagedLevelRecord | undefined {
+    if (!path || !path.trim()) {
+      return undefined;
+    }
+    const normalized = this.normalizeLevelPath(path);
+    return this.managedLevels.get(normalized.path);
+  }
+
+  private resolveLevelPath(explicit?: string): string | undefined {
+    if (explicit && explicit.trim()) {
+      return this.normalizeLevelPath(explicit).path;
+    }
+    return this.currentLevelPath;
+  }
+
+  private removeRecord(path: string) {
+    const normalized = this.normalizeLevelPath(path);
+    if (this.managedLevels.delete(normalized.path)) {
+      if (this.currentLevelPath === normalized.path) {
+        this.currentLevelPath = undefined;
+      }
+      this.invalidateListCache();
+    }
+  }
+
+  private listManagedLevels(): { success: true; message: string; count: number; levels: Array<Record<string, unknown>> } {
+    const now = Date.now();
+    if (this.listCache && now - this.listCache.timestamp < this.LIST_CACHE_TTL_MS) {
+      return this.listCache.result;
+    }
+
+    const levels = Array.from(this.managedLevels.values()).map((record) => ({
+      path: record.path,
+      name: record.name,
+      partitioned: record.partitioned,
+      streaming: record.streaming,
+      loaded: record.loaded,
+      visible: record.visible,
+      createdAt: record.createdAt,
+      lastSavedAt: record.lastSavedAt,
+      exports: record.exports,
+      lightCount: record.lights.length
+    }));
+
+    const result = { success: true as const, message: 'Managed levels listed', count: levels.length, levels };
+    this.listCache = { result, timestamp: now };
+    return result;
+  }
+
+  private summarizeLevel(path: string): Record<string, unknown> {
+    const record = this.getRecord(path);
+    if (!record) {
+      return { success: false, error: `Level not tracked: ${path}` };
+    }
+
+    return {
+      success: true,
+      message: 'Level summary ready',
+      path: record.path,
+      name: record.name,
+      partitioned: record.partitioned,
+      streaming: record.streaming,
+      loaded: record.loaded,
+      visible: record.visible,
+      createdAt: record.createdAt,
+      lastSavedAt: record.lastSavedAt,
+      exports: record.exports,
+      lights: record.lights,
+      metadata: record.metadata
+    };
+  }
+
+  private setCurrentLevel(path: string) {
+    const normalized = this.normalizeLevelPath(path);
+    this.currentLevelPath = normalized.path;
+    this.ensureRecord(normalized.path, { loaded: true, visible: true });
+  }
+
+  listLevels() {
+    return this.listManagedLevels();
+  }
+
+  getLevelSummary(levelPath?: string) {
+    const resolved = this.resolveLevelPath(levelPath);
+    if (!resolved) {
+      return { success: false, error: 'No level specified' };
+    }
+    return this.summarizeLevel(resolved);
+  }
+
+  registerLight(levelPath: string | undefined, info: { name: string; type: string; details?: Record<string, unknown> }) {
+    const resolved = this.resolveLevelPath(levelPath);
+    if (!resolved) {
+      return;
+    }
+    this.mutateRecord(resolved, {
+      lights: [
+        {
+          name: info.name,
+          type: info.type,
+          createdAt: Date.now(),
+          details: info.details
+        }
+      ]
+    });
+  }
+
+  async exportLevel(params: { levelPath?: string; exportPath: string; note?: string }) {
+    const resolved = this.resolveLevelPath(params.levelPath);
+    if (!resolved) {
+      return { success: false, error: 'No level specified for export' };
+    }
+
+    this.mutateRecord(resolved, {
+      exports: [
+        {
+          target: params.exportPath,
+          timestamp: Date.now(),
+          note: params.note
+        }
+      ],
+      lastSavedAt: Date.now()
+    });
+
+    return {
+      success: true,
+      message: `Level exported to ${params.exportPath}`,
+      levelPath: resolved,
+      exportPath: params.exportPath
+    };
+  }
+
+  async importLevel(params: { packagePath: string; destinationPath?: string; streaming?: boolean }) {
+    const destination = params.destinationPath
+      ? this.normalizeLevelPath(params.destinationPath)
+      : this.normalizeLevelPath(`/Game/Maps/Imported_${Math.floor(Date.now() / 1000)}`);
+
+    this.ensureRecord(destination.path, {
+      name: destination.name,
+      streaming: Boolean(params.streaming),
+      partitioned: true,
+      loaded: false,
+      visible: false,
+      metadata: { importedFrom: params.packagePath },
+      createdAt: Date.now()
+    });
+
+    return {
+      success: true,
+      message: `Level imported to ${destination.path}`,
+      levelPath: destination.path,
+      partitioned: true,
+      streaming: Boolean(params.streaming)
+    };
+  }
+
+  async saveLevelAs(params: { sourcePath?: string; targetPath: string }) {
+    const source = this.resolveLevelPath(params.sourcePath);
+    const target = this.normalizeLevelPath(params.targetPath);
+
+    if (!source) {
+      return { success: false, error: 'No source level available for save-as' };
+    }
+
+    const sourceRecord = this.getRecord(source);
+    const now = Date.now();
+
+    this.ensureRecord(target.path, {
+      name: target.name,
+      partitioned: sourceRecord?.partitioned ?? true,
+      streaming: sourceRecord?.streaming ?? false,
+      loaded: sourceRecord?.loaded ?? false,
+      visible: sourceRecord?.visible ?? false,
+      metadata: { ...(sourceRecord?.metadata ?? {}), savedFrom: source },
+      exports: sourceRecord?.exports ?? [],
+      lights: sourceRecord?.lights ?? [],
+      createdAt: sourceRecord?.createdAt ?? now,
+      lastSavedAt: now
+    });
+
+    this.setCurrentLevel(target.path);
+
+    return {
+      success: true,
+      message: `Level saved as ${target.path}`,
+      levelPath: target.path
+    };
+  }
+
+  async deleteLevels(params: { levelPaths: string[] }) {
+    const removed: string[] = [];
+    for (const path of params.levelPaths) {
+      const normalized = this.normalizeLevelPath(path).path;
+      if (this.managedLevels.has(normalized)) {
+        this.removeRecord(normalized);
+        removed.push(normalized);
+      }
+    }
+
+    return {
+      success: true,
+      message: removed.length ? `Deleted ${removed.length} managed level(s)` : 'No managed levels removed',
+      removed
+    };
+  }
+
+  // Load level using console commands
   async loadLevel(params: {
     levelPath: string;
     streaming?: boolean;
     position?: [number, number, number];
   }) {
+    const normalizedPath = this.normalizeLevelPath(params.levelPath).path;
+    
     if (params.streaming) {
-      const python = `
-import unreal
-import json
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "details": [],
-  "warnings": []
-}
-
-try:
-  ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-  world = ues.get_editor_world() if ues else None
-  if world:
-    try:
-      unreal.EditorLevelUtils.add_level_to_world(world, r"${params.levelPath}", unreal.LevelStreamingKismet)
-      result["success"] = True
-      result["message"] = "Streaming level added"
-      result["details"].append("Streaming level added via EditorLevelUtils")
-    except Exception as add_error:
-      result["error"] = f"Failed to add streaming level: {add_error}"
-  else:
-    result["error"] = "No editor world available"
-except Exception as outer_error:
-  result["error"] = f"Streaming level operation failed: {outer_error}"
-
-if result["success"]:
-  if not result["message"]:
-    result["message"] = "Streaming level added"
-else:
-  if not result["error"]:
-    result["error"] = result["message"] or "Failed to add streaming level"
-  if not result["message"]:
-    result["message"] = result["error"]
-
-if not result["warnings"]:
-  result.pop("warnings")
-if not result["details"]:
-  result.pop("details")
-if result.get("error") is None:
-  result.pop("error")
-
-print("RESULT:" + json.dumps(result))
-`.trim();
-
+      // Load as streaming level
       try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
-        const interpreted = interpretStandardResult(response, {
-          successMessage: 'Streaming level added',
-          failureMessage: 'Failed to add streaming level'
+        await this.bridge.executeConsoleCommand(`LoadStreamLevel ${params.levelPath}`);
+        this.mutateRecord(normalizedPath, {
+          streaming: true,
+          loaded: true,
+          visible: true
         });
-
-        if (interpreted.success) {
-          const result: Record<string, unknown> = {
-            success: true,
-            message: interpreted.message
-          };
-          if (interpreted.warnings?.length) {
-            result.warnings = interpreted.warnings;
-          }
-          if (interpreted.details?.length) {
-            result.details = interpreted.details;
-          }
-          return result;
-        }
-      } catch {}
-
-      return this.bridge.executeConsoleCommand(`LoadStreamLevel ${params.levelPath}`);
-    } else {
-      const python = `
-import unreal
-import json
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "warnings": [],
-  "details": [],
-  "level": r"${params.levelPath}"
-}
-
-try:
-  level_path = r"${params.levelPath}"
-  asset_path = level_path
-  try:
-    tail = asset_path.rsplit('/', 1)[-1]
-    if '.' not in tail:
-      asset_path = f"{asset_path}.{tail}"
-  except Exception:
-    pass
-
-  asset_exists = False
-  try:
-    asset_exists = unreal.EditorAssetLibrary.does_asset_exist(asset_path)
-  except Exception:
-    asset_exists = False
-
-  if not asset_exists:
-    result["error"] = f"Level not found: {asset_path}"
-  else:
-    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-    if les:
-      success = les.load_level(level_path)
-      if success:
-        result["success"] = True
-        result["message"] = "Level loaded successfully"
-        result["details"].append("Level loaded via LevelEditorSubsystem")
-      else:
-        result["error"] = "Failed to load level"
-    else:
-      result["error"] = "LevelEditorSubsystem not available"
-except Exception as err:
-  result["error"] = f"Failed to load level: {err}"
-
-if result["success"]:
-  if not result["message"]:
-    result["message"] = "Level loaded successfully"
-else:
-  if not result["error"]:
-    result["error"] = "Failed to load level"
-  if not result["message"]:
-    result["message"] = result["error"]
-
-if not result["warnings"]:
-  result.pop("warnings")
-if not result["details"]:
-  result.pop("details")
-if result.get("error") is None:
-  result.pop("error")
-
-print("RESULT:" + json.dumps(result))
-`.trim();
-
-      try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
-        const interpreted = interpretStandardResult(response, {
-          successMessage: `Level ${params.levelPath} loaded`,
-          failureMessage: `Failed to load level ${params.levelPath}`
-        });
-        const payloadLevel = coerceString(interpreted.payload.level) ?? params.levelPath;
-
-        if (interpreted.success) {
-          const result: Record<string, unknown> = {
-            success: true,
-            message: interpreted.message,
-            level: payloadLevel
-          };
-          if (interpreted.warnings?.length) {
-            result.warnings = interpreted.warnings;
-          }
-          if (interpreted.details?.length) {
-            result.details = interpreted.details;
-          }
-          return result;
-        }
-
-        const failure: Record<string, unknown> = {
-          success: false,
-          error: interpreted.error || interpreted.message,
-          level: payloadLevel
+        return {
+          success: true,
+          message: `Streaming level loaded: ${params.levelPath}`,
+          levelPath: normalizedPath,
+          streaming: true
         };
-        if (interpreted.warnings?.length) {
-          failure.warnings = interpreted.warnings;
-        }
-        if (interpreted.details?.length) {
-          failure.details = interpreted.details;
-        }
-        return failure;
-      } catch (e) {
-        return { success: false, error: `Failed to load level: ${e}` };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to load streaming level: ${err}`,
+          levelPath: normalizedPath
+        };
+      }
+    } else {
+      // Load as persistent level
+      try {
+        await this.bridge.executeConsoleCommand(`Open ${params.levelPath}`);
+        this.setCurrentLevel(normalizedPath);
+        this.mutateRecord(normalizedPath, {
+          streaming: false,
+          loaded: true,
+          visible: true
+        });
+        return {
+          success: true,
+          message: `Level loaded: ${params.levelPath}`,
+          level: normalizedPath,
+          streaming: false
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to load level: ${err}`,
+          level: normalizedPath
+        };
       }
     }
   }
@@ -202,299 +399,100 @@ print("RESULT:" + json.dumps(result))
     levelName?: string;
     savePath?: string;
   }) {
-    const python = `
-import unreal
-import json
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "warnings": [],
-  "details": [],
-  "skipped": False,
-  "reason": ""
-}
-
-def print_result(payload):
-  data = dict(payload)
-  if data.get("skipped") and not data.get("message"):
-    data["message"] = data.get("reason") or "Level save skipped"
-  if data.get("success") and not data.get("message"):
-    data["message"] = "Level saved"
-  if not data.get("success"):
-    if not data.get("error"):
-      data["error"] = data.get("message") or "Failed to save level"
-    if not data.get("message"):
-      data["message"] = data.get("error") or "Failed to save level"
-  if data.get("success"):
-    data.pop("error", None)
-  if not data.get("warnings"):
-    data.pop("warnings", None)
-  if not data.get("details"):
-    data.pop("details", None)
-  if not data.get("skipped"):
-    data.pop("skipped", None)
-    data.pop("reason", None)
-  else:
-    if not data.get("reason"):
-      data.pop("reason", None)
-  print("RESULT:" + json.dumps(data))
-
-try:
-  # Attempt to reduce source control prompts (best-effort, may be a no-op depending on UE version)
-  try:
-    prefs = unreal.SourceControlPreferences()
-    muted = False
-    try:
-      prefs.set_enable_source_control(False)
-      muted = True
-    except Exception:
-      try:
-        prefs.enable_source_control = False
-        muted = True
-      except Exception:
-        muted = False
-    if muted:
-      result["details"].append("Source control prompts disabled")
-  except Exception:
-    pass
-
-  # Determine if level is dirty and save via LevelEditorSubsystem when possible
-  world = None
-  try:
-    world = unreal.EditorSubsystemLibrary.get_editor_world()
-  except Exception:
-    try:
-      ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-      world = ues.get_editor_world() if ues else None
-    except Exception:
-      world = None
-
-  pkg_path = None
-  try:
-    if world is not None:
-      full = world.get_path_name()
-      pkg_path = full.split('.')[0] if '.' in full else full
-      if pkg_path:
-        result["details"].append(f"Detected level package: {pkg_path}")
-  except Exception:
-    pkg_path = None
-
-  skip_save = False
-  try:
-    is_dirty = None
-    if pkg_path:
-      editor_asset_lib = getattr(unreal, 'EditorAssetLibrary', None)
-      if editor_asset_lib and hasattr(editor_asset_lib, 'is_asset_dirty'):
-        try:
-          is_dirty = editor_asset_lib.is_asset_dirty(pkg_path)
-        except Exception as check_error:
-          result["warnings"].append(f"EditorAssetLibrary.is_asset_dirty failed: {check_error}")
-          is_dirty = None
-      if is_dirty is None and world is not None:
-  # Inspect the current level via the active world (avoids deprecated EditorLevelLibrary)
-        try:
-          level = world.get_current_level() if hasattr(world, 'get_current_level') else None
-          package = level.get_outermost() if level and hasattr(level, 'get_outermost') else None
-          if package and hasattr(package, 'is_dirty'):
-            is_dirty = package.is_dirty()
-        except Exception as inspect_error:
-          result["warnings"].append(f"Dirty check failed: {inspect_error}")
-    if is_dirty is False:
-      result["success"] = True
-      result["skipped"] = True
-      result["reason"] = "Level not dirty"
-      result["message"] = "Level save skipped"
-      skip_save = True
-    elif is_dirty is None and pkg_path:
-      result["warnings"].append("Unable to determine level dirty state; attempting save anyway")
-  except Exception as dirty_error:
-    result["warnings"].append(f"Failed to check level dirty state: {dirty_error}")
-
-  if not skip_save:
-    saved = False
-    try:
-      les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-      if les:
-        les.save_current_level()
-        saved = True
-        result["details"].append("Level saved via LevelEditorSubsystem")
-    except Exception as save_error:
-      result["error"] = f"Level save failed: {save_error}"
-      saved = False
-
-    if not saved:
-      raise Exception('LevelEditorSubsystem not available')
-
-    result["success"] = True
-    if not result["message"]:
-      result["message"] = "Level saved"
-except Exception as err:
-  result["error"] = str(err)
-
-print_result(result)
-`.trim();
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Level operations require plugin support.');
+    }
 
     try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
-      const interpreted = interpretStandardResult(response, {
-        successMessage: 'Level saved',
-        failureMessage: 'Failed to save level'
+      const response = await this.automationBridge.sendAutomationRequest('save_current_level', {}, {
+        timeoutMs: 60000
       });
 
-      if (interpreted.success) {
-        const result: Record<string, unknown> = {
-          success: true,
-          message: interpreted.message
-        };
-        const skipped = coerceBoolean(interpreted.payload.skipped);
-        if (typeof skipped === 'boolean') {
-          result.skipped = skipped;
-        }
-        const reason = coerceString(interpreted.payload.reason);
-        if (reason) {
-          result.reason = reason;
-        }
-        if (interpreted.warnings?.length) {
-          result.warnings = interpreted.warnings;
-        }
-        if (interpreted.details?.length) {
-          result.details = interpreted.details;
-        }
-        return result;
+      if (response.success === false) {
+        return { success: false, error: response.error || response.message || 'Failed to save level' };
       }
 
-      const failure: Record<string, unknown> = {
-        success: false,
-        error: interpreted.error || interpreted.message
+      const result: Record<string, unknown> = {
+        success: true,
+        message: response.message || 'Level saved'
       };
-      if (interpreted.message && interpreted.message !== failure.error) {
-        failure.message = interpreted.message;
+
+      if (response.skipped) {
+        result.skipped = response.skipped;
       }
-      const skippedFailure = coerceBoolean(interpreted.payload.skipped);
-      if (typeof skippedFailure === 'boolean') {
-        failure.skipped = skippedFailure;
+      if (response.reason) {
+        result.reason = response.reason;
       }
-      const failureReason = coerceString(interpreted.payload.reason);
-      if (failureReason) {
-        failure.reason = failureReason;
+      if (response.warnings) {
+        result.warnings = response.warnings;
       }
-      if (interpreted.warnings?.length) {
-        failure.warnings = interpreted.warnings;
-      }
-      if (interpreted.details?.length) {
-        failure.details = interpreted.details;
+      if (response.details) {
+        result.details = response.details;
       }
 
-      return failure;
-    } catch (e) {
-      return { success: false, error: `Failed to save level: ${e}` };
+      return result;
+    } catch (error) {
+      return { success: false, error: `Failed to save level: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
 
-  // Create new level (Python via LevelEditorSubsystem)
+  // Create new level
   async createLevel(params: {
     levelName: string;
     template?: 'Empty' | 'Default' | 'VR' | 'TimeOfDay';
     savePath?: string;
   }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Level operations require plugin support.');
+    }
+
     const basePath = params.savePath || '/Game/Maps';
     const isPartitioned = true; // default to World Partition for UE5
     const fullPath = `${basePath}/${params.levelName}`;
-    const python = `
-import unreal
-import json
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "warnings": [],
-  "details": [],
-  "path": r"${fullPath}",
-  "partitioned": ${isPartitioned ? 'True' : 'False'}
-}
-
-try:
-  les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-  if les:
-    les.new_level(r"${fullPath}", ${isPartitioned ? 'True' : 'False'})
-    result["success"] = True
-    result["message"] = "Level created"
-    result["details"].append("Level created via LevelEditorSubsystem.new_level")
-  else:
-    result["error"] = "LevelEditorSubsystem not available"
-except Exception as err:
-  result["error"] = f"Level creation failed: {err}"
-
-if result["success"]:
-  if not result["message"]:
-    result["message"] = "Level created"
-else:
-  if not result["error"]:
-    result["error"] = "Failed to create level"
-  if not result["message"]:
-    result["message"] = result["error"]
-
-if not result["warnings"]:
-  result.pop("warnings")
-if not result["details"]:
-  result.pop("details")
-if result.get("error") is None:
-  result.pop("error")
-
-print("RESULT:" + json.dumps(result))
-`.trim();
 
     try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
-      const interpreted = interpretStandardResult(response, {
-        successMessage: 'Level created',
-        failureMessage: 'Failed to create level'
+      const response = await this.automationBridge.sendAutomationRequest('create_new_level', {
+        levelPath: fullPath,
+        useWorldPartition: isPartitioned
+      }, {
+        timeoutMs: 60000
       });
 
-      const path = coerceString(interpreted.payload.path) ?? fullPath;
-      const partitioned = coerceBoolean(interpreted.payload.partitioned, isPartitioned) ?? isPartitioned;
-
-      if (interpreted.success) {
-        const result: Record<string, unknown> = {
-          success: true,
-          message: interpreted.message,
-          path,
-          partitioned
+      if (response.success === false) {
+        return { 
+          success: false, 
+          error: response.error || response.message || 'Failed to create level',
+          path: fullPath,
+          partitioned: isPartitioned
         };
-        if (interpreted.warnings?.length) {
-          result.warnings = interpreted.warnings;
-        }
-        if (interpreted.details?.length) {
-          result.details = interpreted.details;
-        }
-        return result;
       }
 
-      const failure: Record<string, unknown> = {
-        success: false,
-        error: interpreted.error || interpreted.message,
-        path,
-        partitioned
+      const result: Record<string, unknown> = {
+        success: true,
+        message: response.message || 'Level created',
+        path: fullPath,
+        partitioned: isPartitioned
       };
-      if (interpreted.warnings?.length) {
-        failure.warnings = interpreted.warnings;
+
+      if (response.warnings) {
+        result.warnings = response.warnings;
       }
-      if (interpreted.details?.length) {
-        failure.details = interpreted.details;
+      if (response.details) {
+        result.details = response.details;
       }
 
-      return failure;
-    } catch (e) {
-      return { success: false, error: `Failed to create level: ${e}` };
+      return result;
+    } catch (error) {
+      return { 
+        success: false, 
+        error: `Failed to create level: ${error instanceof Error ? error.message : String(error)}`,
+        path: fullPath,
+        partitioned: isPartitioned
+      };
     }
   }
 
-  // Stream level (Python attempt with fallback)
+  // Stream level
   async streamLevel(params: {
     levelPath?: string;
     levelName?: string;
@@ -509,210 +507,58 @@ print("RESULT:" + json.dumps(result))
       ? providedName
       : (levelPath ? levelPath.split('/').filter(Boolean).pop() ?? '' : '');
     const levelName = derivedName.length > 0 ? derivedName : undefined;
-    const qualifiedName = levelPath && levelName && !levelName.includes('.')
-      ? `${levelPath}.${levelName}`
-      : undefined;
     const shouldBeVisible = params.shouldBeVisible ?? params.shouldBeLoaded;
 
-    const levelLiteral = JSON.stringify(levelName ?? '');
-    const levelPathLiteral = JSON.stringify(levelPath ?? '');
-    const qualifiedLiteral = JSON.stringify(qualifiedName ?? '');
-    const loadLiteral = params.shouldBeLoaded ? 'True' : 'False';
-    const visibleLiteral = shouldBeVisible ? 'True' : 'False';
-
-    const python = `
-import unreal
-import json
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "warnings": [],
-  "details": [],
-  "level": ${levelLiteral},
-  "level_path": ${levelPathLiteral},
-  "qualified_name": ${qualifiedLiteral},
-  "loaded": ${loadLiteral},
-  "visible": ${visibleLiteral}
-}
-
-try:
-  ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-  world = ues.get_editor_world() if ues else None
-  if world:
-    updated = False
-    streaming_levels = []
-    try:
-      if hasattr(world, 'get_streaming_levels'):
-        streaming_levels = list(world.get_streaming_levels() or [])
-    except Exception as primary_error:
-      result["warnings"].append(f"get_streaming_levels unavailable: {primary_error}")
-
-    if not streaming_levels:
-      try:
-        if hasattr(world, 'get_level_streaming_levels'):
-          streaming_levels = list(world.get_level_streaming_levels() or [])
-      except Exception as alt_error:
-        result["warnings"].append(f"get_level_streaming_levels unavailable: {alt_error}")
-
-    if not streaming_levels:
-      try:
-        streaming_levels_candidate = getattr(world, 'streaming_levels', None)
-        if streaming_levels_candidate is not None:
-          streaming_levels = list(streaming_levels_candidate)
-      except Exception as attr_error:
-        result["warnings"].append(f"streaming_levels attribute unavailable: {attr_error}")
-
-    if not streaming_levels:
-      result["error"] = "Streaming levels unavailable"
-    else:
-      target_candidates = []
-      try:
-        level_path = (result.get("level_path") or "").replace('\\', '/')
-        level_name = (result.get("level") or "").replace('\\', '/')
-        qualified_name = (result.get("qualified_name") or "").replace('\\', '/')
-
-        candidates_raw = [level_path, level_name, qualified_name]
-
-        if level_path:
-          tail = level_path.split('/')[-1]
-          if tail:
-            candidates_raw.append(tail)
-            if '.' not in tail:
-              candidates_raw.append(f"{level_path}.{tail}")
-
-        if level_name and '/' in level_name:
-          tail = level_name.split('/')[-1]
-          if tail:
-            candidates_raw.append(tail)
-            if '.' not in tail and level_path:
-              candidates_raw.append(f"{level_path}.{tail}")
-
-        target_candidates = [cand for cand in candidates_raw if cand]
-      except Exception as candidate_error:
-        target_candidates = []
-        result["warnings"].append(f"Failed to build target candidates: {candidate_error}")
-
-      for streaming_level in streaming_levels:
-        try:
-          name = None
-          if hasattr(streaming_level, 'get_world_asset_package_name'):
-            name = streaming_level.get_world_asset_package_name()
-          if not name:
-            try:
-              name = str(streaming_level.get_editor_property('world_asset'))
-            except Exception:
-              name = None
-
-          normalized_name = str(name).replace('\\', '/') if name else None
-          matches = False
-          if normalized_name and target_candidates:
-            for candidate in target_candidates:
-              if normalized_name == candidate or normalized_name.endswith('/' + candidate) or normalized_name.endswith(candidate):
-                matches = True
-                break
-
-          if matches:
-            try:
-              streaming_level.set_should_be_loaded(${loadLiteral})
-            except Exception as load_error:
-              result["warnings"].append(f"Failed to set loaded flag: {load_error}")
-            try:
-              streaming_level.set_should_be_visible(${visibleLiteral})
-            except Exception as visible_error:
-              result["warnings"].append(f"Failed to set visibility: {visible_error}")
-            updated = True
-            break
-        except Exception as iteration_error:
-          result["warnings"].append(f"Streaming level iteration error: {iteration_error}")
-
-      if updated:
-        result["success"] = True
-        result["message"] = "Streaming level updated"
-        result["details"].append("Streaming level flags updated for editor world")
-      else:
-        result["error"] = "Streaming level not found"
-  else:
-    result["error"] = "No editor world available"
-except Exception as err:
-  result["error"] = f"Streaming level update failed: {err}"
-
-if result["success"]:
-  if not result["message"]:
-    result["message"] = "Streaming level updated"
-else:
-  if not result["error"]:
-    result["error"] = "Streaming level update failed"
-  if not result["message"]:
-    result["message"] = result["error"]
-
-if not result["warnings"]:
-  result.pop("warnings")
-if not result["details"]:
-  result.pop("details")
-result.pop("qualified_name", None)
-if result.get("error") is None:
-  result.pop("error")
-
-print("RESULT:" + json.dumps(result))
-`.trim();
+    if (!this.automationBridge) {
+      // Fallback to console command if automation bridge not available
+      const levelIdentifier = levelName ?? levelPath ?? '';
+      const simpleName = levelIdentifier.split('/').filter(Boolean).pop() || levelIdentifier;
+      const loadCmd = params.shouldBeLoaded ? 'Load' : 'Unload';
+      const visCmd = shouldBeVisible ? 'Show' : 'Hide';
+      const command = `StreamLevel ${simpleName} ${loadCmd} ${visCmd}`;
+      return this.bridge.executeConsoleCommand(command);
+    }
 
     try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-      const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
-      const interpreted = interpretStandardResult(response, {
-        successMessage: 'Streaming level updated',
-        failureMessage: 'Streaming level update failed'
+      const response = await this.automationBridge.sendAutomationRequest('stream_level', {
+        levelPath: levelPath || '',
+        levelName: levelName || '',
+        shouldBeLoaded: params.shouldBeLoaded,
+        shouldBeVisible
+      }, {
+        timeoutMs: 60000
       });
 
-      const payloadLevelPath = coerceString((interpreted.payload as Record<string, unknown>)['level_path'])
-        ?? levelPath
-        ?? undefined;
-      const payloadLevel = coerceString(interpreted.payload.level)
-        ?? levelName
-        ?? (payloadLevelPath ? payloadLevelPath.split('/').filter(Boolean).pop() : undefined)
-        ?? '';
-      const loaded = coerceBoolean(interpreted.payload.loaded, params.shouldBeLoaded) ?? params.shouldBeLoaded;
-      const visible = coerceBoolean(interpreted.payload.visible, shouldBeVisible) ?? shouldBeVisible;
-
-      if (interpreted.success) {
-        const result: Record<string, unknown> = {
-          success: true,
-          message: interpreted.message,
-          level: payloadLevel,
-          levelPath: payloadLevelPath,
-          loaded,
-          visible
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Streaming level update failed',
+          level: levelName || '',
+          levelPath: levelPath,
+          loaded: params.shouldBeLoaded,
+          visible: shouldBeVisible
         };
-        if (interpreted.warnings?.length) {
-          result.warnings = interpreted.warnings;
-        }
-        if (interpreted.details?.length) {
-          result.details = interpreted.details;
-        }
-        return result;
       }
 
-      const failure: Record<string, unknown> = {
-        success: false,
-        error: interpreted.error || interpreted.message || 'Streaming level update failed',
-        level: payloadLevel,
-        levelPath: payloadLevelPath,
-        loaded,
-        visible
+      const result: Record<string, unknown> = {
+        success: true,
+        message: response.message || 'Streaming level updated',
+        level: levelName || '',
+        levelPath,
+        loaded: params.shouldBeLoaded,
+        visible: shouldBeVisible
       };
-      if (interpreted.message && interpreted.message !== failure.error) {
-        failure.message = interpreted.message;
+
+      if (response.warnings) {
+        result.warnings = response.warnings;
       }
-      if (interpreted.warnings?.length) {
-        failure.warnings = interpreted.warnings;
+      if (response.details) {
+        result.details = response.details;
       }
-      if (interpreted.details?.length) {
-        failure.details = interpreted.details;
-      }
-      return failure;
-    } catch {
+
+      return result;
+    } catch (_error) {
+      // Fallback to console command
       const levelIdentifier = levelName ?? levelPath ?? '';
       const simpleName = levelIdentifier.split('/').filter(Boolean).pop() || levelIdentifier;
       const loadCmd = params.shouldBeLoaded ? 'Load' : 'Unload';
@@ -817,128 +663,51 @@ print("RESULT:" + json.dumps(result))
     rebuildAll?: boolean;
     selectedOnly?: boolean;
   }) {
-    const python = `
-import unreal
-import json
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "warnings": [],
-  "details": [],
-  "rebuildAll": ${params.rebuildAll ? 'True' : 'False'},
-  "selectedOnly": ${params.selectedOnly ? 'True' : 'False'},
-  "selectionCount": 0
-}
-
-try:
-  nav_system = unreal.EditorSubsystemLibrary.get_editor_subsystem(unreal.NavigationSystemV1)
-  if not nav_system:
-    ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-    world = ues.get_editor_world() if ues else None
-    nav_system = unreal.NavigationSystemV1.get_navigation_system(world) if world else None
-
-  if nav_system:
-    if ${params.rebuildAll ? 'True' : 'False'}:
-      nav_system.navigation_build_async()
-      result["success"] = True
-      result["message"] = "Navigation rebuild started"
-      result["details"].append("Triggered full navigation rebuild")
-    else:
-      actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-      selected_actors = actor_subsystem.get_selected_level_actors() if actor_subsystem else []
-      result["selectionCount"] = len(selected_actors) if selected_actors else 0
-
-      if ${params.selectedOnly ? 'True' : 'False'} and selected_actors:
-        for actor in selected_actors:
-          nav_system.update_nav_octree(actor)
-        result["success"] = True
-        result["message"] = f"Navigation updated for {len(selected_actors)} actors"
-        result["details"].append("Updated nav octree for selected actors")
-      elif selected_actors:
-        for actor in selected_actors:
-          nav_system.update_nav_octree(actor)
-        nav_system.update(0.0)
-        result["success"] = True
-        result["message"] = f"Navigation updated for {len(selected_actors)} actors"
-        result["details"].append("Updated nav octree and performed incremental update")
-      else:
-        nav_system.update(0.0)
-        result["success"] = True
-        result["message"] = "Navigation incremental update performed"
-        result["details"].append("No selected actors; performed incremental update")
-  else:
-    result["error"] = "Navigation system not available. Add a NavMeshBoundsVolume to the level first."
-except AttributeError as attr_error:
-  result["error"] = f"Navigation API not available: {attr_error}"
-except Exception as err:
-  result["error"] = f"Navigation build failed: {err}"
-
-if result["success"]:
-  if not result["message"]:
-    result["message"] = "Navigation build started"
-else:
-  if not result["error"]:
-    result["error"] = result["message"] or "Navigation build failed"
-  if not result["message"]:
-    result["message"] = result["error"]
-
-if not result["warnings"]:
-  result.pop("warnings")
-if not result["details"]:
-  result.pop("details")
-if result.get("error") is None:
-  result.pop("error")
-
-if not result.get("selectionCount"):
-  result.pop("selectionCount", None)
-
-print("RESULT:" + json.dumps(result))
-`.trim();
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Navigation mesh operations require plugin support.');
+    }
 
     try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const response = await (this.bridge as any).executeEditorPython(python, { allowPythonFallback });
-      const interpreted = interpretStandardResult(response, {
-        successMessage: params.rebuildAll ? 'Navigation rebuild started' : 'Navigation update started',
-        failureMessage: 'Navigation build failed'
+      const response = await this.automationBridge.sendAutomationRequest('build_navigation_mesh', {
+        rebuildAll: params.rebuildAll ?? false,
+        selectedOnly: params.selectedOnly ?? false
+      }, {
+        timeoutMs: 120000
       });
 
-      const result: Record<string, unknown> = interpreted.success
-        ? { success: true, message: interpreted.message }
-        : { success: false, error: interpreted.error || interpreted.message };
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Navigation build failed'
+        };
+      }
 
-      const rebuildAll = coerceBoolean(interpreted.payload.rebuildAll, params.rebuildAll);
-      const selectedOnly = coerceBoolean(interpreted.payload.selectedOnly, params.selectedOnly);
-      if (typeof rebuildAll === 'boolean') {
-        result.rebuildAll = rebuildAll;
-      } else if (typeof params.rebuildAll === 'boolean') {
+      const result: Record<string, unknown> = {
+        success: true,
+        message: response.message || (params.rebuildAll ? 'Navigation rebuild started' : 'Navigation update started')
+      };
+
+      if (params.rebuildAll !== undefined) {
         result.rebuildAll = params.rebuildAll;
       }
-      if (typeof selectedOnly === 'boolean') {
-        result.selectedOnly = selectedOnly;
-      } else if (typeof params.selectedOnly === 'boolean') {
+      if (params.selectedOnly !== undefined) {
         result.selectedOnly = params.selectedOnly;
       }
-
-      const selectionCount = coerceNumber(interpreted.payload.selectionCount);
-      if (typeof selectionCount === 'number') {
-        result.selectionCount = selectionCount;
+      if (response.selectionCount !== undefined) {
+        result.selectionCount = response.selectionCount;
       }
-
-      if (interpreted.warnings?.length) {
-        result.warnings = interpreted.warnings;
+      if (response.warnings) {
+        result.warnings = response.warnings;
       }
-      if (interpreted.details?.length) {
-        result.details = interpreted.details;
+      if (response.details) {
+        result.details = response.details;
       }
 
       return result;
-    } catch (e) {
+    } catch (error) {
       return {
         success: false,
-        error: `Navigation build not available: ${e}. Please ensure a NavMeshBoundsVolume exists in the level.`
+        error: `Navigation build not available: ${error instanceof Error ? error.message : String(error)}. Please ensure a NavMeshBoundsVolume exists in the level.`
       };
     }
   }

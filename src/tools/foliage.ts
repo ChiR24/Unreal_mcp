@@ -1,10 +1,12 @@
 // Foliage tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
-import { bestEffortInterpretedText, coerceBoolean, coerceNumber, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
+import { AutomationBridge } from '../automation-bridge.js';
+import { coerceBoolean, coerceNumber, coerceString } from '../utils/result-helpers.js';
 
 export class FoliageTools {
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+
+  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
   // NOTE: We intentionally avoid issuing Unreal console commands here because
   // they have proven unreliable and generate engine warnings (failed FindConsoleObject).
@@ -50,197 +52,59 @@ export class FoliageTools {
       return { success: false, error: errors.join('; ') };
     }
 
-    const py = `
-import unreal, json
-
-name = ${JSON.stringify(name)}
-mesh_path = ${JSON.stringify(meshPath)}
-  default_mesh = '/Engine/EngineMeshes/Sphere'
-package_path = '/Game/Foliage/Types'
-
-res = {'success': False, 'created': False, 'asset_path': '', 'used_mesh': '', 'exists_after': False, 'method': '', 'note': ''}
-
-try:
-    # Ensure package directory
-    try:
-        if not unreal.EditorAssetLibrary.does_directory_exist(package_path):
-            unreal.EditorAssetLibrary.make_directory(package_path)
-    except Exception as e:
-        res['note'] += f"; make_directory failed: {e}"
-
-    # Load mesh or fallback
-    mesh = None
-    try:
-        if unreal.EditorAssetLibrary.does_asset_exist(mesh_path):
-            mesh = unreal.EditorAssetLibrary.load_asset(mesh_path)
-    except Exception as e:
-        res['note'] += f"; could not check/load mesh_path: {e}"
-
-  if not mesh:
-    mesh = unreal.EditorAssetLibrary.load_asset(default_mesh)
-    res['note'] += '; default_mesh_used'
-    if mesh:
-        res['used_mesh'] = str(mesh.get_path_name())
-
-    # Create FoliageType asset using proper UE5 API
-    asset = None
-    try:
-        asset_path = f"{package_path}/{name}"
-        
-        # Check if asset already exists
-        if unreal.EditorAssetLibrary.does_asset_exist(asset_path):
-            asset = unreal.EditorAssetLibrary.load_asset(asset_path)
-            res['note'] += '; loaded_existing'
-        else:
-            # Create FoliageType_InstancedStaticMesh using proper API
-            try:
-                asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-                
-                # Try to create factory and set mesh property
-                factory = None
-                try:
-                    factory = unreal.FoliageType_InstancedStaticMeshFactory()
-                    # Try different property names for different UE versions
-                    try:
-                        factory.set_editor_property('mesh', mesh)
-                    except:
-                        try:
-                            factory.set_editor_property('static_mesh', mesh)
-                        except:
-                            try:
-                                factory.set_editor_property('source_mesh', mesh)
-                            except:
-                                pass  # Factory will use default or no mesh
-                except:
-                    res['note'] += '; factory_creation_failed'
-                    factory = None
-                
-                # Create the asset with or without factory
-                if factory:
-                    asset = asset_tools.create_asset(
-                        asset_name=name,
-                        package_path=package_path,
-                        asset_class=unreal.FoliageType_InstancedStaticMesh,
-                        factory=factory
-                    )
-                else:
-                    # Try without factory
-                    asset = asset_tools.create_asset(
-                        asset_name=name,
-                        package_path=package_path,
-                        asset_class=unreal.FoliageType_InstancedStaticMesh,
-                        factory=None
-                    )
-                
-                if asset:
-                    # Configure foliage properties
-                    asset.set_editor_property('mesh', mesh)
-                    if ${params.density !== undefined ? params.density : 1.0} >= 0:
-                        asset.set_editor_property('density', ${params.density !== undefined ? params.density : 1.0})
-                    if ${params.randomYaw === false ? 'False' : 'True'}:
-                        asset.set_editor_property('random_yaw', True)
-                    if ${params.alignToNormal === false ? 'False' : 'True'}:
-                        asset.set_editor_property('align_to_normal', True)
-                    
-                    # Set scale range
-                    min_scale = ${params.minScale || 0.8}
-                    max_scale = ${params.maxScale || 1.2}
-                    asset.set_editor_property('scale_x', (min_scale, max_scale))
-                    asset.set_editor_property('scale_y', (min_scale, max_scale))
-                    asset.set_editor_property('scale_z', (min_scale, max_scale))
-                    
-                    res['note'] += '; created_with_factory'
-                else:
-                    res['note'] += '; factory_creation_failed'
-            except AttributeError:
-                # Fallback if factory doesn't exist - use base FoliageType
-                try:
-                    asset = asset_tools.create_asset(
-                        asset_name=name,
-                        package_path=package_path,
-                        asset_class=unreal.FoliageType,
-                        factory=None
-                    )
-                    if asset:
-                        res['note'] += '; created_base_foliage_type'
-                except Exception as e2:
-                    res['note'] += f"; base_creation_failed: {e2}"
-            except Exception as e:
-                res['note'] += f"; factory_creation_failed: {e}"
-                asset = None
-    except Exception as e:
-        res['note'] += f"; create_asset failed: {e}"
-        asset = None
-
-    if asset and mesh:
-        try:
-            # Set the mesh property (different property names in different UE versions)
-            try:
-                asset.set_editor_property('mesh', mesh)
-            except:
-                try:
-                    asset.set_editor_property('static_mesh', mesh)
-                except:
-                    pass
-            
-            # Save the asset
-            unreal.EditorAssetLibrary.save_asset(asset.get_path_name())
-            res['asset_path'] = str(asset.get_path_name())
-            res['created'] = True
-            res['method'] = 'FoliageType_InstancedStaticMesh'
-        except Exception as e:
-            res['note'] += f"; set/save asset failed: {e}"
-    elif not asset:
-        res['note'] += "; asset creation returned None"
-    elif not mesh:
-        res['note'] += "; mesh object is None, cannot assign to foliage type"
-
-    # Verify existence
-    res['exists_after'] = unreal.EditorAssetLibrary.does_asset_exist(res['asset_path']) if res['asset_path'] else False
-    res['success'] = res['exists_after'] or res['created']
-    
-except Exception as e:
-    res['success'] = False
-    res['note'] += f"; fatal: {e}"
-
-print('RESULT:' + json.dumps(res))
-`.trim();
-
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const pyResp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback });
-    const interpreted = interpretStandardResult(pyResp, {
-      successMessage: `Foliage type '${name}' processed`,
-      failureMessage: 'Add foliage type failed'
-    });
-
-    if (!interpreted.success) {
-      return {
-        success: false,
-        error: coerceString(interpreted.payload.note) ?? interpreted.error ?? 'Add foliage type failed',
-  note: coerceString(interpreted.payload.note) ?? bestEffortInterpretedText(interpreted)
-      };
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Foliage operations require plugin support.');
     }
 
-    const payload = interpreted.payload as Record<string, unknown>;
-    const created = coerceBoolean(payload.created, false) ?? false;
-    const exists = coerceBoolean(payload.exists_after, false) ?? created;
-    const method = coerceString(payload.method) ?? 'Unknown';
-    const assetPath = coerceString(payload.asset_path);
-    const usedMesh = coerceString(payload.used_mesh);
-    const note = coerceString(payload.note);
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('add_foliage_type', {
+        name,
+        meshPath,
+        density: params.density,
+        radius: params.radius,
+        minScale: params.minScale,
+        maxScale: params.maxScale,
+        alignToNormal: params.alignToNormal,
+        randomYaw: params.randomYaw,
+        groundSlope: params.groundSlope
+      }, {
+        timeoutMs: 60000
+      });
 
-    return {
-      success: true,
-      created,
-      exists,
-      method,
-      assetPath,
-      usedMesh,
-      note,
-      message: exists
-        ? `Foliage type '${name}' ready (${method})`
-        : `Created foliage '${name}' but verification did not find it yet`
-    };
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Add foliage type failed',
+          note: coerceString((response.result as any)?.note)
+        };
+      }
+
+      const payload = response.result as Record<string, unknown>;
+      const created = coerceBoolean(payload.created, false) ?? false;
+      const exists = coerceBoolean(payload.exists_after, false) ?? created;
+      const method = coerceString(payload.method) ?? 'Unknown';
+      const assetPath = coerceString(payload.asset_path);
+      const usedMesh = coerceString(payload.used_mesh);
+      const note = coerceString(payload.note);
+
+      return {
+        success: true,
+        created,
+        exists,
+        method,
+        assetPath,
+        usedMesh,
+        note,
+        message: exists
+          ? `Foliage type '${name}' ready (${method})`
+          : `Created foliage '${name}' but verification did not find it yet`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to add foliage type: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
   }
 
   // Paint foliage by placing HISM instances (editor-only)
@@ -276,134 +140,53 @@ print('RESULT:' + json.dumps(res))
       return { success: false, error: errors.join('; ') };
     }
 
-    const brush = Number.isFinite(params.brushSize as number) ? (params.brushSize as number) : 300;
-    const py = `
-import unreal, json, random, math
-
-res = {'success': False, 'added': 0, 'actor': '', 'component': '', 'used_mesh': '', 'note': ''}
-foliage_type_name = ${JSON.stringify(foliageType)}
-px, py, pz = ${pos[0]}, ${pos[1]}, ${pos[2]}
-radius = float(${brush}) / 2.0
-
-try:
-  actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-  if not actor_subsystem:
-    raise RuntimeError('EditorActorSubsystem unavailable. Enable Editor Scripting Utilities plugin.')
-
-  all_actors = actor_subsystem.get_all_level_actors()
-
-  # Find or create a container actor using modern EditorActorSubsystem
-  label = f"FoliageContainer_{foliage_type_name}"
-  container = None
-  for a in all_actors:
-    try:
-      if a and a.get_actor_label() == label:
-        container = a
-        break
-    except Exception:
-      pass
-
-  if not container:
-    container = actor_subsystem.spawn_actor_from_class(
-      unreal.StaticMeshActor,
-      unreal.Vector(px, py, pz)
-    )
-    if not container:
-      raise RuntimeError('Failed to spawn foliage container actor via EditorActorSubsystem')
-    try:
-      container.set_actor_label(label)
-    except Exception:
-      pass
-
-    # Resolve mesh from FoliageType asset
-    mesh = None
-    fol_asset_path = f"/Game/Foliage/Types/{foliage_type_name}.{foliage_type_name}"
-    if unreal.EditorAssetLibrary.does_asset_exist(fol_asset_path):
-        try:
-            ft_asset = unreal.EditorAssetLibrary.load_asset(fol_asset_path)
-            mesh = ft_asset.get_editor_property('mesh')
-        except Exception:
-            mesh = None
-    
-    if not mesh:
-        mesh = unreal.EditorAssetLibrary.load_asset('/Engine/EngineMeshes/Sphere')
-  res['note'] += '; used_default_mesh'
-    
-    if mesh:
-        res['used_mesh'] = str(mesh.get_path_name())
-
-    # Since HISM components and add_component don't work in this version,
-    # spawn individual StaticMeshActors for each instance
-    target_count = max(5, int(radius / 20.0))
-    added = 0
-    for i in range(target_count):
-        ang = random.random() * math.tau
-        r = random.random() * radius
-        x, y, z = px + math.cos(ang) * r, py + math.sin(ang) * r, pz
-        try:
-      # Spawn static mesh actor at position using modern subsystem
-      inst_actor = actor_subsystem.spawn_actor_from_class(
-        unreal.StaticMeshActor,
-        unreal.Vector(x, y, z),
-        unreal.Rotator(0, random.random()*360.0, 0)
-      )
-            if inst_actor and mesh:
-                # Set mesh on the actor's component
-                try:
-                    mesh_comp = inst_actor.static_mesh_component
-                    if mesh_comp:
-                        mesh_comp.set_static_mesh(mesh)
-                    inst_actor.set_actor_label(f"{foliage_type_name}_instance_{i}")
-                    # Group under the container for organization
-                    inst_actor.attach_to_actor(container, "", unreal.AttachmentRule.KEEP_WORLD, unreal.AttachmentRule.KEEP_WORLD, unreal.AttachmentRule.KEEP_WORLD, False)
-                    added += 1
-                except Exception as e:
-                    res['note'] += f"; instance_{i} setup failed: {e}"
-        except Exception as e:
-            res['note'] += f"; spawn instance_{i} failed: {e}"
-
-    res['added'] = added
-    res['actor'] = container.get_actor_label()
-    res['component'] = 'StaticMeshActors'  # Using actors instead of components
-    res['success'] = True
-except Exception as e:
-    res['success'] = False
-    res['note'] += f"; fatal: {e}"
-
-print('RESULT:' + json.dumps(res))
-`.trim();
-
-  const allowPythonFallback2 = allowPythonFallbackFromEnv();
-  const pyResp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallback2 });
-    const interpreted = interpretStandardResult(pyResp, {
-      successMessage: `Painted foliage for '${foliageType}'`,
-      failureMessage: 'Paint foliage failed'
-    });
-
-    if (!interpreted.success) {
-      return {
-        success: false,
-        error: coerceString(interpreted.payload.note) ?? interpreted.error ?? 'Paint foliage failed',
-  note: coerceString(interpreted.payload.note) ?? bestEffortInterpretedText(interpreted)
-      };
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Foliage operations require plugin support.');
     }
 
-    const payload = interpreted.payload as Record<string, unknown>;
-    const added = coerceNumber(payload.added) ?? 0;
-    const actor = coerceString(payload.actor);
-    const component = coerceString(payload.component);
-    const usedMesh = coerceString(payload.used_mesh);
-    const note = coerceString(payload.note);
+    const brush = Number.isFinite(params.brushSize as number) ? (params.brushSize as number) : 300;
 
-    return {
-      success: true,
-      added,
-      actor,
-      component,
-      usedMesh,
-      note,
-      message: `Painted ${added} instances for '${foliageType}' around (${pos[0]}, ${pos[1]}, ${pos[2]})`
-    };
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('paint_foliage', {
+        foliageType,
+        position: pos,
+        brushSize: brush,
+        paintDensity: params.paintDensity,
+        eraseMode: params.eraseMode
+      }, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Paint foliage failed',
+          note: coerceString((response.result as any)?.note)
+        };
+      }
+
+      const payload = response.result as Record<string, unknown>;
+      const added = coerceNumber(payload.added) ?? 0;
+      const actor = coerceString(payload.actor);
+      const component = coerceString(payload.component);
+      const usedMesh = coerceString(payload.used_mesh);
+      const note = coerceString(payload.note);
+
+      return {
+        success: true,
+        added,
+        actor,
+        component,
+        usedMesh,
+        note,
+        message: `Painted ${added} instances for '${foliageType}' around (${pos[0]}, ${pos[1]}, ${pos[2]})`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to paint foliage: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
   }
 
   // Create instanced mesh

@@ -1,11 +1,15 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation-bridge.js';
 import { loadEnv } from '../types/env.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
 import { spawn } from 'child_process';
 
 export class EngineTools {
   private env = loadEnv();
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+
+  setAutomationBridge(automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
 
   async launchEditor(params?: { editorExe?: string; projectPath?: string }) {
     const exe = params?.editorExe || this.env.UE_EDITOR_EXE;
@@ -22,13 +26,14 @@ export class EngineTools {
   }
 
   async quitEditor() {
+    if (!this.automationBridge) {
+      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge is not available for quit_editor' };
+    }
+
     try {
-  // Use plugin-first wrapper to request quitting the editor. Fall back
-  // to Python only when explicitly allowed by env (deprecated).
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const resp = await (this.bridge as any).executeEditorPython('import unreal; unreal.SystemLibrary.quit_editor()', { allowPythonFallback });
-      if (resp && (resp as any).success === false) {
-        return { success: false, error: (resp as any).error || (resp as any).message || 'Plugin rejected quit request' };
+      const resp: any = await this.automationBridge.sendAutomationRequest('quit_editor', {});
+      if (resp && resp.success === false) {
+        return { success: false, error: resp.error || resp.message || 'Quit request failed' };
       }
       return { success: true, message: 'Quit command sent' };
     } catch (err: any) {

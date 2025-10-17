@@ -1,6 +1,5 @@
 import { UnrealBridge } from '../unreal-bridge.js';
-import { coerceBoolean, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
+import { coerceString } from '../utils/result-helpers.js';
 
 export class AssetResources {
   constructor(private bridge: UnrealBridge) {}
@@ -135,97 +134,56 @@ export class AssetResources {
   private async listDirectoryOnly(dir: string, _recursive: boolean, limit: number) {
     // Always return only immediate children to avoid timeout and improve navigation
     try {
-      const py = `
-import unreal
-import json
+      // Use the native C++ plugin's list action instead of Python
+      const automationBridge = (this.bridge as any).automationBridge;
+      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const normalizedDir = this.normalizeDir(dir);
+          const response = await automationBridge.sendAutomationRequest(
+            'list',
+            { directory: normalizedDir, limit, recursive: false },
+            { timeoutMs: 30000 }
+          );
 
-_dir = r"${this.normalizeDir(dir)}"
+          if (response.success !== false && response.result) {
+            const payload = response.result;
+            
+            const foldersArr = Array.isArray(payload.folders_list)
+              ? payload.folders_list.map((f: any) => ({
+                  Name: coerceString(f?.n) ?? '',
+                  Path: coerceString(f?.p) ?? '',
+                  Class: 'Folder',
+                  isFolder: true
+                }))
+              : [];
 
-try:
-    ar = unreal.AssetRegistryHelpers.get_asset_registry()
-    # Immediate subfolders
-    sub_paths = ar.get_sub_paths(_dir, False)
-    folders_list = []
-    for p in sub_paths:
-        try:
-            name = p.split('/')[-1]
-            folders_list.append({'n': name, 'p': p})
-        except Exception:
-            pass
+            const assetsArr = Array.isArray(payload.assets)
+              ? payload.assets.map((a: any) => ({
+                  Name: coerceString(a?.n) ?? '',
+                  Path: coerceString(a?.p) ?? '',
+                  Class: coerceString(a?.c) ?? 'Object'
+                }))
+              : [];
 
-    # Immediate assets at this path
-    assets_data = ar.get_assets_by_path(_dir, False)
-    assets = []
-    for a in assets_data[:${limit}]:
-        try:
-            assets.append({
-                'n': str(a.asset_name),
-                'p': str(a.object_path),
-                'c': str(a.asset_class)
-            })
-        except Exception:
-            pass
+            const result = {
+              assets: [...foldersArr, ...assetsArr],
+              count: foldersArr.length + assetsArr.length,
+              folders: foldersArr.length,
+              files: assetsArr.length,
+              path: normalizedDir,
+              recursive: false,
+              method: 'automation_bridge',
+              cached: false
+            };
 
-    print("RESULT:" + json.dumps({
-        'success': True,
-        'path': _dir,
-        'folders': len(folders_list),
-        'files': len(assets),
-        'folders_list': folders_list,
-        'assets': assets
-    }))
-except Exception as e:
-    print("RESULT:" + json.dumps({'success': False, 'error': str(e), 'path': _dir}))
-`.trim();
-
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback });
-      const interpreted = interpretStandardResult(resp, {
-        successMessage: 'Directory contents retrieved',
-        failureMessage: 'Failed to list directory contents'
-      });
-
-      if (interpreted.success) {
-        const payload = interpreted.payload as Record<string, unknown>;
-
-        const foldersArr = Array.isArray(payload.folders_list)
-          ? payload.folders_list.map((f: any) => ({
-              Name: coerceString(f?.n) ?? '',
-              Path: coerceString(f?.p) ?? '',
-              Class: 'Folder',
-              isFolder: true
-            }))
-          : [];
-
-        const assetsArr = Array.isArray(payload.assets)
-          ? payload.assets.map((a: any) => ({
-              Name: coerceString(a?.n) ?? '',
-              Path: coerceString(a?.p) ?? '',
-              Class: coerceString(a?.c) ?? 'Asset',
-              isFolder: false
-            }))
-          : [];
-
-        const total = foldersArr.length + assetsArr.length;
-        const summary = {
-          total,
-          folders: foldersArr.length,
-          assets: assetsArr.length
-        };
-
-        const resolvedPath = coerceString(payload.path) ?? this.normalizeDir(dir);
-
-        return {
-          success: true,
-          path: resolvedPath,
-          summary,
-          foldersList: foldersArr,
-          assets: assetsArr,
-          count: total,
-          note: `Immediate children of ${resolvedPath}: ${foldersArr.length} folder(s), ${assetsArr.length} asset(s)`,
-          method: 'asset_registry_listing'
-        };
+            const key = this.makeKey(dir, false);
+            this.cache.set(key, { timestamp: Date.now(), data: result });
+            return result;
+          }
+        } catch {}
       }
+      
+      // No fallback available
     } catch (err: any) {
       const errorMessage = err?.message ? String(err.message) : 'Asset registry request failed';
       console.warn('Engine asset listing failed:', errorMessage);
@@ -261,28 +219,21 @@ except Exception as e:
       return false;
     }
 
-    // Normalize asset path (support users passing /Content/...)
-    const ap = this.normalizeDir(assetPath);
-    const py = `
-import unreal
-apath = r"${ap}"
-try:
-    exists = unreal.EditorAssetLibrary.does_asset_exist(apath)
-    print("RESULT:{'success': True, 'exists': %s}" % ('True' if exists else 'False'))
-except Exception as e:
-    print("RESULT:{'success': False, 'error': '" + str(e) + "'}")
-`.trim();
-  const allowPythonFallback2 = allowPythonFallbackFromEnv();
-  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallback2 });
-    const interpreted = interpretStandardResult(resp, {
-      successMessage: 'Asset existence verified',
-      failureMessage: 'Failed to verify asset existence'
-    });
+    try {
+      const automationBridge = (this.bridge as any).automationBridge;
+      if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
+        return false;
+      }
 
-    if (interpreted.success) {
-      return coerceBoolean(interpreted.payload.exists, false) ?? false;
+      const normalizedPath = this.normalizeDir(assetPath);
+      const response = await automationBridge.sendAutomationRequest(
+        'asset_exists',
+        { asset_path: normalizedPath }
+      );
+
+      return response?.success !== false && response?.result?.exists === true;
+    } catch {
+      return false;
     }
-
-    return false;
   }
 }

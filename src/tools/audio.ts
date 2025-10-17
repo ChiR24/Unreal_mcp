@@ -1,11 +1,12 @@
 // Audio tools for Unreal Engine
 import JSON5 from 'json5';
 import { UnrealBridge } from '../unreal-bridge.js';
-import { escapePythonString } from '../utils/python.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
+import { AutomationBridge } from '../automation-bridge.js';
 
 export class AudioTools {
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+
+  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
   private interpretResult(
     resp: unknown,
@@ -184,177 +185,32 @@ export class AudioTools {
       attenuationSettings?: string;
     };
   }) {
-  const escapePyString = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  const toPyNumber = (value?: number) =>
-    value === undefined || value === null || !Number.isFinite(value) ? 'None' : String(value);
-  const toPyBool = (value?: boolean) =>
-    value === undefined || value === null ? 'None' : value ? 'True' : 'False';
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Audio operations require plugin support.');
+    }
 
-  const path = params.savePath || '/Game/Audio/Cues';
-  const wavePath = params.wavePath || '';
-  const attenuationPath = params.settings?.attenuationSettings || '';
-  const volumeLiteral = toPyNumber(params.settings?.volume);
-  const pitchLiteral = toPyNumber(params.settings?.pitch);
-  const loopingLiteral = toPyBool(params.settings?.looping);
+    const path = params.savePath || '/Game/Audio/Cues';
 
-  const _py = `
-import unreal
-import json
-
-name = r"${escapePyString(params.name)}"
-package_path = r"${escapePyString(path)}"
-wave_path = r"${escapePyString(wavePath)}"
-attenuation_path = r"${escapePyString(attenuationPath)}"
-attach_wave = ${params.wavePath ? 'True' : 'False'}
-volume_override = ${volumeLiteral}
-pitch_override = ${pitchLiteral}
-looping_override = ${loopingLiteral}
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "warnings": []
-}
-
-try:
-  asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-  if not asset_tools:
-    result["error"] = "AssetToolsHelpers unavailable"
-    raise SystemExit(0)
-
-  factory = None
-  try:
-    factory = unreal.SoundCueFactoryNew()
-  except Exception:
-    factory = None
-
-  if not factory:
-    result["error"] = "SoundCueFactoryNew unavailable"
-    raise SystemExit(0)
-
-  package_path = package_path.rstrip('/') if package_path else package_path
-
-  asset = asset_tools.create_asset(
-    asset_name=name,
-    package_path=package_path,
-    asset_class=unreal.SoundCue,
-    factory=factory
-  )
-
-  if not asset:
-    result["error"] = "Failed to create SoundCue"
-    raise SystemExit(0)
-
-  asset_subsystem = None
-  try:
-    asset_subsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
-  except Exception:
-    asset_subsystem = None
-
-  editor_library = unreal.EditorAssetLibrary
-
-  if attach_wave:
-    wave_exists = False
-    try:
-      if asset_subsystem and hasattr(asset_subsystem, "does_asset_exist"):
-        wave_exists = asset_subsystem.does_asset_exist(wave_path)
-      else:
-        wave_exists = editor_library.does_asset_exist(wave_path)
-    except Exception as existence_error:
-      result["warnings"].append(f"Wave lookup failed: {existence_error}")
-
-    if not wave_exists:
-      result["warnings"].append(f"Wave asset not found: {wave_path}")
-    else:
-      try:
-        if asset_subsystem and hasattr(asset_subsystem, "load_asset"):
-          wave_asset = asset_subsystem.load_asset(wave_path)
-        else:
-          wave_asset = editor_library.load_asset(wave_path)
-        if wave_asset:
-          # Hooking up cue nodes via Python is non-trivial; surface warning for manual setup
-          result["warnings"].append("Sound cue created without automatic wave node hookup")
-      except Exception as wave_error:
-        result["warnings"].append(f"Failed to load wave asset: {wave_error}")
-
-  if volume_override is not None and hasattr(asset, "volume_multiplier"):
-    asset.volume_multiplier = volume_override
-  if pitch_override is not None and hasattr(asset, "pitch_multiplier"):
-    asset.pitch_multiplier = pitch_override
-  if looping_override is not None and hasattr(asset, "b_looping"):
-    asset.b_looping = looping_override
-
-  if attenuation_path:
-    try:
-      attenuation_asset = editor_library.load_asset(attenuation_path)
-      if attenuation_asset:
-        applied = False
-        if hasattr(asset, "set_attenuation_settings"):
-          try:
-            asset.set_attenuation_settings(attenuation_asset)
-            applied = True
-          except Exception:
-            applied = False
-        if not applied and hasattr(asset, "attenuation_settings"):
-          asset.attenuation_settings = attenuation_asset
-          applied = True
-        if not applied:
-          result["warnings"].append("Attenuation asset loaded but could not be applied automatically")
-    except Exception as attenuation_error:
-      result["warnings"].append(f"Failed to apply attenuation: {attenuation_error}")
-
-  try:
-    save_target = f"{package_path}/{name}" if package_path else name
-    if asset_subsystem and hasattr(asset_subsystem, "save_asset"):
-      asset_subsystem.save_asset(save_target)
-    else:
-      editor_library.save_asset(save_target)
-  except Exception as save_error:
-    result["warnings"].append(f"Save failed: {save_error}")
-
-  result["success"] = True
-  result["message"] = "Sound cue created"
-
-except SystemExit:
-  pass
-except Exception as error:
-  result["error"] = str(error)
-
-finally:
-  payload = dict(result)
-  if payload.get("success"):
-    if not payload.get("message"):
-      payload["message"] = "Sound cue created"
-    payload.pop("error", None)
-  else:
-    if not payload.get("error"):
-      payload["error"] = payload.get("message") or "Failed to create SoundCue"
-    if not payload.get("message"):
-      payload["message"] = payload["error"]
-  if not payload.get("warnings"):
-    payload.pop("warnings", None)
-  print('RESULT:' + json.dumps(payload))
-`.trim();
     try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const payload = {
+      const response = await this.automationBridge.sendAutomationRequest('create_sound_cue', {
         name: params.name,
-        package_path: path,
-        wave_path: wavePath,
-        attenuation_path: attenuationPath,
-        attach_wave: !!params.wavePath,
-        volume: params.settings?.volume ?? null,
-        pitch: params.settings?.pitch ?? null,
-        looping: params.settings?.looping ?? null
-      };
-      const resp = await this.bridge.executeEditorFunction('CREATE_SOUND_CUE', payload as any, { allowPythonFallback });
-      return this.interpretResult(resp, {
-        successMessage: 'Sound cue created',
-        failureMessage: 'Failed to create SoundCue'
+        packagePath: path,
+        wavePath: params.wavePath,
+        attenuationPath: params.settings?.attenuationSettings,
+        volume: params.settings?.volume,
+        pitch: params.settings?.pitch,
+        looping: params.settings?.looping
+      }, {
+        timeoutMs: 60000
       });
-    } catch (e) {
-      return { success: false, error: `Failed to create sound cue: ${e}` };
+
+      if (response.success === false) {
+        return { success: false, error: response.error || response.message || 'Failed to create SoundCue' };
+      }
+
+      return { success: true, message: response.message || 'Sound cue created' };
+    } catch (error) {
+      return { success: false, error: `Failed to create sound cue: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
 
@@ -366,99 +222,29 @@ finally:
     pitch?: number;
     startTime?: number;
   }) {
-    const volume = params.volume ?? 1.0;
-    const pitch = params.pitch ?? 1.0;
-    const startTime = params.startTime ?? 0.0;
-    const soundPath = params.soundPath ?? '';
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Audio operations require plugin support.');
+    }
 
-  const _py = `
-import unreal
-import json
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "warnings": []
-}
-
-try:
-  path = "${escapePythonString(soundPath)}"
-  if not unreal.EditorAssetLibrary.does_asset_exist(path):
-    result["error"] = "Sound asset not found"
-    raise SystemExit(0)
-
-  snd = unreal.EditorAssetLibrary.load_asset(path)
-  if not snd:
-    result["error"] = f"Failed to load sound asset: {path}"
-    raise SystemExit(0)
-
-  world = None
-  try:
-    world = unreal.EditorUtilityLibrary.get_editor_world()
-  except Exception:
-    world = None
-
-  if not world:
-      editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-      if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
-        world = editor_subsystem.get_editor_world()
-
-  if not world:
-    try:
-      world = unreal.EditorSubsystemLibrary.get_editor_world()
-    except Exception:
-      world = None
-
-  if not world:
-    result["error"] = "Unable to resolve editor world. Start PIE and ensure Editor Scripting Utilities is enabled."
-    raise SystemExit(0)
-
-  loc = unreal.Vector(${params.location[0]}, ${params.location[1]}, ${params.location[2]})
-  rot = unreal.Rotator(0.0, 0.0, 0.0)
-  unreal.GameplayStatics.spawn_sound_at_location(world, snd, loc, rot, ${volume}, ${pitch}, ${startTime})
-
-  result["success"] = True
-  result["message"] = "Sound played"
-
-except SystemExit:
-  pass
-except Exception as e:
-  result["error"] = str(e)
-finally:
-  payload = dict(result)
-  if payload.get("success"):
-    if not payload.get("message"):
-      payload["message"] = "Sound played"
-    payload.pop("error", None)
-  else:
-    if not payload.get("error"):
-      payload["error"] = payload.get("message") or "Failed to play sound"
-    if not payload.get("message"):
-      payload["message"] = payload["error"]
-  if not payload.get("warnings"):
-    payload.pop("warnings", None)
-  print('RESULT:' + json.dumps(payload))
-`.trim();
     try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const payload = {
-        path: soundPath,
-        x: params.location?.[0] ?? 0,
-        y: params.location?.[1] ?? 0,
-        z: params.location?.[2] ?? 0,
-        volume,
-        pitch,
-        startTime
-      };
-      const resp = await this.bridge.executeEditorFunction('PLAY_SOUND_AT_LOCATION', payload as any, { allowPythonFallback });
-      return this.interpretResult(resp, {
-        successMessage: 'Sound played',
-        failureMessage: 'Failed to play sound'
+      const response = await this.automationBridge.sendAutomationRequest('play_sound_at_location', {
+        soundPath: params.soundPath,
+        location: params.location,
+        volume: params.volume ?? 1.0,
+        pitch: params.pitch ?? 1.0,
+        startTime: params.startTime ?? 0.0
+      }, {
+        timeoutMs: 30000
       });
-  } catch (e) {
-    return { success: false, error: `Failed to play sound: ${e}` };
-  }
+
+      if (response.success === false) {
+        return { success: false, error: response.error || response.message || 'Failed to play sound' };
+      }
+
+      return { success: true, message: response.message || 'Sound played' };
+    } catch (error) {
+      return { success: false, error: `Failed to play sound: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
   // Play sound 2D
@@ -468,133 +254,28 @@ finally:
     pitch?: number;
     startTime?: number;
   }) {
-    const volume = params.volume ?? 1.0;
-    const pitch = params.pitch ?? 1.0;
-    const startTime = params.startTime ?? 0.0;
-    const soundPath = params.soundPath ?? '';
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Audio operations require plugin support.');
+    }
 
-  const _py = `
-import unreal
-import json
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "warnings": []
-}
-
-try:
-  path = "${escapePythonString(soundPath)}"
-  if not unreal.EditorAssetLibrary.does_asset_exist(path):
-    result["error"] = "Sound asset not found"
-    raise SystemExit(0)
-
-  snd = unreal.EditorAssetLibrary.load_asset(path)
-  if not snd:
-    result["error"] = f"Failed to load sound asset: {path}"
-    raise SystemExit(0)
-
-  world = None
-  try:
-    world = unreal.EditorUtilityLibrary.get_editor_world()
-  except Exception:
-    world = None
-
-  if not world:
-    editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-    if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
-      world = editor_subsystem.get_editor_world()
-
-  if not world:
-    try:
-      world = unreal.EditorSubsystemLibrary.get_editor_world()
-    except Exception:
-      world = None
-
-  if not world:
-    result["error"] = "Unable to resolve editor world. Start PIE and ensure Editor Scripting Utilities is enabled."
-    raise SystemExit(0)
-
-  ok = False
-  try:
-    unreal.GameplayStatics.spawn_sound_2d(world, snd, ${volume}, ${pitch}, ${startTime})
-    ok = True
-  except AttributeError:
-    try:
-      unreal.GameplayStatics.play_sound_2d(world, snd, ${volume}, ${pitch}, ${startTime})
-      ok = True
-    except AttributeError:
-      pass
-
-  if not ok:
-    cam_loc = unreal.Vector(0.0, 0.0, 0.0)
-    try:
-      editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-      if editor_subsystem and hasattr(editor_subsystem, 'get_level_viewport_camera_info'):
-        info = editor_subsystem.get_level_viewport_camera_info()
-        if isinstance(info, (list, tuple)) and len(info) > 0:
-          cam_loc = info[0]
-    except Exception:
-      try:
-        controller = world.get_first_player_controller()
-        if controller:
-          pawn = controller.get_pawn()
-          if pawn:
-            cam_loc = pawn.get_actor_location()
-      except Exception:
-        pass
-
-    try:
-      rot = unreal.Rotator(0.0, 0.0, 0.0)
-      unreal.GameplayStatics.spawn_sound_at_location(world, snd, cam_loc, rot, ${volume}, ${pitch}, ${startTime})
-      ok = True
-      result["warnings"].append("Fell back to 3D playback at camera location")
-    except Exception as location_error:
-      result["warnings"].append(f"Failed fallback playback: {location_error}")
-
-  if not ok:
-    result["error"] = "Failed to play sound in 2D or fallback configuration"
-    raise SystemExit(0)
-
-  result["success"] = True
-  result["message"] = "Sound2D played"
-
-except SystemExit:
-  pass
-except Exception as e:
-  result["error"] = str(e)
-finally:
-  payload = dict(result)
-  if payload.get("success"):
-    if not payload.get("message"):
-      payload["message"] = "Sound2D played"
-    payload.pop("error", None)
-  else:
-    if not payload.get("error"):
-      payload["error"] = payload.get("message") or "Failed to play sound2D"
-    if not payload.get("message"):
-      payload["message"] = payload["error"]
-  if not payload.get("warnings"):
-    payload.pop("warnings", None)
-  print('RESULT:' + json.dumps(payload))
-`.trim();
     try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const payload = {
-        path: soundPath,
-        volume,
-        pitch,
-        startTime
-      };
-      const resp = await this.bridge.executeEditorFunction('PLAY_SOUND_2D', payload as any, { allowPythonFallback });
-      return this.interpretResult(resp, {
-        successMessage: 'Sound2D played',
-        failureMessage: 'Failed to play sound2D'
+      const response = await this.automationBridge.sendAutomationRequest('play_sound_2d', {
+        soundPath: params.soundPath,
+        volume: params.volume ?? 1.0,
+        pitch: params.pitch ?? 1.0,
+        startTime: params.startTime ?? 0.0
+      }, {
+        timeoutMs: 30000
       });
-  } catch (e) {
-    return { success: false, error: `Failed to play sound2D: ${e}` };
-  }
+
+      if (response.success === false) {
+        return { success: false, error: response.error || response.message || 'Failed to play 2D sound' };
+      }
+
+      return { success: true, message: response.message || '2D sound played' };
+    } catch (error) {
+      return { success: false, error: `Failed to play 2D sound: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
   // Create audio component
@@ -768,61 +449,7 @@ finally:
       await this.bridge.executeConsoleCommand(command);
       return { success: true, message: `Master volume set to ${vol}` };
     } catch (e) {
-      // Fallback to Python method if console command fails
-      const py = `
-  import unreal
-  import json
-      try:
-        # Try using AudioMixerBlueprintLibrary if available
-        try:
-          unreal.AudioMixerBlueprintLibrary.set_overall_volume_multiplier(${vol})
-          print('RESULT:' + json.dumps({'success': True}))
-        except AttributeError:
-          # Fallback to GameplayStatics method using modern subsystems (no deprecated EditorLevelLibrary)
-          try:
-            world = None
-            try:
-              editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-              if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
-                world = editor_subsystem.get_editor_world()
-            except Exception:
-              world = None
-
-            if world is None:
-              try:
-                world = unreal.EditorSubsystemLibrary.get_editor_world()
-              except Exception:
-                world = None
-
-            if world:
-              unreal.GameplayStatics.set_global_pitch_modulation(world, 1.0, 0.0)  # Reset pitch
-              unreal.GameplayStatics.set_global_time_dilation(world, 1.0)  # Reset time
-              # Note: There's no direct master volume in GameplayStatics, use sound class
-              print('RESULT:' + json.dumps({'success': False, 'error': 'Master volume control not available, use sound classes instead'}))
-            else:
-              print('RESULT:' + json.dumps({'success': False, 'error': 'Unable to resolve editor world'}))
-          except Exception as e2:
-            print('RESULT:' + json.dumps({'success': False, 'error': str(e2)}))
-  except Exception as e:
-      print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-  `.trim();
-      
-      try {
-  const resp = await (this.bridge as any).executeEditorPython(py, { allowPythonFallback: allowPythonFallbackFromEnv() });
-        const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-        const m = out.match(/RESULT:({.*})/);
-        if (m) {
-          try {
-            const parsed = JSON.parse(m[1]);
-            return parsed.success 
-              ? { success: true, message: `Master volume set to ${vol}` }
-              : { success: false, error: parsed.error };
-          } catch {}
-        }
-        return { success: true, message: 'Master volume set command executed' };
-      } catch {
-        return { success: false, error: `Failed to set master volume: ${e}` };
-      }
+      return { success: false, error: `Failed to set master volume: ${e instanceof Error ? e.message : String(e)}` };
     }
   }
 

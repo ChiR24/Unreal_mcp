@@ -20,7 +20,6 @@ public class McpAutomationBridge : ModuleRules
         // Editor-only dependencies should only be added when building for the editor target
         if (Target.bBuildEditor)
         {
-            PublicDependencyModuleNames.Add("EditorSubsystem");
             PrivateDependencyModuleNames.AddRange(new string[]
             {
                 "ApplicationCore",
@@ -33,7 +32,7 @@ public class McpAutomationBridge : ModuleRules
                 "Sockets",
                 "Networking",
                 "UnrealEd",
-                "PythonScriptPlugin",
+                "EditorSubsystem",
                 "EditorScriptingUtilities",
                 "BlueprintGraph",
                 "Kismet",
@@ -41,6 +40,7 @@ public class McpAutomationBridge : ModuleRules
                 "AssetRegistry",
                 "AssetTools",
                 "MaterialEditor",
+                "SourceControl",
                 // SubobjectData subsystem module (UE 5.6+)
                 // NOTE: SubobjectData is an optional engine module introduced in UE 5.6.
                 // Do not unconditionally add it here to avoid UBT failing on engine
@@ -57,9 +57,20 @@ public class McpAutomationBridge : ModuleRules
                 "Sequencer",
                 "MovieScene",
                 "MovieSceneTools",
-                // Niagara support (editor + runtime where needed)
+                "MovieSceneTracks",
                 "Niagara",
-                "NiagaraEditor"
+                "NiagaraEditor",
+                "Landscape",
+                "LandscapeEditor",
+                "LandscapeEditorUtilities",
+                "Foliage",
+                "FoliageEdit",
+                "AnimGraph",
+                "AnimationBlueprintLibrary",
+                "Persona",
+                "ToolMenus",
+                "EditorWidgets",
+                "PropertyEditor"
             });
 
             // LevelEditor: editor subsystem used by viewport / editor controls.
@@ -154,7 +165,6 @@ public class McpAutomationBridge : ModuleRules
                 if (!string.IsNullOrEmpty(engineRoot))
                 {
                     bool foundHeader = false;
-                    bool foundModuleDef = false;
                     // Known header names that indicate the presence of the SubobjectData module
                     string[] headerNames = new string[] {
                         "SubobjectDataSubsystem.h",

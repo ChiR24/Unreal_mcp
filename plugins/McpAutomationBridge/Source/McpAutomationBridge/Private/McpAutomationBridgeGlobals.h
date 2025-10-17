@@ -26,9 +26,6 @@ extern FString GCurrentSequencePath;
 // Niagara assets even when on-disk creation is not possible.
 extern TMap<FString, TSharedPtr<FJsonObject>> GNiagaraRegistry;
 
-extern FCriticalSection GPythonExecMutex;
-extern TMap<FString, TArray<TPair<FString, TSharedPtr<class FMcpBridgeWebSocket>>>> GPythonExecInflight;
-
 // Recent asset save tracking to throttle frequent SaveLoadedAsset calls
 extern TMap<FString, double> GRecentAssetSaveTs;
 extern FCriticalSection GRecentAssetSaveMutex;

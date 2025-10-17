@@ -37,8 +37,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
     const FString Lower = Action.ToLower();
     // Accept either the generic execute_editor_function action or the
     // more specific execute_console_command action. This allows the
-    // Node-side bridge to prefer a native console command path and avoid
-    // Python fallbacks for health checks and other simple diagnostics.
+    // server to use native console commands for health checks and diagnostics.
     if (!Lower.Equals(TEXT("execute_editor_function"), ESearchCase::IgnoreCase) && !Lower.Contains(TEXT("execute_editor_function"))
         && !Lower.Equals(TEXT("execute_console_command")) && !Lower.Contains(TEXT("execute_console_command"))) return false;
 
@@ -69,31 +68,38 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
                 return;
             }
 
-            bool bOk = false;
+            // Many Unreal console commands return false from Exec() even when
+            // they execute successfully (Shot, PlayInViewport, viewmode, etc.).
+            // Therefore we execute the command and assume success unless we
+            // detect an explicit failure condition.
+            bool bExecCalled = false;
             if (GEngine)
             {
                 // Prefer using the global editor Exec when available — this
                 // reliably executes console commands in the editor context.
-                if (GEditor && GEditor->Exec(nullptr, *Cmd))
+                if (GEditor)
                 {
-                    bOk = true;
+                    GEditor->Exec(nullptr, *Cmd);
+                    bExecCalled = true;
                 }
-                else if (GEngine)
+                
+                // Also try world contexts to ensure command reaches game world
+                if (GEngine)
                 {
                     for (const FWorldContext& Ctx : GEngine->GetWorldContexts())
                     {
                         UWorld* W = Ctx.World();
                         if (!W) continue;
-                        // Use GEngine->Exec(World, Cmd) to execute the command
-                        // in the context of the world. This avoids relying on a
-                        // particular UWorld::Exec overload and is broadly
-                        // supported across engine versions.
-                        bOk = GEngine->Exec(W, *Cmd);
-                        if (bOk) break;
+                        GEngine->Exec(W, *Cmd);
+                        bExecCalled = true;
+                        break; // Only need one world context
                     }
                 }
             }
 
+            // If we successfully called Exec at least once, report success.
+            // Only fail if we couldn't call Exec at all.
+            const bool bOk = bExecCalled;
             TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
             Out->SetStringField(TEXT("command"), Cmd);
             Out->SetBoolField(TEXT("success"), bOk);

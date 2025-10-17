@@ -1,12 +1,12 @@
 // Landscape tools for Unreal Engine with UE 5.6 World Partition support
 import { UnrealBridge } from '../unreal-bridge.js';
-import { bestEffortInterpretedText, coerceBoolean, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
-import { allowPythonFallbackFromEnv } from '../utils/env.js';
+import { AutomationBridge } from '../automation-bridge.js';
 import { ensureVector3 } from '../utils/validation.js';
-import { escapePythonString } from '../utils/python.js';
 
 export class LandscapeTools {
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+
+  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
   // Create landscape with World Partition support (UE 5.6)
   async createLandscape(params: {
@@ -41,6 +41,10 @@ export class LandscapeTools {
       };
     }
 
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
+    }
+
     const [locX, locY, locZ] = ensureVector3(params.location ?? [0, 0, 0], 'landscape location');
     const sectionsPerComponent = Math.max(1, Math.floor(params.sectionsPerComponent ?? 1));
     const quadsPerSection = Math.max(1, Math.floor(params.quadsPerSection ?? 63));
@@ -50,273 +54,47 @@ export class LandscapeTools {
     const scaleX = params.sizeX ? Math.max(0.1, params.sizeX / defaultSize) : 1;
     const scaleY = params.sizeY ? Math.max(0.1, params.sizeY / defaultSize) : 1;
 
-    const escapedName = escapePythonString(name);
-  const escapedMaterial =
-    params.materialPath && params.materialPath.trim().length > 0
-    ? escapePythonString(params.materialPath.trim())
-    : '';
-
-    const runtimeGridFlag = params.runtimeGrid ? 'True' : 'False';
-    const spatiallyLoadedFlag = params.isSpatiallyLoaded ? 'True' : 'False';
-    const runtimeGridValue = params.runtimeGrid ? escapePythonString(params.runtimeGrid.trim()) : '';
-    const dataLayerNames = Array.isArray(params.dataLayers)
-      ? params.dataLayers
-          .map(layer => layer?.trim())
-          .filter((layer): layer is string => Boolean(layer))
-          .map(layer => escapePythonString(layer))
-      : [];
-
-    const pythonScript = `
-import unreal
-import json
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "warnings": [],
-  "details": [],
-  "landscapeName": "",
-  "landscapeActor": "",
-  "worldPartition": False,
-  "runtimeGridRequested": ${runtimeGridFlag},
-  "spatiallyLoaded": ${spatiallyLoadedFlag}
-}
-
-try:
-  editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-  world = editor_subsystem.get_editor_world() if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world') else None
-  data_layer_manager = None
-  world_partition = None
-  if world:
-    # Try multiple methods to access World Partition (UE 5.6+)
-    try:
-      # Method 1: Try get_world_partition() if it exists
-      if hasattr(world, 'get_world_partition'):
-        world_partition = world.get_world_partition()
-    except (AttributeError, Exception):
-      pass
-    
-    if not world_partition:
-      try:
-        # Method 2: Try WorldPartitionSubsystem
-        wp_subsystem = unreal.get_editor_subsystem(unreal.WorldPartitionSubsystem)
-        if wp_subsystem:
-          world_partition = wp_subsystem.get_world_partition(world)
-      except (AttributeError, Exception):
-        pass
-    
-    if not world_partition:
-      try:
-        # Method 3: Check if world has world_partition property
-        if hasattr(world, 'world_partition'):
-          world_partition = world.world_partition
-      except (AttributeError, Exception):
-        pass
-    
-    result["worldPartition"] = world_partition is not None
-    
-    if result["worldPartition"] and hasattr(unreal, "WorldPartitionBlueprintLibrary"):
-      try:
-        data_layer_manager = unreal.WorldPartitionBlueprintLibrary.get_data_layer_manager(world)
-      except Exception as dlm_error:
-        result["warnings"].append(f"Data layer manager unavailable: {dlm_error}")
-
-  actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-  if not actor_subsystem:
-    result["error"] = "EditorActorSubsystem unavailable"
-  else:
-    existing = None
-    try:
-      for actor in actor_subsystem.get_all_level_actors():
-        if actor and actor.get_actor_label() == "${escapedName}":
-          existing = actor
-          break
-    except Exception as scan_error:
-      result["warnings"].append(f"Actor scan failed: {scan_error}")
-
-    if existing:
-      result["success"] = True
-      result["message"] = "Landscape already exists"
-      result["landscapeName"] = existing.get_actor_label()
-      try:
-        result["landscapeActor"] = existing.get_path_name()
-      except Exception:
-        pass
-    else:
-      landscape_class = getattr(unreal, "Landscape", None)
-      if not landscape_class:
-        result["error"] = "Landscape class unavailable"
-      else:
-        location = unreal.Vector(${locX}, ${locY}, ${locZ})
-        rotation = unreal.Rotator(0.0, 0.0, 0.0)
-        landscape_actor = actor_subsystem.spawn_actor_from_class(landscape_class, location, rotation)
-        if not landscape_actor:
-          result["error"] = "Failed to spawn landscape actor"
-        else:
-          # Set label first
-          try:
-            landscape_actor.set_actor_label("${escapedName}", True)
-          except TypeError:
-            landscape_actor.set_actor_label("${escapedName}")
-          except Exception as label_error:
-            result["warnings"].append(f"Failed to set landscape label: {label_error}")
-          
-          # Fix component registration by forcing re-registration
-          # This addresses the "RegisterComponentWithWorld: Trying to register component with IsValid() == false" warning
-          try:
-            # Get landscape components and re-register them
-            landscape_components = landscape_actor.get_components_by_class(unreal.LandscapeComponent)
-            if landscape_components:
-              for component in landscape_components:
-                if hasattr(component, 'register_component'):
-                  try:
-                    component.register_component()
-                  except Exception:
-                    pass
-            else:
-              # If no components yet, this is expected for LandscapePlaceholder
-              # The landscape needs to be "finalized" via editor tools or console commands
-              result["details"].append("Landscape placeholder created - finalize via editor for full functionality")
-          except Exception as comp_error:
-            # Component registration is best-effort; not critical
-            result["details"].append(f"Component registration attempted (editor finalization may be needed)")
-
-          try:
-            landscape_actor.set_actor_scale3d(unreal.Vector(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)}, 1.0))
-            result["details"].append(f"Actor scale set to (${scaleX.toFixed(2)}, ${scaleY.toFixed(2)}, 1.0)")
-          except Exception as scale_error:
-            result["warnings"].append(f"Failed to set landscape scale: {scale_error}")
-
-          # Workaround for LandscapeEditorSubsystem Python API limitation
-          # Use direct property manipulation instead
-          landscape_configured = False
-          try:
-            # Try LandscapeEditorSubsystem if available (may not be in Python API)
-            landscape_editor = unreal.get_editor_subsystem(unreal.LandscapeEditorSubsystem)
-            if landscape_editor:
-              try:
-                landscape_editor.set_component_size(${sectionsPerComponent}, ${quadsPerSection})
-                landscape_editor.set_component_count(${componentCount}, ${componentCount})
-                result["details"].append(f"Component size ${sectionsPerComponent}x${quadsPerSection}, count ${componentCount}x${componentCount}")
-                landscape_configured = True
-              except Exception as config_error:
-                result["details"].append(f"LandscapeEditorSubsystem method limited: {config_error}")
-          except (AttributeError, Exception):
-            # Expected - LandscapeEditorSubsystem not available in Python API
-            pass
-          
-          # Fallback: Configure via properties if subsystem not available
-          if not landscape_configured:
-            try:
-              # Set component properties directly
-              if hasattr(landscape_actor, 'set_editor_property'):
-                # Note: These properties may not be directly editable post-spawn
-                # This is documented UE limitation - landscape config is best done via editor tools
-                result["details"].append(f"Landscape spawned (config via editor tools recommended for ${sectionsPerComponent}x${quadsPerSection} components)")
-            except Exception:
-              pass
-
-          ${escapedMaterial ? `try:
-            material = unreal.EditorAssetLibrary.load_asset("${escapedMaterial}")
-            if material:
-              try:
-                landscape_actor.set_landscape_material(material)
-              except Exception:
-                landscape_actor.editor_set_landscape_material(material)
-              result["details"].append("Landscape material applied")
-            else:
-              result["warnings"].append("Landscape material asset not found: ${escapedMaterial}")
-          except Exception as material_error:
-            result["warnings"].append(f"Failed to apply landscape material: {material_error}")
-          ` : ''}
-          ${runtimeGridValue ? `if result["worldPartition"] and hasattr(unreal, "WorldPartitionBlueprintLibrary"):
-            try:
-              unreal.WorldPartitionBlueprintLibrary.set_actor_runtime_grid(landscape_actor, "${runtimeGridValue}")
-              result["details"].append("Runtime grid assigned: ${runtimeGridValue}")
-            except Exception as grid_error:
-              result["warnings"].append(f"Failed to assign runtime grid: {grid_error}")
-          ` : ''}
-          ${params.isSpatiallyLoaded ? `if result["worldPartition"] and hasattr(unreal, "WorldPartitionBlueprintLibrary"):
-            try:
-              unreal.WorldPartitionBlueprintLibrary.set_actor_spatially_loaded(landscape_actor, True)
-              result["details"].append("Actor marked as spatially loaded")
-            except Exception as spatial_error:
-              result["warnings"].append(f"Failed to mark as spatially loaded: {spatial_error}")
-          ` : ''}
-          ${dataLayerNames.length ? `if result["worldPartition"] and data_layer_manager:
-            for layer_name in ${JSON.stringify(dataLayerNames)}:
-              try:
-                data_layer = data_layer_manager.get_data_layer(layer_name)
-                if data_layer:
-                  unreal.WorldPartitionBlueprintLibrary.add_actor_to_data_layer(landscape_actor, data_layer)
-                  result["details"].append(f"Added to data layer {layer_name}")
-                else:
-                  result["warnings"].append(f"Data layer not found: {layer_name}")
-              except Exception as data_layer_error:
-                result["warnings"].append(f"Failed to assign data layer {layer_name}: {data_layer_error}")
-          ` : ''}
-
-          try:
-            result["landscapeName"] = landscape_actor.get_actor_label()
-            result["landscapeActor"] = landscape_actor.get_path_name()
-          except Exception:
-            pass
-
-          result["success"] = True
-          result["message"] = "Landscape actor created"
-except Exception as e:
-  result["error"] = str(e)
-
-if result.get("success"):
-  result.pop("error", None)
-else:
-  if not result.get("error"):
-    result["error"] = "Failed to create landscape actor"
-  if not result.get("message"):
-    result["message"] = result["error"]
-
-if not result.get("warnings"):
-  result.pop("warnings", None)
-if not result.get("details"):
-  result.pop("details", None)
-
-print("RESULT:" + json.dumps(result))
-`.trim();
-
     try {
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const response = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback });
-      const interpreted = interpretStandardResult(response, {
-        successMessage: 'Landscape actor created',
-        failureMessage: 'Failed to create landscape actor'
+      const response = await this.automationBridge.sendAutomationRequest('create_landscape', {
+        name,
+        location: [locX, locY, locZ],
+        scaleX,
+        scaleY,
+        sectionsPerComponent,
+        quadsPerSection,
+        componentCount,
+        materialPath: params.materialPath || '',
+        enableWorldPartition: params.enableWorldPartition ?? false,
+        runtimeGrid: params.runtimeGrid || '',
+        isSpatiallyLoaded: params.isSpatiallyLoaded ?? false,
+        dataLayers: params.dataLayers || []
+      }, {
+        timeoutMs: 60000
       });
 
-      if (!interpreted.success) {
+      if (response.success === false) {
         return {
           success: false,
-          error: interpreted.error || interpreted.message
+          error: response.error || response.message || 'Failed to create landscape actor'
         };
       }
 
       const result: Record<string, unknown> = {
         success: true,
-        message: interpreted.message,
-        landscapeName: coerceString(interpreted.payload.landscapeName) ?? name,
-        worldPartition: coerceBoolean(interpreted.payload.worldPartition)
+        message: response.message || 'Landscape actor created',
+        landscapeName: response.landscapeName || name,
+        worldPartition: response.worldPartition ?? params.enableWorldPartition ?? false
       };
 
-      const actorPath = coerceString(interpreted.payload.landscapeActor);
-      if (actorPath) {
-        result.landscapeActor = actorPath;
+      if (response.landscapeActor) {
+        result.landscapeActor = response.landscapeActor;
       }
-      if (interpreted.warnings?.length) {
-        result.warnings = interpreted.warnings;
+      if (response.warnings) {
+        result.warnings = response.warnings;
       }
-      if (interpreted.details?.length) {
-        result.details = interpreted.details;
+      if (response.details) {
+        result.details = response.details;
       }
-
       if (params.runtimeGrid) {
         result.runtimeGrid = params.runtimeGrid;
       }
@@ -328,10 +106,11 @@ print("RESULT:" + json.dumps(result))
     } catch (error) {
       return {
         success: false,
-        error: `Failed to create landscape actor: ${error}`
+        error: `Failed to create landscape actor: ${error instanceof Error ? error.message : String(error)}`
       };
     }
   }
+
 
   // Sculpt landscape
   async sculptLandscape(_params: {
@@ -566,105 +345,35 @@ print("RESULT:" + json.dumps(result))
     dataLayers?: string[];
     streamingDistance?: number;
   }) {
-    try {
-    const pythonScript = `
-import unreal
-import json
-
-result = {'success': False, 'error': 'Landscape not found'}
-
-try:
-  # Get the landscape actor using modern EditorActorSubsystem
-  actors = []
-  try:
-    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    if actor_subsystem and hasattr(actor_subsystem, 'get_all_level_actors'):
-      actors = actor_subsystem.get_all_level_actors()
-  except Exception:
-    actors = []
-  landscape = None
-
-  for actor in actors:
-    if actor.get_name() == "${params.landscapeName}" or actor.get_actor_label() == "${params.landscapeName}":
-      if isinstance(actor, unreal.LandscapeProxy) or isinstance(actor, unreal.Landscape):
-        landscape = actor
-        break
-
-  if landscape:
-    changes_made = []
-
-    # Configure spatial loading (UE 5.6)
-    if ${params.enableSpatialLoading !== undefined ? 'True' : 'False'}:
-      try:
-        landscape.set_editor_property('is_spatially_loaded', ${params.enableSpatialLoading || false})
-        changes_made.append("Spatial loading: ${params.enableSpatialLoading}")
-      except:
-        pass
-
-    # Set runtime grid (UE 5.6 World Partition)
-    if "${params.runtimeGrid || ''}":
-      try:
-        landscape.set_editor_property('runtime_grid', unreal.Name("${params.runtimeGrid}"))
-        changes_made.append("Runtime grid: ${params.runtimeGrid}")
-      except:
-        pass
-
-    # Configure data layers (UE 5.6)
-    if ${params.dataLayers ? 'True' : 'False'}:
-      try:
-        # Try modern subsystem first
-        try:
-          world = None
-          editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-          if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
-            world = editor_subsystem.get_editor_world()
-          if world is None:
-            world = unreal.EditorSubsystemLibrary.get_editor_world()
-        except Exception:
-          world = unreal.EditorSubsystemLibrary.get_editor_world()
-        data_layer_manager = unreal.WorldPartitionBlueprintLibrary.get_data_layer_manager(world)
-        if data_layer_manager:
-          # Note: Full data layer API requires additional setup
-          changes_made.append("Data layers: Requires manual configuration")
-      except:
-        pass
-
-    if changes_made:
-      result = {
-        'success': True,
-        'message': 'World Partition configured',
-        'changes': changes_made
-      }
-    else:
-      result = {
-        'success': False,
-        'error': 'No World Partition changes applied'
-      }
-
-except Exception as e:
-  result = {'success': False, 'error': str(e)}
-
-print('RESULT:' + json.dumps(result))
-`.trim();
-
-  const allowPythonFallback = allowPythonFallbackFromEnv();
-  const response = await (this.bridge as any).executeEditorPython(pythonScript, { allowPythonFallback });
-    const interpreted = interpretStandardResult(response, {
-      successMessage: 'World Partition configuration attempted',
-      failureMessage: 'World Partition configuration failed'
-    });
-
-    if (interpreted.success) {
-      return interpreted.payload as any;
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. World Partition operations require plugin support.');
     }
 
-    return {
-      success: false,
-      error: interpreted.error ?? 'World Partition configuration failed',
-      details: bestEffortInterpretedText(interpreted)
-    };
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('configure_landscape_world_partition', {
+        landscapeName: params.landscapeName,
+        enableSpatialLoading: params.enableSpatialLoading,
+        runtimeGrid: params.runtimeGrid || '',
+        dataLayers: params.dataLayers || [],
+        streamingDistance: params.streamingDistance
+      }, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'World Partition configuration failed'
+        };
+      }
+
+      return {
+        success: true,
+        message: response.message || 'World Partition configured',
+        changes: response.changes
+      };
     } catch (err) {
-      return { success: false, error: `Failed to configure World Partition: ${err}` };
+      return { success: false, error: `Failed to configure World Partition: ${err instanceof Error ? err.message : String(err)}` };
     }
   }
 
