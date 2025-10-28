@@ -195,13 +195,21 @@ export class ResponseValidator {
 
     // If it's already MCP-shaped, return as-is (optionally append validation meta)
     if (alreadyMcpShaped) {
-      if (structuredPayload !== undefined && response && typeof response === 'object' && response.structuredContent === undefined) {
+      if (structuredPayload !== undefined && response && typeof response === 'object' && (response as any).structuredContent === undefined) {
         try {
           (response as any).structuredContent = structuredPayload && typeof structuredPayload === 'object'
             ? cleanObject(structuredPayload)
             : structuredPayload;
         } catch {}
       }
+      // Promote failure semantics to top-level isError when obvious
+      try {
+        const sc: any = (response as any).structuredContent || structuredPayload || {};
+        const hasExplicitFailure = (typeof sc.success === 'boolean' && sc.success === false) || (typeof sc.error === 'string' && sc.error.length > 0);
+        if (hasExplicitFailure && (response as any).isError !== true) {
+          (response as any).isError = true;
+        }
+      } catch {}
       if (!validation.valid) {
         try {
           (response as any)._validation = { valid: false, errors: validation.errors };
@@ -223,6 +231,16 @@ export class ResponseValidator {
       ]
     } as any;
 
+    // Surface a top-level success flag when available so clients and test
+    // harnesses do not have to infer success from the absence of isError.
+    try {
+      if (structuredPayload && typeof (structuredPayload as any).success === 'boolean') {
+        (wrapped as any).success = Boolean((structuredPayload as any).success);
+      } else if (response && typeof (response as any).success === 'boolean') {
+        (wrapped as any).success = Boolean((response as any).success);
+      }
+    } catch {}
+
     if (structuredPayload !== undefined) {
       try {
         wrapped.structuredContent = structuredPayload && typeof structuredPayload === 'object'
@@ -239,9 +257,27 @@ export class ResponseValidator {
       }
     }
 
+    // Promote failure semantics to top-level isError when obvious
+    try {
+      const sc: any = wrapped.structuredContent || {};
+      const hasExplicitFailure = (typeof sc.success === 'boolean' && sc.success === false) || (typeof sc.error === 'string' && sc.error.length > 0);
+      if (hasExplicitFailure) {
+        wrapped.isError = true;
+      }
+    } catch {}
+
     if (!validation.valid) {
       wrapped._validation = { valid: false, errors: validation.errors };
     }
+
+    // Mark explicit error when success is false to avoid false positives in
+    // clients that check only for the absence of isError.
+    try {
+      const s = (wrapped as any).success;
+      if (typeof s === 'boolean' && s === false) {
+        (wrapped as any).isError = true;
+      }
+    } catch {}
 
     return wrapped;
   }

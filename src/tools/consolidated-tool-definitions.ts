@@ -10,13 +10,13 @@ Use it when you need to:
 - spin up a minimal Material asset at a specific path.
 - duplicate, rename, move, or delete assets with optional redirector fixup.
 
-Supported actions: list, import, create_material, duplicate, rename, move, delete.`,
+Supported actions: list, import, create_material, create_material_instance, duplicate, rename, move, delete, delete_assets, create_folder, get_dependencies, create_thumbnail, set_tags, generate_report, validate, fixup_redirectors, find_by_tag, get_metadata, set_metadata.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: { 
           type: 'string', 
-    enum: ['list', 'import', 'create_material', 'create_material_instance', 'duplicate', 'rename', 'move', 'delete'],
+    enum: ['list', 'import', 'create_material', 'create_material_instance', 'duplicate', 'rename', 'move', 'delete', 'delete_assets', 'create_folder', 'get_dependencies', 'create_thumbnail', 'set_tags', 'generate_report', 'validate', 'fixup_redirectors', 'find_by_tag', 'get_metadata', 'set_metadata'],
           description: 'Action to perform'
         },
         // For list
@@ -36,11 +36,15 @@ Supported actions: list, import, create_material, duplicate, rename, move, delet
         save: { type: 'boolean', description: 'Save newly created assets after duplication.' },
         fixupRedirectors: { type: 'boolean', description: 'Run redirector fixup for affected folders after move/delete actions.' },
         timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds for automation-bridge-backed asset operations.' },
-  // For create_material and create_material_instance
-  name: { type: 'string', description: 'Name for the new material asset or instance. Example: "MyMaterial"' },
-  path: { type: 'string', description: 'Content path where material will be saved. Example: "/Game/Materials"' },
-  parentMaterial: { type: 'string', description: 'Parent material (asset path) for material instances. Example: "/Game/Materials/M_MasterMaterial"' },
-  parameters: { type: 'object', additionalProperties: true, description: 'Optional material parameter overrides for instances (name->value map).' }
+        // For create_material and create_material_instance
+        name: { type: 'string', description: 'Name for the new material asset or instance. Example: "MyMaterial"' },
+        path: { type: 'string', description: 'Content path where material will be saved. Example: "/Game/Materials"' },
+        parentMaterial: { type: 'string', description: 'Parent material (asset path) for material instances. Example: "/Game/Materials/M_MasterMaterial"' },
+        parameters: { type: 'object', additionalProperties: true, description: 'Optional material parameter overrides for instances (name->value map).' },
+        // Misc/advanced
+        tag: { type: 'string', description: 'Tag name for find_by_tag action' },
+        metadata: { type: 'object', additionalProperties: true, description: 'Arbitrary metadata map for set_metadata action' },
+        directoryPath: { type: 'string', description: 'Optional directory path for fixup_redirectors' }
       },
       required: ['action']
     },
@@ -72,6 +76,29 @@ Supported actions: list, import, create_material, duplicate, rename, move, delet
         failed: { type: 'array', items: { type: 'string' }, description: 'Assets that failed to delete' },
         message: { type: 'string', description: 'Status message' },
         error: { type: 'string', description: 'Error message if failed' }
+      }
+    }
+  },
+  // 7a. BLUEPRINT SNAPSHOT
+  {
+    name: 'blueprint_get',
+    description: `Retrieve a Blueprint's snapshot from the automation bridge for inspection.
+
+Use it when you need to:
+- fetch the current Blueprint definition (variables, functions, events, defaults).
+- validate metadata recorded by prior manage_blueprint operations.
+- inspect Blueprint structure without issuing a multi-action manage request.
+
+Inputs:
+- blueprintPath (string): The Blueprint asset path (e.g. /Game/Blueprints/BP_MyActor).
+- name (string): Optional alias when blueprintPath is omitted.
+- timeoutMs (number): Optional timeout override.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blueprintPath: { type: 'string', description: 'Full Blueprint asset path (preferred).' },
+        name: { type: 'string', description: 'Alternative Blueprint identifier when blueprintPath is not provided.' },
+        timeoutMs: { type: 'integer', description: 'Optional timeout override in milliseconds.' }
       }
     }
   },
@@ -295,21 +322,41 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
   // 5. ANIMATION SYSTEM - Combines animation and physics setup
   {
     name: 'animation_physics',
-  description: `Animation and physics rigging helper covering Anim BPs, montage playback, ragdolls, and vehicle setup.
+  description: `Animation and physics rigging helper covering Anim BPs, montage playback, ragdolls, state machines, IK, blend spaces/trees, and vehicle setup.
 
 Use it when you need to:
 - generate an Animation Blueprint for a skeleton.
 - play a montage/animation on an actor at a chosen rate.
 - enable a quick ragdoll using an existing physics asset.
- - configure vehicle movement and drivetrain settings via physics helpers.
+- configure vehicle movement and drivetrain settings via physics helpers.
+- generate blend spaces/trees and state machines.
+- setup IK chains and retargeting.
 
-Supported actions: create_animation_bp, play_montage, setup_ragdoll, configure_vehicle.`,
+Supported actions: create_animation_bp, create_anim_blueprint, create_animation_blueprint, play_montage, play_anim_montage, setup_ragdoll, activate_ragdoll, configure_vehicle, create_blend_space, create_state_machine, setup_ik, create_procedural_anim, create_blend_tree, setup_retargeting, setup_physics_simulation, create_animation_asset, cleanup.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: { 
           type: 'string', 
-          enum: ['create_animation_bp', 'play_montage', 'setup_ragdoll', 'configure_vehicle'],
+          enum: [
+            'create_animation_bp',
+            'create_anim_blueprint',
+            'create_animation_blueprint',
+            'play_montage',
+            'play_anim_montage',
+            'setup_ragdoll',
+            'activate_ragdoll',
+            'configure_vehicle',
+            'create_blend_space',
+            'create_state_machine',
+            'setup_ik',
+            'create_procedural_anim',
+            'create_blend_tree',
+            'setup_retargeting',
+            'setup_physics_simulation',
+            'create_animation_asset',
+            'cleanup'
+          ],
           description: 'Action type'
         },
         // Common
@@ -375,7 +422,23 @@ Supported actions: create_animation_bp, play_montage, setup_ragdoll, configure_v
           type: 'array',
           description: 'Optional list of Unreal plugin names that must be enabled before configure_vehicle runs.',
           items: { type: 'string' }
-        }
+        },
+        // Advanced animation features (optional)
+        blueprintPath: { type: 'string', description: 'Animation Blueprint path or target Blueprint path' },
+        states: { type: 'array', items: { type: 'object' }, description: 'State definitions for state machines' },
+        transitions: { type: 'array', items: { type: 'object' }, description: 'Transition definitions for state machines' },
+        chain: { type: 'object', description: 'IK chain configuration' },
+        effector: { type: 'object', description: 'IK effector target' },
+        settings: { type: 'object', description: 'Generic settings for procedural animation creation' },
+        dimensions: { anyOf: [ { type: 'number' }, { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 } ], description: 'Blend space dimensions or axis count' },
+        horizontalAxis: { type: 'object', properties: { name: { type: 'string' }, minValue: { type: 'number' }, maxValue: { type: 'number' } } },
+        verticalAxis: { type: 'object', properties: { name: { type: 'string' }, minValue: { type: 'number' }, maxValue: { type: 'number' } } },
+        samples: { type: 'array', items: { type: 'object' }, description: 'Sample animations for blend spaces' },
+        assetType: { type: 'string', description: 'Type of animation asset to create (Sequence, Montage, etc.)' },
+        sourceSkeleton: { type: 'string', description: 'Source skeleton for retargeting' },
+        targetSkeleton: { type: 'string', description: 'Target skeleton for retargeting' },
+        params: { type: 'object', description: 'Parameters for physics simulation setup' },
+        artifacts: { type: 'array', items: { type: 'string' }, description: 'Artifact asset paths to cleanup' }
       },
       required: ['action']
     },
@@ -506,7 +569,7 @@ Supported actions: create, add_component, set_default, modify_scs, get_scs, add_
       properties: {
         action: { 
           type: 'string', 
-          enum: ['create', 'add_component', 'set_default', 'modify_scs', 'ensure_exists', 'probe_handle', 'add_variable', 'add_function', 'add_event', 'add_construction_script', 'set_variable_metadata', 'get', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property'],
+          enum: ['create', 'add_component', 'set_default', 'modify_scs', 'ensure_exists', 'probe_handle', 'add_variable', 'add_function', 'add_event', 'add_construction_script', 'set_variable_metadata', 'get', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property', 'add_node', 'connect_pins'],
           description: 'Blueprint action'
         },
         componentClass: { type: 'string', description: 'Optional component class name for probe_handle (e.g., StaticMeshComponent)' },
@@ -703,13 +766,33 @@ Use it when you need to:
 - drive procedural terrain/foliage generation with bounds, seeds, and density settings.
 - spawn explicit foliage instances at transforms.
 
-Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_procedural_terrain, create_procedural_foliage, add_foliage_instances, create_landscape_grass_type.`,
+Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_procedural_terrain, create_procedural_foliage, add_foliage_instances, get_foliage_instances, remove_foliage, create_landscape_grass_type.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: { 
           type: 'string', 
-          enum: ['create_landscape', 'sculpt', 'add_foliage', 'paint_foliage', 'create_procedural_terrain', 'create_procedural_foliage', 'add_foliage_instances', 'create_landscape_grass_type'],
+          enum: [
+            'create_landscape',
+            'sculpt',
+            'add_foliage',
+            'paint_foliage',
+            'create_procedural_terrain',
+            'create_procedural_foliage',
+            'add_foliage_instances',
+            'get_foliage_instances',
+            'remove_foliage',
+            'create_landscape_grass_type',
+            'export_snapshot',
+            'import_snapshot',
+            'delete',
+            'add_landscape_spline',
+            'set_landscape_material',
+            'create_layer',
+            'paint_layer',
+            'export_heightmap',
+            'import_heightmap'
+          ],
           description: 'Environment action'
         },
         // Common
@@ -814,7 +897,7 @@ Supported actions: profile, show_fps, set_quality, play_sound, create_widget, sh
       properties: {
         action: { 
           type: 'string', 
-          enum: ['profile', 'show_fps', 'set_quality', 'play_sound', 'create_widget', 'show_widget', 'screenshot', 'engine_start', 'engine_quit'],
+          enum: ['profile', 'show_fps', 'set_quality', 'play_sound', 'create_widget', 'show_widget', 'screenshot', 'engine_start', 'engine_quit', 'set_resolution', 'set_fullscreen', 'set_cvar', 'execute_command'],
           description: 'System action'
         },
         // Performance
@@ -851,6 +934,10 @@ Supported actions: profile, show_fps, set_quality, play_sound, create_widget, sh
         visible: { type: 'boolean', description: 'Whether widget should be visible (true) or hidden (false). Required for show_widget action.' },
         // Screenshot
         resolution: { type: 'string', description: 'Screenshot resolution in WIDTHxHEIGHT format (e.g., "1920x1080", "3840x2160"). Optional for screenshot action, uses viewport size if not specified.' },
+        // Resolution / fullscreen control (system_control)
+        width: { type: 'number', description: 'Screen width in pixels (set_resolution / set_fullscreen). Required for set_resolution.' },
+        height: { type: 'number', description: 'Screen height in pixels (set_resolution / set_fullscreen). Required for set_resolution.' },
+        windowed: { type: 'boolean', description: 'Windowed mode when using set_resolution (true=windowed, false=fullscreen). Optional; defaults to true.' },
         // Engine lifecycle
         projectPath: { type: 'string', description: 'Absolute path to .uproject file (e.g., "C:/Projects/MyGame/MyGame.uproject"). Required for engine_start unless UE_PROJECT_PATH environment variable is set.' },
         editorExe: { type: 'string', description: 'Absolute path to Unreal Editor executable (e.g., "C:/UnrealEngine/Engine/Binaries/Win64/UnrealEditor.exe"). Required for engine_start unless UE_EDITOR_EXE environment variable is set.' }
@@ -902,98 +989,8 @@ Use it when higher-level tools don't cover the console tweak you need. Hazardous
     }
   },
 
-  // 11. PYTHON EXECUTION
-  {
-    name: 'execute_python',
-  description: `General-purpose Python runner for the Unreal Editor.
 
-Use it when you need to:
-- run a one-off Python script without creating a dedicated tool.
-- leverage existing bridge templates (e.g., GET_ALL_ACTORS) with custom parameters.
-- capture structured RESULT payloads emitted from the script.
-
-Supported modes: direct script execution or template invocation.
-
-Execution always routes through the MCP Automation Bridge plugin.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        script: { type: 'string', description: 'Raw Python source to execute inside the Unreal Editor. Required if no template is provided.' },
-        template: { type: 'string', description: 'Optional bridge template name (e.g., "GET_ALL_ACTORS"). When set, the template is executed instead of the raw script.' },
-        templateParams: { type: 'object', description: 'Optional parameters to substitute into the selected template.' },
-        context: { type: 'object', description: 'JSON-serialisable payload exposed to the script as MCP_INPUT.' },
-        captureResult: { type: 'boolean', description: 'Parse RESULT: blocks from stdout (true) or return raw execution output (false). Defaults to true.' },
-        transport: {
-          type: 'string',
-          enum: ['automation_bridge'],
-          description: 'Execution transport. Only automation_bridge is supported; omit to use the default.'
-        },
-        timeoutMs: {
-          type: 'number',
-          description: 'Optional timeout (milliseconds) when using the automation bridge transport. Defaults to 15000.'
-        }
-      },
-      anyOf: [
-        { required: ['script'] },
-        { required: ['template'] }
-      ]
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', description: 'Whether the Python execution succeeded' },
-        result: { description: 'Parsed RESULT payload or raw execution response' },
-        message: { type: 'string', description: 'Human-readable status message' },
-        warnings: { type: 'array', items: { type: 'string' }, description: 'Optional warnings from execution' },
-        error: { type: 'string', description: 'Error details if execution failed' }
-      }
-    }
-  },
-
-  // 12. REMOTE CONTROL PRESETS
-  {
-    name: 'manage_rc',
-  description: `Remote Control preset helper for building, exposing, and mutating RC assets.
-
-Use it when you need to:
-- create a preset asset on disk.
-- expose actors or object properties to the preset.
-- list the exposed fields for inspection.
-- get or set property values through RC with JSON-serializable payloads.
-
-Supported actions: create_preset, expose_actor, expose_property, list_fields, set_property, get_property.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: ['create_preset', 'expose_actor', 'expose_property', 'list_fields', 'set_property', 'get_property'],
-          description: 'RC action'
-        },
-        name: { type: 'string', description: 'Name for Remote Control preset asset. Required for create_preset action.' },
-        path: { type: 'string', description: 'Content path where preset will be saved (e.g., "/Game/RCPresets"). Required for create_preset action.' },
-        presetPath: { type: 'string', description: 'Full content path to existing Remote Control preset asset (e.g., "/Game/RCPresets/MyPreset"). Required for expose_actor, expose_property, list_fields, set_property, and get_property actions.' },
-        actorName: { type: 'string', description: 'Actor label/name in level to expose to Remote Control preset. Required for expose_actor action.' },
-        objectPath: { type: 'string', description: 'Full object path for property operations (e.g., "/Game/Maps/Level.Level:PersistentLevel.StaticMeshActor_0"). Required for expose_property, set_property, and get_property actions.' },
-        propertyName: { type: 'string', description: 'Name of the property to expose, get, or set (e.g., "RelativeLocation", "Intensity", "bHidden"). Required for expose_property, set_property, and get_property actions.' },
-        value: { description: 'New value to set for property. Must be JSON-serializable and compatible with property type (e.g., {"X":100,"Y":200,"Z":300} for location, true/false for bool, number for numeric types). Required for set_property action.' }
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        presetPath: { type: 'string' },
-        fields: { type: 'array', items: { type: 'object' } },
-        value: {},
-        error: { type: 'string' }
-      }
-    }
-  },
-
-  // 13. SEQUENCER / CINEMATICS
+  // 11. SEQUENCER / CINEMATICS
   {
     name: 'manage_sequence',
   description: `Sequencer automation helper for Level Sequences: asset management, bindings, and playback control.
@@ -1004,7 +1001,7 @@ Use it when you need to:
 - adjust sequence metadata (frame rate, bounds, playback window).
 - drive playback (play/pause/stop), adjust speed, or fetch binding info.
 
-Supported actions: create, open, add_camera, add_actor, add_actors, remove_actors, get_bindings, add_spawnable_from_class, play, pause, stop, set_properties, get_properties, set_playback_speed.`,
+Supported actions: create, open, add_camera, add_actor, add_actors, remove_actors, get_bindings, add_spawnable_from_class, play, pause, stop, get_properties, set_playback_speed, list, duplicate, rename, delete, get_metadata.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -1013,7 +1010,8 @@ Supported actions: create, open, add_camera, add_actor, add_actors, remove_actor
           enum: [
             'create', 'open', 'add_camera', 'add_actor', 'add_actors', 
             'remove_actors', 'get_bindings', 'add_spawnable_from_class',
-            'play', 'pause', 'stop', 'set_properties', 'get_properties', 'set_playback_speed'
+            'play', 'pause', 'stop', 'get_properties', 'set_playback_speed',
+            'list', 'duplicate', 'rename', 'delete', 'get_metadata'
           ], 
           description: 'Sequence action' 
         },
@@ -1023,12 +1021,14 @@ Supported actions: create, open, add_camera, add_actor, add_actors, remove_actor
         actorNames: { type: 'array', items: { type: 'string' }, description: 'Array of actor labels/names for batch add or remove operations. Required for add_actors and remove_actors actions.' },
         className: { type: 'string', description: 'Unreal class name for spawnable actor (e.g., "StaticMeshActor", "CineCameraActor", "SkeletalMeshActor"). Required for add_spawnable_from_class action.' },
         spawnable: { type: 'boolean', description: 'If true, camera is spawnable (owned by sequence); if false, camera is possessable (references level actor). Optional for add_camera, defaults to true.' },
-        frameRate: { type: 'number', description: 'Sequence frame rate in frames per second (e.g., 24, 30, 60). Required for set_properties when changing frame rate.' },
-        lengthInFrames: { type: 'number', description: 'Total sequence length measured in frames. Required for set_properties when changing duration.' },
-        playbackStart: { type: 'number', description: 'First frame of playback range (inclusive). Optional for set_properties.' },
-        playbackEnd: { type: 'number', description: 'Last frame of playback range (inclusive). Optional for set_properties.' },
+        frameRate: { type: 'number', description: 'Sequence frame rate in frames per second (e.g., 24, 30, 60). (Not currently implemented by plugin; for future use.)' },
+        lengthInFrames: { type: 'number', description: 'Total sequence length measured in frames. (Not currently implemented by plugin; for future use.)' },
+        playbackStart: { type: 'number', description: 'First frame of playback range (inclusive). (Not currently implemented by plugin; for future use.)' },
+        playbackEnd: { type: 'number', description: 'Last frame of playback range (inclusive). (Not currently implemented by plugin; for future use.)' },
         speed: { type: 'number', description: 'Playback speed multiplier. 1.0 is normal speed, 2.0 is double speed, 0.5 is half speed. Required for set_playback_speed action.' },
-        loopMode: { type: 'string', enum: ['once', 'loop', 'pingpong'], description: 'How sequence loops: "once" plays once and stops, "loop" repeats from start, "pingpong" plays forward then backward. Optional for set_properties.' }
+        loopMode: { type: 'string', enum: ['once', 'loop', 'pingpong'], description: 'How sequence loops. (Not currently implemented by plugin; for future use.)' },
+        destinationPath: { type: 'string', description: 'Destination content folder for duplicate action (e.g., "/Game/Cinematics/Copies"). Required for duplicate.' },
+        newName: { type: 'string', description: 'New asset name for duplicate/rename actions.' }
       },
       required: ['action']
     },
@@ -1054,7 +1054,7 @@ Supported actions: create, open, add_camera, add_actor, add_actors, remove_actor
     }
   },
 
-  // 14. INTROSPECTION
+  // 12. INTROSPECTION
   {
     name: 'inspect',
   description: `Introspection utility for reading or mutating properties on actors, components, or CDOs.

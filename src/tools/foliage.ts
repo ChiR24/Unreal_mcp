@@ -57,9 +57,10 @@ export class FoliageTools {
     }
 
     try {
+      const base = meshPath.includes('.') ? meshPath : `${meshPath}.${meshPath.split('/').filter(Boolean).pop()}`;
       const response = await this.automationBridge.sendAutomationRequest('add_foliage_type', {
         name,
-        meshPath,
+        meshPath: base,
         density: params.density,
         radius: params.radius,
         minScale: params.minScale,
@@ -147,9 +148,10 @@ export class FoliageTools {
     const brush = Number.isFinite(params.brushSize as number) ? (params.brushSize as number) : 300;
 
     try {
+      const typePath = foliageType.includes('/') ? foliageType : `/Game/Foliage/${foliageType}.${foliageType}`;
       const response = await this.automationBridge.sendAutomationRequest('paint_foliage', {
-        foliageType,
-        position: pos,
+        foliageTypePath: typePath,
+        locations: [{ x: pos[0], y: pos[1], z: pos[2] }],
         brushSize: brush,
         paintDensity: params.paintDensity,
         eraseMode: params.eraseMode
@@ -166,18 +168,12 @@ export class FoliageTools {
       }
 
       const payload = response.result as Record<string, unknown>;
-      const added = coerceNumber(payload.added) ?? 0;
-      const actor = coerceString(payload.actor);
-      const component = coerceString(payload.component);
-      const usedMesh = coerceString(payload.used_mesh);
+      const added = coerceNumber(payload.instancesPlaced) ?? coerceNumber((payload as any)?.count) ?? 0;
       const note = coerceString(payload.note);
 
       return {
         success: true,
         added,
-        actor,
-        component,
-        usedMesh,
         note,
         message: `Painted ${added} instances for '${foliageType}' around (${pos[0]}, ${pos[1]}, ${pos[2]})`
       };
@@ -186,6 +182,54 @@ export class FoliageTools {
         success: false,
         error: `Failed to paint foliage: ${error instanceof Error ? error.message : String(error)}`
       };
+    }
+  }
+
+  // Query foliage instances (plugin-native)
+  async getFoliageInstances(params: { foliageType?: string }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Foliage operations require plugin support.');
+    }
+    try {
+      const typePath = params.foliageType ? (params.foliageType.includes('/') ? params.foliageType : `/Game/Foliage/${params.foliageType}.${params.foliageType}`) : undefined;
+      const response = await this.automationBridge.sendAutomationRequest('get_foliage_instances', {
+        foliageTypePath: typePath
+      }, { timeoutMs: 60000 });
+      if (response.success === false) {
+        return { success: false, error: response.error || response.message || 'Get foliage instances failed' };
+      }
+      const payload = response.result as Record<string, unknown>;
+      return {
+        success: true,
+        count: coerceNumber(payload.count) ?? 0,
+        instances: (payload.instances as any[]) ?? []
+      };
+    } catch (error) {
+      return { success: false, error: `Failed to get foliage instances: ${error instanceof Error ? error.message : String(error)}` };
+    }
+  }
+
+  // Remove foliage (plugin-native)
+  async removeFoliage(params: { foliageType?: string; removeAll?: boolean }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Foliage operations require plugin support.');
+    }
+    try {
+      const typePath = params.foliageType ? (params.foliageType.includes('/') ? params.foliageType : `/Game/Foliage/${params.foliageType}.${params.foliageType}`) : undefined;
+      const response = await this.automationBridge.sendAutomationRequest('remove_foliage', {
+        foliageTypePath: typePath,
+        removeAll: !!params.removeAll
+      }, { timeoutMs: 60000 });
+      if (response.success === false) {
+        return { success: false, error: response.error || response.message || 'Remove foliage failed' };
+      }
+      const payload = response.result as Record<string, unknown>;
+      return {
+        success: true,
+        instancesRemoved: coerceNumber(payload.instancesRemoved) ?? 0
+      };
+    } catch (error) {
+      return { success: false, error: `Failed to remove foliage: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
 

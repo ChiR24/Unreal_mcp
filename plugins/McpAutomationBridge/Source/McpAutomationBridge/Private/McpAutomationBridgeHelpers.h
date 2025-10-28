@@ -470,7 +470,7 @@ static inline bool SaveLoadedAssetThrottled(UObject* Asset, double ThrottleSecon
     }
 
     // Perform the save and record timestamp on success
-    bool bSaved = UEditorAssetLibrary::SaveLoadedAsset(Asset);
+    const bool bSaved = UEditorAssetLibrary::SaveLoadedAsset(Asset);
     if (bSaved)
     {
         FScopeLock Lock(&GRecentAssetSaveMutex);
@@ -1035,14 +1035,6 @@ static inline FProperty* ResolveNestedPropertyPath(UObject* RootObject, const FS
     
     OutError = TEXT("Unexpected end of property path resolution");
     return nullptr;
-}
-
-static inline bool IsFastMode(const TSharedPtr<FJsonObject>& Payload)
-{
-    if (!Payload.IsValid()) return false;
-    if (Payload->HasField(TEXT("fast"))) return Payload->GetBoolField(TEXT("fast"));
-    if (Payload->HasField(TEXT("fastMode"))) return Payload->GetBoolField(TEXT("fastMode"));
-    return false;
 }
 
 // Helper to find an SCS node by a (case-insensitive) name. Uses reflection

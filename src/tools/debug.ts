@@ -265,19 +265,14 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     });
   }
 
-  async drawDebugCoordinateSystem(params: {
+  async drawDebugCoordinateSystem(_params: {
     location: [number, number, number];
     rotation?: [number, number, number];
     scale?: number;
     duration?: number;
     thickness?: number;
   }) {
-    const rotation = params.rotation || [0, 0, 0];
-    const scale = params.scale || 100.0;
-    const duration = params.duration || 5.0;
-    const thickness = params.thickness || 2.0;
-    const command = `DrawDebugCoordinateSystem ${params.location.join(' ')} ${rotation.join(' ')} ${scale} ${duration} ${thickness}`;
-    return this.bridge.executeConsoleCommand(command);
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'DrawDebugCoordinateSystem is not available via console; requires plugin/editor API or Python' };
   }
 
   async drawDebugFrustum(params: {
@@ -426,19 +421,13 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     color?: [number, number, number, number];
   }) {
     if (params.enabled && params.message) {
-      const key = params.key || -1;
-      const duration = params.duration || 5.0;
-      const color = params.color || [255, 255, 255, 255];
-      const command = `ke * DisplayDebugMessage ${key} "${params.message}" ${duration} ${color.join(' ')}`;
-      return this.bridge.executeConsoleCommand(command);
-    } else {
-      return this.bridge.executeConsoleCommand('DisableAllScreenMessages');
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Showing on-screen messages via console is not supported; use editor API' };
     }
+    return this.bridge.executeConsoleCommand('DisableAllScreenMessages');
   }
 
-  async showSkeletalMeshBones(params: { actorName: string; enabled: boolean; }) {
-    const command = params.enabled ? `ShowDebugSkelMesh ${params.actorName}` : `HideDebugSkelMesh ${params.actorName}`;
-    return this.bridge.executeConsoleCommand(command);
+  async showSkeletalMeshBones(_params: { actorName: string; enabled: boolean; }) {
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Showing skeletal mesh bones via console is not supported; use editor API' };
   }
 
   async clearDebugShapes() {

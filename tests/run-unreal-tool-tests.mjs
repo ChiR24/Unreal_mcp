@@ -648,11 +648,10 @@ function enrichTestCase(rawCase) {
       };
     }
     case 'Automation Bridge': {
-      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      // execute_python tool removed - Python functionality deprecated
       return {
         ...base,
-        toolName: 'execute_python',
-        arguments: { ...payloadValue }
+        skipReason: 'execute_python tool removed - Python support deprecated'
       };
     }
     case 'Debug Tools': {
@@ -667,12 +666,10 @@ function enrichTestCase(rawCase) {
       };
     }
     case 'Remote Control Preset Tools': {
-      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
-      if (!payloadValue.action) return { ...base, skipReason: 'Missing action in payload' };
+      // manage_rc tool removed - Remote Control API deprecated
       return {
         ...base,
-        toolName: 'manage_rc',
-        arguments: payloadValue
+        skipReason: 'manage_rc tool removed - Remote Control API deprecated'
       };
     }
     case 'Asset Boundary Tests': {
@@ -761,12 +758,12 @@ function enrichTestCase(rawCase) {
     }
     case 'Remote Control Boundary Tests':
     case 'Remote Control Preset Boundary Tests': {
-      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
-      return { ...base, toolName: 'manage_rc', arguments: payloadValue };
+      // manage_rc tool removed - Remote Control API deprecated
+      return { ...base, skipReason: 'manage_rc tool removed - Remote Control API deprecated' };
     }
     case 'Python Execution Boundary Tests': {
-      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
-      return { ...base, toolName: 'execute_python', arguments: payloadValue };
+      // execute_python tool removed - Python support deprecated
+      return { ...base, skipReason: 'execute_python tool removed - Python support deprecated' };
     }
     case 'Inspection Boundary Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };

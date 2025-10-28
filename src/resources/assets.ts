@@ -46,13 +46,14 @@ export class AssetResources {
       const entry = this.cache.get(key);
       const now = Date.now();
       if (entry && (now - entry.timestamp) < this.ttlMs) {
-        return entry.data;
+        return { success: true, ...entry.data };
       }
     } catch {}
     
     // Check if bridge is connected
     if (!this.bridge.isConnected) {
       return {
+        success: false,
         assets: [],
         warning: 'Unreal Engine is not connected. Please ensure Unreal Engine is running with Remote Control enabled.',
         connectionStatus: 'disconnected'
@@ -60,8 +61,9 @@ export class AssetResources {
     }
     
     // Always use directory-only listing (immediate children)
-    return this.listDirectoryOnly(dir, false, limit);
-    // End of list method - all logic is now in listDirectoryOnly
+    const listed = await this.listDirectoryOnly(dir, false, limit);
+    // Ensure a success flag is present so downstream evaluators don't assume success implicitly
+    return { ...listed, success: listed && (listed as any).success === false ? false : true };
   }
 
   /**
@@ -166,6 +168,7 @@ export class AssetResources {
               : [];
 
             const result = {
+              success: true,
               assets: [...foldersArr, ...assetsArr],
               count: foldersArr.length + assetsArr.length,
               folders: foldersArr.length,

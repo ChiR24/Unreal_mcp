@@ -92,6 +92,9 @@ export class LightingTools {
     temperature?: number;
   }) {
     const name = this.normalizeName(params.name);
+    if (!this.automationBridge) {
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Light spawning requires Automation Bridge support' } as any;
+    }
     
     // Validate numeric parameters
     if (params.intensity !== undefined) {
@@ -149,14 +152,22 @@ export class LightingTools {
       properties.temperature = params.temperature;
     }
 
-    await this.spawnLightViaAutomation('DirectionalLight', {
-      name,
-      location: [0, 0, 500],
-      rotation: rot,
-      properties
-    });
+    try {
+      await this.spawnLightViaAutomation('DirectionalLight', {
+        name,
+        location: [0, 0, 500],
+        rotation: rot,
+        properties
+      });
 
-    return { success: true, message: `Directional light '${name}' spawned` };
+      return { success: true, message: `Directional light '${name}' spawned` };
+    } catch (e: any) {
+      const msg = String(e?.message ?? e).toLowerCase();
+      if (msg.includes('unknown') || msg.includes('not implemented')) {
+        return { success: false, error: 'NOT_IMPLEMENTED', message: e?.message || 'Directional light spawn not implemented by plugin' } as any;
+      }
+      return { success: false, error: `Failed to create directional light: ${e?.message ?? e}` } as any;
+    }
   }
 
   // Create point light
@@ -170,6 +181,9 @@ export class LightingTools {
     castShadows?: boolean;
   }) {
     const name = this.normalizeName(params.name);
+    if (!this.automationBridge) {
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Light spawning requires Automation Bridge support' } as any;
+    }
     
     // Validate location array
     if (params.location !== undefined) {
@@ -239,13 +253,21 @@ export class LightingTools {
       properties.lightFalloffExponent = params.falloffExponent;
     }
 
-    await this.spawnLightViaAutomation('PointLight', {
-      name,
-      location,
-      properties
-    });
+    try {
+      await this.spawnLightViaAutomation('PointLight', {
+        name,
+        location,
+        properties
+      });
 
-    return { success: true, message: `Point light '${name}' spawned at ${location.join(', ')}` };
+      return { success: true, message: `Point light '${name}' spawned at ${location.join(', ')}` };
+    } catch (e: any) {
+      const msg = String(e?.message ?? e).toLowerCase();
+      if (msg.includes('unknown') || msg.includes('not implemented')) {
+        return { success: false, error: 'NOT_IMPLEMENTED', message: e?.message || 'Point light spawn not implemented by plugin' } as any;
+      }
+      return { success: false, error: `Failed to create point light: ${e?.message ?? e}` } as any;
+    }
   }
 
   // Create spot light
@@ -261,6 +283,9 @@ export class LightingTools {
     castShadows?: boolean;
   }) {
     const name = this.normalizeName(params.name);
+    if (!this.automationBridge) {
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Light spawning requires Automation Bridge support' } as any;
+    }
     
     // Validate required location and rotation arrays
     if (!params.location || !Array.isArray(params.location) || params.location.length !== 3) {
@@ -350,14 +375,22 @@ export class LightingTools {
       properties.castShadows = params.castShadows;
     }
 
-    await this.spawnLightViaAutomation('SpotLight', {
-      name,
-      location: params.location,
-      rotation: params.rotation,
-      properties
-    });
+    try {
+      await this.spawnLightViaAutomation('SpotLight', {
+        name,
+        location: params.location,
+        rotation: params.rotation,
+        properties
+      });
 
-    return { success: true, message: `Spot light '${name}' spawned at ${params.location.join(', ')}` };
+      return { success: true, message: `Spot light '${name}' spawned at ${params.location.join(', ')}` };
+    } catch (e: any) {
+      const msg = String(e?.message ?? e).toLowerCase();
+      if (msg.includes('unknown') || msg.includes('not implemented')) {
+        return { success: false, error: 'NOT_IMPLEMENTED', message: e?.message || 'Spot light spawn not implemented by plugin' } as any;
+      }
+      return { success: false, error: `Failed to create spot light: ${e?.message ?? e}` } as any;
+    }
   }
 
   // Create rect light
@@ -372,6 +405,9 @@ export class LightingTools {
   }) {
     
     const name = this.normalizeName(params.name);
+    if (!this.automationBridge) {
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Light spawning requires Automation Bridge support' } as any;
+    }
 
     // Validate required location and rotation arrays
     if (!params.location || !Array.isArray(params.location) || params.location.length !== 3) {
@@ -446,14 +482,22 @@ export class LightingTools {
       properties.sourceHeight = params.height;
     }
 
-    await this.spawnLightViaAutomation('RectLight', {
-      name,
-      location: params.location,
-      rotation: params.rotation,
-      properties
-    });
+    try {
+      await this.spawnLightViaAutomation('RectLight', {
+        name,
+        location: params.location,
+        rotation: params.rotation,
+        properties
+      });
 
-    return { success: true, message: `Rect light '${name}' spawned at ${params.location.join(', ')}` };
+      return { success: true, message: `Rect light '${name}' spawned at ${params.location.join(', ')}` };
+    } catch (e: any) {
+      const msg = String(e?.message ?? e).toLowerCase();
+      if (msg.includes('unknown') || msg.includes('not implemented')) {
+        return { success: false, error: 'NOT_IMPLEMENTED', message: e?.message || 'Rect light spawn not implemented by plugin' } as any;
+      }
+      return { success: false, error: `Failed to create rect light: ${e?.message ?? e}` } as any;
+    }
   }
 
   /**
@@ -498,16 +542,20 @@ export class LightingTools {
       }
 
       // Fallback to specific light creation methods
+      const toArray3 = (loc: any): [number, number, number] => Array.isArray(loc)
+        ? [Number(loc[0]) || 0, Number(loc[1]) || 0, Number(loc[2]) || 0]
+        : [Number(loc?.x) || 0, Number(loc?.y) || 0, Number(loc?.z) || 0];
+      const locArr = toArray3(location);
       const typeNorm = (lightTypeRaw || 'Point').toLowerCase();
       switch (typeNorm) {
         case 'directional': case 'directionallight':
           return await this.createDirectionalLight({ name, intensity: params.intensity, color: Array.isArray(params.color) ? [params.color[0], params.color[1], params.color[2]] as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined), rotation: params.rotation as any });
         case 'spot': case 'spotlight':
-          return await this.createSpotLight({ name, location: (location as any) as [number, number, number], rotation: params.rotation as any, intensity: params.intensity, innerCone: undefined, outerCone: undefined, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined) });
+          return await this.createSpotLight({ name, location: locArr, rotation: params.rotation as any, intensity: params.intensity, innerCone: undefined, outerCone: undefined, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined) });
         case 'rect': case 'rectlight':
-          return await this.createRectLight({ name, location: (location as any) as [number, number, number], rotation: params.rotation as any, width: undefined, height: undefined, intensity: params.intensity, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined) });
+          return await this.createRectLight({ name, location: locArr, rotation: params.rotation as any, width: undefined, height: undefined, intensity: params.intensity, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined) });
         case 'point': default:
-          return await this.createPointLight({ name, location: (location as any) as [number, number, number], intensity: params.intensity, radius: undefined, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined), castShadows: undefined });
+          return await this.createPointLight({ name, location: locArr, intensity: params.intensity, radius: undefined, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined), castShadows: undefined });
       }
 
     } catch (err) {
@@ -530,7 +578,7 @@ export class LightingTools {
     }
 
     if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Sky light creation requires plugin support.');
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Sky light creation requires Automation Bridge support' } as any;
     }
 
     try {
@@ -554,6 +602,10 @@ export class LightingTools {
       });
 
       if (response.success === false) {
+        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
+        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
+          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Sky light creation not implemented by plugin' } as any;
+        }
         return {
           success: false,
           error: response.error || response.message || 'Failed to create sky light'
@@ -580,7 +632,7 @@ export class LightingTools {
     const recapture = !!params?.recapture;
 
     if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Sky light management requires plugin support.');
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Sky light management requires Automation Bridge support' } as any;
     }
 
     try {
@@ -592,6 +644,10 @@ export class LightingTools {
       });
 
       if (response.success === false) {
+        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
+        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
+          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Ensure single sky light not implemented by plugin' } as any;
+        }
         return {
           success: false,
           error: response.error || response.message || 'Failed to ensure single sky light'
@@ -701,7 +757,7 @@ export class LightingTools {
     buildReflectionCaptures?: boolean;
   }) {
     if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Lighting build requires plugin support.');
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Lighting build requires Automation Bridge support' } as any;
     }
 
     try {
@@ -714,6 +770,10 @@ export class LightingTools {
       });
 
       if (response.success === false) {
+        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
+        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
+          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Lighting build not implemented by plugin' } as any;
+        }
         return {
           success: false,
           error: response.error || response.message || 'Failed to build lighting'
@@ -723,12 +783,12 @@ export class LightingTools {
       return {
         success: true,
         message: response.message || 'Lighting build started'
-      };
+      } as any;
     } catch (error) {
       return {
         success: false,
         error: `Failed to build lighting: ${error instanceof Error ? error.message : String(error)}`
-      };
+      } as any;
     }
   }
 

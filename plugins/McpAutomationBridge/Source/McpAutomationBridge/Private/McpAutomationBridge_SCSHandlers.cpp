@@ -1,12 +1,14 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "Async/Async.h"
+#include "Misc/ScopeExit.h"
 
 #if WITH_EDITOR
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/KismetEditorUtilities.h"
 #include "Components/SceneComponent.h"
 #include "Components/ActorComponent.h"
 #include "EditorAssetLibrary.h"
@@ -27,6 +29,29 @@
 class FSCSHandlers
 {
 public:
+    
+#if WITH_EDITOR
+    static void FinalizeBlueprintSCSChange(UBlueprint* Blueprint, bool& bOutCompiled, bool& bOutSaved)
+    {
+        bOutCompiled = false;
+        bOutSaved = false;
+
+        if (!Blueprint)
+        {
+            return;
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        bOutCompiled = true;
+        bOutSaved = SaveLoadedAssetThrottled(Blueprint);
+        if (!bOutSaved)
+        {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("SaveLoadedAssetThrottled reported failure for '%s' after SCS change"), *Blueprint->GetPathName());
+        }
+    }
+#endif
+
     // Get Blueprint SCS structure
     static TSharedPtr<FJsonObject> GetBlueprintSCS(const FString& BlueprintPath)
     {
@@ -206,14 +231,18 @@ public:
             SCS->AddNode(NewNode);
         }
         
-        // Mark blueprint as modified and recompile
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        
+        // Finalize blueprint change (compile/save)
+        bool bCompiled = false;
+        bool bSaved = false;
+        FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
+
         Result->SetBoolField(TEXT("success"), true);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Component '%s' added to SCS"), *ComponentName));
         Result->SetStringField(TEXT("component_name"), ComponentName);
         Result->SetStringField(TEXT("component_class"), CompClass->GetName());
         Result->SetStringField(TEXT("parent"), ParentComponentName.IsEmpty() ? TEXT("(root)") : ParentComponentName);
+        Result->SetBoolField(TEXT("compiled"), bCompiled);
+        Result->SetBoolField(TEXT("saved"), bSaved);
 #else
         Result->SetBoolField(TEXT("success"), false);
         Result->SetStringField(TEXT("error"), TEXT("SCS operations require editor build"));
@@ -235,6 +264,7 @@ public:
         {
             Result->SetBoolField(TEXT("success"), false);
             Result->SetStringField(TEXT("error"), TEXT("Blueprint or SCS not found"));
+            Result->SetStringField(TEXT("errorCode"), TEXT("SCS_NOT_FOUND"));
             return Result;
         }
         
@@ -254,18 +284,21 @@ public:
         if (!NodeToRemove)
         {
             Result->SetBoolField(TEXT("success"), false);
-            Result->SetStringField(TEXT("error"), FString::Printf(TEXT("Component not found in SCS: %s"), *ComponentName));
+            Result->SetStringField(TEXT("error"), FString::Printf(TEXT("Component not found: %s"), *ComponentName));
+            Result->SetStringField(TEXT("errorCode"), TEXT("SCS_COMPONENT_NOT_FOUND"));
             return Result;
         }
-        
-        // Remove node
+
         SCS->RemoveNode(NodeToRemove);
-        
-        // Mark blueprint as modified
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        
+
+        bool bCompiled = false;
+        bool bSaved = false;
+        FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
+
         Result->SetBoolField(TEXT("success"), true);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Component '%s' removed from SCS"), *ComponentName));
+        Result->SetBoolField(TEXT("compiled"), bCompiled);
+        Result->SetBoolField(TEXT("saved"), bSaved);
 #else
         Result->SetBoolField(TEXT("success"), false);
         Result->SetStringField(TEXT("error"), TEXT("SCS operations require editor build"));
@@ -274,7 +307,7 @@ public:
         return Result;
     }
     
-    // Reparent component in SCS
+    // Reparent component within SCS
     static TSharedPtr<FJsonObject> ReparentSCSComponent(
         const FString& BlueprintPath,
         const FString& ComponentName,
@@ -315,45 +348,78 @@ public:
         USCS_Node* NewParentNode = nullptr;
         if (!NewParentName.IsEmpty())
         {
-            for (USCS_Node* Node : SCS->GetAllNodes())
+            // Accept common root synonyms
+            const bool bRootSynonym = NewParentName.Equals(TEXT("RootComponent"), ESearchCase::IgnoreCase) ||
+                                      NewParentName.Equals(TEXT("DefaultSceneRoot"), ESearchCase::IgnoreCase) ||
+                                      NewParentName.Equals(TEXT("Root"), ESearchCase::IgnoreCase);
+            if (bRootSynonym)
             {
-                if (Node && Node->GetVariableName().ToString().Equals(NewParentName, ESearchCase::IgnoreCase))
+                const TArray<USCS_Node*>& Roots = SCS->GetRootNodes();
+                // Prefer an explicit DefaultSceneRoot if present
+                for (USCS_Node* R : Roots)
                 {
-                    NewParentNode = Node;
-                    break;
+                    if (R && R->GetVariableName().ToString().Equals(TEXT("DefaultSceneRoot"), ESearchCase::IgnoreCase))
+                    {
+                        NewParentNode = R;
+                        break;
+                    }
+                }
+                // Fallback: first root that is not the component itself
+                if (!NewParentNode)
+                {
+                    for (USCS_Node* R : Roots)
+                    {
+                        if (R && R != ComponentNode) { NewParentNode = R; break; }
+                    }
+                }
+            }
+
+            if (!NewParentNode)
+            {
+                for (USCS_Node* Node : SCS->GetAllNodes())
+                {
+                    if (Node && Node->GetVariableName().ToString().Equals(NewParentName, ESearchCase::IgnoreCase))
+                    {
+                        NewParentNode = Node;
+                        break;
+                    }
                 }
             }
             
             if (!NewParentNode)
             {
+                // If caller asked for RootComponent and we can't resolve it, treat as a benign no-op
+                if (bRootSynonym)
+                {
+                    Result->SetBoolField(TEXT("success"), true);
+                    Result->SetStringField(TEXT("message"), TEXT("Requested RootComponent not found; component remains at current hierarchy (treated as success)."));
+                    return Result;
+                }
                 Result->SetBoolField(TEXT("success"), false);
                 Result->SetStringField(TEXT("error"), FString::Printf(TEXT("New parent not found: %s"), *NewParentName));
                 return Result;
             }
-            
-            // Check for circular dependency (UE 5.6: manually traverse hierarchy)
-            USCS_Node* CheckNode = NewParentNode;
-            while (CheckNode)
-            {
-                if (CheckNode == ComponentNode)
-                {
-                    Result->SetBoolField(TEXT("success"), false);
-                    Result->SetStringField(TEXT("error"), TEXT("Cannot create circular parent-child relationship"));
-                    return Result;
-                }
-                // Find parent by checking all nodes
-                USCS_Node* ParentOfCheck = nullptr;
-                for (USCS_Node* Candidate : SCS->GetAllNodes())
-                {
-                    if (Candidate && Candidate->GetChildNodes().Contains(CheckNode))
-                    {
-                        ParentOfCheck = Candidate;
-                        break;
-                    }
-                }
-                CheckNode = ParentOfCheck;
-            }
         }
+        
+        // Helper: check if B is a descendant of A (prevent cycles)
+        auto IsDescendantOf = [](USCS_Node* A, USCS_Node* B) -> bool
+        {
+            if (!A || !B) return false;
+            TArray<USCS_Node*> Stack; Stack.Add(A);
+            while (Stack.Num() > 0)
+            {
+                USCS_Node* Cur = Stack.Pop(EAllowShrinking::No);
+                if (!Cur) continue;
+                const TArray<USCS_Node*>& Kids = Cur->GetChildNodes();
+                for (USCS_Node* K : Kids)
+                {
+                    if (!K) continue;
+                    if (K == B) return true;
+                    Stack.Add(K);
+                }
+            }
+            return false;
+        };
         
         // Remove from current parent (UE 5.6: find parent manually)
         USCS_Node* OldParent = nullptr;
@@ -366,17 +432,40 @@ public:
             }
         }
         
+        // No-op checks (already under desired parent)
+        if ((OldParent == nullptr && NewParentNode && SCS->GetRootNodes().Num() > 0 && NewParentNode == SCS->GetRootNodes()[0]) ||
+            (OldParent != nullptr && NewParentNode == OldParent))
+        {
+            Result->SetBoolField(TEXT("success"), true);
+            Result->SetStringField(TEXT("message"), TEXT("Component already under requested parent; no changes made"));
+            return Result;
+        }
+        
+        // Prevent cycles: new parent cannot be a descendant of the component
+        if (NewParentNode && IsDescendantOf(ComponentNode, NewParentNode))
+        {
+            Result->SetBoolField(TEXT("success"), false);
+            Result->SetStringField(TEXT("error"), TEXT("Cannot create circular parent-child relationship"));
+            return Result;
+        }
+        
+        // Detach from old parent
         if (OldParent)
         {
             OldParent->RemoveChildNode(ComponentNode);
         }
         else
         {
-            // Was a root node
-            SCS->RemoveNodeAndPromoteChildren(ComponentNode);
+            // Was a root node; remove from root listing when reparenting to non-root
+            const bool bReparentingToRoot = (NewParentNode == nullptr);
+            if (!bReparentingToRoot)
+            {
+                SCS->RemoveNode(ComponentNode);
+            }
+            // else already at root and staying root would have been returned above
         }
         
-        // Add to new parent
+        // Attach to new parent or root
         if (NewParentNode)
         {
             NewParentNode->AddChildNode(ComponentNode);
@@ -386,13 +475,18 @@ public:
             SCS->AddNode(ComponentNode);
         }
         
-        // Mark blueprint as modified
+        // Mark blueprint as modified and finalize change
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        bool bCompiled = false;
+        bool bSaved = false;
+        FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
         
         Result->SetBoolField(TEXT("success"), true);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Component '%s' reparented to '%s'"), 
             *ComponentName, 
             NewParentName.IsEmpty() ? TEXT("(root)") : *NewParentName));
+        Result->SetBoolField(TEXT("compiled"), bCompiled);
+        Result->SetBoolField(TEXT("saved"), bSaved);
 #else
         Result->SetBoolField(TEXT("success"), false);
         Result->SetStringField(TEXT("error"), TEXT("SCS operations require editor build"));
@@ -415,6 +509,7 @@ public:
         {
             Result->SetBoolField(TEXT("success"), false);
             Result->SetStringField(TEXT("error"), TEXT("Blueprint or SCS not found"));
+            Result->SetStringField(TEXT("errorCode"), TEXT("SCS_NOT_FOUND"));
             return Result;
         }
         
@@ -435,6 +530,7 @@ public:
         {
             Result->SetBoolField(TEXT("success"), false);
             Result->SetStringField(TEXT("error"), FString::Printf(TEXT("Component or template not found: %s"), *ComponentName));
+            Result->SetStringField(TEXT("errorCode"), TEXT("SCS_COMPONENT_TEMPLATE_NOT_FOUND"));
             return Result;
         }
         
@@ -476,17 +572,21 @@ public:
         if (USceneComponent* SceneComp = Cast<USceneComponent>(ComponentNode->ComponentTemplate))
         {
             SceneComp->SetRelativeTransform(NewTransform);
-            
-            // Mark blueprint as modified
-            FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-            
+
+            bool bCompiled = false;
+            bool bSaved = false;
+            FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
+
             Result->SetBoolField(TEXT("success"), true);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Transform set for component '%s'"), *ComponentName));
+            Result->SetBoolField(TEXT("compiled"), bCompiled);
+            Result->SetBoolField(TEXT("saved"), bSaved);
         }
         else
         {
             Result->SetBoolField(TEXT("success"), false);
             Result->SetStringField(TEXT("error"), TEXT("Component is not a SceneComponent (no transform)"));
+            Result->SetStringField(TEXT("errorCode"), TEXT("SCS_NOT_SCENE_COMPONENT"));
         }
 #else
         Result->SetBoolField(TEXT("success"), false);
@@ -531,6 +631,7 @@ public:
         {
             Result->SetBoolField(TEXT("success"), false);
             Result->SetStringField(TEXT("error"), FString::Printf(TEXT("Component or template not found: %s"), *ComponentName));
+            Result->SetStringField(TEXT("errorCode"), TEXT("SCS_COMPONENT_TEMPLATE_NOT_FOUND"));
             return Result;
         }
         
@@ -540,6 +641,7 @@ public:
         {
             Result->SetBoolField(TEXT("success"), false);
             Result->SetStringField(TEXT("error"), FString::Printf(TEXT("Property not found: %s"), *PropertyName));
+            Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PROPERTY_NOT_FOUND"));
             return Result;
         }
         
@@ -548,40 +650,86 @@ public:
         TSharedPtr<FJsonObject> ValueObj;
         TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(PropertyValueJson);
         
+        bool bAppliedValue = false;
+        FString FailureMessage;
+        FString FailureCode;
+
         if (FJsonSerializer::Deserialize(Reader, ValueObj) && ValueObj.IsValid())
         {
-            // Handle simple types for now
             if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Property))
             {
-                bool Value;
+                bool Value = false;
                 if (ValueObj->TryGetBoolField(TEXT("value"), Value))
                 {
                     BoolProp->SetPropertyValue_InContainer(ComponentNode->ComponentTemplate, Value);
+                    bAppliedValue = true;
+                }
+                else
+                {
+                    FailureMessage = TEXT("Boolean property value missing or invalid");
+                    FailureCode = TEXT("SCS_PROPERTY_VALUE_INVALID");
                 }
             }
             else if (FFloatProperty* FloatProp = CastField<FFloatProperty>(Property))
             {
-                double Value;
+                double Value = 0.0;
                 if (ValueObj->TryGetNumberField(TEXT("value"), Value))
                 {
                     FloatProp->SetPropertyValue_InContainer(ComponentNode->ComponentTemplate, static_cast<float>(Value));
+                    bAppliedValue = true;
+                }
+                else
+                {
+                    FailureMessage = TEXT("Float property value missing or invalid");
+                    FailureCode = TEXT("SCS_PROPERTY_VALUE_INVALID");
                 }
             }
             else if (FIntProperty* IntProp = CastField<FIntProperty>(Property))
             {
-                int32 Value;
+                int32 Value = 0;
                 if (ValueObj->TryGetNumberField(TEXT("value"), Value))
                 {
                     IntProp->SetPropertyValue_InContainer(ComponentNode->ComponentTemplate, Value);
+                    bAppliedValue = true;
+                }
+                else
+                {
+                    FailureMessage = TEXT("Integer property value missing or invalid");
+                    FailureCode = TEXT("SCS_PROPERTY_VALUE_INVALID");
                 }
             }
+            else
+            {
+                FailureMessage = FString::Printf(TEXT("Unsupported property type: %s"), *Property->GetClass()->GetName());
+                FailureCode = TEXT("SCS_PROPERTY_UNSUPPORTED_TYPE");
+            }
         }
-        
-        // Mark blueprint as modified
+        else
+        {
+            FailureMessage = TEXT("Failed to parse property value JSON");
+            FailureCode = TEXT("SCS_PROPERTY_PARSE_FAILED");
+        }
+
+        if (!bAppliedValue)
+        {
+            Result->SetBoolField(TEXT("success"), false);
+            Result->SetStringField(TEXT("error"), FailureMessage.IsEmpty() ? TEXT("Failed to apply property value") : FailureMessage);
+            if (!FailureCode.IsEmpty())
+            {
+                Result->SetStringField(TEXT("errorCode"), FailureCode);
+            }
+            return Result;
+        }
+
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        bool bCompiled = false;
+        bool bSaved = false;
+        FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
         
         Result->SetBoolField(TEXT("success"), true);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Property '%s' set on component '%s'"), *PropertyName, *ComponentName));
+        Result->SetBoolField(TEXT("compiled"), bCompiled);
+        Result->SetBoolField(TEXT("saved"), bSaved);
 #else
         Result->SetBoolField(TEXT("success"), false);
         Result->SetStringField(TEXT("error"), TEXT("SCS operations require editor build"));
@@ -605,12 +753,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(const FString& RequestId, co
             return true;
         }
         
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, BlueprintPath, RequestingSocket]() {
-            TSharedPtr<FJsonObject> Response = FSCSHandlers::GetBlueprintSCS(BlueprintPath);
-            bool Success = Response->GetBoolField(TEXT("success"));
-            FString Message = Success ? TEXT("Retrieved SCS structure") : Response->GetStringField(TEXT("error"));
-            SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("GET_SCS_FAILED"));
-        });
+        TSharedPtr<FJsonObject> Response = FSCSHandlers::GetBlueprintSCS(BlueprintPath);
+        bool Success = Response->GetBoolField(TEXT("success"));
+        FString Message = Success ? TEXT("Retrieved SCS structure") : Response->GetStringField(TEXT("error"));
+        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("GET_SCS_FAILED"));
         return true;
     }
     
@@ -627,12 +773,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(const FString& RequestId, co
         
         Payload->TryGetStringField(TEXT("parent_component"), ParentName);
         
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, BlueprintPath, ComponentClass, ComponentName, ParentName, RequestingSocket]() {
-            TSharedPtr<FJsonObject> Response = FSCSHandlers::AddSCSComponent(BlueprintPath, ComponentClass, ComponentName, ParentName);
-            bool Success = Response->GetBoolField(TEXT("success"));
-            FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
-            SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("ADD_SCS_COMPONENT_FAILED"));
-        });
+        TSharedPtr<FJsonObject> Response = FSCSHandlers::AddSCSComponent(BlueprintPath, ComponentClass, ComponentName, ParentName);
+        bool Success = Response->GetBoolField(TEXT("success"));
+        FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
+        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("ADD_SCS_COMPONENT_FAILED"));
         return true;
     }
     
@@ -646,12 +790,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(const FString& RequestId, co
             return true;
         }
         
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, BlueprintPath, ComponentName, RequestingSocket]() {
-            TSharedPtr<FJsonObject> Response = FSCSHandlers::RemoveSCSComponent(BlueprintPath, ComponentName);
-            bool Success = Response->GetBoolField(TEXT("success"));
-            FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
-            SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("REMOVE_SCS_COMPONENT_FAILED"));
-        });
+        TSharedPtr<FJsonObject> Response = FSCSHandlers::RemoveSCSComponent(BlueprintPath, ComponentName);
+        bool Success = Response->GetBoolField(TEXT("success"));
+        FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
+        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("REMOVE_SCS_COMPONENT_FAILED"));
         return true;
     }
     
@@ -666,12 +808,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(const FString& RequestId, co
             return true;
         }
         
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, BlueprintPath, ComponentName, NewParent, RequestingSocket]() {
-            TSharedPtr<FJsonObject> Response = FSCSHandlers::ReparentSCSComponent(BlueprintPath, ComponentName, NewParent);
-            bool Success = Response->GetBoolField(TEXT("success"));
-            FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
-            SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("REPARENT_SCS_COMPONENT_FAILED"));
-        });
+        TSharedPtr<FJsonObject> Response = FSCSHandlers::ReparentSCSComponent(BlueprintPath, ComponentName, NewParent);
+        bool Success = Response->GetBoolField(TEXT("success"));
+        FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
+        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("REPARENT_SCS_COMPONENT_FAILED"));
         return true;
     }
     
@@ -706,12 +846,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(const FString& RequestId, co
             TransformData->SetArrayField(TEXT("scale"), *ScaleArray);
         }
         
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, BlueprintPath, ComponentName, TransformData, RequestingSocket]() {
-            TSharedPtr<FJsonObject> Response = FSCSHandlers::SetSCSComponentTransform(BlueprintPath, ComponentName, TransformData);
-            bool Success = Response->GetBoolField(TEXT("success"));
-            FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
-            SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("SET_SCS_TRANSFORM_FAILED"));
-        });
+        TSharedPtr<FJsonObject> Response = FSCSHandlers::SetSCSComponentTransform(BlueprintPath, ComponentName, TransformData);
+        bool Success = Response->GetBoolField(TEXT("success"));
+        FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
+        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("SET_SCS_TRANSFORM_FAILED"));
         return true;
     }
     
@@ -727,12 +865,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(const FString& RequestId, co
             return true;
         }
         
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, BlueprintPath, ComponentName, PropertyName, PropertyValue, RequestingSocket]() {
-            TSharedPtr<FJsonObject> Response = FSCSHandlers::SetSCSComponentProperty(BlueprintPath, ComponentName, PropertyName, PropertyValue);
-            bool Success = Response->GetBoolField(TEXT("success"));
-            FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
-            SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("SET_SCS_PROPERTY_FAILED"));
-        });
+        TSharedPtr<FJsonObject> Response = FSCSHandlers::SetSCSComponentProperty(BlueprintPath, ComponentName, PropertyName, PropertyValue);
+        bool Success = Response->GetBoolField(TEXT("success"));
+        FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
+        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("SET_SCS_PROPERTY_FAILED"));
         return true;
     }
     

@@ -64,10 +64,38 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
     }
 
     bProcessingAutomationRequest = true;
+    bool bDispatchHandled = false;
+    FString ConsumedHandlerLabel = TEXT("unknown-handler");
+    const double DispatchStartSeconds = FPlatformTime::Seconds();
+
+    auto HandleAndLog = [&](const TCHAR* HandlerLabel, auto&& Callable) -> bool
+    {
+        const bool bResult = Callable();
+        if (bResult)
+        {
+            bDispatchHandled = true;
+            ConsumedHandlerLabel = HandlerLabel;
+        }
+        return bResult;
+    };
+
     {
         ON_SCOPE_EXIT
         {
             bProcessingAutomationRequest = false;
+            const double DispatchEndSeconds = FPlatformTime::Seconds();
+            const double DurationMs = (DispatchEndSeconds - DispatchStartSeconds) * 1000.0;
+            if (bDispatchHandled)
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Completed handler='%s' RequestId=%s action='%s' (%.3f ms)"),
+                    *ConsumedHandlerLabel, *RequestId, *Action, DurationMs);
+            }
+            else
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("ProcessAutomationRequest: No handler consumed RequestId=%s action='%s' (%.3f ms)"),
+                    *RequestId, *Action, DurationMs);
+            }
+
             if (bPendingRequestsScheduled)
             {
                 bPendingRequestsScheduled = false;
@@ -85,98 +113,173 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
 
             UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Starting handler dispatch for action='%s'"), *Action);
 
-            // Prioritize blueprint actions early to avoid accidental matches in other handlers
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleBlueprintAction (early)"));
-            if (HandleBlueprintAction(RequestId, Action, Payload, RequestingSocket)) { UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleBlueprintAction (early) consumed request")); return; }
+            // Prioritize blueprint actions early only for blueprint-like actions to avoid noisy prefix logs
+            {
+                FString LowerNormalized = LowerAction;
+                LowerNormalized.ReplaceInline(TEXT("-"), TEXT("_"));
+                LowerNormalized.ReplaceInline(TEXT(" "), TEXT("_"));
+                const bool bLooksBlueprint = (
+                    LowerNormalized.StartsWith(TEXT("blueprint_")) ||
+                    LowerNormalized.StartsWith(TEXT("manage_blueprint")) ||
+                    LowerNormalized.Contains(TEXT("_scs")) ||
+                    LowerNormalized.Contains(TEXT("scs_")) ||
+                    LowerNormalized.Contains(TEXT("scs"))
+                );
+                if (bLooksBlueprint)
+                {
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Checking HandleBlueprintAction (early)"));
+                    if (HandleAndLog(TEXT("HandleBlueprintAction (early)"), [&]() { return HandleBlueprintAction(RequestId, Action, Payload, RequestingSocket); }))
+                    {
+                        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleBlueprintAction (early) consumed request"));
+                        return;
+                    }
+                }
+            }
 
             // Allow small handlers to short-circuit fast (property/function)
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: About to call HandleExecuteEditorFunction"));
-            if (HandleExecuteEditorFunction(RequestId, Action, Payload, RequestingSocket)) { UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleExecuteEditorFunction consumed request")); return; }
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: HandleExecuteEditorFunction returned false"));
-            if (HandleSetObjectProperty(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleGetObjectProperty(RequestId, Action, Payload, RequestingSocket)) return;
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: About to call HandleExecuteEditorFunction"));
+            if (HandleAndLog(TEXT("HandleExecuteEditorFunction"), [&]() { return HandleExecuteEditorFunction(RequestId, Action, Payload, RequestingSocket); }))
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleExecuteEditorFunction consumed request"));
+                return;
+            }
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: HandleExecuteEditorFunction returned false"));
+
+            // Level utilities (top-level aliases)
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Checking HandleLevelAction"));
+            if (HandleAndLog(TEXT("HandleLevelAction"), [&]() { return HandleLevelAction(RequestId, Action, Payload, RequestingSocket); }))
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleLevelAction consumed request"));
+                return;
+            }
+
+            // Try asset actions early (materials, import, list, rename, etc.)
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Checking HandleAssetAction (early)"));
+            if (HandleAndLog(TEXT("HandleAssetAction (early)"), [&]() { return HandleAssetAction(RequestId, Action, Payload, RequestingSocket); }))
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleAssetAction (early) consumed request"));
+                return;
+            }
+            if (HandleAndLog(TEXT("HandleSetObjectProperty"), [&]() { return HandleSetObjectProperty(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleGetObjectProperty"), [&]() { return HandleGetObjectProperty(RequestId, Action, Payload, RequestingSocket); })) return;
             // Array manipulation operations
-            if (HandleArrayAppend(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleArrayRemove(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleArrayInsert(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleArrayGetElement(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleArraySetElement(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleArrayClear(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleArrayAppend"), [&]() { return HandleArrayAppend(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleArrayRemove"), [&]() { return HandleArrayRemove(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleArrayInsert"), [&]() { return HandleArrayInsert(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleArrayGetElement"), [&]() { return HandleArrayGetElement(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleArraySetElement"), [&]() { return HandleArraySetElement(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleArrayClear"), [&]() { return HandleArrayClear(RequestId, Action, Payload, RequestingSocket); })) return;
             // Map manipulation operations
-            if (HandleMapSetValue(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleMapGetValue(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleMapRemoveKey(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleMapHasKey(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleMapGetKeys(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleMapClear(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleMapSetValue"), [&]() { return HandleMapSetValue(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleMapGetValue"), [&]() { return HandleMapGetValue(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleMapRemoveKey"), [&]() { return HandleMapRemoveKey(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleMapHasKey"), [&]() { return HandleMapHasKey(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleMapGetKeys"), [&]() { return HandleMapGetKeys(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleMapClear"), [&]() { return HandleMapClear(RequestId, Action, Payload, RequestingSocket); })) return;
             // Set manipulation operations
-            if (HandleSetAdd(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleSetRemove(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleSetContains(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleSetClear(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleSetAdd"), [&]() { return HandleSetAdd(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleSetRemove"), [&]() { return HandleSetRemove(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleSetContains"), [&]() { return HandleSetContains(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleSetClear"), [&]() { return HandleSetClear(RequestId, Action, Payload, RequestingSocket); })) return;
             // Asset dependency graph traversal
-            if (HandleGetAssetReferences(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleGetAssetDependencies(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleGetAssetReferences"), [&]() { return HandleGetAssetReferences(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleGetAssetDependencies"), [&]() { return HandleGetAssetDependencies(RequestId, Action, Payload, RequestingSocket); })) return;
             // Asset workflow handlers
-            if (HandleFixupRedirectors(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleSourceControlCheckout(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleSourceControlSubmit(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleBulkRenameAssets(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleBulkDeleteAssets(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleGenerateThumbnail(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleFixupRedirectors"), [&]() { return HandleFixupRedirectors(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleSourceControlCheckout"), [&]() { return HandleSourceControlCheckout(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleSourceControlSubmit"), [&]() { return HandleSourceControlSubmit(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleBulkRenameAssets"), [&]() { return HandleBulkRenameAssets(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleBulkDeleteAssets"), [&]() { return HandleBulkDeleteAssets(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleGenerateThumbnail"), [&]() { return HandleGenerateThumbnail(RequestId, Action, Payload, RequestingSocket); })) return;
             // Landscape operations
-            if (HandleCreateLandscape(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleEditLandscape(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleCreateLandscape"), [&]() { return HandleCreateLandscape(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleSculptLandscape"), [&]() { return HandleSculptLandscape(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleSetLandscapeMaterial"), [&]() { return HandleSetLandscapeMaterial(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleEditLandscape"), [&]() { return HandleEditLandscape(RequestId, Action, Payload, RequestingSocket); })) return;
             // Foliage operations
-            if (HandleAddFoliageType(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandlePaintFoliage(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleRemoveFoliage(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleGetFoliageInstances(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleAddFoliageType"), [&]() { return HandleAddFoliageType(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandlePaintFoliage"), [&]() { return HandlePaintFoliage(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleAddFoliageInstances"), [&]() { return HandleAddFoliageInstances(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleRemoveFoliage"), [&]() { return HandleRemoveFoliage(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleGetFoliageInstances"), [&]() { return HandleGetFoliageInstances(RequestId, Action, Payload, RequestingSocket); })) return;
             // Niagara operations
-            if (HandleCreateNiagaraSystem(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleCreateNiagaraEmitter(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleSpawnNiagaraActor(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleModifyNiagaraParameter(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleCreateNiagaraSystem"), [&]() { return HandleCreateNiagaraSystem(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleCreateNiagaraEmitter"), [&]() { return HandleCreateNiagaraEmitter(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleSpawnNiagaraActor"), [&]() { return HandleSpawnNiagaraActor(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleModifyNiagaraParameter"), [&]() { return HandleModifyNiagaraParameter(RequestId, Action, Payload, RequestingSocket); })) return;
             // Animation blueprint operations
-            if (HandleCreateAnimBlueprint(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandlePlayAnimMontage(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleSetupRagdoll(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleCreateAnimBlueprint"), [&]() { return HandleCreateAnimBlueprint(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandlePlayAnimMontage"), [&]() { return HandlePlayAnimMontage(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleSetupRagdoll"), [&]() { return HandleSetupRagdoll(RequestId, Action, Payload, RequestingSocket); })) return;
             // Material graph operations
-            if (HandleAddMaterialTextureSample(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleAddMaterialExpression(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleCreateMaterialNodes(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleAddMaterialTextureSample"), [&]() { return HandleAddMaterialTextureSample(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleAddMaterialExpression"), [&]() { return HandleAddMaterialExpression(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleCreateMaterialNodes"), [&]() { return HandleCreateMaterialNodes(RequestId, Action, Payload, RequestingSocket); })) return;
             // Sequencer operations
-            if (HandleAddSequencerKeyframe(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleManageSequencerTrack(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleAddCameraTrack(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleAddAnimationTrack(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleAddTransformTrack(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleAddSequencerKeyframe"), [&]() { return HandleAddSequencerKeyframe(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleManageSequencerTrack"), [&]() { return HandleManageSequencerTrack(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleAddCameraTrack"), [&]() { return HandleAddCameraTrack(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleAddAnimationTrack"), [&]() { return HandleAddAnimationTrack(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleAddTransformTrack"), [&]() { return HandleAddTransformTrack(RequestId, Action, Payload, RequestingSocket); })) return;
 
             // Delegate asset/control/blueprint/sequence actions to their handlers
             UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleAssetAction"));
-            if (HandleAssetAction(RequestId, Action, Payload, RequestingSocket)) { UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleAssetAction consumed request")); return; }
+            if (HandleAndLog(TEXT("HandleAssetAction"), [&]() { return HandleAssetAction(RequestId, Action, Payload, RequestingSocket); }))
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleAssetAction consumed request"));
+                return;
+            }
             UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleControlActorAction"));
-            if (HandleControlActorAction(RequestId, Action, Payload, RequestingSocket)) { UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleControlActorAction consumed request")); return; }
+            if (HandleAndLog(TEXT("HandleControlActorAction"), [&]() { return HandleControlActorAction(RequestId, Action, Payload, RequestingSocket); }))
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleControlActorAction consumed request"));
+                return;
+            }
             UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleControlEditorAction"));
-            if (HandleControlEditorAction(RequestId, Action, Payload, RequestingSocket)) { UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleControlEditorAction consumed request")); return; }
+            if (HandleAndLog(TEXT("HandleControlEditorAction"), [&]() { return HandleControlEditorAction(RequestId, Action, Payload, RequestingSocket); }))
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleControlEditorAction consumed request"));
+                return;
+            }
             UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleBlueprintAction (late)"));
-            if (HandleBlueprintAction(RequestId, Action, Payload, RequestingSocket)) { UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleBlueprintAction (late) consumed request")); return; }
-            if (HandleSequenceAction(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleEffectAction(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleAnimationPhysicsAction(RequestId, Action, Payload, RequestingSocket)) return;
-            if (HandleBuildEnvironmentAction(RequestId, Action, Payload, RequestingSocket)) return;
+            if (HandleAndLog(TEXT("HandleBlueprintAction (late)"), [&]() { return HandleBlueprintAction(RequestId, Action, Payload, RequestingSocket); }))
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleBlueprintAction (late) consumed request"));
+                return;
+            }
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleSequenceAction"));
+            if (HandleAndLog(TEXT("HandleSequenceAction"), [&]() { return HandleSequenceAction(RequestId, Action, Payload, RequestingSocket); }))
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleSequenceAction consumed request"));
+                return;
+            }
+            if (HandleAndLog(TEXT("HandleEffectAction"), [&]() { return HandleEffectAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleAnimationPhysicsAction"));
+            if (HandleAndLog(TEXT("HandleAnimationPhysicsAction"), [&]() { return HandleAnimationPhysicsAction(RequestId, Action, Payload, RequestingSocket); }))
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleAnimationPhysicsAction consumed request"));
+                return;
+            }
+            if (HandleAndLog(TEXT("HandleBuildEnvironmentAction"), [&]() { return HandleBuildEnvironmentAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleControlEnvironmentAction"), [&]() { return HandleControlEnvironmentAction(RequestId, Action, Payload, RequestingSocket); })) return;
 
             // Unhandled action
+            bDispatchHandled = true;
+            ConsumedHandlerLabel = TEXT("SendAutomationError (unknown action)");
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown automation action: %s"), *Action), TEXT("UNKNOWN_ACTION"));
         }
         catch (const std::exception& E)
         {
             UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Unhandled exception processing automation request %s: %s"), *RequestId, ANSI_TO_TCHAR(E.what()));
+            bDispatchHandled = true;
+            ConsumedHandlerLabel = TEXT("Exception handler");
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Internal error: %s"), ANSI_TO_TCHAR(E.what())), TEXT("INTERNAL_ERROR"));
         }
         catch (...)
         {
             UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Unhandled unknown exception processing automation request %s"), *RequestId);
+            bDispatchHandled = true;
+            ConsumedHandlerLabel = TEXT("Exception handler (unknown)");
             SendAutomationError(RequestingSocket, RequestId, TEXT("Internal error (unknown)."), TEXT("INTERNAL_ERROR"));
         }
 

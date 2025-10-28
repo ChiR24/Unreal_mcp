@@ -278,70 +278,30 @@ export class AudioTools {
     }
   }
 
-  // Create audio component
-  async createAudioComponent(params: {
+  // Create audio component (not available via console)
+  async createAudioComponent(_params: {
     actorName: string;
     componentName: string;
     soundPath: string;
     autoPlay?: boolean;
     is3D?: boolean;
   }) {
-    const commands = [];
-    
-    commands.push(`AddAudioComponent ${params.actorName} ${params.componentName} ${params.soundPath}`);
-    
-    if (params.autoPlay !== undefined) {
-      commands.push(`SetAudioComponentAutoPlay ${params.actorName}.${params.componentName} ${params.autoPlay}`);
-    }
-    
-    if (params.is3D !== undefined) {
-      commands.push(`SetAudioComponent3D ${params.actorName}.${params.componentName} ${params.is3D}`);
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Audio component ${params.componentName} added to ${params.actorName}` };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating audio components is not available via console; requires plugin/editor API' };
   }
 
   // Set sound attenuation
-  async setSoundAttenuation(params: {
+  async setSoundAttenuation(_params: {
     name: string;
     innerRadius?: number;
     falloffDistance?: number;
     attenuationShape?: 'Sphere' | 'Capsule' | 'Box' | 'Cone';
     falloffMode?: 'Linear' | 'Logarithmic' | 'Inverse' | 'LogReverse' | 'Natural';
   }) {
-    const commands = [];
-    
-    commands.push(`CreateAttenuationSettings ${params.name}`);
-    
-    if (params.innerRadius !== undefined) {
-      commands.push(`SetAttenuationInnerRadius ${params.name} ${params.innerRadius}`);
-    }
-    
-    if (params.falloffDistance !== undefined) {
-      commands.push(`SetAttenuationFalloffDistance ${params.name} ${params.falloffDistance}`);
-    }
-    
-    if (params.attenuationShape) {
-      commands.push(`SetAttenuationShape ${params.name} ${params.attenuationShape}`);
-    }
-    
-    if (params.falloffMode) {
-      commands.push(`SetAttenuationFalloffMode ${params.name} ${params.falloffMode}`);
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Attenuation settings ${params.name} configured` };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Setting sound attenuation is not available via console; requires plugin/editor API' };
   }
 
   // Create sound class
-  async createSoundClass(params: {
+  async createSoundClass(_params: {
     name: string;
     parentClass?: string;
     properties?: {
@@ -351,35 +311,10 @@ export class AudioTools {
       attenuationDistanceScale?: number;
     };
   }) {
-    const commands = [];
-    const parent = params.parentClass || 'Master';
-    
-    commands.push(`CreateSoundClass ${params.name} ${parent}`);
-    
-    if (params.properties) {
-      if (params.properties.volume !== undefined) {
-        commands.push(`SetSoundClassVolume ${params.name} ${params.properties.volume}`);
-      }
-      if (params.properties.pitch !== undefined) {
-        commands.push(`SetSoundClassPitch ${params.name} ${params.properties.pitch}`);
-      }
-      if (params.properties.lowPassFilterFrequency !== undefined) {
-        commands.push(`SetSoundClassLowPassFilter ${params.name} ${params.properties.lowPassFilterFrequency}`);
-      }
-      if (params.properties.attenuationDistanceScale !== undefined) {
-        commands.push(`SetSoundClassAttenuationScale ${params.name} ${params.properties.attenuationDistanceScale}`);
-      }
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Sound class ${params.name} created` };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating sound classes is not available via console; requires plugin/editor API' };
   }
-
   // Create sound mix
-  async createSoundMix(params: {
+  async createSoundMix(_params: {
     name: string;
     classAdjusters?: Array<{
       soundClass: string;
@@ -389,49 +324,20 @@ export class AudioTools {
       fadeOutTime?: number;
     }>;
   }) {
-    const commands = [];
-    
-    commands.push(`CreateSoundMix ${params.name}`);
-    
-    if (params.classAdjusters) {
-      for (const adjuster of params.classAdjusters) {
-        commands.push(`AddSoundMixClassAdjuster ${params.name} ${adjuster.soundClass}`);
-        
-        if (adjuster.volumeAdjuster !== undefined) {
-          commands.push(`SetSoundMixVolume ${params.name} ${adjuster.soundClass} ${adjuster.volumeAdjuster}`);
-        }
-        if (adjuster.pitchAdjuster !== undefined) {
-          commands.push(`SetSoundMixPitch ${params.name} ${adjuster.soundClass} ${adjuster.pitchAdjuster}`);
-        }
-        if (adjuster.fadeInTime !== undefined) {
-          commands.push(`SetSoundMixFadeIn ${params.name} ${adjuster.soundClass} ${adjuster.fadeInTime}`);
-        }
-        if (adjuster.fadeOutTime !== undefined) {
-          commands.push(`SetSoundMixFadeOut ${params.name} ${adjuster.soundClass} ${adjuster.fadeOutTime}`);
-        }
-      }
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Sound mix ${params.name} created` };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating sound mixes is not available via console; requires plugin/editor API' };
   }
 
   // Push/Pop sound mix
-  async pushSoundMix(params: {
+  async pushSoundMix(_params: {
     mixName: string;
   }) {
-    const command = `PushSoundMix ${params.mixName}`;
-    return this.bridge.executeConsoleCommand(command);
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Pushing sound mixes is not available via console; requires plugin/editor API' };
   }
 
-  async popSoundMix(params: {
+  async popSoundMix(_params: {
     mixName: string;
   }) {
-    const command = `PopSoundMix ${params.mixName}`;
-    return this.bridge.executeConsoleCommand(command);
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Popping sound mixes is not available via console; requires plugin/editor API' };
   }
 
   // Set master volume
@@ -454,7 +360,7 @@ export class AudioTools {
   }
 
   // Create ambient sound
-  async createAmbientSound(params: {
+  async createAmbientSound(_params: {
     name: string;
     location: [number, number, number];
     soundPath: string;
@@ -462,31 +368,11 @@ export class AudioTools {
     radius?: number;
     autoPlay?: boolean;
   }) {
-    const commands = [];
-    
-    commands.push(`SpawnAmbientSound ${params.name} ${params.location.join(' ')} ${params.soundPath}`);
-    
-    if (params.volume !== undefined) {
-      commands.push(`SetAmbientVolume ${params.name} ${params.volume}`);
-    }
-    
-    if (params.radius !== undefined) {
-      commands.push(`SetAmbientRadius ${params.name} ${params.radius}`);
-    }
-    
-    if (params.autoPlay !== undefined) {
-      commands.push(`SetAmbientAutoPlay ${params.name} ${params.autoPlay}`);
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Ambient sound ${params.name} created` };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating ambient sounds is not available via console; requires plugin/editor API' };
   }
 
   // Create reverb zone
-  async createReverbZone(params: {
+  async createReverbZone(_params: {
     name: string;
     location: [number, number, number];
     size: [number, number, number];
@@ -494,52 +380,16 @@ export class AudioTools {
     volume?: number;
     fadeTime?: number;
   }) {
-    const commands = [];
-    
-    commands.push(`CreateReverbVolume ${params.name} ${params.location.join(' ')} ${params.size.join(' ')}`);
-    
-    if (params.reverbEffect) {
-      commands.push(`SetReverbEffect ${params.name} ${params.reverbEffect}`);
-    }
-    
-    if (params.volume !== undefined) {
-      commands.push(`SetReverbVolume ${params.name} ${params.volume}`);
-    }
-    
-    if (params.fadeTime !== undefined) {
-      commands.push(`SetReverbFadeTime ${params.name} ${params.fadeTime}`);
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Reverb zone ${params.name} created` };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating reverb zones is not available via console; requires plugin/editor API' };
   }
 
   // Audio analysis
-  async enableAudioAnalysis(params: {
+  async enableAudioAnalysis(_params: {
     enabled: boolean;
     fftSize?: number;
     outputType?: 'Magnitude' | 'Decibel' | 'Normalized';
   }) {
-    const commands = [];
-    
-    commands.push(`EnableAudioAnalysis ${params.enabled}`);
-    
-    if (params.enabled && params.fftSize) {
-      commands.push(`SetFFTSize ${params.fftSize}`);
-    }
-    
-    if (params.enabled && params.outputType) {
-      commands.push(`SetAudioAnalysisOutput ${params.outputType}`);
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Audio analysis ${params.enabled ? 'enabled' : 'disabled'}` };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Audio analysis controls are not available via console; requires plugin/editor API' };
   }
 
   // Stop all sounds
@@ -548,59 +398,29 @@ export class AudioTools {
   }
 
   // Fade sound
-  async fadeSound(params: {
+  async fadeSound(_params: {
     soundName: string;
     targetVolume: number;
     fadeTime: number;
     fadeType?: 'FadeIn' | 'FadeOut' | 'FadeTo';
   }) {
-    const type = params.fadeType || 'FadeTo';
-    const command = `${type}Sound ${params.soundName} ${params.targetVolume} ${params.fadeTime}`;
-    return this.bridge.executeConsoleCommand(command);
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Fading sound via console is not supported; use plugin/editor API' };
   }
 
   // Set doppler effect
-  async setDopplerEffect(params: {
+  async setDopplerEffect(_params: {
     enabled: boolean;
     scale?: number;
   }) {
-    const commands = [];
-    
-    commands.push(`EnableDoppler ${params.enabled}`);
-    
-    if (params.scale !== undefined) {
-      commands.push(`SetDopplerScale ${params.scale}`);
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Doppler effect ${params.enabled ? 'enabled' : 'disabled'}` };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Doppler effect controls are not available via console; requires plugin/editor API' };
   }
 
   // Audio occlusion
-  async setAudioOcclusion(params: {
+  async setAudioOcclusion(_params: {
     enabled: boolean;
     lowPassFilterFrequency?: number;
     volumeAttenuation?: number;
   }) {
-    const commands = [];
-    
-    commands.push(`EnableAudioOcclusion ${params.enabled}`);
-    
-    if (params.lowPassFilterFrequency !== undefined) {
-      commands.push(`SetOcclusionLowPassFilter ${params.lowPassFilterFrequency}`);
-    }
-    
-    if (params.volumeAttenuation !== undefined) {
-      commands.push(`SetOcclusionVolumeAttenuation ${params.volumeAttenuation}`);
-    }
-    
-    for (const cmd of commands) {
-      await this.bridge.executeConsoleCommand(cmd);
-    }
-    
-    return { success: true, message: `Audio occlusion ${params.enabled ? 'enabled' : 'disabled'}` };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Audio occlusion controls are not available via console; requires plugin/editor API' };
   }
 }

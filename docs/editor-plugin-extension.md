@@ -75,6 +75,11 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 - `LOAD_LEVEL` - Level loading
 - `SAVE_LEVEL` - Level saving
 - `BUILD_LIGHTING` - `ULevelEditorSubsystem::BuildLightMaps()`
+- `LIST_ACTOR_COMPONENTS` - Enumerate components for any editor actor via `UEditorActorSubsystem`
+- `RESOLVE_OBJECT` - Resolve assets or classes and surface best-effort metadata for inspection tools
+- `SAVE_DIRTY_PACKAGES` / `SAVE_ALL_DIRTY_PACKAGES` - Trigger native dirty-package saves through `UEditorLoadingAndSavingUtils`
+- `SAVE_ASSET` - Persist a specific asset path using throttled `UEditorAssetLibrary` helpers
+- `SET_BLUEPRINT_DEFAULT` - Routes to native blueprint default editing without Python fallbacks
 
 ### 3. Property Operations (`HandleSetObjectProperty`, `HandleGetObjectProperty`)
 ✅ **Fully Implemented** - Typed `FProperty` marshaling
@@ -92,6 +97,7 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 - Component addition to blueprints ⚠️
 - Blueprint compilation and saving ✅
 - CDO (Class Default Object) property modification ✅
+- Blueprint default overrides via `SET_BLUEPRINT_DEFAULT` requests ✅
 
 ### 5. Sequence/Sequencer Operations
 ✅ **Fully Implemented** - Level Sequence Editor integration

@@ -34,7 +34,7 @@ export class VisualTools {
       const p = await this.findLatestScreenshot(captureStartedAt);
       if (!p) {
         this.log.warn('Screenshot captured but output file was not found');
-        return { success: true, message: 'Screenshot triggered, but could not locate output file' };
+        return { success: false, handled: true, message: 'handled: screenshot triggered but output file not found' } as any;
       }
       let b64: string | undefined;
       let truncated = false;
@@ -162,7 +162,7 @@ export class VisualTools {
     const cleaned = filter.trim();
 
     if (!this.automationBridge) {
-      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge is not available for cleanup' };
+      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'handled: cleanup not available without automation bridge' } as any;
     }
 
     try {

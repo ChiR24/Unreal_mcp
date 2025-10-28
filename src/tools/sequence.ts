@@ -40,9 +40,23 @@ export class SequenceTools {
         const defaultTimeout = Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
         const finalTimeout = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : defaultTimeout;
         try {
-            const response: any = await this.automationBridge.sendAutomationRequest(action, payload, { timeoutMs: finalTimeout });
-            const success = response && response.success !== false;
+            // For sequence_* actions, wait for completion to avoid false-positive success
+            const isSequenceAction = String(action || '').toLowerCase().startsWith('sequence_');
+            const response: any = await this.automationBridge.sendAutomationRequest(
+                action,
+                payload,
+                { timeoutMs: finalTimeout, waitForEvent: isSequenceAction, waitForEventTimeoutMs: finalTimeout }
+            );
+            let success = response && response.success !== false;
             const result = response.result ?? response;
+            // Guard against empty/placeholder acks for sequence actions
+            if (success && isSequenceAction) {
+                const hasMeaningfulResult = result && typeof result === 'object' ? Object.keys(result).length > 0 : result !== undefined && result !== null;
+                if (!hasMeaningfulResult) {
+                    success = false;
+                    return { success, error: 'NO_RESULT', message: 'Plugin acknowledged request but returned no result', result: undefined, requestId: response.requestId } as any;
+                }
+            }
             return { success, message: response.message ?? undefined, error: response.success === false ? (response.error ?? response.message) : undefined, result, requestId: response.requestId } as any;
         } catch (err: any) {
             return { success: false, error: String(err), message: String(err) } as const;

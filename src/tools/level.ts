@@ -349,7 +349,8 @@ export class LevelTools {
     if (params.streaming) {
       // Load as streaming level
       try {
-        await this.bridge.executeConsoleCommand(`LoadStreamLevel ${params.levelPath}`);
+        const simpleName = (params.levelPath || '').split('/').filter(Boolean).pop() || params.levelPath;
+        await this.bridge.executeConsoleCommand(`StreamLevel ${simpleName} Load Show`);
         this.mutateRecord(normalizedPath, {
           streaming: true,
           loaded: true,
@@ -400,7 +401,7 @@ export class LevelTools {
     savePath?: string;
   }) {
     if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Level operations require plugin support.');
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Level save requires Automation Bridge support' };
     }
 
     try {
@@ -409,6 +410,10 @@ export class LevelTools {
       });
 
       if (response.success === false) {
+        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
+        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
+          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Level save not implemented by plugin' };
+        }
         return { success: false, error: response.error || response.message || 'Failed to save level' };
       }
 
@@ -443,7 +448,7 @@ export class LevelTools {
     savePath?: string;
   }) {
     if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Level operations require plugin support.');
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Level creation requires Automation Bridge support' };
     }
 
     const basePath = params.savePath || '/Game/Maps';
@@ -459,6 +464,10 @@ export class LevelTools {
       });
 
       if (response.success === false) {
+        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
+        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
+          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Level creation not implemented by plugin', path: fullPath, partitioned: isPartitioned };
+        }
         return { 
           success: false, 
           error: response.error || response.message || 'Failed to create level',
@@ -530,6 +539,29 @@ export class LevelTools {
       });
 
       if (response.success === false) {
+        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
+        // If the plugin does not implement streaming, fall back to console commands
+        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
+          const levelIdentifier = levelName ?? levelPath ?? '';
+          const simpleName = levelIdentifier.split('/').filter(Boolean).pop() || levelIdentifier;
+          const loadCmd = params.shouldBeLoaded ? 'Load' : 'Unload';
+          const visCmd = shouldBeVisible ? 'Show' : 'Hide';
+          const command = `StreamLevel ${simpleName} ${loadCmd} ${visCmd}`;
+          const fallback = await this.bridge.executeConsoleCommand(command);
+          return {
+            success: true,
+            message: params.shouldBeLoaded
+              ? `Streaming level loaded: ${levelIdentifier}`
+              : `Streaming level unloaded: ${levelIdentifier}`,
+            level: simpleName,
+            levelPath,
+            loaded: params.shouldBeLoaded,
+            visible: shouldBeVisible,
+            handled: true,
+            transport: 'console_command',
+            ...fallback
+          } as any;
+        }
         return {
           success: false,
           error: response.error || response.message || 'Streaming level update failed',
@@ -676,9 +708,13 @@ export class LevelTools {
       });
 
       if (response.success === false) {
+        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
+        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
+          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Navigation build not implemented by plugin' };
+        }
         return {
           success: false,
-          error: response.error || response.message || 'Navigation build failed'
+          error: response.error || response.message || 'Failed to build navigation'
         };
       }
 

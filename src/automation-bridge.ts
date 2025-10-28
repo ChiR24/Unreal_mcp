@@ -142,6 +142,43 @@ type AutomationBridgeEvents = {
 
 const log = new Logger('AutomationBridge');
 
+// Actions that typically complete asynchronously inside the editor and should
+// only be considered "done" once a completion event or follow-up response is
+// observed. Enabling waitForEvent for these avoids false-positive successes
+// from initial acknowledgements.
+const WAIT_FOR_EVENT_ACTIONS = new Set<string>([
+  // Sequencer
+  'sequence_create',
+  'sequence_open',
+  'sequence_add_camera',
+  'sequence_add_actor',
+  'sequence_add_actors',
+  'sequence_remove_actors',
+  'sequence_set_properties',
+  'sequence_set_playback_speed',
+  'sequence_get_properties',
+  'sequence_get_bindings',
+  'sequence_add_spawnable_from_class',
+  'add_sequencer_keyframe',
+  'manage_sequencer_track',
+  // Asset ops
+  'duplicate_asset',
+  'rename_asset',
+  'delete_assets',
+  'move_asset',
+  'create_folder',
+  'import_asset',
+  'save_asset',
+  'set_tags',
+  'create_thumbnail',
+  'generate_report',
+  'validate',
+  'fixup_redirectors',
+  // Generic editor property changes
+  'set_object_property',
+  'execute_editor_function'
+]);
+
 export class AutomationBridge extends EventEmitter {
   private readonly host: string;
   private readonly port: number;
@@ -195,7 +232,7 @@ export class AutomationBridge extends EventEmitter {
 
   constructor(options: AutomationBridgeOptions = {}) {
     super();
-  this.host = options.host ?? process.env.MCP_AUTOMATION_WS_HOST ?? DEFAULT_AUTOMATION_HOST;
+    this.host = options.host ?? process.env.MCP_AUTOMATION_WS_HOST ?? DEFAULT_AUTOMATION_HOST;
     const sanitizePort = (value: unknown): number | null => {
       if (typeof value === 'number' && Number.isInteger(value)) {
         return value > 0 && value <= 65535 ? value : null;
@@ -207,7 +244,7 @@ export class AutomationBridge extends EventEmitter {
       return null;
     };
 
-  const defaultPort = sanitizePort(options.port ?? process.env.MCP_AUTOMATION_WS_PORT) ?? DEFAULT_AUTOMATION_PORT;
+    const defaultPort = sanitizePort(options.port ?? process.env.MCP_AUTOMATION_WS_PORT) ?? DEFAULT_AUTOMATION_PORT;
     const configuredPortValues: Array<number | string> | undefined = options.ports
       ? options.ports
       : process.env.MCP_AUTOMATION_WS_PORTS
@@ -229,7 +266,7 @@ export class AutomationBridge extends EventEmitter {
     }
 
     this.ports = Array.from(new Set(sanitizedPorts));
-  const defaultProtocols = DEFAULT_NEGOTIATED_PROTOCOLS;
+    const defaultProtocols = DEFAULT_NEGOTIATED_PROTOCOLS;
     const userProtocols = Array.isArray(options.protocols)
       ? options.protocols.filter((proto) => typeof proto === 'string' && proto.trim().length > 0)
       : [];
@@ -254,15 +291,15 @@ export class AutomationBridge extends EventEmitter {
       ?? packageInfo.version
       ?? process.env.npm_package_version
       ?? '0.0.0';
-  const resolvedHeartbeat = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
+    const resolvedHeartbeat = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
     this.heartbeatIntervalMs = resolvedHeartbeat > 0 ? resolvedHeartbeat : 0;
-  const resolvedMaxPending = options.maxPendingRequests ?? DEFAULT_MAX_PENDING_REQUESTS;
-  this.maxPendingRequests = Math.max(1, resolvedMaxPending);
+    const resolvedMaxPending = options.maxPendingRequests ?? DEFAULT_MAX_PENDING_REQUESTS;
+    this.maxPendingRequests = Math.max(1, resolvedMaxPending);
     const resolvedMaxConnections = options.maxConcurrentConnections ?? 10; // Allow up to 10 concurrent connections
     this.maxConcurrentConnections = Math.max(1, resolvedMaxConnections);
     this.clientMode = options.clientMode ?? process.env.MCP_AUTOMATION_CLIENT_MODE === 'true';
     this.clientHost = options.clientHost ?? process.env.MCP_AUTOMATION_CLIENT_HOST ?? DEFAULT_AUTOMATION_HOST;
-  this.clientPort = options.clientPort ?? sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) ?? DEFAULT_AUTOMATION_PORT;
+    this.clientPort = options.clientPort ?? sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) ?? DEFAULT_AUTOMATION_PORT;
   }
 
   override on<K extends keyof AutomationBridgeEvents>(
@@ -322,7 +359,7 @@ export class AutomationBridge extends EventEmitter {
           },
           perMessageDeflate: false
         });
-  this.wsServers.set(port, server);
+        this.wsServers.set(port, server);
 
         server.on('connection', (socket: WebSocket, request: IncomingMessage) => {
           const remoteAddr = request.socket.remoteAddress ?? undefined;
@@ -477,7 +514,7 @@ export class AutomationBridge extends EventEmitter {
       // Expose active connection details for admin/health purposes
       connections: connectionInfos,
       webSocketListening: this.listeningPorts.size > 0,
-  serverLegacyEnabled: this.serverLegacyEnabled,
+      serverLegacyEnabled: this.serverLegacyEnabled,
       serverName: this.serverName,
       serverVersion: this.serverVersion,
       maxConcurrentConnections: this.maxConcurrentConnections,
@@ -849,9 +886,9 @@ export class AutomationBridge extends EventEmitter {
       availablePorts: [...this.ports],
       activePort: port,
       protocol: socket.protocol || null,
-  // activeSockets already includes the connecting socket by the time we
-  // build the handshake ack, so use the map size directly.
-  concurrentConnections: this.activeSockets.size,
+      // activeSockets already includes the connecting socket by the time we
+      // build the handshake ack, so use the map size directly.
+      concurrentConnections: this.activeSockets.size,
       maxConcurrentConnections: this.maxConcurrentConnections
     };
   }
@@ -887,10 +924,12 @@ export class AutomationBridge extends EventEmitter {
               clearTimeout(pending.timeout);
               if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
               this.pendingRequests.delete(reqId);
+              const baseSuccess = (pending.initialResponse && typeof pending.initialResponse.success === 'boolean') ? pending.initialResponse.success : undefined;
+              const evtSuccess = (evt.result && typeof evt.result.success === 'boolean') ? !!evt.result.success : undefined;
               const synthetic: AutomationBridgeResponseMessage = {
                 type: 'automation_response',
                 requestId: reqId,
-                success: evt.result && typeof evt.result.success === 'boolean' ? !!evt.result.success : true,
+                success: evtSuccess !== undefined ? evtSuccess : (baseSuccess !== undefined ? baseSuccess : undefined as any),
                 message: typeof evt.result?.message === 'string' ? evt.result.message : (typeof evt.message === 'string' ? evt.message : FStringSafe(evt.event)),
                 error: typeof evt.result?.error === 'string' ? evt.result.error : undefined,
                 result: evt.result ?? evt.payload ?? undefined
@@ -922,9 +961,38 @@ export class AutomationBridge extends EventEmitter {
 
     const pending = this.pendingRequests.get(requestId);
     if (!pending) {
-      log.warn(`No pending automation request found for requestId=${requestId}; pendingRequests=${this.pendingRequests.size}. Response payload truncated: ${JSON.stringify(response).substring(0, 1000)}`);
+      log.debug(`No pending automation request found for requestId=${requestId}; pendingRequests=${this.pendingRequests.size}. Response payload truncated: ${JSON.stringify(response).substring(0, 1000)}`);
       return;
     }
+
+    // Helper: enforce that any action echoed by the plugin matches the requested action (prefix-safe)
+    const enforceActionMatch = (resp: AutomationBridgeResponseMessage): AutomationBridgeResponseMessage => {
+      try {
+        const expected = (pending.action || '').toString().toLowerCase();
+        const echoed: string | undefined = (() => {
+          const r: any = resp as any;
+          const candidate = (typeof r.action === 'string' && r.action) || (typeof r.result?.action === 'string' && r.result.action);
+          return candidate as any;
+        })();
+        if (expected && echoed && typeof echoed === 'string') {
+          const got = echoed.toLowerCase();
+          // Consider it a mismatch if neither starts with the other (allowing minor decoration, e.g. namespaces)
+          const startsEitherWay = got.startsWith(expected) || expected.startsWith(got);
+          if (!startsEitherWay) {
+            const mutated: any = { ...resp };
+            // Mark as failure without discarding original payload
+            mutated.success = false;
+            if (!mutated.error) mutated.error = 'ACTION_PREFIX_MISMATCH';
+            const msgBase = typeof mutated.message === 'string' ? mutated.message + ' ' : '';
+            mutated.message = `${msgBase}Response action mismatch (expected~='${expected}', got='${echoed}')`;
+            return mutated as AutomationBridgeResponseMessage;
+          }
+        }
+      } catch (e) {
+        log.debug('enforceActionMatch check skipped', e as any);
+      }
+      return response;
+    };
 
     // If the caller requested waiting for a completion event, defer
     // resolution until the automation_event matching this requestId
@@ -945,17 +1013,23 @@ export class AutomationBridge extends EventEmitter {
         // resolve immediately instead of waiting for an event.
         if (response.success === false || savedFlag === true) {
           this.pendingRequests.delete(requestId);
-          pending.resolve(response);
+          pending.resolve(enforceActionMatch(response));
           return;
         }
         // Store initial response and wait for an automation_event or
         // a subsequent automation_response to mark completion.
-        pending.initialResponse = response;
-        const evtMs = pending.eventTimeoutMs && pending.eventTimeoutMs > 0 ? pending.eventTimeoutMs : 300000; // default 5 minutes
-        pending.eventTimeout = setTimeout(() => {
-          if (this.pendingRequests.has(requestId)) this.pendingRequests.delete(requestId);
-          try { pending.reject(new Error(`Timed out waiting for completion event for request ${requestId} after ${evtMs}ms`)); } catch {};
-        }, evtMs);
+        pending.initialResponse = enforceActionMatch(response);
+        const evtMs = pending.eventTimeoutMs && pending.eventTimeoutMs > 0 ? pending.eventTimeoutMs : undefined;
+        if (evtMs !== undefined) {
+          pending.eventTimeout = setTimeout(() => {
+            if (this.pendingRequests.has(requestId)) this.pendingRequests.delete(requestId);
+            try {
+              pending.reject(new Error(`Timed out waiting for completion event for request ${requestId} after ${evtMs}ms`));
+            } catch {}
+          }, evtMs);
+        } else {
+          log.debug(`Waiting indefinitely for completion event for request ${requestId}; no event timeout configured.`);
+        }
         // Leave the pending entry in the map so automation_event or
         // another automation_response can complete it.
         return;
@@ -964,14 +1038,14 @@ export class AutomationBridge extends EventEmitter {
         // second automation_response; treat this as the final result.
         if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
         this.pendingRequests.delete(requestId);
-        pending.resolve(response);
+        pending.resolve(enforceActionMatch(response));
         return;
       }
     }
 
     clearTimeout(pending.timeout);
     this.pendingRequests.delete(requestId);
-    pending.resolve(response);
+    pending.resolve(enforceActionMatch(response));
   }
 
   private handleBridgePing(message: AutomationBridgeMessage): void {
@@ -1034,32 +1108,54 @@ export class AutomationBridge extends EventEmitter {
     return `req-${Date.now().toString(36)}-${this.requestCounter.toString(36)}`;
   }
 
-    public async sendAutomationRequest(
+  public async sendAutomationRequest(
     action: string,
     payload: Record<string, unknown> = {},
     options: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number } = {}
   ): Promise<AutomationBridgeResponseMessage> {
-    if (!this.enabled) {
-      throw new Error('Automation bridge disabled');
+    // Default timeout for automation requests. Allow override via
+    // MCP_AUTOMATION_REQUEST_TIMEOUT_MS (ms). Default is 120s but for
+    // blueprint-related or Python-executing actions we enforce at least
+    // 120s to avoid spurious 60s timeouts on large editor ops.
+    const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
+    let defaultTimeout = Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
+    // Ensure blueprint and Python-heavy actions have a minimum timeout
+    const lowerAction = (action || '').toLowerCase();
+    if (lowerAction.includes('blueprint') || lowerAction.includes('execute_editor_python') || lowerAction.includes('modify_scs')) {
+      // Blueprint & Python-heavy operations can be long; prefer a larger
+      // default timeout to accommodate large editor ops (compile/save, I/O).
+      defaultTimeout = Math.max(defaultTimeout, 300000); // 5 minutes
     }
-    if (!this.isConnected()) {
-      throw new Error('Automation bridge not connected');
-    }
+    const timeoutMs = Math.max(1000, options.timeoutMs ?? defaultTimeout);
 
-  // Default timeout for automation requests. Allow override via
-  // MCP_AUTOMATION_REQUEST_TIMEOUT_MS (ms). Default is 120s but for
-  // blueprint-related or Python-executing actions we enforce at least
-  // 120s to avoid spurious 60s timeouts on large editor ops.
-  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  let defaultTimeout = Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
-  // Ensure blueprint and Python-heavy actions have a minimum timeout
-  const lowerAction = (action || '').toLowerCase();
-  if (lowerAction.includes('blueprint') || lowerAction.includes('execute_editor_python') || lowerAction.includes('modify_scs')) {
-    // Blueprint & Python-heavy operations can be long; prefer a larger
-    // default timeout to accommodate large editor ops (compile/save, I/O).
-    defaultTimeout = Math.max(defaultTimeout, 300000); // 5 minutes
-  }
-  const timeoutMs = Math.max(1000, options.timeoutMs ?? defaultTimeout);
+    // Decide whether to wait for a completion signal for this action.
+    // If the caller specified waitForEvent explicitly, honor it; otherwise
+    // enable it for known long-running/editor-mutating actions to avoid
+    // reporting success on initial acknowledgements. Certain actions are
+    // explicitly known to return a single, final automation_response and
+    // must never wait for an event.
+    const normalizedAction = String(action || '').toLowerCase();
+    let useWaitForEvent = typeof options.waitForEvent === 'boolean'
+      ? options.waitForEvent
+      : WAIT_FOR_EVENT_ACTIONS.has(normalizedAction);
+    // Force-disable event waiting for actions that are known to complete
+    // with a single response (no automation_event follow-up).
+    const ACTIONS_NO_EVENT = new Set<string>([
+      'delete_assets', 'rename_asset', 'duplicate_asset', 'move_asset', 'create_thumbnail', 'set_tags', 'validate', 'generate_report',
+      'import_asset', 'import_asset_deferred', 'create_material', 'create_material_instance', 'asset_exists',
+      'execute_console_command', 'control_actor', 'control_editor', 'stream_level', 'save_current_level'
+    ]);
+    if (ACTIONS_NO_EVENT.has(normalizedAction)) {
+      useWaitForEvent = false;
+    }
+    const envEventTimeoutRaw = process.env.MCP_AUTOMATION_EVENT_TIMEOUT_MS;
+    const envEventTimeout = envEventTimeoutRaw ? Number(envEventTimeoutRaw) : undefined;
+    const defaultEventTimeout = envEventTimeout !== undefined && Number.isFinite(envEventTimeout) && envEventTimeout > 0
+      ? envEventTimeout
+      : undefined;
+    const waitEventTimeoutMs = typeof options.waitForEventTimeoutMs === 'number' && options.waitForEventTimeoutMs > 0
+      ? options.waitForEventTimeoutMs
+      : defaultEventTimeout;
 
     // Helper: stable stringify to produce deterministic cache keys for payloads
     const stableStringify = (value: unknown): string => {
@@ -1075,7 +1171,7 @@ export class AutomationBridge extends EventEmitter {
     };
 
     // Coalesce identical frequent read-only requests to avoid spamming the editor
-  const COALESCE_ACTIONS = new Set(['blueprint_exists']);
+    const COALESCE_ACTIONS = new Set(['blueprint_exists']);
     let coalesceKey: string | undefined;
     if (COALESCE_ACTIONS.has(action)) {
       try {
@@ -1112,18 +1208,18 @@ export class AutomationBridge extends EventEmitter {
         timeout,
         action,
         requestedAt: new Date(),
-        waitForEvent: !!options.waitForEvent,
-        eventTimeoutMs: typeof options.waitForEventTimeoutMs === 'number' && options.waitForEventTimeoutMs > 0 ? options.waitForEventTimeoutMs : undefined
+        waitForEvent: useWaitForEvent,
+        eventTimeoutMs: waitEventTimeoutMs
       });
     });
 
     this.lastRequestSentAt = new Date();
     // Avoid noisy logs for very frequent probe actions
-  const FREQUENT_ACTIONS = new Set(['blueprint_exists']);
+    const FREQUENT_ACTIONS = new Set(['blueprint_exists']);
     if (FREQUENT_ACTIONS.has(action)) {
-      log.debug(`sendAutomationRequest: requestId=${requestId}, action=${action}, timeoutMs=${timeoutMs}`);
+      log.debug(`sendAutomationRequest: requestId=${requestId}, action=${action}, timeoutMs=${timeoutMs}${useWaitForEvent ? ', waitForEvent=true' : ''}`);
     } else {
-      log.info(`sendAutomationRequest: requestId=${requestId}, action=${action}, timeoutMs=${timeoutMs}`);
+      log.info(`sendAutomationRequest: requestId=${requestId}, action=${action}, timeoutMs=${timeoutMs}${useWaitForEvent ? ', waitForEvent=true' : ''}`);
     }
     const sent = this.send(requestPayload);
     if (!sent) {
@@ -1145,6 +1241,14 @@ export class AutomationBridge extends EventEmitter {
     }
 
     return pendingPromise;
+  }
+
+  async controlEnvironment(
+    action: string,
+    payload: Record<string, unknown> = {},
+    options: { timeoutMs?: number } = {}
+  ): Promise<AutomationBridgeResponseMessage> {
+    return this.sendAutomationRequest('control_environment', { action, ...payload }, options);
   }
 
   private emitAutomation<K extends keyof AutomationBridgeEvents>(

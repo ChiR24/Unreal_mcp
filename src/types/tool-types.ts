@@ -171,7 +171,24 @@ export type AssetAction = 'list' | 'import' | 'create_material' | 'create_materi
 export type ActorAction = 'spawn' | 'delete' | 'apply_force';
 export type EditorAction = 'play' | 'stop' | 'set_camera' | 'set_view_mode';
 export type LevelAction = 'load' | 'save' | 'stream' | 'create_light' | 'build_lighting';
-export type AnimationAction = 'create_animation_bp' | 'play_montage' | 'setup_ragdoll';
+export type AnimationAction =
+  | 'create_animation_bp'
+  | 'create_anim_blueprint'
+  | 'create_animation_blueprint'
+  | 'play_montage'
+  | 'play_anim_montage'
+  | 'setup_ragdoll'
+  | 'activate_ragdoll'
+  | 'configure_vehicle'
+  | 'create_blend_space'
+  | 'create_state_machine'
+  | 'setup_ik'
+  | 'create_procedural_anim'
+  | 'create_blend_tree'
+  | 'setup_retargeting'
+  | 'setup_physics_simulation'
+  | 'create_animation_asset'
+  | 'cleanup';
 export type EffectAction =
   | 'particle'
   | 'niagara'
@@ -232,15 +249,57 @@ export interface ConsolidatedToolParams {
 
   animation_physics: {
     action: AnimationAction;
+    // Common
     name?: string;
     actorName?: string;
+    savePath?: string;
+    path?: string;
+
+    // Animation blueprint
     skeletonPath?: string;
+    blueprintName?: string;
+    blueprintPath?: string;
+
+    // Playback
     montagePath?: string;
     animationPath?: string;
     playRate?: number;
+
+    // Ragdoll/physics
     physicsAssetName?: string;
     blendWeight?: number;
-    savePath?: string;
+
+    // Vehicle config
+    vehicleName?: string;
+    vehicleType?: 'Car' | 'Bike' | 'Tank' | 'Aircraft' | string;
+    wheels?: Array<{ name: string; radius: number; width: number; mass: number; isSteering?: boolean; isDriving?: boolean }>;
+    engine?: { maxRPM: number; torqueCurve: Array<[number, number]> };
+    transmission?: { gears: number[]; finalDriveRatio: number };
+    pluginDependencies?: string[];
+
+    // Blend space / tree
+    dimensions?: number | [number, number];
+    horizontalAxis?: { name?: string; minValue?: number; maxValue?: number };
+    verticalAxis?: { name?: string; minValue?: number; maxValue?: number };
+    samples?: any[];
+
+    // State machine
+    states?: any[];
+    transitions?: any[];
+
+    // IK / Retargeting / Procedural
+    chain?: any;
+    effector?: any;
+    settings?: any;
+    sourceSkeleton?: string;
+    targetSkeleton?: string;
+
+    // Physics simulation setup
+    params?: Record<string, any>;
+
+    // Cleanup
+    artifacts?: string[];
+    assetType?: string;
   };
 
   create_effect: {
@@ -313,6 +372,10 @@ export interface ConsolidatedToolParams {
     widgetName?: string;
     widgetType?: string;
     visible?: boolean;
+    // Resolution / fullscreen helpers
+    width?: number;
+    height?: number;
+    windowed?: boolean;
   };
 
   console_command: {

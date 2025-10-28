@@ -50,39 +50,33 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
         return true;
     }
 
-    AsyncTask(ENamedThreads::GameThread, [this, RequestId, SystemName, SavePath, RequestingSocket]()
+    UNiagaraSystemFactoryNew* Factory = NewObject<UNiagaraSystemFactoryNew>();
+    if (!Factory)
     {
-        FString FullPath = FString::Printf(TEXT("%s/%s"), *SavePath, *SystemName);
-        
-        UNiagaraSystemFactoryNew* Factory = NewObject<UNiagaraSystemFactoryNew>();
-        if (!Factory)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Niagara system factory"), TEXT("FACTORY_FAILED"));
-            return;
-        }
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Niagara system factory"), TEXT("FACTORY_FAILED"));
+        return true;
+    }
 
-        FString PackagePath = SavePath;
-        FString AssetName = SystemName;
-        FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
-        UObject* NewAsset = AssetToolsModule.Get().CreateAsset(AssetName, PackagePath, UNiagaraSystem::StaticClass(), Factory);
-        UNiagaraSystem* NiagaraSystem = Cast<UNiagaraSystem>(NewAsset);
-        
-        if (!NiagaraSystem)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Niagara system asset"), TEXT("ASSET_CREATION_FAILED"));
-            return;
-        }
+    FString PackagePath = SavePath;
+    FString AssetName = SystemName;
+    FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+    UObject* NewAsset = AssetToolsModule.Get().CreateAsset(AssetName, PackagePath, UNiagaraSystem::StaticClass(), Factory);
+    UNiagaraSystem* NiagaraSystem = Cast<UNiagaraSystem>(NewAsset);
 
-        UEditorAssetLibrary::SaveAsset(NiagaraSystem->GetPathName());
+    if (!NiagaraSystem)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Niagara system asset"), TEXT("ASSET_CREATION_FAILED"));
+        return true;
+    }
 
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("systemPath"), NiagaraSystem->GetPathName());
-        Resp->SetStringField(TEXT("systemName"), SystemName);
+    UEditorAssetLibrary::SaveAsset(NiagaraSystem->GetPathName());
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara system created successfully"), Resp, FString());
-    });
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("systemPath"), NiagaraSystem->GetPathName());
+    Resp->SetStringField(TEXT("systemName"), SystemName);
 
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara system created successfully"), Resp, FString());
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_niagara_system requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -116,39 +110,33 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
         return true;
     }
 
-    AsyncTask(ENamedThreads::GameThread, [this, RequestId, EmitterName, SavePath, RequestingSocket]()
+    UNiagaraEmitterFactoryNew* Factory = NewObject<UNiagaraEmitterFactoryNew>();
+    if (!Factory)
     {
-        FString FullPath = FString::Printf(TEXT("%s/%s"), *SavePath, *EmitterName);
-        
-        UNiagaraEmitterFactoryNew* Factory = NewObject<UNiagaraEmitterFactoryNew>();
-        if (!Factory)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Niagara emitter factory"), TEXT("FACTORY_FAILED"));
-            return;
-        }
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Niagara emitter factory"), TEXT("FACTORY_FAILED"));
+        return true;
+    }
 
-        FString PackagePath = SavePath;
-        FString AssetName = EmitterName;
-        FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
-        UObject* NewAsset = AssetToolsModule.Get().CreateAsset(AssetName, PackagePath, UNiagaraEmitter::StaticClass(), Factory);
-        UNiagaraEmitter* NiagaraEmitter = Cast<UNiagaraEmitter>(NewAsset);
-        
-        if (!NiagaraEmitter)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Niagara emitter asset"), TEXT("ASSET_CREATION_FAILED"));
-            return;
-        }
+    FString PackagePath = SavePath;
+    FString AssetName = EmitterName;
+    FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+    UObject* NewAsset = AssetToolsModule.Get().CreateAsset(AssetName, PackagePath, UNiagaraEmitter::StaticClass(), Factory);
+    UNiagaraEmitter* NiagaraEmitter = Cast<UNiagaraEmitter>(NewAsset);
 
-        UEditorAssetLibrary::SaveAsset(NiagaraEmitter->GetPathName());
+    if (!NiagaraEmitter)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Niagara emitter asset"), TEXT("ASSET_CREATION_FAILED"));
+        return true;
+    }
 
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("emitterPath"), NiagaraEmitter->GetPathName());
-        Resp->SetStringField(TEXT("emitterName"), EmitterName);
+    UEditorAssetLibrary::SaveAsset(NiagaraEmitter->GetPathName());
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara emitter created successfully"), Resp, FString());
-    });
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("emitterPath"), NiagaraEmitter->GetPathName());
+    Resp->SetStringField(TEXT("emitterName"), EmitterName);
 
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara emitter created successfully"), Resp, FString());
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_niagara_emitter requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -187,55 +175,51 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnNiagaraActor(
     FString ActorName;
     Payload->TryGetStringField(TEXT("name"), ActorName);
 
-    AsyncTask(ENamedThreads::GameThread, [this, RequestId, SystemPath, X, Y, Z, ActorName, RequestingSocket]()
+    if (!GEditor || !GEditor->GetEditorWorldContext().World())
     {
-        if (!GEditor || !GEditor->GetEditorWorldContext().World())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Editor world not available"), TEXT("EDITOR_NOT_AVAILABLE"));
-            return;
-        }
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor world not available"), TEXT("EDITOR_NOT_AVAILABLE"));
+        return true;
+    }
 
-        UWorld* World = GEditor->GetEditorWorldContext().World();
-        
-        UNiagaraSystem* NiagaraSystem = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
-        if (!NiagaraSystem)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load Niagara system"), TEXT("LOAD_FAILED"));
-            return;
-        }
+    UWorld* World = GEditor->GetEditorWorldContext().World();
 
-        FVector Location(X, Y, Z);
-        ANiagaraActor* NiagaraActor = World->SpawnActor<ANiagaraActor>(ANiagaraActor::StaticClass(), Location, FRotator::ZeroRotator);
-        
-        if (!NiagaraActor)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to spawn Niagara actor"), TEXT("SPAWN_FAILED"));
-            return;
-        }
+    UNiagaraSystem* NiagaraSystem = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+    if (!NiagaraSystem)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load Niagara system"), TEXT("LOAD_FAILED"));
+        return true;
+    }
 
-        if (NiagaraActor->GetNiagaraComponent())
-        {
-            NiagaraActor->GetNiagaraComponent()->SetAsset(NiagaraSystem);
-        }
+    FVector Location(X, Y, Z);
+    ANiagaraActor* NiagaraActor = World->SpawnActor<ANiagaraActor>(ANiagaraActor::StaticClass(), Location, FRotator::ZeroRotator);
 
-        if (!ActorName.IsEmpty())
-        {
-            NiagaraActor->SetActorLabel(ActorName);
-        }
-        else
-        {
-            NiagaraActor->SetActorLabel(FString::Printf(TEXT("NiagaraActor_%s"), *FGuid::NewGuid().ToString(EGuidFormats::Short)));
-        }
+    if (!NiagaraActor)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to spawn Niagara actor"), TEXT("SPAWN_FAILED"));
+        return true;
+    }
 
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("actorPath"), NiagaraActor->GetPathName());
-        Resp->SetStringField(TEXT("actorName"), NiagaraActor->GetActorLabel());
-        Resp->SetStringField(TEXT("systemPath"), SystemPath);
+    if (NiagaraActor->GetNiagaraComponent())
+    {
+        NiagaraActor->GetNiagaraComponent()->SetAsset(NiagaraSystem);
+    }
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara actor spawned successfully"), Resp, FString());
-    });
+    if (!ActorName.IsEmpty())
+    {
+        NiagaraActor->SetActorLabel(ActorName);
+    }
+    else
+    {
+        NiagaraActor->SetActorLabel(FString::Printf(TEXT("NiagaraActor_%s"), *FGuid::NewGuid().ToString(EGuidFormats::Short)));
+    }
 
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("actorPath"), NiagaraActor->GetPathName());
+    Resp->SetStringField(TEXT("actorName"), NiagaraActor->GetActorLabel());
+    Resp->SetStringField(TEXT("systemPath"), SystemPath);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara actor spawned successfully"), Resp, FString());
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("spawn_niagara_actor requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -273,85 +257,81 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyNiagaraParameter(
     Payload->TryGetStringField(TEXT("parameterType"), ParameterType);
     if (ParameterType.IsEmpty()) ParameterType = TEXT("Float");
 
-    AsyncTask(ENamedThreads::GameThread, [this, RequestId, ActorName, ParameterName, ParameterType, Payload, RequestingSocket]()
+    if (!GEditor || !GEditor->GetEditorWorldContext().World())
     {
-        if (!GEditor || !GEditor->GetEditorWorldContext().World())
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor world not available"), TEXT("EDITOR_NOT_AVAILABLE"));
+        return true;
+    }
+
+    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    if (!ActorSS)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("EditorActorSubsystem not available"), TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+        return true;
+    }
+
+    TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+    ANiagaraActor* NiagaraActor = nullptr;
+
+    for (AActor* Actor : AllActors)
+    {
+        if (Actor && Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Editor world not available"), TEXT("EDITOR_NOT_AVAILABLE"));
-            return;
+            NiagaraActor = Cast<ANiagaraActor>(Actor);
+            if (NiagaraActor) break;
         }
+    }
 
-        UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-        if (!ActorSS)
+    if (!NiagaraActor || !NiagaraActor->GetNiagaraComponent())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Niagara actor not found"), TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
+
+    UNiagaraComponent* NiagaraComp = NiagaraActor->GetNiagaraComponent();
+    bool bSuccess = false;
+
+    if (ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
+    {
+        double Value = 0.0;
+        if (Payload->TryGetNumberField(TEXT("value"), Value))
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("EditorActorSubsystem not available"), TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-            return;
+            NiagaraComp->SetFloatParameter(FName(*ParameterName), static_cast<float>(Value));
+            bSuccess = true;
         }
-
-        TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
-        ANiagaraActor* NiagaraActor = nullptr;
-        
-        for (AActor* Actor : AllActors)
+    }
+    else if (ParameterType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
+    {
+        const TSharedPtr<FJsonObject>* VectorObj = nullptr;
+        if (Payload->TryGetObjectField(TEXT("value"), VectorObj) && VectorObj)
         {
-            if (Actor && Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
-            {
-                NiagaraActor = Cast<ANiagaraActor>(Actor);
-                if (NiagaraActor) break;
-            }
+            double VX = 0.0, VY = 0.0, VZ = 0.0;
+            (*VectorObj)->TryGetNumberField(TEXT("x"), VX);
+            (*VectorObj)->TryGetNumberField(TEXT("y"), VY);
+            (*VectorObj)->TryGetNumberField(TEXT("z"), VZ);
+            NiagaraComp->SetVectorParameter(FName(*ParameterName), FVector(VX, VY, VZ));
+            bSuccess = true;
         }
-
-        if (!NiagaraActor || !NiagaraActor->GetNiagaraComponent())
+    }
+    else if (ParameterType.Equals(TEXT("Bool"), ESearchCase::IgnoreCase))
+    {
+        bool Value = false;
+        if (Payload->TryGetBoolField(TEXT("value"), Value))
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Niagara actor not found"), TEXT("ACTOR_NOT_FOUND"));
-            return;
+            NiagaraComp->SetBoolParameter(FName(*ParameterName), Value);
+            bSuccess = true;
         }
+    }
 
-        UNiagaraComponent* NiagaraComp = NiagaraActor->GetNiagaraComponent();
-        bool bSuccess = false;
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), bSuccess);
+    Resp->SetStringField(TEXT("actorName"), ActorName);
+    Resp->SetStringField(TEXT("parameterName"), ParameterName);
+    Resp->SetStringField(TEXT("parameterType"), ParameterType);
 
-        if (ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
-        {
-            double Value = 0.0;
-            if (Payload->TryGetNumberField(TEXT("value"), Value))
-            {
-                NiagaraComp->SetFloatParameter(FName(*ParameterName), (float)Value);
-                bSuccess = true;
-            }
-        }
-        else if (ParameterType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
-        {
-            const TSharedPtr<FJsonObject>* VectorObj = nullptr;
-            if (Payload->TryGetObjectField(TEXT("value"), VectorObj) && VectorObj)
-            {
-                double X = 0.0, Y = 0.0, Z = 0.0;
-                (*VectorObj)->TryGetNumberField(TEXT("x"), X);
-                (*VectorObj)->TryGetNumberField(TEXT("y"), Y);
-                (*VectorObj)->TryGetNumberField(TEXT("z"), Z);
-                NiagaraComp->SetVectorParameter(FName(*ParameterName), FVector(X, Y, Z));
-                bSuccess = true;
-            }
-        }
-        else if (ParameterType.Equals(TEXT("Bool"), ESearchCase::IgnoreCase))
-        {
-            bool Value = false;
-            if (Payload->TryGetBoolField(TEXT("value"), Value))
-            {
-                NiagaraComp->SetBoolParameter(FName(*ParameterName), Value);
-                bSuccess = true;
-            }
-        }
-
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), bSuccess);
-        Resp->SetStringField(TEXT("actorName"), ActorName);
-        Resp->SetStringField(TEXT("parameterName"), ParameterName);
-        Resp->SetStringField(TEXT("parameterType"), ParameterType);
-
-        SendAutomationResponse(RequestingSocket, RequestId, bSuccess, 
-            bSuccess ? TEXT("Niagara parameter modified successfully") : TEXT("Failed to modify parameter"), 
-            Resp, bSuccess ? FString() : TEXT("PARAMETER_SET_FAILED"));
-    });
-
+    SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
+        bSuccess ? TEXT("Niagara parameter modified successfully") : TEXT("Failed to modify parameter"),
+        Resp, bSuccess ? FString() : TEXT("PARAMETER_SET_FAILED"));
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("modify_niagara_parameter requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));

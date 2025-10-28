@@ -2,6 +2,9 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation-bridge.js';
 import { sanitizeAssetName, validateAssetParams } from '../utils/validation.js';
 
+type Vector3 = [number, number, number];
+
+
 export class NiagaraTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
 
@@ -23,23 +26,157 @@ export class NiagaraTools {
     }>;
   }) {
     try {
-    const path = params.savePath || '/Game/Effects/Niagara';
-    // Prefer plugin-first creation
-    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
-      try {
-        const res: any = await this.automationBridge.sendAutomationRequest('create_niagara_system', { name: params.name, savePath: path, template: params.template }, { timeoutMs: 60000 });
-        if (res && res.success !== false) {
-          return { success: true, path: res.path || res.result?.path || `${path}/${params.name}`, message: res.message || 'Niagara system created' } as any;
-        }
-        return { success: false, message: res?.message ?? 'Niagara create failed', error: res?.error ?? 'CREATE_NIAGARA_FAILED' } as any;
-      } catch (error) {
-        return { success: false, error: `Failed to create Niagara system: ${error instanceof Error ? error.message : String(error)}` };
+      if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
+        throw new Error('Automation Bridge not available. Niagara system creation requires plugin support.');
       }
+
+      const path = params.savePath || '/Game/Effects/Niagara';
+      const response: any = await this.automationBridge.sendAutomationRequest(
+        'create_niagara_system',
+        { name: params.name, savePath: path, template: params.template },
+        { timeoutMs: 60000 }
+      );
+
+      if (response && response.success !== false) {
+        const result = response.result ?? {};
+        const systemName: string = result.systemName ?? params.name;
+        const systemPath: string = response.path ?? result.systemPath ?? result.path ?? `${path}/${params.name}`;
+        return {
+          success: true,
+          systemName,
+          path: systemPath,
+          message: response.message || result.message || `Niagara system ${systemName} created`
+        } as const;
+      }
+
+      return {
+        success: false,
+        error: response?.error ?? 'CREATE_NIAGARA_SYSTEM_FAILED',
+        message: response?.message ?? 'Niagara system creation failed'
+      } as const;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Failed to create Niagara system: ${message}` } as const;
+    }
+  }
+
+  async createEmitter(params: {
+    name: string;
+    savePath?: string;
+    systemPath?: string;
+    template?: string;
+  }) {
+    if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
+      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'createEmitter requires automation bridge' } as const;
     }
 
-    throw new Error('Automation Bridge not available. Niagara system creation requires plugin support.');
-    } catch (err) {
-      return { success: false, error: `Failed to create Niagara system: ${err}` };
+    const requestPayload: Record<string, unknown> = {
+      name: params.name,
+      savePath: params.savePath ?? '/Game/Effects/Niagara'
+    };
+    if (params.systemPath) requestPayload.systemPath = params.systemPath;
+    if (params.template) requestPayload.template = params.template;
+
+    try {
+      const response: any = await this.automationBridge.sendAutomationRequest('create_niagara_emitter', requestPayload, { timeoutMs: 60000 });
+      if (response && response.success !== false) {
+        const result = response.result ?? {};
+        return {
+          success: true,
+          emitterPath: response.emitterPath ?? result.emitterPath ?? result.path,
+          emitterName: result.emitterName ?? params.name,
+          message: response.message || result.message || `Niagara emitter ${params.name} created`
+        } as const;
+      }
+
+      return {
+        success: false,
+        error: response?.error ?? 'CREATE_NIAGARA_EMITTER_FAILED',
+        message: response?.message ?? 'Niagara emitter creation failed'
+      } as const;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Failed to create Niagara emitter: ${message}` } as const;
+    }
+  }
+
+  async createRibbon(params: {
+    systemPath: string;
+    start?: { x: number; y: number; z: number } | [number, number, number];
+    end?: { x: number; y: number; z: number } | [number, number, number];
+    color?: [number, number, number, number];
+    width?: number;
+  }) {
+    if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
+      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'createRibbon requires automation bridge' } as const;
+    }
+
+    const toVector = (value?: { x: number; y: number; z: number } | Vector3): Vector3 | undefined => {
+      if (!value) return undefined;
+      if (Array.isArray(value)) return [value[0] ?? 0, value[1] ?? 0, value[2] ?? 0];
+      return [value.x ?? 0, value.y ?? 0, value.z ?? 0];
+    };
+
+    const requestPayload: Record<string, unknown> = { systemPath: params.systemPath };
+    const start = toVector(params.start);
+    const end = toVector(params.end);
+    if (start) requestPayload.start = start;
+    if (end) requestPayload.end = end;
+    if (params.color) requestPayload.color = params.color;
+    if (typeof params.width === 'number') requestPayload.width = params.width;
+
+    try {
+      const response: any = await this.automationBridge.sendAutomationRequest('create_niagara_ribbon', requestPayload, { timeoutMs: 60000 });
+      if (response && response.success !== false) {
+        const result = response.result ?? {};
+        return {
+          success: true,
+          ribbonPath: response.ribbonPath ?? result.ribbonPath ?? result.path,
+          message: response.message || result.message || 'Niagara ribbon created'
+        } as const;
+      }
+
+      return {
+        success: false,
+        error: response?.error ?? 'CREATE_NIAGARA_RIBBON_FAILED',
+        message: response?.message ?? 'Niagara ribbon creation failed'
+      } as const;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Failed to create Niagara ribbon: ${message}` } as const;
+    }
+  }
+
+  async cleanupEffects(params: { filter: string }) {
+    if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
+      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'cleanupEffects requires automation bridge' } as const;
+    }
+    if (!params.filter || typeof params.filter !== 'string') {
+      return { success: false, error: 'INVALID_ARGUMENT', message: 'filter is required' } as const;
+    }
+
+    try {
+      const response: any = await this.automationBridge.sendAutomationRequest('cleanup', { filter: params.filter }, { timeoutMs: 60000 });
+      if (response && response.success !== false) {
+        const result = response.result ?? {};
+        const removedActors: string[] = result.removedActors ?? response.removedActors ?? [];
+        const removedCount = result.removed ?? removedActors.length;
+        return {
+          success: true,
+          removed: removedCount,
+          removedActors,
+          message: response.message || result.message || `Cleanup completed (removed=${removedCount})`
+        } as const;
+      }
+
+      return {
+        success: false,
+        error: response?.error ?? 'CLEANUP_FAILED',
+        message: response?.message ?? 'Niagara cleanup failed'
+      } as const;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Failed to cleanup Niagara effects: ${message}` } as const;
     }
   }
 
@@ -155,7 +292,7 @@ export class NiagaraTools {
   }) {
     try {
       // Validate effect type at runtime (inputs can come from JSON)
-      const allowedTypes = ['Fire','Smoke','Explosion','Water','Rain','Snow','Magic','Lightning','Dust','Steam'];
+      const allowedTypes = ['Fire','Smoke','Explosion','Water','Rain','Snow','Magic','Lightning','Dust','Steam','Default'];
       if (!params || !allowedTypes.includes(String(params.effectType))) {
         return { success: false, error: `Invalid effectType: ${String(params?.effectType)}` };
       }

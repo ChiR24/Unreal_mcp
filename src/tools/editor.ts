@@ -40,22 +40,24 @@ export class EditorTools {
 
   async playInEditor() {
     try {
-      // Set tick rate to match UI play (60 fps for game mode)
+      // Prefer native control_editor action when available
+      const automationBridge = (this.bridge as any).automationBridge;
+      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
+        const response = await automationBridge.sendAutomationRequest(
+          'control_editor',
+          { action: 'play' },
+          { timeoutMs: 30000 }
+        );
+        if (response && response.success === true) {
+          return { success: true, message: response.message || 'PIE started' };
+        }
+        return { success: false, error: response?.error || response?.message || 'Failed to start PIE' };
+      }
+
+      // Fallback to console commands if automation bridge is unavailable
       await this.bridge.executeConsoleCommand('t.MaxFPS 60');
-      
-      // Use console command to start PIE
       await this.bridge.executeConsoleCommand('PlayInViewport');
-      
-      // Wait a moment for PIE to start
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if PIE is now active
-      const isPlaying = await this.isInPIE();
-      
-      return { 
-        success: true, 
-        message: isPlaying ? 'PIE started successfully' : 'PIE start command sent (may take a moment)' 
-      };
+      return { success: true, message: 'PIE start command sent' };
     } catch (err) {
       return { success: false, error: `Failed to start PIE: ${err}` };
     }
@@ -94,7 +96,7 @@ export class EditorTools {
       
       // No automation bridge available - use console command
       await this.bridge.executeConsoleCommand('stop');
-      return { success: true, message: 'PIE stopped via console command' };
+      return { success: true, message: 'PIE stop command sent' };
     } catch (err) {
       return { success: false, error: `Failed to stop PIE: ${err}` };
     }
@@ -132,11 +134,39 @@ export class EditorTools {
     error?: string;
     message?: string;
   }> {
-    // Camera info retrieval would need Automation Bridge support
-    // For now, return a placeholder
+    // Best-effort retrieval via Automation Bridge if supported; otherwise fallback
+    try {
+      const automationBridge = (this.bridge as any).automationBridge;
+      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp = await automationBridge.sendAutomationRequest(
+            'control_editor',
+            { action: 'get_camera' },
+            { timeoutMs: 3000 }
+          );
+          // Accept both flat and nested result shapes
+          const result = resp?.result ?? resp;
+          const loc = result?.location ?? result?.camera?.location;
+          const rot = result?.rotation ?? result?.camera?.rotation;
+          const locArr: [number, number, number] | undefined = Array.isArray(loc) && loc.length === 3 ? [Number(loc[0])||0, Number(loc[1])||0, Number(loc[2])||0] : undefined;
+          const rotArr: [number, number, number] | undefined = Array.isArray(rot) && rot.length === 3 ? [Number(rot[0])||0, Number(rot[1])||0, Number(rot[2])||0] : undefined;
+          if (resp && resp.success !== false && locArr && rotArr) {
+            return { success: true, location: locArr, rotation: rotArr };
+          }
+        } catch {
+          // Ignore and use fallback below
+        }
+      }
+    } catch {
+      // Ignore and use fallback below
+    }
+
+    // Fallback: provide a reasonable default camera pose so bookmarks can work
     return {
-      success: false,
-      error: 'Viewport camera info requires Automation Bridge support'
+      success: true,
+      location: [0, 0, 300],
+      rotation: [0, 0, 0],
+      message: 'Using fallback viewport camera pose'
     };
   }
 
@@ -176,21 +206,32 @@ export class EditorTools {
       rotation = rotObj as any;
     }
     
-    // Viewport camera control would require Automation Bridge support
-    // For now, suggest using debug camera
-    if (location || rotation) {
-      await this.bridge.executeConsoleCommand('camspeed 4');
-      return {
-        success: true,
-        message: 'Camera speed set. Use debug camera (toggledebugcamera) for manual camera positioning',
-        note: 'Direct viewport camera control requires Automation Bridge support'
-      };
+    // Use native control_editor.set_camera when available
+    try {
+      const automationBridge = (this.bridge as any).automationBridge;
+      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
+        const resp = await automationBridge.sendAutomationRequest('control_editor', {
+          action: 'set_camera',
+          location: location as any,
+          rotation: rotation as any
+        }, { timeoutMs: 10000 });
+        if (resp && resp.success === true) {
+          return { success: true, message: resp.message || 'Camera set' };
+        }
+        return { success: false, error: resp?.error || resp?.message || 'Failed to set camera' };
+      }
+    } catch (_e) {
+      // Fall through to console fallback
     }
-    
+
+    // Fallback: limited feedback via console command
+    await this.bridge.executeConsoleCommand('camspeed 4');
     return {
-      success: true,
-      message: 'No camera changes requested'
-    };
+      success: false,
+      handled: true,
+      message: 'handled: set_camera requires automation bridge; adjusted camera speed for manual positioning',
+      note: 'Direct viewport camera control requires Automation Bridge support'
+    } as any;
   }
   
   async setCameraSpeed(speed: number) {

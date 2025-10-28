@@ -185,33 +185,4 @@ export class ActorTools {
     // Default: assume it's an engine class
     return '/Script/Engine.' + classPath;
   }
-  
-  private getConsoleClassName(classPath: string): string {
-    // Normalize class path for console 'summon'
-    const input = classPath;
-
-    // Engine classes: reduce '/Script/Engine.ClassName' to 'ClassName'
-    if (input.startsWith('/Script/Engine.')) {
-      return input.replace('/Script/Engine.', '');
-    }
-
-    // If it's already a simple class name (no path) and not a /Game asset, strip optional _C and return
-    if (!input.startsWith('/Game/') && !input.includes('/')) {
-      if (input.endsWith('_C')) return input.slice(0, -2);
-      return input;
-    }
-
-    // Blueprint assets under /Game: ensure '/Game/Path/Asset.Asset_C'
-    if (input.startsWith('/Game/')) {
-      // Remove any existing ".Something" suffix to rebuild normalized class ref
-      const pathWithoutSuffix = input.split('.')[0];
-      const parts = pathWithoutSuffix.split('/');
-      const assetName = parts[parts.length - 1].replace(/_C$/, '');
-      const normalized = `${pathWithoutSuffix}.${assetName}_C`;
-      return normalized;
-    }
-
-    // Fallback: return input unchanged
-    return input;
-  }
 }

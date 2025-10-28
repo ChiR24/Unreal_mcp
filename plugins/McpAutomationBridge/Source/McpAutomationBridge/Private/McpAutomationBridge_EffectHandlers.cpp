@@ -69,13 +69,11 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         if (LowerSub == TEXT("particle"))
         {
             FString Preset; LocalPayload->TryGetStringField(TEXT("preset"), Preset);
-            AsyncTask(ENamedThreads::GameThread, [RequestId, RequestingSocket, SerializeResponseAndSend, Preset]() {
-                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-                Resp->SetBoolField(TEXT("success"), true);
-                Resp->SetStringField(TEXT("preset"), Preset);
-                Resp->SetStringField(TEXT("message"), FString::Printf(TEXT("Particle %s spawned"), *Preset));
-                SerializeResponseAndSend(true, TEXT("Particle spawned"), Resp, FString());
-            });
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), false);
+            Resp->SetStringField(TEXT("error"), TEXT("Particle preset spawning not implemented."));
+            if (!Preset.IsEmpty()) { Resp->SetStringField(TEXT("preset"), Preset); }
+            SerializeResponseAndSend(false, TEXT("Particle subaction not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
             return true;
         }
 
@@ -83,13 +81,11 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         if (LowerSub == TEXT("debug_shape"))
         {
             FString ShapeType; LocalPayload->TryGetStringField(TEXT("shapeType"), ShapeType);
-            AsyncTask(ENamedThreads::GameThread, [RequestId, RequestingSocket, SerializeResponseAndSend, ShapeType]() {
-                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-                Resp->SetBoolField(TEXT("success"), true);
-                Resp->SetStringField(TEXT("shapeType"), ShapeType);
-                Resp->SetStringField(TEXT("message"), FString::Printf(TEXT("Debug %s drawn"), *ShapeType));
-                SerializeResponseAndSend(true, TEXT("Debug shape created"), Resp, FString());
-            });
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), false);
+            Resp->SetStringField(TEXT("error"), TEXT("Debug shape drawing not implemented."));
+            if (!ShapeType.IsEmpty()) { Resp->SetStringField(TEXT("shapeType"), ShapeType); }
+            SerializeResponseAndSend(false, TEXT("Debug shape subaction not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
             return true;
         }
 
@@ -160,50 +156,67 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         FString AttachToActor; LocalPayload->TryGetStringField(TEXT("attachToActor"), AttachToActor);
 
 #if WITH_EDITOR
-            AsyncTask(ENamedThreads::GameThread, [this, RequestId, SystemPath, Loc, RotArr, ScaleArr, bAutoDestroy, AttachToActor, RequestingSocket, SerializeResponseAndSend]() {
+        if (!GEditor)
+        {
+            SerializeResponseAndSend(false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+            return true;
+        }
+        UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+        if (!ActorSS)
+        {
+            SerializeResponseAndSend(false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+            return true;
+        }
+
+        UObject* NiagObj = UEditorAssetLibrary::LoadAsset(SystemPath);
+        if (!NiagObj)
+        {
             TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-            if (!GEditor) { SerializeResponseAndSend(false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE")); return; }
-            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-            if (!ActorSS) { SerializeResponseAndSend(false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING")); return; }
+            Resp->SetBoolField(TEXT("success"), false);
+            Resp->SetStringField(TEXT("error"), TEXT("Niagara system asset not found"));
+            SerializeResponseAndSend(false, TEXT("Niagara system not found"), Resp, TEXT("SYSTEM_NOT_FOUND"));
+            return true;
+        }
 
-            // Try native Niagara spawn using asset load and UNiagaraComponent where available
-            UObject* NiagObj = UEditorAssetLibrary::LoadAsset(SystemPath);
-            if (!NiagObj)
+        const FRotator SpawnRot(static_cast<float>(RotArr[0]), static_cast<float>(RotArr[1]), static_cast<float>(RotArr[2]));
+        AActor* Spawned = ActorSS->SpawnActorFromClass(ANiagaraActor::StaticClass(), Loc, SpawnRot);
+        if (!Spawned)
+        {
+            SerializeResponseAndSend(false, TEXT("Failed to spawn NiagaraActor"), nullptr, TEXT("SPAWN_FAILED"));
+            return true;
+        }
+
+        UNiagaraComponent* NiComp = Spawned->FindComponentByClass<UNiagaraComponent>();
+        if (NiComp && NiagObj->IsA<UNiagaraSystem>())
+        {
+            NiComp->SetAsset(Cast<UNiagaraSystem>(NiagObj));
+            NiComp->SetWorldScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
+            NiComp->Activate(true);
+        }
+
+        if (!AttachToActor.IsEmpty())
+        {
+            AActor* Parent = nullptr;
+            TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+            for (AActor* A : AllActors)
             {
-                Resp->SetBoolField(TEXT("success"), false);
-                Resp->SetStringField(TEXT("error"), TEXT("Niagara system asset not found"));
-                SerializeResponseAndSend(false, TEXT("Niagara system not found"), Resp, TEXT("SYSTEM_NOT_FOUND"));
-                return;
+                if (A && A->GetActorLabel().Equals(AttachToActor, ESearchCase::IgnoreCase))
+                {
+                    Parent = A;
+                    break;
+                }
             }
-
-            // Spawn world actor
-            const FRotator SpawnRot(static_cast<float>(RotArr[0]), static_cast<float>(RotArr[1]), static_cast<float>(RotArr[2]));
-            AActor* Spawned = ActorSS->SpawnActorFromClass(ANiagaraActor::StaticClass(), Loc, SpawnRot);
-            if (!Spawned) { SerializeResponseAndSend(false, TEXT("Failed to spawn NiagaraActor"), nullptr, TEXT("SPAWN_FAILED")); return; }
-
-            // Configure Niagara component
-            UNiagaraComponent* NiComp = Spawned->FindComponentByClass<UNiagaraComponent>();
-            if (NiComp && NiagObj->IsA<UNiagaraSystem>())
+            if (Parent)
             {
-                NiComp->SetAsset(Cast<UNiagaraSystem>(NiagObj));
-                NiComp->SetWorldScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
-                NiComp->Activate(true);
+                Spawned->AttachToActor(Parent, FAttachmentTransformRules::KeepWorldTransform);
             }
+        }
 
-            // Attach if requested
-            if (!AttachToActor.IsEmpty())
-            {
-                AActor* Parent = nullptr;
-                TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
-                for (AActor* A : AllActors) if (A && A->GetActorLabel().Equals(AttachToActor, ESearchCase::IgnoreCase)) { Parent = A; break; }
-                if (Parent) Spawned->AttachToActor(Parent, FAttachmentTransformRules::KeepWorldTransform);
-            }
-
-            Spawned->SetActorLabel(FString::Printf(TEXT("Niagara_%lld"), FDateTime::Now().ToUnixTimestamp()));
-            Resp->SetBoolField(TEXT("success"), true);
-            Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
-            SerializeResponseAndSend(true, TEXT("Niagara spawned"), Resp, FString());
-        });
+        Spawned->SetActorLabel(FString::Printf(TEXT("Niagara_%lld"), FDateTime::Now().ToUnixTimestamp()));
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
+        SerializeResponseAndSend(true, TEXT("Niagara spawned"), Resp, FString());
         return true;
 #else
         SerializeResponseAndSend(false, TEXT("spawn_niagara requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -221,81 +234,107 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         if (ParameterType.IsEmpty()) ParameterType = TEXT("Float");
 
 #if WITH_EDITOR
-    AsyncTask(ENamedThreads::GameThread, [this, RequestId, SystemName, ParameterName, ParameterType, bIsUser, LocalPayload, RequestingSocket, SerializeResponseAndSend]() {
-            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-            if (!GEditor) { SerializeResponseAndSend(false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE")); return; }
-            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>(); if (!ActorSS) { SerializeResponseAndSend(false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING")); return; }
+        if (!GEditor)
+        {
+            SerializeResponseAndSend(false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+            return true;
+        }
+        UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+        if (!ActorSS)
+        {
+            SerializeResponseAndSend(false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+            return true;
+        }
 
-            const FName ParamName(*ParameterName);
-            const TSharedPtr<FJsonValue> ValueField = LocalPayload->TryGetField(TEXT("value"));
+        const FName ParamName(*ParameterName);
+        const TSharedPtr<FJsonValue> ValueField = LocalPayload->TryGetField(TEXT("value"));
 
-            // Locate Niagara actors with the given name (best-effort)
-            TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
-            bool bApplied = false;
-            for (AActor* Actor : AllActors)
+        TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+        bool bApplied = false;
+        for (AActor* Actor : AllActors)
+        {
+            if (!Actor)
             {
-                if (!Actor) continue;
-                if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) continue;
-                UNiagaraComponent* NiComp = Actor->FindComponentByClass<UNiagaraComponent>();
-                if (!NiComp) continue;
+                continue;
+            }
+            if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase))
+            {
+                continue;
+            }
+            UNiagaraComponent* NiComp = Actor->FindComponentByClass<UNiagaraComponent>();
+            if (!NiComp)
+            {
+                continue;
+            }
 
-                if (ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
+            if (ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
+            {
+                double NumberValue = 0.0;
+                bool bHasNumber = LocalPayload->TryGetNumberField(TEXT("value"), NumberValue);
+                if (!bHasNumber && ValueField.IsValid())
                 {
-                    double NumberValue = 0.0;
-                    bool bHasNumber = LocalPayload->TryGetNumberField(TEXT("value"), NumberValue);
-                    if (!bHasNumber && ValueField.IsValid())
+                    if (ValueField->Type == EJson::Number)
                     {
-                        if (ValueField->Type == EJson::Number)
+                        NumberValue = ValueField->AsNumber();
+                        bHasNumber = true;
+                    }
+                    else if (ValueField->Type == EJson::Object)
+                    {
+                        const TSharedPtr<FJsonObject> Obj = ValueField->AsObject();
+                        if (Obj.IsValid())
                         {
-                            NumberValue = ValueField->AsNumber();
-                            bHasNumber = true;
-                        }
-                        else if (ValueField->Type == EJson::Object)
-                        {
-                            const TSharedPtr<FJsonObject> Obj = ValueField->AsObject();
-                            if (Obj.IsValid()) bHasNumber = Obj->TryGetNumberField(TEXT("v"), NumberValue);
+                            bHasNumber = Obj->TryGetNumberField(TEXT("v"), NumberValue);
                         }
                     }
-                    if (bHasNumber)
-                    {
-                        NiComp->SetVariableFloat(ParamName, static_cast<float>(NumberValue));
-                        bApplied = true;
-                    }
                 }
-                else if (ParameterType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
+                if (bHasNumber)
                 {
-                    const TArray<TSharedPtr<FJsonValue>>* ArrValue = nullptr;
-                    if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) && ArrValue && ArrValue->Num() >= 3)
-                    {
-                        const float X = static_cast<float>((*ArrValue)[0]->AsNumber());
-                        const float Y = static_cast<float>((*ArrValue)[1]->AsNumber());
-                        const float Z = static_cast<float>((*ArrValue)[2]->AsNumber());
-                        NiComp->SetVariableVec3(ParamName, FVector(X, Y, Z));
-                        bApplied = true;
-                    }
-                }
-                else if (ParameterType.Equals(TEXT("Color"), ESearchCase::IgnoreCase))
-                {
-                    const TArray<TSharedPtr<FJsonValue>>* ArrValue = nullptr;
-                    if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) && ArrValue && ArrValue->Num() >= 3)
-                    {
-                        const float R = static_cast<float>((*ArrValue)[0]->AsNumber());
-                        const float G = static_cast<float>((*ArrValue)[1]->AsNumber());
-                        const float B = static_cast<float>((*ArrValue)[2]->AsNumber());
-                        const float Alpha = ArrValue->Num() > 3 ? static_cast<float>((*ArrValue)[3]->AsNumber()) : 1.0f;
-                        NiComp->SetVariableLinearColor(ParamName, FLinearColor(R, G, B, Alpha));
-                        bApplied = true;
-                    }
-                }
-
-                if (bApplied)
-                {
-                    break;
+                    NiComp->SetVariableFloat(ParamName, static_cast<float>(NumberValue));
+                    bApplied = true;
                 }
             }
-            Resp->SetBoolField(TEXT("success"), bApplied);
-            if (bApplied) SerializeResponseAndSend(true, TEXT("Niagara parameter set"), Resp, FString()); else SerializeResponseAndSend(false, TEXT("Niagara parameter not applied"), Resp, TEXT("SET_NIAGARA_PARAM_FAILED"));
-        });
+            else if (ParameterType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
+            {
+                const TArray<TSharedPtr<FJsonValue>>* ArrValue = nullptr;
+                if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) && ArrValue && ArrValue->Num() >= 3)
+                {
+                    const float X = static_cast<float>((*ArrValue)[0]->AsNumber());
+                    const float Y = static_cast<float>((*ArrValue)[1]->AsNumber());
+                    const float Z = static_cast<float>((*ArrValue)[2]->AsNumber());
+                    NiComp->SetVariableVec3(ParamName, FVector(X, Y, Z));
+                    bApplied = true;
+                }
+            }
+            else if (ParameterType.Equals(TEXT("Color"), ESearchCase::IgnoreCase))
+            {
+                const TArray<TSharedPtr<FJsonValue>>* ArrValue = nullptr;
+                if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) && ArrValue && ArrValue->Num() >= 3)
+                {
+                    const float R = static_cast<float>((*ArrValue)[0]->AsNumber());
+                    const float G = static_cast<float>((*ArrValue)[1]->AsNumber());
+                    const float B = static_cast<float>((*ArrValue)[2]->AsNumber());
+                    const float Alpha = ArrValue->Num() > 3 ? static_cast<float>((*ArrValue)[3]->AsNumber()) : 1.0f;
+                    NiComp->SetVariableLinearColor(ParamName, FLinearColor(R, G, B, Alpha));
+                    bApplied = true;
+                }
+            }
+
+            if (bApplied)
+            {
+                break;
+            }
+        }
+
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), bApplied);
+        if (bApplied)
+        {
+            SerializeResponseAndSend(true, TEXT("Niagara parameter set"), Resp, FString());
+        }
+        else
+        {
+            SerializeResponseAndSend(false, TEXT("Niagara parameter not applied"), Resp, TEXT("SET_NIAGARA_PARAM_FAILED"));
+        }
         return true;
 #else
         SerializeResponseAndSend(false, TEXT("set_niagara_parameter requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -368,39 +407,70 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         }
 
 #if WITH_EDITOR
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, LightName, LightType, Loc, Intensity, bHasColor, Cr, Cg, Cb, Ca, bPulseEnabled, PulseFreq, RequestingSocket]() {
-            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-            if (!GEditor) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE")); return; }
-            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>(); if (!ActorSS) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING")); return; }
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        if (!GEditor)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+            return true;
+        }
+        UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+        if (!ActorSS)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+            return true;
+        }
 
-            // Choose class by type
-            UClass* ChosenClass = APointLight::StaticClass(); UClass* CompClass = UPointLightComponent::StaticClass();
-            FString LT = LightType.ToLower();
-            if (LT == TEXT("spot") || LT == TEXT("spotlight")) { ChosenClass = ASpotLight::StaticClass(); CompClass = USpotLightComponent::StaticClass(); }
-            else if (LT == TEXT("directional") || LT == TEXT("directionallight")) { ChosenClass = ADirectionalLight::StaticClass(); CompClass = UDirectionalLightComponent::StaticClass(); }
-            else if (LT == TEXT("rect") || LT == TEXT("rectlight")) { ChosenClass = ARectLight::StaticClass(); CompClass = URectLightComponent::StaticClass(); }
+        UClass* ChosenClass = APointLight::StaticClass();
+        UClass* CompClass = UPointLightComponent::StaticClass();
+        FString LT = LightType.ToLower();
+        if (LT == TEXT("spot") || LT == TEXT("spotlight"))
+        {
+            ChosenClass = ASpotLight::StaticClass();
+            CompClass = USpotLightComponent::StaticClass();
+        }
+        else if (LT == TEXT("directional") || LT == TEXT("directionallight"))
+        {
+            ChosenClass = ADirectionalLight::StaticClass();
+            CompClass = UDirectionalLightComponent::StaticClass();
+        }
+        else if (LT == TEXT("rect") || LT == TEXT("rectlight"))
+        {
+            ChosenClass = ARectLight::StaticClass();
+            CompClass = URectLightComponent::StaticClass();
+        }
 
-            AActor* Spawned = ActorSS->SpawnActorFromClass(ChosenClass, Loc, FRotator::ZeroRotator);
-            if (!Spawned) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to spawn light actor"), nullptr, TEXT("CREATE_DYNAMIC_LIGHT_FAILED")); return; }
+        AActor* Spawned = ActorSS->SpawnActorFromClass(ChosenClass, Loc, FRotator::ZeroRotator);
+        if (!Spawned)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to spawn light actor"), nullptr, TEXT("CREATE_DYNAMIC_LIGHT_FAILED"));
+            return true;
+        }
 
-            // Try to find light component
-            UActorComponent* C = Spawned->GetComponentByClass(CompClass);
-            if (C)
+        UActorComponent* C = Spawned->GetComponentByClass(CompClass);
+        if (C)
+        {
+            if (ULightComponent* LC = Cast<ULightComponent>(C))
             {
-                if (ULightComponent* LC = Cast<ULightComponent>(C))
+                LC->SetIntensity(static_cast<float>(Intensity));
+                if (bHasColor)
                 {
-                    LC->SetIntensity(static_cast<float>(Intensity));
-                    if (bHasColor) LC->SetLightColor(FLinearColor(static_cast<float>(Cr), static_cast<float>(Cg), static_cast<float>(Cb), static_cast<float>(Ca)));
+                    LC->SetLightColor(FLinearColor(static_cast<float>(Cr), static_cast<float>(Cg), static_cast<float>(Cb), static_cast<float>(Ca)));
                 }
             }
+        }
 
-            if (!LightName.IsEmpty()) Spawned->SetActorLabel(LightName);
-            if (bPulseEnabled) Spawned->Tags.Add(FName(*FString::Printf(TEXT("MCP_PULSE:%g"), PulseFreq)));
+        if (!LightName.IsEmpty())
+        {
+            Spawned->SetActorLabel(LightName);
+        }
+        if (bPulseEnabled)
+        {
+            Spawned->Tags.Add(FName(*FString::Printf(TEXT("MCP_PULSE:%g"), PulseFreq)));
+        }
 
-            Resp->SetBoolField(TEXT("success"), true);
-            Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
-            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Dynamic light created"), Resp, FString());
-        });
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Dynamic light created"), Resp, FString());
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_dynamic_light requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -414,20 +484,49 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         FString Filter; LocalPayload->TryGetStringField(TEXT("filter"), Filter);
         if (Filter.IsEmpty()) { SerializeResponseAndSend(false, TEXT("filter required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
 #if WITH_EDITOR
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, Filter, RequestingSocket]() {
-            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-            if (!GEditor) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE")); return; }
-            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>(); if (!ActorSS) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING")); return; }
-            TArray<AActor*> Actors = ActorSS->GetAllLevelActors();
-            TArray<FString> Removed;
-            for (AActor* A : Actors)
+        if (!GEditor)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+            return true;
+        }
+        UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+        if (!ActorSS)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+            return true;
+        }
+        TArray<AActor*> Actors = ActorSS->GetAllLevelActors();
+        TArray<FString> Removed;
+        for (AActor* A : Actors)
+        {
+            if (!A)
             {
-                if (!A) continue; FString Label = A->GetActorLabel(); if (Label.IsEmpty()) continue; if (!Label.StartsWith(Filter, ESearchCase::IgnoreCase)) continue; bool bDel = ActorSS->DestroyActor(A); if (bDel) Removed.Add(Label);
+                continue;
             }
-            Resp->SetArrayField(TEXT("removedActors"), TArray<TSharedPtr<FJsonValue>>() ); TArray<TSharedPtr<FJsonValue>> Arr; for (const FString& S : Removed) Arr.Add(MakeShared<FJsonValueString>(S)); Resp->SetArrayField(TEXT("removedActors"), Arr);
-            Resp->SetNumberField(TEXT("removed"), Removed.Num());
-            SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Cleanup completed (removed=%d)"), Removed.Num()), Resp, FString());
-        });
+            FString Label = A->GetActorLabel();
+            if (Label.IsEmpty())
+            {
+                continue;
+            }
+            if (!Label.StartsWith(Filter, ESearchCase::IgnoreCase))
+            {
+                continue;
+            }
+            bool bDel = ActorSS->DestroyActor(A);
+            if (bDel)
+            {
+                Removed.Add(Label);
+            }
+        }
+        TArray<TSharedPtr<FJsonValue>> Arr;
+        for (const FString& S : Removed)
+        {
+            Arr.Add(MakeShared<FJsonValueString>(S));
+        }
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetArrayField(TEXT("removedActors"), Arr);
+        Resp->SetNumberField(TEXT("removed"), Removed.Num());
+        SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Cleanup completed (removed=%d)"), Removed.Num()), Resp, FString());
         return true;
 #else
         SerializeResponseAndSend(false, TEXT("cleanup requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -437,74 +536,39 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
     
         // STUB HANDLERS FOR TEST COVERAGE
         if (Lower.Equals(TEXT("create_niagara_ribbon"))) {
-    #if WITH_EDITOR
-            AsyncTask(ENamedThreads::GameThread, [this, RequestId, RequestingSocket]() {
-                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-                Resp->SetBoolField(TEXT("success"), true);
-                Resp->SetStringField(TEXT("message"), TEXT("Niagara ribbon created (stub)"));
-                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ribbon created (stub)"), Resp, FString());
-            });
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), false);
+            Resp->SetStringField(TEXT("error"), TEXT("create_niagara_ribbon not implemented."));
+            SerializeResponseAndSend(false, TEXT("create_niagara_ribbon not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
             return true;
-    #else
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_niagara_ribbon requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-            return true;
-    #endif
         }
         if (Lower.Equals(TEXT("create_volumetric_fog"))) {
-    #if WITH_EDITOR
-            AsyncTask(ENamedThreads::GameThread, [this, RequestId, RequestingSocket]() {
-                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-                Resp->SetBoolField(TEXT("success"), true);
-                Resp->SetStringField(TEXT("message"), TEXT("Volumetric fog created (stub)"));
-                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Volumetric fog created (stub)"), Resp, FString());
-            });
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), false);
+            Resp->SetStringField(TEXT("error"), TEXT("create_volumetric_fog not implemented."));
+            SerializeResponseAndSend(false, TEXT("create_volumetric_fog not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
             return true;
-    #else
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_volumetric_fog requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-            return true;
-    #endif
         }
         if (Lower.Equals(TEXT("create_particle_trail"))) {
-    #if WITH_EDITOR
-            AsyncTask(ENamedThreads::GameThread, [this, RequestId, RequestingSocket]() {
-                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-                Resp->SetBoolField(TEXT("success"), true);
-                Resp->SetStringField(TEXT("message"), TEXT("Particle trail created (stub)"));
-                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Particle trail created (stub)"), Resp, FString());
-            });
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), false);
+            Resp->SetStringField(TEXT("error"), TEXT("create_particle_trail not implemented."));
+            SerializeResponseAndSend(false, TEXT("create_particle_trail not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
             return true;
-    #else
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_particle_trail requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-            return true;
-    #endif
         }
         if (Lower.Equals(TEXT("create_environment_effect"))) {
-    #if WITH_EDITOR
-            AsyncTask(ENamedThreads::GameThread, [this, RequestId, RequestingSocket]() {
-                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-                Resp->SetBoolField(TEXT("success"), true);
-                Resp->SetStringField(TEXT("message"), TEXT("Environment effect created (stub)"));
-                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Environment effect created (stub)"), Resp, FString());
-            });
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), false);
+            Resp->SetStringField(TEXT("error"), TEXT("create_environment_effect not implemented."));
+            SerializeResponseAndSend(false, TEXT("create_environment_effect not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
             return true;
-    #else
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_environment_effect requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-            return true;
-    #endif
         }
         if (Lower.Equals(TEXT("create_impact_effect"))) {
-    #if WITH_EDITOR
-            AsyncTask(ENamedThreads::GameThread, [this, RequestId, RequestingSocket]() {
-                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-                Resp->SetBoolField(TEXT("success"), true);
-                Resp->SetStringField(TEXT("message"), TEXT("Impact effect created (stub)"));
-                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Impact effect created (stub)"), Resp, FString());
-            });
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), false);
+            Resp->SetStringField(TEXT("error"), TEXT("create_impact_effect not implemented."));
+            SerializeResponseAndSend(false, TEXT("create_impact_effect not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
             return true;
-    #else
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_impact_effect requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-            return true;
-    #endif
         }
 
     return false;

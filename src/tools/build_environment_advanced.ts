@@ -143,8 +143,9 @@ export class BuildEnvironmentAdvanced {
     }
 
     try {
+      const typePath = params.foliageType.includes('/') ? params.foliageType : `/Game/Foliage/${params.foliageType}.${params.foliageType}`;
       const response = await this.automationBridge.sendAutomationRequest('add_foliage_instances', {
-        foliageType: params.foliageType,
+        foliageType: typePath,
         transforms: params.transforms
       }, {
         timeoutMs: 120000 // 2 minutes for instance placement

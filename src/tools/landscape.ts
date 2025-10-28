@@ -48,27 +48,30 @@ export class LandscapeTools {
     const [locX, locY, locZ] = ensureVector3(params.location ?? [0, 0, 0], 'landscape location');
     const sectionsPerComponent = Math.max(1, Math.floor(params.sectionsPerComponent ?? 1));
     const quadsPerSection = Math.max(1, Math.floor(params.quadsPerSection ?? 63));
-    const componentCount = Math.max(1, Math.floor(params.componentCount ?? 1));
+    const _componentCount = Math.max(1, Math.floor(params.componentCount ?? 1));
 
     const defaultSize = 1000;
-    const scaleX = params.sizeX ? Math.max(0.1, params.sizeX / defaultSize) : 1;
-    const scaleY = params.sizeY ? Math.max(0.1, params.sizeY / defaultSize) : 1;
+    const _scaleX = params.sizeX ? Math.max(0.1, params.sizeX / defaultSize) : 1;
+    const _scaleY = params.sizeY ? Math.max(0.1, params.sizeY / defaultSize) : 1;
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_landscape', {
-        name,
-        location: [locX, locY, locZ],
-        scaleX,
-        scaleY,
+      // Map to plugin-native payload shape
+      const componentsX = Math.max(1, Math.floor((params.componentCount ?? Math.max(1, Math.floor((params.sizeX ?? 1000) / 1000)))));
+      const componentsY = Math.max(1, Math.floor((params.componentCount ?? Math.max(1, Math.floor((params.sizeY ?? 1000) / 1000)))));
+      const quadsPerComponent = quadsPerSection; // Plugin uses quadsPerComponent
+
+      const payload: Record<string, unknown> = {
+        x: locX,
+        y: locY,
+        z: locZ,
+        componentsX,
+        componentsY,
+        quadsPerComponent,
         sectionsPerComponent,
-        quadsPerSection,
-        componentCount,
-        materialPath: params.materialPath || '',
-        enableWorldPartition: params.enableWorldPartition ?? false,
-        runtimeGrid: params.runtimeGrid || '',
-        isSpatiallyLoaded: params.isSpatiallyLoaded ?? false,
-        dataLayers: params.dataLayers || []
-      }, {
+        materialPath: params.materialPath || ''
+      };
+
+      const response = await this.automationBridge.sendAutomationRequest('create_landscape', payload, {
         timeoutMs: 60000
       });
 
@@ -201,9 +204,11 @@ export class LandscapeTools {
     scale?: [number, number, number];
   }) {
     const scale = params.scale || [100, 100, 100];
-    const command = `ImportLandscapeHeightmap ${params.landscapeName} ${params.heightmapPath} ${scale.join(' ')}`;
-    
-    return this.bridge.executeConsoleCommand(command);
+const command = `ImportLandscapeHeightmap ${params.landscapeName} ${params.heightmapPath} ${scale.join(' ')}`;
+    const raw = await this.bridge.executeConsoleCommand(command);
+    const summary = this.bridge.summarizeConsoleCommand(command, raw);
+    const ok = summary.returnValue !== false && !(summary.output && /unknown|invalid/i.test(summary.output));
+    return { success: ok, message: summary.output || (ok ? 'Heightmap import executed' : 'Heightmap import failed'), raw };
   }
 
   // Export heightmap
@@ -213,9 +218,11 @@ export class LandscapeTools {
     format?: 'PNG' | 'RAW';
   }) {
     const format = params.format || 'PNG';
-    const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.exportPath} ${format}`;
-    
-    return this.bridge.executeConsoleCommand(command);
+const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.exportPath} ${format}`;
+    const raw = await this.bridge.executeConsoleCommand(command);
+    const summary = this.bridge.summarizeConsoleCommand(command, raw);
+    const ok = summary.returnValue !== false && !(summary.output && /unknown|invalid/i.test(summary.output));
+    return { success: ok, message: summary.output || (ok ? 'Heightmap export executed' : 'Heightmap export failed'), raw };
   }
 
   // Set landscape LOD

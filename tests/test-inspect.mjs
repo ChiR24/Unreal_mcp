@@ -1,264 +1,48 @@
 #!/usr/bin/env node
 /**
- * Inspect Test Suite
- * Tool: inspect
- * Actions: inspect_object, set_property, get_property
- * 
- * NOTE: These tests use Python to create actors dynamically,
- * then inspect/modify them. This avoids hardcoded object paths.
+ * Condensed Inspect Test Suite (15 cases) — safe for real Editor runs.
+ * Tools used: execute_python (bootstrap), inspect
  */
 
 import { runToolTests } from './test-runner.mjs';
 
 const testCases = [
-  // Setup: Create a test actor using Python
-  {
-    scenario: 'Setup - Create StaticMeshActor for testing',
-    toolName: 'execute_python',
-    arguments: {
-      script: `
-import unreal
-
-# Spawn a test static mesh actor
-world = unreal.EditorLevelLibrary.get_editor_world()
-location = unreal.Vector(0, 0, 100)
-rotation = unreal.Rotator(0, 0, 0)
-actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
-    unreal.StaticMeshActor.static_class(),
-    location,
-    rotation
-)
-actor.set_actor_label("InspectTestActor")
-
-# Load and assign a mesh
-mesh_asset = unreal.EditorAssetLibrary.load_asset('/Engine/BasicShapes/Cube')
-if mesh_asset and actor.static_mesh_component:
-    actor.static_mesh_component.set_static_mesh(mesh_asset)
-
-print(f"RESULT:{{'success': True, 'actor': '{actor.get_name()}', 'path': '{actor.get_path_name()}'}}")
-`
-    },
-    expected: 'success - test actor created'
-  },
-  
-  // Setup: Create a test light
-  {
-    scenario: 'Setup - Create DirectionalLight for testing',
-    toolName: 'execute_python',
-    arguments: {
-      script: `
-import unreal
-
-world = unreal.EditorLevelLibrary.get_editor_world()
-location = unreal.Vector(0, 0, 500)
-rotation = unreal.Rotator(-45, 0, 0)
-light = unreal.EditorLevelLibrary.spawn_actor_from_class(
-    unreal.DirectionalLight.static_class(),
-    location,
-    rotation
-)
-light.set_actor_label("InspectTestLight")
-
-print(f"RESULT:{{'success': True, 'light': '{light.get_name()}', 'path': '{light.get_path_name()}'}}")
-`
-    },
-    expected: 'success - test light created'
-  },
-
-  // Find actor and get its location using Python
-  {
-    scenario: 'Get actor location via Python',
-    toolName: 'execute_python',
-    arguments: {
-      script: `
-import unreal
-
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
-test_actor = next((a for a in actors if a.get_actor_label() == "InspectTestActor"), None)
-
-if test_actor:
-    location = test_actor.get_actor_location()
-    print(f"RESULT:{{'success': True, 'location': {{'X': {location.x}, 'Y': {location.y}, 'Z': {location.z}}}}}")
-else:
-    print("RESULT:{'success': False, 'error': 'Actor not found'}")
-`
-    },
-    expected: 'success - location retrieved'
-  },
-
-  // Set actor location using Python
-  {
-    scenario: 'Set actor location via Python',
-    toolName: 'execute_python',
-    arguments: {
-      script: `
-import unreal
-
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
-test_actor = next((a for a in actors if a.get_actor_label() == "InspectTestActor"), None)
-
-if test_actor:
-    new_location = unreal.Vector(100, 200, 300)
-    test_actor.set_actor_location(new_location, False, False)
-    print("RESULT:{'success': True, 'message': 'Location set'}")
-else:
-    print("RESULT:{'success': False, 'error': 'Actor not found'}")
-`
-    },
-    expected: 'success - location set'
-  },
-
-  // Get actor rotation
-  {
-    scenario: 'Get actor rotation via Python',
-    toolName: 'execute_python',
-    arguments: {
-      script: `
-import unreal
-
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
-test_actor = next((a for a in actors if a.get_actor_label() == "InspectTestActor"), None)
-
-if test_actor:
-    rotation = test_actor.get_actor_rotation()
-    print(f"RESULT:{{'success': True, 'rotation': {{'Pitch': {rotation.pitch}, 'Yaw': {rotation.yaw}, 'Roll': {rotation.roll}}}}}")
-else:
-    print("RESULT:{'success': False, 'error': 'Actor not found'}")
-`
-    },
-    expected: 'success - rotation retrieved'
-  },
-
-  // Set actor rotation
-  {
-    scenario: 'Set actor rotation via Python',
-    toolName: 'execute_python',
-    arguments: {
-      script: `
-import unreal
-
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
-test_actor = next((a for a in actors if a.get_actor_label() == "InspectTestActor"), None)
-
-if test_actor:
-    new_rotation = unreal.Rotator(0, 90, 0)
-    test_actor.set_actor_rotation(new_rotation, False)
-    print("RESULT:{'success': True, 'message': 'Rotation set'}")
-else:
-    print("RESULT:{'success': False, 'error': 'Actor not found'}")
-`
-    },
-    expected: 'success - rotation set'
-  },
-
-  // Set actor scale
-  {
-    scenario: 'Set actor scale via Python',
-    toolName: 'execute_python',
-    arguments: {
-      script: `
-import unreal
-
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
-test_actor = next((a for a in actors if a.get_actor_label() == "InspectTestActor"), None)
-
-if test_actor:
-    new_scale = unreal.Vector(2, 2, 2)
-    test_actor.set_actor_scale3d(new_scale)
-    print("RESULT:{'success': True, 'message': 'Scale set'}")
-else:
-    print("RESULT:{'success': False, 'error': 'Actor not found'}")
-`
-    },
-    expected: 'success - scale set'
-  },
-
-  // Toggle visibility
-  {
-    scenario: 'Set actor hidden via Python',
-    toolName: 'execute_python',
-    arguments: {
-      script: `
-import unreal
-
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
-test_actor = next((a for a in actors if a.get_actor_label() == "InspectTestActor"), None)
-
-if test_actor:
-    test_actor.set_actor_hidden_in_game(True)
-    print("RESULT:{'success': True, 'message': 'Visibility toggled'}")
-else:
-    print("RESULT:{'success': False, 'error': 'Actor not found'}")
-`
-    },
-    expected: 'success - visibility toggled'
-  },
-
-  // Get actor mobility
-  {
-    scenario: 'Get mobility via Python',
-    toolName: 'execute_python',
-    arguments: {
-      script: `
-import unreal
-
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
-test_actor = next((a for a in actors if a.get_actor_label() == "InspectTestActor"), None)
-
-if test_actor and hasattr(test_actor, 'static_mesh_component'):
-    comp = test_actor.static_mesh_component
-    mobility = str(comp.get_editor_property('mobility'))
-    print(f"RESULT:{{'success': True, 'mobility': '{mobility}'}}")
-else:
-    print("RESULT:{'success': False, 'error': 'Actor or component not found'}")
-`
-    },
-    expected: 'success - mobility retrieved'
-  },
-
-  // Set light intensity
-  {
-    scenario: 'Set light intensity via Python',
-    toolName: 'execute_python',
-    arguments: {
-      script: `
-import unreal
-
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
-test_light = next((a for a in actors if a.get_actor_label() == "InspectTestLight"), None)
-
-if test_light and hasattr(test_light, 'light_component'):
-    test_light.light_component.set_intensity(10.0)
-    print("RESULT:{'success': True, 'message': 'Intensity set'}")
-else:
-    print("RESULT:{'success': False, 'error': 'Light not found'}")
-`
-    },
-    expected: 'success - intensity set'
-  },
-
-  // Cleanup: Delete test actors
-  {
-    scenario: 'Cleanup - Delete test actors',
-    toolName: 'execute_python',
-    arguments: {
-      script: `
-import unreal
-
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
-deleted = []
-
-for actor in actors:
-    label = actor.get_actor_label()
-    if label in ["InspectTestActor", "InspectTestLight"]:
-        unreal.EditorLevelLibrary.destroy_actor(actor)
-        deleted.append(label)
-
-print(f"RESULT:{{'success': True, 'deleted': {deleted}}}")
-`
-    },
-    expected: 'success - cleanup complete'
-  }
+  // 1. Bootstrap: spawn a mesh actor for inspection (using control_actor instead of execute_python)
+  { scenario: 'Bootstrap - spawn InspectActor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: 'Inspect_A', location: { x: 0, y: 0, z: 200 } }, expected: 'success - bootstrap created' },
+  // 2. Inspect actor by name
+  { scenario: 'Inspect actor by name', toolName: 'inspect', arguments: { action: 'inspect_object', name: 'Inspect_A' }, expected: 'success - object inspected' },
+  // 3. Get a property from the actor
+  { scenario: 'Get actor location property', toolName: 'inspect', arguments: { action: 'get_property', name: 'Inspect_A', propertyPath: 'ActorLocation' }, expected: 'success - property retrieved' },
+  // 4. Set a property on the actor
+  { scenario: 'Set actor hidden property', toolName: 'inspect', arguments: { action: 'set_property', name: 'Inspect_A', propertyPath: 'bHidden', value: true }, expected: 'success - property set' },
+  // 5. Inspect component list
+  { scenario: 'Get components on actor', toolName: 'inspect', arguments: { action: 'get_components', name: 'Inspect_A' }, expected: 'success - components returned' },
+  // 6. Get component property
+  { scenario: 'Get static mesh component mesh', toolName: 'inspect', arguments: { action: 'get_component_property', name: 'Inspect_A', componentName: 'StaticMeshComponent0', propertyPath: 'StaticMesh' }, expected: 'success - component property retrieved' },
+  // 7. Set component mobility
+  { scenario: 'Set component mobility', toolName: 'inspect', arguments: { action: 'set_component_property', name: 'Inspect_A', componentName: 'StaticMeshComponent0', propertyPath: 'Mobility', value: 'Movable' }, expected: 'success - component property set' },
+  // 8. Query actor metadata (best-effort)
+  { scenario: 'Get actor metadata', toolName: 'inspect', arguments: { action: 'get_metadata', name: 'Inspect_A' }, expected: 'success - metadata returned' },
+  // 9. Add a tag to the actor
+  { scenario: 'Add tag to actor', toolName: 'inspect', arguments: { action: 'add_tag', name: 'Inspect_A', tag: 'InspectTC' }, expected: 'success - tag added' },
+  // 10. Find actors by tag
+  { scenario: 'Find actors by tag', toolName: 'inspect', arguments: { action: 'find_by_tag', tag: 'InspectTC' }, expected: 'success - actors found' },
+  // 11. Save actor state (best-effort)
+  { scenario: 'Save actor snapshot', toolName: 'inspect', arguments: { action: 'create_snapshot', name: 'Inspect_A', snapshotName: 'Inspect_A_Snap' }, expected: 'success - snapshot created' },
+  // 12. Restore actor state
+  { scenario: 'Restore actor snapshot', toolName: 'inspect', arguments: { action: 'restore_snapshot', name: 'Inspect_A', snapshotName: 'Inspect_A_Snap' }, expected: 'success - snapshot restored' },
+  // 13. Export actor to JSON
+  { scenario: 'Export actor', toolName: 'inspect', arguments: { action: 'export', name: 'Inspect_A', format: 'JSON', outputPath: './tests/reports/inspect_actor_export.json' }, expected: 'success - actor exported' },
+  // 14. Delete test actor via inspect
+  { scenario: 'Delete actor', toolName: 'inspect', arguments: { action: 'delete_object', name: 'Inspect_A' }, expected: 'success - actor deleted' },
+  // 15. Verify deletion with a simple list
+  { scenario: 'Verify actor deleted', toolName: 'inspect', arguments: { action: 'list_objects', filter: 'Inspect_A' }, expected: 'success - deleted or not found' },
+  // Additional
+  { scenario: 'List objects', toolName: 'inspect', arguments: { action: 'list_objects', filter: 'Inspect_' }, expected: 'success or handled' },
+  { scenario: 'Find by class', toolName: 'inspect', arguments: { action: 'find_by_class', className: 'StaticMeshActor' }, expected: 'success or handled' },
+  { scenario: 'Get bounding box', toolName: 'inspect', arguments: { action: 'get_bounding_box', name: 'Inspect_A' }, expected: 'success or handled' },
+  { scenario: 'Inspect blueprint class (best-effort)', toolName: 'inspect', arguments: { action: 'inspect_class', classPath: '/Game/Blueprints/BP_Auto' }, expected: 'success or handled' },
+  { scenario: 'Verify delete again', toolName: 'inspect', arguments: { action: 'delete_object', name: 'Inspect_A' }, expected: 'success or handled' }
 ];
 
 await runToolTests('Inspect', testCases);

@@ -803,11 +803,18 @@ void UMcpAutomationBridgeSubsystem::HandleMessage(TSharedPtr<FMcpBridgeWebSocket
         Ack->SetArrayField(TEXT("supportedProtocols"), SupportedProtos);
 
         TArray<TSharedPtr<FJsonValue>> AvailablePorts;
-        for (const TSharedPtr<FMcpBridgeWebSocket>& S : ActiveSockets)
         {
-            if (S.IsValid())
+            TSet<int32> UniquePorts;
+            for (const TSharedPtr<FMcpBridgeWebSocket>& S : ActiveSockets)
             {
-                AvailablePorts.Add(MakeShared<FJsonValueNumber>(S->GetPort()));
+                if (S.IsValid())
+                {
+                    UniquePorts.Add(S->GetPort());
+                }
+            }
+            for (int32 P : UniquePorts)
+            {
+                AvailablePorts.Add(MakeShared<FJsonValueNumber>(P));
             }
         }
         Ack->SetArrayField(TEXT("availablePorts"), AvailablePorts);

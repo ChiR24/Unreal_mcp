@@ -122,7 +122,7 @@ let lastHealthSuccessAt = 0;
 
 // Configuration
 const CONFIG = {
-  // Tooling: use consolidated tools only (13 tools)
+  // Tooling: use consolidated tools only (12 tools)
   // Connection retry settings
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY_MS: 2000,
@@ -161,8 +161,8 @@ async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
     return false;
   }
     try {
-      // Use a safe echo command that doesn't affect any settings
-      await bridge.executeConsoleCommand('echo MCP Server Health Check');
+      // Use a safe, no-op stats command that always exists
+      await bridge.executeConsoleCommand('stat none');
       metrics.connectionStatus = 'connected';
       metrics.lastHealthCheck = new Date();
       lastHealthSuccessAt = Date.now();
@@ -294,6 +294,12 @@ export function createServer() {
   const landscapeTools = new LandscapeTools(bridge);
   const foliageTools = new FoliageTools(bridge);
   const buildEnvAdvanced = new BuildEnvironmentAdvanced(bridge);
+  // Wire automation bridge into tools that require native plugin operations
+  levelTools.setAutomationBridge(automationBridge);
+  lightingTools.setAutomationBridge(automationBridge);
+  landscapeTools.setAutomationBridge(automationBridge);
+  foliageTools.setAutomationBridge(automationBridge);
+  buildEnvAdvanced.setAutomationBridge(automationBridge);
   const debugTools = new DebugVisualizationTools(bridge);
   const performanceTools = new PerformanceTools(bridge);
   const audioTools = new AudioTools(bridge);
@@ -302,6 +308,12 @@ export function createServer() {
   const introspectionTools = new IntrospectionTools(bridge);
   const visualTools = new VisualTools(bridge);
   const engineTools = new EngineTools(bridge, automationBridge);
+  // Wire automation bridge into introspection tools so inspect actions can use native handlers
+  try { (introspectionTools as any).setAutomationBridge?.(automationBridge); } catch {}
+
+  // Wire automation bridge into other tools that can leverage native handlers
+  try { audioTools.setAutomationBridge(automationBridge); } catch {}
+  try { (visualTools as any).setAutomationBridge?.(automationBridge); } catch {}
 
   const server = new Server(
     {
@@ -331,7 +343,7 @@ export function createServer() {
       scope: `tool-call/${toolName}`
     } as const;
 
-    return responseValidator.wrapResponse(toolName, {
+    const wrapped = responseValidator.wrapResponse(toolName, {
       ...payload,
       content: [
         {
@@ -340,6 +352,8 @@ export function createServer() {
         }
       ]
     });
+    try { (wrapped as any).isError = true; } catch {}
+    return wrapped;
   };
 
   // Handle commands listing for MCP inspector compatibility
@@ -578,7 +592,7 @@ export function createServer() {
     return { tools: sanitized };
   });
 
-  // Handle tool calls - consolidated tools only (13)
+  // Handle tool calls - consolidated tools only (12)
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name } = request.params;
     let args: any = request.params.arguments || {};
@@ -701,13 +715,18 @@ export function createServer() {
       // Validate and enhance response
       const wrappedResult = responseValidator.wrapResponse(name, result);
 
-      const wrappedSuccess = typeof (wrappedResult as any)?.success === 'boolean'
-        ? Boolean((wrappedResult as any).success)
-        : undefined;
+      // Prefer success from structuredContent when present
+      let wrappedSuccess: boolean | undefined = undefined;
+      try {
+        const sc: any = (wrappedResult as any).structuredContent;
+        if (sc && typeof sc.success === 'boolean') wrappedSuccess = Boolean(sc.success);
+      } catch {}
+
       const isErrorResponse = Boolean((wrappedResult as any)?.isError === true);
 
+      // Only consider operation successful when we have an explicit true success and no error flags.
       const tentative = explicitSuccess ?? wrappedSuccess;
-      const finalSuccess = tentative !== undefined ? (tentative && !isErrorResponse) : !isErrorResponse;
+      const finalSuccess = tentative === true && !isErrorResponse;
 
       trackPerformance(startTime, finalSuccess);
 
@@ -742,23 +761,11 @@ export function createServer() {
       } catch {}
 
       const sanitizedError = cleanObject(errorResponse);
-      let errorText = '';
       try {
-        errorText = JSON.stringify(sanitizedError, null, 2);
-      } catch {
-        errorText = sanitizedError.message || errorResponse.message || `Failed to execute ${name}`;
-      }
+        (sanitizedError as any).isError = true;
+      } catch {}
 
-      const wrappedError = {
-        ...sanitizedError,
-        isError: true,
-        content: [{
-          type: 'text',
-          text: errorText
-        }]
-      };
-
-      return responseValidator.wrapResponse(name, wrappedError);
+      return responseValidator.wrapResponse(name, sanitizedError);
     }
   });
 

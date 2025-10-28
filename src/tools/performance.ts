@@ -206,7 +206,7 @@ export class PerformanceTools {
     detailed?: boolean;
     outputPath?: string;
   }) {
-  const commands: string[] = [];
+    const commands: string[] = [];
     
     if (params.detailed) {
       commands.push('memreport -full');
@@ -214,8 +214,9 @@ export class PerformanceTools {
       commands.push('memreport');
     }
     
+    // Writing reports to disk via console is not supported here; surface NOT_IMPLEMENTED when requested
     if (params.outputPath) {
-      commands.push(`obj savepackage ${params.outputPath}`);
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Saving memreport to a file is not supported via console; use editor API or plugin' };
     }
     
     await this.bridge.executeConsoleCommands(commands);
@@ -229,7 +230,7 @@ export class PerformanceTools {
     poolSize?: number; // MB
     boostPlayerLocation?: boolean;
   }) {
-  const commands: string[] = [];
+    const commands: string[] = [];
     
     commands.push(`r.TextureStreaming ${params.enabled ? 1 : 0}`);
     
@@ -238,7 +239,8 @@ export class PerformanceTools {
     }
     
     if (params.boostPlayerLocation !== undefined) {
-      commands.push(`r.Streaming.UseFixedPoolSize ${params.boostPlayerLocation ? 1 : 0}`);
+      // Not a supported direct console option here
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Boosting player location for streaming is not supported via console; use editor/plugin API' };
     }
     
     await this.bridge.executeConsoleCommands(commands);
@@ -310,7 +312,7 @@ export class PerformanceTools {
     enableBatching?: boolean; // no-op (deprecated internal toggle)
     mergeActors?: boolean;
   }) {
-  const commands: string[] = [];
+    const commands: string[] = [];
     
     if (params.enableInstancing !== undefined) {
       commands.push(`r.MeshDrawCommands.DynamicInstancing ${params.enableInstancing ? 1 : 0}`);
@@ -319,7 +321,7 @@ export class PerformanceTools {
     // Avoid using r.RHICmdBypass; it's a low-level debug toggle and not suitable for general batching control
     
     if (params.mergeActors) {
-      commands.push('MergeActors');
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Actor merging is not available via console; use editor Merge Actors tool or plugin' };
     }
     
     await this.bridge.executeConsoleCommands(commands);

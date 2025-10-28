@@ -500,7 +500,9 @@ export class UnrealBridge {
       priority = 1; // Heavy operation
     } else if (command.includes('summon') || command.includes('spawn')) {
       priority = 5; // Medium operation
-    } else if (command.startsWith('stat') || command.startsWith('show')) {
+    } else if (command.startsWith('stat')) {
+      priority = 8; // Dedicated throttling for stat commands
+    } else if (command.startsWith('show')) {
       priority = 9; // Light operation
     }
     
@@ -1092,7 +1094,7 @@ export class UnrealBridge {
   getSafeCommands(): Record<string, string> {
     return {
       // Health check (safe, no side effects)
-      'HealthCheck': 'echo MCP Server Health Check',
+'HealthCheck': 'stat none',
       
       // Performance monitoring (safe)
       'ShowFPS': 'stat unit',  // Use 'stat unit' instead of 'stat fps'

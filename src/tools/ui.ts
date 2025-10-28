@@ -45,7 +45,7 @@ export class UITools {
   }
 
   // Add widget component
-  async addWidgetComponent(params: {
+  async addWidgetComponent(_params: {
     widgetName: string;
     componentType: 'Button' | 'Text' | 'Image' | 'ProgressBar' | 'Slider' | 'CheckBox' | 'ComboBox' | 'TextBox' | 'ScrollBox' | 'Canvas' | 'VerticalBox' | 'HorizontalBox' | 'Grid' | 'Overlay';
     componentName: string;
@@ -56,32 +56,11 @@ export class UITools {
       alignment?: [number, number];
     };
   }) {
-  const commands: string[] = [];
-    
-    commands.push(`AddWidgetComponent ${params.widgetName} ${params.componentType} ${params.componentName}`);
-    
-    if (params.slot) {
-      if (params.slot.position) {
-        commands.push(`SetWidgetPosition ${params.widgetName}.${params.componentName} ${params.slot.position.join(' ')}`);
-      }
-      if (params.slot.size) {
-        commands.push(`SetWidgetSize ${params.widgetName}.${params.componentName} ${params.slot.size.join(' ')}`);
-      }
-      if (params.slot.anchor) {
-        commands.push(`SetWidgetAnchor ${params.widgetName}.${params.componentName} ${params.slot.anchor.join(' ')}`);
-      }
-      if (params.slot.alignment) {
-        commands.push(`SetWidgetAlignment ${params.widgetName}.${params.componentName} ${params.slot.alignment.join(' ')}`);
-      }
-    }
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: `Component ${params.componentName} added to widget` };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Widget component operations require plugin/editor API; console commands are not available' };
   }
 
   // Set text
-  async setWidgetText(params: {
+  async setWidgetText(_params: {
     widgetName: string;
     componentName: string;
     text: string;
@@ -89,54 +68,22 @@ export class UITools {
     color?: [number, number, number, number];
     fontFamily?: string;
   }) {
-  const commands: string[] = [];
-    
-    commands.push(`SetWidgetText ${params.widgetName}.${params.componentName} "${params.text}"`);
-    
-    if (params.fontSize !== undefined) {
-      commands.push(`SetWidgetFontSize ${params.widgetName}.${params.componentName} ${params.fontSize}`);
-    }
-    
-    if (params.color) {
-      commands.push(`SetWidgetTextColor ${params.widgetName}.${params.componentName} ${params.color.join(' ')}`);
-    }
-    
-    if (params.fontFamily) {
-      commands.push(`SetWidgetFont ${params.widgetName}.${params.componentName} ${params.fontFamily}`);
-    }
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: 'Widget text updated' };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Setting widget text via console is not supported; use plugin/editor API' };
   }
 
   // Set image
-  async setWidgetImage(params: {
+  async setWidgetImage(_params: {
     widgetName: string;
     componentName: string;
     imagePath: string;
     tint?: [number, number, number, number];
     sizeToContent?: boolean;
   }) {
-  const commands: string[] = [];
-    
-    commands.push(`SetWidgetImage ${params.widgetName}.${params.componentName} ${params.imagePath}`);
-    
-    if (params.tint) {
-      commands.push(`SetWidgetImageTint ${params.widgetName}.${params.componentName} ${params.tint.join(' ')}`);
-    }
-    
-    if (params.sizeToContent !== undefined) {
-      commands.push(`SetWidgetSizeToContent ${params.widgetName}.${params.componentName} ${params.sizeToContent}`);
-    }
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: 'Widget image updated' };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Setting widget images via console is not supported; use plugin/editor API' };
   }
 
   // Create HUD
-  async createHUD(params: {
+  async createHUD(_params: {
     name: string;
     elements?: Array<{
       type: 'HealthBar' | 'AmmoCounter' | 'Score' | 'Timer' | 'Minimap' | 'Crosshair';
@@ -144,68 +91,16 @@ export class UITools {
       size?: [number, number];
     }>;
   }) {
-  const commands: string[] = [];
-    
-    commands.push(`CreateHUDClass ${params.name}`);
-    
-    if (params.elements) {
-      for (const element of params.elements) {
-        const size = element.size || [100, 50];
-        commands.push(`AddHUDElement ${params.name} ${element.type} ${element.position.join(' ')} ${size.join(' ')}`);
-      }
-    }
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: `HUD ${params.name} created` };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating HUDs via console is not supported; use plugin/editor API' };
   }
 
   // Show/Hide widget
-  async setWidgetVisibility(params: {
+  async setWidgetVisibility(_params: {
     widgetName: string;
     visible: boolean;
     playerIndex?: number;
   }) {
-    const playerIndex = params.playerIndex ?? 0;
-    const widgetName = params.widgetName?.trim();
-    if (!widgetName) {
-      return { success: false, error: 'widgetName is required' };
-    }
-
-    // Use plugin-first asset existence check
-    const candidates = [] as string[];
-    if (widgetName.startsWith('/Game/')) {
-      candidates.push(widgetName);
-    } else {
-      candidates.push(`/Game/UI/Widgets/${widgetName}`);
-      candidates.push(`/Game/${widgetName}`);
-    }
-    let found = '';
-    for (const cand of candidates) {
-      try {
-        if (await this.bridge.assetExists(cand)) { found = cand; break; }
-      } catch (_e) {
-        // ignore and continue
-      }
-    }
-    if (!found) {
-      return { success: false, error: `Widget asset not found for ${widgetName}` };
-    }
-
-    const command = params.visible 
-      ? `ShowWidget ${widgetName} ${playerIndex}`
-      : `HideWidget ${widgetName} ${playerIndex}`;
-
-    const raw = await this.bridge.executeConsoleCommand(command);
-    const summary = this.bridge.summarizeConsoleCommand(command, raw);
-
-    return {
-      success: true,
-      message: params.visible ? `Widget ${widgetName} show command issued` : `Widget ${widgetName} hide command issued`,
-      command: summary.command,
-      output: summary.output || undefined,
-      logLines: summary.logLines?.length ? summary.logLines : undefined
-    };
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Showing/hiding widgets via console is not supported; use plugin/editor API' };
   }
 
   // Add widget to viewport
@@ -234,13 +129,11 @@ export class UITools {
   }
 
   // Remove widget from viewport
-  async removeWidgetFromViewport(params: {
+  async removeWidgetFromViewport(_params: {
     widgetName: string;
     playerIndex?: number;
   }) {
-    const playerIndex = params.playerIndex ?? 0;
-    const command = `RemoveWidgetFromViewport ${params.widgetName} ${playerIndex}`;
-    return this.bridge.executeConsoleCommand(command);
+    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Removing widgets via console is not supported; use plugin/editor API' };
   }
 
   // Create menu

@@ -16,7 +16,6 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "Modules/ModuleManager.h"
-#include "Async/Async.h"
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
@@ -26,6 +25,7 @@
 
 bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT(">>> HandleAnimationPhysicsAction ENTRY: RequestId=%s RawAction='%s'"), *RequestId, *Action);
     const FString Lower = Action.ToLower();
     if (!Lower.Equals(TEXT("animation_physics"), ESearchCase::IgnoreCase) && !Lower.StartsWith(TEXT("animation_physics"))) return false;
 
@@ -33,51 +33,120 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
 
     FString SubAction; Payload->TryGetStringField(TEXT("action"), SubAction);
     const FString LowerSub = SubAction.ToLower();
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleAnimationPhysicsAction: subaction='%s'"), *LowerSub);
 
 #if WITH_EDITOR
-    AsyncTask(ENamedThreads::GameThread, [this, RequestId, Payload, LowerSub, RequestingSocket]() {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("action"), LowerSub);
-        Resp->SetStringField(TEXT("message"), FString::Printf(TEXT("Animation/Physics action '%s' handled"), *LowerSub));
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetStringField(TEXT("action"), LowerSub);
+    bool bSuccess = false;
+    FString Message;
+    FString ErrorCode;
 
-        // Most animation/physics operations are best-effort stubs for now
-        // Real implementations would require detailed animation blueprint APIs
-        if (LowerSub == TEXT("cleanup"))
+    if (LowerSub == TEXT("cleanup"))
+    {
+        const TArray<TSharedPtr<FJsonValue>>* ArtifactsArray = nullptr;
+        if (!Payload->TryGetArrayField(TEXT("artifacts"), ArtifactsArray) || !ArtifactsArray)
         {
-            // Handle cleanup of animation artifacts
-            const TArray<TSharedPtr<FJsonValue>>* ArtifactsArray = nullptr;
-            if (Payload->TryGetArrayField(TEXT("artifacts"), ArtifactsArray) && ArtifactsArray)
+            Message = TEXT("artifacts array required for cleanup");
+            ErrorCode = TEXT("INVALID_ARGUMENT");
+        }
+        else
+        {
+            TArray<FString> Cleaned;
+            TArray<FString> Missing;
+            TArray<FString> Failed;
+
+            for (const TSharedPtr<FJsonValue>& Val : *ArtifactsArray)
             {
-                TArray<FString> Cleaned;
-                for (const TSharedPtr<FJsonValue>& Val : *ArtifactsArray)
+                if (!Val.IsValid() || Val->Type != EJson::String)
                 {
-                    if (Val.IsValid() && Val->Type == EJson::String)
-                    {
-                        FString ArtifactPath = Val->AsString();
-                        // Try to delete the asset
-                        if (UEditorAssetLibrary::DoesAssetExist(ArtifactPath))
-                        {
-                            if (UEditorAssetLibrary::DeleteAsset(ArtifactPath))
-                            {
-                                Cleaned.Add(ArtifactPath);
-                            }
-                        }
-                    }
+                    continue;
                 }
-                
-                TArray<TSharedPtr<FJsonValue>> CleanedArray;
-                for (const FString& Path : Cleaned)
+
+                const FString ArtifactPath = Val->AsString().TrimStartAndEnd();
+                if (ArtifactPath.IsEmpty())
                 {
-                    CleanedArray.Add(MakeShared<FJsonValueString>(Path));
+                    continue;
                 }
+
+                if (!UEditorAssetLibrary::DoesAssetExist(ArtifactPath))
+                {
+                    Missing.Add(ArtifactPath);
+                    continue;
+                }
+
+                if (UEditorAssetLibrary::DeleteAsset(ArtifactPath))
+                {
+                    Cleaned.Add(ArtifactPath);
+                }
+                else
+                {
+                    Failed.Add(ArtifactPath);
+                }
+            }
+
+            TArray<TSharedPtr<FJsonValue>> CleanedArray;
+            for (const FString& Path : Cleaned)
+            {
+                CleanedArray.Add(MakeShared<FJsonValueString>(Path));
+            }
+            if (CleanedArray.Num() > 0)
+            {
                 Resp->SetArrayField(TEXT("cleaned"), CleanedArray);
-                Resp->SetNumberField(TEXT("cleanedCount"), Cleaned.Num());
+            }
+            Resp->SetNumberField(TEXT("cleanedCount"), Cleaned.Num());
+
+            if (Missing.Num() > 0)
+            {
+                TArray<TSharedPtr<FJsonValue>> MissingArray;
+                for (const FString& Path : Missing)
+                {
+                    MissingArray.Add(MakeShared<FJsonValueString>(Path));
+                }
+                Resp->SetArrayField(TEXT("missing"), MissingArray);
+            }
+
+            if (Failed.Num() > 0)
+            {
+                TArray<TSharedPtr<FJsonValue>> FailedArray;
+                for (const FString& Path : Failed)
+                {
+                    FailedArray.Add(MakeShared<FJsonValueString>(Path));
+                }
+                Resp->SetArrayField(TEXT("failed"), FailedArray);
+            }
+
+            if (Cleaned.Num() > 0 && Failed.Num() == 0)
+            {
+                bSuccess = true;
+                Message = TEXT("Animation artifacts removed");
+            }
+            else
+            {
+                bSuccess = false;
+                Message = Failed.Num() > 0
+                    ? TEXT("Some animation artifacts could not be removed")
+                    : TEXT("No animation artifacts were removed");
+                ErrorCode = Failed.Num() > 0 ? TEXT("CLEANUP_PARTIAL") : TEXT("CLEANUP_NO_OP");
+                Resp->SetStringField(TEXT("error"), Message);
             }
         }
+    }
+    else
+    {
+        Message = FString::Printf(TEXT("Animation/Physics action '%s' not implemented"), *LowerSub);
+        ErrorCode = TEXT("NOT_IMPLEMENTED");
+        Resp->SetStringField(TEXT("error"), Message);
+    }
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Animation/Physics action '%s' completed"), *LowerSub), Resp, FString());
-    });
+    Resp->SetBoolField(TEXT("success"), bSuccess);
+    if (Message.IsEmpty())
+    {
+        Message = bSuccess ? TEXT("Animation/Physics action completed") : TEXT("Animation/Physics action failed");
+    }
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleAnimationPhysicsAction: responding to subaction '%s' (success=%s)"), *LowerSub, bSuccess ? TEXT("true") : TEXT("false"));
+    SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Animation/Physics actions require editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -118,52 +187,47 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
         return true;
     }
 
-    AsyncTask(ENamedThreads::GameThread, [this, RequestId, BlueprintName, SkeletonPath, SavePath, RequestingSocket]()
+    USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+    if (!Skeleton)
     {
-        USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
-        if (!Skeleton)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load skeleton"), TEXT("LOAD_FAILED"));
-            return;
-        }
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load skeleton"), TEXT("LOAD_FAILED"));
+        return true;
+    }
 
-        FString FullPath = FString::Printf(TEXT("%s/%s"), *SavePath, *BlueprintName);
-        
-        UAnimBlueprintFactory* Factory = NewObject<UAnimBlueprintFactory>();
-        Factory->TargetSkeleton = Skeleton;
-        Factory->BlueprintType = BPTYPE_Normal;
-        Factory->ParentClass = UAnimInstance::StaticClass();
-        
-        if (!Factory)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create animation blueprint factory"), TEXT("FACTORY_FAILED"));
-            return;
-        }
+    FString FullPath = FString::Printf(TEXT("%s/%s"), *SavePath, *BlueprintName);
 
-        // Create asset via AssetTools (UE 5.x)
-        FString PackagePath = SavePath;
-        FString AssetName = BlueprintName;
-        FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
-        UObject* NewAsset = AssetToolsModule.Get().CreateAsset(AssetName, PackagePath, UAnimBlueprint::StaticClass(), Factory);
-        UAnimBlueprint* AnimBlueprint = Cast<UAnimBlueprint>(NewAsset);
-        
-        if (!AnimBlueprint)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create animation blueprint"), TEXT("ASSET_CREATION_FAILED"));
-            return;
-        }
+    UAnimBlueprintFactory* Factory = NewObject<UAnimBlueprintFactory>();
+    Factory->TargetSkeleton = Skeleton;
+    Factory->BlueprintType = BPTYPE_Normal;
+    Factory->ParentClass = UAnimInstance::StaticClass();
 
-        UEditorAssetLibrary::SaveAsset(AnimBlueprint->GetPathName());
+    if (!Factory)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create animation blueprint factory"), TEXT("FACTORY_FAILED"));
+        return true;
+    }
 
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("blueprintPath"), AnimBlueprint->GetPathName());
-        Resp->SetStringField(TEXT("blueprintName"), BlueprintName);
-        Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+    FString PackagePath = SavePath;
+    FString AssetName = BlueprintName;
+    FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+    UObject* NewAsset = AssetToolsModule.Get().CreateAsset(AssetName, PackagePath, UAnimBlueprint::StaticClass(), Factory);
+    UAnimBlueprint* AnimBlueprint = Cast<UAnimBlueprint>(NewAsset);
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Animation blueprint created successfully"), Resp, FString());
-    });
+    if (!AnimBlueprint)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create animation blueprint"), TEXT("ASSET_CREATION_FAILED"));
+        return true;
+    }
 
+    UEditorAssetLibrary::SaveAsset(AnimBlueprint->GetPathName());
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("blueprintPath"), AnimBlueprint->GetPathName());
+    Resp->SetStringField(TEXT("blueprintName"), BlueprintName);
+    Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Animation blueprint created successfully"), Resp, FString());
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_animation_blueprint requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -200,76 +264,74 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     double PlayRate = 1.0;
     Payload->TryGetNumberField(TEXT("playRate"), PlayRate);
 
-    AsyncTask(ENamedThreads::GameThread, [this, RequestId, ActorName, MontagePath, PlayRate, RequestingSocket]()
+    if (!GEditor || !GEditor->GetEditorWorldContext().World())
     {
-        if (!GEditor || !GEditor->GetEditorWorldContext().World())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Editor world not available"), TEXT("EDITOR_NOT_AVAILABLE"));
-            return;
-        }
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor world not available"), TEXT("EDITOR_NOT_AVAILABLE"));
+        return true;
+    }
 
-        UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-        if (!ActorSS)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("EditorActorSubsystem not available"), TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-            return;
-        }
+    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    if (!ActorSS)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("EditorActorSubsystem not available"), TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+        return true;
+    }
 
-        TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
-        APawn* TargetPawn = nullptr;
-        
-        for (AActor* Actor : AllActors)
+    TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+    APawn* TargetPawn = nullptr;
+
+    for (AActor* Actor : AllActors)
+    {
+        if (Actor && Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
         {
-            if (Actor && Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
+            TargetPawn = Cast<APawn>(Actor);
+            if (TargetPawn)
             {
-                TargetPawn = Cast<APawn>(Actor);
-                if (TargetPawn) break;
+                break;
             }
         }
+    }
 
-        if (!TargetPawn)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Pawn actor not found"), TEXT("ACTOR_NOT_FOUND"));
-            return;
-        }
+    if (!TargetPawn)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Pawn actor not found"), TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
 
-        USkeletalMeshComponent* SkelMeshComp = TargetPawn->FindComponentByClass<USkeletalMeshComponent>();
-        if (!SkelMeshComp)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Skeletal mesh component not found"), TEXT("COMPONENT_NOT_FOUND"));
-            return;
-        }
+    USkeletalMeshComponent* SkelMeshComp = TargetPawn->FindComponentByClass<USkeletalMeshComponent>();
+    if (!SkelMeshComp)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Skeletal mesh component not found"), TEXT("COMPONENT_NOT_FOUND"));
+        return true;
+    }
 
-        UAnimMontage* Montage = LoadObject<UAnimMontage>(nullptr, *MontagePath);
-        if (!Montage)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load animation montage"), TEXT("LOAD_FAILED"));
-            return;
-        }
+    UAnimMontage* Montage = LoadObject<UAnimMontage>(nullptr, *MontagePath);
+    if (!Montage)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load animation montage"), TEXT("LOAD_FAILED"));
+        return true;
+    }
 
-        float MontageLength = 0.f;
-        if (UAnimInstance* AnimInst = SkelMeshComp->GetAnimInstance())
-        {
-            MontageLength = AnimInst->Montage_Play(Montage, static_cast<float>(PlayRate));
-        }
-        else
-        {
-            // Fallback: set single node mode and try to play as an animation asset (may not support montages)
-            SkelMeshComp->SetAnimationMode(EAnimationMode::Type::AnimationSingleNode);
-            SkelMeshComp->PlayAnimation(Montage, false);
-        }
+    float MontageLength = 0.f;
+    if (UAnimInstance* AnimInst = SkelMeshComp->GetAnimInstance())
+    {
+        MontageLength = AnimInst->Montage_Play(Montage, static_cast<float>(PlayRate));
+    }
+    else
+    {
+        SkelMeshComp->SetAnimationMode(EAnimationMode::Type::AnimationSingleNode);
+        SkelMeshComp->PlayAnimation(Montage, false);
+    }
 
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("actorName"), ActorName);
-        Resp->SetStringField(TEXT("montagePath"), MontagePath);
-        Resp->SetNumberField(TEXT("playRate"), PlayRate);
-        Resp->SetNumberField(TEXT("montageLength"), MontageLength);
-        Resp->SetBoolField(TEXT("playing"), true);
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("actorName"), ActorName);
+    Resp->SetStringField(TEXT("montagePath"), MontagePath);
+    Resp->SetNumberField(TEXT("playRate"), PlayRate);
+    Resp->SetNumberField(TEXT("montageLength"), MontageLength);
+    Resp->SetBoolField(TEXT("playing"), true);
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Animation montage playing"), Resp, FString());
-    });
-
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Animation montage playing"), Resp, FString());
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("play_anim_montage requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -299,68 +361,64 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
     double BlendWeight = 1.0;
     Payload->TryGetNumberField(TEXT("blendWeight"), BlendWeight);
 
-    AsyncTask(ENamedThreads::GameThread, [this, RequestId, ActorName, BlendWeight, RequestingSocket]()
+    if (!GEditor || !GEditor->GetEditorWorldContext().World())
     {
-        if (!GEditor || !GEditor->GetEditorWorldContext().World())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Editor world not available"), TEXT("EDITOR_NOT_AVAILABLE"));
-            return;
-        }
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor world not available"), TEXT("EDITOR_NOT_AVAILABLE"));
+        return true;
+    }
 
-        UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-        if (!ActorSS)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("EditorActorSubsystem not available"), TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-            return;
-        }
+    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    if (!ActorSS)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("EditorActorSubsystem not available"), TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+        return true;
+    }
 
-        TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
-        APawn* TargetPawn = nullptr;
-        
-        for (AActor* Actor : AllActors)
+    TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+    APawn* TargetPawn = nullptr;
+
+    for (AActor* Actor : AllActors)
+    {
+        if (Actor && Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
         {
-            if (Actor && Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
+            TargetPawn = Cast<APawn>(Actor);
+            if (TargetPawn)
             {
-                TargetPawn = Cast<APawn>(Actor);
-                if (TargetPawn) break;
+                break;
             }
         }
+    }
 
-        if (!TargetPawn)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Pawn actor not found"), TEXT("ACTOR_NOT_FOUND"));
-            return;
-        }
+    if (!TargetPawn)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Pawn actor not found"), TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
 
-        USkeletalMeshComponent* SkelMeshComp = TargetPawn->FindComponentByClass<USkeletalMeshComponent>();
-        if (!SkelMeshComp)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Skeletal mesh component not found"), TEXT("COMPONENT_NOT_FOUND"));
-            return;
-        }
+    USkeletalMeshComponent* SkelMeshComp = TargetPawn->FindComponentByClass<USkeletalMeshComponent>();
+    if (!SkelMeshComp)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Skeletal mesh component not found"), TEXT("COMPONENT_NOT_FOUND"));
+        return true;
+    }
 
-        // Enable physics simulation (ragdoll)
-        SkelMeshComp->SetSimulatePhysics(true);
-        SkelMeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-        
-        // Set blend weights if physics asset exists
-        if (SkelMeshComp->GetPhysicsAsset())
-        {
-            SkelMeshComp->SetAllBodiesSimulatePhysics(true);
-            // Blend weight affects physics/animation mixing
-            SkelMeshComp->SetUpdateAnimationInEditor(BlendWeight < 1.0);
-        }
+    SkelMeshComp->SetSimulatePhysics(true);
+    SkelMeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("actorName"), ActorName);
-        Resp->SetNumberField(TEXT("blendWeight"), BlendWeight);
-        Resp->SetBoolField(TEXT("ragdollActive"), SkelMeshComp->IsSimulatingPhysics());
-        Resp->SetBoolField(TEXT("hasPhysicsAsset"), SkelMeshComp->GetPhysicsAsset() != nullptr);
+    if (SkelMeshComp->GetPhysicsAsset())
+    {
+        SkelMeshComp->SetAllBodiesSimulatePhysics(true);
+        SkelMeshComp->SetUpdateAnimationInEditor(BlendWeight < 1.0);
+    }
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ragdoll setup completed"), Resp, FString());
-    });
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("actorName"), ActorName);
+    Resp->SetNumberField(TEXT("blendWeight"), BlendWeight);
+    Resp->SetBoolField(TEXT("ragdollActive"), SkelMeshComp->IsSimulatingPhysics());
+    Resp->SetBoolField(TEXT("hasPhysicsAsset"), SkelMeshComp->GetPhysicsAsset() != nullptr);
 
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ragdoll setup completed"), Resp, FString());
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("setup_ragdoll requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));

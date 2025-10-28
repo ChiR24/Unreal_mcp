@@ -68,7 +68,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(const FString& RequestId, 
 
 #if WITH_EDITOR
         // Native asset import using AssetTools UAssetImportTask
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, CleanDest, SourcePath, RequestingSocket]() {
+        {
             TArray<UAssetImportTask*> Tasks;
             UAssetImportTask* Task = NewObject<UAssetImportTask>();
             Task->Filename = SourcePath;
@@ -81,7 +81,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(const FString& RequestId, 
             IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools")).Get();
             AssetTools.ImportAssetTasks(Tasks);
 
-            // Build result
             TSharedPtr<FJsonObject> ResObj = MakeShared<FJsonObject>();
             if (Task->ImportedObjectPaths.Num() > 0)
             {
@@ -101,7 +100,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(const FString& RequestId, 
                 ResObj->SetStringField(TEXT("error"), TEXT("No assets imported"));
                 SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Asset import failed"), ResObj, TEXT("IMPORT_FAILED"));
             }
-        });
+        }
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Asset import requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -121,17 +120,25 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(const FString& RequestId, 
         if (Destination.IsEmpty()) Destination = TEXT("/Game");
         if (Destination.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) Destination = FString::Printf(TEXT("/Game%s"), *Destination.RightChop(8));
 
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, Name, Destination, Parent, RequestingSocket]() {
-            // Create material natively via AssetTools and UMaterialFactoryNew
+        {
             UMaterialFactoryNew* Factory = NewObject<UMaterialFactoryNew>();
             FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
             UObject* NewObj = AssetToolsModule.Get().CreateAsset(Name, Destination, UMaterial::StaticClass(), Factory);
             if (!NewObj)
             {
-                TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>(); Err->SetStringField(TEXT("error"), TEXT("CreateAsset returned null")); SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create material failed"), Err, TEXT("CREATE_MATERIAL_FAILED")); return;
+                TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+                Err->SetStringField(TEXT("error"), TEXT("CreateAsset returned null"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create material failed"), Err, TEXT("CREATE_MATERIAL_FAILED"));
+                return true;
             }
             UMaterial* M = Cast<UMaterial>(NewObj);
-            if (!M) { TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>(); Err->SetStringField(TEXT("error"), TEXT("Created asset is not a Material")); SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create material failed"), Err, TEXT("CREATE_MATERIAL_FAILED")); return; }
+            if (!M)
+            {
+                TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+                Err->SetStringField(TEXT("error"), TEXT("Created asset is not a Material"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create material failed"), Err, TEXT("CREATE_MATERIAL_FAILED"));
+                return true;
+            }
             if (!Parent.IsEmpty())
             {
                 if (UObject* ParentAsset = LoadObject<UObject>(nullptr, *Parent))
@@ -142,8 +149,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(const FString& RequestId, 
 #if WITH_EDITOR
             SaveLoadedAssetThrottled(M);
 #endif
-            TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetStringField(TEXT("path"), M->GetPathName()); Out->SetBoolField(TEXT("success"), true); SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Material created"), Out, FString());
-        });
+            TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+            Out->SetStringField(TEXT("path"), M->GetPathName());
+            Out->SetBoolField(TEXT("success"), true);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Material created"), Out, FString());
+        }
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_material requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -266,37 +276,50 @@ else:
 print('RESULT:' + json.dumps(result))
 )PY"), *EscapedNameInst, *EscapedDestInst, *EscapedParentInst, *ParamsJson);
 
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, Name, Destination, Parent, ParamsJson, RequestingSocket]() {
-            // Create material instance via native APIs
+        {
             UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
             FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
             UObject* NewObj = AssetToolsModule.Get().CreateAsset(Name, Destination, UMaterialInstanceConstant::StaticClass(), Factory);
-            if (!NewObj) { TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>(); Err->SetStringField(TEXT("error"), TEXT("CreateAsset returned null")); SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create material instance failed"), Err, TEXT("CREATE_MATERIAL_INSTANCE_FAILED")); return; }
-            UMaterialInstanceConstant* MIC = Cast<UMaterialInstanceConstant>(NewObj);
-            if (!MIC) { TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>(); Err->SetStringField(TEXT("error"), TEXT("Created asset is not a MaterialInstanceConstant")); SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create material instance failed"), Err, TEXT("CREATE_MATERIAL_INSTANCE_FAILED")); return; }
-            // Load parent material
-            UObject* ParentAsset = LoadObject<UObject>(nullptr, *Parent);
-            if (ParentAsset && ParentAsset->IsA<UMaterialInterface>())
+            if (!NewObj)
             {
-#if MCP_HAS_MATERIAL_EDITING_LIBRARY
-                UMaterialEditingLibrary::SetMaterialInstanceParent(MIC, Cast<UMaterialInterface>(ParentAsset));
-#else
-                MIC->SetEditorProperty(TEXT("Parent"), Cast<UMaterialInterface>(ParentAsset));
-#endif
+                TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+                Err->SetStringField(TEXT("error"), TEXT("CreateAsset returned null"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create material instance failed"), Err, TEXT("CREATE_MATERIAL_INSTANCE_FAILED"));
+                return true;
             }
-            // Apply params JSON when present using MaterialEditingLibrary when available
+            UMaterialInstanceConstant* MIC = Cast<UMaterialInstanceConstant>(NewObj);
+            if (!MIC)
+            {
+                TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+                Err->SetStringField(TEXT("error"), TEXT("Created asset is not a MaterialInstanceConstant"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create material instance failed"), Err, TEXT("CREATE_MATERIAL_INSTANCE_FAILED"));
+                return true;
+            }
+            if (UObject* ParentAsset = LoadObject<UObject>(nullptr, *Parent))
+            {
+                if (ParentAsset->IsA<UMaterialInterface>())
+                {
+#if MCP_HAS_MATERIAL_EDITING_LIBRARY
+                    UMaterialEditingLibrary::SetMaterialInstanceParent(MIC, Cast<UMaterialInterface>(ParentAsset));
+#else
+                    MIC->SetEditorProperty(TEXT("Parent"), Cast<UMaterialInterface>(ParentAsset));
+#endif
+                }
+            }
             if (!ParamsJson.IsEmpty())
             {
                 TSharedPtr<FJsonObject> ParsedParams;
                 TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ParamsJson);
                 if (FJsonSerializer::Deserialize(Reader, ParsedParams) && ParsedParams.IsValid())
                 {
-                    // Iterate parameters and attempt to set via native APIs
                     for (const auto& Pair : ParsedParams->Values)
                     {
                         const FString& Key = Pair.Key;
                         const TSharedPtr<FJsonValue>& Val = Pair.Value;
-                        if (!Val.IsValid()) continue;
+                        if (!Val.IsValid())
+                        {
+                            continue;
+                        }
 #if MCP_HAS_MATERIAL_EDITING_LIBRARY
                         if (Val->Type == EJson::Number)
                         {
@@ -317,8 +340,7 @@ print('RESULT:' + json.dumps(result))
                         }
                         else if (Val->Type == EJson::String)
                         {
-                            UObject* Maybe = LoadObject<UObject>(nullptr, *Val->AsString());
-                            if (Maybe)
+                            if (UObject* Maybe = LoadObject<UObject>(nullptr, *Val->AsString()))
                             {
                                 if (UTexture* AsTexture = Cast<UTexture>(Maybe))
                                 {
@@ -333,8 +355,11 @@ print('RESULT:' + json.dumps(result))
 #if WITH_EDITOR
             SaveLoadedAssetThrottled(MIC);
 #endif
-            TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>(); Out->SetStringField(TEXT("path"), MIC->GetPathName()); Out->SetBoolField(TEXT("success"), true); SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Material instance created"), Out, FString());
-        });
+            TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+            Out->SetStringField(TEXT("path"), MIC->GetPathName());
+            Out->SetBoolField(TEXT("success"), true);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Material instance created"), Out, FString());
+        }
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_material_instance requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -355,10 +380,9 @@ print('RESULT:' + json.dumps(result))
         if (Destination.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) Destination = FString::Printf(TEXT("/Game%s"), *Destination.RightChop(8));
 
         // Normalise and schedule asset creation on the GameThread
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, Name, Destination, Template, RequestingSocket]() {
+        {
             TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
 #if MCP_HAS_NIAGARA_FACTORY
-            // Try native creation via Niagara factory when available
             UNiagaraSystemFactoryNew* Factory = NewObject<UNiagaraSystemFactoryNew>();
             FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
             UObject* NewObj = AssetToolsModule.Get().CreateAsset(Name, Destination, UNiagaraSystem::StaticClass(), Factory);
@@ -366,19 +390,21 @@ print('RESULT:' + json.dumps(result))
             {
                 Out->SetStringField(TEXT("error"), TEXT("CreateAsset returned null"));
                 SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create Niagara system failed"), Out, TEXT("CREATE_NIAGARA_SYSTEM_FAILED"));
-                return;
+                return true;
             }
             UNiagaraSystem* NS = Cast<UNiagaraSystem>(NewObj);
             if (!NS)
             {
                 Out->SetStringField(TEXT("error"), TEXT("Created asset is not a NiagaraSystem"));
                 SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create Niagara system failed"), Out, TEXT("CREATE_NIAGARA_SYSTEM_FAILED"));
-                return;
+                return true;
             }
-            // Optionally record template reference for tests/tools
-            if (!Template.IsEmpty()) { Out->SetStringField(TEXT("template"), Template); }
-            // Register and save
-            FAssetRegistryModule& Arm = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")); Arm.Get().AssetCreated(NS);
+            if (!Template.IsEmpty())
+            {
+                Out->SetStringField(TEXT("template"), Template);
+            }
+            FAssetRegistryModule& Arm = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+            Arm.Get().AssetCreated(NS);
 #if WITH_EDITOR
             SaveLoadedAssetThrottled(NS);
 #endif
@@ -386,18 +412,11 @@ print('RESULT:' + json.dumps(result))
             Out->SetStringField(TEXT("path"), NS->GetPathName());
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara system created"), Out, FString());
 #else
-            // Niagara factories unavailable — record a lightweight registry entry
-            const FString CandidateNormalized = FString::Printf(TEXT("%s/%s"), *Destination, *Name);
-            TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-            Entry->SetStringField(TEXT("name"), Name);
-            Entry->SetStringField(TEXT("path"), CandidateNormalized);
-            if (!Template.IsEmpty()) Entry->SetStringField(TEXT("template"), Template);
-            GNiagaraRegistry.Add(CandidateNormalized, Entry);
-            Out->SetBoolField(TEXT("success"), true);
-            Out->SetStringField(TEXT("path"), CandidateNormalized);
-            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara system recorded in plugin registry (stub)."), Out, FString());
+            Out->SetBoolField(TEXT("success"), false);
+            Out->SetStringField(TEXT("error"), TEXT("Niagara factory support not available in this build."));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_niagara_system not supported in this build"), Out, TEXT("NOT_IMPLEMENTED"));
 #endif
-        });
+        }
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_niagara_system requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -492,36 +511,44 @@ if 'warnings' in result and not result['warnings']:
 print('RESULT:' + json.dumps(result))
 )PY"), *EscapedSourceDup, *EscapedDestDup, *EscapedNewNameDup, bOverwrite ? TEXT("True") : TEXT("False"), bSave ? TEXT("True") : TEXT("False"));
 
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, SourcePathDup, DestinationDup, NewNameDup, bOverwrite, bSave, RequestingSocket]() {
+        {
             TSharedPtr<FJsonObject> ResObj = MakeShared<FJsonObject>();
             bool bResult = false;
             FString ResultPath;
-            // Prefer EditorAssetLibrary duplication; fall back to AssetTools if necessary
             if (UEditorAssetLibrary::DoesAssetExist(SourcePathDup))
             {
                 FString Dest = DestinationDup;
-                if (!NewNameDup.IsEmpty()) Dest = FString::Printf(TEXT("%s/%s"), *DestinationDup, *NewNameDup);
-                // If not overwrite and dest exists -> error
+                if (!NewNameDup.IsEmpty())
+                {
+                    Dest = FString::Printf(TEXT("%s/%s"), *DestinationDup, *NewNameDup);
+                }
                 if (!bOverwrite && UEditorAssetLibrary::DoesAssetExist(Dest))
                 {
                     ResObj->SetBoolField(TEXT("success"), false);
                     ResObj->SetStringField(TEXT("error"), TEXT("Asset already exists at destination"));
                     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Duplicate failed: destination exists"), ResObj, TEXT("DUPLICATE_FAILED"));
-                    return;
+                    return true;
                 }
 
-                UObject* DuplicatedAsset = UEditorAssetLibrary::DuplicateAsset(SourcePathDup, Dest);
-                const bool bDupOk = (DuplicatedAsset != nullptr);
-                if (bDupOk)
+                if (UObject* DuplicatedAsset = UEditorAssetLibrary::DuplicateAsset(SourcePathDup, Dest))
                 {
-                    bResult = true; ResultPath = Dest;
+                    bResult = true;
+                    ResultPath = Dest;
                 }
             }
 
             ResObj->SetBoolField(TEXT("success"), bResult);
-            if (bResult) { ResObj->SetStringField(TEXT("path"), ResultPath); SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Asset duplicated"), ResObj, FString()); }
-            else { ResObj->SetStringField(TEXT("error"), TEXT("Duplicate failed")); SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Duplicate failed"), ResObj, TEXT("DUPLICATE_FAILED")); }
-        });
+            if (bResult)
+            {
+                ResObj->SetStringField(TEXT("path"), ResultPath);
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Asset duplicated"), ResObj, FString());
+            }
+            else
+            {
+                ResObj->SetStringField(TEXT("error"), TEXT("Duplicate failed"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Duplicate failed"), ResObj, TEXT("DUPLICATE_FAILED"));
+            }
+        }
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Duplicate asset requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -584,10 +611,13 @@ else:
 print('RESULT:' + json.dumps(result))
 )PY"), *EscapedAsset, *EscapedNew);
 
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, AssetPath, NewName, RequestingSocket]() {
+        {
             TSharedPtr<FJsonObject> ResObj = MakeShared<FJsonObject>();
             FString ParentPath, OldName;
-            if (!AssetPath.Split(TEXT("/"), &ParentPath, &OldName, ESearchCase::IgnoreCase, ESearchDir::FromEnd)) ParentPath = AssetPath;
+            if (!AssetPath.Split(TEXT("/"), &ParentPath, &OldName, ESearchCase::IgnoreCase, ESearchDir::FromEnd))
+            {
+                ParentPath = AssetPath;
+            }
             const FString Destination = FString::Printf(TEXT("%s/%s"), *ParentPath, *NewName);
             bool bOk = false;
             if (UEditorAssetLibrary::DoesAssetExist(AssetPath))
@@ -598,8 +628,7 @@ print('RESULT:' + json.dumps(result))
                     FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
                     TArray<FAssetRenameData> Renames;
                     Renames.Emplace(FSoftObjectPath(AssetPath), FSoftObjectPath(Destination));
-                    bool bRenameOk = AssetToolsModule.Get().RenameAssets(Renames);
-                    if (bRenameOk)
+                    if (AssetToolsModule.Get().RenameAssets(Renames))
                     {
                         bOk = true;
                     }
@@ -610,9 +639,17 @@ print('RESULT:' + json.dumps(result))
                 }
             }
             ResObj->SetBoolField(TEXT("success"), bOk);
-            if (bOk) { ResObj->SetStringField(TEXT("path"), Destination); SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Asset renamed"), ResObj, FString()); }
-            else { ResObj->SetStringField(TEXT("error"), TEXT("Rename failed")); SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Rename failed"), ResObj, TEXT("RENAME_FAILED")); }
-        });
+            if (bOk)
+            {
+                ResObj->SetStringField(TEXT("path"), Destination);
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Asset renamed"), ResObj, FString());
+            }
+            else
+            {
+                ResObj->SetStringField(TEXT("error"), TEXT("Rename failed"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Rename failed"), ResObj, TEXT("RENAME_FAILED"));
+            }
+        }
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Rename asset requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -698,10 +735,13 @@ if 'warnings' in result and not result['warnings']:
 print('RESULT:' + json.dumps(result))
 )PY"), *EscapedAssetMove, *EscapedDestMove, *EscapedNewNameMove, bFixup ? TEXT("True") : TEXT("False"));
 
-        AsyncTask(ENamedThreads::GameThread, [this, RequestId, AssetPath, DestinationMove, NewNameMove, bFixup, RequestingSocket]() {
+        {
             TSharedPtr<FJsonObject> ResObj = MakeShared<FJsonObject>();
             FString Dest = DestinationMove;
-            if (!NewNameMove.IsEmpty()) Dest = FString::Printf(TEXT("%s/%s"), *DestinationMove, *NewNameMove);
+            if (!NewNameMove.IsEmpty())
+            {
+                Dest = FString::Printf(TEXT("%s/%s"), *DestinationMove, *NewNameMove);
+            }
             bool bOk = false;
             if (UEditorAssetLibrary::DoesAssetExist(AssetPath))
             {
@@ -722,9 +762,17 @@ print('RESULT:' + json.dumps(result))
                 }
             }
             ResObj->SetBoolField(TEXT("success"), bOk);
-            if (bOk) { ResObj->SetStringField(TEXT("path"), Dest); SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Asset moved"), ResObj, FString()); }
-            else { ResObj->SetStringField(TEXT("error"), TEXT("Move failed")); SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Move failed"), ResObj, TEXT("MOVE_FAILED")); }
-        });
+            if (bOk)
+            {
+                ResObj->SetStringField(TEXT("path"), Dest);
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Asset moved"), ResObj, FString());
+            }
+            else
+            {
+                ResObj->SetStringField(TEXT("error"), TEXT("Move failed"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Move failed"), ResObj, TEXT("MOVE_FAILED"));
+            }
+        }
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Move asset requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -811,40 +859,82 @@ if 'warnings' in result and not result['warnings']:
 print('RESULT:' + json.dumps(result))
 )PY"), *JsonList, bFixup ? TEXT("True") : TEXT("False"));
 
-    AsyncTask(ENamedThreads::GameThread, [this, RequestId, PathsArr = *PathsArr, bFixup, RequestingSocket]() {
+        {
             TSharedPtr<FJsonObject> ResObj = MakeShared<FJsonObject>();
-            TArray<FString> Deleted; TArray<FString> Missing; TArray<FString> Failed;
+            TArray<FString> Deleted;
+            TArray<FString> Missing;
+            TArray<FString> Failed;
             FAssetToolsModule& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
-            for (const TSharedPtr<FJsonValue>& V : PathsArr)
+            for (const TSharedPtr<FJsonValue>& V : *PathsArr)
             {
-                if (!V.IsValid() || V->Type != EJson::String) continue;
-                const FString Path = V->AsString();
-                if (!UEditorAssetLibrary::DoesAssetExist(Path)) { Missing.Add(Path); continue; }
-                bool bDel = UEditorAssetLibrary::DeleteAsset(Path);
-                if (bDel) Deleted.Add(Path); else Failed.Add(Path);
-            }
-            ResObj->SetArrayField(TEXT("deleted"), TArray<TSharedPtr<FJsonValue>>());
-            TArray<TSharedPtr<FJsonValue>> DelVals; for (const FString& P : Deleted) DelVals.Add(MakeShared<FJsonValueString>(P)); ResObj->SetArrayField(TEXT("deleted"), DelVals);
-            TArray<TSharedPtr<FJsonValue>> MissVals; for (const FString& P : Missing) MissVals.Add(MakeShared<FJsonValueString>(P)); ResObj->SetArrayField(TEXT("missing"), MissVals);
-            TArray<TSharedPtr<FJsonValue>> FailVals; for (const FString& P : Failed) FailVals.Add(MakeShared<FJsonValueString>(P)); ResObj->SetArrayField(TEXT("failed"), FailVals);
-            if (Deleted.Num() > 0 && bFixup)
-            {
-                // Fix redirectors for folders touched
-                TSet<FString> Folders;
-                for (const FString& P : Deleted) if (P.Contains(TEXT("/"))) Folders.Add(P.Left(P.Find(TEXT("/"), ESearchCase::IgnoreCase, ESearchDir::FromEnd)));
-                if (Folders.Num() > 0)
+                if (!V.IsValid() || V->Type != EJson::String)
                 {
-                    for (const FString& Folder : Folders)
-                    {
-                        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("FixUpRedirectors: skipped redirector cleanup for %s (unsupported API)."), *Folder);
-                    }
+                    continue;
+                }
+                const FString Path = V->AsString();
+                if (!UEditorAssetLibrary::DoesAssetExist(Path))
+                {
+                    Missing.Add(Path);
+                    continue;
+                }
+                if (UEditorAssetLibrary::DeleteAsset(Path))
+                {
+                    Deleted.Add(Path);
+                }
+                else
+                {
+                    Failed.Add(Path);
                 }
             }
+
+            TArray<TSharedPtr<FJsonValue>> DelVals;
+            for (const FString& P : Deleted)
+            {
+                DelVals.Add(MakeShared<FJsonValueString>(P));
+            }
+            ResObj->SetArrayField(TEXT("deleted"), DelVals);
+
+            TArray<TSharedPtr<FJsonValue>> MissVals;
+            for (const FString& P : Missing)
+            {
+                MissVals.Add(MakeShared<FJsonValueString>(P));
+            }
+            ResObj->SetArrayField(TEXT("missing"), MissVals);
+
+            TArray<TSharedPtr<FJsonValue>> FailVals;
+            for (const FString& P : Failed)
+            {
+                FailVals.Add(MakeShared<FJsonValueString>(P));
+            }
+            ResObj->SetArrayField(TEXT("failed"), FailVals);
+
+            if (Deleted.Num() > 0 && bFixup)
+            {
+                TSet<FString> Folders;
+                for (const FString& P : Deleted)
+                {
+                    if (P.Contains(TEXT("/")))
+                    {
+                        Folders.Add(P.Left(P.Find(TEXT("/"), ESearchCase::IgnoreCase, ESearchDir::FromEnd)));
+                    }
+                }
+                for (const FString& Folder : Folders)
+                {
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("FixUpRedirectors: skipped redirector cleanup for %s (unsupported API)."), *Folder);
+                }
+            }
+
             const bool bSuccess = Failed.Num() == 0 && Deleted.Num() > 0;
             ResObj->SetBoolField(TEXT("success"), bSuccess);
-            if (bSuccess) SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Assets deleted"), ResObj, FString());
-            else SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Delete failed"), ResObj, TEXT("DELETE_FAILED"));
-        });
+            if (bSuccess)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Assets deleted"), ResObj, FString());
+            }
+            else
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Delete failed"), ResObj, TEXT("DELETE_FAILED"));
+            }
+        }
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Delete assets requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
