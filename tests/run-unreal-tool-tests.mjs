@@ -666,10 +666,9 @@ function enrichTestCase(rawCase) {
       };
     }
     case 'Remote Control Preset Tools': {
-      // manage_rc tool removed - Remote Control API deprecated
-      return {
-        ...base,
-        skipReason: 'manage_rc tool removed - Remote Control API deprecated'
+      // manage_rc tool removed - deprecated
+      return { ...base, skip: true, 
+        skipReason: 'manage_rc tool removed - deprecated'
       };
     }
     case 'Asset Boundary Tests': {
@@ -758,8 +757,8 @@ function enrichTestCase(rawCase) {
     }
     case 'Remote Control Boundary Tests':
     case 'Remote Control Preset Boundary Tests': {
-      // manage_rc tool removed - Remote Control API deprecated
-      return { ...base, skipReason: 'manage_rc tool removed - Remote Control API deprecated' };
+      // manage_rc tool removed - deprecated
+      return { ...base, skipReason: 'manage_rc tool removed - deprecated' };
     }
     case 'Python Execution Boundary Tests': {
       // execute_python tool removed - Python support deprecated

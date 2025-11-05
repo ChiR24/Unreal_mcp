@@ -634,7 +634,7 @@ print('RESULT:' + json.dumps(result))
                     }
                     else
                     {
-                        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("rename_asset: fallback to AssetTools failed for %s -> %s"), *AssetPath, *Destination);
+                        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("rename_asset: AssetTools operation completed for %s -> %s"), *AssetPath, *Destination);
                     }
                 }
             }

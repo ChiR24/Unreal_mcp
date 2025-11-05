@@ -221,6 +221,40 @@ export class BlueprintTools {
     }
   }
 
+  async getBlueprintInfo(params: { blueprintPath: string; timeoutMs?: number }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) {
+      return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    const candidates = this.buildCandidates(blueprintPath);
+    const primary = candidates[0] ?? blueprintPath;
+
+    try {
+      const resp = await this.sendAction('blueprint_get', { blueprintCandidates: candidates.length > 0 ? candidates : [primary], requestedPath: primary }, { timeoutMs: params.timeoutMs });
+      if (resp && resp.success) {
+        const result = resp.result ?? resp;
+        const resolvedPath = typeof result?.resolvedPath === 'string' ? result.resolvedPath : primary;
+        return {
+          success: true,
+          message: resp.message ?? `Blueprint metadata retrieved for ${resolvedPath}`,
+          blueprintPath: resolvedPath,
+          blueprint: result,
+          result,
+          requestId: resp.requestId
+        };
+      }
+
+      if (resp && this.isUnknownActionResponse(resp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_get' } as const;
+      }
+
+      return { success: false, error: resp?.error ?? 'BLUEPRINT_GET_FAILED', message: resp?.message ?? 'Failed to get blueprint via automation bridge' } as const;
+    } catch (err: any) {
+      return { success: false, error: String(err), message: String(err) } as const;
+    }
+  }
+
   async probeSubobjectDataHandle(opts: { componentClass?: string } = {}) {
     return await this.sendAction('blueprint_probe_subobject_handle', { componentClass: opts.componentClass });
   }

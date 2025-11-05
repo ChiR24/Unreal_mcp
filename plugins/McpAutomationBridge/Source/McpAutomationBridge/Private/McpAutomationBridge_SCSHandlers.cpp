@@ -82,12 +82,15 @@ public:
         
         for (USCS_Node* Node : AllNodes)
         {
-            if (Node)
+            if (Node && Node->GetVariableName().IsValid())
             {
                 TSharedPtr<FJsonObject> ComponentObj = MakeShareable(new FJsonObject);
                 ComponentObj->SetStringField(TEXT("name"), Node->GetVariableName().ToString());
                 ComponentObj->SetStringField(TEXT("class"), Node->ComponentClass ? Node->ComponentClass->GetName() : TEXT("Unknown"));
-                ComponentObj->SetStringField(TEXT("parent"), Node->ParentComponentOrVariableName.ToString());
+                if (!Node->ParentComponentOrVariableName.IsNone())
+                {
+                    ComponentObj->SetStringField(TEXT("parent"), Node->ParentComponentOrVariableName.ToString());
+                }
                 
                 // Add transform if component template exists (cast to SceneComponent for UE 5.6)
                 if (Node->ComponentTemplate)
@@ -124,6 +127,7 @@ public:
 #else
         Result->SetBoolField(TEXT("success"), false);
         Result->SetStringField(TEXT("error"), TEXT("SCS operations require editor build"));
+        return Result;
 #endif
         
         return Result;
@@ -186,7 +190,7 @@ public:
         {
             for (USCS_Node* Node : SCS->GetAllNodes())
             {
-                if (Node && Node->GetVariableName().ToString().Equals(ParentComponentName, ESearchCase::IgnoreCase))
+                if (Node && Node->GetVariableName().IsValid() && Node->GetVariableName().ToString().Equals(ParentComponentName, ESearchCase::IgnoreCase))
                 {
                     ParentNode = Node;
                     break;
@@ -204,7 +208,7 @@ public:
         // Check for duplicate name
         for (USCS_Node* Node : SCS->GetAllNodes())
         {
-            if (Node && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+            if (Node && Node->GetVariableName().IsValid() && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
             {
                 Result->SetBoolField(TEXT("success"), false);
                 Result->SetStringField(TEXT("error"), FString::Printf(TEXT("Component with name '%s' already exists"), *ComponentName));
@@ -220,7 +224,10 @@ public:
             Result->SetStringField(TEXT("error"), TEXT("Failed to create SCS node"));
             return Result;
         }
-        
+
+        // Explicitly set the variable name to ensure it's properly registered
+        NewNode->SetVariableName(FName(*ComponentName));
+
         // Set parent or add as root
         if (ParentNode)
         {
@@ -244,8 +251,7 @@ public:
         Result->SetBoolField(TEXT("compiled"), bCompiled);
         Result->SetBoolField(TEXT("saved"), bSaved);
 #else
-        Result->SetBoolField(TEXT("success"), false);
-        Result->SetStringField(TEXT("error"), TEXT("SCS operations require editor build"));
+        return UnsupportedSCSAction();
 #endif
         
         return Result;
@@ -274,7 +280,7 @@ public:
         USCS_Node* NodeToRemove = nullptr;
         for (USCS_Node* Node : SCS->GetAllNodes())
         {
-            if (Node && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+            if (Node && Node->GetVariableName().IsValid() && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
             {
                 NodeToRemove = Node;
                 break;
@@ -300,8 +306,7 @@ public:
         Result->SetBoolField(TEXT("compiled"), bCompiled);
         Result->SetBoolField(TEXT("saved"), bSaved);
 #else
-        Result->SetBoolField(TEXT("success"), false);
-        Result->SetStringField(TEXT("error"), TEXT("SCS operations require editor build"));
+        return UnsupportedSCSAction();
 #endif
         
         return Result;
@@ -330,7 +335,7 @@ public:
         USCS_Node* ComponentNode = nullptr;
         for (USCS_Node* Node : SCS->GetAllNodes())
         {
-            if (Node && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+            if (Node && Node->GetVariableName().IsValid() && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
             {
                 ComponentNode = Node;
                 break;
@@ -358,7 +363,7 @@ public:
                 // Prefer an explicit DefaultSceneRoot if present
                 for (USCS_Node* R : Roots)
                 {
-                    if (R && R->GetVariableName().ToString().Equals(TEXT("DefaultSceneRoot"), ESearchCase::IgnoreCase))
+                    if (R && R->GetVariableName().IsValid() && R->GetVariableName().ToString().Equals(TEXT("DefaultSceneRoot"), ESearchCase::IgnoreCase))
                     {
                         NewParentNode = R;
                         break;
@@ -378,7 +383,7 @@ public:
             {
                 for (USCS_Node* Node : SCS->GetAllNodes())
                 {
-                    if (Node && Node->GetVariableName().ToString().Equals(NewParentName, ESearchCase::IgnoreCase))
+                    if (Node && Node->GetVariableName().IsValid() && Node->GetVariableName().ToString().Equals(NewParentName, ESearchCase::IgnoreCase))
                     {
                         NewParentNode = Node;
                         break;
@@ -488,8 +493,7 @@ public:
         Result->SetBoolField(TEXT("compiled"), bCompiled);
         Result->SetBoolField(TEXT("saved"), bSaved);
 #else
-        Result->SetBoolField(TEXT("success"), false);
-        Result->SetStringField(TEXT("error"), TEXT("SCS operations require editor build"));
+        return UnsupportedSCSAction();
 #endif
         
         return Result;
@@ -519,13 +523,13 @@ public:
         USCS_Node* ComponentNode = nullptr;
         for (USCS_Node* Node : SCS->GetAllNodes())
         {
-            if (Node && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+            if (Node && Node->GetVariableName().IsValid() && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
             {
                 ComponentNode = Node;
                 break;
             }
         }
-        
+
         if (!ComponentNode || !ComponentNode->ComponentTemplate)
         {
             Result->SetBoolField(TEXT("success"), false);
@@ -589,8 +593,7 @@ public:
             Result->SetStringField(TEXT("errorCode"), TEXT("SCS_NOT_SCENE_COMPONENT"));
         }
 #else
-        Result->SetBoolField(TEXT("success"), false);
-        Result->SetStringField(TEXT("error"), TEXT("SCS operations require editor build"));
+        return UnsupportedSCSAction();
 #endif
         
         return Result;
@@ -620,13 +623,13 @@ public:
         USCS_Node* ComponentNode = nullptr;
         for (USCS_Node* Node : SCS->GetAllNodes())
         {
-            if (Node && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+            if (Node && Node->GetVariableName().IsValid() && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
             {
                 ComponentNode = Node;
                 break;
             }
         }
-        
+
         if (!ComponentNode || !ComponentNode->ComponentTemplate)
         {
             Result->SetBoolField(TEXT("success"), false);
@@ -731,146 +734,19 @@ public:
         Result->SetBoolField(TEXT("compiled"), bCompiled);
         Result->SetBoolField(TEXT("saved"), bSaved);
 #else
-        Result->SetBoolField(TEXT("success"), false);
-        Result->SetStringField(TEXT("error"), TEXT("SCS operations require editor build"));
+        return UnsupportedSCSAction();
 #endif
         
         return Result;
     }
 };
 
-// Integration with HandleAutomationRequest - add these handlers
-bool UMcpAutomationBridgeSubsystem::HandleSCSAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+#if !WITH_EDITOR
+static TSharedPtr<FJsonObject> UnsupportedSCSAction()
 {
-    const FString Lower = Action.ToLower();
-    
-    if (Lower.Equals(TEXT("get_blueprint_scs"), ESearchCase::IgnoreCase))
-    {
-        FString BlueprintPath;
-        if (!Payload->TryGetStringField(TEXT("blueprint_path"), BlueprintPath))
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_path required"), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-        
-        TSharedPtr<FJsonObject> Response = FSCSHandlers::GetBlueprintSCS(BlueprintPath);
-        bool Success = Response->GetBoolField(TEXT("success"));
-        FString Message = Success ? TEXT("Retrieved SCS structure") : Response->GetStringField(TEXT("error"));
-        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("GET_SCS_FAILED"));
-        return true;
-    }
-    
-    if (Lower.Equals(TEXT("add_scs_component"), ESearchCase::IgnoreCase))
-    {
-        FString BlueprintPath, ComponentClass, ComponentName, ParentName;
-        if (!Payload->TryGetStringField(TEXT("blueprint_path"), BlueprintPath) ||
-            !Payload->TryGetStringField(TEXT("component_class"), ComponentClass) ||
-            !Payload->TryGetStringField(TEXT("component_name"), ComponentName))
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_path, component_class, and component_name required"), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-        
-        Payload->TryGetStringField(TEXT("parent_component"), ParentName);
-        
-        TSharedPtr<FJsonObject> Response = FSCSHandlers::AddSCSComponent(BlueprintPath, ComponentClass, ComponentName, ParentName);
-        bool Success = Response->GetBoolField(TEXT("success"));
-        FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
-        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("ADD_SCS_COMPONENT_FAILED"));
-        return true;
-    }
-    
-    if (Lower.Equals(TEXT("remove_scs_component"), ESearchCase::IgnoreCase))
-    {
-        FString BlueprintPath, ComponentName;
-        if (!Payload->TryGetStringField(TEXT("blueprint_path"), BlueprintPath) ||
-            !Payload->TryGetStringField(TEXT("component_name"), ComponentName))
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_path and component_name required"), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-        
-        TSharedPtr<FJsonObject> Response = FSCSHandlers::RemoveSCSComponent(BlueprintPath, ComponentName);
-        bool Success = Response->GetBoolField(TEXT("success"));
-        FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
-        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("REMOVE_SCS_COMPONENT_FAILED"));
-        return true;
-    }
-    
-    if (Lower.Equals(TEXT("reparent_scs_component"), ESearchCase::IgnoreCase))
-    {
-        FString BlueprintPath, ComponentName, NewParent;
-        if (!Payload->TryGetStringField(TEXT("blueprint_path"), BlueprintPath) ||
-            !Payload->TryGetStringField(TEXT("component_name"), ComponentName) ||
-            !Payload->TryGetStringField(TEXT("new_parent"), NewParent))
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_path, component_name, and new_parent required"), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-        
-        TSharedPtr<FJsonObject> Response = FSCSHandlers::ReparentSCSComponent(BlueprintPath, ComponentName, NewParent);
-        bool Success = Response->GetBoolField(TEXT("success"));
-        FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
-        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("REPARENT_SCS_COMPONENT_FAILED"));
-        return true;
-    }
-    
-    if (Lower.Equals(TEXT("set_scs_component_transform"), ESearchCase::IgnoreCase))
-    {
-        FString BlueprintPath, ComponentName;
-        if (!Payload->TryGetStringField(TEXT("blueprint_path"), BlueprintPath) ||
-            !Payload->TryGetStringField(TEXT("component_name"), ComponentName))
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_path and component_name required"), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-        
-        // Extract transform data
-        TSharedPtr<FJsonObject> TransformData = MakeShareable(new FJsonObject);
-        
-        const TArray<TSharedPtr<FJsonValue>>* LocArray;
-        if (Payload->TryGetArrayField(TEXT("location"), LocArray))
-        {
-            TransformData->SetArrayField(TEXT("location"), *LocArray);
-        }
-        
-        const TArray<TSharedPtr<FJsonValue>>* RotArray;
-        if (Payload->TryGetArrayField(TEXT("rotation"), RotArray))
-        {
-            TransformData->SetArrayField(TEXT("rotation"), *RotArray);
-        }
-        
-        const TArray<TSharedPtr<FJsonValue>>* ScaleArray;
-        if (Payload->TryGetArrayField(TEXT("scale"), ScaleArray))
-        {
-            TransformData->SetArrayField(TEXT("scale"), *ScaleArray);
-        }
-        
-        TSharedPtr<FJsonObject> Response = FSCSHandlers::SetSCSComponentTransform(BlueprintPath, ComponentName, TransformData);
-        bool Success = Response->GetBoolField(TEXT("success"));
-        FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
-        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("SET_SCS_TRANSFORM_FAILED"));
-        return true;
-    }
-    
-    if (Lower.Equals(TEXT("set_scs_component_property"), ESearchCase::IgnoreCase))
-    {
-        FString BlueprintPath, ComponentName, PropertyName, PropertyValue;
-        if (!Payload->TryGetStringField(TEXT("blueprint_path"), BlueprintPath) ||
-            !Payload->TryGetStringField(TEXT("component_name"), ComponentName) ||
-            !Payload->TryGetStringField(TEXT("property_name"), PropertyName) ||
-            !Payload->TryGetStringField(TEXT("property_value"), PropertyValue))
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprint_path, component_name, property_name, and property_value required"), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-        
-        TSharedPtr<FJsonObject> Response = FSCSHandlers::SetSCSComponentProperty(BlueprintPath, ComponentName, PropertyName, PropertyValue);
-        bool Success = Response->GetBoolField(TEXT("success"));
-        FString Message = Success ? Response->GetStringField(TEXT("message")) : Response->GetStringField(TEXT("error"));
-        SendAutomationResponse(RequestingSocket, RequestId, Success, Message, Response, Success ? FString() : TEXT("SET_SCS_PROPERTY_FAILED"));
-        return true;
-    }
-    
-    return false;
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(TEXT("error"), TEXT("SCS operations require editor build"));
+    return Result;
 }
+#endif

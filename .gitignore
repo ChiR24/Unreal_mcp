@@ -86,3 +86,4 @@ tests/test-runner.mjs
 tests/test-sequence.mjs
 tests/test-system.mjs
 scripts/run-all-tests.mjs
+.claude/settings.local.json

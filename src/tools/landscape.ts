@@ -124,7 +124,7 @@ export class LandscapeTools {
     strength?: number;
     position?: [number, number, number];
   }) {
-    return { success: false, error: 'sculptLandscape not implemented via Remote Control. Requires Landscape editor tools.' };
+    return { success: false, error: 'sculptLandscape not implemented. Requires Landscape editor tools.' };
   }
 
   // Paint landscape
@@ -136,7 +136,7 @@ export class LandscapeTools {
     strength?: number;
     targetValue?: number;
   }) {
-    return { success: false, error: 'paintLandscape not implemented via Remote Control. Requires Landscape editor tools.' };
+    return { success: false, error: 'paintLandscape not implemented. Requires Landscape editor tools.' };
   }
 
   // Add landscape layer

@@ -539,29 +539,6 @@ export class LevelTools {
       });
 
       if (response.success === false) {
-        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
-        // If the plugin does not implement streaming, fall back to console commands
-        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
-          const levelIdentifier = levelName ?? levelPath ?? '';
-          const simpleName = levelIdentifier.split('/').filter(Boolean).pop() || levelIdentifier;
-          const loadCmd = params.shouldBeLoaded ? 'Load' : 'Unload';
-          const visCmd = shouldBeVisible ? 'Show' : 'Hide';
-          const command = `StreamLevel ${simpleName} ${loadCmd} ${visCmd}`;
-          const fallback = await this.bridge.executeConsoleCommand(command);
-          return {
-            success: true,
-            message: params.shouldBeLoaded
-              ? `Streaming level loaded: ${levelIdentifier}`
-              : `Streaming level unloaded: ${levelIdentifier}`,
-            level: simpleName,
-            levelPath,
-            loaded: params.shouldBeLoaded,
-            visible: shouldBeVisible,
-            handled: true,
-            transport: 'console_command',
-            ...fallback
-          } as any;
-        }
         return {
           success: false,
           error: response.error || response.message || 'Streaming level update failed',

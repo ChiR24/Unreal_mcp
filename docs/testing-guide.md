@@ -24,7 +24,6 @@ Each tool has a dedicated test file in `tests/`:
 - **test-performance.mjs** - Performance profiling (FPS, memory, stats, profiling)
 - **test-system.mjs** - System control (engine info, settings, plugins, Python execution)
 - **test-debug.mjs** - Debug visualization (draw lines, boxes, spheres, points, clear)
-- **test-rc.mjs** - Remote Control presets (create, add/remove properties, get/set values)
 
 ### Shared Test Runner
 All test files use `test-runner.mjs` which provides:
@@ -54,7 +53,7 @@ npm run test:physics          # Test physics only
 npm run test:performance      # Test performance profiling only
 npm run test:system           # Test system control only
 npm run test:debug            # Test debug visualization only
-npm run test:rc               # Test Remote Control presets only
+npm run test:sequence        # Test Sequencer actions only
 ```
 
 ### Run Tests Directly
@@ -69,8 +68,7 @@ node tests/test-control-actor.mjs
 ### Unreal Engine Setup
 1. **Unreal Engine 5.6** must be running
 2. **Required plugins enabled:**
-   - Remote Control API
-   - Remote Control Web Interface
+   - Native Automation Bridge
    - Python Editor Script Plugin
    - Editor Scripting Utilities
    - Sequencer
@@ -82,9 +80,6 @@ node tests/test-control-actor.mjs
 [HTTPServer.Listeners]
 DefaultBindAddress=0.0.0.0
 
-[RemoteControl]
-RemoteControlWebInterfacePort=30020
-RemoteControlWebSocketServerPort=30010
 ```
 
 **Environment Variables (optional):**
@@ -228,7 +223,7 @@ This prevents false positives from connection errors.
 **Solutions**:
 1. Launch Unreal Engine 5.6
 2. Open your project
-3. Verify Remote Control plugins are enabled
+3. Verify Unreal Engine is running with the MCP plugin enabled
 4. Check `DefaultEngine.ini` configuration
 5. Test connection: `npm run test:system`
 
@@ -400,7 +395,7 @@ A: Create a new test file following the structure, add test cases with your tool
 A: Some tests create/delete assets and actors. Use a test project or backup your work.
 
 **Q: Can I run tests in CI/CD?**  
-A: Yes, if you can run Unreal Engine headless with Remote Control enabled. Most tests require active editor.
+A: Yes, if you can run Unreal Engine headless with the MCP plugin enabled. Most tests require active editor.
 
 ## Support
 
@@ -408,7 +403,7 @@ For issues with:
 - **MCP Server**: Check server logs, ensure plugins enabled
 - **Test Framework**: Review test-runner.mjs and test file structure  
 - **Specific Tool**: Check tool implementation in `src/tools/<toolname>.ts`
-- **Unreal Integration**: Review Remote Control API logs in Unreal Output Log
+- **Unreal Integration**: Review MCP plugin logs in Unreal Output Log
 
 ## Next Steps
 

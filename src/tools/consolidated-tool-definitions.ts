@@ -106,27 +106,52 @@ Inputs:
   // 2. ACTOR CONTROL - Combines actor operations
   {
     name: 'control_actor',
-  description: `Viewport actor toolkit for spawning, removing, or nudging actors with physics forces.
+  description: `Viewport actor toolkit for spawning, removing, or nudging actors with physics forces, plus advanced component and tagging helpers.
 
 Use it when you need to:
 - drop a class or mesh into the level (classPath accepts names or asset paths).
-- delete actors by label, case-insensitively.
+- delete or duplicate actors by label, case-insensitively.
 - push a physics-enabled actor with a world-space force vector.
+- attach, tag, or edit component properties on actors already in the level.
 
-Supported actions: spawn, delete, apply_force.`,
+Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, apply_force, set_transform, get_transform, set_visibility, add_component, set_component_properties, get_components, add_tag, find_by_tag, find_by_name, set_blueprint_variables, create_snapshot, attach, detach.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: { 
           type: 'string', 
-          enum: ['spawn', 'delete', 'apply_force'],
+          enum: [
+            'spawn',
+            'spawn_blueprint',
+            'delete',
+            'delete_by_tag',
+            'duplicate',
+            'apply_force',
+            'set_transform',
+            'get_transform',
+            'set_visibility',
+            'add_component',
+            'set_component_properties',
+            'get_components',
+            'add_tag',
+            'find_by_tag',
+            'find_by_name',
+            'set_blueprint_variables',
+            'create_snapshot',
+            'attach',
+            'detach'
+          ],
           description: 'Action to perform'
         },
         // Common
-        actorName: { type: 'string', description: 'Actor label/name (optional for spawn, auto-generated if not provided; required for delete). Case-insensitive for delete action.' },
+        actorName: { type: 'string', description: 'Actor label/name (optional for spawn, auto-generated if not provided; required for most other operations). Case-insensitive for delete and lookup actions.' },
         classPath: { 
           type: 'string', 
           description: 'Actor class (e.g., "StaticMeshActor", "CameraActor") OR asset path (e.g., "/Engine/BasicShapes/Cube", "/Game/MyMesh"). Asset paths will automatically spawn as StaticMeshActor with the mesh applied. Required for spawn action.'
+        },
+        blueprintPath: {
+          type: 'string',
+          description: 'Blueprint asset path (e.g., "/Game/Blueprints/BP_MyActor") used by spawn_blueprint.'
         },
         // Transform
         location: {
@@ -147,6 +172,15 @@ Supported actions: spawn, delete, apply_force.`,
             roll: { type: 'number', description: 'Roll rotation in degrees (X-axis rotation)' }
           }
         },
+        scale: {
+          type: 'object',
+          description: 'World space scale for set_transform action.',
+          properties: {
+            x: { type: 'number', description: 'Scale factor along X axis' },
+            y: { type: 'number', description: 'Scale factor along Y axis' },
+            z: { type: 'number', description: 'Scale factor along Z axis' }
+          }
+        },
         // Physics
         force: {
           type: 'object',
@@ -156,7 +190,27 @@ Supported actions: spawn, delete, apply_force.`,
             y: { type: 'number', description: 'Force magnitude along Y-axis' },
             z: { type: 'number', description: 'Force magnitude along Z-axis' }
           }
-        }
+        },
+        componentType: { type: 'string', description: 'Component class to add when action is add_component (e.g., "PointLightComponent").' },
+        componentName: { type: 'string', description: 'Component name used by add_component or set_component_properties actions.' },
+        properties: { type: 'object', additionalProperties: true, description: 'Property overrides for add_component or set_component_properties actions.' },
+        visible: { type: 'boolean', description: 'Visibility toggle used by set_visibility action.' },
+        newName: { type: 'string', description: 'Optional new name used by duplicate action.' },
+        offset: {
+          type: 'object',
+          description: 'Optional location offset applied during duplicate action.',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' }
+          }
+        },
+        tag: { type: 'string', description: 'Gameplay tag value used by add_tag, find_by_tag, or delete_by_tag actions.' },
+        matchType: { type: 'string', description: 'Optional match type (exact, contains, etc.) for find_by_tag action.' },
+        variables: { type: 'object', additionalProperties: true, description: 'Blueprint variable overrides for set_blueprint_variables action.' },
+        snapshotName: { type: 'string', description: 'Snapshot identifier for create_snapshot action.' },
+        childActor: { type: 'string', description: 'Child actor name used by attach action.' },
+        parentActor: { type: 'string', description: 'Parent actor name used by attach action.' }
       },
       required: ['action']
     },
@@ -189,20 +243,44 @@ Supported actions: spawn, delete, apply_force.`,
   // 3. EDITOR CONTROL - Combines editor operations
   {
     name: 'control_editor',
-  description: `Editor session controls for PIE playback, camera placement, and view modes.
+  description: `Editor session controls for PIE playback, camera placement, recording, and viewport operations.
 
 Use it when you need to:
-- start or stop Play In Editor.
-- reposition the active viewport camera.
-- switch between Lit/Unlit/Wireframe and other safe view modes.
+- start, stop, pause, or resume Play In Editor.
+- reposition the active viewport camera or adjust FOV/resolution.
+- execute safe view mode changes and console commands.
+- capture screenshots, bookmarks, or recording sessions for reviews.
 
-Supported actions: play, stop, set_camera, set_view_mode (with validation).`,
+Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, possess, set_camera, set_camera_position, set_camera_fov, set_view_mode, set_viewport_resolution, console_command, screenshot, step_frame, start_recording, stop_recording, create_bookmark, jump_to_bookmark, set_preferences, set_viewport_realtime.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: { 
           type: 'string', 
-          enum: ['play', 'stop', 'set_camera', 'set_view_mode'],
+          enum: [
+            'play',
+            'stop',
+            'stop_pie',
+            'pause',
+            'resume',
+            'set_game_speed',
+            'eject',
+            'possess',
+            'set_camera',
+            'set_camera_position',
+            'set_camera_fov',
+            'set_view_mode',
+            'set_viewport_resolution',
+            'console_command',
+            'screenshot',
+            'step_frame',
+            'start_recording',
+            'stop_recording',
+            'create_bookmark',
+            'jump_to_bookmark',
+            'set_preferences',
+            'set_viewport_realtime'
+          ],
           description: 'Editor action'
         },
         // Camera
@@ -228,7 +306,19 @@ Supported actions: play, stop, set_camera, set_view_mode (with validation).`,
         viewMode: { 
           type: 'string', 
           description: 'View mode for set_view_mode action. Supported: Lit, Unlit, Wireframe, DetailLighting, LightingOnly, LightComplexity, ShaderComplexity. Required for set_view_mode.'
-        }
+        },
+        speed: { type: 'number', description: 'Playback speed multiplier for set_game_speed action.' },
+        filename: { type: 'string', description: 'Optional file name for screenshot/start_recording actions.' },
+        fov: { type: 'number', description: 'Field of view value in degrees for set_camera_fov.' },
+        width: { type: 'number', description: 'Viewport width in pixels for set_viewport_resolution.' },
+        height: { type: 'number', description: 'Viewport height in pixels for set_viewport_resolution.' },
+        command: { type: 'string', description: 'Console command to execute when action is console_command.' },
+        steps: { type: 'integer', description: 'Frame steps to advance for step_frame action (defaults to 1).' },
+        frameRate: { type: 'number', description: 'Capture frame rate for start_recording action.' },
+        durationSeconds: { type: 'number', description: 'Optional maximum recording duration for start_recording.' },
+        bookmarkName: { type: 'string', description: 'Bookmark identifier for create_bookmark or jump_to_bookmark actions.' },
+        category: { type: 'string', description: 'Editor preference category for set_preferences action.' },
+        preferences: { type: 'object', additionalProperties: true, description: 'Preference overrides for set_preferences action.' }
       },
       required: ['action']
     },
@@ -370,6 +460,10 @@ Supported actions: create_animation_bp, create_anim_blueprint, create_animation_
         // Physics
         physicsAssetName: { type: 'string', description: 'Name or path to physics asset for ragdoll simulation. Required for setup_ragdoll action.' },
         blendWeight: { type: 'number', description: 'Blend weight between animated and ragdoll physics (0.0 to 1.0). 0.0 is fully animated, 1.0 is fully ragdoll. Optional, defaults to 1.0.' },
+        meshPath: { type: 'string', description: 'Skeletal mesh to generate a physics asset for. Required when skeletonPath does not resolve to a preview mesh.' },
+        assignToMesh: { type: 'boolean', description: 'Assign the newly created physics asset to the skeletal mesh after creation.' },
+        previewSkeleton: { type: 'string', description: 'Optional skeleton used to resolve a preview mesh when the main skeleton lacks one.' },
+        generateConstraints: { type: 'boolean', description: 'Hint for physics setup on whether to auto-generate joint constraints.' },
         savePath: { type: 'string', description: 'Content path where animation blueprint will be saved (e.g., "/Game/Animations"). Required for create_animation_bp action.' },
         // Vehicle configuration
         vehicleName: { type: 'string', description: 'Vehicle actor or Blueprint identifier to configure. Required for configure_vehicle action.' },
@@ -437,6 +531,8 @@ Supported actions: create_animation_bp, create_anim_blueprint, create_animation_
         assetType: { type: 'string', description: 'Type of animation asset to create (Sequence, Montage, etc.)' },
         sourceSkeleton: { type: 'string', description: 'Source skeleton for retargeting' },
         targetSkeleton: { type: 'string', description: 'Target skeleton for retargeting' },
+        assets: { type: 'array', items: { type: 'string' }, description: 'Animation assets to duplicate and retarget' },
+        retargetAssets: { type: 'array', items: { type: 'string' }, description: 'Alias for assets; retained for backward compatibility' },
         params: { type: 'object', description: 'Parameters for physics simulation setup' },
         artifacts: { type: 'array', items: { type: 'string' }, description: 'Artifact asset paths to cleanup' }
       },
@@ -558,7 +654,7 @@ Supported actions: niagara, particle, debug_shape.`,
 Use it when you need to:
 - create a new Blueprint of a specific base type (Actor, Pawn, Character, ...).
 - add a component to an existing Blueprint asset with a unique name.
-- tweak Blueprint Class Default Object (CDO) properties when Remote Control cannot.
+- tweak Blueprint Class Default Object (CDO) properties when direct editor access cannot.
 - orchestrate multi-step Simple Construction Script edits with compile/save toggles.
 - retrieve, add, remove, reparent, or modify SCS (Simple Construction Script) components.
 - set component transforms and properties within the SCS hierarchy.

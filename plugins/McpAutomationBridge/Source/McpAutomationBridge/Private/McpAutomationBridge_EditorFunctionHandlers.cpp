@@ -30,6 +30,12 @@
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
 #include "Sound/SoundCue.h"
+#if __has_include("Blueprint/UserWidget.h")
+#include "Blueprint/UserWidget.h"
+#endif
+#if __has_include("GameFramework/PlayerController.h")
+#include "GameFramework/PlayerController.h"
+#endif
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -577,102 +583,80 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         return true;
     }
 
-    // ADD_WIDGET_TO_VIEWPORT: best-effort; not always supported in editor context
+    // ADD_WIDGET_TO_VIEWPORT: implemented with proper widget creation and viewport management
     if (FN == TEXT("ADD_WIDGET_TO_VIEWPORT"))
     {
         FString WidgetPath; Payload->TryGetStringField(TEXT("widget_path"), WidgetPath);
-        int32 z = 0; Payload->TryGetNumberField(TEXT("z_order"), z);
+        if (WidgetPath.IsEmpty()) 
+        { 
+            SendAutomationError(RequestingSocket, RequestId, TEXT("widget_path required"), TEXT("INVALID_ARGUMENT")); 
+            return true; 
+        }
+        
+        int32 zOrder = 0; Payload->TryGetNumberField(TEXT("z_order"), zOrder);
         int32 playerIndex = 0; Payload->TryGetNumberField(TEXT("player_index"), playerIndex);
-        // Editor-time widget addition is not supported reliably; return NOT_IMPLEMENTED so server may fallback
-        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Add widget to viewport not implemented natively in editor context"), nullptr, TEXT("NOT_IMPLEMENTED"));
-        return true;
-    }
 
-    // RC_* pass-through: indicate not implemented natively so server may fallback to Python
-    if (FN.StartsWith(TEXT("RC_")))
-    {
-        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Remote Control functions are not implemented natively in plugin; allow Python fallback or implement RC handlers"), nullptr, TEXT("UNKNOWN_PLUGIN_ACTION"));
-        return true;
-    }
-
-    // Map several BLUEPRINT_* editor-function fallbacks to the blueprint_* action handlers
-    if (FN == TEXT("CREATE_BLUEPRINT") || FN == TEXT("BLUEPRINT_CREATE"))
-    {
-        // Expect either 'payload' containing JSON string or nested params
-        FString JsonStr; if (Payload->TryGetStringField(TEXT("payload"), JsonStr) && !JsonStr.IsEmpty())
+        if (!GEditor)
         {
-            TSharedPtr<FJsonObject> Parsed; TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonStr);
-            if (!FJsonSerializer::Deserialize(Reader, Parsed) || !Parsed.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid JSON payload"), TEXT("INVALID_ARGUMENT")); return true; }
-            return HandleBlueprintAction(RequestId, TEXT("blueprint_create"), Parsed, RequestingSocket);
-        }
-        // Try nested params object
-        const TSharedPtr<FJsonObject>* ParamsObj = nullptr; if (Payload->TryGetObjectField(TEXT("params"), ParamsObj) && ParamsObj && (*ParamsObj).IsValid()) { return HandleBlueprintAction(RequestId, TEXT("blueprint_create"), *ParamsObj, RequestingSocket); }
-        // Fallback: try forwarding full payload
-        return HandleBlueprintAction(RequestId, TEXT("blueprint_create"), Payload, RequestingSocket);
-    }
-
-    if (FN == TEXT("BLUEPRINT_ADD_VARIABLE") || FN == TEXT("BLUEPRINT_ADD_VAR"))
-    {
-        // Accept either 'payload' JSON string or params
-        FString JsonStr; if (Payload->TryGetStringField(TEXT("payload"), JsonStr) && !JsonStr.IsEmpty()) { TSharedPtr<FJsonObject> Parsed; TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonStr); if (!FJsonSerializer::Deserialize(Reader, Parsed) || !Parsed.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid JSON payload"), TEXT("INVALID_ARGUMENT")); return true; } return HandleBlueprintAction(RequestId, TEXT("blueprint_add_variable"), Parsed, RequestingSocket); }
-        const TSharedPtr<FJsonObject>* ParamsObj = nullptr; if (Payload->TryGetObjectField(TEXT("params"), ParamsObj) && ParamsObj && (*ParamsObj).IsValid()) { return HandleBlueprintAction(RequestId, TEXT("blueprint_add_variable"), *ParamsObj, RequestingSocket); }
-        return HandleBlueprintAction(RequestId, TEXT("blueprint_add_variable"), Payload, RequestingSocket);
-    }
-
-    if (FN == TEXT("BLUEPRINT_SET_VARIABLE_METADATA") || FN == TEXT("BLUEPRINT_SET_VAR_METADATA"))
-    {
-        FString JsonStr; if (Payload->TryGetStringField(TEXT("payload"), JsonStr) && !JsonStr.IsEmpty()) { TSharedPtr<FJsonObject> Parsed; TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonStr); if (!FJsonSerializer::Deserialize(Reader, Parsed) || !Parsed.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid JSON payload"), TEXT("INVALID_ARGUMENT")); return true; } return HandleBlueprintAction(RequestId, TEXT("blueprint_set_variable_metadata"), Parsed, RequestingSocket); }
-        const TSharedPtr<FJsonObject>* ParamsObj = nullptr; if (Payload->TryGetObjectField(TEXT("params"), ParamsObj) && ParamsObj && (*ParamsObj).IsValid()) { return HandleBlueprintAction(RequestId, TEXT("blueprint_set_variable_metadata"), *ParamsObj, RequestingSocket); }
-        return HandleBlueprintAction(RequestId, TEXT("blueprint_set_variable_metadata"), Payload, RequestingSocket);
-    }
-
-    if (FN == TEXT("BLUEPRINT_ADD_CONSTRUCTION_SCRIPT") || FN == TEXT("BLUEPRINT_ADD_CONSTRUCTION"))
-    {
-        FString JsonStr; if (Payload->TryGetStringField(TEXT("payload"), JsonStr) && !JsonStr.IsEmpty()) { TSharedPtr<FJsonObject> Parsed; TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonStr); if (!FJsonSerializer::Deserialize(Reader, Parsed) || !Parsed.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid JSON payload"), TEXT("INVALID_ARGUMENT")); return true; } return HandleBlueprintAction(RequestId, TEXT("blueprint_add_construction_script"), Parsed, RequestingSocket); }
-        const TSharedPtr<FJsonObject>* ParamsObj = nullptr; if (Payload->TryGetObjectField(TEXT("params"), ParamsObj) && ParamsObj && (*ParamsObj).IsValid()) { return HandleBlueprintAction(RequestId, TEXT("blueprint_add_construction_script"), *ParamsObj, RequestingSocket); }
-        return HandleBlueprintAction(RequestId, TEXT("blueprint_add_construction_script"), Payload, RequestingSocket);
-    }
-
-    // CREATE_SOUND_CUE: create a SoundCue asset when factory is available
-    if (FN == TEXT("CREATE_SOUND_CUE"))
-    {
-        const TSharedPtr<FJsonObject>* ParamsPtr = nullptr; TSharedPtr<FJsonObject> Params = Payload;
-        if (Payload->TryGetObjectField(TEXT("params"), ParamsPtr) && ParamsPtr && (*ParamsPtr).IsValid()) Params = *ParamsPtr;
-        FString Name; Params->TryGetStringField(TEXT("name"), Name);
-        FString Package; Params->TryGetStringField(TEXT("package_path"), Package);
-        if (Name.IsEmpty() || Package.IsEmpty()) { SendAutomationError(RequestingSocket, RequestId, TEXT("name and package_path required"), TEXT("INVALID_ARGUMENT")); return true; }
-#if WITH_EDITOR
-        UFactory* FactoryInstance = nullptr;
-        UClass* FactoryClass = ResolveClassByName(TEXT("SoundCueFactoryNew"));
-        if (FactoryClass && FactoryClass->IsChildOf(UFactory::StaticClass()))
-        {
-            FactoryInstance = NewObject<UFactory>(GetTransientPackage(), FactoryClass);
-        }
-        FAssetToolsModule& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
-        UObject* Created = AssetTools.Get().CreateAsset(Name, Package, USoundCue::StaticClass(), FactoryInstance);
-        if (!Created)
-        {
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to create SoundCue"), nullptr, TEXT("CREATE_FAILED"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available for widget creation"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
             return true;
         }
-        SaveLoadedAssetThrottled(Created);
+
+        // Load the widget blueprint class
+        UClass* WidgetClass = LoadClass<UUserWidget>(nullptr, *WidgetPath);
+        if (!WidgetClass)
+        {
+            TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+            Err->SetStringField(TEXT("error"), TEXT("Widget class not found"));
+            Err->SetStringField(TEXT("widget_path"), WidgetPath);
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Widget class not found"), Err, TEXT("WIDGET_NOT_FOUND"));
+            return true;
+        }
+
+        // Get the current world and player controller
+        UWorld* World = GEditor->GetEditorWorldContext().World();
+        if (!World)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("No world available"), nullptr, TEXT("NO_WORLD"));
+            return true;
+        }
+
+        APlayerController* PlayerController = UGameplayStatics::GetPlayerController(World, playerIndex);
+        if (!PlayerController)
+        {
+            // Try to get the first available player controller if the specified one doesn't exist
+            PlayerController = UGameplayStatics::GetPlayerController(World, 0);
+            if (!PlayerController)
+            {
+                TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+                Err->SetStringField(TEXT("error"), TEXT("Player controller not available"));
+                Err->SetNumberField(TEXT("player_index"), playerIndex);
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Player controller not available"), Err, TEXT("NO_PLAYER_CONTROLLER"));
+                return true;
+            }
+        }
+
+        // Create and add the widget to viewport
+        UUserWidget* Widget = CreateWidget<UUserWidget>(PlayerController, WidgetClass);
+        if (!Widget)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to create widget instance"), nullptr, TEXT("WIDGET_CREATION_FAILED"));
+            return true;
+        }
+
+        Widget->AddToViewport(zOrder);
+
         TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
-        Out->SetStringField(TEXT("path"), Created->GetPathName());
         Out->SetBoolField(TEXT("success"), true);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("SoundCue created"), Out, FString());
+        Out->SetStringField(TEXT("widget_path"), WidgetPath);
+        Out->SetStringField(TEXT("widget_class"), WidgetClass->GetPathName());
+        Out->SetNumberField(TEXT("z_order"), zOrder);
+        Out->SetNumberField(TEXT("player_index"), PlayerController ? playerIndex : 0);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget added to viewport"), Out, FString());
         return true;
-#else
-        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Create sound cue requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-        return true;
-#endif
     }
 
-    // Unknown function -> indicate the plugin does not implement it so callers
-    // can either fall back to Python (server opt-in) or surface UNKNOWN_PLUGIN_ACTION.
-    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Unknown editor function or not implemented by plugin"), nullptr, TEXT("UNKNOWN_PLUGIN_ACTION"));
-    return true;
-#else
-    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor functions require editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
+    return false;
 }
+
+#endif

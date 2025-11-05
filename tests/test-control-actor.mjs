@@ -44,6 +44,12 @@ const testCases = [
     expected: 'success - actor transform set'
   },
   {
+    scenario: 'Get actor transform',
+    toolName: 'control_actor',
+    arguments: { action: 'get_transform', actorName: 'TC_Cube' },
+    expected: 'success - actor transform retrieved'
+  },
+  {
     scenario: 'Add PointLight component to actor',
     toolName: 'control_actor',
     arguments: { action: 'add_component', actorName: 'TC_Cube', componentType: 'PointLightComponent', componentName: 'TC_PointLightComp', properties: { Intensity: 3000 } },
@@ -62,16 +68,52 @@ const testCases = [
     expected: 'success - actor components retrieved'
   },
   {
+    scenario: 'Toggle actor visibility',
+    toolName: 'control_actor',
+    arguments: { action: 'set_visibility', actorName: 'TC_Cube', visible: false },
+    expected: 'success - actor visibility updated'
+  },
+  {
     scenario: 'Duplicate actor',
     toolName: 'control_actor',
     arguments: { action: 'duplicate', actorName: 'TC_Cube', newName: 'TC_Cube_Copy', offset: { x: 50, y: 0, z: 0 } },
     expected: 'success - actor duplicated'
   },
   {
+    scenario: 'Attach actor to another',
+    toolName: 'control_actor',
+    arguments: { action: 'attach', childActor: 'TC_Cube_Copy', parentActor: 'TC_Cube' },
+    expected: 'success - actor attached'
+  },
+  {
+    scenario: 'Detach actor',
+    toolName: 'control_actor',
+    arguments: { action: 'detach', actorName: 'TC_Cube_Copy' },
+    expected: 'success - actor detached'
+  },
+  {
+    scenario: 'Tag actor',
+    toolName: 'control_actor',
+    arguments: { action: 'add_tag', actorName: 'TC_Cube', tag: 'TC_Tag' },
+    expected: 'success - actor tagged'
+  },
+  {
     scenario: 'Find actors by tag',
     toolName: 'control_actor',
     arguments: { action: 'find_by_tag', tag: 'TC_Tag' },
     expected: 'success - actors found by tag'
+  },
+  {
+    scenario: 'Find actors by name',
+    toolName: 'control_actor',
+    arguments: { action: 'find_by_name', name: 'TC_Cube' },
+    expected: 'success - actors found by name'
+  },
+  {
+    scenario: 'Create snapshot for an actor',
+    toolName: 'control_actor',
+    arguments: { action: 'create_snapshot', actorName: 'TC_Cube', snapshotName: 'TC_Before' },
+    expected: 'success - actor snapshot created'
   },
   {
     scenario: 'Create test blueprint first (BP_TestActor)',
@@ -104,31 +146,23 @@ const testCases = [
     expected: 'success - blueprint variables set'
   },
   {
-    scenario: 'Create snapshot for an actor',
+    scenario: 'Delete by tag filter',
     toolName: 'control_actor',
-    arguments: { action: 'create_snapshot', actorName: 'TC_Cube', snapshotName: 'TC_Before' },
-    expected: 'success - actor snapshot created'
+    arguments: { action: 'delete_by_tag', tag: 'TC_Tag' },
+    expected: 'success - actors deleted by tag'
   },
   {
     scenario: 'Cleanup - delete test actors',
     toolName: 'control_actor',
-    arguments: { action: 'delete', actorNames: ['TC_Cube', 'TC_Cube_Copy', 'TC_Physics', 'TC_PointLight', 'TC_BP_Instance', 'TC_Camera'] },
+    arguments: { action: 'delete', actorNames: ['TC_Cube_Copy', 'TC_Physics', 'TC_PointLight', 'TC_BP_Instance', 'TC_Camera'] },
     expected: 'success - actors deleted'
   },
   {
     scenario: 'Cleanup - delete test blueprint',
     toolName: 'manage_asset',
     arguments: { action: 'delete_assets', paths: ['/Game/Blueprints/BP_TestActor'] },
-expected: 'success - test blueprint deleted'},
-  // Additional coverage to reach 20+ cases
-  // Additional coverage to reach 20+ cases
-  { scenario: 'Tag actor', toolName: 'control_actor', arguments: { action: 'add_tag', actorName: 'TC_Cube', tag: 'TC_Tag' }, expected: 'not_implemented' },
-  { scenario: 'Find actors by name', toolName: 'control_actor', arguments: { action: 'find_by_name', name: 'TC_Cube' }, expected: 'failure - actor not found' },
-  { scenario: 'Get actor transform', toolName: 'control_actor', arguments: { action: 'get_transform', actorName: 'TC_Cube' }, expected: 'not_implemented' },
-  { scenario: 'Toggle actor visibility', toolName: 'control_actor', arguments: { action: 'set_visibility', actorName: 'TC_Cube', visible: false }, expected: 'not_implemented' },
-  { scenario: 'Attach actor to another', toolName: 'control_actor', arguments: { action: 'attach', childActor: 'TC_Cube_Copy', parentActor: 'TC_Cube' }, expected: 'not_implemented' },
-  { scenario: 'Detach actor', toolName: 'control_actor', arguments: { action: 'detach', actorName: 'TC_Cube_Copy' }, expected: 'not_implemented' },
-  { scenario: 'Delete by tag filter', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: 'TC_Tag' }, expected: 'not_implemented' }
+    expected: 'success - test blueprint deleted'
+  }
 ];
 
 await runToolTests('Actor Control', testCases);

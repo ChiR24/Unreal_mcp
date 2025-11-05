@@ -2,16 +2,33 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation-bridge.js';
 import { Logger } from '../utils/logger.js';
 import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
+import { lookupPropertyMetadata, normalizeDictionaryKey, PropertyDictionaryEntry } from './property-dictionary.js';
+
+export interface ObjectSummary {
+  name?: string;
+  class?: string;
+  path?: string;
+  parent?: string;
+  tags?: string[];
+  propertyCount: number;
+  curatedPropertyCount: number;
+  filteredPropertyCount: number;
+  categories?: Record<string, number>;
+}
 
 export interface ObjectInfo {
-  class: string;
-  name: string;
-  path: string;
+  class?: string;
+  name?: string;
+  path?: string;
   properties: PropertyInfo[];
   functions?: FunctionInfo[];
   parent?: string;
   interfaces?: string[];
   flags?: string[];
+  summary?: ObjectSummary;
+  filteredProperties?: string[];
+  tags?: string[];
+  original?: any;
 }
 
 export interface PropertyInfo {
@@ -22,6 +39,10 @@ export interface PropertyInfo {
   metadata?: Record<string, any>;
   category?: string;
   tooltip?: string;
+  description?: string;
+  displayValue?: string;
+  dictionaryEntry?: PropertyDictionaryEntry;
+  isReadOnly?: boolean;
 }
 
 export interface FunctionInfo {
@@ -44,7 +65,25 @@ export class IntrospectionTools {
   private objectCache = new Map<string, ObjectInfo>();
   private retryAttempts = 3;
   private retryDelay = 1000;
-  
+
+  private readonly propertyFilterPatterns: RegExp[] = [
+    /internal/i,
+    /transient/i,
+    /^temp/i,
+    /^bhidden/i,
+    /renderstate/i,
+    /previewonly/i,
+    /deprecated/i
+  ];
+
+  private readonly ignoredPropertyKeys = new Set<string>([
+    'assetimportdata',
+    'blueprintcreatedcomponents',
+    'componentreplicator',
+    'componentoverrides',
+    'actorcomponenttags'
+  ]);
+
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
@@ -137,6 +176,197 @@ export class IntrospectionTools {
     return value;
   }
 
+  private isPlainObject(value: any): value is Record<string, any> {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  private isLikelyPropertyDescriptor(value: any): boolean {
+    if (!this.isPlainObject(value)) return false;
+    if (typeof value.name === 'string' && ('value' in value || 'type' in value)) return true;
+    if ('propertyName' in value && ('currentValue' in value || 'defaultValue' in value)) return true;
+    return false;
+  }
+
+  private shouldFilterProperty(name: string, value: any, flags?: string[], detailed = false): boolean {
+    if (detailed) return false;
+    if (!name) return true;
+    const normalized = normalizeDictionaryKey(name);
+    if (this.ignoredPropertyKeys.has(normalized)) return true;
+    for (const pattern of this.propertyFilterPatterns) {
+      if (pattern.test(name)) return true;
+    }
+    if (Array.isArray(value) && value.length === 0) return true;
+    if (this.isPlainObject(value) && Object.keys(value).length === 0) return true;
+    if (flags?.some((f) => /deprecated/i.test(f))) return true;
+    return false;
+  }
+
+  private formatDisplayValue(value: any, type: string): string {
+    if (value === null || value === undefined) return 'None';
+    if (typeof value === 'string') return value.length > 120 ? `${value.slice(0, 117)}...` : value;
+    if (typeof value === 'number' || typeof value === 'boolean') return `${value}`;
+    if (Array.isArray(value)) {
+      const preview = value.slice(0, 5).map((entry) => this.formatDisplayValue(entry, typeof entry));
+      const suffix = value.length > 5 ? `, … (+${value.length - 5})` : '';
+      return `[${preview.join(', ')}${suffix}]`;
+    }
+    if (this.isPlainObject(value)) {
+      const keys = Object.keys(value);
+      if (['vector', 'rotator', 'transform'].some((token) => type.toLowerCase().includes(token))) {
+        const printable = Object.entries(value)
+          .map(([k, v]) => `${k}: ${this.formatDisplayValue(v, typeof v)}`)
+          .join(', ');
+        return `{ ${printable} }`;
+      }
+      const preview = keys.slice(0, 5).map((k) => `${k}: ${this.formatDisplayValue(value[k], typeof value[k])}`);
+      const suffix = keys.length > 5 ? `, … (+${keys.length - 5} keys)` : '';
+      return `{ ${preview.join(', ')}${suffix} }`;
+    }
+    return String(value);
+  }
+
+  private normalizePropertyEntry(entry: any, detailed = false): PropertyInfo | null {
+    if (!entry) return null;
+    const name: string = entry.name ?? entry.propertyName ?? entry.key ?? '';
+    if (!name) return null;
+
+    const candidateType = entry.type ?? entry.propertyType ?? (entry.value !== undefined ? typeof entry.value : undefined);
+    const type = typeof candidateType === 'string' && candidateType.length > 0 ? candidateType : 'unknown';
+    const rawValue = entry.value ?? entry.currentValue ?? entry.defaultValue ?? entry.data ?? entry;
+    const value = this.convertPropertyValue(rawValue, type);
+    const flags: string[] | undefined = entry.flags ?? entry.attributes;
+    const metadata: Record<string, any> | undefined = entry.metadata ?? entry.annotations;
+    const filtered = this.shouldFilterProperty(name, value, flags, detailed);
+    const dictionaryEntry = lookupPropertyMetadata(name);
+    const propertyInfo: PropertyInfo = {
+      name,
+      type,
+      value,
+      flags,
+      metadata,
+      category: dictionaryEntry?.category ?? entry.category,
+      tooltip: entry.tooltip ?? entry.helpText,
+      description: dictionaryEntry?.description ?? entry.description,
+      displayValue: this.formatDisplayValue(value, type),
+      dictionaryEntry,
+      isReadOnly: Boolean(entry.isReadOnly || entry.readOnly || flags?.some((f) => f.toLowerCase().includes('readonly')))
+    };
+    (propertyInfo as any).__filtered = filtered;
+    return propertyInfo;
+  }
+
+  private flattenPropertyMap(source: Record<string, any>, prefix = '', detailed = false): PropertyInfo[] {
+    const properties: PropertyInfo[] = [];
+    for (const [rawKey, rawValue] of Object.entries(source)) {
+      const name = prefix ? `${prefix}.${rawKey}` : rawKey;
+      if (this.isLikelyPropertyDescriptor(rawValue)) {
+        const normalized = this.normalizePropertyEntry({ ...rawValue, name }, detailed);
+        if (normalized) properties.push(normalized);
+        continue;
+      }
+
+      if (this.isPlainObject(rawValue)) {
+        const nestedKeys = Object.keys(rawValue);
+        const hasPrimitiveChildren = nestedKeys.some((key) => {
+          const child = rawValue[key];
+          return child === null || typeof child !== 'object' || Array.isArray(child) || this.isLikelyPropertyDescriptor(child);
+        });
+
+        if (hasPrimitiveChildren) {
+          const normalized = this.normalizePropertyEntry({ name, value: rawValue }, detailed);
+          if (normalized) properties.push(normalized);
+        } else {
+          properties.push(...this.flattenPropertyMap(rawValue, name, detailed));
+        }
+        continue;
+      }
+
+      const normalized = this.normalizePropertyEntry({ name, value: rawValue }, detailed);
+      if (normalized) properties.push(normalized);
+    }
+    return properties;
+  }
+
+  private extractRawProperties(rawInfo: any, detailed = false): PropertyInfo[] {
+    if (!rawInfo) return [];
+    if (Array.isArray(rawInfo.properties)) {
+      const entries = rawInfo.properties as Array<Record<string, unknown>>;
+      return entries
+        .map((entry) => this.normalizePropertyEntry(entry, detailed))
+        .filter((entry): entry is PropertyInfo => Boolean(entry));
+    }
+
+    if (this.isPlainObject(rawInfo.properties)) {
+      return this.flattenPropertyMap(rawInfo.properties, '', detailed);
+    }
+
+    if (Array.isArray(rawInfo)) {
+      const entries = rawInfo as Array<Record<string, unknown>>;
+      return entries
+        .map((entry) => this.normalizePropertyEntry(entry, detailed))
+        .filter((entry): entry is PropertyInfo => Boolean(entry));
+    }
+
+    if (this.isPlainObject(rawInfo)) {
+      const shallow = { ...rawInfo };
+      delete shallow.properties;
+      delete shallow.functions;
+      delete shallow.summary;
+      return this.flattenPropertyMap(shallow, '', detailed);
+    }
+
+    return [];
+  }
+
+  curateObjectInfo(rawInfo: any, objectPath: string, detailed = false): ObjectInfo {
+    const properties = this.extractRawProperties(rawInfo, detailed);
+    const filteredProperties: string[] = [];
+    const curatedProperties = properties.filter((prop) => {
+      const shouldFilter = (prop as any).__filtered;
+      delete (prop as any).__filtered;
+      if (shouldFilter) {
+        filteredProperties.push(prop.name);
+      }
+      return !shouldFilter;
+    });
+
+    const categories: Record<string, number> = {};
+    const finalList = (detailed ? properties : curatedProperties).map((prop) => {
+      const category = (prop.category ?? prop.dictionaryEntry?.category ?? 'General');
+      categories[category] = (categories[category] ?? 0) + 1;
+      return prop;
+    });
+
+    const summary: ObjectSummary = {
+      name: rawInfo?.name ?? rawInfo?.objectName ?? rawInfo?.displayName,
+      class: rawInfo?.class ?? rawInfo?.className ?? rawInfo?.type ?? rawInfo?.objectClass,
+      path: rawInfo?.path ?? rawInfo?.objectPath ?? objectPath,
+      parent: rawInfo?.outer ?? rawInfo?.parent,
+      tags: Array.isArray(rawInfo?.tags) ? rawInfo.tags : undefined,
+      propertyCount: properties.length,
+      curatedPropertyCount: curatedProperties.length,
+      filteredPropertyCount: filteredProperties.length,
+      categories
+    };
+
+    const info: ObjectInfo = {
+      class: summary.class,
+      name: summary.name,
+      path: summary.path,
+      parent: summary.parent,
+      tags: summary.tags,
+      properties: finalList,
+      functions: Array.isArray(rawInfo?.functions) ? rawInfo.functions : undefined,
+      interfaces: Array.isArray(rawInfo?.interfaces) ? rawInfo.interfaces : undefined,
+      flags: Array.isArray(rawInfo?.flags) ? rawInfo.flags : undefined,
+      summary,
+      filteredProperties: filteredProperties.length ? filteredProperties : undefined,
+      original: rawInfo
+    };
+
+    return info;
+  }
+
   async inspectObject(params: { objectPath: string; detailed?: boolean }) {
     // Check cache first if not requesting detailed info
     if (!params.detailed && this.objectCache.has(params.objectPath)) {
@@ -167,9 +397,12 @@ export class IntrospectionTools {
           };
         }
 
+        const rawInfo = response.info ?? response.result ?? response.data ?? response;
+        const curatedInfo = this.curateObjectInfo(rawInfo, params.objectPath, params.detailed ?? false);
+
         const result = {
           success: true,
-          info: response.info
+          info: curatedInfo
         };
 
         // Cache the result if successful and not detailed

@@ -27,7 +27,8 @@ public class McpAutomationBridge : ModuleRules
             {
                 "LevelSequence","LevelSequenceEditor","Sequencer","MovieScene","MovieSceneTools","MovieSceneTracks",
                 "Niagara","NiagaraEditor","Landscape","LandscapeEditor","LandscapeEditorUtilities","Foliage","FoliageEdit",
-                "AnimGraph","AnimationBlueprintLibrary","Persona","ToolMenus","EditorWidgets","PropertyEditor","LevelEditor"
+                "AnimGraph","AnimationBlueprintLibrary","Persona","ToolMenus","EditorWidgets","PropertyEditor","LevelEditor",
+                "ControlRig","ControlRigDeveloper","UMG","UMGEditor"
             });
 
             // Ensure editor builds expose full Blueprint graph editing APIs.

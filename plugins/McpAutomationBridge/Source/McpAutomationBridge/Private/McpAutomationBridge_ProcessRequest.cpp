@@ -241,6 +241,12 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleControlEditorAction consumed request"));
                 return;
             }
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleUiAction"));
+            if (HandleAndLog(TEXT("HandleUiAction"), [&]() { return HandleUiAction(RequestId, Action, Payload, RequestingSocket); }))
+            {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleUiAction consumed request"));
+                return;
+            }
             UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleBlueprintAction (late)"));
             if (HandleAndLog(TEXT("HandleBlueprintAction (late)"), [&]() { return HandleBlueprintAction(RequestId, Action, Payload, RequestingSocket); }))
             {
@@ -262,6 +268,11 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             }
             if (HandleAndLog(TEXT("HandleBuildEnvironmentAction"), [&]() { return HandleBuildEnvironmentAction(RequestId, Action, Payload, RequestingSocket); })) return;
             if (HandleAndLog(TEXT("HandleControlEnvironmentAction"), [&]() { return HandleControlEnvironmentAction(RequestId, Action, Payload, RequestingSocket); })) return;
+
+            // Additional consolidated tool handlers
+            if (HandleAndLog(TEXT("HandleSystemControlAction"), [&]() { return HandleSystemControlAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleConsoleCommandAction"), [&]() { return HandleConsoleCommandAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleInspectAction"), [&]() { return HandleInspectAction(RequestId, Action, Payload, RequestingSocket); })) return;
 
             // Unhandled action
             bDispatchHandled = true;

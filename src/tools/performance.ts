@@ -1,10 +1,19 @@
 // Performance tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation-bridge.js';
 import { Logger } from '../utils/logger.js';
 
 export class PerformanceTools {
   private log = new Logger('PerformanceTools');
-  constructor(private bridge: UnrealBridge) {}
+  private automationBridge?: AutomationBridge;
+
+  constructor(private bridge: UnrealBridge, automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
+
+  setAutomationBridge(automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
 
   // Start profiling
   async startProfiling(params: {
@@ -206,21 +215,37 @@ export class PerformanceTools {
     detailed?: boolean;
     outputPath?: string;
   }) {
+    // If output path is specified, use Automation Bridge for file writing
+    if (params.outputPath && this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('generate_memory_report', {
+          detailed: params.detailed ?? false,
+          outputPath: params.outputPath
+        });
+
+        return response.success
+          ? { success: true, message: response.message || 'Memory report saved to file' }
+          : { success: false, error: response.error || response.message || 'Failed to generate memory report' };
+      } catch (error) {
+        return { success: false, error: `Failed to generate memory report: ${error instanceof Error ? error.message : String(error)}` };
+      }
+    }
+
     const commands: string[] = [];
-    
+
     if (params.detailed) {
       commands.push('memreport -full');
     } else {
       commands.push('memreport');
     }
-    
-    // Writing reports to disk via console is not supported here; surface NOT_IMPLEMENTED when requested
+
+    // Writing reports to disk via console is not supported
     if (params.outputPath) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Saving memreport to a file is not supported via console; use editor API or plugin' };
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Saving memreport to a file requires C++ plugin support' };
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Memory report generated' };
   }
 
@@ -231,20 +256,35 @@ export class PerformanceTools {
     boostPlayerLocation?: boolean;
   }) {
     const commands: string[] = [];
-    
+
     commands.push(`r.TextureStreaming ${params.enabled ? 1 : 0}`);
-    
+
     if (params.poolSize !== undefined) {
       commands.push(`r.Streaming.PoolSize ${params.poolSize}`);
     }
-    
+
     if (params.boostPlayerLocation !== undefined) {
-      // Not a supported direct console option here
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Boosting player location for streaming is not supported via console; use editor/plugin API' };
+      // Use Automation Bridge for player location boosting
+      if (this.automationBridge) {
+        try {
+          const response = await this.automationBridge.sendAutomationRequest('configure_texture_streaming', {
+            enabled: params.enabled,
+            poolSize: params.poolSize,
+            boostPlayerLocation: params.boostPlayerLocation
+          });
+
+          return response.success
+            ? { success: true, message: response.message || 'Texture streaming configured with player location boost' }
+            : { success: false, error: response.error || response.message || 'Failed to configure texture streaming' };
+        } catch (error) {
+          return { success: false, error: `Failed to configure texture streaming: ${error instanceof Error ? error.message : String(error)}` };
+        }
+      }
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Boosting player location for streaming requires C++ plugin support' };
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Texture streaming configured' };
   }
 
@@ -313,19 +353,35 @@ export class PerformanceTools {
     mergeActors?: boolean;
   }) {
     const commands: string[] = [];
-    
+
     if (params.enableInstancing !== undefined) {
       commands.push(`r.MeshDrawCommands.DynamicInstancing ${params.enableInstancing ? 1 : 0}`);
     }
-    
+
     // Avoid using r.RHICmdBypass; it's a low-level debug toggle and not suitable for general batching control
-    
+
     if (params.mergeActors) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Actor merging is not available via console; use editor Merge Actors tool or plugin' };
+      // Use Automation Bridge for actor merging
+      if (this.automationBridge) {
+        try {
+          const response = await this.automationBridge.sendAutomationRequest('merge_actors', {
+            enableInstancing: params.enableInstancing,
+            enableBatching: params.enableBatching,
+            mergeActors: params.mergeActors
+          });
+
+          return response.success
+            ? { success: true, message: response.message || 'Actors merged for optimization' }
+            : { success: false, error: response.error || response.message || 'Failed to merge actors' };
+        } catch (error) {
+          return { success: false, error: `Failed to merge actors: ${error instanceof Error ? error.message : String(error)}` };
+        }
+      }
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Actor merging requires C++ plugin support' };
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Draw call optimization configured' };
   }
 

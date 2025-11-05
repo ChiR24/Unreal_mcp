@@ -95,7 +95,7 @@ export class ErrorHandler {
     // Unreal Engine specific errors
     if (
       errorMessage.includes('unreal') ||
-      errorMessage.includes('remote control') ||
+      errorMessage.includes('connection failed') ||
       errorMessage.includes('blueprint') ||
       errorMessage.includes('actor') ||
       errorMessage.includes('asset')

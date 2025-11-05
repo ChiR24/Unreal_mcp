@@ -285,8 +285,8 @@ export function createServer() {
   const assetTools = new AssetTools(bridge, automationBridge);
   const editorTools = new EditorTools(bridge);
   const materialTools = new MaterialTools(bridge, automationBridge);
-  const animationTools = new AnimationTools(bridge);
-  const physicsTools = new PhysicsTools(bridge);
+  const animationTools = new AnimationTools(bridge, automationBridge);
+  const physicsTools = new PhysicsTools(bridge, automationBridge);
   const niagaraTools = new NiagaraTools(bridge, automationBridge);
   const blueprintTools = new BlueprintTools(bridge, automationBridge);
   const levelTools = new LevelTools(bridge);
@@ -300,10 +300,12 @@ export function createServer() {
   landscapeTools.setAutomationBridge(automationBridge);
   foliageTools.setAutomationBridge(automationBridge);
   buildEnvAdvanced.setAutomationBridge(automationBridge);
+  animationTools.setAutomationBridge(automationBridge);
+  physicsTools.setAutomationBridge(automationBridge);
   const debugTools = new DebugVisualizationTools(bridge);
   const performanceTools = new PerformanceTools(bridge);
   const audioTools = new AudioTools(bridge);
-  const uiTools = new UITools(bridge);
+  const uiTools = new UITools(bridge, automationBridge);
   const sequenceTools = new SequenceTools(bridge, automationBridge);
   const introspectionTools = new IntrospectionTools(bridge);
   const visualTools = new VisualTools(bridge);
@@ -313,6 +315,7 @@ export function createServer() {
 
   // Wire automation bridge into other tools that can leverage native handlers
   try { audioTools.setAutomationBridge(automationBridge); } catch {}
+  try { uiTools.setAutomationBridge(automationBridge); } catch {}
   try { (visualTools as any).setAutomationBridge?.(automationBridge); } catch {}
 
   const server = new Server(

@@ -1083,37 +1083,6 @@ static inline USCS_Node* FindScsNodeByName(USimpleConstructionScript* SCS, const
     return nullptr;
 }
 
-// Lightweight registry-level SCS operation applier used for fast-mode testing
-static inline void ApplySCSOperationsToRegistry(const FString& NormalizedBlueprintPath, const TArray<TSharedPtr<FJsonValue>>& DeferredOps, TArray<TSharedPtr<FJsonValue>>& FinalSummaries, TArray<FString>& LocalWarnings)
-{
-    // Minimal registry-level simulation: record operation summaries and update
-    // the lightweight GBlueprintRegistry structure so tests can observe
-    // deterministic state without requiring heavy on-disk modifications.
-    FinalSummaries.Empty();
-    TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-    if (TSharedPtr<FJsonObject>* Found = GBlueprintRegistry.Find(NormalizedBlueprintPath)) Entry = *Found;
-    else { Entry = MakeShared<FJsonObject>(); Entry->SetStringField(TEXT("blueprintPath"), NormalizedBlueprintPath); Entry->SetArrayField(TEXT("constructionScripts"), TArray<TSharedPtr<FJsonValue>>() ); GBlueprintRegistry.Add(NormalizedBlueprintPath, Entry); }
-
-    for (int32 Index = 0; Index < DeferredOps.Num(); ++Index)
-    {
-        const TSharedPtr<FJsonObject> Op = DeferredOps[Index]->AsObject();
-        FString Type; Op->TryGetStringField(TEXT("type"), Type);
-        TSharedPtr<FJsonObject> Summary = MakeShared<FJsonObject>();
-        Summary->SetNumberField(TEXT("index"), Index);
-        Summary->SetStringField(TEXT("type"), Type.IsEmpty() ? TEXT("unknown") : Type);
-        Summary->SetBoolField(TEXT("success"), true);
-        FinalSummaries.Add(MakeShared<FJsonValueObject>(Summary));
-        // Record operation lightly in the registry for later inspection
-        if (Type.Equals(TEXT("add_component"), ESearchCase::IgnoreCase))
-        {
-            TArray<TSharedPtr<FJsonValue>> Scripts = Entry->HasField(TEXT("constructionScripts")) ? Entry->GetArrayField(TEXT("constructionScripts")) : TArray<TSharedPtr<FJsonValue>>();
-            TSharedPtr<FJsonObject> Record = MakeShared<FJsonObject>(); Record->SetStringField(TEXT("op"), TEXT("add_component")); Record->SetObjectField(TEXT("details"), Op);
-            Scripts.Add(MakeShared<FJsonValueObject>(Record));
-            Entry->SetArrayField(TEXT("constructionScripts"), Scripts);
-        }
-    }
-}
-
 #if WITH_EDITOR
 // Attempt to locate and load a Blueprint by several heuristics. Returns nullptr
 // on failure and populates OutNormalized and OutError accordingly.

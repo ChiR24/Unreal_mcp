@@ -32,6 +32,43 @@ export class AssetResources {
     }
   }
 
+  clearCache(dir?: string) {
+    if (!dir) {
+      this.cache.clear();
+      return;
+    }
+
+    const normalized = this.normalizeDir(dir);
+    for (const key of Array.from(this.cache.keys())) {
+      if (key.startsWith(`${normalized}::`)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  invalidateAssetPaths(paths: string[]) {
+    if (!Array.isArray(paths) || paths.length === 0) {
+      return;
+    }
+
+    const dirs = new Set<string>();
+    for (const rawPath of paths) {
+      if (typeof rawPath !== 'string' || rawPath.trim().length === 0) {
+        continue;
+      }
+      const normalized = this.normalizeDir(rawPath);
+      dirs.add(normalized);
+      const parent = this.parentDirectory(normalized);
+      if (parent) {
+        dirs.add(parent);
+      }
+    }
+
+    for (const dir of dirs) {
+      this.clearCache(dir);
+    }
+  }
+
   async list(dir = '/Game', _recursive = false, limit = 50) {
     // ALWAYS use non-recursive listing to show only immediate children
     // This prevents timeouts and makes navigation clearer
@@ -55,7 +92,7 @@ export class AssetResources {
       return {
         success: false,
         assets: [],
-        warning: 'Unreal Engine is not connected. Please ensure Unreal Engine is running with Remote Control enabled.',
+        warning: 'Unreal Engine is not connected. Please ensure Unreal Engine is running with the MCP server enabled.',
         connectionStatus: 'disconnected'
       };
     }
@@ -238,5 +275,20 @@ export class AssetResources {
     } catch {
       return false;
     }
+  }
+
+  private parentDirectory(path: string): string | null {
+    if (!path || typeof path !== 'string') {
+      return null;
+    }
+
+    const normalized = this.normalizeDir(path);
+    const lastSlash = normalized.lastIndexOf('/');
+    if (lastSlash <= 0) {
+      return normalized === '/' ? '/' : null;
+    }
+
+    const parent = normalized.substring(0, lastSlash);
+    return parent.length > 0 ? parent : '/';
   }
 }

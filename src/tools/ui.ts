@@ -1,9 +1,18 @@
 // UI tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation-bridge.js';
 import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
 
 export class UITools {
-  constructor(private bridge: UnrealBridge) {}
+  private automationBridge?: AutomationBridge;
+
+  constructor(private bridge: UnrealBridge, automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
+
+  setAutomationBridge(automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
 
   // Create widget blueprint
   async createWidget(params: {
@@ -12,7 +21,33 @@ export class UITools {
     savePath?: string;
   }) {
     const path = params.savePath || '/Game/UI/Widgets';
-    // Plugin-first: attempt to create the widget asset via the Automation
+    // Plugin-first: attempt to create the widget asset via the Automation Bridge.
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp = await this.automationBridge.sendAutomationRequest('system_control', {
+          action: 'create_widget',
+          name: params.name,
+          widgetType: params.type,
+          savePath: path
+        });
+        if (resp && resp.success !== false) {
+          const result = resp.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? (result as Record<string, unknown>) : undefined;
+          const widgetPath = typeof resultObj?.widgetPath === 'string' ? (resultObj.widgetPath as string) : `${path}/${params.name}`;
+          const message = resp.message || `Widget created at ${widgetPath}`;
+          return {
+            success: true,
+            message,
+            widgetPath,
+            exists: Boolean(resultObj?.exists)
+          };
+        }
+      } catch (error) {
+        console.warn('UITools.createWidget automation bridge request failed, falling back to editor function:', error);
+      }
+    }
+
+    // Fallback: attempt to create the widget asset via the Automation
     // Bridge plugin using the generic CREATE_ASSET function. If the plugin
     // does not implement the action the bridge will fall back to executing
     // the Python template (deprecated and gated by server opt-in).
@@ -44,7 +79,7 @@ export class UITools {
     }
   }
 
-  // Add widget component
+  // Add widget component (requires C++ plugin)
   async addWidgetComponent(_params: {
     widgetName: string;
     componentType: 'Button' | 'Text' | 'Image' | 'ProgressBar' | 'Slider' | 'CheckBox' | 'ComboBox' | 'TextBox' | 'ScrollBox' | 'Canvas' | 'VerticalBox' | 'HorizontalBox' | 'Grid' | 'Overlay';
@@ -56,10 +91,27 @@ export class UITools {
       alignment?: [number, number];
     };
   }) {
-    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Widget component operations require plugin/editor API; console commands are not available' };
+    if (!this.automationBridge) {
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Widget component operations require C++ plugin support' };
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('add_widget_component', {
+        widgetName: _params.widgetName,
+        componentType: _params.componentType,
+        componentName: _params.componentName,
+        slot: _params.slot
+      });
+
+      return response.success
+        ? { success: true, message: response.message || 'Widget component added' }
+        : { success: false, error: response.error || response.message || 'Failed to add widget component' };
+    } catch (error) {
+      return { success: false, error: `Failed to add widget component: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
-  // Set text
+  // Set text (requires C++ plugin)
   async setWidgetText(_params: {
     widgetName: string;
     componentName: string;
@@ -68,10 +120,29 @@ export class UITools {
     color?: [number, number, number, number];
     fontFamily?: string;
   }) {
-    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Setting widget text via console is not supported; use plugin/editor API' };
+    if (!this.automationBridge) {
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Setting widget text requires C++ plugin support' };
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('set_widget_text', {
+        widgetName: _params.widgetName,
+        componentName: _params.componentName,
+        text: _params.text,
+        fontSize: _params.fontSize,
+        color: _params.color,
+        fontFamily: _params.fontFamily
+      });
+
+      return response.success
+        ? { success: true, message: response.message || 'Widget text set' }
+        : { success: false, error: response.error || response.message || 'Failed to set widget text' };
+    } catch (error) {
+      return { success: false, error: `Failed to set widget text: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
-  // Set image
+  // Set image (requires C++ plugin)
   async setWidgetImage(_params: {
     widgetName: string;
     componentName: string;
@@ -79,10 +150,28 @@ export class UITools {
     tint?: [number, number, number, number];
     sizeToContent?: boolean;
   }) {
-    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Setting widget images via console is not supported; use plugin/editor API' };
+    if (!this.automationBridge) {
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Setting widget images requires C++ plugin support' };
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('set_widget_image', {
+        widgetName: _params.widgetName,
+        componentName: _params.componentName,
+        imagePath: _params.imagePath,
+        tint: _params.tint,
+        sizeToContent: _params.sizeToContent
+      });
+
+      return response.success
+        ? { success: true, message: response.message || 'Widget image set' }
+        : { success: false, error: response.error || response.message || 'Failed to set widget image' };
+    } catch (error) {
+      return { success: false, error: `Failed to set widget image: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
-  // Create HUD
+  // Create HUD (requires C++ plugin)
   async createHUD(_params: {
     name: string;
     elements?: Array<{
@@ -91,16 +180,47 @@ export class UITools {
       size?: [number, number];
     }>;
   }) {
-    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating HUDs via console is not supported; use plugin/editor API' };
+    if (!this.automationBridge) {
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating HUDs requires C++ plugin support' };
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('create_hud', {
+        name: _params.name,
+        elements: _params.elements
+      });
+
+      return response.success
+        ? { success: true, message: response.message || 'HUD created' }
+        : { success: false, error: response.error || response.message || 'Failed to create HUD' };
+    } catch (error) {
+      return { success: false, error: `Failed to create HUD: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
-  // Show/Hide widget
+  // Show/Hide widget (requires C++ plugin)
   async setWidgetVisibility(_params: {
     widgetName: string;
     visible: boolean;
     playerIndex?: number;
   }) {
-    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Showing/hiding widgets via console is not supported; use plugin/editor API' };
+    if (!this.automationBridge) {
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Showing/hiding widgets requires C++ plugin support' };
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('set_widget_visibility', {
+        widgetName: _params.widgetName,
+        visible: _params.visible,
+        playerIndex: _params.playerIndex ?? 0
+      });
+
+      return response.success
+        ? { success: true, message: response.message || `Widget ${_params.visible ? 'shown' : 'hidden'}` }
+        : { success: false, error: response.error || response.message || 'Failed to set widget visibility' };
+    } catch (error) {
+      return { success: false, error: `Failed to set widget visibility: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
   // Add widget to viewport
@@ -128,12 +248,27 @@ export class UITools {
     }
   }
 
-  // Remove widget from viewport
+  // Remove widget from viewport (requires C++ plugin)
   async removeWidgetFromViewport(_params: {
     widgetName: string;
     playerIndex?: number;
   }) {
-    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Removing widgets via console is not supported; use plugin/editor API' };
+    if (!this.automationBridge) {
+      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Removing widgets requires C++ plugin support' };
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('remove_widget_from_viewport', {
+        widgetName: _params.widgetName,
+        playerIndex: _params.playerIndex ?? 0
+      });
+
+      return response.success
+        ? { success: true, message: response.message || 'Widget removed from viewport' }
+        : { success: false, error: response.error || response.message || 'Failed to remove widget from viewport' };
+    } catch (error) {
+      return { success: false, error: `Failed to remove widget from viewport: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
   // Create menu

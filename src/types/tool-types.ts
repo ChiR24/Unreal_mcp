@@ -41,8 +41,21 @@ export interface Rotation3D {
 
 export interface ControlActorResponse extends BaseToolResponse {
   actor?: string;
-  deleted?: string;
+  actorName?: string;
+  actorPath?: string;
+  componentName?: string;
+  componentPath?: string;
+  componentClass?: string;
+  componentPaths?: Array<{ name: string; path: string; class?: string }>;
+  components?: Array<Record<string, unknown>>;
+  actors?: Array<Record<string, unknown>>;
+  deleted?: string | string[];
+  deletedCount?: number;
+  missing?: string[];
   physicsEnabled?: boolean;
+  visible?: boolean;
+  tag?: string;
+  snapshotName?: string;
 }
 
 // Editor Control Types
@@ -68,6 +81,13 @@ export interface AnimationPhysicsResponse extends BaseToolResponse {
   playing?: boolean;
   playRate?: number;
   ragdollActive?: boolean;
+  path?: string;
+  blendSpacePath?: string;
+  skeletonPath?: string;
+  controlRigPath?: string;
+  twoDimensional?: boolean;
+  warnings?: string[];
+  details?: unknown;
 }
 
 // Effects System Types
@@ -150,6 +170,71 @@ export interface ToolParameters {
     force: Vector3D;
   };
 
+  SpawnBlueprintParams: {
+    blueprintPath: string;
+    actorName?: string;
+    location?: Vector3D;
+    rotation?: Rotation3D;
+  };
+
+  SetTransformParams: {
+    actorName: string;
+    location?: Vector3D;
+    rotation?: Rotation3D;
+    scale?: Vector3D;
+  };
+
+  SetVisibilityParams: {
+    actorName: string;
+    visible: boolean;
+  };
+
+  ComponentParams: {
+    actorName: string;
+    componentType?: string;
+    componentName?: string;
+    properties?: Record<string, unknown>;
+  };
+
+  DuplicateActorParams: {
+    actorName: string;
+    newName?: string;
+    offset?: Vector3D;
+  };
+
+  AttachActorParams: {
+    childActor: string;
+    parentActor: string;
+  };
+
+  DetachActorParams: {
+    actorName: string;
+  };
+
+  TagActorParams: {
+    actorName: string;
+    tag: string;
+  };
+
+  FindByTagParams: {
+    tag: string;
+    matchType?: string;
+  };
+
+  FindByNameParams: {
+    name: string;
+  };
+
+  BlueprintVariablesParams: {
+    actorName: string;
+    variables: Record<string, unknown>;
+  };
+
+  SnapshotActorParams: {
+    actorName: string;
+    snapshotName: string;
+  };
+
   // Editor Control
   SetCameraParams: {
     location?: Vector3D;
@@ -168,7 +253,26 @@ export interface ToolParameters {
 
 // Consolidated tool action types
 export type AssetAction = 'list' | 'import' | 'create_material' | 'create_material_instance';
-export type ActorAction = 'spawn' | 'delete' | 'apply_force';
+export type ActorAction =
+  | 'spawn'
+  | 'spawn_blueprint'
+  | 'delete'
+  | 'delete_by_tag'
+  | 'duplicate'
+  | 'apply_force'
+  | 'set_transform'
+  | 'get_transform'
+  | 'set_visibility'
+  | 'add_component'
+  | 'set_component_properties'
+  | 'get_components'
+  | 'add_tag'
+  | 'find_by_tag'
+  | 'find_by_name'
+  | 'set_blueprint_variables'
+  | 'create_snapshot'
+  | 'attach'
+  | 'detach';
 export type EditorAction = 'play' | 'stop' | 'set_camera' | 'set_view_mode';
 export type LevelAction = 'load' | 'save' | 'stream' | 'create_light' | 'build_lighting';
 export type AnimationAction =
@@ -223,7 +327,22 @@ export interface ConsolidatedToolParams {
     classPath?: string;
     location?: Vector3D;
     rotation?: Rotation3D;
+    scale?: Vector3D;
     force?: Vector3D;
+    blueprintPath?: string;
+    componentType?: string;
+    componentName?: string;
+    properties?: Record<string, unknown>;
+    visible?: boolean;
+    newName?: string;
+    offset?: Vector3D;
+    tag?: string;
+    matchType?: string;
+    variables?: Record<string, unknown>;
+    snapshotName?: string;
+    childActor?: string;
+    parentActor?: string;
+    actorNames?: string[];
   };
 
   control_editor: {
@@ -231,6 +350,18 @@ export interface ConsolidatedToolParams {
     location?: Vector3D;
     rotation?: Rotation3D;
     viewMode?: string;
+    speed?: number;
+    filename?: string;
+    fov?: number;
+    width?: number;
+    height?: number;
+    command?: string;
+    steps?: number;
+    frameRate?: number;
+    durationSeconds?: number;
+    bookmarkName?: string;
+    category?: string;
+    preferences?: Record<string, unknown>;
   };
 
   manage_level: {
@@ -269,6 +400,11 @@ export interface ConsolidatedToolParams {
     physicsAssetName?: string;
     blendWeight?: number;
 
+    meshPath?: string;
+    assignToMesh?: boolean;
+    previewSkeleton?: string;
+    generateConstraints?: boolean;
+
     // Vehicle config
     vehicleName?: string;
     vehicleType?: 'Car' | 'Bike' | 'Tank' | 'Aircraft' | string;
@@ -290,12 +426,13 @@ export interface ConsolidatedToolParams {
     // IK / Retargeting / Procedural
     chain?: any;
     effector?: any;
-    settings?: any;
+    // Retargeting
     sourceSkeleton?: string;
     targetSkeleton?: string;
-
-    // Physics simulation setup
-    params?: Record<string, any>;
+    assets?: string[];
+    retargetAssets?: string[];
+    suffix?: string;
+    overwrite?: boolean;
 
     // Cleanup
     artifacts?: string[];

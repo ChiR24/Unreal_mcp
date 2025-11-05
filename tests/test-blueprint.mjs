@@ -78,16 +78,16 @@ const testCases = [
   { scenario: 'Probe SubobjectData handle', toolName: 'manage_blueprint', arguments: { action: 'probe_handle', name: BP_PATH, componentClass: 'StaticMeshComponent' }, expected: 'success' },
 
   // 11. Verify registry entries
-  { scenario: 'Fetch blueprint and verify registry entries', toolName: 'manage_blueprint', arguments: { action: 'get', blueprintPath: BP_PATH }, expected: 'success', verify: { blueprintHasVariable: ['MyVar','VarInt','VarBool'], blueprintHasFunction: ['DoSomething'], blueprintHasEvent: ['OnCustom'] } },
+  { scenario: 'Fetch blueprint and verify registry entries', toolName: 'manage_blueprint', arguments: { action: 'get', name: BP_PATH }, expected: 'success', verify: { blueprintHasVariable: ['MyVar','VarInt','VarBool'], blueprintHasFunction: ['DoSomething'], blueprintHasEvent: ['OnCustom'] } },
 
   // 11.1 Direct plugin get to inspect full blueprint snapshot
-  { scenario: 'Retrieve blueprint details via blueprint_get', toolName: 'blueprint_get', arguments: { blueprintPath: BP_PATH }, expected: 'success' },
+  { scenario: 'Retrieve blueprint details via blueprint_get', toolName: 'blueprint_get', arguments: { action: 'get', blueprintPath: BP_PATH }, expected: 'success' },
 
   // 12. Remove event (idempotent safe)
   { scenario: 'Remove custom event', toolName: 'manage_blueprint', arguments: { action: 'remove_event', name: BP_PATH, eventName: 'OnCustom', waitForCompletion: true }, expected: 'success' },
 
   // 13. Negative: attempt to fetch unknown blueprint (expect not found)
-  { scenario: 'Fetch unknown blueprint should fail', toolName: 'manage_blueprint', arguments: { action: 'get', blueprintPath: '/Game/Blueprints/DOES_NOT_EXIST_123' }, expected: 'not found' },
+  { scenario: 'Fetch unknown blueprint should fail', toolName: 'manage_blueprint', arguments: { action: 'get', name: '/Game/Blueprints/DOES_NOT_EXIST_123' }, expected: 'not found' },
 
   // 14. Idempotent add variable check — ensure no hard failure on duplicate add
   { scenario: 'Idempotent add variable check', toolName: 'manage_blueprint', arguments: { action: 'add_variable', name: BP_PATH, variableName: 'MyVar', variableType: 'Float' }, expected: 'success' },

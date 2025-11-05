@@ -1,4 +1,6 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation-bridge.js';
+import { cleanObject } from '../utils/safe-json.js';
 import { validateAssetParams } from '../utils/validation.js';
 
 type CreateAnimationBlueprintSuccess = {
@@ -52,7 +54,15 @@ export class AnimationTools {
     createdAt: number;
   }>();
 
-  constructor(private bridge: UnrealBridge) {}
+  private automationBridge?: AutomationBridge;
+
+  constructor(private bridge: UnrealBridge, automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
+
+  setAutomationBridge(automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
 
   private normalizePath(basePath: string | undefined, name: string): { directory: string; assetName: string; fullPath: string } {
     const directory = (basePath && basePath.trim().replace(/\/+$/, '')) || '/Game/Animations';
@@ -92,6 +102,35 @@ export class AnimationTools {
       const assetName = sanitized.name;
       const assetPath = sanitized.savePath ?? targetPath;
       const fullPath = `${assetPath}/${assetName}`;
+
+      // Prefer native plugin support when available
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp = await this.automationBridge.sendAutomationRequest('create_animation_blueprint', {
+            name: assetName,
+            skeletonPath: params.skeletonPath,
+            savePath: assetPath
+          }, { timeoutMs: 60000 });
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
+          if (resp && resp.success !== false && resultObj) {
+            const blueprintPath = typeof resultObj.blueprintPath === 'string' ? resultObj.blueprintPath : fullPath;
+            const warnings = Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
+            const details = resultObj.details as string[] | undefined;
+            this.trackArtifact(assetName, { path: blueprintPath, type: 'AnimationBlueprint' });
+            return {
+              success: true,
+              message: resp.message || `Animation Blueprint created at ${blueprintPath}`,
+              path: blueprintPath,
+              skeleton: params.skeletonPath,
+              warnings,
+              details
+            };
+          }
+        } catch (error) {
+          console.warn('AnimationTools.createAnimationBlueprint bridge call failed, falling back to console command:', error);
+        }
+      }
 
       const commands: string[] = [
         `CreateAsset AnimationBlueprint ${assetName} ${assetPath}`,
@@ -181,7 +220,10 @@ export class AnimationTools {
     horizontalAxis?: { name: string; minValue: number; maxValue: number };
     verticalAxis?: { name: string; minValue: number; maxValue: number };
     samples?: Array<{ animation: string; x: number; y?: number }>;
-  }): Promise<{ success: true; message: string; path: string } | { success: false; error: string }> {
+  }): Promise<
+    | { success: true; message: string; path: string; skeletonPath?: string; warnings?: string[]; details?: unknown }
+    | { success: false; error: string }
+  > {
     try {
       const targetPath = params.savePath ?? '/Game/Animations';
       const validation = validateAssetParams({ name: params.name, savePath: targetPath });
@@ -194,6 +236,38 @@ export class AnimationTools {
       const assetPath = sanitized.savePath ?? targetPath;
       const dimensions = params.dimensions === 2 ? 2 : 1;
       const blendSpaceType = dimensions === 2 ? 'BlendSpace' : 'BlendSpace1D';
+
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp = await this.automationBridge.sendAutomationRequest('animation_physics', cleanObject({
+            action: 'create_blend_space',
+            name: assetName,
+            savePath: assetPath,
+            skeletonPath: params.skeletonPath,
+            dimensions,
+            horizontalAxis: params.horizontalAxis,
+            verticalAxis: params.verticalAxis,
+            samples: params.samples
+          }));
+          if (resp && resp.success !== false) {
+            const result = resp.result ?? resp;
+            const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
+            const path = resultObj && typeof resultObj.blendSpacePath === 'string' ? resultObj.blendSpacePath : `${assetPath}/${assetName}`;
+            const warnings = resultObj && Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
+            const details = resultObj ? resultObj.details : undefined;
+            return {
+              success: true,
+              message: resp.message || `Blend Space ${assetName} created`,
+              path,
+              skeletonPath: params.skeletonPath,
+              details,
+              warnings
+            };
+          }
+        } catch (error) {
+          console.warn('AnimationTools.createBlendSpace bridge call failed, falling back to console implementation:', error);
+        }
+      }
 
       const commands: string[] = [
         `CreateAsset ${blendSpaceType} ${assetName} ${assetPath}`,
@@ -244,7 +318,10 @@ export class AnimationTools {
       bone?: string;
       defaultValue?: unknown;
     }>;
-  }): Promise<{ success: true; message: string; path: string } | { success: false; error: string }> {
+  }): Promise<
+    | { success: true; message: string; path: string; warnings?: string[]; details?: unknown }
+    | { success: false; error: string }
+  > {
     try {
       const targetPath = params.savePath ?? '/Game/Animations';
       const validation = validateAssetParams({ name: params.name, savePath: targetPath });
@@ -256,6 +333,35 @@ export class AnimationTools {
       const assetName = sanitized.name;
       const assetPath = sanitized.savePath ?? targetPath;
       const fullPath = `${assetPath}/${assetName}`;
+
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp = await this.automationBridge.sendAutomationRequest('animation_physics', cleanObject({
+            action: 'setup_ik',
+            name: assetName,
+            savePath: assetPath,
+            skeletonPath: params.skeletonPath,
+            controls: params.controls
+          }), { timeoutMs: 60000 });
+          if (resp && resp.success !== false) {
+            const result = resp.result ?? resp;
+            const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
+            const controlRigPath = resultObj && typeof resultObj.controlRigPath === 'string' ? resultObj.controlRigPath : fullPath;
+            const warnings = resultObj && Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
+            const details = resultObj ? resultObj.details : undefined;
+            this.trackArtifact(assetName, { path: controlRigPath, type: 'ControlRig' });
+            return {
+              success: true,
+              message: resp.message || `Control Rig ${assetName} created`,
+              path: controlRigPath,
+              warnings,
+              details
+            };
+          }
+        } catch (error) {
+          console.warn('AnimationTools.setupControlRig bridge call failed, falling back to console implementation:', error);
+        }
+      }
 
       const commands: string[] = [
         `CreateAsset ControlRig ${assetName} ${assetPath}`,

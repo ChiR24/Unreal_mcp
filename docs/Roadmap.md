@@ -40,7 +40,7 @@ if (args.action === 'inspect_object') {
 ```
 
 **3. The Raw Data Problem:**
-The `getObjectProperties` function will return what the Unreal Remote Control API provides: a massive, unfiltered JSON object. It will be noisy and difficult for an LLM to parse. It might look something like this:
+The `getObjectProperties` function will return what the Unreal MCP plugin provides: a comprehensive JSON object of actor properties. It will be noisy and difficult for an LLM to parse. It might look something like this:
 
 ```json
 // Raw, messy response from Unreal
@@ -79,7 +79,7 @@ Here is what the `curateObjectProperties` function must do:
 *   **B. Filter Out the Noise:** You need a set of rules to remove useless properties.
     *   **Keyword Filtering:** Ignore any property containing "Internal", "Transient", or starting with "bHidden".
     *   **Type Filtering:** Ignore complex, non-serializable types like object pointers or delegates, unless they are common structs like Vectors or Colors.
-    *   **Read-Only Filtering:** The Remote Control API can tell you if a property is read-only. Discard these for `set_property` actions, but maybe keep them for pure inspection.
+    *   **Read-Only Filtering:** The MCP plugin can tell you if a property is read-only. Discard these for `set_property` actions, but maybe keep them for pure inspection.
 
 *   **C. Enrich the Data:** This is the most crucial step. You will add descriptive metadata to the remaining properties. You would maintain a "Property Dictionary" within your MCP.
 

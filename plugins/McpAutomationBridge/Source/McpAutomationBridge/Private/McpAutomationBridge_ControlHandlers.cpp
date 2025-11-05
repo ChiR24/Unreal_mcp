@@ -26,6 +26,19 @@
 #endif
 // Additional editor headers for viewport control
 #include "Editor.h"
+#include "Modules/ModuleManager.h"
+#if __has_include("LevelEditor.h")
+#include "LevelEditor.h"
+#define MCP_HAS_LEVEL_EDITOR_MODULE 1
+#else
+#define MCP_HAS_LEVEL_EDITOR_MODULE 0
+#endif
+#if __has_include("Settings/LevelEditorPlaySettings.h")
+#include "Settings/LevelEditorPlaySettings.h"
+#define MCP_HAS_LEVEL_EDITOR_PLAY_SETTINGS 1
+#else
+#define MCP_HAS_LEVEL_EDITOR_PLAY_SETTINGS 0
+#endif
 #include "EditorViewportClient.h"
 #include "Engine/Blueprint.h"
 #include "Components/PrimitiveComponent.h"
@@ -464,6 +477,105 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(const FString& Requ
             return true;
         }
 
+        if (LowerSub == TEXT("get_transform") || LowerSub == TEXT("get_actor_transform"))
+        {
+            FString TargetName; Payload->TryGetStringField(TEXT("actorName"), TargetName);
+            if (TargetName.IsEmpty())
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("actorName required"), nullptr, TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+
+            AActor* Found = FindActorByName(TargetName);
+            if (!Found)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetStringField(TEXT("error"), TEXT("Actor not found"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Actor not found"), Resp, TEXT("ACTOR_NOT_FOUND"));
+                return true;
+            }
+
+            const FTransform Current = Found->GetActorTransform();
+            const FVector Location = Current.GetLocation();
+            const FRotator Rotation = Current.GetRotation().Rotator();
+            const FVector Scale = Current.GetScale3D();
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            auto MakeArray = [](const FVector& Vec)
+            {
+                TArray<TSharedPtr<FJsonValue>> Arr;
+                Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
+                Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
+                Arr.Add(MakeShared<FJsonValueNumber>(Vec.Z));
+                return Arr;
+            };
+
+            TArray<TSharedPtr<FJsonValue>> LocArray = MakeArray(Location);
+            Resp->SetArrayField(TEXT("location"), LocArray);
+
+            TArray<TSharedPtr<FJsonValue>> RotArray;
+            RotArray.Add(MakeShared<FJsonValueNumber>(Rotation.Pitch));
+            RotArray.Add(MakeShared<FJsonValueNumber>(Rotation.Yaw));
+            RotArray.Add(MakeShared<FJsonValueNumber>(Rotation.Roll));
+            Resp->SetArrayField(TEXT("rotation"), RotArray);
+
+            TArray<TSharedPtr<FJsonValue>> ScaleArray = MakeArray(Scale);
+            Resp->SetArrayField(TEXT("scale"), ScaleArray);
+
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor transform retrieved"), Resp, FString());
+            return true;
+        }
+
+        if (LowerSub == TEXT("set_visibility") || LowerSub == TEXT("set_actor_visibility"))
+        {
+            FString TargetName; Payload->TryGetStringField(TEXT("actorName"), TargetName);
+            if (TargetName.IsEmpty())
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("actorName required"), nullptr, TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+
+            bool bVisible = true;
+            if (Payload->HasField(TEXT("visible")))
+            {
+                Payload->TryGetBoolField(TEXT("visible"), bVisible);
+            }
+
+            AActor* Found = FindActorByName(TargetName);
+            if (!Found)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetStringField(TEXT("error"), TEXT("Actor not found"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Actor not found"), Resp, TEXT("ACTOR_NOT_FOUND"));
+                return true;
+            }
+
+            Found->Modify();
+            Found->SetActorHiddenInGame(!bVisible);
+            Found->SetActorEnableCollision(bVisible);
+
+            for (UActorComponent* Comp : Found->GetComponents())
+            {
+                if (!Comp) continue;
+                if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Comp))
+                {
+                    Prim->SetVisibility(bVisible, true);
+                    Prim->SetHiddenInGame(!bVisible);
+                }
+            }
+
+            Found->MarkComponentsRenderStateDirty();
+            Found->MarkPackageDirty();
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetBoolField(TEXT("visible"), bVisible);
+            Resp->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor visibility updated"), Resp, FString());
+            return true;
+        }
+
         if (LowerSub == TEXT("add_component"))
         {
             FString TargetName; Payload->TryGetStringField(TEXT("actorName"), TargetName);
@@ -777,6 +889,91 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(const FString& Requ
             return true;
         }
 
+        if (LowerSub == TEXT("attach"))
+        {
+            FString ChildName; Payload->TryGetStringField(TEXT("childActor"), ChildName);
+            FString ParentName; Payload->TryGetStringField(TEXT("parentActor"), ParentName);
+            if (ChildName.IsEmpty() || ParentName.IsEmpty())
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("childActor and parentActor required"), nullptr, TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+
+            AActor* Child = FindActorByName(ChildName);
+            AActor* Parent = FindActorByName(ParentName);
+            if (!Child || !Parent)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetStringField(TEXT("error"), TEXT("Child or parent actor not found"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Child or parent actor not found"), Resp, TEXT("ACTOR_NOT_FOUND"));
+                return true;
+            }
+
+            USceneComponent* ChildRoot = Child->GetRootComponent();
+            USceneComponent* ParentRoot = Parent->GetRootComponent();
+            if (!ChildRoot || !ParentRoot)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Actor missing root component"), nullptr, TEXT("ROOT_MISSING"));
+                return true;
+            }
+
+            Child->Modify();
+            ChildRoot->Modify();
+            ChildRoot->AttachToComponent(ParentRoot, FAttachmentTransformRules::KeepWorldTransform);
+            Child->SetOwner(Parent);
+            Child->MarkPackageDirty();
+            Parent->MarkPackageDirty();
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetStringField(TEXT("child"), Child->GetActorLabel());
+            Resp->SetStringField(TEXT("parent"), Parent->GetActorLabel());
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor attached"), Resp, FString());
+            return true;
+        }
+
+        if (LowerSub == TEXT("detach"))
+        {
+            FString TargetName; Payload->TryGetStringField(TEXT("actorName"), TargetName);
+            if (TargetName.IsEmpty())
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("actorName required"), nullptr, TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+
+            AActor* Found = FindActorByName(TargetName);
+            if (!Found)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetStringField(TEXT("error"), TEXT("Actor not found"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Actor not found"), Resp, TEXT("ACTOR_NOT_FOUND"));
+                return true;
+            }
+
+            USceneComponent* RootComp = Found->GetRootComponent();
+            if (!RootComp || !RootComp->GetAttachParent())
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), true);
+                Resp->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+                Resp->SetStringField(TEXT("note"), TEXT("Actor was not attached"));
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor already detached"), Resp, FString());
+                return true;
+            }
+
+            Found->Modify();
+            RootComp->Modify();
+            RootComp->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+            Found->SetOwner(nullptr);
+            Found->MarkPackageDirty();
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor detached"), Resp, FString());
+            return true;
+        }
+
         if (LowerSub == TEXT("find_by_tag"))
         {
             FString TagValue; Payload->TryGetStringField(TEXT("tag"), TagValue);
@@ -828,6 +1025,121 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(const FString& Requ
             Resp->SetArrayField(TEXT("actors"), Matches);
             Resp->SetNumberField(TEXT("count"), Matches.Num());
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actors found"), Resp, FString());
+            return true;
+        }
+
+        if (LowerSub == TEXT("add_tag"))
+        {
+            FString TargetName; Payload->TryGetStringField(TEXT("actorName"), TargetName);
+            FString TagValue; Payload->TryGetStringField(TEXT("tag"), TagValue);
+            if (TargetName.IsEmpty() || TagValue.IsEmpty())
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("actorName and tag required"), nullptr, TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+
+            AActor* Found = FindActorByName(TargetName);
+            if (!Found)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetStringField(TEXT("error"), TEXT("Actor not found"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Actor not found"), Resp, TEXT("ACTOR_NOT_FOUND"));
+                return true;
+            }
+
+            const FName TagName(*TagValue);
+            const bool bAlreadyHad = Found->Tags.Contains(TagName);
+
+            Found->Modify();
+            Found->Tags.AddUnique(TagName);
+            Found->MarkPackageDirty();
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetBoolField(TEXT("wasPresent"), bAlreadyHad);
+            Resp->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+            Resp->SetStringField(TEXT("tag"), TagName.ToString());
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Tag applied to actor"), Resp, FString());
+            return true;
+        }
+
+        if (LowerSub == TEXT("find_by_name"))
+        {
+            FString Query; Payload->TryGetStringField(TEXT("name"), Query);
+            if (Query.IsEmpty())
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("name required"), nullptr, TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+
+            const TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+            TArray<TSharedPtr<FJsonValue>> Matches;
+            for (AActor* Actor : AllActors)
+            {
+                if (!Actor) continue;
+                const FString Label = Actor->GetActorLabel();
+                const FString Name = Actor->GetName();
+                const FString Path = Actor->GetPathName();
+                const bool bMatches = Label.Contains(Query, ESearchCase::IgnoreCase) ||
+                    Name.Contains(Query, ESearchCase::IgnoreCase) ||
+                    Path.Contains(Query, ESearchCase::IgnoreCase);
+                if (bMatches)
+                {
+                    TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+                    Entry->SetStringField(TEXT("label"), Label);
+                    Entry->SetStringField(TEXT("name"), Name);
+                    Entry->SetStringField(TEXT("path"), Path);
+                    Entry->SetStringField(TEXT("class"), Actor->GetClass() ? Actor->GetClass()->GetPathName() : TEXT(""));
+                    Matches.Add(MakeShared<FJsonValueObject>(Entry));
+                }
+            }
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetNumberField(TEXT("count"), Matches.Num());
+            Resp->SetArrayField(TEXT("actors"), Matches);
+            Resp->SetStringField(TEXT("query"), Query);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor query executed"), Resp, FString());
+            return true;
+        }
+
+        if (LowerSub == TEXT("delete_by_tag"))
+        {
+            FString TagValue; Payload->TryGetStringField(TEXT("tag"), TagValue);
+            if (TagValue.IsEmpty())
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("tag required"), nullptr, TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+
+            const FName TagName(*TagValue);
+            const TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+            TArray<FString> Deleted;
+
+            for (AActor* Actor : AllActors)
+            {
+                if (!Actor) continue;
+                if (Actor->ActorHasTag(TagName))
+                {
+                    const FString Label = Actor->GetActorLabel();
+                    if (ActorSS->DestroyActor(Actor))
+                    {
+                        Deleted.Add(Label);
+                    }
+                }
+            }
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetStringField(TEXT("tag"), TagName.ToString());
+            Resp->SetNumberField(TEXT("deletedCount"), Deleted.Num());
+            TArray<TSharedPtr<FJsonValue>> DeletedArray;
+            for (const FString& Name : Deleted)
+            {
+                DeletedArray.Add(MakeShared<FJsonValueString>(Name));
+            }
+            Resp->SetArrayField(TEXT("deleted"), DeletedArray);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actors deleted by tag"), Resp, FString());
             return true;
         }
 
@@ -1023,15 +1335,67 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(const FString& Req
     {
         if (LowerSub == TEXT("play"))
         {
-            // PIE start helper varies across engine versions; provide a safe fallback response
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Play in Editor start is not implemented for this engine version"), nullptr, TEXT("NOT_IMPLEMENTED"));
+            if (!GEditor)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+                return true;
+            }
+
+            if (GEditor->PlayWorld)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), true);
+                Resp->SetBoolField(TEXT("alreadyPlaying"), true);
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Play session already active"), Resp, FString());
+                return true;
+            }
+
+            FRequestPlaySessionParams PlayParams;
+            PlayParams.WorldType = EPlaySessionWorldType::PlayInEditor;
+#if MCP_HAS_LEVEL_EDITOR_PLAY_SETTINGS
+            PlayParams.EditorPlaySettings = GetMutableDefault<ULevelEditorPlaySettings>();
+#endif
+#if MCP_HAS_LEVEL_EDITOR_MODULE
+            if (FLevelEditorModule* LevelEditorModule = FModuleManager::GetModulePtr<FLevelEditorModule>(TEXT("LevelEditor")))
+            {
+                TSharedPtr<IAssetViewport> DestinationViewport = LevelEditorModule->GetFirstActiveViewport();
+                if (DestinationViewport.IsValid())
+                {
+                    PlayParams.DestinationSlateViewport = DestinationViewport;
+                }
+            }
+#endif
+
+            GEditor->RequestPlaySession(PlayParams);
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Play in Editor started"), Resp, FString());
             return true;
         }
 
         if (LowerSub == TEXT("stop"))
         {
-            // PIE stop helper varies across engine versions; attempt graceful response only
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Play in Editor stop is not implemented for this engine version"), nullptr, TEXT("NOT_IMPLEMENTED"));
+            if (!GEditor)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+                return true;
+            }
+
+            if (!GEditor->PlayWorld)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), true);
+                Resp->SetBoolField(TEXT("alreadyStopped"), true);
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Play session not active"), Resp, FString());
+                return true;
+            }
+
+            GEditor->RequestEndPlayMap();
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Play in Editor stopped"), Resp, FString());
             return true;
         }
 
@@ -1068,7 +1432,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(const FString& Req
                 }
             }
 
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("NOT_IMPLEMENTED"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
             return true;
         }
 
@@ -1106,7 +1470,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(const FString& Req
                 }
             }
 
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("NOT_IMPLEMENTED"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
             return true;
         }
 

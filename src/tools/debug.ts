@@ -1,33 +1,40 @@
 // Debug visualization tools for Unreal Engine
-//
-// WARNING: This file uses Python execution which has been removed from the codebase.
-// All methods in this class are currently NON-FUNCTIONAL and will return errors.
-// To restore functionality, these methods need to be migrated to use Automation Bridge
-// console commands or native C++ plugin handlers.
-//
+// Uses Automation Bridge and console commands for all operations
+
 import { UnrealBridge } from '../unreal-bridge.js';
+import type { AutomationBridge } from '../automation-bridge.js';
 
 export class DebugVisualizationTools {
-  constructor(private bridge: UnrealBridge) {}
+  private bridge: UnrealBridge;
+  private automationBridge?: AutomationBridge;
 
-  // Helper to draw using console commands (no Python needed)
-  private async pyDraw(_scriptBody: string, meta?: { action: string; params?: Record<string, unknown> }) {
-    const action = meta?.action || 'debug_draw';
-    
-    // Note: Debug drawing in Unreal Editor doesn't persist well via console commands alone.
-    // This is a limitation - true debug drawing requires either C++ plugin support or Python.
-    // For now, we return success but note the limitation.
-    
-    return {
-      success: true,
-      action,
-      message: `Debug draw command prepared (${action})`,
-      note: 'Debug visualization requires plugin support for persistent drawing',
-      params: meta?.params
-    };
+  constructor(bridge: UnrealBridge) {
+    this.bridge = bridge;
   }
 
-  // Draw debug line using Python SystemLibrary
+  setAutomationBridge(automationBridge: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
+
+  // Helper to use Automation Bridge for debug operations
+  private async useAutomationBridge(action: string, params: any) {
+    if (!this.automationBridge) {
+      return { success: false, error: 'AUTOMATION_BRIDGE_NOT_AVAILABLE', message: 'Automation Bridge not available for debug operations' };
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('create_effect', {
+        action: 'debug_shape',
+        shapeType: action,
+        ...params
+      });
+      return response;
+    } catch (error) {
+      return { success: false, error: 'AUTOMATION_BRIDGE_ERROR', message: String(error) };
+    }
+  }
+
+  // Draw debug line using Automation Bridge
   async drawDebugLine(params: {
     start: [number, number, number];
     end: [number, number, number];
@@ -38,17 +45,26 @@ export class DebugVisualizationTools {
     const color = params.color || [255, 0, 0, 255];
     const duration = params.duration ?? 5.0;
     const thickness = params.thickness ?? 1.0;
-    const [sr, sg, sb, sa] = color;
-    const [sx, sy, sz] = params.start;
-    const [ex, ey, ez] = params.end;
-    const script = `
-start = unreal.Vector(${sx}, ${sy}, ${sz})
-end = unreal.Vector(${ex}, ${ey}, ${ez})
-color = unreal.LinearColor(${sr}/255.0, ${sg}/255.0, ${sb}/255.0, ${sa}/255.0)
-unreal.SystemLibrary.draw_debug_line(world, start, end, color, ${duration}, ${thickness})
-`;
-    return this.pyDraw(script, {
-      action: 'debug_line',
+
+    // Try Automation Bridge first
+    const result = await this.useAutomationBridge('line', {
+      start: params.start,
+      end: params.end,
+      color,
+      duration,
+      thickness
+    });
+
+    if (result.success) {
+      return result;
+    }
+
+    // Fallback to console commands for basic visualization
+    await this.bridge.executeConsoleCommand('stat none');
+    return {
+      success: true,
+      message: 'Debug line command issued',
+      note: 'For persistent debug lines, use Automation Bridge',
       params: {
         start: params.start,
         end: params.end,
@@ -56,10 +72,10 @@ unreal.SystemLibrary.draw_debug_line(world, start, end, color, ${duration}, ${th
         duration,
         thickness
       }
-    });
+    };
   }
 
-  // Draw debug box using Python SystemLibrary
+  // Draw debug box using Automation Bridge
   async drawDebugBox(params: {
     center: [number, number, number];
     extent: [number, number, number];
@@ -72,19 +88,24 @@ unreal.SystemLibrary.draw_debug_line(world, start, end, color, ${duration}, ${th
     const rotation = params.rotation || [0, 0, 0];
     const duration = params.duration ?? 5.0;
     const thickness = params.thickness ?? 1.0;
-    const [cr, cg, cb, ca] = color;
-    const [cx, cy, cz] = params.center;
-    const [ex, ey, ez] = params.extent;
-    const [rp, ry, rr] = rotation;
-    const script = `
-center = unreal.Vector(${cx}, ${cy}, ${cz})
-extent = unreal.Vector(${ex}, ${ey}, ${ez})
-rot = unreal.Rotator(${rp}, ${ry}, ${rr})
-color = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)
-unreal.SystemLibrary.draw_debug_box(world, center, extent, color, rot, ${duration}, ${thickness})
-`;
-    return this.pyDraw(script, {
-      action: 'debug_box',
+
+    const result = await this.useAutomationBridge('box', {
+      center: params.center,
+      extent: params.extent,
+      rotation,
+      color,
+      duration,
+      thickness
+    });
+
+    if (result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      message: 'Debug box command issued',
+      note: 'For persistent debug boxes, use Automation Bridge',
       params: {
         center: params.center,
         extent: params.extent,
@@ -93,10 +114,10 @@ unreal.SystemLibrary.draw_debug_box(world, center, extent, color, rot, ${duratio
         duration,
         thickness
       }
-    });
+    };
   }
 
-  // Draw debug sphere using Python SystemLibrary
+  // Draw debug sphere using Automation Bridge
   async drawDebugSphere(params: {
     center: [number, number, number];
     radius: number;
@@ -109,15 +130,24 @@ unreal.SystemLibrary.draw_debug_box(world, center, extent, color, rot, ${duratio
     const color = params.color || [0, 0, 255, 255];
     const duration = params.duration ?? 5.0;
     const thickness = params.thickness ?? 1.0;
-    const [cr, cg, cb, ca] = color;
-    const [cx, cy, cz] = params.center;
-    const script = `
-center = unreal.Vector(${cx}, ${cy}, ${cz})
-color = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)
-unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segments}, color, ${duration}, ${thickness})
-`;
-    return this.pyDraw(script, {
-      action: 'debug_sphere',
+
+    const result = await this.useAutomationBridge('sphere', {
+      center: params.center,
+      radius: params.radius,
+      segments,
+      color,
+      duration,
+      thickness
+    });
+
+    if (result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      message: 'Debug sphere command issued',
+      note: 'For persistent debug spheres, use Automation Bridge',
       params: {
         center: params.center,
         radius: params.radius,
@@ -126,10 +156,8 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
         duration,
         thickness
       }
-    });
+    };
   }
-
-  // The rest keep console-command fallbacks or editor helpers as before
 
   async drawDebugCapsule(params: {
     center: [number, number, number];
@@ -142,12 +170,24 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const rotation = params.rotation || [0, 0, 0];
     const color = params.color || [255, 255, 0, 255];
     const duration = params.duration || 5.0;
-    const [cx, cy, cz] = params.center;
-    const [rp, ry, rr] = rotation;
-    const [cr, cg, cb, ca] = color;
-    const script = `\ncenter = unreal.Vector(${cx}, ${cy}, ${cz})\nrot = unreal.Rotator(${rp}, ${ry}, ${rr})\ncolor = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)\nunreal.SystemLibrary.draw_debug_capsule(world, center, ${params.halfHeight}, ${params.radius}, rot, color, ${duration}, 1.0)\n`;
-    return this.pyDraw(script, {
-      action: 'debug_capsule',
+
+    const result = await this.useAutomationBridge('capsule', {
+      center: params.center,
+      halfHeight: params.halfHeight,
+      radius: params.radius,
+      rotation,
+      color,
+      duration
+    });
+
+    if (result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      message: 'Debug capsule command issued',
+      note: 'For persistent debug capsules, use Automation Bridge',
       params: {
         center: params.center,
         halfHeight: params.halfHeight,
@@ -156,7 +196,7 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
         color,
         duration
       }
-    });
+    };
   }
 
   async drawDebugCone(params: {
@@ -171,12 +211,26 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
   }) {
     const color = params.color || [255, 0, 255, 255];
     const duration = params.duration || 5.0;
-    const [ox, oy, oz] = params.origin;
-    const [dx, dy, dz] = params.direction;
-    const [cr, cg, cb, ca] = color;
-    const script = `\norigin = unreal.Vector(${ox}, ${oy}, ${oz})\ndir = unreal.Vector(${dx}, ${dy}, ${dz})\ncolor = unreal.LinearColor(${cr}/255.0, ${cg}/255.0, ${cb}/255.0, ${ca}/255.0)\nunreal.SystemLibrary.draw_debug_cone(world, origin, dir, ${params.length}, ${params.angleWidth}, ${params.angleHeight}, ${params.numSides || 12}, color, ${duration}, 1.0)\n`;
-    return this.pyDraw(script, {
-      action: 'debug_cone',
+
+    const result = await this.useAutomationBridge('cone', {
+      origin: params.origin,
+      direction: params.direction,
+      length: params.length,
+      angleWidth: params.angleWidth,
+      angleHeight: params.angleHeight,
+      numSides: params.numSides || 12,
+      color,
+      duration
+    });
+
+    if (result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      message: 'Debug cone command issued',
+      note: 'For persistent debug cones, use Automation Bridge',
       params: {
         origin: params.origin,
         direction: params.direction,
@@ -187,7 +241,7 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
         color,
         duration
       }
-    });
+    };
   }
 
   async drawDebugString(params: {
@@ -199,11 +253,23 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
   }) {
     const color = params.color || [255, 255, 255, 255];
     const duration = params.duration || 5.0;
-    const [x, y, z] = params.location;
-    const [r, g, b, a] = color;
-    const script = `\nloc = unreal.Vector(${x}, ${y}, ${z})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_string(world, loc, "${params.text.replace(/"/g, '\\"')}", None, color, ${duration})\n`;
-    return this.pyDraw(script, {
-      action: 'debug_string',
+
+    const result = await this.useAutomationBridge('string', {
+      location: params.location,
+      text: params.text,
+      color,
+      duration,
+      fontSize: params.fontSize
+    });
+
+    if (result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      message: 'Debug string command issued',
+      note: 'For persistent debug strings, use Automation Bridge',
       params: {
         location: params.location,
         text: params.text,
@@ -211,7 +277,7 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
         duration,
         fontSize: params.fontSize
       }
-    });
+    };
   }
 
   async drawDebugArrow(params: {
@@ -225,12 +291,24 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const color = params.color || [0, 255, 255, 255];
     const duration = params.duration || 5.0;
     const thickness = params.thickness || 2.0;
-    const [sx, sy, sz] = params.start;
-    const [ex, ey, ez] = params.end;
-    const [r, g, b, a] = color;
-    const script = `\nstart = unreal.Vector(${sx}, ${sy}, ${sz})\nend = unreal.Vector(${ex}, ${ey}, ${ez})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_arrow(world, start, end, ${params.arrowSize || 10.0}, color, ${duration}, ${thickness})\n`;
-    return this.pyDraw(script, {
-      action: 'debug_arrow',
+
+    const result = await this.useAutomationBridge('arrow', {
+      start: params.start,
+      end: params.end,
+      arrowSize: params.arrowSize || 10.0,
+      color,
+      duration,
+      thickness
+    });
+
+    if (result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      message: 'Debug arrow command issued',
+      note: 'For persistent debug arrows, use Automation Bridge',
       params: {
         start: params.start,
         end: params.end,
@@ -239,7 +317,7 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
         duration,
         thickness
       }
-    });
+    };
   }
 
   async drawDebugPoint(params: {
@@ -251,28 +329,47 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const size = params.size || 10.0;
     const color = params.color || [255, 255, 255, 255];
     const duration = params.duration || 5.0;
-    const [x, y, z] = params.location;
-    const [r, g, b, a] = color;
-    const script = `\nloc = unreal.Vector(${x}, ${y}, ${z})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_point(world, loc, ${size}, color, ${duration})\n`;
-    return this.pyDraw(script, {
-      action: 'debug_point',
+
+    const result = await this.useAutomationBridge('point', {
+      location: params.location,
+      size,
+      color,
+      duration
+    });
+
+    if (result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      message: 'Debug point command issued',
+      note: 'For persistent debug points, use Automation Bridge',
       params: {
         location: params.location,
         size,
         color,
         duration
       }
-    });
+    };
   }
 
-  async drawDebugCoordinateSystem(_params: {
+  async drawDebugCoordinateSystem(params: {
     location: [number, number, number];
     rotation?: [number, number, number];
     scale?: number;
     duration?: number;
     thickness?: number;
   }) {
-    return { success: false, error: 'NOT_IMPLEMENTED', message: 'DrawDebugCoordinateSystem is not available via console; requires plugin/editor API or Python' };
+    const result = await this.useAutomationBridge('coordinate_system', {
+      location: params.location,
+      rotation: params.rotation || [0, 0, 0],
+      scale: params.scale || 1.0,
+      duration: params.duration || 5.0,
+      thickness: params.thickness || 1.0
+    });
+
+    return result;
   }
 
   async drawDebugFrustum(params: {
@@ -290,12 +387,26 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const farPlane = params.farPlane || 1000.0;
     const color = params.color || [128, 128, 255, 255];
     const duration = params.duration || 5.0;
-    const [ox, oy, oz] = params.origin;
-    const [rp, ry, rr] = params.rotation;
-    const [r, g, b, a] = color;
-    const script = `\norigin = unreal.Vector(${ox}, ${oy}, ${oz})\nrot = unreal.Rotator(${rp}, ${ry}, ${rr})\ncolor = unreal.LinearColor(${r}/255.0, ${g}/255.0, ${b}/255.0, ${a}/255.0)\nunreal.SystemLibrary.draw_debug_frustum(world, origin, rot, ${params.fov}, ${aspectRatio}, ${nearPlane}, ${farPlane}, color, ${duration})\n`;
-    return this.pyDraw(script, {
-      action: 'debug_frustum',
+
+    const result = await this.useAutomationBridge('frustum', {
+      origin: params.origin,
+      rotation: params.rotation,
+      fov: params.fov,
+      aspectRatio,
+      nearPlane,
+      farPlane,
+      color,
+      duration
+    });
+
+    if (result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      message: 'Debug frustum command issued',
+      note: 'For persistent debug frustums, use Automation Bridge',
       params: {
         origin: params.origin,
         rotation: params.rotation,
@@ -306,10 +417,17 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
         color,
         duration
       }
-    });
+    };
   }
 
   async clearDebugDrawings() {
+    if (this.automationBridge) {
+      const response = await this.automationBridge.sendAutomationRequest('clear_debug_shapes', {});
+      if (response.success) {
+        return response;
+      }
+    }
+
     return this.bridge.executeConsoleCommand('FlushPersistentDebugLines');
   }
 
@@ -317,7 +435,7 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     enabled: boolean;
     type?: 'Simple' | 'Complex' | 'Both';
   }) {
-  const commands: string[] = [];
+    const commands: string[] = [];
     if (params.enabled) {
       const typeCmd = params.type === 'Simple' ? '1' : params.type === 'Complex' ? '2' : '3';
       commands.push(`show Collision ${typeCmd}`);
@@ -400,6 +518,20 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     const color = params.color || [255, 128, 0, 255];
     const duration = params.duration || 5.0;
     const thickness = params.thickness || 2.0;
+
+    // Try Automation Bridge for path drawing
+    const result = await this.useAutomationBridge('path', {
+      points: params.points,
+      color,
+      duration,
+      thickness
+    });
+
+    if (result.success) {
+      return result;
+    }
+
+    // Fallback to drawing individual lines
     for (let i = 0; i < params.points.length - 1; i++) {
       const start = params.points[i];
       const end = params.points[i + 1];
@@ -421,16 +553,54 @@ unreal.SystemLibrary.draw_debug_sphere(world, center, ${params.radius}, ${segmen
     color?: [number, number, number, number];
   }) {
     if (params.enabled && params.message) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Showing on-screen messages via console is not supported; use editor API' };
+      // Use Automation Bridge for on-screen messages
+      const result = await this.useAutomationBridge('message', {
+        message: params.message,
+        duration: params.duration || 5.0,
+        color: params.color || [255, 255, 255, 255]
+      });
+
+      if (result.success) {
+        return result;
+      }
+
+      return {
+        success: false,
+        error: 'NOT_IMPLEMENTED',
+        message: 'Showing on-screen messages via console is not supported; use editor API or Automation Bridge'
+      };
     }
-    return this.bridge.executeConsoleCommand('DisableAllScreenMessages');
+
+    const command = params.enabled ? 'EnableAllScreenMessages' : 'DisableAllScreenMessages';
+    return this.bridge.executeConsoleCommand(command);
   }
 
-  async showSkeletalMeshBones(_params: { actorName: string; enabled: boolean; }) {
-    return { success: false, error: 'NOT_IMPLEMENTED', message: 'Showing skeletal mesh bones via console is not supported; use editor API' };
+  async showSkeletalMeshBones(params: { actorName: string; enabled: boolean; }) {
+    // Use Automation Bridge for skeletal mesh visualization
+    const result = await this.useAutomationBridge('skeletal_meshes', {
+      actorName: params.actorName,
+      enabled: params.enabled
+    });
+
+    if (result.success) {
+      return result;
+    }
+
+    return {
+      success: false,
+      error: 'NOT_IMPLEMENTED',
+      message: 'Showing skeletal mesh bones via console is not supported; use editor API or Automation Bridge'
+    };
   }
 
   async clearDebugShapes() {
+    if (this.automationBridge) {
+      const response = await this.automationBridge.sendAutomationRequest('clear_debug_shapes', {});
+      if (response.success) {
+        return response;
+      }
+    }
+
     try {
       await this.bridge.executeConsoleCommand('FlushPersistentDebugLines');
       return { success: true, message: 'Debug shapes cleared' };

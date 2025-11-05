@@ -243,37 +243,19 @@ export class NiagaraTools {
     isUserParameter?: boolean;
   }) {
     try {
-      const paramType = params.isUserParameter ? 'User' : 'System';
-      let valueStr = '';
-      // Prefer plugin transport when available
-      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
-        try {
-          const resp: any = await this.automationBridge.sendAutomationRequest('set_niagara_parameter', {
-            systemName: params.systemName,
-            parameterName: params.parameterName,
-            parameterType: params.parameterType,
-            value: params.value,
-            isUserParameter: params.isUserParameter === true
-          });
-          if (resp && resp.success !== false) return { success: true, message: resp.message || `Parameter ${params.parameterName} set on ${params.systemName}`, applied: resp.applied ?? resp.result?.applied } as any;
-          const errTxt = String(resp?.error ?? resp?.message ?? '');
-          if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
-            // fall through to console fallback
-          } else {
-            return { success: false, message: resp?.message ?? 'Set parameter failed', error: resp?.error ?? 'SET_PARAMETER_FAILED' } as any;
-          }
-        } catch (_e) {
-          // fall back to console execution below
-        }
+      const automationBridge = (this.bridge as any).automationBridge;
+      if (!automationBridge) {
+        return { success: false, error: 'Automation bridge not available' };
       }
-      switch (params.parameterType) {
-        case 'Float': case 'Int': case 'Bool': valueStr = String(params.value); break;
-        case 'Vector': { const v = params.value as number[]; valueStr = `${v[0]} ${v[1]} ${v[2]}`; break; }
-        case 'Color': { const c = params.value as number[]; valueStr = `${c[0]} ${c[1]} ${c[2]} ${c[3] || 1}`; break; }
-      }
-      const command = `SetNiagara${paramType}Parameter ${params.systemName} ${params.parameterName} ${params.parameterType} ${valueStr}`;
-      await this.bridge.executeConsoleCommand(command);
-      return { success: true, message: `Parameter ${params.parameterName} set on ${params.systemName}` };
+      const resp: any = await automationBridge.sendAutomationRequest('set_niagara_parameter', {
+        systemName: params.systemName,
+        parameterName: params.parameterName,
+        parameterType: params.parameterType,
+        value: params.value,
+        isUserParameter: params.isUserParameter === true
+      });
+      if (resp && resp.success !== false) return { success: true, message: resp.message || `Parameter ${params.parameterName} set on ${params.systemName}`, applied: resp.applied ?? resp.result?.applied } as any;
+      return { success: false, message: resp?.message ?? 'Set parameter failed', error: resp?.error ?? 'SET_PARAMETER_FAILED' } as any;
     } catch (err) {
       return { success: false, error: `Failed to set parameter: ${err}` };
     }

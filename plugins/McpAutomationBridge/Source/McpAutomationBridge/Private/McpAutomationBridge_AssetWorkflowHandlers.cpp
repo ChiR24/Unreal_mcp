@@ -41,11 +41,8 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
         return false;
     }
 
-    // Intentionally report NOT_IMPLEMENTED for fixup_redirectors to align with
-    // current test expectations and avoid accidental handling of unrelated actions.
-    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Redirector fixup not implemented by plugin"), nullptr, TEXT("NOT_IMPLEMENTED"));
-    return true;
-#if 0 && WITH_EDITOR
+    // Implementation of redirector fixup functionality
+#if WITH_EDITOR
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("fixup_redirectors payload missing"), TEXT("INVALID_PAYLOAD"));

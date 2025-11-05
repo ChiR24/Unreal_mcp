@@ -54,7 +54,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
 
     TSharedPtr<FJsonObject> LocalPayload = Payload.IsValid() ? Payload : MakeShared<FJsonObject>();
 
-    auto SerializeResponseAndSend = [&](bool bOk, const FString& Msg, const TSharedPtr<FJsonObject>& ResObj, const FString& ErrCode = FString())
+    auto SendResponse = [&](bool bOk, const FString& Msg, const TSharedPtr<FJsonObject>& ResObj, const FString& ErrCode = FString())
     {
         SendAutomationResponse(RequestingSocket, RequestId, bOk, Msg, ResObj, ErrCode);
     };
@@ -69,31 +69,294 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         if (LowerSub == TEXT("particle"))
         {
             FString Preset; LocalPayload->TryGetStringField(TEXT("preset"), Preset);
+            if (Preset.IsEmpty()) 
+            { 
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), false);
+                Resp->SetStringField(TEXT("error"), TEXT("preset parameter required for particle spawning"));
+                SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Preset path required"), Resp, TEXT("INVALID_ARGUMENT")); 
+                return true; 
+            }
+
+            // Location and optional rotation/scale
+            FVector Loc(0,0,0);
+            if (LocalPayload->HasField(TEXT("location")))
+            {
+                const TSharedPtr<FJsonValue> LocVal = LocalPayload->TryGetField(TEXT("location"));
+                if (LocVal.IsValid())
+                {
+                    if (LocVal->Type == EJson::Array)
+                    {
+                        const TArray<TSharedPtr<FJsonValue>>& Arr = LocVal->AsArray();
+                        if (Arr.Num() >= 3) Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
+                    }
+                    else if (LocVal->Type == EJson::Object)
+                    {
+                        const TSharedPtr<FJsonObject> O = LocVal->AsObject();
+                        if (O.IsValid()) Loc = FVector((float)(O->HasField(TEXT("x")) ? O->GetNumberField(TEXT("x")) : 0.0), (float)(O->HasField(TEXT("y")) ? O->GetNumberField(TEXT("y")) : 0.0), (float)(O->HasField(TEXT("z")) ? O->GetNumberField(TEXT("z")) : 0.0));
+                    }
+                }
+            }
+
+            // Rotation may be an array
+            TArray<double> RotArr = {0,0,0};
+            const TArray<TSharedPtr<FJsonValue>>* RA = nullptr;
+            if (LocalPayload->TryGetArrayField(TEXT("rotation"), RA) && RA && RA->Num() >= 3)
+            {
+                RotArr[0] = (*RA)[0]->AsNumber(); RotArr[1] = (*RA)[1]->AsNumber(); RotArr[2] = (*RA)[2]->AsNumber();
+            }
+
+            // Scale may be an array or a single numeric value
+            TArray<double> ScaleArr = {1,1,1};
+            const TArray<TSharedPtr<FJsonValue>>* ScaleJsonArr = nullptr;
+            if (LocalPayload->TryGetArrayField(TEXT("scale"), ScaleJsonArr) && ScaleJsonArr && ScaleJsonArr->Num() >= 3)
+            {
+                ScaleArr[0] = (*ScaleJsonArr)[0]->AsNumber(); ScaleArr[1] = (*ScaleJsonArr)[1]->AsNumber(); ScaleArr[2] = (*ScaleJsonArr)[2]->AsNumber();
+            }
+            else if (LocalPayload->TryGetNumberField(TEXT("scale"), ScaleArr[0]))
+            {
+                ScaleArr[1] = ScaleArr[2] = ScaleArr[0];
+            }
+
+            const bool bAutoDestroy = LocalPayload->HasField(TEXT("autoDestroy")) ? LocalPayload->GetBoolField(TEXT("autoDestroy")) : false;
+
+#if WITH_EDITOR
+            if (!GEditor)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), false);
+                Resp->SetStringField(TEXT("error"), TEXT("Editor not available"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), Resp, TEXT("EDITOR_NOT_AVAILABLE"));
+                return true;
+            }
+            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+            if (!ActorSS)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), false);
+                Resp->SetStringField(TEXT("error"), TEXT("EditorActorSubsystem not available"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("EditorActorSubsystem not available"), Resp, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+                return true;
+            }
+
+            UObject* ParticleObj = UEditorAssetLibrary::LoadAsset(Preset);
+            if (!ParticleObj)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), false);
+                Resp->SetStringField(TEXT("error"), TEXT("Particle preset asset not found"));
+                Resp->SetStringField(TEXT("preset"), Preset);
+                SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Particle preset not found"), Resp, TEXT("PRESET_NOT_FOUND"));
+                return true;
+            }
+
+            const FRotator SpawnRot(static_cast<float>(RotArr[0]), static_cast<float>(RotArr[1]), static_cast<float>(RotArr[2]));
+            AActor* Spawned = ActorSS->SpawnActorFromClass(ANiagaraActor::StaticClass(), Loc, SpawnRot);
+            if (!Spawned)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), false);
+                Resp->SetStringField(TEXT("error"), TEXT("Failed to spawn particle actor"));
+                SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Failed to spawn particle actor"), Resp, TEXT("SPAWN_FAILED"));
+                return true;
+            }
+
+            UNiagaraComponent* NiComp = Spawned->FindComponentByClass<UNiagaraComponent>();
+            if (NiComp && ParticleObj->IsA<UNiagaraSystem>())
+            {
+                NiComp->SetAsset(Cast<UNiagaraSystem>(ParticleObj));
+                NiComp->SetWorldScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
+                NiComp->Activate(true);
+            }
+
+            Spawned->SetActorLabel(FString::Printf(TEXT("Particle_%s_%lld"), *FPackageName::GetShortName(Preset), FDateTime::Now().ToUnixTimestamp()));
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetStringField(TEXT("particlePath"), Preset);
+            Resp->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
+            Resp->SetNumberField(TEXT("actorId"), Spawned->GetUniqueID());
+            SendAutomationResponse(RequestingSocket, RequestId,true, TEXT("Particle preset spawned"), Resp, FString());
+            return true;
+#else
             TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
             Resp->SetBoolField(TEXT("success"), false);
-            Resp->SetStringField(TEXT("error"), TEXT("Particle preset spawning not implemented."));
-            if (!Preset.IsEmpty()) { Resp->SetStringField(TEXT("preset"), Preset); }
-            SerializeResponseAndSend(false, TEXT("Particle subaction not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
+            Resp->SetStringField(TEXT("error"), TEXT("Particle spawning requires editor build"));
+            Resp->SetStringField(TEXT("preset"), Preset);
+            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Particle spawning not available in non-editor build"), Resp, TEXT("NOT_AVAILABLE"));
             return true;
+#endif
         }
 
         // Handle debug shapes
         if (LowerSub == TEXT("debug_shape"))
         {
             FString ShapeType; LocalPayload->TryGetStringField(TEXT("shapeType"), ShapeType);
+            if (ShapeType.IsEmpty()) 
+            { 
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), false);
+                Resp->SetStringField(TEXT("error"), TEXT("shapeType parameter required for debug shape drawing"));
+                SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("shapeType required"), Resp, TEXT("INVALID_ARGUMENT")); 
+                return true; 
+            }
+
+            // Location
+            FVector Loc(0,0,0);
+            if (LocalPayload->HasField(TEXT("location")))
+            {
+                const TSharedPtr<FJsonValue> LocVal = LocalPayload->TryGetField(TEXT("location"));
+                if (LocVal.IsValid())
+                {
+                    if (LocVal->Type == EJson::Array)
+                    {
+                        const TArray<TSharedPtr<FJsonValue>>& Arr = LocVal->AsArray();
+                        if (Arr.Num() >= 3) Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
+                    }
+                    else if (LocVal->Type == EJson::Object)
+                    {
+                        const TSharedPtr<FJsonObject> O = LocVal->AsObject();
+                        if (O.IsValid()) Loc = FVector((float)(O->HasField(TEXT("x")) ? O->GetNumberField(TEXT("x")) : 0.0), (float)(O->HasField(TEXT("y")) ? O->GetNumberField(TEXT("y")) : 0.0), (float)(O->HasField(TEXT("z")) ? O->GetNumberField(TEXT("z")) : 0.0));
+                    }
+                }
+            }
+
+            // Color (default: red)
+            TArray<double> ColorArr = {255, 0, 0, 255};
+            const TArray<TSharedPtr<FJsonValue>>* ColorJsonArr = nullptr;
+            if (LocalPayload->TryGetArrayField(TEXT("color"), ColorJsonArr) && ColorJsonArr && ColorJsonArr->Num() >= 4)
+            {
+                ColorArr[0] = (*ColorJsonArr)[0]->AsNumber(); 
+                ColorArr[1] = (*ColorJsonArr)[1]->AsNumber(); 
+                ColorArr[2] = (*ColorJsonArr)[2]->AsNumber(); 
+                ColorArr[3] = (*ColorJsonArr)[3]->AsNumber();
+            }
+
+            // Duration (default: 5.0 seconds)
+            const float Duration = LocalPayload->HasField(TEXT("duration")) ? (float)LocalPayload->GetNumberField(TEXT("duration")) : 5.0f;
+
+            // Size/Radius (default: 100.0)
+            const float Size = LocalPayload->HasField(TEXT("size")) ? (float)LocalPayload->GetNumberField(TEXT("size")) : 100.0f;
+
+            // Thickness for lines (default: 2.0)
+            const float Thickness = LocalPayload->HasField(TEXT("thickness")) ? (float)LocalPayload->GetNumberField(TEXT("thickness")) : 2.0f;
+
+#if WITH_EDITOR
+            if (!GEditor)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), false);
+                Resp->SetStringField(TEXT("error"), TEXT("Editor not available for debug drawing"));
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), Resp, TEXT("EDITOR_NOT_AVAILABLE"));
+                return true;
+            }
+
+            // Get the current world for debug drawing
+            UWorld* World = GEditor->GetEditorWorldContext().World();
+            if (!World)
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), false);
+                Resp->SetStringField(TEXT("error"), TEXT("No world available for debug drawing"));
+                SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("No world available"), Resp, TEXT("NO_WORLD"));
+                return true;
+            }
+
+            const FColor DebugColor((uint8)ColorArr[0], (uint8)ColorArr[1], (uint8)ColorArr[2], (uint8)ColorArr[3]);
+            const FString LowerShapeType = ShapeType.ToLower();
+
+            if (LowerShapeType == TEXT("sphere"))
+            {
+                DrawDebugSphere(World, Loc, Size, 16, DebugColor, false, Duration, 0, Thickness);
+            }
+            else if (LowerShapeType == TEXT("box"))
+            {
+                FVector BoxSize = FVector(Size);
+                if (LocalPayload->HasField(TEXT("boxSize")))
+                {
+                    const TArray<TSharedPtr<FJsonValue>>* BoxSizeArr = nullptr;
+                    if (LocalPayload->TryGetArrayField(TEXT("boxSize"), BoxSizeArr) && BoxSizeArr && BoxSizeArr->Num() >= 3)
+                    {
+                        BoxSize = FVector((float)(*BoxSizeArr)[0]->AsNumber(), (float)(*BoxSizeArr)[1]->AsNumber(), (float)(*BoxSizeArr)[2]->AsNumber());
+                    }
+                }
+                DrawDebugBox(World, Loc, BoxSize, FRotator::ZeroRotator.Quaternion(), DebugColor, false, Duration, 0, Thickness);
+            }
+            else if (LowerShapeType == TEXT("circle"))
+            {
+                DrawDebugCircle(World, Loc, Size, 32, DebugColor, false, Duration, 0, Thickness, FVector::UpVector);
+            }
+            else if (LowerShapeType == TEXT("line"))
+            {
+                FVector EndLoc = Loc + FVector(100, 0, 0);
+                if (LocalPayload->HasField(TEXT("endLocation")))
+                {
+                    const TSharedPtr<FJsonValue> EndVal = LocalPayload->TryGetField(TEXT("endLocation"));
+                    if (EndVal.IsValid())
+                    {
+                        if (EndVal->Type == EJson::Array)
+                        {
+                            const TArray<TSharedPtr<FJsonValue>>& Arr = EndVal->AsArray();
+                            if (Arr.Num() >= 3) EndLoc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
+                        }
+                        else if (EndVal->Type == EJson::Object)
+                        {
+                            const TSharedPtr<FJsonObject> O = EndVal->AsObject();
+                            if (O.IsValid()) EndLoc = FVector((float)(O->HasField(TEXT("x")) ? O->GetNumberField(TEXT("x")) : 0.0), (float)(O->HasField(TEXT("y")) ? O->GetNumberField(TEXT("y")) : 0.0), (float)(O->HasField(TEXT("z")) ? O->GetNumberField(TEXT("z")) : 0.0));
+                        }
+                    }
+                }
+                DrawDebugLine(World, Loc, EndLoc, DebugColor, false, Duration, 0, Thickness);
+            }
+            else if (LowerShapeType == TEXT("point"))
+            {
+                DrawDebugPoint(World, Loc, Size, DebugColor, false, Duration);
+            }
+            else if (LowerShapeType == TEXT("coordinate"))
+            {
+                FRotator Rot = FRotator::ZeroRotator;
+                if (LocalPayload->HasField(TEXT("rotation")))
+                {
+                    const TArray<TSharedPtr<FJsonValue>>* RotArr = nullptr;
+                    if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotArr) && RotArr && RotArr->Num() >= 3)
+                    {
+                        Rot = FRotator((float)(*RotArr)[0]->AsNumber(), (float)(*RotArr)[1]->AsNumber(), (float)(*RotArr)[2]->AsNumber());
+                    }
+                }
+                DrawDebugCoordinateSystem(World, Loc, Rot, Size, false, Duration, 0, Thickness);
+            }
+            else
+            {
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), false);
+                Resp->SetStringField(TEXT("error"), FString::Printf(TEXT("Unsupported shape type: %s"), *ShapeType));
+                Resp->SetStringField(TEXT("supportedShapes"), TEXT("sphere, box, circle, line, point, coordinate"));
+                SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Unsupported shape type"), Resp, TEXT("UNSUPPORTED_SHAPE"));
+                return true;
+            }
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetStringField(TEXT("shapeType"), ShapeType);
+            Resp->SetStringField(TEXT("location"), FString::Printf(TEXT("%.2f,%.2f,%.2f"), Loc.X, Loc.Y, Loc.Z));
+            Resp->SetNumberField(TEXT("duration"), Duration);
+            SendAutomationResponse(RequestingSocket, RequestId,true, TEXT("Debug shape drawn"), Resp, FString());
+            return true;
+#else
             TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
             Resp->SetBoolField(TEXT("success"), false);
-            Resp->SetStringField(TEXT("error"), TEXT("Debug shape drawing not implemented."));
-            if (!ShapeType.IsEmpty()) { Resp->SetStringField(TEXT("shapeType"), ShapeType); }
-            SerializeResponseAndSend(false, TEXT("Debug shape subaction not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
+            Resp->SetStringField(TEXT("error"), TEXT("Debug shape drawing requires editor build"));
+            Resp->SetStringField(TEXT("shapeType"), ShapeType);
+            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Debug shape drawing not available in non-editor build"), Resp, TEXT("NOT_AVAILABLE"));
             return true;
+#endif
         }
 
         // Handle niagara sub-action (delegates to existing spawn_niagara logic)
         if (LowerSub == TEXT("niagara"))
         {
             FString SystemPath; LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
-            if (SystemPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("systemPath required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+            if (SystemPath.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("systemPath required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
             
             // Reuse spawn_niagara logic below by continuing execution
             // The existing spawn_niagara handler will process this
@@ -110,7 +373,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
     if (Lower.Equals(TEXT("spawn_niagara")))
     {
         FString SystemPath; LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
-        if (SystemPath.IsEmpty()) { SerializeResponseAndSend(false, TEXT("systemPath required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+        if (SystemPath.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("systemPath required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
 
         // Location and optional rotation/scale
         FVector Loc(0,0,0);
@@ -158,13 +421,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
 #if WITH_EDITOR
         if (!GEditor)
         {
-            SerializeResponseAndSend(false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
             return true;
         }
         UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
         if (!ActorSS)
         {
-            SerializeResponseAndSend(false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
             return true;
         }
 
@@ -174,7 +437,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
             TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
             Resp->SetBoolField(TEXT("success"), false);
             Resp->SetStringField(TEXT("error"), TEXT("Niagara system asset not found"));
-            SerializeResponseAndSend(false, TEXT("Niagara system not found"), Resp, TEXT("SYSTEM_NOT_FOUND"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Niagara system not found"), Resp, TEXT("SYSTEM_NOT_FOUND"));
             return true;
         }
 
@@ -182,7 +445,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         AActor* Spawned = ActorSS->SpawnActorFromClass(ANiagaraActor::StaticClass(), Loc, SpawnRot);
         if (!Spawned)
         {
-            SerializeResponseAndSend(false, TEXT("Failed to spawn NiagaraActor"), nullptr, TEXT("SPAWN_FAILED"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to spawn NiagaraActor"), nullptr, TEXT("SPAWN_FAILED"));
             return true;
         }
 
@@ -216,10 +479,10 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
-        SerializeResponseAndSend(true, TEXT("Niagara spawned"), Resp, FString());
+        SendAutomationResponse(RequestingSocket, RequestId,true, TEXT("Niagara spawned"), Resp, FString());
         return true;
 #else
-        SerializeResponseAndSend(false, TEXT("spawn_niagara requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+        SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("spawn_niagara requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
         return true;
 #endif
     }
@@ -230,19 +493,19 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         FString ParameterName; LocalPayload->TryGetStringField(TEXT("parameterName"), ParameterName);
         FString ParameterType; LocalPayload->TryGetStringField(TEXT("parameterType"), ParameterType);
         const bool bIsUser = LocalPayload->HasField(TEXT("isUserParameter")) ? LocalPayload->GetBoolField(TEXT("isUserParameter")) : false;
-        if (ParameterName.IsEmpty()) { SerializeResponseAndSend(false, TEXT("parameterName required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+        if (ParameterName.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("parameterName required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
         if (ParameterType.IsEmpty()) ParameterType = TEXT("Float");
 
 #if WITH_EDITOR
         if (!GEditor)
         {
-            SerializeResponseAndSend(false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
             return true;
         }
         UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
         if (!ActorSS)
         {
-            SerializeResponseAndSend(false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
             return true;
         }
 
@@ -329,15 +592,15 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         Resp->SetBoolField(TEXT("success"), bApplied);
         if (bApplied)
         {
-            SerializeResponseAndSend(true, TEXT("Niagara parameter set"), Resp, FString());
+            SendAutomationResponse(RequestingSocket, RequestId,true, TEXT("Niagara parameter set"), Resp, FString());
         }
         else
         {
-            SerializeResponseAndSend(false, TEXT("Niagara parameter not applied"), Resp, TEXT("SET_NIAGARA_PARAM_FAILED"));
+            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Niagara parameter not applied"), Resp, TEXT("SET_NIAGARA_PARAM_FAILED"));
         }
         return true;
 #else
-        SerializeResponseAndSend(false, TEXT("set_niagara_parameter requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+        SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("set_niagara_parameter requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
         return true;
 #endif
     }
@@ -482,7 +745,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
     if (Lower.Equals(TEXT("cleanup")))
     {
         FString Filter; LocalPayload->TryGetStringField(TEXT("filter"), Filter);
-        if (Filter.IsEmpty()) { SerializeResponseAndSend(false, TEXT("filter required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+        if (Filter.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("filter required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
 #if WITH_EDITOR
         if (!GEditor)
         {
@@ -529,47 +792,129 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Cleanup completed (removed=%d)"), Removed.Num()), Resp, FString());
         return true;
 #else
-        SerializeResponseAndSend(false, TEXT("cleanup requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+        SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("cleanup requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
         return true;
 #endif
     }
     
-        // STUB HANDLERS FOR TEST COVERAGE
-        if (Lower.Equals(TEXT("create_niagara_ribbon"))) {
-            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-            Resp->SetBoolField(TEXT("success"), false);
-            Resp->SetStringField(TEXT("error"), TEXT("create_niagara_ribbon not implemented."));
-            SerializeResponseAndSend(false, TEXT("create_niagara_ribbon not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
-            return true;
+        // STUB HANDLERS FOR TEST COVERAGE - NOW IMPLEMENTED
+        if (Lower.Equals(TEXT("create_niagara_ribbon"))) 
+        {
+            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_niagara_ribbon"), TEXT("/Niagara/DefaultRibbonSystem.DefaultRibbonSystem"));
         }
-        if (Lower.Equals(TEXT("create_volumetric_fog"))) {
-            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-            Resp->SetBoolField(TEXT("success"), false);
-            Resp->SetStringField(TEXT("error"), TEXT("create_volumetric_fog not implemented."));
-            SerializeResponseAndSend(false, TEXT("create_volumetric_fog not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
-            return true;
+        if (Lower.Equals(TEXT("create_volumetric_fog"))) 
+        {
+            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_volumetric_fog"), TEXT("/Niagara/DefaultVolumetricFog.DefaultVolumetricFog"));
         }
-        if (Lower.Equals(TEXT("create_particle_trail"))) {
-            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-            Resp->SetBoolField(TEXT("success"), false);
-            Resp->SetStringField(TEXT("error"), TEXT("create_particle_trail not implemented."));
-            SerializeResponseAndSend(false, TEXT("create_particle_trail not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
-            return true;
+        if (Lower.Equals(TEXT("create_particle_trail"))) 
+        {
+            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_particle_trail"), TEXT("/Niagara/DefaultTrailSystem.DefaultTrailSystem"));
         }
-        if (Lower.Equals(TEXT("create_environment_effect"))) {
-            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-            Resp->SetBoolField(TEXT("success"), false);
-            Resp->SetStringField(TEXT("error"), TEXT("create_environment_effect not implemented."));
-            SerializeResponseAndSend(false, TEXT("create_environment_effect not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
-            return true;
+        if (Lower.Equals(TEXT("create_environment_effect"))) 
+        {
+            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_environment_effect"), TEXT("/Niagara/DefaultEnvironmentSystem.DefaultEnvironmentSystem"));
         }
-        if (Lower.Equals(TEXT("create_impact_effect"))) {
-            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-            Resp->SetBoolField(TEXT("success"), false);
-            Resp->SetStringField(TEXT("error"), TEXT("create_impact_effect not implemented."));
-            SerializeResponseAndSend(false, TEXT("create_impact_effect not implemented."), Resp, TEXT("NOT_IMPLEMENTED"));
-            return true;
+        if (Lower.Equals(TEXT("create_impact_effect"))) 
+        {
+            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_impact_effect"), TEXT("/Niagara/DefaultImpactSystem.DefaultImpactSystem"));
         }
 
     return false;
+}
+
+// Helper function to create Niagara effects with default systems
+bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& EffectName, const FString& DefaultSystemPath)
+{
+#if WITH_EDITOR
+    if (!GEditor)
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), false);
+        Resp->SetStringField(TEXT("error"), TEXT("Editor not available"));
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), Resp, TEXT("EDITOR_NOT_AVAILABLE"));
+        return true;
+    }
+    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    if (!ActorSS)
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), false);
+        Resp->SetStringField(TEXT("error"), TEXT("EditorActorSubsystem not available"));
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("EditorActorSubsystem not available"), Resp, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+        return true;
+    }
+
+    // Get custom system path or use default
+    FString SystemPath = DefaultSystemPath;
+    Payload->TryGetStringField(TEXT("systemPath"), SystemPath);
+    
+    // Location
+    FVector Loc(0,0,0);
+    if (Payload->HasField(TEXT("location")))
+    {
+        const TSharedPtr<FJsonValue> LocVal = Payload->TryGetField(TEXT("location"));
+        if (LocVal.IsValid())
+        {
+            if (LocVal->Type == EJson::Array)
+            {
+                const TArray<TSharedPtr<FJsonValue>>& Arr = LocVal->AsArray();
+                if (Arr.Num() >= 3) Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
+            }
+            else if (LocVal->Type == EJson::Object)
+            {
+                const TSharedPtr<FJsonObject> O = LocVal->AsObject();
+                if (O.IsValid()) Loc = FVector((float)(O->HasField(TEXT("x")) ? O->GetNumberField(TEXT("x")) : 0.0), (float)(O->HasField(TEXT("y")) ? O->GetNumberField(TEXT("y")) : 0.0), (float)(O->HasField(TEXT("z")) ? O->GetNumberField(TEXT("z")) : 0.0));
+            }
+        }
+    }
+
+    // Load the Niagara system
+    UObject* NiagObj = UEditorAssetLibrary::LoadAsset(SystemPath);
+    if (!NiagObj)
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), false);
+        Resp->SetStringField(TEXT("error"), TEXT("Niagara system asset not found"));
+        Resp->SetStringField(TEXT("systemPath"), SystemPath);
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Niagara system not found"), Resp, TEXT("SYSTEM_NOT_FOUND"));
+        return true;
+    }
+
+    // Spawn the actor
+    AActor* Spawned = ActorSS->SpawnActorFromClass(ANiagaraActor::StaticClass(), Loc, FRotator::ZeroRotator);
+    if (!Spawned)
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), false);
+        Resp->SetStringField(TEXT("error"), TEXT("Failed to spawn Niagara actor"));
+        SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Failed to spawn Niagara actor"), Resp, TEXT("SPAWN_FAILED"));
+        return true;
+    }
+
+    // Configure the Niagara component
+    UNiagaraComponent* NiComp = Spawned->FindComponentByClass<UNiagaraComponent>();
+    if (NiComp && NiagObj->IsA<UNiagaraSystem>())
+    {
+        NiComp->SetAsset(Cast<UNiagaraSystem>(NiagObj));
+        NiComp->Activate(true);
+    }
+
+    // Set actor label
+    Spawned->SetActorLabel(FString::Printf(TEXT("%s_%lld"), *EffectName.Replace(TEXT("create_"), TEXT("")), FDateTime::Now().ToUnixTimestamp()));
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("effectType"), EffectName);
+    Resp->SetStringField(TEXT("systemPath"), SystemPath);
+    Resp->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
+    Resp->SetNumberField(TEXT("actorId"), Spawned->GetUniqueID());
+    SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("%s created successfully"), *EffectName), Resp, FString());
+    return true;
+#else
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetStringField(TEXT("error"), TEXT("Effect creation requires editor build"));
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Effect creation not available in non-editor build"), Resp, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
 }

@@ -134,40 +134,25 @@ export class EditorTools {
     error?: string;
     message?: string;
   }> {
-    // Best-effort retrieval via Automation Bridge if supported; otherwise fallback
     try {
       const automationBridge = (this.bridge as any).automationBridge;
-      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
-        try {
-          const resp = await automationBridge.sendAutomationRequest(
-            'control_editor',
-            { action: 'get_camera' },
-            { timeoutMs: 3000 }
-          );
-          // Accept both flat and nested result shapes
-          const result = resp?.result ?? resp;
-          const loc = result?.location ?? result?.camera?.location;
-          const rot = result?.rotation ?? result?.camera?.rotation;
-          const locArr: [number, number, number] | undefined = Array.isArray(loc) && loc.length === 3 ? [Number(loc[0])||0, Number(loc[1])||0, Number(loc[2])||0] : undefined;
-          const rotArr: [number, number, number] | undefined = Array.isArray(rot) && rot.length === 3 ? [Number(rot[0])||0, Number(rot[1])||0, Number(rot[2])||0] : undefined;
-          if (resp && resp.success !== false && locArr && rotArr) {
-            return { success: true, location: locArr, rotation: rotArr };
-          }
-        } catch {
-          // Ignore and use fallback below
-        }
+      const resp = await automationBridge.sendAutomationRequest(
+        'control_editor',
+        { action: 'get_camera' },
+        { timeoutMs: 3000 }
+      );
+      const result = resp?.result ?? resp;
+      const loc = result?.location ?? result?.camera?.location;
+      const rot = result?.rotation ?? result?.camera?.rotation;
+      const locArr: [number, number, number] | undefined = Array.isArray(loc) && loc.length === 3 ? [Number(loc[0])||0, Number(loc[1])||0, Number(loc[2])||0] : undefined;
+      const rotArr: [number, number, number] | undefined = Array.isArray(rot) && rot.length === 3 ? [Number(rot[0])||0, Number(rot[1])||0, Number(rot[2])||0] : undefined;
+      if (resp && resp.success !== false && locArr && rotArr) {
+        return { success: true, location: locArr, rotation: rotArr };
       }
-    } catch {
-      // Ignore and use fallback below
+      return { success: false, error: 'Failed to get camera information' };
+    } catch (err) {
+      return { success: false, error: `Camera query failed: ${err}` };
     }
-
-    // Fallback: provide a reasonable default camera pose so bookmarks can work
-    return {
-      success: true,
-      location: [0, 0, 300],
-      rotation: [0, 0, 0],
-      message: 'Using fallback viewport camera pose'
-    };
   }
 
   async setViewportCamera(location?: { x: number; y: number; z: number } | [number, number, number] | null | undefined, rotation?: { pitch: number; yaw: number; roll: number } | [number, number, number] | null | undefined) {
@@ -209,29 +194,18 @@ export class EditorTools {
     // Use native control_editor.set_camera when available
     try {
       const automationBridge = (this.bridge as any).automationBridge;
-      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
-        const resp = await automationBridge.sendAutomationRequest('control_editor', {
-          action: 'set_camera',
-          location: location as any,
-          rotation: rotation as any
-        }, { timeoutMs: 10000 });
-        if (resp && resp.success === true) {
-          return { success: true, message: resp.message || 'Camera set' };
-        }
-        return { success: false, error: resp?.error || resp?.message || 'Failed to set camera' };
+      const resp = await automationBridge.sendAutomationRequest('control_editor', {
+        action: 'set_camera',
+        location: location as any,
+        rotation: rotation as any
+      }, { timeoutMs: 10000 });
+      if (resp && resp.success === true) {
+        return { success: true, message: resp.message || 'Camera set' };
       }
-    } catch (_e) {
-      // Fall through to console fallback
+      return { success: false, error: resp?.error || resp?.message || 'Failed to set camera' };
+    } catch (err) {
+      return { success: false, error: `Camera control failed: ${err}` };
     }
-
-    // Fallback: limited feedback via console command
-    await this.bridge.executeConsoleCommand('camspeed 4');
-    return {
-      success: false,
-      handled: true,
-      message: 'handled: set_camera requires automation bridge; adjusted camera speed for manual positioning',
-      note: 'Direct viewport camera control requires Automation Bridge support'
-    } as any;
   }
   
   async setCameraSpeed(speed: number) {
