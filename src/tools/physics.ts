@@ -1,8 +1,4 @@
-// Physics tools for Unreal Engine
-//
-// Physics operations now use the Automation Bridge for complex physics asset operations.
-// Python fallbacks have been removed in favor of direct plugin communication.
-//
+// Physics tools for Unreal Engine using Automation Bridge
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation-bridge.js';
 import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay } from '../utils/validation.js';

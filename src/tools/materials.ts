@@ -151,14 +151,9 @@ export class MaterialTools {
         parameters: parameters || {}
       };
 
-  const allowPythonFallback = false;
-
-      // Try a plugin-native asset creation path via executeEditorFunction which will
-      // call into plugin handlers first and only run the Python template when
-      // explicitly allowed by environment. If the plugin returns UNKNOWN_PLUGIN_ACTION
-      // this will preserve explicit failure semantics so callers can migrate.
+      // Try a plugin-native asset creation path via executeEditorFunction
       try {
-        const res = await this.bridge.executeEditorFunction('CREATE_ASSET', createParams, { allowPythonFallback });
+        const res = await this.bridge.executeEditorFunction('CREATE_ASSET', createParams);
         if (res && res.success !== false) {
           const createdPath = res.path || res.result?.path || `${cleanPath}/${name}`;
           // Attempt to set parent via plugin-native setObjectProperty when available
@@ -171,7 +166,7 @@ export class MaterialTools {
           }
           // Save asset (plugin-first via SAVE_ASSET template)
           try {
-            await this.bridge.executeEditorFunction('SAVE_ASSET', { path: createdPath }, { allowPythonFallback });
+            await this.bridge.executeEditorFunction('SAVE_ASSET', { path: createdPath });
           } catch (_) {}
           return { success: true, path: createdPath, message: `Material instance ${name} created at ${createdPath}` } as any;
         }

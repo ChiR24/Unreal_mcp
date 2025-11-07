@@ -650,12 +650,10 @@ export class UnrealBridge {
   }
 
   async executeEditorFunction(
-    functionName: string, 
-    params?: Record<string, any>, 
-    _options?: { allowPythonFallback?: boolean; timeoutMs?: number }
+    functionName: string,
+    params?: Record<string, any>,
+    _options?: { timeoutMs?: number }
   ): Promise<any> {
-    // Note: options parameter is ignored as Python fallback has been removed.
-    // It's kept for backward compatibility with existing callers.
     if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
       return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE' };
     }
@@ -668,35 +666,26 @@ export class UnrealBridge {
     return resp && resp.success !== false ? (resp.result ?? resp) : resp;
   }
 
-  /**
-   * Ensure required plugins are enabled
-   * @deprecated Plugin management has been removed. This is a no-op stub.
-   * @returns Empty array (no missing plugins reported since check is disabled)
-   */
+  /** Stub - plugin management removed */
   async ensurePluginsEnabled(_pluginNames: string[], _context?: string): Promise<string[]> {
-    // Return empty array to indicate no missing plugins
-    // (since plugin checking has been removed)
     return [];
   }
 
-  async executeEditorPython(_script: string, _options?: { timeoutMs?: number; allowPythonFallback?: boolean }): Promise<any> {
+  async executeEditorPython(_script: string, _options?: { timeoutMs?: number }): Promise<any> {
     return {
       success: false,
       error: 'PYTHON_EXECUTION_REMOVED',
-      message: 'Python execution has been completely removed. Use native plugin handlers instead.'
+      message: 'Python execution removed. Use native plugin handlers instead.'
     };
   }
 
   async executePythonWithResult(_script: string, _timeoutMs?: number): Promise<any> {
-    throw new Error('Python execution is no longer supported by the MCP Automation Bridge plugin. All automation is now implemented natively in C++.');
+    throw new Error('Python execution removed. Use native plugin handlers instead.');
   }
 
-  /**
-   * Get the Unreal Engine version (stub - no longer uses Python)
-   * @returns default version info since Python has been removed
-   */
+  /** Get Unreal Engine version */
   async getEngineVersion(): Promise<{ version: string; major: number; minor: number; patch: number; isUE56OrAbove: boolean; }> {
-    this.log.debug('[STUB] getEngineVersion called - returning default (Python removed)');
+    this.log.debug('[STUB] getEngineVersion called');
     return {
       version: 'unknown',
       major: 5,
@@ -706,12 +695,9 @@ export class UnrealBridge {
     };
   }
 
-  /**
-   * Query feature flags (stub - no longer uses Python)
-   * @returns default feature flags since Python has been removed
-   */
+  /** Query feature flags (stub) */
   async getFeatureFlags(): Promise<{ pythonEnabled: boolean; subsystems: { unrealEditor: boolean; levelEditor: boolean; editorActor: boolean; } }> {
-    this.log.debug('[STUB] getFeatureFlags called - returning defaults (Python removed)');
+    this.log.debug('[STUB] getFeatureFlags called');
     return {
       pythonEnabled: false,
       subsystems: {

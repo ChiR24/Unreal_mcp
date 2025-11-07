@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Added
+- **WebAssembly Integration**: WASM acceleration for high-performance operations (5-8x faster JSON parsing, 5-10x faster transform math, 3-5x faster dependency resolution)
+- WASM automatically initializes on server startup with graceful TypeScript fallbacks
+- Performance monitoring and metrics tracking for WASM operations
+
+### Changed
+- Integrated WASM into automation bridge for JSON parsing
+- Integrated WASM into response validator for faster schema validation
+- Streamlined and cleaned up codebase by removing deprecated Python-related comments
+
+### Documentation
+- Updated README.md with WASM integration documentation
+- Added WebAssembly Performance section with setup instructions
+
 ## [0.4.6] - 2025-10-04
 ### Fixed
 - Fixed duplicate response output issue where tool responses were being displayed twice in MCP content

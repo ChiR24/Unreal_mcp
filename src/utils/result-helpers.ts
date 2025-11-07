@@ -11,10 +11,7 @@ export interface InterpretedStandardResult {
   raw: unknown;
 }
 
-/**
- * Interprets automation bridge responses into a standard format
- * @deprecated Python execution removed - this now handles generic automation bridge responses
- */
+/** Interprets automation bridge responses into a standard format */
 export function interpretStandardResult(
   response: unknown,
   defaults: { successMessage: string; failureMessage: string }
@@ -45,10 +42,7 @@ export function interpretStandardResult(
   };
 }
 
-/**
- * Cleans result text by removing tags
- * @deprecated Python-specific - now just returns trimmed text
- */
+/** Cleans result text by removing tags */
 export function cleanResultText(
   text: string | undefined,
   options: { tag?: string; defaultValue?: string } = {}

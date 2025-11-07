@@ -370,12 +370,9 @@ export class BlueprintTools {
     }
   }
 
-  // ========== SCS (Simple Construction Script) Blueprint Authoring ==========
+  // SCS (Simple Construction Script) operations
 
-  /**
-   * Get Blueprint SCS structure
-   * Retrieves the complete Simple Construction Script component hierarchy
-   */
+  /** Get Blueprint SCS structure */
   async getBlueprintSCS(params: { blueprintPath: string; timeoutMs?: number }) {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
@@ -633,7 +630,7 @@ export class BlueprintTools {
     }
   }
 
-  // ===== Event Graph Node authoring (editor builds only) =====
+  // Event Graph operations
   async addNode(params: {
     blueprintName: string;
     nodeType: string; // e.g., 'variableget', 'variableset', 'customevent', 'callfunction'

@@ -1,8 +1,4 @@
-// Lighting tools for Unreal Engine
-//
-// Light creation methods now use the Automation Bridge for actor spawning.
-// Python fallbacks have been removed in favor of direct plugin communication.
-//
+// Lighting tools for Unreal Engine using Automation Bridge
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation-bridge.js';
 

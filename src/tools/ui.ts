@@ -233,8 +233,7 @@ export class UITools {
     const playerIndex = params.playerIndex ?? 0;
     
     try {
-      const allowPythonFallback = false;
-      const resp = await this.bridge.executeEditorFunction('ADD_WIDGET_TO_VIEWPORT', { widget_path: params.widgetClass, z_order: zOrder, player_index: playerIndex } as any, { allowPythonFallback });
+      const resp = await this.bridge.executeEditorFunction('ADD_WIDGET_TO_VIEWPORT', { widget_path: params.widgetClass, z_order: zOrder, player_index: playerIndex } as any);
       const interpreted = interpretStandardResult(resp, {
         successMessage: `Widget added to viewport with z-order ${zOrder}`,
         failureMessage: 'Failed to add widget to viewport'

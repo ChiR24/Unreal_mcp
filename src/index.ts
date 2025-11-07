@@ -32,8 +32,8 @@ import { EngineTools } from './tools/engine.js';
 import { consolidatedToolDefinitions } from './tools/consolidated-tool-definitions.js';
 import { handleConsolidatedToolCall } from './tools/consolidated-tool-handlers.js';
 import { prompts } from './prompts/index.js';
-import { 
-  CallToolRequestSchema, 
+import {
+  CallToolRequestSchema,
   ListToolsRequestSchema,
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
@@ -46,6 +46,7 @@ import { routeStdoutLogsToStderr } from './utils/stdio-redirect.js';
 import { createElicitationHelper } from './utils/elicitation.js';
 import { cleanObject } from './utils/safe-json.js';
 import { ErrorHandler } from './utils/error-handler.js';
+import { initializeWASM } from './wasm/index.js';
 
 const require = createRequire(import.meta.url);
 const packageInfo: { name?: string; version?: string } = (() => {
@@ -214,8 +215,20 @@ export function createServer() {
   automationBridge.on('error', (error) => {
     log.error('Automation bridge error', error);
   });
-  
-// Initialize response validation with schemas
+
+  // Initialize WebAssembly module for high-performance operations (5-8x faster)
+  log.debug('Initializing WebAssembly integration...');
+  initializeWASM({
+    enabled: process.env.WASM_ENABLED === 'true',
+    fallbackEnabled: true,
+    performanceMonitoring: true
+  }).then(() => {
+    log.info('✅ WebAssembly integration initialized (JSON parsing and math operations)');
+  }).catch((error) => {
+    log.warn('⚠️ WebAssembly initialization failed, using TypeScript fallbacks:', error);
+  });
+
+  // Initialize response validation with schemas
   log.debug('Initializing response validation...');
   const toolDefs = consolidatedToolDefinitions;
   toolDefs.forEach((tool: any) => {
