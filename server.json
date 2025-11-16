@@ -1,5 +1,4 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
   "name": "io.github.ChiR24/unreal-engine-mcp",
   "description": "MCP server for Unreal Engine 5 with 13 tools for game development automation.",
   "version": "0.4.7",
