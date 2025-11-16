@@ -98,6 +98,12 @@ export interface SystemControlResponse extends BaseToolResponse {
   soundPlaying?: boolean;
   widgetPath?: string;
   widgetVisible?: boolean;
+  imagePath?: string;
+  imageBase64?: string;
+  pid?: number;
+  logPath?: string;
+  entries?: Array<{ timestamp?: string; category?: string; level?: string; message: string }>;
+  filteredCount?: number;
 }
 
 // Console Command Types
@@ -174,7 +180,7 @@ export type AnimationAction = 'create_animation_bp' | 'play_montage' | 'setup_ra
 export type EffectAction = 'particle' | 'niagara' | 'debug_shape';
 export type BlueprintAction = 'create' | 'add_component';
 export type EnvironmentAction = 'create_landscape' | 'sculpt' | 'add_foliage' | 'paint_foliage';
-export type SystemAction = 'profile' | 'show_fps' | 'set_quality' | 'play_sound' | 'create_widget' | 'show_widget';
+export type SystemAction = 'profile' | 'show_fps' | 'set_quality' | 'play_sound' | 'create_widget' | 'show_widget' | 'screenshot' | 'engine_start' | 'engine_quit' | 'read_log';
 export type VerificationAction = 'foliage_type_exists' | 'foliage_instances_near' | 'landscape_exists' | 'quality_level';
 
 // Consolidated tool parameter types
@@ -282,6 +288,15 @@ export interface ConsolidatedToolParams {
     widgetName?: string;
     widgetType?: string;
     visible?: boolean;
+    resolution?: string;
+    projectPath?: string;
+    editorExe?: string;
+    filter_category?: string | string[];
+    filter_level?: 'Error' | 'Warning' | 'Log' | 'Verbose' | 'VeryVerbose' | 'All';
+    lines?: number;
+    log_path?: string;
+    include_prefixes?: string[];
+    exclude_categories?: string[];
   };
 
   console_command: {

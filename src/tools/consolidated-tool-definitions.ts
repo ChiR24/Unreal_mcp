@@ -537,7 +537,7 @@ Supported actions: profile, show_fps, set_quality, play_sound, create_widget, sh
       properties: {
         action: { 
           type: 'string', 
-          enum: ['profile', 'show_fps', 'set_quality', 'play_sound', 'create_widget', 'show_widget', 'screenshot', 'engine_start', 'engine_quit'],
+          enum: ['profile', 'show_fps', 'set_quality', 'play_sound', 'create_widget', 'show_widget', 'screenshot', 'engine_start', 'engine_quit', 'read_log'],
           description: 'System action'
         },
         // Performance
@@ -577,6 +577,14 @@ Supported actions: profile, show_fps, set_quality, play_sound, create_widget, sh
         // Engine lifecycle
         projectPath: { type: 'string', description: 'Absolute path to .uproject file (e.g., "C:/Projects/MyGame/MyGame.uproject"). Required for engine_start unless UE_PROJECT_PATH environment variable is set.' },
         editorExe: { type: 'string', description: 'Absolute path to Unreal Editor executable (e.g., "C:/UnrealEngine/Engine/Binaries/Win64/UnrealEditor.exe"). Required for engine_start unless UE_EDITOR_EXE environment variable is set.' }
+        ,
+        // Log reading
+        filter_category: { description: 'Category filter as string or array; comma-separated or array values' },
+        filter_level: { type: 'string', enum: ['Error','Warning','Log','Verbose','VeryVerbose','All'], description: 'Log level filter' },
+        lines: { type: 'number', description: 'Number of lines to read from tail' },
+        log_path: { type: 'string', description: 'Absolute path to a specific .log file to read' },
+        include_prefixes: { type: 'array', items: { type: 'string' }, description: 'Only include categories starting with any of these prefixes' },
+        exclude_categories: { type: 'array', items: { type: 'string' }, description: 'Categories to exclude' }
       },
       required: ['action']
     },
@@ -594,7 +602,14 @@ Supported actions: profile, show_fps, set_quality, play_sound, create_widget, sh
         imageBase64: { type: 'string', description: 'Screenshot image base64 (truncated)' },
         pid: { type: 'number', description: 'Process ID for launched editor' },
         message: { type: 'string', description: 'Status message' },
-        error: { type: 'string', description: 'Error message if failed' }
+        error: { type: 'string', description: 'Error message if failed' },
+        logPath: { type: 'string', description: 'Log file path used for read_log' },
+        entries: { 
+          type: 'array',
+          items: { type: 'object', properties: { timestamp: { type: 'string' }, category: { type: 'string' }, level: { type: 'string' }, message: { type: 'string' } } },
+          description: 'Parsed Output Log entries'
+        },
+        filteredCount: { type: 'number', description: 'Count of entries after filtering' }
       }
     }
   },

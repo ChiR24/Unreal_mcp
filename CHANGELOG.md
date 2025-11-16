@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.7] - 2025-11-16
+### Added
+- Output Log reading via `system_control` tool with `read_log` action. Supports filtering by category (comma-separated or array), log level (Error, Warning, Log, Verbose, VeryVerbose, All), line count (up to 2000), specific log path, include prefixes, and exclude categories. Automatically resolves the latest project log under Saved/Logs.
+- New `src/tools/logs.ts` implementing robust log tailing, parsing (timestamp/category/level/message), and UE-specific internal entry filtering (e.g., excludes LogPython RESULT: blocks unless requested).
+
+### Changed
+- `system_control` tool schema: Added `read_log` action with full filter parameters to inputSchema; extended outputSchema with `logPath`, `entries` array, and `filteredCount`.
+- Updated `src/tools/consolidated-tool-handlers.ts` to route `read_log` to LogTools without requiring UE connection (file-based).
+- `src/index.ts`: Instantiates and passes LogTools to consolidated handler.
+- Version bumped to 0.4.7 in package.json, package-lock.json, server.json, .env.production, and runtime config.
+
 ## [0.4.6] - 2025-10-04
 ### Fixed
 - Fixed duplicate response output issue where tool responses were being displayed twice in MCP content

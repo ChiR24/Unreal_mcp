@@ -196,6 +196,8 @@ Additional advanced blueprint scenarios remain documented in the legacy matrix f
 | 2 | Play sound with missing asset fails | `{"action":"play_sound","soundPath":"/Game/MCP/Audio/Missing"}` | Error message reports that the sound asset could not be found. |
 | 3 | Play sound at location missing asset fails | `{"action":"play_sound","soundPath":"/Game/MCP/Audio/Missing","location":{"x":0,"y":0,"z":0}}` | Error message reports that the sound asset could not be found for the world location playback. |
 | 4 | Play sound with empty path fails validation | `{"action":"play_sound","soundPath":"","volume":1.0}` | Error message explains that the sound asset path could not be resolved. |
+| 5 | Read Output Log tail with defaults | `{"action":"read_log","lines":50,"filter_level":"All"}` | Success response returns recent log entries and the logPath used. |
+| 6 | Read Output Log filtered by custom categories | `{"action":"read_log","filter_category":"LogMyCategory,LogOtherLog","filter_level":"Error","lines":100}` | Success response returns only matching categories at Error level. |
 
 ---
 

@@ -823,8 +823,25 @@ print('RESULT:' + json.dumps({'success': exists, 'exists': exists, 'path': path}
         }
 
       // 9. SYSTEM CONTROL
-case 'system_control':
+      case 'system_control':
         switch (requireAction(args)) {
+          case 'read_log': {
+            const filterCategoryRaw = args.filter_category;
+            const filterCategory = Array.isArray(filterCategoryRaw)
+              ? filterCategoryRaw
+              : typeof filterCategoryRaw === 'string' && filterCategoryRaw.trim() !== ''
+                ? filterCategoryRaw.split(',').map((s: string) => s.trim()).filter(Boolean)
+                : undefined;
+            const res = await tools.logTools.readOutputLog({
+              filterCategory,
+              filterLevel: args.filter_level,
+              lines: typeof args.lines === 'number' ? args.lines : undefined,
+              logPath: typeof args.log_path === 'string' ? args.log_path : undefined,
+              includePrefixes: Array.isArray(args.include_prefixes) ? args.include_prefixes : undefined,
+              excludeCategories: Array.isArray(args.exclude_categories) ? args.exclude_categories : undefined
+            });
+            return cleanObject(res);
+          }
           case 'profile': {
             const res = await tools.performanceTools.startProfiling({ type: args.profileType, duration: args.duration });
             return cleanObject(res);

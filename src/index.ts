@@ -28,6 +28,7 @@ import { SequenceTools } from './tools/sequence.js';
 import { IntrospectionTools } from './tools/introspection.js';
 import { VisualTools } from './tools/visual.js';
 import { EngineTools } from './tools/engine.js';
+import { LogTools } from './tools/logs.js';
 import { consolidatedToolDefinitions } from './tools/consolidated-tool-definitions.js';
 import { handleConsolidatedToolCall } from './tools/consolidated-tool-handlers.js';
 import { prompts } from './prompts/index.js';
@@ -88,7 +89,7 @@ const CONFIG = {
   RETRY_DELAY_MS: 2000,
   // Server info
   SERVER_NAME: 'unreal-engine-mcp',
-  SERVER_VERSION: '0.4.6',
+  SERVER_VERSION: '0.4.7',
   // Monitoring
   HEALTH_CHECK_INTERVAL_MS: 30000 // 30 seconds
 };
@@ -237,6 +238,7 @@ export function createServer() {
   const introspectionTools = new IntrospectionTools(bridge);
   const visualTools = new VisualTools(bridge);
   const engineTools = new EngineTools(bridge);
+  const logTools = new LogTools(bridge);
 
   const server = new Server(
     {
@@ -474,11 +476,22 @@ export function createServer() {
     let args: any = request.params.arguments || {};
     const startTime = Date.now();
 
-    // Ensure connection only when needed, with 3 attempts
-    const connected = await ensureConnectedOnDemand();
-    if (!connected) {
-      trackPerformance(startTime, false);
-      return createNotConnectedResponse(name);
+    let requiresEngine = true;
+    try {
+      const n = String(name);
+      if (n === 'system_control') {
+        const action = String((args || {}).action || '').trim();
+        if (action === 'read_log') {
+          requiresEngine = false;
+        }
+      }
+    } catch {}
+    if (requiresEngine) {
+      const connected = await ensureConnectedOnDemand();
+      if (!connected) {
+        trackPerformance(startTime, false);
+        return createNotConnectedResponse(name);
+      }
     }
     
 // Create tools object for handler
@@ -505,6 +518,7 @@ export function createServer() {
       introspectionTools,
       visualTools,
       engineTools,
+      logTools,
       // Elicitation (client-optional)
       elicit: elicitation.elicit,
       supportsElicitation: elicitation.supports,

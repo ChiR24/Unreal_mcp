@@ -144,7 +144,7 @@ Then enable Python execution in: Edit > Project Settings > Plugins > Remote Cont
 | `create_effect` | Particles, Niagara, debug shapes |
 | `manage_blueprint` | Create blueprints, add components |
 | `build_environment` | Landscapes, terrain, foliage |
-| `system_control` | Profiling, quality, UI, screenshots |
+| `system_control` | Profiling, quality, UI, screenshots, Output Log reading |
 | `console_command` | Direct console command execution |
 | `manage_rc` | Remote Control presets |
 | `manage_sequence` | Sequencer/cinematics |
