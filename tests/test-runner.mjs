@@ -94,8 +94,8 @@ function evaluateExpectation(testCase, response) {
 
   // Handle NOT_IMPLEMENTED expectations
   if (lowerExpected === 'not_implemented') {
-    const isNotImplemented = actualError === 'NOT_IMPLEMENTED' || 
-                            (actualMessage && actualMessage.toLowerCase().includes('not implemented'));
+    const isNotImplemented = actualError === 'NOT_IMPLEMENTED' ||
+      (actualMessage && actualMessage.toLowerCase().includes('not implemented'));
     if (isNotImplemented) {
       return { passed: true, reason: 'Feature not implemented as expected' };
     } else {
@@ -135,12 +135,12 @@ function evaluateExpectation(testCase, response) {
     'AttributeError: module',
     'Python execution failed'
   ];
-  
+
   const messageStr = (actualMessage || '').toString();
   const errorStr = (actualError || '').toString();
   const combinedText = (messageStr + ' ' + errorStr).toLowerCase();
-  
-  const hasPythonError = pythonSyntaxErrors.some(errType => 
+
+  const hasPythonError = pythonSyntaxErrors.some(errType =>
     combinedText.includes(errType.toLowerCase())
   );
 
@@ -166,7 +166,7 @@ function evaluateExpectation(testCase, response) {
   // CRITICAL: Check if message says "failed" but success is true (FALSE POSITIVE)
   if (actualSuccess && (
     messageStr.toLowerCase().includes('failed') ||
-  messageStr.toLowerCase().includes('python execution failed') ||
+    messageStr.toLowerCase().includes('python execution failed') ||
     errorStr.toLowerCase().includes('failed')
   )) {
     return {
@@ -175,11 +175,12 @@ function evaluateExpectation(testCase, response) {
     };
   }
 
+
   // CRITICAL FIX: UE_NOT_CONNECTED errors should ALWAYS fail tests unless explicitly expected
   if (actualError === 'UE_NOT_CONNECTED') {
-    const explicitlyExpectsDisconnection = lowerExpected.includes('not connected') || 
-                                          lowerExpected.includes('ue_not_connected') ||
-                                          lowerExpected.includes('disconnected');
+    const explicitlyExpectsDisconnection = lowerExpected.includes('not connected') ||
+      lowerExpected.includes('ue_not_connected') ||
+      lowerExpected.includes('disconnected');
     if (!explicitlyExpectsDisconnection) {
       return {
         passed: false,
@@ -193,16 +194,16 @@ function evaluateExpectation(testCase, response) {
   if (expectedFailure && !actualSuccess) {
     // Test expects failure and got failure - but verify it's the RIGHT kind of failure
     const lowerReason = actualMessage?.toLowerCase() || actualError?.toLowerCase() || '';
-    
+
     // Check for specific error types (not just generic "error" keyword)
     const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist'];
     const expectedErrorType = specificErrorTypes.find(type => lowerExpected.includes(type));
-    const errorTypeMatch = expectedErrorType ? lowerReason.includes(expectedErrorType) : 
-                           failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
-    
+    const errorTypeMatch = expectedErrorType ? lowerReason.includes(expectedErrorType) :
+      failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
+
     // If expected outcome specifies an error type, actual error should match it
-    if (lowerExpected.includes('not found') || lowerExpected.includes('invalid') || 
-        lowerExpected.includes('missing') || lowerExpected.includes('already exists')) {
+    if (lowerExpected.includes('not found') || lowerExpected.includes('invalid') ||
+      lowerExpected.includes('missing') || lowerExpected.includes('already exists')) {
       const passed = errorTypeMatch;
       let reason;
       if (response.isError) {
@@ -228,7 +229,6 @@ function evaluateExpectation(testCase, response) {
   } else {
     reason = 'No structured response returned';
   }
-
   return { passed, reason };
 }
 
@@ -236,8 +236,6 @@ function evaluateExpectation(testCase, response) {
  * Main test runner function
  */
 export async function runToolTests(toolName, testCases) {
-  console.log('='.repeat(60));
-  console.log(`Starting ${toolName} Tests`);
   console.log(`Total test cases: ${testCases.length}`);
   console.log('='.repeat(60));
   console.log('');
@@ -311,7 +309,7 @@ export async function runToolTests(toolName, testCases) {
               const st = await fs.stat(full);
               const m = st.mtimeMs || 0;
               if (m > latest) latest = m;
-            } catch (_) {}
+            } catch (_) { }
           }
         }
       } catch (_) {
@@ -420,7 +418,7 @@ export async function runToolTests(toolName, testCases) {
     // Single-attempt call helper (no retries). This forwards a timeoutMs
     // argument to the server so server-side automation calls use the same
     // timeout the test harness expects.
-    callToolOnce = async function(callOptions, baseTimeoutMs) {
+    callToolOnce = async function (callOptions, baseTimeoutMs) {
       const envDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000') || 60000;
       const perCall = Number(callOptions?.arguments?.timeoutMs) || undefined;
       const base = typeof baseTimeoutMs === 'number' && baseTimeoutMs > 0 ? baseTimeoutMs : (perCall || envDefault);
@@ -478,7 +476,7 @@ export async function runToolTests(toolName, testCases) {
         if (structuredContent === null && response.content?.length) {
           for (const entry of response.content) {
             if (entry?.type !== 'text' || typeof entry.text !== 'string') continue;
-            try { structuredContent = JSON.parse(entry.text); break; } catch {}
+            try { structuredContent = JSON.parse(entry.text); break; } catch { }
           }
         }
         const normalizedResponse = { ...response, structuredContent };
@@ -536,7 +534,7 @@ export async function runToolTests(toolName, testCases) {
     return;
   } finally {
     if (transport) {
-      try { await transport.close(); } catch {}
+      try { await transport.close(); } catch { }
     }
   }
 

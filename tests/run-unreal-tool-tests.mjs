@@ -647,13 +647,6 @@ function enrichTestCase(rawCase) {
         arguments: payloadValue
       };
     }
-    case 'Automation Bridge': {
-      // execute_python tool removed - Python functionality deprecated
-      return {
-        ...base,
-        skipReason: 'execute_python tool removed - Python support deprecated'
-      };
-    }
     case 'Debug Tools': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       if (!payloadValue.action) {
@@ -663,12 +656,6 @@ function enrichTestCase(rawCase) {
         ...base,
         toolName: 'create_effect',
         arguments: payloadValue
-      };
-    }
-    case 'Remote Control Preset Tools': {
-      // manage_rc tool removed - deprecated
-      return { ...base, skip: true, 
-        skipReason: 'manage_rc tool removed - deprecated'
       };
     }
     case 'Asset Boundary Tests': {
@@ -757,12 +744,12 @@ function enrichTestCase(rawCase) {
     }
     case 'Remote Control Boundary Tests':
     case 'Remote Control Preset Boundary Tests': {
-      // manage_rc tool removed - deprecated
-      return { ...base, skipReason: 'manage_rc tool removed - deprecated' };
+      // No consolidated remote control tool mapping; treated as unsupported group
+      return { ...base, skipReason: `Unknown tool group '${rawCase.groupName}'` };
     }
     case 'Python Execution Boundary Tests': {
-      // execute_python tool removed - Python support deprecated
-      return { ...base, skipReason: 'execute_python tool removed - Python support deprecated' };
+      // No consolidated Python execution tool; treated as unsupported group
+      return { ...base, skipReason: `Unknown tool group '${rawCase.groupName}'` };
     }
     case 'Inspection Boundary Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };

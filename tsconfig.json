@@ -34,7 +34,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "removeComments": false,
+    "removeComments": true,
     "importHelpers": false,
     "emitDeclarationOnly": false,
     

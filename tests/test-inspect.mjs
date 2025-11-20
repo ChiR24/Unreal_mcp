@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Condensed Inspect Test Suite (15 cases) — safe for real Editor runs.
- * Tools used: execute_python (bootstrap), inspect
+ * Tools used: control_actor (bootstrap), inspect
  */
 
 import { runToolTests } from './test-runner.mjs';
