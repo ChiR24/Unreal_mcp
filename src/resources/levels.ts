@@ -4,7 +4,7 @@ import { coerceString } from '../utils/result-helpers.js';
 export class LevelResources {
   private automationBridge: any;
 
-  constructor(private bridge: UnrealBridge) {
+  constructor(bridge: UnrealBridge) {
     this.automationBridge = (bridge as any).automationBridge;
   }
 

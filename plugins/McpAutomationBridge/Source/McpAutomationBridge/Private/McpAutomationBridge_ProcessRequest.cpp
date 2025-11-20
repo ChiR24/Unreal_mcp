@@ -18,7 +18,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
     // This trace is intentionally verbose — routine requests can be high
     // frequency and will otherwise flood the logs. Developers can enable
     // Verbose logging to see these messages when required.
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT(">>> ProcessAutomationRequest ENTRY: RequestId=%s action='%s' (thread=%s)"), *RequestId, *Action, IsInGameThread() ? TEXT("GameThread") : TEXT("SocketThread"));
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT(">>> ProcessAutomationRequest ENTRY: RequestId=%s action='%s' (thread=%s)"), *RequestId, *Action, IsInGameThread() ? TEXT("GameThread") : TEXT("SocketThread"));
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest invoked (thread=%s) RequestId=%s action=%s activeSockets=%d pendingQueue=%d"),
         IsInGameThread() ? TEXT("GameThread") : TEXT("SocketThread"), *RequestId, *Action, ActiveSockets.Num(), PendingAutomationRequests.Num());
     if (!IsInGameThread())
@@ -87,7 +87,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             const double DurationMs = (DispatchEndSeconds - DispatchStartSeconds) * 1000.0;
             if (bDispatchHandled)
             {
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Completed handler='%s' RequestId=%s action='%s' (%.3f ms)"),
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Completed handler='%s' RequestId=%s action='%s' (%.3f ms)"),
                     *ConsumedHandlerLabel, *RequestId, *Action, DurationMs);
             }
             else
@@ -111,7 +111,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 PendingRequestsToSockets.Add(RequestId, RequestingSocket);
             }
 
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Starting handler dispatch for action='%s'"), *Action);
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Starting handler dispatch for action='%s'"), *Action);
 
             // Prioritize blueprint actions early only for blueprint-like actions to avoid noisy prefix logs
             {
@@ -223,47 +223,47 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             if (HandleAndLog(TEXT("HandleAddTransformTrack"), [&]() { return HandleAddTransformTrack(RequestId, Action, Payload, RequestingSocket); })) return;
 
             // Delegate asset/control/blueprint/sequence actions to their handlers
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleAssetAction"));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Checking HandleAssetAction"));
             if (HandleAndLog(TEXT("HandleAssetAction"), [&]() { return HandleAssetAction(RequestId, Action, Payload, RequestingSocket); }))
             {
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleAssetAction consumed request"));
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleAssetAction consumed request"));
                 return;
             }
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleControlActorAction"));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Checking HandleControlActorAction"));
             if (HandleAndLog(TEXT("HandleControlActorAction"), [&]() { return HandleControlActorAction(RequestId, Action, Payload, RequestingSocket); }))
             {
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleControlActorAction consumed request"));
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleControlActorAction consumed request"));
                 return;
             }
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleControlEditorAction"));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Checking HandleControlEditorAction"));
             if (HandleAndLog(TEXT("HandleControlEditorAction"), [&]() { return HandleControlEditorAction(RequestId, Action, Payload, RequestingSocket); }))
             {
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleControlEditorAction consumed request"));
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleControlEditorAction consumed request"));
                 return;
             }
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleUiAction"));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Checking HandleUiAction"));
             if (HandleAndLog(TEXT("HandleUiAction"), [&]() { return HandleUiAction(RequestId, Action, Payload, RequestingSocket); }))
             {
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleUiAction consumed request"));
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleUiAction consumed request"));
                 return;
             }
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleBlueprintAction (late)"));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Checking HandleBlueprintAction (late)"));
             if (HandleAndLog(TEXT("HandleBlueprintAction (late)"), [&]() { return HandleBlueprintAction(RequestId, Action, Payload, RequestingSocket); }))
             {
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleBlueprintAction (late) consumed request"));
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleBlueprintAction (late) consumed request"));
                 return;
             }
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleSequenceAction"));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Checking HandleSequenceAction"));
             if (HandleAndLog(TEXT("HandleSequenceAction"), [&]() { return HandleSequenceAction(RequestId, Action, Payload, RequestingSocket); }))
             {
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleSequenceAction consumed request"));
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleSequenceAction consumed request"));
                 return;
             }
             if (HandleAndLog(TEXT("HandleEffectAction"), [&]() { return HandleEffectAction(RequestId, Action, Payload, RequestingSocket); })) return;
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("ProcessAutomationRequest: Checking HandleAnimationPhysicsAction"));
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Checking HandleAnimationPhysicsAction"));
             if (HandleAndLog(TEXT("HandleAnimationPhysicsAction"), [&]() { return HandleAnimationPhysicsAction(RequestId, Action, Payload, RequestingSocket); }))
             {
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleAnimationPhysicsAction consumed request"));
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleAnimationPhysicsAction consumed request"));
                 return;
             }
             if (HandleAndLog(TEXT("HandleBuildEnvironmentAction"), [&]() { return HandleBuildEnvironmentAction(RequestId, Action, Payload, RequestingSocket); })) return;

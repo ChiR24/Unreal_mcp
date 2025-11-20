@@ -39,7 +39,7 @@ const testCases = [
   {
     scenario: 'Create material instance',
     toolName: 'manage_asset',
-    arguments: { action: 'create_material_instance', name: 'MI_TestInstance', path: '/Game/Tests/ManageAsset', parentMaterial: '/Game/Tests/ManageAsset/M_MasterMaterial_Test', parameters: { BaseColor: [0.5,0.5,0.8,1.0] } },
+    arguments: { action: 'create_material_instance', name: 'MI_TestInstance', path: '/Game/Tests/ManageAsset', parentMaterial: '/Game/Tests/ManageAsset/M_MasterMaterial_Test', parameters: { BaseColor: [0.5, 0.5, 0.8, 1.0] } },
     expected: 'success - material instance created'
   },
 
@@ -87,7 +87,7 @@ const testCases = [
   {
     scenario: 'Set tags on material',
     toolName: 'manage_asset',
-    arguments: { action: 'set_tags', assetPath: '/Game/Tests/ManageAsset/M_MasterMaterial_Test', tags: ['TestMaterial','AutoCreated'] },
+    arguments: { action: 'set_tags', assetPath: '/Game/Tests/ManageAsset/M_MasterMaterial_Test', tags: ['TestMaterial', 'AutoCreated'] },
     expected: 'success - asset tags set'
   },
 
@@ -123,19 +123,61 @@ const testCases = [
     expected: 'success - assets deleted'
   },
 
-  // 15. Delete the test folder
+  // 15. Real-World Scenario: Asset Reorganization
   {
-    scenario: 'Remove test folder',
+    scenario: 'Asset Reorganization - Setup',
     toolName: 'manage_asset',
-    arguments: { action: 'delete', assetPath: '/Game/Tests/ManageAsset' },
-    expected: 'success - asset deleted'
+    arguments: { action: 'create_folder', path: '/Game/Tests/Reorg' },
+    expected: 'success'
   },
-  { scenario: 'Import placeholder asset (no-op safe)', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: './tests/fixtures/missing.fbx', destinationPath: '/Game/Tests/ManageAsset' }, expected: 'success or handled' },
-  { scenario: 'Fixup redirectors', toolName: 'manage_asset', arguments: { action: 'fixup_redirectors', directory: '/Game/Tests/ManageAsset' }, expected: 'NOT_IMPLEMENTED' },
-  { scenario: 'Find assets by tag', toolName: 'manage_asset', arguments: { action: 'find_by_tag', tag: 'AutoCreated' }, expected: 'NOT_IMPLEMENTED' },
-  { scenario: 'Get asset metadata', toolName: 'manage_asset', arguments: { action: 'get_metadata', assetPath: '/Game/Tests/ManageAsset/M_MasterMaterial_Test' }, expected: 'NOT_IMPLEMENTED' },
-  { scenario: 'Set asset metadata', toolName: 'manage_asset', arguments: { action: 'set_metadata', assetPath: '/Game/Tests/ManageAsset/M_MasterMaterial_Test', metadata: { Author: 'TC' } }, expected: 'NOT_IMPLEMENTED' },
-  { scenario: 'Bulk delete (final cleanup)', toolName: 'manage_asset', arguments: { action: 'delete', assetPaths: ['/Game/Tests/ManageAsset'] }, expected: 'success or handled' }
+  {
+    scenario: 'Asset Reorganization - Create Assets',
+    toolName: 'manage_asset',
+    arguments: { action: 'create_material', name: 'M_Original', path: '/Game/Tests/Reorg', materialType: 'Master' },
+    expected: 'success'
+  },
+  {
+    scenario: 'Asset Reorganization - Move Asset',
+    toolName: 'manage_asset',
+    arguments: { action: 'move', assetPath: '/Game/Tests/Reorg/M_Original', destinationPath: '/Game/Tests/Reorg/Moved/M_Moved' },
+    expected: 'success'
+  },
+  // Note: Fixup redirectors is often a slow operation and might not be fully supported in all contexts, 
+  // but we include it as part of the workflow.
+  {
+    scenario: 'Asset Reorganization - Fixup Redirectors',
+    toolName: 'manage_asset',
+    arguments: { action: 'fixup_redirectors', directory: '/Game/Tests/Reorg' },
+    expected: 'NOT_IMPLEMENTED'
+  },
+
+  // 16. Real-World Scenario: Deep Duplication
+  {
+    scenario: 'Deep Duplication - Setup Source',
+    toolName: 'manage_asset',
+    arguments: { action: 'create_folder', path: '/Game/Tests/DeepCopy/Source' },
+    expected: 'success'
+  },
+  {
+    scenario: 'Deep Duplication - Create Source Asset',
+    toolName: 'manage_asset',
+    arguments: { action: 'create_material', name: 'M_Source', path: '/Game/Tests/DeepCopy/Source', materialType: 'Master' },
+    expected: 'success'
+  },
+  {
+    scenario: 'Deep Duplication - Duplicate Folder',
+    toolName: 'manage_asset',
+    arguments: { action: 'duplicate', sourcePath: '/Game/Tests/DeepCopy/Source', destinationPath: '/Game/Tests/DeepCopy/Target', save: true },
+    expected: 'success' // Assuming duplicate works on folders or we duplicate the asset
+  },
+
+  // Cleanup
+  {
+    scenario: 'Cleanup Reorg and DeepCopy',
+    toolName: 'manage_asset',
+    arguments: { action: 'delete', assetPaths: ['/Game/Tests/Reorg', '/Game/Tests/DeepCopy'] },
+    expected: 'success or handled'
+  }
 ];
 
 await runToolTests('Asset Management', testCases);

@@ -19,6 +19,14 @@ const testCases = [
   { scenario: 'Duplicate sequence', toolName: 'manage_sequence', arguments: { action: 'duplicate', path: seqPath, destinationPath: copyDir, newName: 'TC_Seq_Copy', overwrite: true }, expected: 'success - duplicated' },
   { scenario: 'Rename sequence copy', toolName: 'manage_sequence', arguments: { action: 'rename', path: `${copyDir}/TC_Seq_Copy`, newName: 'TC_Seq_Renamed' }, expected: 'success - renamed' },
   { scenario: 'Delete sequence copy', toolName: 'manage_sequence', arguments: { action: 'delete', path: `${copyDir}/TC_Seq_Renamed` }, expected: 'success - deleted' },
+  // Real-World Scenario: Cinematic Shot
+  { scenario: 'Cinematic - Create Sequence', toolName: 'manage_sequence', arguments: { action: 'create', name: 'TC_Cinematic', path: '/Game/Cinematics' }, expected: 'success' },
+  { scenario: 'Cinematic - Add Actor', toolName: 'manage_sequence', arguments: { action: 'add_actor', path: '/Game/Cinematics/TC_Cinematic', actorName: 'TC_Cube' }, expected: 'success' },
+  { scenario: 'Cinematic - Keyframe Transform', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: '/Game/Cinematics/TC_Cinematic', actorName: 'TC_Cube', property: 'Transform', time: 0.0, value: { location: { x: 0, y: 0, z: 0 } } }, expected: 'success' },
+  { scenario: 'Cinematic - Keyframe End', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: '/Game/Cinematics/TC_Cinematic', actorName: 'TC_Cube', property: 'Transform', time: 2.0, value: { location: { x: 200, y: 0, z: 0 } } }, expected: 'success' },
+
+  // Cleanup
+  { scenario: 'Cleanup - Delete Cinematic', toolName: 'manage_sequence', arguments: { action: 'delete', path: '/Game/Cinematics/TC_Cinematic' }, expected: 'success' },
   { scenario: 'Delete original sequence', toolName: 'manage_sequence', arguments: { action: 'delete', path: seqPath }, expected: 'success - deleted' },
   { scenario: 'Verify sequence removed', toolName: 'manage_sequence', arguments: { action: 'get_bindings', path: seqPath }, expected: 'success or not found' }
 ];

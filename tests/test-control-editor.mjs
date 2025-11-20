@@ -23,12 +23,10 @@ const testCases = [
   { scenario: 'Jump to camera bookmark', toolName: 'control_editor', arguments: { action: 'jump_to_bookmark', bookmarkName: 'TC_Bookmark' }, expected: 'success - jumped to bookmark' },
   { scenario: 'Set editor preferences', toolName: 'control_editor', arguments: { action: 'set_preferences', category: 'Editor', preferences: { UseGrid: true, SnapToGrid: true } }, expected: 'success - editor preferences set' },
   // Additional
-  { scenario: 'Toggle viewport realtime', toolName: 'control_editor', arguments: { action: 'set_viewport_realtime', enabled: true }, expected: 'success or handled' },
-  { scenario: 'Set time dilation', toolName: 'control_editor', arguments: { action: 'set_time_dilation', value: 0.5 }, expected: 'success or handled' },
-  { scenario: 'Toggle game view', toolName: 'control_editor', arguments: { action: 'toggle_game_view', enabled: true }, expected: 'success or handled' },
-  { scenario: 'Set auto exposure bias', toolName: 'control_editor', arguments: { action: 'set_exposure', bias: 1.0 }, expected: 'success or handled' },
-  { scenario: 'Set viewport resolution (windowed)', toolName: 'control_editor', arguments: { action: 'set_resolution', width: 1280, height: 720, windowed: true }, expected: 'success or handled' },
-  { scenario: 'Open Output Log', toolName: 'control_editor', arguments: { action: 'open_output_log' }, expected: 'success or handled' }
+  // Real-World Scenario: Editor Automation
+  { scenario: 'Editor Auto - Open Asset', toolName: 'control_editor', arguments: { action: 'open_asset', assetPath: '/Engine/BasicShapes/Cube' }, expected: 'success' },
+  { scenario: 'Editor Auto - Focus Viewport', toolName: 'control_editor', arguments: { action: 'set_camera', location: { x: 500, y: 500, z: 500 }, rotation: { pitch: -30, yaw: 225, roll: 0 } }, expected: 'success' },
+  { scenario: 'Editor Auto - Run Command', toolName: 'control_editor', arguments: { action: 'execute_command', command: 'stat fps' }, expected: 'success' }
 ];
 
 await runToolTests('Editor Control', testCases);

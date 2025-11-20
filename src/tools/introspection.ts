@@ -1,7 +1,6 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation-bridge.js';
 import { Logger } from '../utils/logger.js';
-import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
 import { lookupPropertyMetadata, normalizeDictionaryKey, PropertyDictionaryEntry } from './property-dictionary.js';
 
 export interface ObjectSummary {
@@ -113,40 +112,6 @@ export class IntrospectionTools {
     }
     
     throw lastError;
-  }
-
-  /**
-   * Parse Python execution result with better error handling
-   */
-  private parsePythonResult(resp: any, operationName: string): any {
-        const interpreted = interpretStandardResult(resp, {
-            successMessage: `${operationName} succeeded`,
-            failureMessage: `${operationName} failed`
-        });
-
-        if (interpreted.success) {
-            return {
-                ...interpreted.payload,
-                success: true
-            };
-        }
-
-    const output = bestEffortInterpretedText(interpreted) ?? '';
-    if (output) {
-      this.log.error(`Failed to parse ${operationName} result: ${output}`);
-    }
-
-    if (output.includes('ModuleNotFoundError')) {
-      return { success: false, error: 'Reflection module not available.' };
-    }
-    if (output.includes('AttributeError')) {
-      return { success: false, error: 'Reflection API method not found. Check Unreal Engine version compatibility.' };
-    }
-
-    return {
-      success: false,
-            error: `${interpreted.error ?? `${operationName} did not return a valid result`}: ${output.substring(0, 200)}`
-    };
   }
 
   /**

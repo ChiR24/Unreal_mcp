@@ -65,27 +65,7 @@ const DEFAULT_SERVER_VERSION = typeof packageInfo.version === 'string' && packag
   ? packageInfo.version
   : '0.0.0';
 
-const ListCommandsRequestSchema = z.object({
-  method: z.literal('commands/list'),
-  params: z
-    .object({
-      _meta: z.any().optional()
-    })
-    .partial()
-    .optional()
-});
 
-const listCommandsResponse = {
-  commands: [
-    { name: 'ping', description: 'Check connectivity' },
-    { name: 'tools/list', description: 'List available tools' },
-    { name: 'tools/call', description: 'Invoke a tool by name' },
-    { name: 'resources/list', description: 'List available resources' },
-    { name: 'resources/read', description: 'Read the contents of a resource' },
-    { name: 'prompts/list', description: 'List prompt templates' },
-    { name: 'prompts/get', description: 'Fetch a prompt template' }
-  ]
-} as const;
 
 const log = new Logger('UE-MCP');
 
@@ -135,6 +115,18 @@ const CONFIG = {
   HEALTH_CHECK_INTERVAL_MS: 30000 // 30 seconds
 };
 
+function createNotConnectedResponse(toolName: string) {
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `Cannot execute tool '${toolName}': Unreal Engine is not connected.`
+      }
+    ],
+    isError: true
+  };
+}
+
 // Helper function to track performance
 function trackPerformance(startTime: number, success: boolean) {
   const responseTime = Date.now() - startTime;
@@ -144,13 +136,13 @@ function trackPerformance(startTime: number, success: boolean) {
   } else {
     metrics.failedRequests++;
   }
-  
+
   // Keep last 100 response times for average calculation
   metrics.responseTimes.push(responseTime);
   if (metrics.responseTimes.length > 100) {
     metrics.responseTimes.shift();
   }
-  
+
   // Calculate average
   metrics.averageResponseTime = metrics.responseTimes.reduce((a, b) => a + b, 0) / metrics.responseTimes.length;
 }
@@ -161,20 +153,20 @@ async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
   if (!bridge.isConnected) {
     return false;
   }
-    try {
-      // Use a safe, no-op stats command that always exists
-      await bridge.executeConsoleCommand('stat none');
-      metrics.connectionStatus = 'connected';
-      metrics.lastHealthCheck = new Date();
-      lastHealthSuccessAt = Date.now();
-      return true;
-    } catch (err1) {
-      metrics.connectionStatus = 'error';
-      metrics.lastHealthCheck = new Date();
-      // Avoid noisy warnings when engine may be shutting down; log at debug
-      log.debug('Health check failed (console):', err1);
-      return false;
-    }
+  try {
+    // Use a safe, no-op stats command that always exists
+    await bridge.executeConsoleCommand('stat none');
+    metrics.connectionStatus = 'connected';
+    metrics.lastHealthCheck = new Date();
+    lastHealthSuccessAt = Date.now();
+    return true;
+  } catch (err1) {
+    metrics.connectionStatus = 'error';
+    metrics.lastHealthCheck = new Date();
+    // Avoid noisy warnings when engine may be shutting down; log at debug
+    log.debug('Health check failed (console):', err1);
+    return false;
+  }
 }
 
 export function createServer() {
@@ -243,6 +235,52 @@ export function createServer() {
   log.debug('Server starting without connecting to Unreal Engine');
   metrics.connectionStatus = 'disconnected';
 
+  const server = new Server(
+    {
+      name: CONFIG.SERVER_NAME,
+      version: CONFIG.SERVER_VERSION
+    },
+    {
+      capabilities: {
+        tools: {},
+        resources: {},
+        prompts: {}
+      }
+    }
+  );
+
+  // Initialize elicitation helper
+  const elicitation = createElicitationHelper(server, log);
+  const defaultElicitationTimeoutMs = 60000;
+
+  // Initialize tools
+  const actorTools = new ActorTools(bridge);
+  const assetTools = new AssetTools(bridge);
+  const editorTools = new EditorTools(bridge);
+  const materialTools = new MaterialTools(bridge);
+  const animationTools = new AnimationTools(bridge);
+  const physicsTools = new PhysicsTools(bridge);
+  const niagaraTools = new NiagaraTools(bridge);
+  const blueprintTools = new BlueprintTools(bridge);
+  const levelTools = new LevelTools(bridge);
+  const lightingTools = new LightingTools(bridge);
+  const landscapeTools = new LandscapeTools(bridge);
+  const buildEnvAdvanced = new BuildEnvironmentAdvanced(bridge);
+  const foliageTools = new FoliageTools(bridge);
+  const debugTools = new DebugVisualizationTools(bridge);
+  const performanceTools = new PerformanceTools(bridge);
+  const audioTools = new AudioTools(bridge);
+  const uiTools = new UITools(bridge);
+  const sequenceTools = new SequenceTools(bridge);
+  const introspectionTools = new IntrospectionTools(bridge);
+  const visualTools = new VisualTools(bridge);
+  const engineTools = new EngineTools(bridge);
+
+  // Initialize resources
+  const assetResources = new AssetResources(bridge);
+  const actorResources = new ActorResources(bridge);
+  const levelResources = new LevelResources(bridge);
+
   // Health checks manager (only active when connected)
   const startHealthChecks = () => {
     if (healthCheckTimer) return;
@@ -289,112 +327,13 @@ export function createServer() {
   };
 
   // Resources
-  const assetResources = new AssetResources(bridge);
-  const actorResources = new ActorResources(bridge, automationBridge);
-  const levelResources = new LevelResources(bridge);
-  
-  // Tools
-  const actorTools = new ActorTools(bridge);
-  const assetTools = new AssetTools(bridge, automationBridge);
-  const editorTools = new EditorTools(bridge);
-  const materialTools = new MaterialTools(bridge, automationBridge);
-  const animationTools = new AnimationTools(bridge, automationBridge);
-  const physicsTools = new PhysicsTools(bridge, automationBridge);
-  const niagaraTools = new NiagaraTools(bridge, automationBridge);
-  const blueprintTools = new BlueprintTools(bridge, automationBridge);
-  const levelTools = new LevelTools(bridge);
-  const lightingTools = new LightingTools(bridge);
-  const landscapeTools = new LandscapeTools(bridge);
-  const foliageTools = new FoliageTools(bridge);
-  const buildEnvAdvanced = new BuildEnvironmentAdvanced(bridge);
-  // Wire automation bridge into tools that require native plugin operations
-  levelTools.setAutomationBridge(automationBridge);
-  lightingTools.setAutomationBridge(automationBridge);
-  landscapeTools.setAutomationBridge(automationBridge);
-  foliageTools.setAutomationBridge(automationBridge);
-  buildEnvAdvanced.setAutomationBridge(automationBridge);
-  animationTools.setAutomationBridge(automationBridge);
-  physicsTools.setAutomationBridge(automationBridge);
-  const debugTools = new DebugVisualizationTools(bridge);
-  const performanceTools = new PerformanceTools(bridge);
-  const audioTools = new AudioTools(bridge);
-  const uiTools = new UITools(bridge, automationBridge);
-  const sequenceTools = new SequenceTools(bridge, automationBridge);
-  const introspectionTools = new IntrospectionTools(bridge);
-  const visualTools = new VisualTools(bridge);
-  const engineTools = new EngineTools(bridge, automationBridge);
-  // Wire automation bridge into introspection tools so inspect actions can use native handlers
-  try { (introspectionTools as any).setAutomationBridge?.(automationBridge); } catch {}
-
-  // Wire automation bridge into other tools that can leverage native handlers
-  try { audioTools.setAutomationBridge(automationBridge); } catch {}
-  try { uiTools.setAutomationBridge(automationBridge); } catch {}
-  try { (visualTools as any).setAutomationBridge?.(automationBridge); } catch {}
-
-  const server = new Server(
-    {
-      name: CONFIG.SERVER_NAME,
-      version: CONFIG.SERVER_VERSION
-    },
-    {
-      capabilities: {
-        resources: {},
-        tools: {},
-        prompts: {},
-        logging: {}
-      }
-    }
-  );
-
-  // Optional elicitation helper – used only if client supports it.
-  const elicitation = createElicitationHelper(server as any, log);
-  const defaultElicitationTimeoutMs = elicitation.getDefaultTimeoutMs();
-
-  const createNotConnectedResponse = (toolName: string) => {
-    const payload = {
-      success: false,
-      error: 'UE_NOT_CONNECTED',
-      message: 'Unreal Engine is not connected (after 3 attempts). Please open UE and try again.',
-      retriable: false,
-      scope: `tool-call/${toolName}`
-    } as const;
-
-    const wrapped = responseValidator.wrapResponse(toolName, {
-      ...payload,
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(payload, null, 2)
-        }
-      ]
-    });
-    try { (wrapped as any).isError = true; } catch {}
-    return wrapped;
-  };
-
-  // Handle commands listing for MCP inspector compatibility
-  server.setRequestHandler(ListCommandsRequestSchema, async () => listCommandsResponse);
-
-  // Handle resource listing
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
     return {
       resources: [
         {
           uri: 'ue://assets',
-          name: 'Project Assets',
-          description: 'List all assets in the project',
-          mimeType: 'application/json'
-        },
-        {
-          uri: 'ue://actors', 
-          name: 'Level Actors',
-          description: 'List all actors in the current level',
-          mimeType: 'application/json'
-        },
-        {
-          uri: 'ue://level',
-          name: 'Current Level',
-          description: 'Information about the current level',
+          name: 'Assets',
+          description: 'Project assets',
           mimeType: 'application/json'
         },
         {
@@ -422,7 +361,7 @@ export function createServer() {
   // Handle resource reading
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const uri = request.params.uri;
-    
+
     if (uri === 'ue://assets') {
       const ok = await ensureConnectedOnDemand();
       if (!ok) {
@@ -437,7 +376,7 @@ export function createServer() {
         }]
       };
     }
-    
+
     if (uri === 'ue://actors') {
       const ok = await ensureConnectedOnDemand();
       if (!ok) {
@@ -452,7 +391,7 @@ export function createServer() {
         }]
       };
     }
-    
+
     if (uri === 'ue://level') {
       const ok = await ensureConnectedOnDemand();
       if (!ok) {
@@ -467,7 +406,7 @@ export function createServer() {
         }]
       };
     }
-    
+
     if (uri === 'ue://health') {
       const uptimeMs = Date.now() - metrics.uptime;
       const automationStatus = automationBridge.getStatus();
@@ -475,8 +414,8 @@ export function createServer() {
       let versionInfo: any = {};
       let featureFlags: any = {};
       if (bridge.isConnected) {
-        try { versionInfo = await bridge.getEngineVersion(); } catch {}
-        try { featureFlags = await bridge.getFeatureFlags(); } catch {}
+        try { versionInfo = await bridge.getEngineVersion(); } catch { }
+        try { featureFlags = await bridge.getFeatureFlags(); } catch { }
       }
 
       const responseTimes = metrics.responseTimes.slice(-25);
@@ -580,11 +519,11 @@ export function createServer() {
         }]
       };
     }
-    
+
     throw new Error(`Unknown resource: ${uri}`);
   });
 
-// Handle tool listing - consolidated tools only
+  // Handle tool listing - consolidated tools only
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     log.info('Serving consolidated tools');
     // Return a sanitized copy of tool definitions to clients. Some client
@@ -620,8 +559,8 @@ export function createServer() {
       trackPerformance(startTime, false);
       return createNotConnectedResponse(name);
     }
-    
-// Create tools object for handler
+
+    // Create tools object for handler
     const tools = {
       actorTools,
       assetTools,
@@ -647,7 +586,7 @@ export function createServer() {
       // Elicitation (client-optional)
       elicit: elicitation.elicit,
       supportsElicitation: elicitation.supports,
-  elicitationTimeoutMs: defaultElicitationTimeoutMs,
+      elicitationTimeoutMs: defaultElicitationTimeoutMs,
       // Resources for listing and info
       assetResources,
       actorResources,
@@ -655,11 +594,11 @@ export function createServer() {
       bridge,
       automationBridge
     };
-    
-// Execute consolidated tool handler
+
+    // Execute consolidated tool handler
     try {
       log.debug(`Executing tool: ${name}`);
-      
+
       // Opportunistic generic elicitation for missing primitive required fields
       try {
         const toolDef: any = (consolidatedToolDefinitions as any[]).find(t => t.name === name);
@@ -736,7 +675,7 @@ export function createServer() {
       try {
         const sc: any = (wrappedResult as any).structuredContent;
         if (sc && typeof sc.success === 'boolean') wrappedSuccess = Boolean(sc.success);
-      } catch {}
+      } catch { }
 
       const isErrorResponse = Boolean((wrappedResult as any)?.isError === true);
 
@@ -760,7 +699,7 @@ export function createServer() {
       return wrappedResult;
     } catch (error) {
       trackPerformance(startTime, false);
-      
+
       // Use consistent error handling
       const errorResponse = ErrorHandler.createErrorResponse(error, name, { ...args, scope: `tool-call/${name}` });
       log.error(`Tool execution failed: ${name}`, errorResponse);
@@ -774,12 +713,12 @@ export function createServer() {
           retriable: Boolean((errorResponse as any).retriable)
         });
         if (metrics.recentErrors.length > 20) metrics.recentErrors.splice(0, metrics.recentErrors.length - 20);
-      } catch {}
+      } catch { }
 
       const sanitizedError = cleanObject(errorResponse);
       try {
         (sanitizedError as any).isError = true;
-      } catch {}
+      } catch { }
 
       return responseValidator.wrapResponse(name, sanitizedError);
     }
@@ -892,17 +831,17 @@ export async function startStdioServer() {
   process.once('exit', () => {
     automationBridge.stop();
   });
-  
+
   // Add debugging for transport messages
   const originalWrite = process.stdout.write;
-  process.stdout.write = function(...args: any[]) {
+  process.stdout.write = function (...args: any[]) {
     const message = args[0];
     if (typeof message === 'string' && message.includes('jsonrpc')) {
       log.debug(`Sending to client: ${message.substring(0, 200)}...`);
     }
     return originalWrite.apply(process.stdout, args as any);
   } as any;
-  
+
   await server.connect(transport);
   log.info('Unreal Engine MCP Server started on stdio');
 }

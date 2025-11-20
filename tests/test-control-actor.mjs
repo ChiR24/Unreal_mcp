@@ -151,10 +151,69 @@ const testCases = [
     arguments: { action: 'delete_by_tag', tag: 'TC_Tag' },
     expected: 'success - actors deleted by tag'
   },
+  // Real-World Scenario: Composite Actor (Parent-Child)
+  {
+    scenario: 'Composite Actor - Spawn Parent (Car)',
+    toolName: 'control_actor',
+    arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: 'TC_Car_Body', location: { x: 1000, y: 0, z: 100 } },
+    expected: 'success'
+  },
+  {
+    scenario: 'Composite Actor - Spawn Child (Wheel)',
+    toolName: 'control_actor',
+    arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cylinder', actorName: 'TC_Car_Wheel', location: { x: 1050, y: 50, z: 50 } },
+    expected: 'success'
+  },
+  {
+    scenario: 'Composite Actor - Attach Wheel to Body',
+    toolName: 'control_actor',
+    arguments: { action: 'attach', childActor: 'TC_Car_Wheel', parentActor: 'TC_Car_Body' },
+    expected: 'success'
+  },
+  {
+    scenario: 'Composite Actor - Move Parent',
+    toolName: 'control_actor',
+    arguments: { action: 'set_transform', actorName: 'TC_Car_Body', location: { x: 1200, y: 0, z: 100 } },
+    expected: 'success'
+  },
+
+  // Real-World Scenario: Batch Operations
+  {
+    scenario: 'Batch Ops - Spawn Crowd 1',
+    toolName: 'control_actor',
+    arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: 'TC_Crowd_1', location: { x: 2000, y: 0, z: 0 } },
+    expected: 'success'
+  },
+  {
+    scenario: 'Batch Ops - Spawn Crowd 2',
+    toolName: 'control_actor',
+    arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: 'TC_Crowd_2', location: { x: 2100, y: 0, z: 0 } },
+    expected: 'success'
+  },
+  {
+    scenario: 'Batch Ops - Tag Crowd',
+    toolName: 'control_actor',
+    arguments: { action: 'add_tag', actorName: 'TC_Crowd_1', tag: 'TC_Crowd' },
+    expected: 'success'
+  },
+  {
+    scenario: 'Batch Ops - Tag Crowd 2',
+    toolName: 'control_actor',
+    arguments: { action: 'add_tag', actorName: 'TC_Crowd_2', tag: 'TC_Crowd' },
+    expected: 'success'
+  },
+  {
+    scenario: 'Batch Ops - Find by Tag',
+    toolName: 'control_actor',
+    arguments: { action: 'find_by_tag', tag: 'TC_Crowd' },
+    expected: 'success'
+  },
+
+  // Cleanup
   {
     scenario: 'Cleanup - delete test actors',
     toolName: 'control_actor',
-    arguments: { action: 'delete', actorNames: ['TC_Cube_Copy', 'TC_Physics', 'TC_PointLight', 'TC_BP_Instance', 'TC_Camera'] },
+    arguments: { action: 'delete', actorNames: ['TC_Cube_Copy', 'TC_Physics', 'TC_PointLight', 'TC_BP_Instance', 'TC_Camera', 'TC_Car_Body', 'TC_Car_Wheel', 'TC_Crowd_1', 'TC_Crowd_2'] },
     expected: 'success - actors deleted'
   },
   {

@@ -48,11 +48,6 @@ export class LandscapeTools {
     const [locX, locY, locZ] = ensureVector3(params.location ?? [0, 0, 0], 'landscape location');
     const sectionsPerComponent = Math.max(1, Math.floor(params.sectionsPerComponent ?? 1));
     const quadsPerSection = Math.max(1, Math.floor(params.quadsPerSection ?? 63));
-    const _componentCount = Math.max(1, Math.floor(params.componentCount ?? 1));
-
-    const defaultSize = 1000;
-    const _scaleX = params.sizeX ? Math.max(0.1, params.sizeX / defaultSize) : 1;
-    const _scaleY = params.sizeY ? Math.max(0.1, params.sizeY / defaultSize) : 1;
 
     try {
       // Map to plugin-native payload shape

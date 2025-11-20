@@ -1,8 +1,12 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { ensureRotation, ensureVector3 } from '../utils/validation.js';
+import { BaseTool } from './base-tool.js';
+import { IActorTools } from '../types/tool-interfaces.js';
 
-export class ActorTools {
-  constructor(private bridge: UnrealBridge) {}
+export class ActorTools extends BaseTool implements IActorTools {
+  constructor(bridge: UnrealBridge) {
+    super(bridge);
+  }
 
   async spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string }) {
     if (!params.classPath || typeof params.classPath !== 'string' || params.classPath.trim().length === 0) {
@@ -37,9 +41,9 @@ export class ActorTools {
       'actor rotation'
     );
 
-    // Use automation bridge for actor spawning
     try {
-      const response = await (this.bridge as any).automationBridge?.sendAutomationRequest('spawn_actor', {
+      const response = await this.getAutomationBridge().sendAutomationRequest('control_actor', {
+        action: 'spawn',
         classPath: mappedClassPath,
         location: { x: locX, y: locY, z: locZ },
         rotation: { pitch: rotPitch, yaw: rotYaw, roll: rotRoll },
@@ -61,14 +65,14 @@ export class ActorTools {
         rotation: { pitch: rotPitch, yaw: rotYaw, roll: rotRoll }
       };
 
-      if (response.warnings?.length) {
-        result.warnings = response.warnings;
+      if ((response as any).warnings?.length) {
+        result.warnings = (response as any).warnings;
       }
-      if (response.details?.length) {
-        result.details = response.details;
+      if ((response as any).details?.length) {
+        result.details = (response as any).details;
       }
-      if (response.componentPaths?.length) {
-        result.componentPaths = response.componentPaths;
+      if ((response as any).componentPaths?.length) {
+        result.componentPaths = (response as any).componentPaths;
       }
 
       return result;
@@ -82,23 +86,12 @@ export class ActorTools {
       throw new Error('Invalid actorName');
     }
 
-    try {
-      const response = await (this.bridge as any).automationBridge?.sendAutomationRequest('delete_actor', {
-        actorName: params.actorName
-      });
-
-      if (!response || !response.success) {
-        throw new Error(response?.error || response?.message || 'Failed to delete actor');
-      }
-
-      return {
+    return this.sendRequest('delete', { actorName: params.actorName }, 'control_actor')
+      .then(response => ({
         success: true,
         message: response.message || `Deleted actor ${params.actorName}`,
         deleted: params.actorName
-      };
-    } catch (err) {
-      throw new Error(`Failed to delete actor: ${err}`);
-    }
+      }));
   }
 
   async applyForce(params: { actorName: string; force: { x: number; y: number; z: number } }) {
@@ -111,24 +104,14 @@ export class ActorTools {
 
     const [forceX, forceY, forceZ] = ensureVector3(params.force, 'force vector');
 
-    try {
-      const response = await (this.bridge as any).automationBridge?.sendAutomationRequest('apply_force', {
-        actorName: params.actorName,
-        force: { x: forceX, y: forceY, z: forceZ }
-      });
-
-      if (!response || !response.success) {
-        throw new Error(response?.error || response?.message || 'Failed to apply force');
-      }
-
-      return {
-        success: true,
-        message: response.message || `Applied force to ${params.actorName}`,
-        physicsEnabled: response.physicsEnabled ?? true
-      };
-    } catch (err) {
-      throw new Error(`Failed to apply force: ${err}`);
-    }
+    return this.sendRequest('apply_force', {
+      actorName: params.actorName,
+      force: { x: forceX, y: forceY, z: forceZ }
+    }, 'control_actor').then(response => ({
+      success: true,
+      message: response.message || `Applied force to ${params.actorName}`,
+      physicsEnabled: response.physicsEnabled ?? true
+    }));
   }
 
   private resolveActorClass(classPath: string): string {
@@ -158,12 +141,12 @@ export class ActorTools {
       // PlaneReflectionCapture is abstract and cannot be spawned
       'DecalActor': '/Script/Engine.DecalActor'
     };
-    
+
     // Check if it's a simple name that needs mapping
     if (classMap[classPath]) {
       return classMap[classPath];
     }
-    
+
     // Check if it already looks like a full path
     if (classPath.startsWith('/Script/') || classPath.startsWith('/Game/')) {
       return classPath;
@@ -172,7 +155,7 @@ export class ActorTools {
     if (classPath.startsWith('/Engine/')) {
       return classPath;
     }
-    
+
     // Check for Blueprint paths
     if (classPath.includes('Blueprint') || classPath.includes('BP_')) {
       // Ensure it has the proper prefix
@@ -181,7 +164,7 @@ export class ActorTools {
       }
       return classPath;
     }
-    
+
     // Default: assume it's an engine class
     return '/Script/Engine.' + classPath;
   }
@@ -196,21 +179,12 @@ export class ActorTools {
     const location = params.location ? ensureVector3(params.location, 'spawn_blueprint location') : undefined;
     const rotation = params.rotation ? ensureRotation(params.rotation, 'spawn_blueprint rotation') : undefined;
 
-    const automation = (this.bridge as any).automationBridge;
-    if (!automation || typeof automation.sendAutomationRequest !== 'function') {
-      throw new Error('Automation bridge not available for spawn_blueprint');
-    }
-
     const payload: Record<string, unknown> = { blueprintPath };
     if (actorName) payload.actorName = actorName;
     if (location) payload.location = { x: location[0], y: location[1], z: location[2] };
     if (rotation) payload.rotation = { pitch: rotation[0], yaw: rotation[1], roll: rotation[2] };
 
-    const resp = await automation.sendAutomationRequest('control_actor', { action: 'spawn_blueprint', ...payload });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to spawn blueprint actor');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('spawn_blueprint', payload, 'control_actor');
   }
 
   async setTransform(params: { actorName: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; scale?: { x: number; y: number; z: number } }) {
@@ -219,7 +193,7 @@ export class ActorTools {
       throw new Error('Invalid actorName');
     }
 
-    const payload: Record<string, unknown> = { action: 'set_transform', actorName };
+    const payload: Record<string, unknown> = { actorName };
     if (params.location) {
       const loc = ensureVector3(params.location, 'set_transform location');
       payload.location = { x: loc[0], y: loc[1], z: loc[2] };
@@ -233,24 +207,14 @@ export class ActorTools {
       payload.scale = { x: scl[0], y: scl[1], z: scl[2] };
     }
 
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', payload);
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to set transform');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('set_transform', payload, 'control_actor');
   }
 
   async getTransform(actorName: string) {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', { action: 'get_transform', actorName });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to get transform');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('get_transform', { actorName }, 'control_actor');
   }
 
   async setVisibility(params: { actorName: string; visible: boolean }) {
@@ -258,12 +222,7 @@ export class ActorTools {
     if (!actorName) {
       throw new Error('Invalid actorName');
     }
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', { action: 'set_visibility', actorName, visible: Boolean(params.visible) });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to set visibility');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('set_visibility', { actorName, visible: Boolean(params.visible) }, 'control_actor');
   }
 
   async addComponent(params: { actorName: string; componentType: string; componentName?: string; properties?: Record<string, unknown> }) {
@@ -272,18 +231,12 @@ export class ActorTools {
     if (!actorName) throw new Error('Invalid actorName');
     if (!componentType) throw new Error('Invalid componentType');
 
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', {
-      action: 'add_component',
+    return this.sendRequest('add_component', {
       actorName,
       componentType,
       componentName: typeof params.componentName === 'string' ? params.componentName : undefined,
       properties: params.properties
-    });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to add component');
-    }
-    return resp.result ?? resp;
+    }, 'control_actor');
   }
 
   async setComponentProperties(params: { actorName: string; componentName: string; properties: Record<string, unknown> }) {
@@ -292,36 +245,25 @@ export class ActorTools {
     if (!actorName) throw new Error('Invalid actorName');
     if (!componentName) throw new Error('Invalid componentName');
 
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', {
-      action: 'set_component_properties',
+    return this.sendRequest('set_component_properties', {
       actorName,
       componentName,
       properties: params.properties ?? {}
-    });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to set component properties');
-    }
-    return resp.result ?? resp;
+    }, 'control_actor');
   }
 
   async getComponents(actorName: string) {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', { action: 'get_components', actorName });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to get components');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('get_components', { actorName }, 'control_actor');
   }
 
   async duplicate(params: { actorName: string; newName?: string; offset?: { x: number; y: number; z: number } }) {
     const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
     if (!actorName) throw new Error('Invalid actorName');
 
-    const payload: Record<string, unknown> = { action: 'duplicate', actorName };
+    const payload: Record<string, unknown> = { actorName };
     if (typeof params.newName === 'string' && params.newName.trim().length > 0) {
       payload.newName = params.newName.trim();
     }
@@ -330,12 +272,7 @@ export class ActorTools {
       payload.offset = { x: offs[0], y: offs[1], z: offs[2] };
     }
 
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', payload);
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to duplicate actor');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('duplicate', payload, 'control_actor');
   }
 
   async addTag(params: { actorName: string; tag: string }) {
@@ -344,52 +281,31 @@ export class ActorTools {
     if (!actorName) throw new Error('Invalid actorName');
     if (!tag) throw new Error('Invalid tag');
 
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', { action: 'add_tag', actorName, tag });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to add tag');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('add_tag', { actorName, tag }, 'control_actor');
   }
 
   async findByTag(params: { tag: string; matchType?: string }) {
     const tag = typeof params.tag === 'string' ? params.tag.trim() : '';
     if (!tag) throw new Error('Invalid tag');
 
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', {
-      action: 'find_by_tag',
+    return this.sendRequest('find_by_tag', {
       tag,
       matchType: typeof params.matchType === 'string' ? params.matchType : undefined
-    });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to find actors by tag');
-    }
-    return resp.result ?? resp;
+    }, 'control_actor');
   }
 
   async findByName(name: string) {
     if (typeof name !== 'string' || name.trim().length === 0) {
       throw new Error('Invalid actor name query');
     }
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', { action: 'find_by_name', name: name.trim() });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to find actors by name');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('find_by_name', { name: name.trim() }, 'control_actor');
   }
 
   async detach(actorName: string) {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', { action: 'detach', actorName });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to detach actor');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('detach', { actorName }, 'control_actor');
   }
 
   async attach(params: { childActor: string; parentActor: string }) {
@@ -398,35 +314,20 @@ export class ActorTools {
     if (!child) throw new Error('Invalid childActor');
     if (!parent) throw new Error('Invalid parentActor');
 
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', { action: 'attach', childActor: child, parentActor: parent });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to attach actors');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('attach', { childActor: child, parentActor: parent }, 'control_actor');
   }
 
   async deleteByTag(tag: string) {
     if (typeof tag !== 'string' || tag.trim().length === 0) {
       throw new Error('Invalid tag');
     }
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', { action: 'delete_by_tag', tag: tag.trim() });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to delete actors by tag');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('delete_by_tag', { tag: tag.trim() }, 'control_actor');
   }
 
   async setBlueprintVariables(params: { actorName: string; variables: Record<string, unknown> }) {
     const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
     if (!actorName) throw new Error('Invalid actorName');
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', { action: 'set_blueprint_variables', actorName, variables: params.variables ?? {} });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to set blueprint variables');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('set_blueprint_variables', { actorName, variables: params.variables ?? {} }, 'control_actor');
   }
 
   async createSnapshot(params: { actorName: string; snapshotName: string }) {
@@ -434,20 +335,10 @@ export class ActorTools {
     const snapshotName = typeof params.snapshotName === 'string' ? params.snapshotName.trim() : '';
     if (!actorName) throw new Error('Invalid actorName');
     if (!snapshotName) throw new Error('Invalid snapshotName');
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', { action: 'create_snapshot', actorName, snapshotName });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to create snapshot');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('create_snapshot', { actorName, snapshotName }, 'control_actor');
   }
 
   async listActors() {
-    const automation = (this.bridge as any).automationBridge;
-    const resp = await automation?.sendAutomationRequest('control_actor', { action: 'list' });
-    if (!resp || resp.success === false) {
-      throw new Error(resp?.error || resp?.message || 'Failed to list actors');
-    }
-    return resp.result ?? resp;
+    return this.sendRequest('list', {}, 'control_actor');
   }
 }

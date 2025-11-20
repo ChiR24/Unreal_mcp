@@ -81,10 +81,12 @@ export function sanitizeScsOperation(rawOperation: BlueprintScsOperationInput, i
   if (!type) return { ok: false, error: `Operation at index ${index} missing type.` };
   const operation: Record<string, unknown> = { type };
 
-  const componentName = (rawOperation as any).componentName ?? (rawOperation as any).name;
-  const componentClass = (rawOperation as any).componentClass ?? (rawOperation as any).componentType ?? (rawOperation as any).class;
-  const attachTo = (rawOperation as any).attachTo ?? (rawOperation as any).parent ?? (rawOperation as any).attach;
-  const transform = normalizeTransformInput((rawOperation as any).transform);
+  // Type-safe access to properties
+  const op = rawOperation as Record<string, any>;
+  const componentName = op.componentName ?? op.name;
+  const componentClass = op.componentClass ?? op.componentType ?? op.class;
+  const attachTo = op.attachTo ?? op.parent ?? op.attach;
+  const transform = normalizeTransformInput(op.transform);
   const properties = rawOperation.properties && typeof rawOperation.properties === 'object' ? rawOperation.properties : undefined;
 
   switch (type) {
@@ -120,7 +122,7 @@ export function sanitizeScsOperation(rawOperation: BlueprintScsOperationInput, i
       break;
     }
     case 'attach_component': {
-      const parent = (rawOperation as any).parentComponent ?? (rawOperation as any).parent;
+      const parent = op.parentComponent ?? op.parent;
       if (!componentName) return { ok: false, error: `attach_component operation at index ${index} requires componentName.` };
       if (!parent) return { ok: false, error: `attach_component operation at index ${index} requires parentComponent.` };
       operation.componentName = componentName;
@@ -137,43 +139,36 @@ export function sanitizeScsOperation(rawOperation: BlueprintScsOperationInput, i
 export function resolveBlueprintCandidates(rawName: string | undefined): { primary: string | undefined; candidates: string[] } {
   const trimmed = coerceString(rawName)?.trim();
   if (!trimmed) return { primary: undefined, candidates: [] };
-  const normalizedInput = trimmed.replace(/\\/g, '/').replace(/\/\/+/, '/');
-  const withoutLeading = normalizedInput.replace(/^\/+/, '');
-  // Build a prioritized list where absolute /Game/ paths are preferred
-  // before attempting bare names. This avoids calling EditorAssetLibrary
-  // with invalid paths such as 'BP_TestPawn' which cause repeated engine
-  // errors when probed frequently.
-  const seen = new Set<string>();
-  const ordered: string[] = [];
-  const pushUnique = (v?: string) => {
-    if (!v) return;
-    const fixed = v.replace(/\\/g, '/').replace(/\/\/+/ , '/').trim();
-    if (!fixed) return;
-    if (seen.has(fixed)) return;
-    seen.add(fixed);
-    ordered.push(fixed);
+
+  // Normalize slashes and remove duplicates (global flag fixed)
+  const normalized = trimmed.replace(/\\/g, '/').replace(/\/+/g, '/');
+  const withoutLeading = normalized.replace(/^\/+/, '');
+  
+  // Build a prioritized list using a Set to handle uniqueness automatically
+  const candidates = new Set<string>();
+  
+  const add = (path: string) => {
+    if (path && path.trim()) candidates.add(path.replace(/\/+/g, '/'));
   };
 
-  if (normalizedInput.includes('/')) {
-    // If caller provided a path-like input, try to normalize and prefer
-    // absolute /Game/ paths derived from the basename.
-    const remainder = withoutLeading.split('/').pop();
-    if (remainder) {
-      pushUnique(`/Game/Blueprints/${remainder}`);
-      pushUnique(`/Game/${remainder}`);
+  if (normalized.includes('/')) {
+    // Path-like input: try to guess standard content paths first
+    const basename = withoutLeading.split('/').pop();
+    if (basename) {
+      add(`/Game/Blueprints/${basename}`);
+      add(`/Game/${basename}`);
     }
-    // Keep the original normalized input as a final candidate.
-    pushUnique(normalizedInput);
-    // Also include a leading-slash variant if not present.
-    pushUnique(normalizedInput.startsWith('/') ? normalizedInput : `/${withoutLeading}`);
+    add(normalized);
+    add(normalized.startsWith('/') ? normalized : `/${withoutLeading}`);
   } else {
-    // Bare name: prefer common content roots first, then try the raw name and a leading-slash variant.
-    pushUnique(`/Game/Blueprints/${withoutLeading}`);
-    pushUnique(`/Game/${withoutLeading}`);
-    pushUnique(normalizedInput);
-    pushUnique(`/${withoutLeading}`);
+    // Bare name: try standard locations
+    add(`/Game/Blueprints/${withoutLeading}`);
+    add(`/Game/${withoutLeading}`);
+    add(normalized);
+    add(`/${withoutLeading}`);
   }
 
+  const ordered = Array.from(candidates);
   return { primary: ordered[0], candidates: ordered };
 }
 

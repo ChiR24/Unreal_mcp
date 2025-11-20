@@ -185,14 +185,4 @@ export class MaterialTools {
       return { success: false, error: `Failed to create material instance: ${err}` };
     }
   }
-
-  private async assetExists(assetPath: string): Promise<boolean> {
-    try {
-      return await this.bridge.assetExists(assetPath);
-    } catch {
-      // ignored, fall through to false
-    }
-
-    return false;
-  }
 }

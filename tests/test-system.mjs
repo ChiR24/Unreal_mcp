@@ -23,13 +23,11 @@ const testCases = [
   { scenario: 'Set VSync CVAR', toolName: 'system_control', arguments: { action: 'set_cvar', name: 'r.VSync', value: '0' }, expected: 'success - CVAR set' },
   { scenario: 'Set max FPS CVAR', toolName: 'system_control', arguments: { action: 'set_cvar', name: 't.MaxFPS', value: '60' }, expected: 'success - CVAR set' },
   { scenario: 'Play short UI sound (best-effort)', toolName: 'system_control', arguments: { action: 'play_sound', soundPath: '/Engine/EditorSounds/Generic', volume: 0.5 }, expected: 'success - sound played or handled' },
-{ scenario: 'Create & remove lightweight console widget (cleanup)', toolName: 'system_control', arguments: { action: 'create_widget', widgetPath: '/Engine/EditorWidgets/WBP_Console', owningPlayer: 0 }, expected: 'success - widget created or handled' },
+  { scenario: 'Create & remove lightweight console widget (cleanup)', toolName: 'system_control', arguments: { action: 'create_widget', widgetPath: '/Engine/EditorWidgets/WBP_Console', owningPlayer: 0 }, expected: 'success - widget created or handled' },
   // Additional
-  { scenario: 'Toggle fullscreen', toolName: 'system_control', arguments: { action: 'set_fullscreen', enabled: false }, expected: 'success or handled' },
-  { scenario: 'Set resolution 1920x1080', toolName: 'system_control', arguments: { action: 'set_resolution', width: 1920, height: 1080, windowed: true }, expected: 'success or handled' },
-  { scenario: 'Set ViewDistanceScale', toolName: 'system_control', arguments: { action: 'set_cvar', name: 'r.ViewDistanceScale', value: '1' }, expected: 'success or handled' },
-  { scenario: 'Show memory stat', toolName: 'system_control', arguments: { action: 'execute_command', command: 'stat memory' }, expected: 'success or handled' },
-  { scenario: 'Capture GPU trace (best-effort)', toolName: 'system_control', arguments: { action: 'execute_command', command: 'profilegpu' }, expected: 'success or handled' }
+  // Real-World Scenario: Project Validation
+  { scenario: 'Validation - Check Settings', toolName: 'system_control', arguments: { action: 'get_project_settings', category: 'Project' }, expected: 'success' },
+  { scenario: 'Validation - Validate Assets', toolName: 'system_control', arguments: { action: 'validate_assets', paths: ['/Game'] }, expected: 'success' }
 ];
 
 await runToolTests('System Control', testCases);

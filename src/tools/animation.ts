@@ -64,25 +64,8 @@ export class AnimationTools {
     this.automationBridge = automationBridge;
   }
 
-  private normalizePath(basePath: string | undefined, name: string): { directory: string; assetName: string; fullPath: string } {
-    const directory = (basePath && basePath.trim().replace(/\/+$/, '')) || '/Game/Animations';
-    const sanitizedName = name.trim();
-    const fullPath = `${directory}/${sanitizedName}`;
-    return { directory, assetName: sanitizedName, fullPath };
-  }
-
   private trackArtifact(key: string, info: { path?: string; type: string; metadata?: Record<string, unknown> }) {
     this.managedArtifacts.set(key, { ...info, createdAt: Date.now() });
-  }
-
-  private removeArtifacts(keys: string[]): string[] {
-    const removed: string[] = [];
-    for (const key of keys) {
-      if (this.managedArtifacts.delete(key)) {
-        removed.push(key);
-      }
-    }
-    return removed;
   }
 
   async createAnimationBlueprint(params: {

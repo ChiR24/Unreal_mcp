@@ -23,10 +23,17 @@ const testCases = [
   { scenario: 'Unload streaming level', toolName: 'manage_level', arguments: { action: 'stream', levelPath: '/Game/Maps/TC_SubLevel', shouldBeLoaded: false }, expected: 'success - sublevel unloaded' },
   { scenario: 'Delete test levels', toolName: 'manage_level', arguments: { action: 'delete', levelPath: '/Engine/Maps/Entry' }, expected: 'not_implemented' },
   // Additional
-  { scenario: 'List actors in level', toolName: 'manage_level', arguments: { action: 'list_level_actors', levelPath: '/Engine/Maps/Entry' }, expected: 'not_implemented' },
-  { scenario: 'Set world setting (best-effort)', toolName: 'manage_level', arguments: { action: 'set_world_settings', properties: { bEnableWorldComposition: false } }, expected: 'not_implemented' },
-  { scenario: 'Rename level placeholder', toolName: 'manage_level', arguments: { action: 'rename_level', levelPath: '/Engine/Maps/Entry', newName: 'TC_TestLevel_Renamed' }, expected: 'not_implemented' },
-  { scenario: 'Open level instance (placeholder)', toolName: 'manage_level', arguments: { action: 'open_level_instance', assetPath: '/Game/Maps/TC_SubLevel' }, expected: 'not_implemented' },
+  // Real-World Scenario: Lighting Setup
+  { scenario: 'Lighting - Create Sky Light', toolName: 'manage_level', arguments: { action: 'create_light', lightType: 'Sky', intensity: 1.0 }, expected: 'success' },
+  { scenario: 'Lighting - Build (Preview)', toolName: 'manage_level', arguments: { action: 'build_lighting', quality: 'Preview' }, expected: 'success' },
+
+  // Real-World Scenario: Level Streaming
+  { scenario: 'Streaming - Create Night Variant', toolName: 'manage_level', arguments: { action: 'create_level', levelName: 'TC_SubLevel_Night', streaming: true }, expected: 'success' },
+  { scenario: 'Streaming - Load Night', toolName: 'manage_level', arguments: { action: 'stream', levelPath: '/Game/Maps/TC_SubLevel_Night', shouldBeLoaded: true, shouldBeVisible: true }, expected: 'success' },
+  { scenario: 'Streaming - Unload Day (TC_SubLevel)', toolName: 'manage_level', arguments: { action: 'stream', levelPath: '/Game/Maps/TC_SubLevel', shouldBeLoaded: false }, expected: 'success' },
+
+  // Cleanup
+  { scenario: 'Cleanup - Unload Night', toolName: 'manage_level', arguments: { action: 'stream', levelPath: '/Game/Maps/TC_SubLevel_Night', shouldBeLoaded: false }, expected: 'success' },
   { scenario: 'Validate level', toolName: 'manage_level', arguments: { action: 'validate_level', levelPath: '/Game/Maps/TC_TestLevel_Renamed' }, expected: 'not_implemented' }
 ];
 

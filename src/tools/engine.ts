@@ -5,7 +5,7 @@ import { spawn } from 'child_process';
 
 export class EngineTools {
   private env = loadEnv();
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(_bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
 
   setAutomationBridge(automationBridge?: AutomationBridge) {
     this.automationBridge = automationBridge;

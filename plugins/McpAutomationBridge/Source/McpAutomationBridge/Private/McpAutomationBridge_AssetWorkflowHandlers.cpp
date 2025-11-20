@@ -4,6 +4,23 @@
 #include "Misc/ScopeExit.h"
 #include "Async/Async.h"
 
+#include "Misc/Paths.h"
+
+bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    const FString Lower = Action.ToLower();
+    if (Lower.IsEmpty())
+    {
+        return false;
+    }
+
+    return false;
+}
+
 #if WITH_EDITOR
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"

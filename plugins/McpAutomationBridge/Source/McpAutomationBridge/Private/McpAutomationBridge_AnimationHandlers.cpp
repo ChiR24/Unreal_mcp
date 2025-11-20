@@ -204,7 +204,7 @@ namespace
 
 bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT(">>> HandleAnimationPhysicsAction ENTRY: RequestId=%s RawAction='%s'"), *RequestId, *Action);
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT(">>> HandleAnimationPhysicsAction ENTRY: RequestId=%s RawAction='%s'"), *RequestId, *Action);
     const FString Lower = Action.ToLower();
     if (!Lower.Equals(TEXT("animation_physics"), ESearchCase::IgnoreCase) && !Lower.StartsWith(TEXT("animation_physics"))) return false;
 
@@ -1283,7 +1283,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
         Message = bSuccess ? TEXT("Animation/Physics action completed") : TEXT("Animation/Physics action failed");
     }
 
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleAnimationPhysicsAction: responding to subaction '%s' (success=%s)"), *LowerSub, bSuccess ? TEXT("true") : TEXT("false"));
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleAnimationPhysicsAction: responding to subaction '%s' (success=%s)"), *LowerSub, bSuccess ? TEXT("true") : TEXT("false"));
     SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);
     return true;
 #else

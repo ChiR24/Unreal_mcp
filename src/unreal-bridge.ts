@@ -19,7 +19,6 @@ export class UnrealBridge {
     disconnected: (info: any) => void;
     handshakeFailed: (info: any) => void;
   };
-  private autoReconnectEnabled = false;
   private commandProcessorInitialized = false;
   
   // Command queue for throttling
@@ -34,8 +33,6 @@ export class UnrealBridge {
   // Console object cache to reduce FindConsoleObject warnings
   private consoleObjectCache = new Map<string, any>();
   private readonly CONSOLE_CACHE_TTL = 300000; // 5 minutes TTL for cached objects
-  private pluginStatusCache = new Map<string, { enabled: boolean; timestamp: number }>();
-  private readonly PLUGIN_CACHE_TTL = 5 * 60 * 1000;
   
   // Unsafe viewmodes that can cause crashes or instability via visualizeBuffer
   private readonly UNSAFE_VIEWMODES = [
@@ -127,6 +124,17 @@ export class UnrealBridge {
     }
 
     this.connected = automationBridge.isConnected();
+  }
+
+  /**
+   * Get the automation bridge instance safely.
+   * Throws if not configured, but does not check connection status (use isConnected for that).
+   */
+  getAutomationBridge(): AutomationBridge {
+    if (!this.automationBridge) {
+      throw new Error('Automation bridge is not configured');
+    }
+    return this.automationBridge;
   }
   
   /**
@@ -640,8 +648,8 @@ export class UnrealBridge {
     return results;
   }
 
-  setAutoReconnectEnabled(enabled: boolean): void {
-    this.autoReconnectEnabled = enabled;
+  setAutoReconnectEnabled(_enabled: boolean): void {
+    // Auto-reconnect behavior has been removed; this is now a no-op kept for API compatibility.
   }
 
   // Graceful shutdown
@@ -727,34 +735,6 @@ export class UnrealBridge {
       this.log.debug('assetExists plugin call failed:', (err as Error)?.message ?? err);
     }
     return false;
-  }
-
-  /**
-   * Alternate commands when Python is not available
-   */
-  private async executeAlternateCommand(functionName: string, params?: Record<string, any>): Promise<any> {
-    switch (functionName) {
-      case 'SPAWN_ACTOR_AT_LOCATION':
-        return this.executeEditorFunction('SPAWN_ACTOR_AT_LOCATION', {
-          class_path: params?.class_path || 'StaticMeshActor',
-          params: { location: { x: params?.x || 0, y: params?.y || 0, z: params?.z || 0 }, rotation: params?.rotation }
-        });
-      
-      case 'DELETE_ACTOR':
-        // Prefer plugin-native delete (or executeEditorFunction fallback) over direct Python
-        return this.executeEditorFunction('DELETE_ACTOR', { actor_name: params?.actor_name });
-      
-      case 'BUILD_LIGHTING':
-        // Prefer plugin / LevelEditorSubsystem to run a lighting build; fall back to console if unavailable.
-        try {
-          return await this.executeEditorFunction('BUILD_LIGHTING', { quality: params?.quality });
-        } catch (_err) {
-          return this.executeConsoleCommand('BuildLighting');
-        }
-      
-      default:
-        throw new Error(`No alternate available for ${functionName}`);
-    }
   }
 
   /**

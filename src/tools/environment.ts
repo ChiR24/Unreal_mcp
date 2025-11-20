@@ -10,7 +10,7 @@ interface EnvironmentResult {
 }
 
 export class EnvironmentTools {
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(_bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
 
   setAutomationBridge(automationBridge?: AutomationBridge) {
     this.automationBridge = automationBridge;

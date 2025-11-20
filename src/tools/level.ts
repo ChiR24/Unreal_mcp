@@ -1,6 +1,5 @@
-// Level management tools for Unreal Engine
-import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { BaseTool } from './base-tool.js';
+import { ILevelTools } from '../types/tool-interfaces.js';
 
 type LevelExportRecord = { target: string; timestamp: number; note?: string };
 type ManagedLevelRecord = {
@@ -17,15 +16,11 @@ type ManagedLevelRecord = {
   lights: Array<{ name: string; type: string; createdAt: number; details?: Record<string, unknown> }>;
 };
 
-export class LevelTools {
+export class LevelTools extends BaseTool implements ILevelTools {
   private managedLevels = new Map<string, ManagedLevelRecord>();
   private listCache?: { result: { success: true; message: string; count: number; levels: any[] }; timestamp: number };
   private readonly LIST_CACHE_TTL_MS = 750;
   private currentLevelPath?: string;
-
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
-
-  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
   private invalidateListCache() {
     this.listCache = undefined;
@@ -210,11 +205,11 @@ export class LevelTools {
     this.ensureRecord(normalized.path, { loaded: true, visible: true });
   }
 
-  listLevels() {
+  async listLevels() {
     return this.listManagedLevels();
   }
 
-  getLevelSummary(levelPath?: string) {
+  async getLevelSummary(levelPath?: string) {
     const resolved = this.resolveLevelPath(levelPath);
     if (!resolved) {
       return { success: false, error: 'No level specified' };
@@ -338,16 +333,14 @@ export class LevelTools {
     };
   }
 
-  // Load level using console commands
   async loadLevel(params: {
     levelPath: string;
     streaming?: boolean;
     position?: [number, number, number];
   }) {
     const normalizedPath = this.normalizeLevelPath(params.levelPath).path;
-    
+
     if (params.streaming) {
-      // Load as streaming level
       try {
         const simpleName = (params.levelPath || '').split('/').filter(Boolean).pop() || params.levelPath;
         await this.bridge.executeConsoleCommand(`StreamLevel ${simpleName} Load Show`);
@@ -370,7 +363,6 @@ export class LevelTools {
         };
       }
     } else {
-      // Load as persistent level
       try {
         await this.bridge.executeConsoleCommand(`Open ${params.levelPath}`);
         this.setCurrentLevel(normalizedPath);
@@ -395,17 +387,12 @@ export class LevelTools {
     }
   }
 
-  // Save current level
   async saveLevel(_params: {
     levelName?: string;
     savePath?: string;
   }) {
-    if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Level save requires Automation Bridge support' };
-    }
-
     try {
-      const response = await this.automationBridge.sendAutomationRequest('save_current_level', {}, {
+      const response = await this.sendAutomationRequest('save_current_level', {}, {
         timeoutMs: 60000
       });
 
@@ -441,22 +428,17 @@ export class LevelTools {
     }
   }
 
-  // Create new level
   async createLevel(params: {
     levelName: string;
     template?: 'Empty' | 'Default' | 'VR' | 'TimeOfDay';
     savePath?: string;
   }) {
-    if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Level creation requires Automation Bridge support' };
-    }
-
     const basePath = params.savePath || '/Game/Maps';
     const isPartitioned = true; // default to World Partition for UE5
     const fullPath = `${basePath}/${params.levelName}`;
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_new_level', {
+      const response = await this.sendAutomationRequest('create_new_level', {
         levelPath: fullPath,
         useWorldPartition: isPartitioned
       }, {
@@ -468,8 +450,8 @@ export class LevelTools {
         if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
           return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Level creation not implemented by plugin', path: fullPath, partitioned: isPartitioned };
         }
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: response.error || response.message || 'Failed to create level',
           path: fullPath,
           partitioned: isPartitioned
@@ -492,8 +474,8 @@ export class LevelTools {
 
       return result;
     } catch (error) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: `Failed to create level: ${error instanceof Error ? error.message : String(error)}`,
         path: fullPath,
         partitioned: isPartitioned
@@ -501,7 +483,6 @@ export class LevelTools {
     }
   }
 
-  // Stream level
   async streamLevel(params: {
     levelPath?: string;
     levelName?: string;
@@ -518,18 +499,8 @@ export class LevelTools {
     const levelName = derivedName.length > 0 ? derivedName : undefined;
     const shouldBeVisible = params.shouldBeVisible ?? params.shouldBeLoaded;
 
-    if (!this.automationBridge) {
-      // Fallback to console command if automation bridge not available
-      const levelIdentifier = levelName ?? levelPath ?? '';
-      const simpleName = levelIdentifier.split('/').filter(Boolean).pop() || levelIdentifier;
-      const loadCmd = params.shouldBeLoaded ? 'Load' : 'Unload';
-      const visCmd = shouldBeVisible ? 'Show' : 'Hide';
-      const command = `StreamLevel ${simpleName} ${loadCmd} ${visCmd}`;
-      return this.bridge.executeConsoleCommand(command);
-    }
-
     try {
-      const response = await this.automationBridge.sendAutomationRequest('stream_level', {
+      const response = await this.sendAutomationRequest('stream_level', {
         levelPath: levelPath || '',
         levelName: levelName || '',
         shouldBeLoaded: params.shouldBeLoaded,
@@ -577,15 +548,14 @@ export class LevelTools {
     }
   }
 
-  // World composition
   async setupWorldComposition(params: {
     enableComposition: boolean;
     tileSize?: number;
     distanceStreaming?: boolean;
     streamingDistance?: number;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.enableComposition) {
       commands.push('EnableWorldComposition');
       if (params.tileSize) {
@@ -597,13 +567,12 @@ export class LevelTools {
     } else {
       commands.push('DisableWorldComposition');
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'World composition configured' };
   }
 
-  // Level blueprint
   async editLevelBlueprint(params: {
     eventType: 'BeginPlay' | 'EndPlay' | 'Tick' | 'Custom';
     customEventName?: string;
@@ -617,7 +586,6 @@ export class LevelTools {
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Sub-levels
   async createSubLevel(params: {
     name: string;
     type: 'Persistent' | 'Streaming' | 'Lighting' | 'Gameplay';
@@ -627,7 +595,6 @@ export class LevelTools {
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // World settings
   async setWorldSettings(params: {
     gravity?: number;
     worldScale?: number;
@@ -635,8 +602,8 @@ export class LevelTools {
     defaultPawn?: string;
     killZ?: number;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.gravity !== undefined) {
       commands.push(`SetWorldGravity ${params.gravity}`);
     }
@@ -652,13 +619,12 @@ export class LevelTools {
     if (params.killZ !== undefined) {
       commands.push(`SetKillZ ${params.killZ}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'World settings updated' };
   }
 
-  // Level bounds
   async setLevelBounds(params: {
     min: [number, number, number];
     max: [number, number, number];
@@ -667,17 +633,12 @@ export class LevelTools {
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Navigation mesh
   async buildNavMesh(params: {
     rebuildAll?: boolean;
     selectedOnly?: boolean;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Navigation mesh operations require plugin support.');
-    }
-
     try {
-      const response = await this.automationBridge.sendAutomationRequest('build_navigation_mesh', {
+      const response = await this.sendAutomationRequest('build_navigation_mesh', {
         rebuildAll: params.rebuildAll ?? false,
         selectedOnly: params.selectedOnly ?? false
       }, {
@@ -725,7 +686,6 @@ export class LevelTools {
     }
   }
 
-  // Level visibility
   async setLevelVisibility(params: {
     levelName: string;
     visible: boolean;
@@ -734,7 +694,6 @@ export class LevelTools {
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // World origin
   async setWorldOrigin(params: {
     location: [number, number, number];
   }) {
@@ -742,7 +701,6 @@ export class LevelTools {
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Level streaming volumes
   async createStreamingVolume(params: {
     levelName: string;
     position: [number, number, number];
@@ -753,7 +711,6 @@ export class LevelTools {
     return this.bridge.executeConsoleCommand(command);
   }
 
-  // Level LOD
   async setLevelLOD(params: {
     levelName: string;
     lodLevel: number;
@@ -762,6 +719,4 @@ export class LevelTools {
     const command = `SetLevelLOD ${params.levelName} ${params.lodLevel} ${params.distance}`;
     return this.bridge.executeConsoleCommand(command);
   }
-
 }
-

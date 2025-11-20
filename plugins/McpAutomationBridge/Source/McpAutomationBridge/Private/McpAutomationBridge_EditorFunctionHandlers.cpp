@@ -646,12 +646,22 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
 
         Widget->AddToViewport(zOrder);
 
+        // Verify widget is in viewport
+        const bool bIsInViewport = Widget->IsInViewport();
+
         TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
-        Out->SetBoolField(TEXT("success"), true);
+        Out->SetBoolField(TEXT("success"), bIsInViewport);
         Out->SetStringField(TEXT("widget_path"), WidgetPath);
         Out->SetStringField(TEXT("widget_class"), WidgetClass->GetPathName());
         Out->SetNumberField(TEXT("z_order"), zOrder);
         Out->SetNumberField(TEXT("player_index"), PlayerController ? playerIndex : 0);
+        
+        if (!bIsInViewport)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to add widget to viewport"), Out, TEXT("ADD_TO_VIEWPORT_FAILED"));
+            return true;
+        }
+
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget added to viewport"), Out, FString());
         return true;
     }

@@ -6,7 +6,7 @@ import { AutomationBridge } from '../automation-bridge.js';
  * Implements procedural terrain and foliage using AutomationBridge
  */
 export class BuildEnvironmentAdvanced {
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(_bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 

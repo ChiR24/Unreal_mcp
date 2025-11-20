@@ -1,35 +1,30 @@
-import { UnrealBridge } from '../unreal-bridge.js';
+import { BaseTool } from './base-tool.js';
+import { IEditorTools } from '../types/tool-interfaces.js';
 import { toVec3Object, toRotObject } from '../utils/normalize.js';
 
-export class EditorTools {
+export class EditorTools extends BaseTool implements IEditorTools {
   private cameraBookmarks = new Map<string, { location: [number, number, number]; rotation: [number, number, number]; savedAt: number }>();
   private editorPreferences = new Map<string, Record<string, unknown>>();
   private activeRecording?: { name?: string; options?: Record<string, unknown>; startedAt: number };
 
-  constructor(private bridge: UnrealBridge) {}
-  
   async isInPIE(): Promise<boolean> {
     try {
-      // Use Automation Bridge to check PIE state
-      const automationBridge = (this.bridge as any).automationBridge;
-      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
-        const response = await automationBridge.sendAutomationRequest(
-          'check_pie_state',
-          {},
-          { timeoutMs: 5000 }
-        );
-        
-        if (response && response.success !== false) {
-          return response.isInPIE === true || response.result?.isInPIE === true;
-        }
+      const response = await this.sendAutomationRequest(
+        'check_pie_state',
+        {},
+        { timeoutMs: 5000 }
+      );
+
+      if (response && response.success !== false) {
+        return response.isInPIE === true || response.result?.isInPIE === true;
       }
-      
+
       return false;
     } catch {
       return false;
     }
   }
-  
+
   async ensureNotInPIE(): Promise<void> {
     if (await this.isInPIE()) {
       await this.stopPlayInEditor();
@@ -40,10 +35,8 @@ export class EditorTools {
 
   async playInEditor() {
     try {
-      // Prefer native control_editor action when available
-      const automationBridge = (this.bridge as any).automationBridge;
-      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
-        const response = await automationBridge.sendAutomationRequest(
+      try {
+        const response = await this.sendAutomationRequest(
           'control_editor',
           { action: 'play' },
           { timeoutMs: 30000 }
@@ -52,12 +45,12 @@ export class EditorTools {
           return { success: true, message: response.message || 'PIE started' };
         }
         return { success: false, error: response?.error || response?.message || 'Failed to start PIE' };
+      } catch (_err) {
+        // Fallback to console commands if automation bridge is unavailable or fails
+        await this.bridge.executeConsoleCommand('t.MaxFPS 60');
+        await this.bridge.executeConsoleCommand('PlayInViewport');
+        return { success: true, message: 'PIE start command sent' };
       }
-
-      // Fallback to console commands if automation bridge is unavailable
-      await this.bridge.executeConsoleCommand('t.MaxFPS 60');
-      await this.bridge.executeConsoleCommand('PlayInViewport');
-      return { success: true, message: 'PIE start command sent' };
     } catch (err) {
       return { success: false, error: `Failed to start PIE: ${err}` };
     }
@@ -65,43 +58,34 @@ export class EditorTools {
 
   async stopPlayInEditor() {
     try {
-      // Use the native C++ plugin's control_editor action instead of Python
-      const automationBridge = (this.bridge as any).automationBridge;
-      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function') {
-        try {
-          const response = await automationBridge.sendAutomationRequest(
-            'control_editor',
-            { action: 'stop' },
-            { timeoutMs: 30000 }
-          );
-          
-          if (response.success !== false) {
-            return { 
-              success: true, 
-              message: response.message || 'PIE stopped successfully' 
-            };
-          }
-          
-          // Plugin returned error
-          return { 
-            success: false, 
-            error: response.error || response.message || 'Failed to stop PIE' 
+      try {
+        const response = await this.sendAutomationRequest(
+          'control_editor',
+          { action: 'stop' },
+          { timeoutMs: 30000 }
+        );
+
+        if (response.success !== false) {
+          return {
+            success: true,
+            message: response.message || 'PIE stopped successfully'
           };
-        } catch (_pluginErr) {
-          // Fallback to console command if plugin fails
-          await this.bridge.executeConsoleCommand('stop');
-          return { success: true, message: 'PIE stopped via console command' };
         }
+
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to stop PIE'
+        };
+      } catch (_pluginErr) {
+        // Fallback to console command if plugin fails
+        await this.bridge.executeConsoleCommand('stop');
+        return { success: true, message: 'PIE stopped via console command' };
       }
-      
-      // No automation bridge available - use console command
-      await this.bridge.executeConsoleCommand('stop');
-      return { success: true, message: 'PIE stop command sent' };
     } catch (err) {
       return { success: false, error: `Failed to stop PIE: ${err}` };
     }
   }
-  
+
   async pausePlayInEditor() {
     try {
       // Pause/Resume PIE
@@ -111,7 +95,7 @@ export class EditorTools {
       return { success: false, error: `Failed to pause PIE: ${err}` };
     }
   }
-  
+
   // Alias for consistency with naming convention
   async pauseInEditor() {
     return this.pausePlayInEditor();
@@ -135,8 +119,7 @@ export class EditorTools {
     message?: string;
   }> {
     try {
-      const automationBridge = (this.bridge as any).automationBridge;
-      const resp = await automationBridge.sendAutomationRequest(
+      const resp = await this.sendAutomationRequest(
         'control_editor',
         { action: 'get_camera' },
         { timeoutMs: 3000 }
@@ -144,8 +127,8 @@ export class EditorTools {
       const result = resp?.result ?? resp;
       const loc = result?.location ?? result?.camera?.location;
       const rot = result?.rotation ?? result?.camera?.rotation;
-      const locArr: [number, number, number] | undefined = Array.isArray(loc) && loc.length === 3 ? [Number(loc[0])||0, Number(loc[1])||0, Number(loc[2])||0] : undefined;
-      const rotArr: [number, number, number] | undefined = Array.isArray(rot) && rot.length === 3 ? [Number(rot[0])||0, Number(rot[1])||0, Number(rot[2])||0] : undefined;
+      const locArr: [number, number, number] | undefined = Array.isArray(loc) && loc.length === 3 ? [Number(loc[0]) || 0, Number(loc[1]) || 0, Number(loc[2]) || 0] : undefined;
+      const rotArr: [number, number, number] | undefined = Array.isArray(rot) && rot.length === 3 ? [Number(rot[0]) || 0, Number(rot[1]) || 0, Number(rot[2]) || 0] : undefined;
       if (resp && resp.success !== false && locArr && rotArr) {
         return { success: true, location: locArr, rotation: rotArr };
       }
@@ -174,7 +157,7 @@ export class EditorTools {
       locObj.z = Math.max(-MAX_COORD, Math.min(MAX_COORD, locObj.z));
       location = locObj as any;
     }
-    
+
     // Validate rotation if provided
     if (rotation !== undefined) {
       if (rotation === null) {
@@ -190,11 +173,10 @@ export class EditorTools {
       rotObj.roll = ((rotObj.roll % 360) + 360) % 360;
       rotation = rotObj as any;
     }
-    
+
     // Use native control_editor.set_camera when available
     try {
-      const automationBridge = (this.bridge as any).automationBridge;
-      const resp = await automationBridge.sendAutomationRequest('control_editor', {
+      const resp = await this.sendAutomationRequest('control_editor', {
         action: 'set_camera',
         location: location as any,
         rotation: rotation as any
@@ -207,7 +189,7 @@ export class EditorTools {
       return { success: false, error: `Camera control failed: ${err}` };
     }
   }
-  
+
   async setCameraSpeed(speed: number) {
     try {
       await this.bridge.executeConsoleCommand(`camspeed ${speed}`);
@@ -216,7 +198,7 @@ export class EditorTools {
       return { success: false, error: `Failed to set camera speed: ${err}` };
     }
   }
-  
+
   async setFOV(fov: number) {
     try {
       await this.bridge.executeConsoleCommand(`fov ${fov}`);
@@ -230,14 +212,14 @@ export class EditorTools {
     try {
       const sanitizedFilename = filename ? filename.replace(/[<>:*?"|]/g, '_') : `Screenshot_${Date.now()}`;
       const command = filename ? `highresshot 1920x1080 filename="${sanitizedFilename}"` : 'shot';
-      
+
       await this.bridge.executeConsoleCommand(command);
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: `Screenshot captured: ${sanitizedFilename}`,
         filename: sanitizedFilename,
-        command 
+        command
       };
     } catch (err) {
       return { success: false, error: `Failed to take screenshot: ${err}` };
@@ -384,11 +366,11 @@ export class EditorTools {
       // Clamp to reasonable limits
       const clampedWidth = Math.max(320, Math.min(7680, width));
       const clampedHeight = Math.max(240, Math.min(4320, height));
-      
+
       // Use console command directly instead of Python
       const command = `r.SetRes ${clampedWidth}x${clampedHeight}`;
       await this.bridge.executeConsoleCommand(command);
-      
+
       return {
         success: true,
         message: `Viewport resolution set to ${clampedWidth}x${clampedHeight}`,
@@ -408,18 +390,18 @@ export class EditorTools {
       }
 
       if (command.length > 1000) {
-        return { 
-          success: false, 
-          error: `Command too long (${command.length} chars). Maximum is 1000 characters.` 
+        return {
+          success: false,
+          error: `Command too long (${command.length} chars). Maximum is 1000 characters.`
         };
       }
 
       const res = await this.bridge.executeConsoleCommand(command);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         message: `Console command executed: ${command}`,
-        output: res 
+        output: res
       };
     } catch (err) {
       return { success: false, error: `Failed to execute console command: ${err}` };
