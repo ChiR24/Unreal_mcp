@@ -27,7 +27,31 @@ const testCases = [
   // Additional
   // Real-World Scenario: Project Validation
   { scenario: 'Validation - Check Settings', toolName: 'system_control', arguments: { action: 'get_project_settings', category: 'Project' }, expected: 'success' },
-  { scenario: 'Validation - Validate Assets', toolName: 'system_control', arguments: { action: 'validate_assets', paths: ['/Game'] }, expected: 'success' }
+  { scenario: 'Validation - Validate Assets', toolName: 'system_control', arguments: { action: 'validate_assets', paths: ['/Game'] }, expected: 'success' },
+  {
+    scenario: "Error: Invalid profile type",
+    toolName: "system_control",
+    arguments: { action: "profile", profileType: "InvalidProfile" },
+    expected: "error"
+  },
+  {
+    scenario: "Edge: Quality level 0 (low)",
+    toolName: "system_control",
+    arguments: { action: "set_quality", category: "ViewDistance", level: 0 },
+    expected: "success"
+  },
+  {
+    scenario: "Border: Volume 0 (silent)",
+    toolName: "system_control",
+    arguments: { action: "play_sound", soundPath: "/ValidSound", volume: 0 },
+    expected: "success"
+  },
+  {
+    scenario: "Error: Invalid resolution",
+    toolName: "system_control",
+    arguments: { action: "set_resolution", width: -1, height: -1 },
+    expected: "error|validation"
+  }
 ];
 
 await runToolTests('System Control', testCases);

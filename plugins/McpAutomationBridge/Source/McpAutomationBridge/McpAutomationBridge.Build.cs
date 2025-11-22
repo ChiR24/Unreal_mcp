@@ -18,9 +18,10 @@ public class McpAutomationBridge : ModuleRules
         {
             PrivateDependencyModuleNames.AddRange(new string[]
             {
-                "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings",
+                "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings","EngineSettings",
                 "Sockets","Networking","UnrealEd","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph",
                 "Kismet","KismetCompiler","AssetRegistry","AssetTools","MaterialEditor","SourceControl",
+                "AudioEditor"
             });
 
             PrivateDependencyModuleNames.AddRange(new string[]
@@ -28,7 +29,8 @@ public class McpAutomationBridge : ModuleRules
                 "LevelSequence","LevelSequenceEditor","Sequencer","MovieScene","MovieSceneTools","MovieSceneTracks",
                 "Niagara","NiagaraEditor","Landscape","LandscapeEditor","LandscapeEditorUtilities","Foliage","FoliageEdit",
                 "AnimGraph","AnimationBlueprintLibrary","Persona","ToolMenus","EditorWidgets","PropertyEditor","LevelEditor",
-                "ControlRig","ControlRigDeveloper","UMG","UMGEditor"
+                "ControlRig","ControlRigDeveloper","UMG","UMGEditor","ProceduralMeshComponent","MergeActors",
+                "BehaviorTreeEditor", "WorldPartitionEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIModule", "AIGraph"
             });
 
             // Ensure editor builds expose full Blueprint graph editing APIs.

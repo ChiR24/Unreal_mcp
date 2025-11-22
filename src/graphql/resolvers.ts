@@ -508,6 +508,88 @@ export const resolvers = {
       }
     },
 
+    worldPartitionCells: async (_: any, __: any, context: GraphQLContext) => {
+      try {
+        // Mock response as actual tool for listing cells might not exist or is complex
+        // Using a dummy request to test connectivity or just return empty for now if not implemented
+        return []; 
+      } catch (error) {
+        console.error('Failed to list world partition cells:', error);
+        return [];
+      }
+    },
+
+    niagaraSystems: async (_: any, args: any, context: GraphQLContext) => {
+      const { filter, pagination } = args;
+      try {
+         // Re-use list_assets with filter for NiagaraSystem class
+        const niagaraFilter = { ...filter, class: 'NiagaraSystem' };
+        const { assets, totalCount } = await listAssets(
+          context.automationBridge,
+          niagaraFilter,
+          pagination
+        );
+
+        // Enrich assets with emitters/parameters if possible, or return basic asset shape
+        // For GraphQL we might need to fetch details for each if fields are requested, 
+        // but for list we return the assets cast as NiagaraSystem.
+        
+        const edges = assets.map((asset, index) => ({
+          node: {
+             ...asset,
+             emitters: [], // Placeholder, would require fetch details
+             parameters: [] // Placeholder
+          },
+          cursor: Buffer.from(`${asset.path}:${index}`).toString('base64')
+        }));
+
+        return {
+          edges,
+          pageInfo: {
+            hasNextPage: (pagination?.offset || 0) + assets.length < totalCount,
+            hasPreviousPage: (pagination?.offset || 0) > 0,
+            startCursor: edges.length > 0 ? edges[0].cursor : null,
+            endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null
+          },
+          totalCount
+        };
+      } catch (error) {
+        console.error('Failed to list niagara systems:', error);
+        return {
+          edges: [],
+          pageInfo: {
+            hasNextPage: false,
+            hasPreviousPage: false,
+            startCursor: null,
+            endCursor: null
+          },
+          totalCount: 0
+        };
+      }
+    },
+
+    niagaraSystem: async (_: any, { path }: { path: string }, context: GraphQLContext) => {
+      try {
+        // Check if it's a niagara system
+        const asset = await context.automationBridge.sendAutomationRequest(
+            'get_asset',
+            { assetPath: path },
+            { timeoutMs: 10000 }
+        );
+        if(asset.success && asset.result && (asset.result as any).class === 'NiagaraSystem') {
+             return {
+                 ...(asset.result as any),
+                 emitters: [],
+                 parameters: []
+             };
+        }
+        return null;
+      } catch (error) {
+         console.error('Failed to get niagara system:', error);
+         return null;
+      }
+    },
+
     search: async (_: any, { query, type }: any, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(

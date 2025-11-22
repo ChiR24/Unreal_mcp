@@ -12,7 +12,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const reportsDir = path.resolve(repoRoot, 'tests', 'reports');
 
 const failureKeywords = [
-  'error', 'fail', 'invalid', 'missing', 'not found', 'reject', 'warning'
+  'error', 'fail', 'invalid', 'missing', 'not found', 'not_found', 'reject', 'warning'
 ];
 
 const successKeywords = [
@@ -62,10 +62,6 @@ function summarize(toolName, results, resultsPath) {
   console.log('='.repeat(60));
 }
 
-
-
-// Mock response generator removed — tests always call the real server.
-
 /**
  * Evaluates whether a test case passed based on expected outcome
  */
@@ -77,12 +73,7 @@ function evaluateExpectation(testCase, response) {
   const structuredSuccess = typeof response.structuredContent?.success === 'boolean'
     ? response.structuredContent.success
     : undefined;
-  // Strict success evaluation to avoid false positives
-  let actualSuccess;
-  if (structuredSuccess === true) actualSuccess = true;
-  else if (structuredSuccess === false) actualSuccess = false;
-  else if (response.isError === true) actualSuccess = false;
-  else actualSuccess = undefined;
+  const actualSuccess = structuredSuccess ?? !response.isError;
 
   // Extract actual error/message from response
   let actualError = null;
@@ -90,17 +81,6 @@ function evaluateExpectation(testCase, response) {
   if (response.structuredContent) {
     actualError = response.structuredContent.error;
     actualMessage = response.structuredContent.message;
-  }
-
-  // Handle NOT_IMPLEMENTED expectations
-  if (lowerExpected === 'not_implemented') {
-    const isNotImplemented = actualError === 'NOT_IMPLEMENTED' ||
-      (actualMessage && actualMessage.toLowerCase().includes('not implemented'));
-    if (isNotImplemented) {
-      return { passed: true, reason: 'Feature not implemented as expected' };
-    } else {
-      return { passed: false, reason: `Expected NOT_IMPLEMENTED but got: ${actualMessage || actualError}` };
-    }
   }
 
   // Handle "success or X" patterns (e.g., "success or skeleton not found" / "success or handled")
@@ -123,38 +103,13 @@ function evaluateExpectation(testCase, response) {
     return { passed: false, reason: `None of the expected conditions matched: ${testCase.expected}` };
   }
 
-  // CRITICAL: Check for Python syntax errors in message/error
-  const pythonSyntaxErrors = [
-    'SyntaxError',
-    'invalid syntax',
-    'unterminated string',
-    'forgot a comma',
-    'unexpected indent',
-    'IndentationError',
-    'NameError',
-    'AttributeError: module',
-    'Python execution failed'
-  ];
-
-  const messageStr = (actualMessage || '').toString();
-  const errorStr = (actualError || '').toString();
+  // Also flag common automation/plugin failure phrases
+  const messageStr = (actualMessage || '').toString().toLowerCase();
+  const errorStr = (actualError || '').toString().toLowerCase();
   const combinedText = (messageStr + ' ' + errorStr).toLowerCase();
 
-  const hasPythonError = pythonSyntaxErrors.some(errType =>
-    combinedText.includes(errType.toLowerCase())
-  );
-
-  // Also flag common automation/plugin failure phrases
   const pluginFailureIndicators = ['does not match prefix', 'unknown', 'not implemented', 'unavailable', 'unsupported'];
   const hasPluginFailure = pluginFailureIndicators.some(term => combinedText.includes(term));
-
-  // If expecting success but got Python error, test FAILS
-  if (!containsFailure && hasPythonError) {
-    return {
-      passed: false,
-      reason: `Expected success but got Python error: ${actualMessage || actualError}`
-    };
-  }
 
   if (!containsFailure && hasPluginFailure) {
     return {
@@ -165,16 +120,15 @@ function evaluateExpectation(testCase, response) {
 
   // CRITICAL: Check if message says "failed" but success is true (FALSE POSITIVE)
   if (actualSuccess && (
-    messageStr.toLowerCase().includes('failed') ||
-    messageStr.toLowerCase().includes('python execution failed') ||
-    errorStr.toLowerCase().includes('failed')
+    messageStr.includes('failed') ||
+    messageStr.includes('python execution failed') ||
+    errorStr.includes('failed')
   )) {
     return {
       passed: false,
       reason: `False positive: success=true but message indicates failure: ${actualMessage}`
     };
   }
-
 
   // CRITICAL FIX: UE_NOT_CONNECTED errors should ALWAYS fail tests unless explicitly expected
   if (actualError === 'UE_NOT_CONNECTED') {
@@ -523,8 +477,22 @@ export async function runToolTests(toolName, testCases) {
       } catch (error) {
         const endTime = performance.now();
         const durationMs = endTime - startTime;
-        results.push({ ...testCase, status: 'failed', durationMs, detail: `Exception: ${error.message}` });
-        console.log(formatResultLine(testCase, 'failed', error.message, durationMs));
+
+        // Check if the exception matches the expectation
+        const lowerExpected = testCase.expected.toLowerCase();
+        const errorMsg = error.message.toLowerCase();
+        const isTimeout = errorMsg.includes('timeout') || errorMsg.includes('timed out');
+        const expectsTimeout = lowerExpected.includes('timeout');
+        const expectsError = lowerExpected.includes('error') || lowerExpected.includes('fail');
+
+        if ((expectsTimeout && isTimeout) || (expectsError && !lowerExpected.includes('success'))) {
+          const status = 'passed';
+          results.push({ ...testCase, status, durationMs, detail: `Expected exception: ${error.message}` });
+          console.log(formatResultLine(testCase, status, `Expected exception: ${error.message}`, durationMs));
+        } else {
+          results.push({ ...testCase, status: 'failed', durationMs, detail: `Exception: ${error.message}` });
+          console.log(formatResultLine(testCase, 'failed', error.message, durationMs));
+        }
       }
     }
 

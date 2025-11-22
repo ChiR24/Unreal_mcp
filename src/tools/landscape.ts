@@ -4,7 +4,7 @@ import { AutomationBridge } from '../automation-bridge.js';
 import { ensureVector3 } from '../utils/validation.js';
 
 export class LandscapeTools {
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
@@ -111,27 +111,140 @@ export class LandscapeTools {
 
 
   // Sculpt landscape
-  async sculptLandscape(_params: {
+  async sculptLandscape(params: {
     landscapeName: string;
-    tool: 'Sculpt' | 'Smooth' | 'Flatten' | 'Ramp' | 'Erosion' | 'Hydro' | 'Noise' | 'Retopologize';
+    tool: string;
     brushSize?: number;
     brushFalloff?: number;
     strength?: number;
-    position?: [number, number, number];
+    location?: [number, number, number];
+    radius?: number;
   }) {
-    return { success: false, error: 'sculptLandscape not implemented. Requires Landscape editor tools.' };
+    const [x, y, z] = ensureVector3(params.location ?? [0, 0, 0], 'sculpt location');
+
+    const tool = (params.tool || '').trim();
+    const lowerTool = tool.toLowerCase();
+    const validTools = new Set(['sculpt', 'smooth', 'flatten', 'ramp', 'erosion', 'hydro', 'noise', 'raise', 'lower']);
+    const isValidTool = lowerTool.length > 0 && validTools.has(lowerTool);
+
+    if (!isValidTool) {
+      return {
+        success: false,
+        error: `Invalid sculpt tool: ${params.tool}`
+      };
+    }
+
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
+    }
+
+    const payload = {
+      landscapeName: params.landscapeName,
+      toolMode: tool, // Map 'tool' to 'toolMode'
+      brushRadius: params.brushSize ?? params.radius ?? 1000,
+      brushFalloff: params.brushFalloff ?? 0.5,
+      strength: params.strength ?? 0.1,
+      location: { x, y, z }
+    };
+
+    const response = await this.automationBridge.sendAutomationRequest('sculpt_landscape', payload);
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error || 'Failed to sculpt landscape'
+      };
+    }
+
+    return {
+      success: true,
+      message: `Sculpting applied to ${params.landscapeName}`,
+      details: response
+    };
   }
 
   // Paint landscape
-  async paintLandscape(_params: {
+  async paintLandscape(params: {
     landscapeName: string;
     layerName: string;
     position: [number, number, number];
     brushSize?: number;
     strength?: number;
     targetValue?: number;
+    radius?: number;
+    density?: number;
   }) {
-    return { success: false, error: 'paintLandscape not implemented. Requires Landscape editor tools.' };
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available.');
+    }
+
+    const [x, y] = ensureVector3(params.position, 'paint position');
+    const radius = params.brushSize ?? params.radius ?? 1000;
+
+    // Map brush to a square region for now as C++ only supports region fill
+    const minX = Math.floor(x - radius);
+    const maxX = Math.floor(x + radius);
+    const minY = Math.floor(y - radius);
+    const maxY = Math.floor(y + radius);
+
+    const payload = {
+      landscapeName: params.landscapeName,
+      layerName: params.layerName,
+      region: { minX, minY, maxX, maxY },
+      strength: params.strength ?? 1.0
+    };
+
+    const response = await this.automationBridge.sendAutomationRequest('paint_landscape_layer', payload);
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error || 'Failed to paint landscape layer'
+      };
+    }
+
+    return {
+      success: true,
+      message: `Painted layer ${params.layerName}`,
+      details: response
+    };
+  }
+
+  // Create procedural terrain
+  async createProceduralTerrain(params: {
+    name: string;
+    location?: [number, number, number];
+    subdivisions?: number;
+    settings?: Record<string, unknown>;
+  }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available.');
+    }
+
+    const [x, y, z] = ensureVector3(params.location ?? [0, 0, 0], 'location');
+
+    const payload = {
+      name: params.name,
+      // Environment handler reads location as an array [x, y, z]
+      location: [x, y, z] as [number, number, number],
+      // Preserve additional settings for forwards compatibility
+      ...params.settings
+    };
+
+    const response = await this.automationBridge.sendAutomationRequest('create_procedural_terrain', payload);
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error || 'Failed to create procedural terrain'
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Procedural terrain created',
+      details: response
+    };
   }
 
   // Add landscape layer
@@ -141,20 +254,20 @@ export class LandscapeTools {
     weightMapPath?: string;
     blendMode?: 'Weight' | 'Alpha';
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`AddLandscapeLayer ${params.landscapeName} ${params.layerName}`);
-    
+
     if (params.weightMapPath) {
       commands.push(`SetLayerWeightMap ${params.layerName} ${params.weightMapPath}`);
     }
-    
+
     if (params.blendMode) {
       commands.push(`SetLayerBlendMode ${params.layerName} ${params.blendMode}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Layer ${params.layerName} added to landscape` };
   }
 
@@ -167,28 +280,28 @@ export class LandscapeTools {
     falloffWidth?: number;
     meshPath?: string;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`CreateLandscapeSpline ${params.landscapeName} ${params.splineName}`);
-    
+
     for (const point of params.points) {
       commands.push(`AddSplinePoint ${params.splineName} ${point.join(' ')}`);
     }
-    
+
     if (params.width !== undefined) {
       commands.push(`SetSplineWidth ${params.splineName} ${params.width}`);
     }
-    
+
     if (params.falloffWidth !== undefined) {
       commands.push(`SetSplineFalloffWidth ${params.splineName} ${params.falloffWidth}`);
     }
-    
+
     if (params.meshPath) {
       commands.push(`SetSplineMesh ${params.splineName} ${params.meshPath}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Landscape spline ${params.splineName} created` };
   }
 
@@ -199,7 +312,7 @@ export class LandscapeTools {
     scale?: [number, number, number];
   }) {
     const scale = params.scale || [100, 100, 100];
-const command = `ImportLandscapeHeightmap ${params.landscapeName} ${params.heightmapPath} ${scale.join(' ')}`;
+    const command = `ImportLandscapeHeightmap ${params.landscapeName} ${params.heightmapPath} ${scale.join(' ')}`;
     const raw = await this.bridge.executeConsoleCommand(command);
     const summary = this.bridge.summarizeConsoleCommand(command, raw);
     const ok = summary.returnValue !== false && !(summary.output && /unknown|invalid/i.test(summary.output));
@@ -213,7 +326,7 @@ const command = `ImportLandscapeHeightmap ${params.landscapeName} ${params.heigh
     format?: 'PNG' | 'RAW';
   }) {
     const format = params.format || 'PNG';
-const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.exportPath} ${format}`;
+    const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.exportPath} ${format}`;
     const raw = await this.bridge.executeConsoleCommand(command);
     const summary = this.bridge.summarizeConsoleCommand(command, raw);
     const ok = summary.returnValue !== false && !(summary.output && /unknown|invalid/i.test(summary.output));
@@ -227,23 +340,117 @@ const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.expor
     forcedLOD?: number;
     lodDistribution?: number;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.lodBias !== undefined) {
       commands.push(`SetLandscapeLODBias ${params.landscapeName} ${params.lodBias}`);
     }
-    
+
     if (params.forcedLOD !== undefined) {
       commands.push(`SetLandscapeForcedLOD ${params.landscapeName} ${params.forcedLOD}`);
     }
-    
+
     if (params.lodDistribution !== undefined) {
       commands.push(`SetLandscapeLODDistribution ${params.landscapeName} ${params.lodDistribution}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Landscape LOD settings updated' };
+  }
+
+  // Create a LandscapeGrassType asset via AutomationBridge
+  async createLandscapeGrassType(params: { name: string; path?: string; staticMesh?: string }): Promise<any> {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
+    }
+
+    const name = typeof params.name === 'string' ? params.name.trim() : '';
+    if (!name) {
+      return { success: false, error: 'Grass type name is required' };
+    }
+
+    // Accept mesh path from multiple fields for compatibility
+    const meshPathCandidate = (params as any).meshPath as string | undefined;
+    const meshPathRaw = typeof meshPathCandidate === 'string' && meshPathCandidate.trim().length > 0
+      ? meshPathCandidate.trim()
+      : (typeof params.path === 'string' && params.path.trim().length > 0
+        ? params.path.trim()
+        : (typeof params.staticMesh === 'string' && params.staticMesh.trim().length > 0
+          ? params.staticMesh.trim()
+          : ''));
+
+    if (!meshPathRaw) {
+      return { success: false, error: 'meshPath is required to create a landscape grass type' };
+    }
+
+    try {
+      const response: any = await this.automationBridge.sendAutomationRequest('create_landscape_grass_type', {
+        name,
+        meshPath: meshPathRaw
+      }, { timeoutMs: 90000 });
+
+      if (response && response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to create landscape grass type'
+        };
+      }
+
+      return {
+        success: true,
+        message: response?.message || `Landscape grass type '${name}' created`,
+        assetPath: response?.asset_path || response?.assetPath
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to create landscape grass type: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+  }
+
+  // Set the material used by an existing landscape actor
+  async setLandscapeMaterial(params: { landscapeName: string; materialPath: string }): Promise<any> {
+    const landscapeName = typeof params.landscapeName === 'string' ? params.landscapeName.trim() : '';
+    const materialPath = typeof params.materialPath === 'string' ? params.materialPath.trim() : '';
+
+    if (!landscapeName) {
+      return { success: false, error: 'Landscape name is required' };
+    }
+    if (!materialPath) {
+      return { success: false, error: 'materialPath is required' };
+    }
+
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
+    }
+
+    try {
+      const response: any = await this.automationBridge.sendAutomationRequest('set_landscape_material', {
+        landscapeName,
+        materialPath
+      }, { timeoutMs: 60000 });
+
+      if (response && response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to set landscape material'
+        };
+      }
+
+      return {
+        success: true,
+        message: response?.message || `Landscape material set on '${landscapeName}'`,
+        landscapeName: response?.landscapeName || landscapeName,
+        materialPath: response?.materialPath || materialPath
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to set landscape material: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
   }
 
   // Create landscape grass
@@ -255,24 +462,24 @@ const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.expor
     maxScale?: number;
     randomRotation?: boolean;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`CreateLandscapeGrass ${params.landscapeName} ${params.grassType}`);
-    
+
     if (params.density !== undefined) {
       commands.push(`SetGrassDensity ${params.grassType} ${params.density}`);
     }
-    
+
     if (params.minScale !== undefined && params.maxScale !== undefined) {
       commands.push(`SetGrassScale ${params.grassType} ${params.minScale} ${params.maxScale}`);
     }
-    
+
     if (params.randomRotation !== undefined) {
       commands.push(`SetGrassRandomRotation ${params.grassType} ${params.randomRotation}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Grass type ${params.grassType} created on landscape` };
   }
 
@@ -282,20 +489,20 @@ const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.expor
     collisionMipLevel?: number;
     simpleCollision?: boolean;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.collisionMipLevel !== undefined) {
       commands.push(`SetLandscapeCollisionMipLevel ${params.landscapeName} ${params.collisionMipLevel}`);
     }
-    
+
     if (params.simpleCollision !== undefined) {
       commands.push(`SetLandscapeSimpleCollision ${params.landscapeName} ${params.simpleCollision}`);
     }
-    
+
     commands.push(`UpdateLandscapeCollision ${params.landscapeName}`);
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Landscape collision updated' };
   }
 
@@ -305,20 +512,20 @@ const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.expor
     targetTriangleCount?: number;
     preserveDetails?: boolean;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.targetTriangleCount !== undefined) {
       commands.push(`SetRetopologizeTarget ${params.targetTriangleCount}`);
     }
-    
+
     if (params.preserveDetails !== undefined) {
       commands.push(`SetRetopologizePreserveDetails ${params.preserveDetails}`);
     }
-    
+
     commands.push(`RetopologizeLandscape ${params.landscapeName}`);
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Landscape retopologized' };
   }
 
@@ -333,9 +540,9 @@ const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.expor
     const loc = params.location || [0, 0, 0];
     const size = params.size || [1000, 1000];
     const depth = params.depth || 100;
-    
+
     const command = `CreateWaterBody ${params.type} ${params.name} ${loc.join(' ')} ${size.join(' ')} ${depth}`;
-    
+
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -387,7 +594,7 @@ const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.expor
   }) {
     try {
       const commands = [];
-      
+
       // Use console commands for data layer management
       if (params.operation === 'set' || params.operation === 'add') {
         for (const layerName of params.dataLayerNames) {
@@ -398,12 +605,12 @@ const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.expor
           commands.push(`wp.Runtime.SetDataLayerRuntimeState Unloaded ${layerName}`);
         }
       }
-      
+
       // Execute commands
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         message: `Data layers ${params.operation === 'add' ? 'added' : params.operation === 'remove' ? 'removed' : 'set'} for landscape`,
         layers: params.dataLayerNames
       };
@@ -420,24 +627,24 @@ const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.expor
     enableHLOD?: boolean;
   }) {
     const commands = [];
-    
+
     // World Partition runtime commands
     if (params.loadingRange !== undefined) {
       commands.push(`wp.Runtime.OverrideRuntimeSpatialHashLoadingRange -grid=0 -range=${params.loadingRange}`);
     }
-    
+
     if (params.enableHLOD !== undefined) {
       commands.push(`wp.Runtime.HLOD ${params.enableHLOD ? '1' : '0'}`);
     }
-    
+
     // Debug visualization commands
     commands.push('wp.Runtime.ToggleDrawRuntimeHash2D'); // Show 2D grid
-    
+
     try {
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         message: 'Streaming cells configured for World Partition',
         settings: {
           cellSize: params.cellSize,

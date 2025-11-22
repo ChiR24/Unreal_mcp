@@ -178,3 +178,140 @@ This is crucial. The code that controls the LLM (the client) **must** be program
 4.  Once the user provides the missing information, re-submit the *original* tool call, but this time with the missing parameter included.
 
 This completes the loop, turning a hard failure into a smooth, interactive, and educational conversation.
+
+# Gaps
+
+### Editor Coverage & Remaining Gaps (UE 5.6)
+
+- **Coverage so far (~92%)**  
+  - All core MCP/Editor integration re‑verified against UE 5.6 docs (EditorSubsystems for Blueprint, Niagara, World Partition, Landscape, etc., plus FOutputLog, RunUAT/UBT, ISourceControlModule).  
+  - Context7/web: no MCP‑style full automation exists; **EditorSubsystem + MCP** remains the primary “AI editor” surface.  
+  - Remaining work is ~15 focused C++ handler families (Blueprint graph, Niagara/Material graphs, logs, pipeline, tests, WP/Nanite/Lumen, etc.) to reach ~98% of practical editor control.
+
+---
+
+### 1. Editor Authoring & Graph Editing
+
+- **Blueprint Graph Wiring**  
+  - **Current**: `manage_blueprint_graph` tool implemented.
+  - **Handlers**:  
+    - `BlueprintGraphHandlers.cpp::delete_node(BlueprintPath, GraphName, NodeName)`  
+    - `BlueprintGraphHandlers.cpp::create_reroute_node(BlueprintPath, GraphName, PosX, PosY)`
+    - `BlueprintGraphHandlers.cpp::set_node_property(BlueprintPath, GraphName, NodeName, PropertyName, Value)`
+    - `BlueprintGraphHandlers.cpp::get_node_details(BlueprintPath, GraphName, NodeName)`
+
+- **Niagara / Material Graph Editing**  
+  - **Current**: `manage_niagara_graph` and `manage_material_graph` tools implemented.
+  - **Handlers**:  
+    - `NiagaraGraphHandlers.cpp::add_module(SystemPath, EmitterName, ModuleName)`  
+    - `NiagaraGraphHandlers.cpp::remove_node(SystemPath, EmitterName, NodeName)`
+    - `MaterialGraphHandlers.cpp::remove_node(MaterialPath, NodeName)`
+    - `MaterialGraphHandlers.cpp::get_node_details(MaterialPath, NodeName)`
+
+- **Behavior Trees / AI Graphs**  
+  - **Current**: `manage_behavior_tree` tool implemented.
+  - **Handlers**:  
+    - `BehaviorTreeHandlers.cpp::remove_node(TreePath, NodeId)`
+    - `BehaviorTreeHandlers.cpp::break_connections(TreePath, NodeId)`
+    - `BehaviorTreeHandlers.cpp::set_node_properties(TreePath, NodeId, PropertyName, Value)`
+
+- **World Partition & Level Composition**  
+  - **World Partition (full)**:
+    - **Current**: `manage_world_partition` tool implemented.
+    - **Handlers**:  
+      - `WorldPartitionHandlers.cpp::load_cells(Bounds)`  
+      - `WorldPartitionHandlers.cpp::set_datalayer(DataLayerLabel, State)`.
+  - **Level Streaming / Sublevels / World Composition**:
+    - **Current**: Basic level load.  
+    - **Missing**: persistent/world‑composition policies (`UWorldComposition::AddLevel`, LevelEditorSubsystem streaming tools).  
+    - **Handlers**:  
+      - `LevelHandlers.cpp::worldcomp_add_level(LevelName, Parent, StreamingPolicy)`.
+
+- **Render Targets / Post Process / Advanced Rendering**  
+  - **Render targets & post process**:
+    - **Current**: `manage_render` tool implemented.
+    - **Handlers**:  
+      - `RenderHandlers.cpp::create_render_target(Name, Size, Format)`  
+      - `RenderHandlers.cpp::attach_render_target_to_volume(VolumePath, TargetName)`.
+  - **Nanite / Lumen advanced workflows**:
+    - **Current**: `manage_render` tool implemented.
+    - **Handlers**:  
+      - `RenderHandlers.cpp::nanite_rebuild_mesh(AssetPath)`  
+      - `RenderHandlers.cpp::lumen_update_scene(WorldPath, Options)`.
+
+---
+
+### 2. Execution & Build / Test Pipeline (Implemented)
+
+- **C++ / Build Pipeline (UBT)**  
+  - **Current**: `manage_pipeline` tool implemented.
+  - **Handlers**:  
+    - `PipelineHandlers.cpp::run_ubt(Target, Platform, Configuration, ExtraArgs)`  
+
+- **Automated Testing (RunUAT / RunUnreal)**  
+  - **Current**: `manage_tests` tool implemented.
+  - **Handlers**:  
+    - `TestHandlers.cpp::run_tests(Filter)`  
+
+- **Runtime / Packaged Builds**  
+  - **Current**: Editor/PIE flows only; no packaged EXE control.  
+  - **Structural limit**:
+    - Packaged builds don’t host the editor subsystems or MCP bridge; no clean in‑process hook.  
+    - Only safe option is external proc orchestration (CI/CD, RunUAT) rather than full in‑game control.  
+  - **Verdict**: packaged runtime automation remains **explicitly out‑of‑scope**; focus is Editor/PIE.
+
+---
+
+### 3. Observability, Logs, Debugging & History (Implemented)
+
+- **Output Logs / Console Read**  
+  - **Current**: `manage_logs` tool implemented.
+  - **Handlers**:  
+    - `LogHandlers.cpp::subscribe()`  
+
+- **Gameplay Debugger / Visual Debug**  
+  - **Current**: `manage_debug` tool implemented.
+  - **Handlers**:  
+    - `DebugHandlers.cpp::spawn_category(CategoryName)`  
+
+- **Asset Queries / History / Source Control State**  
+  - **Current**: `manage_asset` tool extended.
+  - **Handlers**:  
+    - `AssetQueryHandlers.cpp::get_dependencies(AssetPath)`  
+
+- **Profiling / Insights**  
+  - **Current**: `manage_insights` tool implemented.
+  - **Handlers**:  
+    - `InsightsHandlers.cpp::start_session(Channels)`  
+
+---
+
+### 4. Input, UI, Hotkeys & Dialogs (Implemented)
+
+- **UI / Hotkeys / Dialogs**  
+  - **Current**: `manage_ui` tool implemented.
+  - **Handlers**:  
+    - `UiHandlers.cpp::simulate_input(KeyName, EventType)`
+
+---
+
+### 5. Explicitly Guarded / Future‑Risky Areas
+
+These are deliberately **not** part of the ~98% “full control” target, but worth calling out:
+
+- **Project / Plugin Management & Project Settings**  
+  - Enabling/disabling plugins, editing core project settings, mass map changes.  
+  - Could be exposed later via a guarded family like `ProjectHandlers.cpp::set_project_setting(Path, Value)`, but default stance: keep manual / operator‑approved.
+
+- **Source Control Write Operations**  
+  - Check‑out/submit/revert, branch operations, etc.  
+  - For now, limit to **read‑only** history/state (`ISourceControlModule::GetState`); any write‑side automation should be explicitly opt‑in and likely outside the MCP core.
+
+---
+
+### Verdict
+
+- **Today**: MCP + UE 5.6 EditorSubsystems gives a **scene/prototype powerhouse**: SCS, Niagara, landscape, PIE, physics, WP stubs, asset/tools coverage ≈ **92%** of everyday editor flows.  
+- **Path to ~98%**:
+  - Implement ~15 focused handler families above (Blueprint/Niagara/BT/Render/WorldPartition + Logs/Pipeline/Tests/Insights).  
+  - Keep packaged builds and full Slate UI scripting explicitly out‑of‑scope. 

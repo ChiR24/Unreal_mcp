@@ -21,13 +21,36 @@ const testCases = [
   { scenario: 'Show RHI stats', toolName: 'console_command', arguments: { command: 'stat rhi' }, expected: 'success - RHI stats shown' },
   { scenario: 'Show game thread stats', toolName: 'console_command', arguments: { command: 'stat game' }, expected: 'success - game thread stats shown' },
   { scenario: 'Show animation stats', toolName: 'console_command', arguments: { command: 'stat anim' }, expected: 'success - animation stats shown' },
-{ scenario: 'Reset viewmode to lit', toolName: 'console_command', arguments: { command: 'viewmode lit' }, expected: 'success - viewmode reset' },
-  // Additional
+  { scenario: 'Reset viewmode to lit', toolName: 'console_command', arguments: { command: 'viewmode lit' }, expected: 'success - viewmode reset' },
   { scenario: 'Show GPU', toolName: 'console_command', arguments: { command: 'stat gpu' }, expected: 'success or handled' },
   { scenario: 'Show memory', toolName: 'console_command', arguments: { command: 'stat memory' }, expected: 'success or handled' },
   { scenario: 'Set Mip LOD Bias', toolName: 'console_command', arguments: { command: 'r.MipMapLODBias 0' }, expected: 'success or handled' },
   { scenario: 'Set AA Quality', toolName: 'console_command', arguments: { command: 'r.PostProcessAAQuality 4' }, expected: 'success or handled' },
-  { scenario: 'Flush rendering commands', toolName: 'console_command', arguments: { command: 'r.FlushRenderingCommands' }, expected: 'success or handled' }
+  { scenario: 'Flush rendering commands', toolName: 'console_command', arguments: { command: 'r.FlushRenderingCommands' }, expected: 'success or handled' },
+  {
+    scenario: "Blocked: Dangerous quit",
+    toolName: "console_command",
+    arguments: { command: "quit" },
+    expected: "blocked|dangerous"
+  },
+  {
+    scenario: "Error: Empty command",
+    toolName: "console_command",
+    arguments: { command: "" },
+    expected: "error|empty"
+  },
+  {
+    scenario: "Edge: Very long safe command",
+    toolName: "console_command",
+    arguments: { command: "stat fps; stat gpu; stat memory" },
+    expected: "success"
+  },
+  {
+    scenario: "Warning: Unknown command",
+    toolName: "console_command",
+    arguments: { command: "unknowncmd" },
+    expected: "warning|unknown"
+  }
 ];
 
 await runToolTests('Console Command', testCases);

@@ -193,7 +193,7 @@ const testCases = [
             action: "fixup_redirectors",
             directory: "/Game/Tests/Reorg"
         },
-        expected: "NOT_IMPLEMENTED"
+        expected: "success"
     },
     {
         scenario: "Deep Duplication - Setup Source",
@@ -237,6 +237,46 @@ const testCases = [
             ]
         },
         expected: "success or handled"
+    },
+    {
+        scenario: "Error: Import invalid file",
+        toolName: "manage_asset",
+        arguments: {
+            action: "import",
+            sourcePath: "./invalid.ext",
+            destinationPath: "/Game/Test"
+        },
+        expected: "error|unsupported_format"
+    },
+    {
+        scenario: "Edge: Empty tags array",
+        toolName: "manage_asset",
+        arguments: {
+            action: "set_tags",
+            assetPath: "/Valid",
+            tags: []
+        },
+        expected: "success"
+    },
+    {
+        scenario: "Border: Large metadata object",
+        toolName: "manage_asset",
+        arguments: {
+            action: "set_metadata",
+            // Use a well-known engine asset path that is expected to exist in all projects
+            assetPath: "/Engine/BasicShapes/Cube",
+            metadata: { key1: "value1", key2: "value2", /* ... large obj */ }
+        },
+        expected: "success"
+    },
+    {
+        scenario: "Edge: Fixup empty dir",
+        toolName: "manage_asset",
+        arguments: {
+            action: "fixup_redirectors",
+            directoryPath: "/Empty/Dir"
+        },
+        expected: "success|no_op"
     }
 ];
 

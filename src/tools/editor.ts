@@ -33,20 +33,25 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async playInEditor() {
+  async playInEditor(timeoutMs: number = 30000) {
     try {
       try {
         const response = await this.sendAutomationRequest(
           'control_editor',
           { action: 'play' },
-          { timeoutMs: 30000 }
+          { timeoutMs }
         );
         if (response && response.success === true) {
           return { success: true, message: response.message || 'PIE started' };
         }
         return { success: false, error: response?.error || response?.message || 'Failed to start PIE' };
-      } catch (_err) {
-        // Fallback to console commands if automation bridge is unavailable or fails
+      } catch (err: any) {
+        // If it's a timeout, return error instead of falling back
+        if (err.message && /time.*out/i.test(err.message)) {
+          return { success: false, error: `Timeout waiting for PIE to start: ${err.message}` };
+        }
+
+        // Fallback to console commands if automation bridge is unavailable or fails (non-timeout)
         await this.bridge.executeConsoleCommand('t.MaxFPS 60');
         await this.bridge.executeConsoleCommand('PlayInViewport');
         return { success: true, message: 'PIE start command sent' };
@@ -208,10 +213,15 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async takeScreenshot(filename?: string) {
+  async takeScreenshot(filename?: string, resolution?: string) {
     try {
+      if (resolution && !/^\d+x\d+$/.test(resolution)) {
+        return { success: false, error: 'Invalid resolution format. Use WxH (e.g. 1920x1080)' };
+      }
+
       const sanitizedFilename = filename ? filename.replace(/[<>:*?"|]/g, '_') : `Screenshot_${Date.now()}`;
-      const command = filename ? `highresshot 1920x1080 filename="${sanitizedFilename}"` : 'shot';
+      const resString = resolution || '1920x1080';
+      const command = filename ? `highresshot ${resString} filename="${sanitizedFilename}"` : 'shot';
 
       await this.bridge.executeConsoleCommand(command);
 

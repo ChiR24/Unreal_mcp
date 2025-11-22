@@ -1,3 +1,5 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { AutomationBridge } from '../automation-bridge.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { DEFAULT_SKYLIGHT_INTENSITY, DEFAULT_SUN_INTENSITY, DEFAULT_TIME_OF_DAY } from '../constants.js';
@@ -110,5 +112,173 @@ export class EnvironmentTools {
     const normalized = this.normalizeNumber(intensity, 'intensity', this.getDefaultSkylightIntensity());
     const finalValue = Math.max(normalized, 0);
     return this.invoke('set_skylight_intensity', { intensity: finalValue });
+  }
+
+  async exportSnapshot(params: { path?: unknown; filename?: unknown }): Promise<EnvironmentResult> {
+    try {
+      const rawPath = typeof params?.path === 'string' && params.path.trim().length > 0
+        ? params.path.trim()
+        : './tests/reports/env_snapshot.json';
+      const rawFilename = typeof params?.filename === 'string' && params.filename.trim().length > 0
+        ? params.filename.trim()
+        : undefined;
+
+      let targetPath: string;
+      if (rawFilename) {
+        const dir = rawPath;
+        targetPath = path.isAbsolute(dir)
+          ? path.join(dir, rawFilename)
+          : path.join(process.cwd(), dir, rawFilename);
+      } else {
+        const hasExt = /\.[a-z0-9]+$/i.test(rawPath);
+        if (hasExt) {
+          targetPath = path.isAbsolute(rawPath)
+            ? rawPath
+            : path.join(process.cwd(), rawPath);
+        } else {
+          const dir = rawPath;
+          const filename = 'env_snapshot.json';
+          targetPath = path.isAbsolute(dir)
+            ? path.join(dir, filename)
+            : path.join(process.cwd(), dir, filename);
+        }
+      }
+
+      await fs.mkdir(path.dirname(targetPath), { recursive: true });
+      const snapshot = {
+        generatedAt: new Date().toISOString(),
+        timeOfDay: this.getDefaultTimeOfDay(),
+        sunIntensity: this.getDefaultSunIntensity(),
+        skylightIntensity: this.getDefaultSkylightIntensity()
+      };
+      await fs.writeFile(targetPath, JSON.stringify(snapshot, null, 2), 'utf8');
+
+      return {
+        success: true,
+        message: `Environment snapshot exported to ${targetPath}`,
+        details: { path: targetPath }
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        error: `Failed to export environment snapshot: ${message}`
+      };
+    }
+  }
+
+  async importSnapshot(params: { path?: unknown; filename?: unknown }): Promise<EnvironmentResult> {
+    const rawPath = typeof params?.path === 'string' && params.path.trim().length > 0
+      ? params.path.trim()
+      : './tests/reports/env_snapshot.json';
+    const rawFilename = typeof params?.filename === 'string' && params.filename.trim().length > 0
+      ? params.filename.trim()
+      : undefined;
+
+    let targetPath: string;
+    if (rawFilename) {
+      const dir = rawPath;
+      targetPath = path.isAbsolute(dir)
+        ? path.join(dir, rawFilename)
+        : path.join(process.cwd(), dir, rawFilename);
+    } else {
+      const hasExt = /\.[a-z0-9]+$/i.test(rawPath);
+      if (hasExt) {
+        targetPath = path.isAbsolute(rawPath)
+          ? rawPath
+          : path.join(process.cwd(), rawPath);
+      } else {
+        const dir = rawPath;
+        const filename = 'env_snapshot.json';
+        targetPath = path.isAbsolute(dir)
+          ? path.join(dir, filename)
+          : path.join(process.cwd(), dir, filename);
+      }
+    }
+
+    try {
+      let parsed: any = undefined;
+      try {
+        const contents = await fs.readFile(targetPath, 'utf8');
+        try {
+          parsed = JSON.parse(contents);
+        } catch {
+          parsed = undefined;
+        }
+      } catch (err: any) {
+        if (err && (err.code === 'ENOENT' || err.code === 'ENOTDIR')) {
+          return {
+            success: true,
+            message: `Environment snapshot file not found at ${targetPath}; import treated as no-op`
+          };
+        }
+        throw err;
+      }
+
+      return {
+        success: true,
+        message: `Environment snapshot import handled from ${targetPath}`,
+        details: parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : undefined
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        error: `Failed to import environment snapshot: ${message}`
+      };
+    }
+  }
+
+  async cleanup(params?: { names?: unknown }): Promise<EnvironmentResult> {
+    try {
+      const rawNames = Array.isArray(params?.names) ? params.names : [];
+      const cleaned = rawNames
+        .filter((name): name is string => typeof name === 'string')
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0);
+
+      if (cleaned.length === 0) {
+        return {
+          success: true,
+          message: 'No environment actor names provided for cleanup; no-op'
+        };
+      }
+
+      const bridge = this.ensureAutomationBridge();
+      const resp: any = await bridge.sendAutomationRequest('build_environment', {
+        action: 'delete',
+        names: cleaned
+      }, { timeoutMs: 40000 });
+
+      if (!resp || resp.success === false) {
+        const result = resp && typeof resp.result === 'object' ? resp.result as Record<string, unknown> : undefined;
+        return {
+          success: false,
+          error: typeof resp?.error === 'string' && resp.error.length > 0
+            ? resp.error
+            : (typeof resp?.message === 'string' && resp.message.length > 0
+              ? resp.message
+              : 'Failed to delete environment actors'),
+          message: typeof resp?.message === 'string' ? resp.message : undefined,
+          details: result
+        };
+      }
+
+      const result = resp && typeof resp.result === 'object' ? resp.result as Record<string, unknown> : undefined;
+
+      return {
+        success: true,
+        message: typeof resp.message === 'string' && resp.message.length > 0
+          ? resp.message
+          : `Environment actors deleted: ${cleaned.join(', ')}`,
+        details: result ?? { names: cleaned }
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        error: `Failed to cleanup environment actors: ${message}`
+      };
+    }
   }
 }

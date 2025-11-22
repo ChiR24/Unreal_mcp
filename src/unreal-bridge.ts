@@ -20,7 +20,7 @@ export class UnrealBridge {
     handshakeFailed: (info: any) => void;
   };
   private commandProcessorInitialized = false;
-  
+
   // Command queue for throttling
   private commandQueue: CommandQueueItem[] = [];
   private isProcessing = false;
@@ -33,13 +33,13 @@ export class UnrealBridge {
   // Console object cache to reduce FindConsoleObject warnings
   private consoleObjectCache = new Map<string, any>();
   private readonly CONSOLE_CACHE_TTL = 300000; // 5 minutes TTL for cached objects
-  
+
   // Unsafe viewmodes that can cause crashes or instability via visualizeBuffer
   private readonly UNSAFE_VIEWMODES = [
     'BaseColor', 'WorldNormal', 'Metallic', 'Specular',
-      'Roughness',
-      'SubsurfaceColor',
-      'Opacity',
+    'Roughness',
+    'SubsurfaceColor',
+    'Opacity',
     'LightComplexity', 'LightmapDensity',
     'StationaryLightOverlap', 'CollisionPawn', 'CollisionVisibility'
   ];
@@ -136,7 +136,7 @@ export class UnrealBridge {
     }
     return this.automationBridge;
   }
-  
+
   /**
    * Attempt to connect with exponential backoff retry strategy
    * Uses optimized retry pattern from TypeScript best practices
@@ -165,7 +165,7 @@ export class UnrealBridge {
     if (this.connectPromise) {
       try {
         await this.connectPromise;
-      } catch {}
+      } catch { }
       return this.connected;
     }
 
@@ -265,7 +265,7 @@ export class UnrealBridge {
     timeoutMs?: number;
     allowAlternate?: boolean;
   }): Promise<Record<string, any>> {
-  const { objectPath, propertyName, timeoutMs } = params;
+    const { objectPath, propertyName, timeoutMs } = params;
     if (!objectPath || typeof objectPath !== 'string') {
       throw new Error('Invalid objectPath: must be a non-empty string');
     }
@@ -358,7 +358,7 @@ export class UnrealBridge {
     timeoutMs?: number;
     allowAlternate?: boolean;
   }): Promise<Record<string, any>> {
-  const { objectPath, propertyName, value, markDirty, timeoutMs } = params;
+    const { objectPath, propertyName, value, markDirty, timeoutMs } = params;
     if (!objectPath || typeof objectPath !== 'string') {
       throw new Error('Invalid objectPath: must be a non-empty string');
     }
@@ -443,19 +443,19 @@ export class UnrealBridge {
   }
 
   // Execute a console command safely with validation and throttling
-  async executeConsoleCommand(command: string, options: { allowPython?: boolean } = {}): Promise<any> {
+  async executeConsoleCommand(command: string, _options: Record<string, never> = {}): Promise<any> {
     const automationAvailable = Boolean(
       this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function'
     );
     if (!automationAvailable) {
       throw new Error('Automation bridge not connected');
     }
-    const { allowPython = false } = options;
+
     // Validate command is not empty
     if (!command || typeof command !== 'string') {
       throw new Error('Invalid command: must be a non-empty string');
     }
-    
+
     const cmdTrimmed = command.trim();
     if (cmdTrimmed.length === 0) {
       // Return success for empty commands to match UE behavior
@@ -468,10 +468,10 @@ export class UnrealBridge {
 
     const cmdLower = cmdTrimmed.toLowerCase();
 
-    if (!allowPython && (cmdLower === 'py' || cmdLower.startsWith('py '))) {
+    if (cmdLower === 'py' || cmdLower.startsWith('py ')) {
       throw new Error('Python console commands are blocked from external calls for safety.');
     }
-    
+
     // Check for dangerous commands
     const dangerousCommands = [
       'quit', 'exit', 'delete', 'destroy', 'kill', 'crash',
@@ -500,10 +500,10 @@ export class UnrealBridge {
     if (forbiddenTokens.some(token => cmdLower.includes(token))) {
       throw new Error(`Command contains unsafe token and was blocked: ${command}`);
     }
-    
+
     // Determine priority based on command type
     let priority = 7; // Default priority
-    
+
     if (command.includes('BuildLighting') || command.includes('BuildPaths')) {
       priority = 1; // Heavy operation
     } else if (command.includes('summon') || command.includes('spawn')) {
@@ -513,19 +513,19 @@ export class UnrealBridge {
     } else if (command.startsWith('show')) {
       priority = 9; // Light operation
     }
-    
+
     // Known invalid command patterns
     const invalidPatterns = [
       /^\d+$/,  // Just numbers
       /^invalid_command/i,
       /^this_is_not_a_valid/i,
     ];
-    
+
     const isLikelyInvalid = invalidPatterns.some(pattern => pattern.test(cmdTrimmed));
     if (isLikelyInvalid) {
       this.log.warn(`Command appears invalid: ${cmdTrimmed}`);
     }
-    
+
     const executeCommand = async (): Promise<any> => {
       if (!this.automationBridge || !this.automationBridge.isConnected()) {
         throw new Error('Automation bridge not connected');
@@ -536,7 +536,7 @@ export class UnrealBridge {
         { command: cmdTrimmed },
         { timeoutMs: 30000 }
       );
-      
+
       if (pluginResp && pluginResp.success) {
         return { ...(pluginResp as any), transport: 'automation_bridge' };
       }
@@ -670,50 +670,93 @@ export class UnrealBridge {
       functionName,
       params: params ?? {}
     }, _options?.timeoutMs ? { timeoutMs: _options.timeoutMs } : undefined);
-    
+
     return resp && resp.success !== false ? (resp.result ?? resp) : resp;
   }
 
   /** Stub - plugin management removed */
-  async ensurePluginsEnabled(_pluginNames: string[], _context?: string): Promise<string[]> {
-    return [];
-  }
+  async ensurePluginsEnabled(pluginNames: string[], context?: string): Promise<string[]> {
+    const names = Array.isArray(pluginNames)
+      ? pluginNames
+          .map((n) => (typeof n === 'string' ? n.trim() : String(n ?? '')))
+          .filter((n) => n.length > 0)
+      : [];
 
-  async executeEditorPython(_script: string, _options?: { timeoutMs?: number }): Promise<any> {
-    return {
-      success: false,
-      error: 'PYTHON_EXECUTION_REMOVED',
-      message: 'Python execution removed. Use native plugin handlers instead.'
-    };
-  }
+    if (names.length === 0) {
+      return [];
+    }
 
-  async executePythonWithResult(_script: string, _timeoutMs?: number): Promise<any> {
-    throw new Error('Python execution removed. Use native plugin handlers instead.');
+    this.log.warn(
+      `Plugin management is disabled; treating requested plugins as missing in context '${context ?? 'unknown'}': ${names.join(', ')}`
+    );
+    return names;
   }
 
   /** Get Unreal Engine version */
   async getEngineVersion(): Promise<{ version: string; major: number; minor: number; patch: number; isUE56OrAbove: boolean; }> {
-    this.log.debug('[STUB] getEngineVersion called');
-    return {
-      version: 'unknown',
-      major: 5,
-      minor: 6,
-      patch: 0,
-      isUE56OrAbove: true
-    };
+    const bridge = this.getAutomationBridge();
+    try {
+      const resp: any = await bridge.sendAutomationRequest(
+        'system_control',
+        { action: 'get_engine_version' },
+        { timeoutMs: 15000 }
+      );
+      const raw = resp && typeof resp.result === 'object'
+        ? (resp.result as any)
+        : (resp?.result ?? resp ?? {});
+      const version = typeof raw.version === 'string' ? raw.version : 'unknown';
+      const major = typeof raw.major === 'number' ? raw.major : 0;
+      const minor = typeof raw.minor === 'number' ? raw.minor : 0;
+      const patch = typeof raw.patch === 'number' ? raw.patch : 0;
+      const isUE56OrAbove =
+        typeof raw.isUE56OrAbove === 'boolean'
+          ? raw.isUE56OrAbove
+          : (major > 5 || (major === 5 && minor >= 6));
+      return { version, major, minor, patch, isUE56OrAbove };
+    } catch (error) {
+      this.log.warn('getEngineVersion failed', error);
+      return {
+        version: 'unknown',
+        major: 0,
+        minor: 0,
+        patch: 0,
+        isUE56OrAbove: false
+      };
+    }
   }
 
-  /** Query feature flags (stub) */
-  async getFeatureFlags(): Promise<{ pythonEnabled: boolean; subsystems: { unrealEditor: boolean; levelEditor: boolean; editorActor: boolean; } }> {
-    this.log.debug('[STUB] getFeatureFlags called');
-    return {
-      pythonEnabled: false,
-      subsystems: {
-        unrealEditor: false,
-        levelEditor: false,
-        editorActor: false
-      }
-    };
+  /** Query feature flags */
+  async getFeatureFlags(): Promise<{ subsystems: { unrealEditor: boolean; levelEditor: boolean; editorActor: boolean; } }> {
+    const bridge = this.getAutomationBridge();
+    try {
+      const resp: any = await bridge.sendAutomationRequest(
+        'system_control',
+        { action: 'get_feature_flags' },
+        { timeoutMs: 15000 }
+      );
+      const raw = resp && typeof resp.result === 'object'
+        ? (resp.result as any)
+        : (resp?.result ?? resp ?? {});
+      const subs = raw && typeof raw.subsystems === 'object'
+        ? (raw.subsystems as any)
+        : {};
+      return {
+        subsystems: {
+          unrealEditor: Boolean(subs.unrealEditor),
+          levelEditor: Boolean(subs.levelEditor),
+          editorActor: Boolean(subs.editorActor)
+        }
+      };
+    } catch (error) {
+      this.log.warn('getFeatureFlags failed', error);
+      return {
+        subsystems: {
+          unrealEditor: false,
+          levelEditor: false,
+          editorActor: false
+        }
+      };
+    }
   }
 
   /**
@@ -826,7 +869,7 @@ export class UnrealBridge {
       'CollisionPawn': 'Wireframe',
       'CollisionVisibility': 'Wireframe'
     };
-    
+
     return alternatives[unsafeMode] || 'Lit';
   }
 
@@ -835,7 +878,7 @@ export class UnrealBridge {
    * Prevent rapid command execution that can overwhelm the engine
    */
   private async executeThrottledCommand<T>(
-    command: () => Promise<T>, 
+    command: () => Promise<T>,
     priority: number = 5
   ): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -845,10 +888,10 @@ export class UnrealBridge {
         reject,
         priority
       });
-      
+
       // Sort by priority (lower number = higher priority)
       this.commandQueue.sort((a, b) => a.priority - b.priority);
-      
+
       // Process queue if not already processing
       if (!this.isProcessing) {
         this.processCommandQueue();
@@ -863,21 +906,21 @@ export class UnrealBridge {
     if (this.isProcessing || this.commandQueue.length === 0) {
       return;
     }
-    
+
     this.isProcessing = true;
-    
+
     while (this.commandQueue.length > 0) {
       const item = this.commandQueue.shift();
       if (!item) continue; // Skip if undefined
-      
+
       // Calculate delay based on time since last command
       const timeSinceLastCommand = Date.now() - this.lastCommandTime;
       const requiredDelay = this.calculateDelay(item.priority);
-      
+
       if (timeSinceLastCommand < requiredDelay) {
         await this.delay(requiredDelay - timeSinceLastCommand);
       }
-      
+
       try {
         const result = await item.command();
         item.resolve(result);
@@ -931,10 +974,10 @@ export class UnrealBridge {
           item.reject(error);
         }
       }
-      
+
       this.lastCommandTime = Date.now();
     }
-    
+
     this.isProcessing = false;
   }
 
@@ -1060,44 +1103,44 @@ export class UnrealBridge {
   getSafeCommands(): Record<string, string> {
     return {
       // Health check (safe, no side effects)
-'HealthCheck': 'stat none',
-      
+      'HealthCheck': 'stat none',
+
       // Performance monitoring (safe)
       'ShowFPS': 'stat unit',  // Use 'stat unit' instead of 'stat fps'
       'ShowMemory': 'stat memory',
       'ShowGame': 'stat game',
       'ShowRendering': 'stat scenerendering',
       'ClearStats': 'stat none',
-      
+
       // Safe viewmodes
       'ViewLit': 'viewmode lit',
       'ViewUnlit': 'viewmode unlit',
       'ViewWireframe': 'viewmode wireframe',
       'ViewDetailLighting': 'viewmode detaillighting',
       'ViewLightingOnly': 'viewmode lightingonly',
-      
+
       // Safe show flags
       'ShowBounds': 'show bounds',
       'ShowCollision': 'show collision',
       'ShowNavigation': 'show navigation',
       'ShowFog': 'show fog',
       'ShowGrid': 'show grid',
-      
+
       // PIE controls
       'PlayInEditor': 'play',
       'StopPlay': 'stop',
       'PausePlay': 'pause',
-      
+
       // Time control
       'SlowMotion': 'slomo 0.5',
       'NormalSpeed': 'slomo 1',
       'FastForward': 'slomo 2',
-      
+
       // Camera controls
       'CameraSpeed1': 'camspeed 1',
       'CameraSpeed4': 'camspeed 4',
       'CameraSpeed8': 'camspeed 8',
-      
+
       // Rendering quality (safe)
       'LowQuality': 'sg.ViewDistanceQuality 0',
       'MediumQuality': 'sg.ViewDistanceQuality 1',

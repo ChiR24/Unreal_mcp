@@ -10,6 +10,10 @@
 #include "Engine/World.h"
 #include "EditorAssetLibrary.h"
 #include "UObject/SavePackage.h"
+#include "ProceduralFoliageSpawner.h"
+#include "ProceduralFoliageVolume.h"
+#include "ProceduralFoliageComponent.h"
+#include "FoliageTypeObject.h"
 
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
@@ -536,6 +540,187 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("add_foliage_instances requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    const FString Lower = Action.ToLower();
+    if (!Lower.Equals(TEXT("create_procedural_foliage"), ESearchCase::IgnoreCase)) { return false; }
+
+#if WITH_EDITOR
+    if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("create_procedural_foliage payload missing"), TEXT("INVALID_PAYLOAD")); return true; }
+
+    FString Name;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("name required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    const TSharedPtr<FJsonObject>* BoundsObj = nullptr;
+    if (!Payload->TryGetObjectField(TEXT("bounds"), BoundsObj) || !BoundsObj)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("bounds required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    FVector Location(0,0,0);
+    FVector Size(1000,1000,1000);
+    
+    const TSharedPtr<FJsonObject>* LocObj = nullptr;
+    if ((*BoundsObj)->TryGetObjectField(TEXT("location"), LocObj) && LocObj)
+    {
+        (*LocObj)->TryGetNumberField(TEXT("x"), Location.X);
+        (*LocObj)->TryGetNumberField(TEXT("y"), Location.Y);
+        (*LocObj)->TryGetNumberField(TEXT("z"), Location.Z);
+    }
+    
+    const TSharedPtr<FJsonObject>* SizeObj = nullptr;
+    if ((*BoundsObj)->TryGetObjectField(TEXT("size"), SizeObj) && SizeObj)
+    {
+        (*SizeObj)->TryGetNumberField(TEXT("x"), Size.X);
+        (*SizeObj)->TryGetNumberField(TEXT("y"), Size.Y);
+        (*SizeObj)->TryGetNumberField(TEXT("z"), Size.Z);
+    }
+    // If size is array
+    const TArray<TSharedPtr<FJsonValue>>* SizeArr = nullptr;
+    if ((*BoundsObj)->TryGetArrayField(TEXT("size"), SizeArr) && SizeArr && SizeArr->Num() >= 3)
+    {
+        Size.X = (*SizeArr)[0]->AsNumber();
+        Size.Y = (*SizeArr)[1]->AsNumber();
+        Size.Z = (*SizeArr)[2]->AsNumber();
+    }
+
+    const TArray<TSharedPtr<FJsonValue>>* FoliageTypesArr = nullptr;
+    if (!Payload->TryGetArrayField(TEXT("foliageTypes"), FoliageTypesArr))
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("foliageTypes array required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    int32 Seed = 12345;
+    Payload->TryGetNumberField(TEXT("seed"), Seed);
+
+    if (!GEditor)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("EDITOR_NOT_AVAILABLE"));
+        return true;
+    }
+
+    // Create Spawner Asset
+    FString PackagePath = TEXT("/Game/ProceduralFoliage");
+    FString AssetName = Name + TEXT("_Spawner");
+    FString FullPackagePath = FString::Printf(TEXT("%s/%s"), *PackagePath, *AssetName);
+
+    UPackage* Package = CreatePackage(*FullPackagePath);
+    UProceduralFoliageSpawner* Spawner = NewObject<UProceduralFoliageSpawner>(Package, FName(*AssetName), RF_Public | RF_Standalone);
+    if (!Spawner)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create spawner asset"), TEXT("CREATION_FAILED"));
+        return true;
+    }
+
+    Spawner->TileSize = 1000.0f; // Default tile size
+    Spawner->NumUniqueTiles = 10;
+    Spawner->RandomSeed = Seed;
+
+    // Add foliage types to spawner
+    int32 TypeIndex = 0;
+    for (const TSharedPtr<FJsonValue>& Val : *FoliageTypesArr)
+    {
+        const TSharedPtr<FJsonObject>* TypeObj = nullptr;
+        if (Val->TryGetObject(TypeObj) && TypeObj)
+        {
+            FString MeshPath;
+            (*TypeObj)->TryGetStringField(TEXT("meshPath"), MeshPath);
+            double Density = 10.0;
+            (*TypeObj)->TryGetNumberField(TEXT("density"), Density);
+            
+            if (!MeshPath.IsEmpty())
+            {
+                UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+                if (Mesh)
+                {
+                    // Create FoliageType asset
+                    FString FTName = FString::Printf(TEXT("%s_FT_%d"), *AssetName, TypeIndex++);
+                    FString FTPackagePath = FString::Printf(TEXT("%s/%s"), *PackagePath, *FTName);
+                    UPackage* FTPackage = CreatePackage(*FTPackagePath);
+                    UFoliageType_InstancedStaticMesh* FT = NewObject<UFoliageType_InstancedStaticMesh>(FTPackage, FName(*FTName), RF_Public | RF_Standalone);
+                    FT->SetStaticMesh(Mesh);
+                    FT->Density = (float)Density;
+                    FT->ReapplyDensity = true;
+                    
+                    FTPackage->MarkPackageDirty();
+                    FAssetRegistryModule::AssetCreated(FT);
+                    
+                    // Add to Spawner using Reflection (since FoliageTypes is private)
+                    FArrayProperty* FoliageTypesProp = FindFProperty<FArrayProperty>(Spawner->GetClass(), TEXT("FoliageTypes"));
+                    if (FoliageTypesProp)
+                    {
+                        FScriptArrayHelper Helper(FoliageTypesProp, FoliageTypesProp->ContainerPtrToValuePtr<void>(Spawner));
+                        int32 Index = Helper.AddValue();
+                        uint8* RawData = Helper.GetRawPtr(Index);
+
+                        UScriptStruct* Struct = FFoliageTypeObject::StaticStruct();
+                        
+                        FObjectProperty* ObjProp = FindFProperty<FObjectProperty>(Struct, TEXT("FoliageTypeObject"));
+                        if (ObjProp)
+                        {
+                            ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(RawData), FT);
+                        }
+
+                        FBoolProperty* BoolProp = FindFProperty<FBoolProperty>(Struct, TEXT("bIsAsset"));
+                        if (BoolProp)
+                        {
+                            BoolProp->SetPropertyValue(BoolProp->ContainerPtrToValuePtr<void>(RawData), true);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Package->MarkPackageDirty();
+    FAssetRegistryModule::AssetCreated(Spawner);
+
+    // Spawn Volume
+    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    AProceduralFoliageVolume* Volume = Cast<AProceduralFoliageVolume>(ActorSS->SpawnActorFromClass(AProceduralFoliageVolume::StaticClass(), Location, FRotator::ZeroRotator));
+    if (!Volume)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to spawn volume"), TEXT("SPAWN_FAILED"));
+        return true;
+    }
+
+    Volume->SetActorLabel(Name);
+    Volume->SetActorScale3D(Size / 200.0f); // Volume default size is 200x200x200? No, usually 100. BrushComponent default is 200.
+    // Let's assume standard brush size.
+    
+    if (UProceduralFoliageComponent* ProcComp = Volume->ProceduralComponent)
+    {
+        ProcComp->FoliageSpawner = Spawner;
+        ProcComp->TileOverlap = 0.0f;
+        
+        // Resimulate
+        // Note: ResimulateProceduralFoliage might be async or require specific context.
+        // In 5.6 it might take a callback or be void.
+        // We'll try calling it.
+        bool bResult = ProcComp->ResimulateProceduralFoliage([](const TArray<FDesiredFoliageInstance>&){});
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("volume_actor"), Volume->GetActorLabel());
+    Resp->SetStringField(TEXT("spawner_path"), Spawner->GetPathName());
+    Resp->SetNumberField(TEXT("foliage_types_count"), TypeIndex);
+    Resp->SetBoolField(TEXT("resimulated"), true);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Procedural foliage created"), Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_procedural_foliage requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #endif
 }

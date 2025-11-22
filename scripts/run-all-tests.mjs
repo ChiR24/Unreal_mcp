@@ -12,7 +12,9 @@ const tests = [
   'test:sequence',
   'test:system',
   'test:console_command',
-  'test:inspect'
+  'test:inspect',
+  'test:manage_asset',
+  'test:blueprint'
 ];
 
 const isWindows = process.platform === 'win32';

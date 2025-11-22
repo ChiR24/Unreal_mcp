@@ -121,7 +121,7 @@ export class AudioTools {
     is3D?: boolean;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating audio components requires C++ plugin support' };
+      throw new Error('Automation Bridge not available. Creating audio components requires plugin support.');
     }
 
     try {
@@ -150,7 +150,7 @@ export class AudioTools {
     falloffMode?: 'Linear' | 'Logarithmic' | 'Inverse' | 'LogReverse' | 'Natural';
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Setting sound attenuation requires C++ plugin support' };
+      throw new Error('Automation Bridge not available. Setting sound attenuation requires plugin support.');
     }
 
     try {
@@ -182,7 +182,7 @@ export class AudioTools {
     };
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating sound classes requires C++ plugin support' };
+      throw new Error('Automation Bridge not available. Creating sound classes requires plugin support.');
     }
 
     try {
@@ -212,7 +212,7 @@ export class AudioTools {
     }>;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating sound mixes requires C++ plugin support' };
+      throw new Error('Automation Bridge not available. Creating sound mixes requires plugin support.');
     }
 
     try {
@@ -234,7 +234,7 @@ export class AudioTools {
     mixName: string;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Pushing sound mixes requires C++ plugin support' };
+      throw new Error('Automation Bridge not available. Pushing sound mixes requires plugin support.');
     }
 
     try {
@@ -254,7 +254,7 @@ export class AudioTools {
     mixName: string;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Popping sound mixes requires C++ plugin support' };
+      throw new Error('Automation Bridge not available. Popping sound mixes requires plugin support.');
     }
 
     try {
@@ -299,7 +299,7 @@ export class AudioTools {
     autoPlay?: boolean;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating ambient sounds requires C++ plugin support' };
+      throw new Error('Automation Bridge not available. Creating ambient sounds requires plugin support.');
     }
 
     try {
@@ -330,7 +330,7 @@ export class AudioTools {
     fadeTime?: number;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating reverb zones requires C++ plugin support' };
+      throw new Error('Automation Bridge not available. Creating reverb zones requires plugin support.');
     }
 
     try {
@@ -358,7 +358,7 @@ export class AudioTools {
     outputType?: 'Magnitude' | 'Decibel' | 'Normalized';
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Audio analysis controls require C++ plugin support' };
+      throw new Error('Automation Bridge not available. Audio analysis controls require plugin support.');
     }
 
     try {
@@ -389,7 +389,7 @@ export class AudioTools {
     fadeType?: 'FadeIn' | 'FadeOut' | 'FadeTo';
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Fading sound requires C++ plugin support' };
+      throw new Error('Automation Bridge not available. Fading sound requires plugin support.');
     }
 
     try {
@@ -414,7 +414,7 @@ export class AudioTools {
     scale?: number;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Doppler effect controls require C++ plugin support' };
+      throw new Error('Automation Bridge not available. Doppler effect controls require plugin support.');
     }
 
     try {
@@ -438,7 +438,7 @@ export class AudioTools {
     volumeAttenuation?: number;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Audio occlusion controls require C++ plugin support' };
+      throw new Error('Automation Bridge not available. Audio occlusion controls require plugin support.');
     }
 
     try {

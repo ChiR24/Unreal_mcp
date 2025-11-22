@@ -18,6 +18,38 @@ This document tracks ongoing work to replace stubbed or registry-based fallbacks
 | `sequence_set_playback_speed` | Returns success without applying speed. | Update Sequencer playback settings. |
 | `sequence_cleanup` | Removes actors by prefix. | ✅ Done |
 
+## Graph Handlers (New)
+
+| Action | Current State | Needed Work |
+| --- | --- | --- |
+| `manage_blueprint_graph` | Implemented (nodes, pins, properties). | Refine `Literal` node creation. |
+| `manage_niagara_graph` | Implemented (modules, removal). | Implement `connect_pins`, `set_parameter`. |
+| `manage_material_graph` | Implemented (nodes, removal, details). | Implement `break_connections`. |
+| `manage_behavior_tree` | Implemented (nodes, removal, connections). | Expand property setting. |
+
+## World Partition & Level Composition
+
+| Action | Current State | Needed Work |
+| --- | --- | --- |
+| `manage_world_partition` | Implemented (`load_cells`, `set_datalayer`). | Refine `set_datalayer` for UE 5.1+ types. |
+
+## Render & Pipeline
+
+| Action | Current State | Needed Work |
+| --- | --- | --- |
+| `manage_render` | Implemented (`create_render_target`). | Implement `nanite_rebuild_mesh`, `lumen_update_scene`. |
+| `manage_pipeline` | Implemented (`run_ubt`). | Add async output streaming. |
+| `manage_tests` | Implemented (`run_tests`). | Add result streaming. |
+
+## Observability
+
+| Action | Current State | Needed Work |
+| --- | --- | --- |
+| `manage_logs` | Implemented (`subscribe`). | Add real-time streaming. |
+| `manage_debug` | Implemented (`spawn_category`). | Add GGameplayDebugger integration. |
+| `manage_insights` | Implemented (`start_session`). | Add FTraceAuxiliary integration. |
+| `manage_ui` | Implemented (`simulate_input`). | Add FSlateApplication integration. |
+
 ## SCS (Simple Construction Script) Helpers
 
 | Action | Current State | Needed Work |

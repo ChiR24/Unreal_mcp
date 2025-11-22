@@ -10,8 +10,8 @@ import { GraphQLServer } from '../src/graphql/server.js';
 import { UnrealBridge } from '../src/unreal-bridge.js';
 import { AutomationBridge } from '../src/automation-bridge.js';
 
-// Mock automation bridge for testing
-class MockAutomationBridge {
+// Test automation bridge for verifying GraphQL integration
+class TestAutomationBridge {
   constructor() {
     this.handlers = new Map();
   }
@@ -35,7 +35,7 @@ class MockAutomationBridge {
   }
 
   sendAutomationRequest(action, params, options) {
-    // Mock responses based on action
+    // Return test data based on action
     switch (action) {
       case 'list_assets':
         return Promise.resolve({
@@ -114,10 +114,10 @@ async function testGraphQLServer() {
   log.info('Starting GraphQL server test...');
 
   const bridge = new UnrealBridge();
-  const mockAutomationBridge = new MockAutomationBridge();
-  bridge.setAutomationBridge(mockAutomationBridge);
+  const testAutomationBridge = new TestAutomationBridge();
+  bridge.setAutomationBridge(testAutomationBridge);
 
-  const graphQLServer = new GraphQLServer(bridge, mockAutomationBridge, {
+  const graphQLServer = new GraphQLServer(bridge, testAutomationBridge, {
     enabled: true,
     port: 4000,
     host: '127.0.0.1'
@@ -253,15 +253,22 @@ async function runGraphQLTests() {
     try {
       log.info(`Testing: ${test.name}`);
 
-      // Simulate GraphQL query (in real test, you'd make HTTP request)
-      // For now, just validate the query is syntactically correct
-      const isValid = test.query.includes('{') && test.query.includes('}');
+      const response = await fetch('http://127.0.0.1:4000/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: test.query })
+      });
 
-      if (isValid) {
-        log.info(`  ✅ ${test.name} - Query is valid`);
+      const result = await response.json();
+
+      if (result.errors) {
+        log.error(`  ❌ ${test.name} - GraphQL Errors:`, JSON.stringify(result.errors));
+        failed++;
+      } else if (result.data) {
+        log.info(`  ✅ ${test.name} - Success`);
         passed++;
       } else {
-        log.error(`  ❌ ${test.name} - Invalid query`);
+        log.error(`  ❌ ${test.name} - No data returned`);
         failed++;
       }
     } catch (error) {

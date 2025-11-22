@@ -24,6 +24,28 @@
 #endif
 #endif
 
+#if WITH_EDITOR
+#include "NiagaraSystem.h"
+#include "NiagaraEmitter.h"
+#include "NiagaraComponent.h"
+#include "NiagaraActor.h"
+#include "NiagaraSystemFactoryNew.h"
+#include "NiagaraEmitterFactoryNew.h"
+#include "NiagaraScriptFactoryNew.h"
+#include "NiagaraParameterCollection.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Engine/World.h"
+#include "EditorAssetLibrary.h"
+#include "AssetToolsModule.h"
+#include "Modules/ModuleManager.h"
+#include "Async/Async.h"
+#if __has_include("Subsystems/EditorActorSubsystem.h")
+#include "Subsystems/EditorActorSubsystem.h"
+#elif __has_include("EditorActorSubsystem.h")
+#include "EditorActorSubsystem.h"
+#endif
+#endif
+
 bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
     const FString& RequestId,
     const FString& Action,

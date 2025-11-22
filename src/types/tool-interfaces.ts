@@ -5,8 +5,8 @@ export interface IBaseTool {
 }
 
 export interface IActorTools {
-    spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string }): Promise<any>;
-    delete(params: { actorName: string }): Promise<any>;
+    spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string; timeoutMs?: number }): Promise<any>;
+    delete(params: { actorName?: string; actorNames?: string[] }): Promise<any>;
     applyForce(params: { actorName: string; force: { x: number; y: number; z: number } }): Promise<any>;
     spawnBlueprint(params: { blueprintPath: string; actorName?: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }): Promise<any>;
     setTransform(params: { actorName: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; scale?: { x: number; y: number; z: number } }): Promise<any>;
@@ -24,7 +24,19 @@ export interface IActorTools {
     deleteByTag(tag: string): Promise<any>;
     setBlueprintVariables(params: { actorName: string; variables: Record<string, unknown> }): Promise<any>;
     createSnapshot(params: { actorName: string; snapshotName: string }): Promise<any>;
+    restoreSnapshot(params: { actorName: string; snapshotName: string }): Promise<any>;
     listActors(): Promise<any>;
+    getMetadata(actorName: string): Promise<any>;
+    exportActor(params: { actorName: string; destinationPath?: string }): Promise<any>;
+    getBoundingBox(actorName: string): Promise<any>;
+}
+
+export interface SourceControlState {
+    isCheckedOut: boolean;
+    isAdded: boolean;
+    isDeleted: boolean;
+    isModified: boolean;
+    whoCheckedOut?: string;
 }
 
 export interface IAssetTools {
@@ -36,10 +48,13 @@ export interface IAssetTools {
     deleteAssets(params: { paths: string[]; fixupRedirectors?: boolean; timeoutMs?: number }): Promise<any>;
     saveAsset(assetPath: string): Promise<any>;
     getDependencies(params: { assetPath: string; recursive?: boolean }): Promise<any>;
-    createThumbnail(params: { assetPath: string }): Promise<any>;
+    getSourceControlState(params: { assetPath: string }): Promise<SourceControlState | any>;
+    analyzeGraph(params: { assetPath: string; maxDepth?: number }): Promise<any>;
+    createThumbnail(params: { assetPath: string; width?: number; height?: number }): Promise<any>;
     setTags(params: { assetPath: string; tags: string[] }): Promise<any>;
     generateReport(params: { directory: string; reportType?: string; outputPath?: string }): Promise<any>;
     validate(params: { assetPath: string }): Promise<any>;
+    generateLODs(params: { assetPath: string; lodCount: number; reductionSettings?: Record<string, unknown> }): Promise<any>;
 }
 
 export interface IEditorTools {
@@ -132,7 +147,7 @@ export interface ILevelTools {
 export interface IEditorTools {
     isInPIE(): Promise<boolean>;
     ensureNotInPIE(): Promise<void>;
-    playInEditor(): Promise<any>;
+    playInEditor(timeoutMs?: number): Promise<any>;
     stopPlayInEditor(): Promise<any>;
     pausePlayInEditor(): Promise<any>;
     pauseInEditor(): Promise<any>;
@@ -140,7 +155,7 @@ export interface IEditorTools {
     setViewportCamera(location?: { x: number; y: number; z: number } | [number, number, number] | null | undefined, rotation?: { pitch: number; yaw: number; roll: number } | [number, number, number] | null | undefined): Promise<any>;
     setCameraSpeed(speed: number): Promise<any>;
     setFOV(fov: number): Promise<any>;
-    takeScreenshot(filename?: string): Promise<any>;
+    takeScreenshot(filename?: string, resolution?: string): Promise<any>;
     resumePlayInEditor(): Promise<any>;
     stepPIEFrame(steps?: number): Promise<any>;
     startRecording(options?: { filename?: string; frameRate?: number; durationSeconds?: number; metadata?: Record<string, unknown> }): Promise<any>;
@@ -160,6 +175,51 @@ export interface ITools {
     levelTools: ILevelTools;
     sequenceTools: ISequenceTools;
     assetResources: IAssetResources;
+    landscapeTools: ILandscapeTools;
+    foliageTools: IFoliageTools;
+    environmentTools: IEnvironmentTools;
+    systemTools: any;
+    uiTools: any;
+    introspectionTools: any;
+    audioTools: any;
+    physicsTools: any;
+    animationTools: any;
     automationBridge?: AutomationBridge;
-    [key: string]: any; // Allow other tools for now
+    [key: string]: any;
+}
+
+export interface IEnvironmentTools {
+    setTimeOfDay(hour: unknown): Promise<any>;
+    setSunIntensity(intensity: unknown): Promise<any>;
+    setSkylightIntensity(intensity: unknown): Promise<any>;
+    exportSnapshot(params: { path?: unknown; filename?: unknown }): Promise<any>;
+    importSnapshot(params: { path?: unknown; filename?: unknown }): Promise<any>;
+    cleanup(params?: { names?: unknown }): Promise<any>;
+}
+
+export interface ILandscapeTools {
+    createLandscape(params: { name: string; location?: [number, number, number]; sizeX?: number; sizeY?: number; quadsPerSection?: number; sectionsPerComponent?: number; componentCount?: number; materialPath?: string; enableWorldPartition?: boolean; runtimeGrid?: string; isSpatiallyLoaded?: boolean; dataLayers?: string[] }): Promise<any>;
+    sculptLandscape(params: { landscapeName: string; tool: string; brushSize?: number; brushFalloff?: number; strength?: number; location?: [number, number, number]; radius?: number }): Promise<any>;
+    paintLandscape(params: { landscapeName: string; layerName: string; position: [number, number, number]; brushSize?: number; strength?: number; targetValue?: number; radius?: number; density?: number }): Promise<any>;
+    createProceduralTerrain(params: { name: string; location?: [number, number, number]; subdivisions?: number; settings?: Record<string, unknown> }): Promise<any>;
+    createLandscapeGrassType(params: { name: string; path?: string; staticMesh?: string }): Promise<any>;
+    setLandscapeMaterial(params: { landscapeName: string; materialPath: string }): Promise<any>;
+}
+
+export interface IFoliageTools {
+    addFoliageType(params: { name: string; meshPath: string; density?: number; radius?: number; minScale?: number; maxScale?: number; alignToNormal?: boolean; randomYaw?: boolean; groundSlope?: number }): Promise<any>;
+    addFoliage(params: { foliageType: string; locations: Array<{ x: number; y: number; z: number }> }): Promise<any>;
+    paintFoliage(params: { foliageType: string; position: [number, number, number]; brushSize?: number; paintDensity?: number; eraseMode?: boolean }): Promise<any>;
+    createProceduralFoliage(params: { name?: string; volumeName?: string; position?: [number, number, number]; size?: [number, number, number]; foliageTypes?: string[]; seed?: number; tileSize?: number; bounds?: { location: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } } }): Promise<any>;
+    getFoliageInstances(params: { foliageType?: string }): Promise<any>;
+    removeFoliage(params: { foliageType?: string; removeAll?: boolean }): Promise<any>;
+    createInstancedMesh(params: { name: string; meshPath: string; instances: Array<{ position: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number] }>; enableCulling?: boolean; cullDistance?: number }): Promise<any>;
+    setFoliageLOD(params: { foliageType: string; lodDistances?: number[]; screenSize?: number[] }): Promise<any>;
+    setFoliageCollision(params: { foliageType: string; collisionEnabled?: boolean; collisionProfile?: string; generateOverlapEvents?: boolean }): Promise<any>;
+    createGrassSystem(params: { name: string; grassTypes: Array<{ meshPath: string; density: number; minScale?: number; maxScale?: number }>; windStrength?: number; windSpeed?: number }): Promise<any>;
+    removeFoliageInstances(params: { foliageType: string; position: [number, number, number]; radius: number }): Promise<any>;
+    selectFoliageInstances(params: { foliageType: string; position?: [number, number, number]; radius?: number; selectAll?: boolean }): Promise<any>;
+    updateFoliageInstances(params: { foliageType: string; updateTransforms?: boolean; updateMesh?: boolean; newMeshPath?: string }): Promise<any>;
+    createFoliageSpawner(params: { name: string; spawnArea: 'Landscape' | 'StaticMesh' | 'BSP' | 'Foliage' | 'All'; excludeAreas?: Array<[number, number, number, number]> }): Promise<any>;
+    optimizeFoliage(params: { mergeInstances?: boolean; generateClusters?: boolean; clusterSize?: number; reduceDrawCalls?: boolean }): Promise<any>;
 }

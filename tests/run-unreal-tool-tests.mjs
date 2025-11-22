@@ -37,7 +37,7 @@ const defaultDocPath = path.resolve(repoRoot, 'docs', 'unreal-tool-test-cases.md
 const docPath = path.resolve(repoRoot, process.env.UNREAL_MCP_TEST_DOC ?? defaultDocPath);
 const reportsDir = path.resolve(repoRoot, 'tests', 'reports');
 const resultsPath = path.join(reportsDir, `unreal-tool-test-results-${new Date().toISOString().replace(/[:]/g, '-')}.json`);
-const defaultFbxDir = normalizeWindowsPath(process.env.UNREAL_MCP_FBX_DIR ?? 'C:\\Users\\micro\\Downloads\\Compressed\\fbx');
+const defaultFbxDir = normalizeWindowsPath(process.env.UNREAL_MCP_FBX_DIR ?? path.join(repoRoot, 'tests', 'assets', 'fbx'));
 const defaultFbxFile = normalizeWindowsPath(process.env.UNREAL_MCP_FBX_FILE ?? path.join(defaultFbxDir, 'test_model.fbx'));
 
 const cliOptions = parseCliOptions(process.argv.slice(2));
@@ -635,12 +635,6 @@ function enrichTestCase(rawCase) {
     case 'System Control Tools': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       if (!payloadValue.action) return { ...base, skipReason: 'Missing action in payload' };
-      if (payloadValue.action === 'engine_quit' || payloadValue.action === 'engine_start') {
-        return {
-          ...base,
-          skipReason: 'Skipping engine process management during automated run'
-        };
-      }
       return {
         ...base,
         toolName: 'system_control',
@@ -755,7 +749,7 @@ function enrichTestCase(rawCase) {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       return { ...base, toolName: 'inspect', arguments: payloadValue };
     }
-    case 'Cross-Tool Integration Tests': 
+    case 'Cross-Tool Integration Tests':
     case 'Stress Test Scenarios':
     case 'Error Recovery Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
@@ -787,9 +781,9 @@ function evaluateExpectation(testCase, response) {
 
   // CRITICAL FIX: UE_NOT_CONNECTED errors should ALWAYS fail tests unless explicitly expected
   if (actualError === 'UE_NOT_CONNECTED') {
-    const explicitlyExpectsDisconnection = lowerExpected.includes('not connected') || 
-                                          lowerExpected.includes('ue_not_connected') ||
-                                          lowerExpected.includes('disconnected');
+    const explicitlyExpectsDisconnection = lowerExpected.includes('not connected') ||
+      lowerExpected.includes('ue_not_connected') ||
+      lowerExpected.includes('disconnected');
     if (!explicitlyExpectsDisconnection) {
       return {
         passed: false,
@@ -804,10 +798,10 @@ function evaluateExpectation(testCase, response) {
     // Test expects failure and got failure - but verify it's the RIGHT kind of failure
     const lowerReason = actualMessage?.toLowerCase() || actualError?.toLowerCase() || '';
     const errorTypeMatch = failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
-    
+
     // If expected outcome specifies an error type, actual error should match it
-    if (lowerExpected.includes('not found') || lowerExpected.includes('invalid') || 
-        lowerExpected.includes('missing') || lowerExpected.includes('already exists')) {
+    if (lowerExpected.includes('not found') || lowerExpected.includes('invalid') ||
+      lowerExpected.includes('missing') || lowerExpected.includes('already exists')) {
       const passed = errorTypeMatch;
       let reason;
       if (response.isError) {
@@ -880,7 +874,7 @@ function summarize(results) {
 
 function generateBenchmarkReport(results) {
   const passedResults = results.filter(r => r.status === 'passed' && r.durationMs);
-  
+
   if (passedResults.length === 0) {
     console.log('\nNo performance data available for benchmarking.');
     return;

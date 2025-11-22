@@ -25,7 +25,8 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
   private isUnknownActionResponse(res: any): boolean {
     if (!res) return false;
     const txt = String((res.error ?? res.message ?? '')).toLowerCase();
-    return txt.includes('unknown') || txt.includes('unknown_action') || txt.includes('unknown automation action');
+    // Only treat specific error codes as "not implemented"
+    return txt.includes('unknown_action') || txt.includes('unknown automation action') || txt.includes('not_implemented') || txt === 'unknown_plugin_action';
   }
 
   private buildCandidates(rawName: string | undefined): string[] {

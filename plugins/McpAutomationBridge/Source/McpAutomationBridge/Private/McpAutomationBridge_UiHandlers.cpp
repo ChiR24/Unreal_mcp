@@ -23,19 +23,29 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString LowerAction = Action.ToLower();
-    if (!LowerAction.Equals(TEXT("system_control"), ESearchCase::IgnoreCase) && !LowerAction.StartsWith(TEXT("system_control")))
+    bool bIsSystemControl = LowerAction.Equals(TEXT("system_control"), ESearchCase::IgnoreCase);
+    bool bIsManageUi = LowerAction.Equals(TEXT("manage_ui"), ESearchCase::IgnoreCase);
+
+    if (!bIsSystemControl && !bIsManageUi)
     {
         return false;
     }
 
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("system_control payload missing."), TEXT("INVALID_PAYLOAD"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Payload missing."), TEXT("INVALID_PAYLOAD"));
         return true;
     }
 
     FString SubAction;
-    Payload->TryGetStringField(TEXT("action"), SubAction);
+    if (Payload->HasField(TEXT("subAction")))
+    {
+        SubAction = Payload->GetStringField(TEXT("subAction"));
+    }
+    else
+    {
+        Payload->TryGetStringField(TEXT("action"), SubAction);
+    }
     const FString LowerSub = SubAction.ToLower();
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -230,6 +240,53 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         {
             Message = TEXT("Failed to save all assets");
             ErrorCode = TEXT("SAVE_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+        }
+    }
+    else if (LowerSub == TEXT("simulate_input"))
+    {
+        FString KeyName;
+        Payload->TryGetStringField(TEXT("keyName"), KeyName); // Changed to keyName to match schema
+        if (KeyName.IsEmpty()) Payload->TryGetStringField(TEXT("key"), KeyName); // Fallback
+
+        FString EventType;
+        Payload->TryGetStringField(TEXT("eventType"), EventType);
+        
+        FKey Key = FKey(FName(*KeyName));
+        if (Key.IsValid())
+        {
+            const uint32 CharacterCode = 0;
+            const uint32 KeyCode = 0;
+            const bool bIsRepeat = false;
+            FModifierKeysState ModifierState; 
+
+            if (EventType == TEXT("KeyDown"))
+            {
+                FKeyEvent KeyEvent(Key, ModifierState, FSlateApplication::Get().GetUserIndexForKeyboard(), bIsRepeat, CharacterCode, KeyCode);
+                FSlateApplication::Get().ProcessKeyDownEvent(KeyEvent);
+            }
+            else if (EventType == TEXT("KeyUp"))
+            {
+                FKeyEvent KeyEvent(Key, ModifierState, FSlateApplication::Get().GetUserIndexForKeyboard(), bIsRepeat, CharacterCode, KeyCode);
+                FSlateApplication::Get().ProcessKeyUpEvent(KeyEvent);
+            }
+            else
+            {
+                // Press and Release
+                FKeyEvent KeyDownEvent(Key, ModifierState, FSlateApplication::Get().GetUserIndexForKeyboard(), bIsRepeat, CharacterCode, KeyCode);
+                FSlateApplication::Get().ProcessKeyDownEvent(KeyDownEvent);
+                
+                FKeyEvent KeyUpEvent(Key, ModifierState, FSlateApplication::Get().GetUserIndexForKeyboard(), bIsRepeat, CharacterCode, KeyCode);
+                FSlateApplication::Get().ProcessKeyUpEvent(KeyUpEvent);
+            }
+            
+            bSuccess = true;
+            Message = FString::Printf(TEXT("Simulated input for key: %s"), *KeyName);
+        }
+        else
+        {
+            Message = FString::Printf(TEXT("Invalid key name: %s"), *KeyName);
+            ErrorCode = TEXT("INVALID_KEY");
             Resp->SetStringField(TEXT("error"), Message);
         }
     }

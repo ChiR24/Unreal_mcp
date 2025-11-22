@@ -18,6 +18,11 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - **Animation & Physics** - Blueprints, state machines, ragdolls, constraints, vehicle setup
 - **Visual Effects** - Niagara particles, GPU simulations, procedural effects
 - **Sequencer** - Cinematics, camera animations, and timeline control
+- **Graph Editing** - Blueprint, Niagara, Material, and Behavior Tree graph manipulation
+- **World Partition** - Load cells, manage data layers
+- **Render Management** - Render targets, Nanite, Lumen
+- **Pipeline & Testing** - Run UBT, automated tests
+- **Observability** - Log streaming, gameplay debugger, insights, asset queries
 - **Console Commands** - Safe execution with dangerous command filtering
 
 ### High-Performance WebAssembly
@@ -182,6 +187,18 @@ No additional engine configuration required. The MCP Automation Bridge plugin ha
 | `console_command` | Direct console command execution |
 | `manage_sequence` | Sequencer/cinematics |
 | `inspect` | Object introspection |
+| `manage_blueprint_graph` | Edit Blueprint nodes and pins |
+| `manage_niagara_graph` | Edit Niagara modules and parameters |
+| `manage_material_graph` | Edit Material expressions and connections |
+| `manage_behavior_tree` | Edit Behavior Tree nodes |
+| `manage_world_partition` | Load cells, manage data layers |
+| `manage_render` | Render targets, Nanite, Lumen |
+| `manage_pipeline` | Run UnrealBuildTool |
+| `manage_tests` | Run automated tests |
+| `manage_logs` | Subscribe to log stream |
+| `manage_debug` | Gameplay debugger control |
+| `manage_insights` | Profiling sessions |
+| `manage_ui` | Simulate input |
 
 ## Key Features
 
@@ -201,7 +218,7 @@ Configuration and runtime defaults are centralized in `src/constants.ts`. All op
 
 ## Supported Asset Types
 
-Blueprints, Materials, Textures, Static/Skeletal Meshes, Levels, Sounds, Particles, Niagara Systems
+Blueprints, Materials, Textures, Static/Skeletal Meshes, Levels, Sounds, Particles, Niagara Systems, Behavior Trees
 
 ## Example Console Commands
 

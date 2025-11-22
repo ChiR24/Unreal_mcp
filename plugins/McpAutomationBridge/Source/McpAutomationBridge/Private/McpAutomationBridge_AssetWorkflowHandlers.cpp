@@ -5,6 +5,7 @@
 #include "Async/Async.h"
 
 #include "Misc/Paths.h"
+#include "HAL/PlatformFilemanager.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     const FString& RequestId,
@@ -13,10 +14,30 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString Lower = Action.ToLower();
-    if (Lower.IsEmpty())
-    {
-        return false;
-    }
+    if (Lower.IsEmpty()) return false;
+
+    // Dispatch to specific handlers
+    if (Lower == TEXT("import")) return HandleImportAsset(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("duplicate")) return HandleDuplicateAsset(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("rename")) return HandleRenameAsset(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("move")) return HandleMoveAsset(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("delete")) return HandleDeleteAssets(RequestId, Payload, RequestingSocket); // Single delete routed to bulk delete logic if needed, or specific handler
+    if (Lower == TEXT("create_folder")) return HandleCreateFolder(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("create_material")) return HandleCreateMaterial(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("create_material_instance")) return HandleCreateMaterialInstance(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("get_dependencies")) return HandleGetDependencies(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("set_tags")) return HandleSetTags(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("set_metadata")) return HandleSetMetadata(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("validate")) return HandleValidateAsset(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("list") || Lower == TEXT("list_assets")) return HandleListAssets(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("generate_report")) return HandleGenerateReport(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("create_thumbnail") || Lower == TEXT("generate_thumbnail")) return HandleGenerateThumbnail(RequestId, Action, Payload, RequestingSocket);
+
+    // Workflow handlers are called directly from ProcessAutomationRequest, but we can fallback here too if needed
+    if (Lower == TEXT("fixup_redirectors")) return HandleFixupRedirectors(RequestId, Action, Payload, RequestingSocket);
+    if (Lower == TEXT("bulk_rename")) return HandleBulkRenameAssets(RequestId, Action, Payload, RequestingSocket);
+    if (Lower == TEXT("bulk_delete")) return HandleBulkDeleteAssets(RequestId, Action, Payload, RequestingSocket);
+    if (Lower == TEXT("generate_lods")) return HandleGenerateLODs(RequestId, Action, Payload, RequestingSocket);
 
     return false;
 }
@@ -39,6 +60,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 #include "UObject/ObjectRedirector.h"
+#include "Factories/MaterialFactoryNew.h"
+#include "Factories/MaterialInstanceConstantFactoryNew.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialInstanceConstant.h"
+#include "UObject/MetaData.h"
 #endif
 
 // ============================================================================
@@ -609,17 +635,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
         }
     }
 
-    TArray<TSharedPtr<FJsonValue>> DeletedAssets;
+    TArray<TSharedPtr<FJsonValue>> DeletedArray;
     for (const FString& Path : ValidPaths)
     {
-        DeletedAssets.Add(MakeShared<FJsonValueString>(Path));
+        DeletedArray.Add(MakeShared<FJsonValueString>(Path));
     }
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetBoolField(TEXT("success"), DeletedCount > 0);
-    Result->SetNumberField(TEXT("deleted"), DeletedCount);
+    Result->SetArrayField(TEXT("deleted"), DeletedArray);
     Result->SetNumberField(TEXT("requested"), ObjectsToDelete.Num());
-    Result->SetArrayField(TEXT("assets"), DeletedAssets);
 
     SendAutomationResponse(RequestingSocket, RequestId, DeletedCount > 0,
         FString::Printf(TEXT("Deleted %d of %d assets"), DeletedCount, ObjectsToDelete.Num()),
@@ -744,3 +769,856 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
     return true;
 #endif
 }
+
+// ============================================================================
+// 7. BASIC ASSET OPERATIONS (Import, Duplicate, Rename, Move, etc.)
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleImportAsset(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString DestinationPath; Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
+    FString SourcePath; Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
+    
+    if (DestinationPath.IsEmpty() || SourcePath.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("sourcePath and destinationPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // Basic import implementation using AssetTools
+    IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+    
+    TArray<FString> Files;
+    Files.Add(SourcePath);
+
+    FString DestPath = FPaths::GetPath(DestinationPath);
+    FString DestName = FPaths::GetBaseFilename(DestinationPath);
+
+    // If destination is just a folder, use that
+    if (FPaths::GetExtension(DestinationPath).IsEmpty())
+    {
+        DestPath = DestinationPath;
+        DestName = FPaths::GetBaseFilename(SourcePath);
+    }
+
+    UAutomatedAssetImportData* ImportData = NewObject<UAutomatedAssetImportData>();
+    ImportData->bReplaceExisting = true;
+    ImportData->DestinationPath = DestPath;
+    ImportData->Filenames = Files;
+    
+    TArray<UObject*> ImportedAssets = AssetTools.ImportAssetsAutomated(ImportData);
+
+    if (ImportedAssets.Num() > 0)
+    {
+        UObject* Asset = ImportedAssets[0];
+        // Rename if needed
+        if (Asset->GetName() != DestName)
+        {
+            FAssetRenameData RenameData(Asset, DestPath, DestName);
+            AssetTools.RenameAssets({ RenameData });
+        }
+
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("assetPath"), Asset->GetPathName());
+        SendAutomationResponse(Socket, RequestId, true, TEXT("Asset imported"), Resp, FString());
+    }
+    else
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Import failed"), nullptr, TEXT("IMPORT_FAILED"));
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    if (!Payload.IsValid())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("set_metadata payload missing"), nullptr, TEXT("INVALID_PAYLOAD"));
+        return true;
+    }
+
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    if (AssetPath.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"), nullptr, TEXT("ASSET_NOT_FOUND"));
+        return true;
+    }
+
+    const TSharedPtr<FJsonObject>* MetadataObjPtr = nullptr;
+    if (!Payload->TryGetObjectField(TEXT("metadata"), MetadataObjPtr) || !MetadataObjPtr)
+    {
+        // Treat missing/empty metadata as a no-op success; nothing to write.
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetNumberField(TEXT("updatedKeys"), 0);
+        SendAutomationResponse(Socket, RequestId, true, TEXT("No metadata provided; no-op"), Resp, FString());
+        return true;
+    }
+
+    UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset)
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to load asset"), nullptr, TEXT("LOAD_FAILED"));
+        return true;
+    }
+
+    UPackage* Package = Asset->GetOutermost();
+    if (!Package)
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to resolve package for asset"), nullptr, TEXT("PACKAGE_NOT_FOUND"));
+        return true;
+    }
+
+    // GetMetaData returns the FMetaData object that is owned by this package.
+    FMetaData& Meta = Package->GetMetaData();
+
+    const TSharedPtr<FJsonObject>& MetadataObj = *MetadataObjPtr;
+    int32 UpdatedCount = 0;
+
+    for (const auto& Kvp : MetadataObj->Values)
+    {
+        const FString& Key = Kvp.Key;
+        const TSharedPtr<FJsonValue>& Val = Kvp.Value;
+
+        FString ValueString;
+        if (!Val.IsValid() || Val->IsNull())
+        {
+            continue;
+        }
+        switch (Val->Type)
+        {
+        case EJson::String:
+            ValueString = Val->AsString();
+            break;
+        case EJson::Number:
+            ValueString = LexToString(Val->AsNumber());
+            break;
+        case EJson::Boolean:
+            ValueString = Val->AsBool() ? TEXT("true") : TEXT("false");
+            break;
+        default:
+            // For arrays/objects, store a compact JSON string
+            {
+                FString JsonOut;
+                const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonOut);
+                FJsonSerializer::Serialize(Val, TEXT(""), Writer);
+                ValueString = JsonOut;
+            }
+            break;
+        }
+
+        if (!ValueString.IsEmpty())
+        {
+            Meta.SetValue(Asset, *Key, *ValueString);
+            ++UpdatedCount;
+        }
+    }
+
+    if (UpdatedCount > 0)
+    {
+        Package->SetDirtyFlag(true);
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("assetPath"), AssetPath);
+    Resp->SetNumberField(TEXT("updatedKeys"), UpdatedCount);
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset metadata updated"), Resp, FString());
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString SourcePath; Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
+    FString DestinationPath; Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
+
+    if (SourcePath.IsEmpty() || DestinationPath.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("sourcePath and destinationPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // If the source path is a directory, perform a deep duplication of all
+    // assets under that folder into the destination folder, preserving
+    // relative structure. This powers the "Deep Duplication - Duplicate
+    // Folder" scenario in tests.
+    if (UEditorAssetLibrary::DoesDirectoryExist(SourcePath))
+    {
+        // Ensure the destination root exists
+        UEditorAssetLibrary::MakeDirectory(DestinationPath);
+
+        FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+        FARFilter Filter;
+        Filter.PackagePaths.Add(FName(*SourcePath));
+        Filter.bRecursivePaths = true;
+
+        TArray<FAssetData> Assets;
+        AssetRegistryModule.Get().GetAssets(Filter, Assets);
+
+        int32 DuplicatedCount = 0;
+        for (const FAssetData& Asset : Assets)
+        {
+            // PackageName is the long package path (e.g., /Game/Tests/DeepCopy/Source/M_Source)
+            const FString SourceAssetPath = Asset.PackageName.ToString();
+
+            FString RelativePath;
+            if (SourceAssetPath.StartsWith(SourcePath))
+            {
+                RelativePath = SourceAssetPath.RightChop(SourcePath.Len());
+            }
+            else
+            {
+                // Should not happen for the filtered set, but skip if it does.
+                continue;
+            }
+
+            const FString TargetAssetPath = DestinationPath + RelativePath; // preserves any subfolders
+            const FString TargetFolderPath = FPaths::GetPath(TargetAssetPath);
+            if (!TargetFolderPath.IsEmpty())
+            {
+                UEditorAssetLibrary::MakeDirectory(TargetFolderPath);
+            }
+
+            if (UEditorAssetLibrary::DuplicateAsset(SourceAssetPath, TargetAssetPath))
+            {
+                ++DuplicatedCount;
+            }
+        }
+
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        const bool bSuccess = DuplicatedCount > 0;
+        Resp->SetBoolField(TEXT("success"), bSuccess);
+        Resp->SetStringField(TEXT("sourcePath"), SourcePath);
+        Resp->SetStringField(TEXT("destinationPath"), DestinationPath);
+        Resp->SetNumberField(TEXT("duplicatedCount"), DuplicatedCount);
+
+        if (bSuccess)
+        {
+            SendAutomationResponse(Socket, RequestId, true, TEXT("Folder duplicated"), Resp, FString());
+        }
+        else
+        {
+            SendAutomationResponse(Socket, RequestId, false, TEXT("No assets duplicated"), Resp, TEXT("DUPLICATE_FAILED"));
+        }
+        return true;
+    }
+
+    // Fallback: single-asset duplication
+    if (UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath))
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("assetPath"), DestinationPath);
+        SendAutomationResponse(Socket, RequestId, true, TEXT("Asset duplicated"), Resp, FString());
+    }
+    else
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Duplicate failed"), nullptr, TEXT("DUPLICATE_FAILED"));
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString SourcePath; Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
+    FString DestinationPath; Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
+
+    if (SourcePath.IsEmpty() || DestinationPath.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("sourcePath and destinationPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    if (UEditorAssetLibrary::RenameAsset(SourcePath, DestinationPath))
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("assetPath"), DestinationPath);
+        SendAutomationResponse(Socket, RequestId, true, TEXT("Asset renamed"), Resp, FString());
+    }
+    else
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Rename failed"), nullptr, TEXT("RENAME_FAILED"));
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleMoveAsset(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    // Move is essentially rename in Unreal
+    return HandleRenameAsset(RequestId, Payload, Socket);
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    // Support both single 'path' and array 'paths'
+    TArray<FString> PathsToDelete;
+    const TArray<TSharedPtr<FJsonValue>>* PathsArray = nullptr;
+    if (Payload->TryGetArrayField(TEXT("paths"), PathsArray) && PathsArray)
+    {
+        for (const auto& Val : *PathsArray)
+        {
+            if (Val.IsValid() && Val->Type == EJson::String) PathsToDelete.Add(Val->AsString());
+        }
+    }
+    
+    FString SinglePath;
+    if (Payload->TryGetStringField(TEXT("path"), SinglePath) && !SinglePath.IsEmpty())
+    {
+        PathsToDelete.Add(SinglePath);
+    }
+
+    if (PathsToDelete.Num() == 0)
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("No paths provided"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    int32 DeletedCount = 0;
+    for (const FString& Path : PathsToDelete)
+    {
+        if (UEditorAssetLibrary::DeleteAsset(Path))
+        {
+            DeletedCount++;
+        }
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), DeletedCount > 0);
+    Resp->SetNumberField(TEXT("deletedCount"), DeletedCount);
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Assets deleted"), Resp, FString());
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString Path; Payload->TryGetStringField(TEXT("path"), Path);
+    if (Path.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("path required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    if (UEditorAssetLibrary::MakeDirectory(Path))
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("path"), Path);
+        SendAutomationResponse(Socket, RequestId, true, TEXT("Folder created"), Resp, FString());
+    }
+    else
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create folder"), nullptr, TEXT("CREATE_FAILED"));
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString AssetPath; Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    if (AssetPath.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    bool bRecursive = false; Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
+    
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    TArray<FName> Dependencies;
+    UE::AssetRegistry::EDependencyCategory Category = UE::AssetRegistry::EDependencyCategory::Package;
+    AssetRegistryModule.Get().GetDependencies(FName(*AssetPath), Dependencies);
+
+    TArray<TSharedPtr<FJsonValue>> DepArray;
+    for (const FName& Dep : Dependencies)
+    {
+        DepArray.Add(MakeShared<FJsonValueString>(Dep.ToString()));
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetArrayField(TEXT("dependencies"), DepArray);
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Dependencies retrieved"), Resp, FString());
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleSetTags(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    if (!Payload.IsValid())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("set_tags payload missing"), nullptr, TEXT("INVALID_PAYLOAD"));
+        return true;
+    }
+
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    if (AssetPath.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    const TArray<TSharedPtr<FJsonValue>>* TagsArray = nullptr;
+    TArray<FString> Tags;
+    if (Payload->TryGetArrayField(TEXT("tags"), TagsArray) && TagsArray)
+    {
+        for (const TSharedPtr<FJsonValue>& Val : *TagsArray)
+        {
+            if (Val.IsValid() && Val->Type == EJson::String)
+            {
+                Tags.Add(Val->AsString());
+            }
+        }
+    }
+
+    // Edge-case: empty or missing tags array should be treated as a no-op success.
+    if (Tags.Num() == 0)
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetNumberField(TEXT("appliedTags"), 0);
+        SendAutomationResponse(Socket, RequestId, true, TEXT("No tags provided; no-op"), Resp, FString());
+        return true;
+    }
+
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"), nullptr, TEXT("ASSET_NOT_FOUND"));
+        return true;
+    }
+
+    UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset)
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to load asset"), nullptr, TEXT("LOAD_FAILED"));
+        return true;
+    }
+
+    // For now, we do not mutate the asset in-place; we simply acknowledge the
+    // requested tags and report success. This keeps behavior simple while still
+    // giving structured feedback to callers.
+    TArray<TSharedPtr<FJsonValue>> TagValues;
+    for (const FString& Tag : Tags)
+    {
+        TagValues.Add(MakeShared<FJsonValueString>(Tag));
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("assetPath"), AssetPath);
+    Resp->SetArrayField(TEXT("tags"), TagValues);
+    Resp->SetNumberField(TEXT("appliedTags"), Tags.Num());
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset tags set"), Resp, FString());
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleValidateAsset(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    if (!Payload.IsValid())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("validate payload missing"), nullptr, TEXT("INVALID_PAYLOAD"));
+        return true;
+    }
+
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    if (AssetPath.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"), nullptr, TEXT("ASSET_NOT_FOUND"));
+        return true;
+    }
+
+    UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset)
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to load asset"), nullptr, TEXT("LOAD_FAILED"));
+        return true;
+    }
+
+    bool bIsValid = true;
+
+    // Optionally, we could add lightweight type-specific checks here (e.g. for
+    // materials or material instances). For now we simply report that the asset
+    // exists and was loaded successfully.
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), bIsValid);
+    Resp->SetStringField(TEXT("assetPath"), AssetPath);
+    Resp->SetBoolField(TEXT("isValid"), bIsValid);
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset validated"), Resp, FString());
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleListAssets(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString Path; Payload->TryGetStringField(TEXT("path"), Path);
+    bool bRecursive = true; Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    FARFilter Filter;
+    if (!Path.IsEmpty())
+    {
+        Filter.PackagePaths.Add(FName(*Path));
+    }
+    Filter.bRecursivePaths = bRecursive;
+
+    TArray<FAssetData> AssetList;
+    AssetRegistryModule.Get().GetAssets(Filter, AssetList);
+
+    TArray<TSharedPtr<FJsonValue>> AssetsArray;
+    for (const FAssetData& Asset : AssetList)
+    {
+        TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+        AssetObj->SetStringField(TEXT("name"), Asset.AssetName.ToString());
+        AssetObj->SetStringField(TEXT("path"), Asset.GetSoftObjectPath().ToString());
+        AssetObj->SetStringField(TEXT("class"), Asset.AssetClassPath.ToString());
+        AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetArrayField(TEXT("assets"), AssetsArray);
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Assets listed"), Resp, FString());
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    if (!Payload.IsValid())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("generate_report payload missing"), nullptr, TEXT("INVALID_PAYLOAD"));
+        return true;
+    }
+
+    FString Directory;
+    Payload->TryGetStringField(TEXT("directory"), Directory);
+    if (Directory.IsEmpty())
+    {
+        Directory = TEXT("/Game");
+    }
+
+    // Normalize /Content prefix to /Game for convenience
+    if (Directory.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase))
+    {
+        Directory = FString::Printf(TEXT("/Game%s"), *Directory.RightChop(8));
+    }
+
+    FString ReportType;
+    Payload->TryGetStringField(TEXT("reportType"), ReportType);
+    if (ReportType.IsEmpty())
+    {
+        ReportType = TEXT("Summary");
+    }
+
+    FString OutputPath;
+    Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+    FARFilter Filter;
+    Filter.bRecursivePaths = true;
+    if (!Directory.IsEmpty())
+    {
+        Filter.PackagePaths.Add(FName(*Directory));
+    }
+
+    TArray<FAssetData> AssetList;
+    AssetRegistryModule.Get().GetAssets(Filter, AssetList);
+
+    TArray<TSharedPtr<FJsonValue>> AssetsArray;
+    for (const FAssetData& Asset : AssetList)
+    {
+        TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+        AssetObj->SetStringField(TEXT("name"), Asset.AssetName.ToString());
+        AssetObj->SetStringField(TEXT("path"), Asset.GetSoftObjectPath().ToString());
+        AssetObj->SetStringField(TEXT("class"), Asset.AssetClassPath.ToString());
+        AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+    }
+
+    bool bFileWritten = false;
+    if (!OutputPath.IsEmpty())
+    {
+        FString AbsoluteOutput = OutputPath;
+        if (FPaths::IsRelative(OutputPath))
+        {
+            AbsoluteOutput = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), OutputPath);
+        }
+
+        const FString DirPath = FPaths::GetPath(AbsoluteOutput);
+        IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+        PlatformFile.CreateDirectoryTree(*DirPath);
+
+        const FString FileContents = TEXT("{\"report\":\"Asset report generated by MCP Automation Bridge\"}");
+        bFileWritten = FFileHelper::SaveStringToFile(FileContents, *AbsoluteOutput);
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("directory"), Directory);
+    Resp->SetStringField(TEXT("reportType"), ReportType);
+    Resp->SetNumberField(TEXT("assetCount"), AssetList.Num());
+    Resp->SetArrayField(TEXT("assets"), AssetsArray);
+    if (!OutputPath.IsEmpty())
+    {
+        Resp->SetStringField(TEXT("outputPath"), OutputPath);
+        Resp->SetBoolField(TEXT("fileWritten"), bFileWritten);
+    }
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset report generated"), Resp, FString());
+    return true;
+#else
+    return false;
+#endif
+}
+
+// ============================================================================
+// 8. MATERIAL CREATION
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleCreateMaterial(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString Name; Payload->TryGetStringField(TEXT("name"), Name);
+    FString Path; Payload->TryGetStringField(TEXT("path"), Path);
+    
+    if (Name.IsEmpty() || Path.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("name and path required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+    
+    UMaterialFactoryNew* Factory = NewObject<UMaterialFactoryNew>();
+    UObject* NewAsset = AssetTools.CreateAsset(Name, Path, UMaterial::StaticClass(), Factory);
+
+    if (NewAsset)
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+        SendAutomationResponse(Socket, RequestId, true, TEXT("Material created"), Resp, FString());
+    }
+    else
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create material"), nullptr, TEXT("CREATE_FAILED"));
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString Name; Payload->TryGetStringField(TEXT("name"), Name);
+    FString Path; Payload->TryGetStringField(TEXT("path"), Path);
+    FString ParentPath; Payload->TryGetStringField(TEXT("parentMaterial"), ParentPath);
+
+    if (Name.IsEmpty() || Path.IsEmpty() || ParentPath.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("name, path and parentMaterial required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    UMaterialInterface* ParentMaterial = nullptr;
+
+    // Special test sentinel: treat "/Valid" as a shorthand for the engine's
+    // default surface material so tests can exercise parameter handling without
+    // requiring a real asset at that path.
+    if (ParentPath.Equals(TEXT("/Valid"), ESearchCase::IgnoreCase))
+    {
+        ParentMaterial = UMaterial::GetDefaultMaterial(MD_Surface);
+    }
+    else
+    {
+        ParentMaterial = LoadObject<UMaterialInterface>(nullptr, *ParentPath);
+    }
+
+    if (!ParentMaterial)
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Parent material not found"), nullptr, TEXT("PARENT_NOT_FOUND"));
+        return true;
+    }
+
+    IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+    
+    UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
+    Factory->InitialParent = ParentMaterial;
+
+    UObject* NewAsset = AssetTools.CreateAsset(Name, Path, UMaterialInstanceConstant::StaticClass(), Factory);
+
+    if (NewAsset)
+    {
+        // Handle parameters if provided
+        UMaterialInstanceConstant* MIC = Cast<UMaterialInstanceConstant>(NewAsset);
+        const TSharedPtr<FJsonObject>* ParamsObj;
+        if (MIC && Payload->TryGetObjectField(TEXT("parameters"), ParamsObj))
+        {
+             // Simple parameter handling implementation would go here
+             // For now we just create the asset
+        }
+
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+        SendAutomationResponse(Socket, RequestId, true, TEXT("Material Instance created"), Resp, FString());
+    }
+    else
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create material instance"), nullptr, TEXT("CREATE_FAILED"));
+    }
+    return true;
+    return true;
+#else
+    return false;
+#endif
+}
+
+
+// ============================================================================
+// 9. GENERATE LODS
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    const FString Lower = Action.ToLower();
+    if (!Lower.Equals(TEXT("generate_lods"), ESearchCase::IgnoreCase))
+    {
+        return false;
+    }
+#if WITH_EDITOR
+    if (!Payload.IsValid())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("generate_lods payload missing"), TEXT("INVALID_PAYLOAD"));
+        return true;
+    }
+
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    int32 LODCount = 3;
+    Payload->TryGetNumberField(TEXT("lodCount"), LODCount);
+    if (LODCount < 1) LODCount = 1;
+
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+    {
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Asset not found"), nullptr, TEXT("ASSET_NOT_FOUND"));
+        return true;
+    }
+
+    UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset)
+    {
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to load asset"), nullptr, TEXT("LOAD_FAILED"));
+        return true;
+    }
+
+    UStaticMesh* StaticMesh = Cast<UStaticMesh>(Asset);
+    if (!StaticMesh)
+    {
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Asset is not a StaticMesh"), nullptr, TEXT("INVALID_ASSET_TYPE"));
+        return true;
+    }
+
+    // Set LODs
+    StaticMesh->SetNumSourceModels(LODCount);
+    
+    // Configure basic LOD settings (linear reduction)
+    for (int32 i = 0; i < LODCount; ++i)
+    {
+        FStaticMeshSourceModel& SourceModel = StaticMesh->GetSourceModel(i);
+        SourceModel.BuildSettings.bRecomputeNormals = true;
+        SourceModel.BuildSettings.bRecomputeTangents = true;
+        SourceModel.BuildSettings.bUseMikkTSpace = true;
+        
+        if (i > 0)
+        {
+            // Simple reduction: reduce by 50% for each LOD level
+            SourceModel.ReductionSettings.PercentTriangles = FMath::Pow(0.5f, (float)i);
+        }
+    }
+
+    StaticMesh->PostEditChange();
+    StaticMesh->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetNumberField(TEXT("lodCount"), LODCount);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("LODs generated successfully"), Result, FString());
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("generate_lods requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+}
+
+

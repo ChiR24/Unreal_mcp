@@ -193,11 +193,14 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             if (HandleAndLog(TEXT("HandleGenerateThumbnail"), [&]() { return HandleGenerateThumbnail(RequestId, Action, Payload, RequestingSocket); })) return;
             // Landscape operations
             if (HandleAndLog(TEXT("HandleCreateLandscape"), [&]() { return HandleCreateLandscape(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleCreateProceduralTerrain"), [&]() { return HandleCreateProceduralTerrain(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleCreateLandscapeGrassType"), [&]() { return HandleCreateLandscapeGrassType(RequestId, Action, Payload, RequestingSocket); })) return;
             if (HandleAndLog(TEXT("HandleSculptLandscape"), [&]() { return HandleSculptLandscape(RequestId, Action, Payload, RequestingSocket); })) return;
             if (HandleAndLog(TEXT("HandleSetLandscapeMaterial"), [&]() { return HandleSetLandscapeMaterial(RequestId, Action, Payload, RequestingSocket); })) return;
             if (HandleAndLog(TEXT("HandleEditLandscape"), [&]() { return HandleEditLandscape(RequestId, Action, Payload, RequestingSocket); })) return;
             // Foliage operations
             if (HandleAndLog(TEXT("HandleAddFoliageType"), [&]() { return HandleAddFoliageType(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleCreateProceduralFoliage"), [&]() { return HandleCreateProceduralFoliage(RequestId, Action, Payload, RequestingSocket); })) return;
             if (HandleAndLog(TEXT("HandlePaintFoliage"), [&]() { return HandlePaintFoliage(RequestId, Action, Payload, RequestingSocket); })) return;
             if (HandleAndLog(TEXT("HandleAddFoliageInstances"), [&]() { return HandleAddFoliageInstances(RequestId, Action, Payload, RequestingSocket); })) return;
             if (HandleAndLog(TEXT("HandleRemoveFoliage"), [&]() { return HandleRemoveFoliage(RequestId, Action, Payload, RequestingSocket); })) return;
@@ -266,6 +269,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleAnimationPhysicsAction consumed request"));
                 return;
             }
+            if (HandleAndLog(TEXT("HandleAudioAction"), [&]() { return HandleAudioAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleLightingAction"), [&]() { return HandleLightingAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandlePerformanceAction"), [&]() { return HandlePerformanceAction(RequestId, Action, Payload, RequestingSocket); })) return;
             if (HandleAndLog(TEXT("HandleBuildEnvironmentAction"), [&]() { return HandleBuildEnvironmentAction(RequestId, Action, Payload, RequestingSocket); })) return;
             if (HandleAndLog(TEXT("HandleControlEnvironmentAction"), [&]() { return HandleControlEnvironmentAction(RequestId, Action, Payload, RequestingSocket); })) return;
 
@@ -273,6 +279,24 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
             if (HandleAndLog(TEXT("HandleSystemControlAction"), [&]() { return HandleSystemControlAction(RequestId, Action, Payload, RequestingSocket); })) return;
             if (HandleAndLog(TEXT("HandleConsoleCommandAction"), [&]() { return HandleConsoleCommandAction(RequestId, Action, Payload, RequestingSocket); })) return;
             if (HandleAndLog(TEXT("HandleInspectAction"), [&]() { return HandleInspectAction(RequestId, Action, Payload, RequestingSocket); })) return;
+
+            // 1. Editor Authoring & Graph Editing
+            if (HandleAndLog(TEXT("HandleBlueprintGraphAction"), [&]() { return HandleBlueprintGraphAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleNiagaraGraphAction"), [&]() { return HandleNiagaraGraphAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleMaterialGraphAction"), [&]() { return HandleMaterialGraphAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleBehaviorTreeAction"), [&]() { return HandleBehaviorTreeAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleWorldPartitionAction"), [&]() { return HandleWorldPartitionAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleRenderAction"), [&]() { return HandleRenderAction(RequestId, Action, Payload, RequestingSocket); })) return;
+
+            // 2. Execution & Build / Test Pipeline
+            if (HandleAndLog(TEXT("HandlePipelineAction"), [&]() { return HandlePipelineAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleTestAction"), [&]() { return HandleTestAction(RequestId, Action, Payload, RequestingSocket); })) return;
+
+            // 3. Observability, Logs, Debugging & History
+            if (HandleAndLog(TEXT("HandleLogAction"), [&]() { return HandleLogAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleDebugAction"), [&]() { return HandleDebugAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleAssetQueryAction"), [&]() { return HandleAssetQueryAction(RequestId, Action, Payload, RequestingSocket); })) return;
+            if (HandleAndLog(TEXT("HandleInsightsAction"), [&]() { return HandleInsightsAction(RequestId, Action, Payload, RequestingSocket); })) return;
 
             // Unhandled action
             bDispatchHandled = true;

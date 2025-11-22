@@ -89,7 +89,7 @@ export class LightingTools {
   }) {
     const name = this.normalizeName(params.name);
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Light spawning requires Automation Bridge support' } as any;
+      throw new Error('Automation Bridge required for light spawning');
     }
     
     // Validate numeric parameters
@@ -158,10 +158,7 @@ export class LightingTools {
 
       return { success: true, message: `Directional light '${name}' spawned` };
     } catch (e: any) {
-      const msg = String(e?.message ?? e).toLowerCase();
-      if (msg.includes('unknown') || msg.includes('not implemented')) {
-        return { success: false, error: 'NOT_IMPLEMENTED', message: e?.message || 'Directional light spawn not implemented by plugin' } as any;
-      }
+      // Don't mask errors as "not implemented" - report the actual error from the bridge
       return { success: false, error: `Failed to create directional light: ${e?.message ?? e}` } as any;
     }
   }
@@ -178,7 +175,7 @@ export class LightingTools {
   }) {
     const name = this.normalizeName(params.name);
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Light spawning requires Automation Bridge support' } as any;
+      throw new Error('Automation Bridge required for light spawning');
     }
     
     // Validate location array
@@ -258,10 +255,7 @@ export class LightingTools {
 
       return { success: true, message: `Point light '${name}' spawned at ${location.join(', ')}` };
     } catch (e: any) {
-      const msg = String(e?.message ?? e).toLowerCase();
-      if (msg.includes('unknown') || msg.includes('not implemented')) {
-        return { success: false, error: 'NOT_IMPLEMENTED', message: e?.message || 'Point light spawn not implemented by plugin' } as any;
-      }
+      // Don't mask errors as "not implemented" - report the actual error from the bridge
       return { success: false, error: `Failed to create point light: ${e?.message ?? e}` } as any;
     }
   }
@@ -280,7 +274,7 @@ export class LightingTools {
   }) {
     const name = this.normalizeName(params.name);
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Light spawning requires Automation Bridge support' } as any;
+      throw new Error('Automation Bridge required for light spawning');
     }
     
     // Validate required location and rotation arrays
@@ -381,10 +375,7 @@ export class LightingTools {
 
       return { success: true, message: `Spot light '${name}' spawned at ${params.location.join(', ')}` };
     } catch (e: any) {
-      const msg = String(e?.message ?? e).toLowerCase();
-      if (msg.includes('unknown') || msg.includes('not implemented')) {
-        return { success: false, error: 'NOT_IMPLEMENTED', message: e?.message || 'Spot light spawn not implemented by plugin' } as any;
-      }
+      // Don't mask errors as "not implemented" - report the actual error from the bridge
       return { success: false, error: `Failed to create spot light: ${e?.message ?? e}` } as any;
     }
   }
@@ -402,7 +393,7 @@ export class LightingTools {
     
     const name = this.normalizeName(params.name);
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Light spawning requires Automation Bridge support' } as any;
+      throw new Error('Automation Bridge required for light spawning');
     }
 
     // Validate required location and rotation arrays
@@ -488,10 +479,7 @@ export class LightingTools {
 
       return { success: true, message: `Rect light '${name}' spawned at ${params.location.join(', ')}` };
     } catch (e: any) {
-      const msg = String(e?.message ?? e).toLowerCase();
-      if (msg.includes('unknown') || msg.includes('not implemented')) {
-        return { success: false, error: 'NOT_IMPLEMENTED', message: e?.message || 'Rect light spawn not implemented by plugin' } as any;
-      }
+      // Don't mask errors as "not implemented" - report the actual error from the bridge
       return { success: false, error: `Failed to create rect light: ${e?.message ?? e}` } as any;
     }
   }
@@ -528,10 +516,8 @@ export class LightingTools {
           if (resp && resp.success !== false) {
             return { success: true, message: resp.message || `Dynamic light ${name} created`, actor: resp.actor || resp.result?.actor } as any;
           }
-          const errTxt = String(resp?.error ?? resp?.message ?? '');
-          if (!(errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION'))) {
-            return { success: false, error: resp?.error ?? resp?.message ?? 'CREATE_DYNAMIC_LIGHT_FAILED' } as any;
-          }
+          // Don't mask errors - if the plugin returned a failure, report it
+          return { success: false, error: resp?.error ?? resp?.message ?? 'CREATE_DYNAMIC_LIGHT_FAILED' } as any;
         } catch (_e) {
           // fall back to Python/bridge implementation below
         }
@@ -574,7 +560,7 @@ export class LightingTools {
     }
 
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Sky light creation requires Automation Bridge support' } as any;
+      throw new Error('Automation Bridge required for sky light creation');
     }
 
     try {
@@ -598,10 +584,6 @@ export class LightingTools {
       });
 
       if (response.success === false) {
-        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
-        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
-          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Sky light creation not implemented by plugin' } as any;
-        }
         return {
           success: false,
           error: response.error || response.message || 'Failed to create sky light'
@@ -628,7 +610,7 @@ export class LightingTools {
     const recapture = !!params?.recapture;
 
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Sky light management requires Automation Bridge support' } as any;
+      throw new Error('Automation Bridge required for sky light management');
     }
 
     try {
@@ -640,10 +622,6 @@ export class LightingTools {
       });
 
       if (response.success === false) {
-        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
-        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
-          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Ensure single sky light not implemented by plugin' } as any;
-        }
         return {
           success: false,
           error: response.error || response.message || 'Failed to ensure single sky light'
@@ -753,7 +731,7 @@ export class LightingTools {
     buildReflectionCaptures?: boolean;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Lighting build requires Automation Bridge support' } as any;
+      throw new Error('Automation Bridge required for lighting build');
     }
 
     try {
@@ -766,10 +744,6 @@ export class LightingTools {
       });
 
       if (response.success === false) {
-        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
-        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
-          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Lighting build not implemented by plugin' } as any;
-        }
         return {
           success: false,
           error: response.error || response.message || 'Failed to build lighting'

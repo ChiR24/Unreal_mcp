@@ -18,6 +18,23 @@
 #include "EditorAssetLibrary.h"
 #include "MaterialEditingLibrary.h"
 #endif
+#include "Async/Async.h"
+
+#if WITH_EDITOR
+#include "Materials/Material.h"
+#include "Materials/MaterialExpression.h"
+#include "Materials/MaterialExpressionScalarParameter.h"
+#include "Materials/MaterialExpressionVectorParameter.h"
+#include "Materials/MaterialExpressionConstant3Vector.h"
+#include "Materials/MaterialExpressionConstant.h"
+#include "Materials/MaterialExpressionTextureSample.h"
+#include "Materials/MaterialExpressionMultiply.h"
+#include "Materials/MaterialExpressionAdd.h"
+#include "Materials/MaterialExpressionLinearInterpolate.h"
+#include "Engine/Texture2D.h"
+#include "EditorAssetLibrary.h"
+#include "MaterialEditingLibrary.h"
+#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialNodes(
     const FString& RequestId,
@@ -339,6 +356,271 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialExpression(
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("add_material_expression requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+}
+
+
+
+
+bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    if (Action != TEXT("manage_material_graph"))
+    {
+        return false;
+    }
+
+#if WITH_EDITOR
+    if (!Payload.IsValid())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
+        return true;
+    }
+
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UMaterial* Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!Material)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+        return true;
+    }
+
+    FString SubAction = Payload->GetStringField(TEXT("subAction"));
+
+    if (SubAction == TEXT("add_node"))
+    {
+        FString NodeType;
+        Payload->TryGetStringField(TEXT("nodeType"), NodeType);
+        float X = 0.0f;
+        float Y = 0.0f;
+        Payload->TryGetNumberField(TEXT("x"), X);
+        Payload->TryGetNumberField(TEXT("y"), Y);
+
+        UMaterialExpression* NewExpr = nullptr;
+        
+        // Map nodeType string to class
+        UClass* ExprClass = nullptr;
+        if (NodeType == TEXT("ScalarParameter")) ExprClass = UMaterialExpressionScalarParameter::StaticClass();
+        else if (NodeType == TEXT("VectorParameter")) ExprClass = UMaterialExpressionVectorParameter::StaticClass();
+        else if (NodeType == TEXT("TextureSample")) ExprClass = UMaterialExpressionTextureSample::StaticClass();
+        else if (NodeType == TEXT("Multiply")) ExprClass = UMaterialExpressionMultiply::StaticClass();
+        else if (NodeType == TEXT("Add")) ExprClass = UMaterialExpressionAdd::StaticClass();
+        else if (NodeType == TEXT("Constant")) ExprClass = UMaterialExpressionConstant::StaticClass();
+        else if (NodeType == TEXT("Constant3Vector")) ExprClass = UMaterialExpressionConstant3Vector::StaticClass();
+        // Add more types as needed
+
+        if (ExprClass)
+        {
+            NewExpr = UMaterialEditingLibrary::CreateMaterialExpression(Material, ExprClass, X, Y);
+        }
+
+        if (NewExpr)
+        {
+            // Optional: Set properties
+            if (NodeType == TEXT("ScalarParameter"))
+            {
+                FString ParamName;
+                if (Payload->TryGetStringField(TEXT("parameterName"), ParamName))
+                {
+                    Cast<UMaterialExpressionScalarParameter>(NewExpr)->ParameterName = FName(*ParamName);
+                }
+                double Val;
+                if (Payload->TryGetNumberField(TEXT("value"), Val))
+                {
+                    Cast<UMaterialExpressionScalarParameter>(NewExpr)->DefaultValue = (float)Val;
+                }
+            }
+            // Handle other types...
+
+            Material->PostEditChange();
+            Material->MarkPackageDirty();
+
+            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            Result->SetStringField(TEXT("nodeId"), NewExpr->MaterialExpressionGuid.ToString());
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node added."), Result);
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to create node of type '%s'"), *NodeType), TEXT("CREATE_FAILED"));
+        }
+        return true;
+    }
+    else if (SubAction == TEXT("connect_pins"))
+    {
+        FString FromNodeId, FromPin, ToNodeId, ToPin;
+        Payload->TryGetStringField(TEXT("fromNodeId"), FromNodeId);
+        Payload->TryGetStringField(TEXT("fromPin"), FromPin);
+        Payload->TryGetStringField(TEXT("toNodeId"), ToNodeId); // Empty if connecting to main material node
+        Payload->TryGetStringField(TEXT("toPin"), ToPin);
+
+        UMaterialExpression* FromExpr = nullptr;
+        for (UMaterialExpression* Expr : Material->GetExpressions())
+        {
+            if (Expr->MaterialExpressionGuid.ToString() == FromNodeId)
+            {
+                FromExpr = Expr;
+                break;
+            }
+        }
+
+        if (!FromExpr)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Source node not found."), TEXT("NODE_NOT_FOUND"));
+            return true;
+        }
+
+        if (ToNodeId.IsEmpty())
+        {
+            // Connect to main material property
+            EMaterialProperty Prop = MP_MAX;
+            if (ToPin == TEXT("BaseColor")) Prop = MP_BaseColor;
+            else if (ToPin == TEXT("EmissiveColor")) Prop = MP_EmissiveColor;
+            else if (ToPin == TEXT("Roughness")) Prop = MP_Roughness;
+            else if (ToPin == TEXT("Metallic")) Prop = MP_Metallic;
+            else if (ToPin == TEXT("Normal")) Prop = MP_Normal;
+            // Add others...
+
+            if (Prop != MP_MAX)
+            {
+                if (UMaterialEditingLibrary::ConnectMaterialProperty(FromExpr, FromPin, Prop))
+                {
+                     Material->PostEditChange();
+                     Material->MarkPackageDirty();
+                     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Connected to material property."));
+                }
+                else
+                {
+                    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to connect to material property."), TEXT("CONNECT_FAILED"));
+                }
+            }
+            else
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown material property."), TEXT("INVALID_PROPERTY"));
+            }
+        }
+        else
+        {
+            // Connect to another expression
+            UMaterialExpression* ToExpr = nullptr;
+            for (UMaterialExpression* Expr : Material->GetExpressions())
+            {
+                if (Expr->MaterialExpressionGuid.ToString() == ToNodeId)
+                {
+                    ToExpr = Expr;
+                    break;
+                }
+            }
+
+            if (!ToExpr)
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Target node not found."), TEXT("NODE_NOT_FOUND"));
+                return true;
+            }
+
+            if (UMaterialEditingLibrary::ConnectMaterialExpressions(FromExpr, FromPin, ToExpr, ToPin))
+            {
+                Material->PostEditChange();
+                Material->MarkPackageDirty();
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nodes connected."));
+            }
+            else
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to connect nodes."), TEXT("CONNECT_FAILED"));
+            }
+        }
+        return true;
+    }
+    else if (SubAction == TEXT("rebuild"))
+    {
+        UMaterialEditingLibrary::RecompileMaterial(Material);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Material rebuilt."));
+        return true;
+    }
+    else if (SubAction == TEXT("remove_node"))
+    {
+        FString NodeId;
+        Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+
+        UMaterialExpression* TargetExpr = nullptr;
+        for (UMaterialExpression* Expr : Material->GetExpressions())
+        {
+            if (Expr->MaterialExpressionGuid.ToString() == NodeId)
+            {
+                TargetExpr = Expr;
+                break;
+            }
+        }
+
+        if (TargetExpr)
+        {
+            Material->GetExpressionCollection().Expressions.Remove(TargetExpr);
+            Material->PostEditChange();
+            Material->MarkPackageDirty();
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node removed."));
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
+        }
+        return true;
+    }
+    else if (SubAction == TEXT("break_connections"))
+    {
+        FString NodeId;
+        Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+        FString PinName;
+        Payload->TryGetStringField(TEXT("pinName"), PinName); // Optional, if empty break all
+
+        // Breaking connections in Material Graph is slightly different as expressions hold the connections.
+        // This requires iterating through all expressions and clearing inputs that point to this node,
+        // or clearing outputs of this node.
+        // Simplified: Not fully implemented for specific pins yet.
+        
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Break connections not fully implemented for materials."), TEXT("NOT_IMPLEMENTED"));
+        return true;
+    }
+    else if (SubAction == TEXT("get_node_details"))
+    {
+        FString NodeId;
+        Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+
+        UMaterialExpression* TargetExpr = nullptr;
+        for (UMaterialExpression* Expr : Material->GetExpressions())
+        {
+            if (Expr->MaterialExpressionGuid.ToString() == NodeId)
+            {
+                TargetExpr = Expr;
+                break;
+            }
+        }
+
+        if (TargetExpr)
+        {
+            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            Result->SetStringField(TEXT("nodeType"), TargetExpr->GetClass()->GetName());
+            Result->SetStringField(TEXT("desc"), TargetExpr->Desc);
+            Result->SetNumberField(TEXT("x"), TargetExpr->MaterialExpressionEditorX);
+            Result->SetNumberField(TEXT("y"), TargetExpr->MaterialExpressionEditorY);
+            
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node details retrieved."), Result);
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
+        }
+        return true;
+    }
+
+    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown subAction: %s"), *SubAction), TEXT("INVALID_SUBACTION"));
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Editor only."), TEXT("EDITOR_ONLY"));
     return true;
 #endif
 }

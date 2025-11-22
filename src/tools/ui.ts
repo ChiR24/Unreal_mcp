@@ -79,6 +79,11 @@ export class UITools {
     }
   }
 
+  // Show widget (convenience wrapper)
+  async showWidget(widgetPath: string) {
+    return this.addWidgetToViewport({ widgetClass: widgetPath });
+  }
+
   // Add widget component (requires C++ plugin)
   async addWidgetComponent(_params: {
     widgetName: string;
@@ -92,7 +97,7 @@ export class UITools {
     };
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Widget component operations require C++ plugin support' };
+      throw new Error('Automation bridge required for widget component operations');
     }
 
     try {
@@ -121,7 +126,7 @@ export class UITools {
     fontFamily?: string;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Setting widget text requires C++ plugin support' };
+      throw new Error('Automation bridge required for setting widget text');
     }
 
     try {
@@ -151,7 +156,7 @@ export class UITools {
     sizeToContent?: boolean;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Setting widget images requires C++ plugin support' };
+      throw new Error('Automation bridge required for setting widget images');
     }
 
     try {
@@ -181,7 +186,7 @@ export class UITools {
     }>;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Creating HUDs requires C++ plugin support' };
+      throw new Error('Automation bridge required for creating HUDs');
     }
 
     try {
@@ -205,7 +210,7 @@ export class UITools {
     playerIndex?: number;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Showing/hiding widgets requires C++ plugin support' };
+      throw new Error('Automation bridge required for showing/hiding widgets');
     }
 
     try {
@@ -253,7 +258,7 @@ export class UITools {
     playerIndex?: number;
   }) {
     if (!this.automationBridge) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Removing widgets requires C++ plugin support' };
+      throw new Error('Automation bridge required for removing widgets');
     }
 
     try {

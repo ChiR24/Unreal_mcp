@@ -161,19 +161,20 @@ const WAIT_FOR_EVENT_ACTIONS = new Set<string>([
   'sequence_add_spawnable_from_class',
   'add_sequencer_keyframe',
   'manage_sequencer_track',
-  // Asset ops
+  // Asset ops that genuinely require a follow-up completion signal.
+  // Note: create_folder and fixup_redirectors both emit a single
+  // automation_response today, so they must not participate in the
+  // waitForEvent flow.
   'duplicate_asset',
   'rename_asset',
   'delete_assets',
   'move_asset',
-  'create_folder',
   'import_asset',
   'save_asset',
   'set_tags',
   'create_thumbnail',
   'generate_report',
   'validate',
-  'fixup_redirectors',
   // Generic editor property changes
   'set_object_property',
   'execute_editor_function'
@@ -902,7 +903,9 @@ export class AutomationBridge extends EventEmitter {
     // Force-disable event waiting for actions that are known to complete
     // with a single response (no automation_event follow-up).
     const ACTIONS_NO_EVENT = new Set<string>([
-      'delete_assets', 'rename_asset', 'duplicate_asset', 'move_asset', 'create_thumbnail', 'set_tags', 'validate', 'generate_report',
+      'delete_assets', 'rename_asset', 'duplicate_asset', 'move_asset',
+      'create_folder', 'fixup_redirectors',
+      'create_thumbnail', 'set_tags', 'validate', 'generate_report',
       'import_asset', 'import_asset_deferred', 'create_material', 'create_material_instance', 'asset_exists',
       'execute_console_command', 'control_actor', 'control_editor', 'stream_level', 'save_current_level'
     ]);

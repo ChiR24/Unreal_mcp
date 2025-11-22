@@ -397,10 +397,6 @@ export class LevelTools extends BaseTool implements ILevelTools {
       });
 
       if (response.success === false) {
-        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
-        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
-          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Level save not implemented by plugin' };
-        }
         return { success: false, error: response.error || response.message || 'Failed to save level' };
       }
 
@@ -446,10 +442,6 @@ export class LevelTools extends BaseTool implements ILevelTools {
       });
 
       if (response.success === false) {
-        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
-        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
-          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Level creation not implemented by plugin', path: fullPath, partitioned: isPartitioned };
-        }
         return {
           success: false,
           error: response.error || response.message || 'Failed to create level',
@@ -646,10 +638,6 @@ export class LevelTools extends BaseTool implements ILevelTools {
       });
 
       if (response.success === false) {
-        const errTxt = String(response.error ?? response.message ?? '').toLowerCase();
-        if (errTxt.includes('unknown') || errTxt.includes('not implemented')) {
-          return { success: false, error: 'NOT_IMPLEMENTED', message: response.message || 'Navigation build not implemented by plugin' };
-        }
         return {
           success: false,
           error: response.error || response.message || 'Failed to build navigation'

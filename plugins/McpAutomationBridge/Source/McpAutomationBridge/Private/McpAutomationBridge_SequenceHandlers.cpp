@@ -56,6 +56,14 @@
 #include "IAssetTools.h"
 #endif
 #include "Editor/EditorEngine.h"
+#include "LevelSequenceEditorBlueprintLibrary.h"
+#if __has_include("ILevelSequenceEditorToolkit.h")
+#include "ILevelSequenceEditorToolkit.h"
+#endif
+#if __has_include("ISequencer.h")
+#include "ISequencer.h"
+#include "MovieSceneSequencePlayer.h"
+#endif
 #endif
 
 FString UMcpAutomationBridgeSubsystem::ResolveSequencePath(const TSharedPtr<FJsonObject>& Payload)
@@ -217,7 +225,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(const FString& R
     Resp->SetNumberField(TEXT("playbackEnd"), 0.0);
     Resp->SetNumberField(TEXT("duration"), 0.0);
     Resp->SetBoolField(TEXT("applied"), false);
-    SendAutomationResponse(Socket, RequestId, true, TEXT("properties updated (no-op)"), Resp, FString());
+    SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_set_properties is not available in this editor build or for this sequence type"), Resp, TEXT("NOT_IMPLEMENTED"));
     return true;
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_set_properties requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -312,11 +320,24 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(const FString& RequestId,
     TSharedPtr<FJsonObject> LocalPayload = Payload.IsValid() ? Payload : MakeShared<FJsonObject>();
     FString SeqPath = ResolveSequencePath(LocalPayload);
     if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
-    TSharedPtr<FJsonObject> Entry = EnsureSequenceEntry(SeqPath);
-    if (Entry.IsValid()) Entry->SetBoolField(TEXT("playing"), true);
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("sequencePath"), SeqPath);
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence play (registry)."), Resp, FString());
+    
+#if WITH_EDITOR
+    ULevelSequence* LevelSeq = Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
+    if (LevelSeq)
+    {
+        if (ULevelSequenceEditorBlueprintLibrary::OpenLevelSequence(LevelSeq))
+        {
+            ULevelSequenceEditorBlueprintLibrary::Play();
+            SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence playing"), nullptr);
+            return true;
+        }
+    }
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to open or play sequence"), nullptr, TEXT("EXECUTION_ERROR"));
     return true;
+#else
+    SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_play requires editor build."), nullptr, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActor(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -328,25 +349,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActor(const FString& Reques
     if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_add_actor requires a sequence path"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 
 #if WITH_EDITOR
-    if (GEditor)
-    {
-        if (UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
-        {
-            AActor* Found = nullptr;
-            TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
-            for (AActor* A : AllActors)
-            {
-                if (A && A->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase)) { Found = A; break; }
-            }
-            if (!Found) { SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"), nullptr, TEXT("ACTOR_NOT_FOUND")); return true; }
-            
-            // Implementation of binding logic would go here if possible
-            SendAutomationResponse(Socket, RequestId, false, TEXT("Binding actors to sequences not available in this editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-            return true;
-        }
-    }
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
-    return true;
+    // Reuse multi-actor binding logic for a single actor by forwarding to
+    // HandleSequenceAddActors with a one-element actorNames array and the
+    // resolved sequence path. This ensures real LevelSequence bindings are
+    // applied when supported by the editor build.
+    TSharedPtr<FJsonObject> ForwardPayload = MakeShared<FJsonObject>();
+    ForwardPayload->SetStringField(TEXT("path"), SeqPath);
+    TArray<TSharedPtr<FJsonValue>> NamesArray;
+    NamesArray.Add(MakeShared<FJsonValueString>(ActorName));
+    ForwardPayload->SetArrayField(TEXT("actorNames"), NamesArray);
+
+    return HandleSequenceAddActors(RequestId, ForwardPayload, Socket);
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_add_actor requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
@@ -622,12 +635,31 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(const FString
     if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_set_playback_speed requires a sequence path"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 
 #if WITH_EDITOR
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
     if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
-    Resp->SetBoolField(TEXT("applied"), false);
-    Resp->SetNumberField(TEXT("speed"), Speed);
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Playback speed updated"), Resp, FString());
+
+    if (GEditor)
+    {
+        if (UAssetEditorSubsystem* AssetEditorSS = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
+        {
+            IAssetEditorInstance* Editor = AssetEditorSS->FindEditorForAsset(SeqObj, false);
+            if (Editor && Editor->GetEditorName() == FName("LevelSequenceEditor"))
+            {
+#if defined(MCP_HAS_LEVELSEQUENCE)
+                 // We assume it implements ILevelSequenceEditorToolkit if the name matches
+                 ILevelSequenceEditorToolkit* LSEditor = static_cast<ILevelSequenceEditorToolkit*>(Editor);
+                 if (LSEditor && LSEditor->GetSequencer().IsValid())
+                 {
+                     LSEditor->GetSequencer()->SetPlaybackSpeed(static_cast<float>(Speed));
+                     SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Playback speed set to %.2f"), Speed), nullptr);
+                     return true;
+                 }
+#endif
+            }
+        }
+    }
+    
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence editor not open or interface unavailable"), nullptr, TEXT("EDITOR_NOT_OPEN"));
     return true;
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_set_playback_speed requires editor build."), nullptr, TEXT("NOT_AVAILABLE"));
@@ -641,13 +673,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePause(const FString& RequestId
     FString SeqPath = ResolveSequencePath(LocalPayload);
     if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_pause requires a sequence path"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 #if WITH_EDITOR
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
-    if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
-    bool bControlled = false;
-    Resp->SetBoolField(TEXT("paused"), true);
-    Resp->SetBoolField(TEXT("controlled"), bControlled);
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence paused"), Resp, FString());
+    ULevelSequence* LevelSeq = Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
+    if (LevelSeq)
+    {
+        // Ensure it's the active one
+        if (ULevelSequenceEditorBlueprintLibrary::GetCurrentLevelSequence() == LevelSeq)
+        {
+            ULevelSequenceEditorBlueprintLibrary::Pause();
+            SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence paused"), nullptr);
+            return true;
+        }
+    }
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not currently open in editor"), nullptr, TEXT("EXECUTION_ERROR"));
     return true;
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_pause requires editor build."), nullptr, TEXT("NOT_AVAILABLE"));
@@ -661,13 +698,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(const FString& RequestId,
     FString SeqPath = ResolveSequencePath(LocalPayload);
     if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_stop requires a sequence path"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 #if WITH_EDITOR
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
-    if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
-    bool bControlled = false;
-    Resp->SetBoolField(TEXT("stopped"), true);
-    Resp->SetBoolField(TEXT("controlled"), bControlled);
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence stopped"), Resp, FString());
+    ULevelSequence* LevelSeq = Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
+    if (LevelSeq)
+    {
+        if (ULevelSequenceEditorBlueprintLibrary::GetCurrentLevelSequence() == LevelSeq)
+        {
+            ULevelSequenceEditorBlueprintLibrary::Pause();
+            ULevelSequenceEditorBlueprintLibrary::SetCurrentTime(0);
+            SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence stopped (reset to start)"), nullptr);
+            return true;
+        }
+    }
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not currently open in editor"), nullptr, TEXT("EXECUTION_ERROR"));
     return true;
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_stop requires editor build."), nullptr, TEXT("NOT_AVAILABLE"));

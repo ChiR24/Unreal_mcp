@@ -12,10 +12,12 @@
 #include "LandscapeEditorUtils.h"
 #include "LandscapeDataAccess.h"
 #include "LandscapeEdit.h"
+#include "LandscapeGrassType.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "Engine/World.h"
 #include "EditorAssetLibrary.h"
+#include "UObject/SavePackage.h"
 #include "Async/Async.h"
 #include "Misc/ScopedSlowTask.h"
 #if __has_include("Subsystems/EditorActorSubsystem.h")
@@ -128,10 +130,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
         return true;
     }
 
-    FScopedSlowTask SlowTask(3.0f, FText::FromString(TEXT("Creating landscape...")));
-    SlowTask.MakeDialog();
 
-    SlowTask.EnterProgressFrame(1.0f, FText::FromString(TEXT("Spawning landscape actor")));
+
+
 
     ALandscape* Landscape = World->SpawnActor<ALandscape>(ALandscape::StaticClass(), Location, FRotator::ZeroRotator);
     if (!Landscape)
@@ -154,7 +155,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
         }
     }
 
-    SlowTask.EnterProgressFrame(1.0f, FText::FromString(TEXT("Initializing landscape components")));
+
 
     const int32 VertX = ComponentsX * QuadsPerComponent + 1;
     const int32 VertY = ComponentsY * QuadsPerComponent + 1;
@@ -196,8 +197,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
         TArrayView<const FLandscapeLayer>(EditLayers)
     );
 
-    SlowTask.EnterProgressFrame(1.0f, FText::FromString(TEXT("Finalizing landscape")));
-    Landscape->RecreateCollisionComponents();
+    // Rely on PostEditChange to update components; avoid direct collision rebuild to reduce crash risk
     Landscape->PostEditChange();
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -318,7 +318,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
 
     SlowTask.EnterProgressFrame(1.0f, FText::FromString(TEXT("Rebuilding collision")));
     LandscapeEdit.Flush();
-    Landscape->RecreateCollisionComponents();
+    // Avoid explicit collision rebuild here; PostEditChange is sufficient for editor updates
     Landscape->PostEditChange();
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -479,6 +479,185 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
 #if WITH_EDITOR
     if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("sculpt_landscape payload missing"), TEXT("INVALID_PAYLOAD")); return true; }
 
+    FString LandscapePath; Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);
+    FString LandscapeName; Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
+    
+    double LocX = 0, LocY = 0, LocZ = 0;
+    const TSharedPtr<FJsonObject>* LocObj = nullptr;
+    if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj)
+    {
+        (*LocObj)->TryGetNumberField(TEXT("x"), LocX);
+        (*LocObj)->TryGetNumberField(TEXT("y"), LocY);
+        (*LocObj)->TryGetNumberField(TEXT("z"), LocZ);
+    }
+    else
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("location required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    FVector TargetLocation(LocX, LocY, LocZ);
+
+    FString ToolMode = TEXT("Raise");
+    Payload->TryGetStringField(TEXT("toolMode"), ToolMode);
+
+    double BrushRadius = 1000.0;
+    Payload->TryGetNumberField(TEXT("brushRadius"), BrushRadius);
+
+    double BrushFalloff = 0.5;
+    Payload->TryGetNumberField(TEXT("brushFalloff"), BrushFalloff);
+
+    double Strength = 0.1;
+    Payload->TryGetNumberField(TEXT("strength"), Strength);
+
+    ALandscape* Landscape = nullptr;
+    if (!LandscapePath.IsEmpty())
+    {
+        Landscape = Cast<ALandscape>(StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
+    }
+    if (!Landscape && !LandscapeName.IsEmpty())
+    {
+        if (!GEditor)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("EDITOR_NOT_AVAILABLE"));
+            return true;
+        }
+        if (UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
+        {
+            TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+            for (AActor* A : AllActors)
+            {
+                if (A && A->IsA<ALandscape>() && A->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase))
+                {
+                    Landscape = Cast<ALandscape>(A);
+                    break;
+                }
+            }
+        }
+    }
+    if (!Landscape)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to find landscape"), TEXT("LOAD_FAILED"));
+        return true;
+    }
+
+    ULandscapeInfo* LandscapeInfo = Landscape->GetLandscapeInfo();
+    if (!LandscapeInfo)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Landscape has no info"), TEXT("INVALID_LANDSCAPE"));
+        return true;
+    }
+
+    // Convert World Location to Landscape Local Space
+    FVector LocalPos = Landscape->GetActorTransform().InverseTransformPosition(TargetLocation);
+    int32 CenterX = FMath::RoundToInt(LocalPos.X);
+    int32 CenterY = FMath::RoundToInt(LocalPos.Y);
+
+    // Convert Brush Radius to Vertex Units (assuming uniform scale for simplicity, or use X)
+    float ScaleX = Landscape->GetActorScale3D().X;
+    int32 RadiusVerts = FMath::Max(1, FMath::RoundToInt(BrushRadius / ScaleX));
+    int32 FalloffVerts = FMath::RoundToInt(RadiusVerts * BrushFalloff);
+
+    int32 MinX = CenterX - RadiusVerts;
+    int32 MaxX = CenterX + RadiusVerts;
+    int32 MinY = CenterY - RadiusVerts;
+    int32 MaxY = CenterY + RadiusVerts;
+
+    // Clamp to landscape extents
+    int32 LMinX, LMinY, LMaxX, LMaxY;
+    if (LandscapeInfo->GetLandscapeExtent(LMinX, LMinY, LMaxX, LMaxY))
+    {
+        MinX = FMath::Max(MinX, LMinX);
+        MinY = FMath::Max(MinY, LMinY);
+        MaxX = FMath::Min(MaxX, LMaxX);
+        MaxY = FMath::Min(MaxY, LMaxY);
+    }
+
+    if (MinX > MaxX || MinY > MaxY)
+    {
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Brush outside landscape bounds"), nullptr, TEXT("OUT_OF_BOUNDS"));
+        return true;
+    }
+
+    int32 SizeX = MaxX - MinX + 1;
+    int32 SizeY = MaxY - MinY + 1;
+    TArray<uint16> HeightData;
+    HeightData.AddZeroed(SizeX * SizeY);
+
+    FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo);
+    LandscapeEdit.GetHeightData(MinX, MinY, MaxX, MaxY, HeightData.GetData(), 0);
+
+    bool bModified = false;
+    for (int32 Y = MinY; Y <= MaxY; ++Y)
+    {
+        for (int32 X = MinX; X <= MaxX; ++X)
+        {
+            float Dist = FMath::Sqrt(FMath::Square((float)(X - CenterX)) + FMath::Square((float)(Y - CenterY)));
+            if (Dist > RadiusVerts) continue;
+
+            float Alpha = 1.0f;
+            if (Dist > (RadiusVerts - FalloffVerts))
+            {
+                Alpha = 1.0f - ((Dist - (RadiusVerts - FalloffVerts)) / (float)FalloffVerts);
+            }
+            Alpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+
+            int32 Index = (Y - MinY) * SizeX + (X - MinX);
+            uint16 CurrentHeight = HeightData[Index];
+            
+            // Landscape height is 0..65535, where 32768 is 0 Z (usually).
+            // 1 unit of uint16 corresponds to Scale.Z / 128.0 (approx, depends on encoding).
+            // Standard: Height = (Value - 32768) * Scale.Z / 128.0
+            // So DeltaValue = DeltaWorldZ * 128.0 / Scale.Z
+            
+            float ScaleZ = Landscape->GetActorScale3D().Z;
+            float HeightScale = 128.0f / ScaleZ; // Conversion factor from World Z to uint16
+            
+            float Delta = 0.0f;
+            if (ToolMode.Equals(TEXT("Raise"), ESearchCase::IgnoreCase))
+            {
+                Delta = Strength * Alpha * 100.0f * HeightScale; // Arbitrary strength multiplier
+            }
+            else if (ToolMode.Equals(TEXT("Lower"), ESearchCase::IgnoreCase))
+            {
+                Delta = -Strength * Alpha * 100.0f * HeightScale;
+            }
+            else if (ToolMode.Equals(TEXT("Flatten"), ESearchCase::IgnoreCase))
+            {
+                // Target Z is TargetLocation.Z
+                // Target Value = (TargetLocation.Z / ScaleZ * 128.0) + 32768
+                float TargetVal = (LocalPos.Z * 128.0f) + 32768.0f; // LocalPos.Z is already in local space relative to actor? 
+                // No, LocalPos is relative to actor transform. Landscape Z is usually 0 in local space at 32768.
+                // Let's assume Flatten to the Z of the hit location.
+                
+                float CurrentVal = (float)CurrentHeight;
+                float Target = (TargetLocation.Z - Landscape->GetActorLocation().Z) / ScaleZ * 128.0f + 32768.0f;
+                
+                Delta = (Target - CurrentVal) * Strength * Alpha;
+            }
+
+            int32 NewHeight = FMath::Clamp((int32)(CurrentHeight + Delta), 0, 65535);
+            if (NewHeight != CurrentHeight)
+            {
+                HeightData[Index] = (uint16)NewHeight;
+                bModified = true;
+            }
+        }
+    }
+
+    if (bModified)
+    {
+        LandscapeEdit.SetHeightData(MinX, MinY, MaxX, MaxY, HeightData.GetData(), 0, true);
+        LandscapeEdit.Flush();
+        // Avoid explicit collision rebuild to prevent potential crashes; PostEditChange will refresh rendering
+        Landscape->PostEditChange();
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("toolMode"), ToolMode);
+    Resp->SetNumberField(TEXT("modifiedVertices"), bModified ? HeightData.Num() : 0);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Landscape sculpted"), Resp, FString());
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("sculpt_landscape requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -559,3 +738,97 @@ bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
     return true;
 #endif
 }
+
+bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    const FString Lower = Action.ToLower();
+    if (!Lower.Equals(TEXT("create_landscape_grass_type"), ESearchCase::IgnoreCase)) { return false; }
+
+#if WITH_EDITOR
+    if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("create_landscape_grass_type payload missing"), TEXT("INVALID_PAYLOAD")); return true; }
+
+    FString Name;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("name required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    FString MeshPath;
+    if (!Payload->TryGetStringField(TEXT("meshPath"), MeshPath) || MeshPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("meshPath required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    double Density = 1.0;
+    Payload->TryGetNumberField(TEXT("density"), Density);
+
+    double MinScale = 0.8;
+    Payload->TryGetNumberField(TEXT("minScale"), MinScale);
+
+    double MaxScale = 1.2;
+    Payload->TryGetNumberField(TEXT("maxScale"), MaxScale);
+
+    UStaticMesh* StaticMesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+    if (!StaticMesh)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load static mesh"), TEXT("LOAD_FAILED"));
+        return true;
+    }
+
+    FString PackagePath = TEXT("/Game/Landscape");
+    FString AssetName = Name;
+    FString FullPackagePath = FString::Printf(TEXT("%s/%s"), *PackagePath, *AssetName);
+
+    UPackage* Package = CreatePackage(*FullPackagePath);
+    ULandscapeGrassType* GrassType = NewObject<ULandscapeGrassType>(Package, FName(*AssetName), RF_Public | RF_Standalone);
+    if (!GrassType)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create grass type asset"), TEXT("CREATION_FAILED"));
+        return true;
+    }
+
+    FGrassVariety Variety;
+    Variety.GrassMesh = StaticMesh;
+    // Variety.GrassDensity.Name = FName(TEXT("Density")); // Default parameter name?
+    // Actually GrassDensity is FPerPlatformFloat.
+    Variety.GrassDensity.Default = static_cast<float>(Density);
+    
+    Variety.ScaleX = FFloatInterval(static_cast<float>(MinScale), static_cast<float>(MaxScale));
+    Variety.ScaleY = FFloatInterval(static_cast<float>(MinScale), static_cast<float>(MaxScale));
+    Variety.ScaleZ = FFloatInterval(static_cast<float>(MinScale), static_cast<float>(MaxScale));
+    
+    Variety.RandomRotation = true;
+    Variety.AlignToSurface = true;
+
+    GrassType->GrassVarieties.Add(Variety);
+
+    Package->MarkPackageDirty();
+    FAssetRegistryModule::AssetCreated(GrassType);
+
+    FString PackageFileName = FPackageName::LongPackageNameToFilename(FullPackagePath, FPackageName::GetAssetPackageExtension());
+    FSavePackageArgs SaveArgs;
+    SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
+    SaveArgs.Error = GError;
+    SaveArgs.SaveFlags = SAVE_NoError;
+    bool bSaved = UPackage::SavePackage(Package, GrassType, *PackageFileName, SaveArgs);
+
+    if (!bSaved)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save grass type asset"), TEXT("SAVE_FAILED"));
+        return true;
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("asset_path"), GrassType->GetPathName());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Landscape grass type created"), Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_landscape_grass_type requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+}
+

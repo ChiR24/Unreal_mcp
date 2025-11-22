@@ -83,7 +83,7 @@ export class IntrospectionTools {
     'actorcomponenttags'
   ]);
 
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
@@ -95,22 +95,22 @@ export class IntrospectionTools {
     operationName: string
   ): Promise<T> {
     let lastError: any;
-    
+
     for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
       try {
         return await operation();
       } catch (error: any) {
         lastError = error;
         this.log.warn(`${operationName} attempt ${attempt} failed: ${error.message || error}`);
-        
+
         if (attempt < this.retryAttempts) {
-          await new Promise(resolve => 
+          await new Promise(resolve =>
             setTimeout(resolve, this.retryDelay * attempt)
           );
         }
       }
     }
-    
+
     throw lastError;
   }
 
@@ -393,7 +393,7 @@ export class IntrospectionTools {
       try {
         // Validate and convert value type if needed
         let processedValue = params.value;
-        
+
         // Handle special Unreal types
         if (typeof params.value === 'object' && params.value !== null) {
           // Vector conversion
@@ -424,7 +424,7 @@ export class IntrospectionTools {
                 'Rotator'
               ),
               Scale3D: this.convertPropertyValue(
-                params.value.scale || params.value.Scale || {x: 1, y: 1, z: 1},
+                params.value.scale || params.value.Scale || { x: 1, y: 1, z: 1 },
                 'Vector'
               )
             };
@@ -588,6 +588,86 @@ export class IntrospectionTools {
         };
       }
     }, 'findObjectsByClass');
+  }
+
+  /**
+   * Get property value of a component
+   */
+  async getComponentProperty(params: { objectPath: string; componentName: string; propertyName: string }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Component property operations require plugin support.');
+    }
+
+    const automationBridge = this.automationBridge;
+    return this.executeWithRetry(async () => {
+      try {
+        const response = await automationBridge.sendAutomationRequest('get_component_property', {
+          objectPath: params.objectPath,
+          componentName: params.componentName,
+          propertyName: params.propertyName
+        }, {
+          timeoutMs: 15000
+        });
+
+        if (response.success === false) {
+          return {
+            success: false,
+            error: response.error || response.message || 'Failed to get component property'
+          };
+        }
+
+        return {
+          success: true,
+          value: response.value,
+          type: response.type
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: `Failed to get component property: ${error instanceof Error ? error.message : String(error)}`
+        };
+      }
+    }, 'getComponentProperty');
+  }
+
+  /**
+   * Set property value of a component
+   */
+  async setComponentProperty(params: { objectPath: string; componentName: string; propertyName: string; value: any }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Component property operations require plugin support.');
+    }
+
+    const automationBridge = this.automationBridge;
+    return this.executeWithRetry(async () => {
+      try {
+        const response = await automationBridge.sendAutomationRequest('set_component_property', {
+          objectPath: params.objectPath,
+          componentName: params.componentName,
+          propertyName: params.propertyName,
+          value: params.value
+        }, {
+          timeoutMs: 15000
+        });
+
+        if (response.success === false) {
+          return {
+            success: false,
+            error: response.error || response.message || 'Failed to set component property'
+          };
+        }
+
+        return {
+          success: true,
+          message: response.message || 'Property set successfully'
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: `Failed to set component property: ${error instanceof Error ? error.message : String(error)}`
+        };
+      }
+    }, 'setComponentProperty');
   }
 
   /**

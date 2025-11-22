@@ -241,7 +241,7 @@ export class PerformanceTools {
 
     // Writing reports to disk via console is not supported
     if (params.outputPath) {
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Saving memreport to a file requires C++ plugin support' };
+      throw new Error('Saving memreport to a file requires Automation Bridge support');
     }
 
     await this.bridge.executeConsoleCommands(commands);
@@ -280,7 +280,7 @@ export class PerformanceTools {
           return { success: false, error: `Failed to configure texture streaming: ${error instanceof Error ? error.message : String(error)}` };
         }
       }
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Boosting player location for streaming requires C++ plugin support' };
+      throw new Error('Boosting player location for streaming requires Automation Bridge support');
     }
 
     await this.bridge.executeConsoleCommands(commands);
@@ -351,6 +351,7 @@ export class PerformanceTools {
     enableInstancing?: boolean;
     enableBatching?: boolean; // no-op (deprecated internal toggle)
     mergeActors?: boolean;
+    actors?: string[];
   }) {
     const commands: string[] = [];
 
@@ -364,11 +365,21 @@ export class PerformanceTools {
       // Use Automation Bridge for actor merging
       if (this.automationBridge) {
         try {
-          const response = await this.automationBridge.sendAutomationRequest('merge_actors', {
+          const actors = Array.isArray(params.actors)
+            ? params.actors.filter((name): name is string => typeof name === 'string' && name.length > 0)
+            : undefined;
+
+          const payload: any = {
             enableInstancing: params.enableInstancing,
             enableBatching: params.enableBatching,
             mergeActors: params.mergeActors
-          });
+          };
+
+          if (actors && actors.length > 0) {
+            payload.actors = actors;
+          }
+
+          const response = await this.automationBridge.sendAutomationRequest('merge_actors', payload);
 
           return response.success
             ? { success: true, message: response.message || 'Actors merged for optimization' }
@@ -377,7 +388,7 @@ export class PerformanceTools {
           return { success: false, error: `Failed to merge actors: ${error instanceof Error ? error.message : String(error)}` };
         }
       }
-      return { success: false, error: 'NOT_IMPLEMENTED', message: 'Actor merging requires C++ plugin support' };
+      throw new Error('Actor merging requires Automation Bridge support');
     }
 
     await this.bridge.executeConsoleCommands(commands);

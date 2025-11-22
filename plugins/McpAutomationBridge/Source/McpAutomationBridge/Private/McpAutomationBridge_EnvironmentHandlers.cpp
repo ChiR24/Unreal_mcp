@@ -9,6 +9,16 @@
 #elif __has_include("EditorActorSubsystem.h")
 #include "EditorActorSubsystem.h"
 #endif
+#if __has_include("Subsystems/UnrealEditorSubsystem.h")
+#include "Subsystems/UnrealEditorSubsystem.h"
+#elif __has_include("UnrealEditorSubsystem.h")
+#include "UnrealEditorSubsystem.h"
+#endif
+#if __has_include("Subsystems/LevelEditorSubsystem.h")
+#include "Subsystems/LevelEditorSubsystem.h"
+#elif __has_include("LevelEditorSubsystem.h")
+#include "LevelEditorSubsystem.h"
+#endif
 #include "FileHelpers.h"
 #include "Misc/FileHelper.h"
 #include "EngineUtils.h"
@@ -17,6 +27,9 @@
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Math/UnrealMathUtility.h"
+#include "ProceduralMeshComponent.h"
+#include "GeneralProjectSettings.h"
+#include "Misc/EngineVersion.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -535,6 +548,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(const FString
 
 bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    const FString Lower = Action.ToLower();
+    if (!Lower.Equals(TEXT("system_control"), ESearchCase::IgnoreCase) && !Lower.StartsWith(TEXT("system_control"))) return false;
+
     if (!Payload.IsValid())
     {
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("System control requires valid payload"), nullptr, TEXT("INVALID_PAYLOAD"));
@@ -633,6 +649,95 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(const FString& Req
         Result->SetStringField(TEXT("filename"), Filename);
         SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Screenshot captured: %s"), *Filename), Result, FString());
         return true;
+    }
+
+    if (LowerSub == TEXT("get_project_settings"))
+    {
+#if WITH_EDITOR
+        FString Category;
+        Payload->TryGetStringField(TEXT("category"), Category);
+        const FString LowerCategory = Category.ToLower();
+
+        const UGeneralProjectSettings* ProjectSettings = GetDefault<UGeneralProjectSettings>();
+        TSharedPtr<FJsonObject> SettingsObj = MakeShared<FJsonObject>();
+        if (ProjectSettings)
+        {
+            SettingsObj->SetStringField(TEXT("projectName"), ProjectSettings->ProjectName);
+            SettingsObj->SetStringField(TEXT("companyName"), ProjectSettings->CompanyName);
+            SettingsObj->SetStringField(TEXT("projectVersion"), ProjectSettings->ProjectVersion);
+            SettingsObj->SetStringField(TEXT("description"), ProjectSettings->Description);
+        }
+
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+        Out->SetStringField(TEXT("category"), Category.IsEmpty() ? TEXT("Project") : Category);
+        Out->SetObjectField(TEXT("settings"), SettingsObj);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Project settings retrieved"), Out, FString());
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("get_project_settings requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+
+    if (LowerSub == TEXT("get_engine_version"))
+    {
+#if WITH_EDITOR
+        const FEngineVersion& EngineVer = FEngineVersion::Current();
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+        Out->SetStringField(TEXT("version"), EngineVer.ToString());
+        Out->SetNumberField(TEXT("major"), EngineVer.GetMajor());
+        Out->SetNumberField(TEXT("minor"), EngineVer.GetMinor());
+        Out->SetNumberField(TEXT("patch"), EngineVer.GetPatch());
+        const bool bIs56OrAbove =
+            (EngineVer.GetMajor() > 5) ||
+            (EngineVer.GetMajor() == 5 && EngineVer.GetMinor() >= 6);
+        Out->SetBoolField(TEXT("isUE56OrAbove"), bIs56OrAbove);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Engine version retrieved"), Out, FString());
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("get_engine_version requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+
+    if (LowerSub == TEXT("get_feature_flags"))
+    {
+#if WITH_EDITOR
+        bool bUnrealEditor = false;
+        bool bLevelEditor = false;
+        bool bEditorActor = false;
+
+        if (GEditor)
+        {
+            if (UUnrealEditorSubsystem* UnrealEditorSS = GEditor->GetEditorSubsystem<UUnrealEditorSubsystem>())
+            {
+                bUnrealEditor = true;
+            }
+            if (ULevelEditorSubsystem* LevelEditorSS = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
+            {
+                bLevelEditor = true;
+            }
+            if (UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
+            {
+                bEditorActor = true;
+            }
+        }
+
+        TSharedPtr<FJsonObject> SubsystemsObj = MakeShared<FJsonObject>();
+        SubsystemsObj->SetBoolField(TEXT("unrealEditor"), bUnrealEditor);
+        SubsystemsObj->SetBoolField(TEXT("levelEditor"), bLevelEditor);
+        SubsystemsObj->SetBoolField(TEXT("editorActor"), bEditorActor);
+
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+        Out->SetObjectField(TEXT("subsystems"), SubsystemsObj);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Feature flags retrieved"), Out, FString());
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("get_feature_flags requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
     }
 
     // Engine quit (disabled for safety)
@@ -894,4 +999,152 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(const FString& RequestId
 
     SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Unknown inspect action: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));
     return true;
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    const FString Lower = Action.ToLower();
+    if (!Lower.Equals(TEXT("create_procedural_terrain"), ESearchCase::IgnoreCase)) { return false; }
+
+#if WITH_EDITOR
+    if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("create_procedural_terrain payload missing"), TEXT("INVALID_PAYLOAD")); return true; }
+
+    FString Name;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("name required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    FVector Location(0, 0, 0);
+    const TArray<TSharedPtr<FJsonValue>>* LocArr = nullptr;
+    if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr && LocArr->Num() >= 3)
+    {
+        Location.X = (*LocArr)[0]->AsNumber();
+        Location.Y = (*LocArr)[1]->AsNumber();
+        Location.Z = (*LocArr)[2]->AsNumber();
+    }
+
+    double SizeX = 2000.0;
+    double SizeY = 2000.0;
+    Payload->TryGetNumberField(TEXT("sizeX"), SizeX);
+    Payload->TryGetNumberField(TEXT("sizeY"), SizeY);
+
+    int32 Subdivisions = 50;
+    Payload->TryGetNumberField(TEXT("subdivisions"), Subdivisions);
+    Subdivisions = FMath::Clamp(Subdivisions, 2, 255);
+
+    FString MaterialPath;
+    Payload->TryGetStringField(TEXT("material"), MaterialPath);
+
+    if (!GEditor)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("EDITOR_NOT_AVAILABLE"));
+        return true;
+    }
+
+    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    if (!ActorSS)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("EditorActorSubsystem not available"), TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+        return true;
+    }
+
+    AActor* NewActor = ActorSS->SpawnActorFromClass(AActor::StaticClass(), Location, FRotator::ZeroRotator);
+    if (!NewActor)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to spawn actor"), TEXT("SPAWN_FAILED"));
+        return true;
+    }
+
+    NewActor->SetActorLabel(Name);
+
+    UProceduralMeshComponent* ProcMesh = NewObject<UProceduralMeshComponent>(NewActor, FName(TEXT("ProceduralTerrain")));
+    if (!ProcMesh)
+    {
+        ActorSS->DestroyActor(NewActor);
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create ProceduralMeshComponent"), TEXT("COMPONENT_CREATION_FAILED"));
+        return true;
+    }
+
+    ProcMesh->RegisterComponent();
+    NewActor->SetRootComponent(ProcMesh);
+    NewActor->AddInstanceComponent(ProcMesh);
+
+    // Generate grid
+    TArray<FVector> Vertices;
+    TArray<int32> Triangles;
+    TArray<FVector> Normals;
+    TArray<FVector2D> UV0;
+    TArray<FColor> VertexColors;
+    TArray<FProcMeshTangent> Tangents;
+
+    const float StepX = SizeX / Subdivisions;
+    const float StepY = SizeY / Subdivisions;
+    const float UVStep = 1.0f / Subdivisions;
+
+    for (int32 Y = 0; Y <= Subdivisions; Y++)
+    {
+        for (int32 X = 0; X <= Subdivisions; X++)
+        {
+            float Z = 0.0f;
+            // Simple sine wave terrain as default since we can't easily parse the math string
+            Z = FMath::Sin(X * 0.1f) * 50.0f + FMath::Cos(Y * 0.1f) * 30.0f;
+
+            Vertices.Add(FVector(X * StepX - SizeX / 2, Y * StepY - SizeY / 2, Z));
+            Normals.Add(FVector(0, 0, 1)); // Simplified normal
+            UV0.Add(FVector2D(X * UVStep, Y * UVStep));
+            VertexColors.Add(FColor::White);
+            Tangents.Add(FProcMeshTangent(1, 0, 0));
+        }
+    }
+
+    for (int32 Y = 0; Y < Subdivisions; Y++)
+    {
+        for (int32 X = 0; X < Subdivisions; X++)
+        {
+            int32 TopLeft = Y * (Subdivisions + 1) + X;
+            int32 TopRight = TopLeft + 1;
+            int32 BottomLeft = (Y + 1) * (Subdivisions + 1) + X;
+            int32 BottomRight = BottomLeft + 1;
+
+            Triangles.Add(TopLeft);
+            Triangles.Add(BottomLeft);
+            Triangles.Add(TopRight);
+
+            Triangles.Add(TopRight);
+            Triangles.Add(BottomLeft);
+            Triangles.Add(BottomRight);
+        }
+    }
+
+    ProcMesh->CreateMeshSection(0, Vertices, Triangles, Normals, UV0, VertexColors, Tangents, true);
+
+    if (!MaterialPath.IsEmpty())
+    {
+        UMaterialInterface* Mat = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
+        if (Mat)
+        {
+            ProcMesh->SetMaterial(0, Mat);
+        }
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("actor_name"), NewActor->GetActorLabel());
+    Resp->SetNumberField(TEXT("vertices"), Vertices.Num());
+    Resp->SetNumberField(TEXT("triangles"), Triangles.Num() / 3);
+    
+    TSharedPtr<FJsonObject> SizeObj = MakeShared<FJsonObject>();
+    SizeObj->SetNumberField(TEXT("x"), SizeX);
+    SizeObj->SetNumberField(TEXT("y"), SizeY);
+    Resp->SetObjectField(TEXT("size"), SizeObj);
+    Resp->SetNumberField(TEXT("subdivisions"), Subdivisions);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Procedural terrain created"), Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_procedural_terrain requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
 }

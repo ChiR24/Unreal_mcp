@@ -131,11 +131,22 @@ export class ResponseValidator {
       // Try to extract structured data from text content
       const textContent = response.content.find((c: any) => c.type === 'text');
       if (textContent?.text) {
-        try {
-          // Check if text is JSON - use WASM for high-performance parsing (5-8x faster)
-          structuredContent = await wasmIntegration.parseProperties(textContent.text);
-        } catch {
-          // Not JSON, use the full response
+        const rawText = String(textContent.text);
+        const trimmed = rawText.trim();
+        const looksLikeJson = trimmed.startsWith('{') || trimmed.startsWith('[');
+
+        if (looksLikeJson) {
+          try {
+            // Check if text is JSON - use WASM for high-performance parsing (5-8x faster)
+            structuredContent = await wasmIntegration.parseProperties(rawText);
+          } catch {
+            // If JSON parsing fails, fall back to using the full response without
+            // emitting noisy parse errors for plain-text messages.
+            structuredContent = response;
+          }
+        } else {
+          // Plain-text summary or error message; keep the original structured
+          // response object instead of attempting JSON parsing.
           structuredContent = response;
         }
       }

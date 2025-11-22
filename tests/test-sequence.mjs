@@ -12,7 +12,7 @@ const copyDir = '/Game/Cinematics/Copies';
 const testCases = [
   { scenario: 'Create sequence', toolName: 'manage_sequence', arguments: { action: 'create', name: 'TC_Seq', path: '/Game/Cinematics' }, expected: 'success - sequence created' },
   { scenario: 'Open sequence', toolName: 'manage_sequence', arguments: { action: 'open', path: seqPath }, expected: 'success' },
-  { scenario: 'Add camera (spawn-only fallback ok)', toolName: 'manage_sequence', arguments: { action: 'add_camera', spawnable: true }, expected: 'success or not implemented' },
+  { scenario: 'Add camera (spawn-only fallback ok)', toolName: 'manage_sequence', arguments: { action: 'add_camera', spawnable: true }, expected: 'success' },
   { scenario: 'Get bindings', toolName: 'manage_sequence', arguments: { action: 'get_bindings', path: seqPath }, expected: 'success - bindings listed' },
   { scenario: 'Set playback speed', toolName: 'manage_sequence', arguments: { action: 'set_playback_speed', speed: 1.2 }, expected: 'success' },
   { scenario: 'Get sequence properties', toolName: 'manage_sequence', arguments: { action: 'get_properties', path: seqPath }, expected: 'success - properties retrieved' },
@@ -28,7 +28,32 @@ const testCases = [
   // Cleanup
   { scenario: 'Cleanup - Delete Cinematic', toolName: 'manage_sequence', arguments: { action: 'delete', path: '/Game/Cinematics/TC_Cinematic' }, expected: 'success' },
   { scenario: 'Delete original sequence', toolName: 'manage_sequence', arguments: { action: 'delete', path: seqPath }, expected: 'success - deleted' },
-  { scenario: 'Verify sequence removed', toolName: 'manage_sequence', arguments: { action: 'get_bindings', path: seqPath }, expected: 'success or not found' }
+  { scenario: 'Verify sequence removed', toolName: 'manage_sequence', arguments: { action: 'get_bindings', path: seqPath }, expected: 'success or not found' },
+
+  {
+    scenario: "Error: Invalid actor name",
+    toolName: "manage_sequence",
+    arguments: { action: "add_actor", actorName: "NonExistentActor" },
+    expected: "not_found"
+  },
+  {
+    scenario: "Edge: Playback speed 0",
+    toolName: "manage_sequence",
+    arguments: { action: "set_playback_speed", speed: 0 },
+    expected: "success"
+  },
+  {
+    scenario: "Border: Empty actors array",
+    toolName: "manage_sequence",
+    arguments: { action: "add_actors", actorNames: [] },
+    expected: "success|no_op"
+  },
+  {
+    scenario: "Error: Invalid class spawnable",
+    toolName: "manage_sequence",
+    arguments: { action: "add_spawnable_from_class", className: "InvalidClass" },
+    expected: "error"
+  }
 ];
 
 await runToolTests('Sequences', testCases);

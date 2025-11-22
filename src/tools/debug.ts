@@ -59,12 +59,10 @@ export class DebugVisualizationTools {
       return result;
     }
 
-    // Fallback to console commands for basic visualization
-    await this.bridge.executeConsoleCommand('stat none');
     return {
-      success: true,
-      message: 'Debug line command issued',
-      note: 'For persistent debug lines, use Automation Bridge',
+      success: false,
+      error: result.error || 'AUTOMATION_BRIDGE_REQUIRED',
+      message: result.message || 'Drawing debug lines requires Automation Bridge debug_shape handler',
       params: {
         start: params.start,
         end: params.end,
@@ -103,9 +101,9 @@ export class DebugVisualizationTools {
     }
 
     return {
-      success: true,
-      message: 'Debug box command issued',
-      note: 'For persistent debug boxes, use Automation Bridge',
+      success: false,
+      error: result.error || 'AUTOMATION_BRIDGE_REQUIRED',
+      message: result.message || 'Drawing debug boxes requires Automation Bridge debug_shape handler',
       params: {
         center: params.center,
         extent: params.extent,
@@ -145,9 +143,9 @@ export class DebugVisualizationTools {
     }
 
     return {
-      success: true,
-      message: 'Debug sphere command issued',
-      note: 'For persistent debug spheres, use Automation Bridge',
+      success: false,
+      error: result.error || 'AUTOMATION_BRIDGE_REQUIRED',
+      message: result.message || 'Drawing debug spheres requires Automation Bridge debug_shape handler',
       params: {
         center: params.center,
         radius: params.radius,
@@ -185,9 +183,9 @@ export class DebugVisualizationTools {
     }
 
     return {
-      success: true,
-      message: 'Debug capsule command issued',
-      note: 'For persistent debug capsules, use Automation Bridge',
+      success: false,
+      error: result.error || 'AUTOMATION_BRIDGE_REQUIRED',
+      message: result.message || 'Drawing debug capsules requires Automation Bridge debug_shape handler',
       params: {
         center: params.center,
         halfHeight: params.halfHeight,
@@ -228,9 +226,9 @@ export class DebugVisualizationTools {
     }
 
     return {
-      success: true,
-      message: 'Debug cone command issued',
-      note: 'For persistent debug cones, use Automation Bridge',
+      success: false,
+      error: result.error || 'AUTOMATION_BRIDGE_REQUIRED',
+      message: result.message || 'Drawing debug cones requires Automation Bridge debug_shape handler',
       params: {
         origin: params.origin,
         direction: params.direction,
@@ -267,9 +265,9 @@ export class DebugVisualizationTools {
     }
 
     return {
-      success: true,
-      message: 'Debug string command issued',
-      note: 'For persistent debug strings, use Automation Bridge',
+      success: false,
+      error: result.error || 'AUTOMATION_BRIDGE_REQUIRED',
+      message: result.message || 'Drawing debug strings requires Automation Bridge debug_shape handler',
       params: {
         location: params.location,
         text: params.text,
@@ -306,9 +304,9 @@ export class DebugVisualizationTools {
     }
 
     return {
-      success: true,
-      message: 'Debug arrow command issued',
-      note: 'For persistent debug arrows, use Automation Bridge',
+      success: false,
+      error: result.error || 'AUTOMATION_BRIDGE_REQUIRED',
+      message: result.message || 'Drawing debug arrows requires Automation Bridge debug_shape handler',
       params: {
         start: params.start,
         end: params.end,
@@ -342,9 +340,9 @@ export class DebugVisualizationTools {
     }
 
     return {
-      success: true,
-      message: 'Debug point command issued',
-      note: 'For persistent debug points, use Automation Bridge',
+      success: false,
+      error: result.error || 'AUTOMATION_BRIDGE_REQUIRED',
+      message: result.message || 'Drawing debug points requires Automation Bridge debug_shape handler',
       params: {
         location: params.location,
         size,
@@ -404,9 +402,9 @@ export class DebugVisualizationTools {
     }
 
     return {
-      success: true,
-      message: 'Debug frustum command issued',
-      note: 'For persistent debug frustums, use Automation Bridge',
+      success: false,
+      error: result.error || 'AUTOMATION_BRIDGE_REQUIRED',
+      message: result.message || 'Drawing debug frustums requires Automation Bridge debug_shape handler',
       params: {
         origin: params.origin,
         rotation: params.rotation,
@@ -531,13 +529,18 @@ export class DebugVisualizationTools {
       return result;
     }
 
-    // Fallback to drawing individual lines
-    for (let i = 0; i < params.points.length - 1; i++) {
-      const start = params.points[i];
-      const end = params.points[i + 1];
-      await this.drawDebugLine({ start, end, color, duration, thickness });
-    }
-    return { success: true, message: `Debug path drawn with ${params.points.length} points` };
+    // If Automation Bridge is unavailable or fails, do not claim success
+    return {
+      success: false,
+      error: result.error || 'AUTOMATION_BRIDGE_REQUIRED',
+      message: result.message || 'Drawing debug paths requires Automation Bridge debug_shape handler',
+      params: {
+        points: params.points,
+        color,
+        duration,
+        thickness
+      }
+    };
   }
 
   async showNavigationMesh(params: { enabled: boolean; }) {
@@ -566,8 +569,8 @@ export class DebugVisualizationTools {
 
       return {
         success: false,
-        error: 'NOT_IMPLEMENTED',
-        message: 'Showing on-screen messages via console is not supported; use editor API or Automation Bridge'
+        error: 'AUTOMATION_BRIDGE_REQUIRED',
+        message: 'Showing on-screen messages requires Automation Bridge'
       };
     }
 
@@ -588,8 +591,8 @@ export class DebugVisualizationTools {
 
     return {
       success: false,
-      error: 'NOT_IMPLEMENTED',
-      message: 'Showing skeletal mesh bones via console is not supported; use editor API or Automation Bridge'
+      error: 'AUTOMATION_BRIDGE_REQUIRED',
+      message: 'Showing skeletal mesh bones requires Automation Bridge'
     };
   }
 

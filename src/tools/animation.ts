@@ -86,7 +86,7 @@ export class AnimationTools {
       const assetPath = sanitized.savePath ?? targetPath;
       const fullPath = `${assetPath}/${assetName}`;
 
-      // Prefer native plugin support when available
+      // Prefer native plugin support; surface real errors when creation fails.
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
         try {
           const resp = await this.automationBridge.sendAutomationRequest('create_animation_blueprint', {
@@ -94,12 +94,15 @@ export class AnimationTools {
             skeletonPath: params.skeletonPath,
             savePath: assetPath
           }, { timeoutMs: 60000 });
+
           const result = resp?.result ?? resp;
           const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
-          if (resp && resp.success !== false && resultObj) {
+          const warnings = Array.isArray(resultObj?.warnings) ? (resultObj.warnings as string[]) : undefined;
+          const details = Array.isArray(resultObj?.details) ? (resultObj.details as string[]) : undefined;
+          const isSuccess = resp && resp.success !== false && !!resultObj;
+
+          if (isSuccess && resultObj) {
             const blueprintPath = typeof resultObj.blueprintPath === 'string' ? resultObj.blueprintPath : fullPath;
-            const warnings = Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
-            const details = resultObj.details as string[] | undefined;
             this.trackArtifact(assetName, { path: blueprintPath, type: 'AnimationBlueprint' });
             return {
               success: true,
@@ -110,22 +113,37 @@ export class AnimationTools {
               details
             };
           }
-        } catch (error) {
-          console.warn('AnimationTools.createAnimationBlueprint bridge call failed, falling back to console command:', error);
+
+          const message = typeof resp?.message === 'string'
+            ? resp.message
+            : (typeof resp?.error === 'string' ? resp.error : 'Animation Blueprint creation failed');
+          const error = typeof resp?.error === 'string' ? resp.error : message;
+
+          return {
+            success: false,
+            message,
+            error,
+            path: fullPath,
+            skeleton: params.skeletonPath,
+            warnings,
+            details
+          };
+        } catch (err) {
+          const error = String(err);
+          return {
+            success: false,
+            message: `Failed to create Animation Blueprint: ${error}`,
+            error,
+            path: fullPath,
+            skeleton: params.skeletonPath
+          };
         }
       }
 
-      const commands: string[] = [
-        `CreateAsset AnimationBlueprint ${assetName} ${assetPath}`,
-        `SetAnimBlueprintSkeleton ${assetName} ${params.skeletonPath}`
-      ];
-
-      await this.bridge.executeConsoleCommands(commands);
-      this.trackArtifact(assetName, { path: fullPath, type: 'AnimationBlueprint' });
-
       return {
-        success: true,
-        message: `Animation Blueprint created at ${fullPath}`,
+        success: false,
+        message: 'Automation bridge not connected for Animation Blueprint creation',
+        error: 'AUTOMATION_BRIDGE_UNAVAILABLE',
         path: fullPath,
         skeleton: params.skeletonPath
       };
@@ -195,6 +213,95 @@ export class AnimationTools {
     }
   }
 
+  async createStateMachine(params: {
+    machineName?: string;
+    states?: Array<string | { name: string; animation?: string; isEntry?: boolean; isExit?: boolean }>;
+    transitions?: Array<{ sourceState: string; targetState: string; condition?: string }>;
+    blueprintPath?: string;
+  }): Promise<
+    | {
+        success: true;
+        message: string;
+        machineName: string;
+        blueprintPath?: string;
+        states?: Array<{ name: string; animation?: string; isEntry?: boolean; isExit?: boolean }>;
+        transitions?: Array<{ sourceState: string; targetState: string; condition?: string }>;
+      }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const rawName = typeof params.machineName === 'string' ? params.machineName.trim() : '';
+      const machineName = rawName || 'StateMachine';
+
+      const normalizedStates: Array<{ name: string; animation?: string; isEntry?: boolean; isExit?: boolean }> =
+        Array.isArray(params.states)
+          ? params.states
+              .map((s) => {
+                if (typeof s === 'string') {
+                  const name = s.trim();
+                  return name ? { name } : undefined;
+                }
+                if (s && typeof s === 'object' && typeof (s as any).name === 'string') {
+                  const name = (s as any).name.trim();
+                  if (!name) return undefined;
+                  return s as { name: string; animation?: string; isEntry?: boolean; isExit?: boolean };
+                }
+                return undefined;
+              })
+              .filter((s): s is { name: string; animation?: string; isEntry?: boolean; isExit?: boolean } => !!s)
+          : [];
+
+      const normalizedTransitionsRaw = Array.isArray(params.transitions)
+        ? params.transitions
+            .map((t) => {
+              if (!t || typeof t !== 'object') return undefined;
+              const src = (t.sourceState || '').trim();
+              const dst = (t.targetState || '').trim();
+              if (!src || !dst) return undefined;
+              return { sourceState: src, targetState: dst, condition: t.condition };
+            })
+            .filter((t) => !!t)
+        : [];
+
+      const normalizedTransitions = normalizedTransitionsRaw as Array<{
+        sourceState: string;
+        targetState: string;
+        condition?: string;
+      }>;
+
+      const blueprintPath = typeof params.blueprintPath === 'string' && params.blueprintPath.trim().length > 0
+        ? params.blueprintPath.trim()
+        : undefined;
+
+      const key = `StateMachine:${machineName}`;
+      this.trackArtifact(key, {
+        path: blueprintPath,
+        type: 'AnimationStateMachine',
+        metadata: {
+          machineName,
+          states: normalizedStates,
+          transitions: normalizedTransitions
+        }
+      });
+
+      return {
+        success: true,
+        message: `State machine '${machineName}' specification recorded`,
+        machineName,
+        blueprintPath,
+        states: normalizedStates.length ? normalizedStates : undefined,
+        transitions: normalizedTransitions.length ? normalizedTransitions : undefined
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to record state machine specification: ${error}`,
+        error
+      };
+    }
+  }
+
   async createBlendSpace(params: {
     name: string;
     savePath?: string;
@@ -218,25 +325,40 @@ export class AnimationTools {
       const assetName = sanitized.name;
       const assetPath = sanitized.savePath ?? targetPath;
       const dimensions = params.dimensions === 2 ? 2 : 1;
-      const blendSpaceType = dimensions === 2 ? 'BlendSpace' : 'BlendSpace1D';
 
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
         try {
-          const resp = await this.automationBridge.sendAutomationRequest('animation_physics', cleanObject({
+          const payload: any = {
             action: 'create_blend_space',
             name: assetName,
             savePath: assetPath,
             skeletonPath: params.skeletonPath,
             dimensions,
-            horizontalAxis: params.horizontalAxis,
-            verticalAxis: params.verticalAxis,
             samples: params.samples
-          }));
-          if (resp && resp.success !== false) {
-            const result = resp.result ?? resp;
-            const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
-            const path = resultObj && typeof resultObj.blendSpacePath === 'string' ? resultObj.blendSpacePath : `${assetPath}/${assetName}`;
-            const warnings = resultObj && Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
+          };
+
+          if (params.horizontalAxis) {
+            payload.minX = params.horizontalAxis.minValue;
+            payload.maxX = params.horizontalAxis.maxValue;
+            // gridX is not in params.horizontalAxis, maybe default or add to interface?
+            // The C++ code defaults GridX to 3.0.
+          }
+
+          if (params.verticalAxis) {
+            payload.minY = params.verticalAxis.minValue;
+            payload.maxY = params.verticalAxis.maxValue;
+          }
+
+          const resp = await this.automationBridge.sendAutomationRequest('animation_physics', cleanObject(payload));
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
+          const isSuccess = resp && resp.success !== false && !!resultObj;
+
+          if (isSuccess && resultObj) {
+            const path = typeof resultObj.blendSpacePath === 'string'
+              ? (resultObj.blendSpacePath as string)
+              : `${assetPath}/${assetName}`;
+            const warnings = Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
             const details = resultObj ? resultObj.details : undefined;
             return {
               success: true,
@@ -247,45 +369,20 @@ export class AnimationTools {
               warnings
             };
           }
-        } catch (error) {
-          console.warn('AnimationTools.createBlendSpace bridge call failed, falling back to console implementation:', error);
+
+          const message = typeof resp?.message === 'string'
+            ? resp.message
+            : (typeof resp?.error === 'string' ? resp.error : 'Blend space creation failed');
+          const error = typeof resp?.error === 'string' ? resp.error : message;
+
+          return { success: false, error };
+        } catch (err) {
+          const error = String(err);
+          return { success: false, error: `Failed to create blend space: ${error}` };
         }
       }
 
-      const commands: string[] = [
-        `CreateAsset ${blendSpaceType} ${assetName} ${assetPath}`,
-        `echo Creating ${blendSpaceType} ${assetName} at ${assetPath}`
-      ];
-
-      if (params.skeletonPath) {
-        commands.push(`SetBlendSpaceSkeleton ${assetName} ${params.skeletonPath}`);
-      }
-
-      if (params.horizontalAxis) {
-        commands.push(
-          `SetBlendSpaceAxis ${assetName} Horizontal ${params.horizontalAxis.name} ${params.horizontalAxis.minValue} ${params.horizontalAxis.maxValue}`
-        );
-      }
-
-      if (dimensions === 2 && params.verticalAxis) {
-        commands.push(
-          `SetBlendSpaceAxis ${assetName} Vertical ${params.verticalAxis.name} ${params.verticalAxis.minValue} ${params.verticalAxis.maxValue}`
-        );
-      }
-
-      if (params.samples) {
-        for (const sample of params.samples) {
-          const coords = dimensions === 1 ? `${sample.x}` : `${sample.x} ${sample.y ?? 0}`;
-          commands.push(`AddBlendSpaceSample ${assetName} ${sample.animation} ${coords}`);
-        }
-      }
-
-      await this.bridge.executeConsoleCommands(commands);
-      return {
-        success: true,
-        message: `Blend Space ${assetName} created`,
-        path: `${assetPath}/${assetName}`
-      };
+      return { success: false, error: 'Automation bridge not connected for createBlendSpace' };
     } catch (err) {
       return { success: false, error: `Failed to create blend space: ${err}` };
     }
@@ -326,11 +423,15 @@ export class AnimationTools {
             skeletonPath: params.skeletonPath,
             controls: params.controls
           }), { timeoutMs: 60000 });
-          if (resp && resp.success !== false) {
-            const result = resp.result ?? resp;
-            const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
-            const controlRigPath = resultObj && typeof resultObj.controlRigPath === 'string' ? resultObj.controlRigPath : fullPath;
-            const warnings = resultObj && Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
+          const isSuccess = resp && resp.success !== false && !!resultObj;
+
+          if (isSuccess && resultObj) {
+            const controlRigPath = typeof resultObj.controlRigPath === 'string'
+              ? (resultObj.controlRigPath as string)
+              : fullPath;
+            const warnings = Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
             const details = resultObj ? resultObj.details : undefined;
             this.trackArtifact(assetName, { path: controlRigPath, type: 'ControlRig' });
             return {
@@ -341,37 +442,379 @@ export class AnimationTools {
               details
             };
           }
-        } catch (error) {
-          console.warn('AnimationTools.setupControlRig bridge call failed, falling back to console implementation:', error);
+
+          const message = typeof resp?.message === 'string'
+            ? resp.message
+            : (typeof resp?.error === 'string' ? resp.error : 'Control Rig setup failed');
+          const error = typeof resp?.error === 'string' ? resp.error : message;
+
+          return { success: false, error };
+        } catch (err) {
+          const error = String(err);
+          return { success: false, error: `Failed to setup control rig: ${error}` };
         }
       }
 
-      const commands: string[] = [
-        `CreateAsset ControlRig ${assetName} ${assetPath}`,
-        `SetControlRigSkeleton ${assetName} ${params.skeletonPath}`
-      ];
-
-      if (params.controls) {
-        for (const control of params.controls) {
-          commands.push(
-            `AddControlRigControl ${assetName} ${control.name} ${control.type} ${control.bone ?? ''}`
-          );
-          if (control.defaultValue !== undefined) {
-            commands.push(
-              `SetControlRigDefault ${assetName} ${control.name} ${JSON.stringify(control.defaultValue)}`
-            );
-          }
-        }
-      }
-
-      await this.bridge.executeConsoleCommands(commands);
-      return {
-        success: true,
-        message: `Control Rig ${assetName} created`,
-        path: fullPath
-      };
+      return { success: false, error: 'Automation bridge not connected for setupControlRig' };
     } catch (err) {
       return { success: false, error: `Failed to setup control rig: ${err}` };
+    }
+  }
+
+  async setupIK(params: {
+    actorName?: string;
+    ikBones?: string[];
+    enableFootPlacement?: boolean;
+  }): Promise<
+    | {
+        success: true;
+        message: string;
+        actorName: string;
+        ikBones?: string[];
+        enableFootPlacement?: boolean;
+      }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const actorName = (params.actorName || 'Character').trim();
+      const ikBones = Array.isArray(params.ikBones)
+        ? params.ikBones.map((b) => String(b)).filter((b) => b.trim().length > 0)
+        : [];
+
+      const key = `IK:${actorName}`;
+      this.trackArtifact(key, {
+        type: 'IKSetup',
+        metadata: {
+          actorName,
+          ikBones,
+          enableFootPlacement: params.enableFootPlacement === true
+        }
+      });
+
+      return {
+        success: true,
+        message: `IK setup specification recorded for actor '${actorName}'`,
+        actorName,
+        ikBones: ikBones.length ? ikBones : undefined,
+        enableFootPlacement: params.enableFootPlacement === true ? true : undefined
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to record IK setup: ${error}`,
+        error
+      };
+    }
+  }
+
+  async createProceduralAnim(params: {
+    systemName?: string;
+    baseAnimation?: string;
+    modifiers?: any[];
+    savePath?: string;
+  }): Promise<
+    | {
+        success: true;
+        message: string;
+        path: string;
+        systemName: string;
+      }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const baseName = (params.systemName || '').trim()
+        || (params.baseAnimation ? params.baseAnimation.split('/').pop() || '' : '');
+      const systemName = baseName || 'ProceduralSystem';
+      const basePath = (params.savePath || '/Game/Animations').replace(/\/+$/, '');
+      const path = `${basePath || '/Game/Animations'}/${systemName}`;
+
+      this.trackArtifact(systemName, {
+        path,
+        type: 'ProceduralAnimation',
+        metadata: {
+          baseAnimation: params.baseAnimation,
+          modifiers: Array.isArray(params.modifiers) ? params.modifiers : []
+        }
+      });
+
+      return {
+        success: true,
+        message: `Procedural animation system '${systemName}' specification recorded at ${path}`,
+        path,
+        systemName
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to record procedural animation system: ${error}`,
+        error
+      };
+    }
+  }
+
+  async createBlendTree(params: {
+    treeName?: string;
+    blendType?: string;
+    basePose?: string;
+    additiveAnimations?: any[];
+    savePath?: string;
+  }): Promise<
+    | {
+        success: true;
+        message: string;
+        path: string;
+        treeName: string;
+      }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const rawName = (params.treeName || '').trim();
+      const treeName = rawName || 'BlendTree';
+      const basePath = (params.savePath || '/Game/Animations').replace(/\/+$/, '');
+      const path = `${basePath || '/Game/Animations'}/${treeName}`;
+
+      this.trackArtifact(treeName, {
+        path,
+        type: 'BlendTree',
+        metadata: {
+          blendType: params.blendType,
+          basePose: params.basePose,
+          additiveAnimations: Array.isArray(params.additiveAnimations) ? params.additiveAnimations : []
+        }
+      });
+
+      return {
+        success: true,
+        message: `Blend tree '${treeName}' specification recorded at ${path}`,
+        path,
+        treeName
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to record blend tree specification: ${error}`,
+        error
+      };
+    }
+  }
+
+  async cleanup(artifacts?: string[]): Promise<
+    | {
+        success: boolean;
+        message: string;
+        removed?: string[];
+        missing?: string[];
+      }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const names = Array.isArray(artifacts)
+        ? artifacts.map((a) => String(a).trim()).filter((a) => a.length > 0)
+        : [];
+
+      const removed: string[] = [];
+      const missing: string[] = [];
+
+      for (const key of names) {
+        if (this.managedArtifacts.delete(key)) {
+          removed.push(key);
+        } else {
+          missing.push(key);
+        }
+      }
+
+      const anyRemoved = removed.length > 0;
+      const anyMissing = missing.length > 0;
+
+      const success = anyRemoved || !anyMissing;
+      const message = anyRemoved
+        ? 'Animation artifacts removed from local registry'
+        : 'No matching animation artifacts found in local registry';
+
+      return {
+        success,
+        message,
+        removed: removed.length ? removed : undefined,
+        missing: missing.length ? missing : undefined
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to cleanup animation artifacts: ${error}`,
+        error
+      };
+    }
+  }
+
+  async createAnimationAsset(params: {
+    name: string;
+    path?: string;
+    savePath?: string;
+    skeletonPath?: string;
+    assetType?: string;
+  }): Promise<
+    | {
+        success: true;
+        message: string;
+        path: string;
+        assetType?: string;
+        existingAsset?: boolean;
+      }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const targetPath = (params.path || params.savePath) ?? '/Game/Animations';
+      const validation = validateAssetParams({ name: params.name, savePath: targetPath });
+      if (!validation.valid) {
+        const message = validation.error ?? 'Invalid asset parameters';
+        return { success: false, message, error: message };
+      }
+
+      const sanitized = validation.sanitized;
+      const assetName = sanitized.name;
+      const assetPath = sanitized.savePath ?? targetPath;
+      const fullPath = `${assetPath}/${assetName}`;
+
+      const normalizedType = (params.assetType || 'sequence').toLowerCase();
+
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const payload: any = {
+            action: 'create_animation_asset',
+            name: assetName,
+            savePath: assetPath,
+            skeletonPath: params.skeletonPath,
+            assetType: normalizedType
+          };
+
+          const resp = await this.automationBridge.sendAutomationRequest('animation_physics', cleanObject(payload), { timeoutMs: 60000 });
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? (result as Record<string, unknown>) : undefined;
+          const isSuccess = resp && resp.success !== false && !!resultObj;
+
+          if (isSuccess && resultObj) {
+            const assetPathResult = typeof resultObj.assetPath === 'string' ? (resultObj.assetPath as string) : fullPath;
+            const assetTypeResult = typeof resultObj.assetType === 'string' ? (resultObj.assetType as string) : undefined;
+            const existingAsset = typeof resultObj.existingAsset === 'boolean' ? Boolean(resultObj.existingAsset) : false;
+
+            this.trackArtifact(assetName, { path: assetPathResult, type: 'AnimationAsset' });
+
+            return {
+              success: true,
+              message: resp.message || `Animation asset created at ${assetPathResult}`,
+              path: assetPathResult,
+              assetType: assetTypeResult,
+              existingAsset
+            };
+          }
+
+          const message = typeof resp?.message === 'string'
+            ? resp.message
+            : (typeof resp?.error === 'string' ? resp.error : 'Animation asset creation failed');
+          const error = typeof resp?.error === 'string' ? resp.error : message;
+
+          return { success: false, message, error };
+        } catch (err) {
+          const error = String(err);
+          return {
+            success: false,
+            message: `Failed to create animation asset: ${error}`,
+            error
+          };
+        }
+      }
+
+      return {
+        success: false,
+        message: 'Automation bridge not connected for createAnimationAsset',
+        error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to create animation asset: ${error}`,
+        error
+      };
+    }
+  }
+
+  async addNotify(params: {
+    animationPath?: string;
+    assetPath?: string;
+    notifyName?: string;
+    time?: number;
+  }): Promise<
+    | {
+        success: true;
+        message: string;
+        assetPath: string;
+        notifyName: string;
+        time: number;
+      }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const rawPath = (params.animationPath || params.assetPath || '').trim();
+      if (!rawPath) {
+        const error = 'animationPath or assetPath is required for addNotify';
+        return { success: false, message: error, error };
+      }
+
+      const notifyName = (params.notifyName || 'Notify').trim();
+      const time = typeof params.time === 'number' && params.time >= 0 ? params.time : 0;
+
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp = await this.automationBridge.sendAutomationRequest(
+            'animation_physics',
+            cleanObject({
+              action: 'add_notify',
+              assetPath: rawPath,
+              notifyName,
+              time
+            }),
+            { timeoutMs: 60000 }
+          );
+
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? (result as Record<string, unknown>) : undefined;
+
+          if (resp && resp.success !== false && resultObj) {
+            return {
+              success: true,
+              message: resp.message || `Notify '${notifyName}' added to ${rawPath} at time ${time}`,
+              assetPath: typeof resultObj.assetPath === 'string' ? (resultObj.assetPath as string) : rawPath,
+              notifyName,
+              time
+            };
+          }
+        } catch (err) {
+          const error = String(err);
+          return {
+            success: false,
+            message: `Failed to add notify: ${error}`,
+            error
+          };
+        }
+      }
+
+      return {
+        success: false,
+        message: 'Automation bridge not connected for addNotify',
+        error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to add notify: ${error}`,
+        error
+      };
     }
   }
 

@@ -4,7 +4,7 @@ import { AutomationBridge } from '../automation-bridge.js';
 import { coerceBoolean, coerceNumber, coerceString } from '../utils/result-helpers.js';
 
 export class FoliageTools {
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
@@ -118,7 +118,7 @@ export class FoliageTools {
   }) {
     const errors: string[] = [];
     const foliageType = String(params?.foliageType ?? '').trim();
-    const pos = Array.isArray(params?.position) ? params.position : [0,0,0];
+    const pos = Array.isArray(params?.position) ? params.position : [0, 0, 0];
 
     if (!foliageType || foliageType.toLowerCase() === 'undefined' || foliageType.toLowerCase() === 'any') {
       errors.push(`Invalid foliageType: '${params?.foliageType}'`);
@@ -145,14 +145,12 @@ export class FoliageTools {
       throw new Error('Automation Bridge not available. Foliage operations require plugin support.');
     }
 
-    const brush = Number.isFinite(params.brushSize as number) ? (params.brushSize as number) : 300;
-
     try {
       const typePath = foliageType.includes('/') ? foliageType : `/Game/Foliage/${foliageType}.${foliageType}`;
       const response = await this.automationBridge.sendAutomationRequest('paint_foliage', {
         foliageTypePath: typePath,
         locations: [{ x: pos[0], y: pos[1], z: pos[2] }],
-        brushSize: brush,
+        brushSize: Number.isFinite(params.brushSize as number) ? (params.brushSize as number) : 300,
         paintDensity: params.paintDensity,
         eraseMode: params.eraseMode
       }, {
@@ -245,26 +243,26 @@ export class FoliageTools {
     enableCulling?: boolean;
     cullDistance?: number;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`CreateInstancedStaticMesh ${params.name} ${params.meshPath}`);
-    
+
     for (const instance of params.instances) {
       const rot = instance.rotation || [0, 0, 0];
       const scale = instance.scale || [1, 1, 1];
       commands.push(`AddInstance ${params.name} ${instance.position.join(' ')} ${rot.join(' ')} ${scale.join(' ')}`);
     }
-    
+
     if (params.enableCulling !== undefined) {
       commands.push(`SetInstanceCulling ${params.name} ${params.enableCulling}`);
     }
-    
+
     if (params.cullDistance !== undefined) {
       commands.push(`SetInstanceCullDistance ${params.name} ${params.cullDistance}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Instanced mesh ${params.name} created with ${params.instances.length} instances` };
   }
 
@@ -274,51 +272,94 @@ export class FoliageTools {
     lodDistances?: number[];
     screenSize?: number[];
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.lodDistances) {
       commands.push(`SetFoliageLODDistances ${params.foliageType} ${params.lodDistances.join(' ')}`);
     }
-    
+
     if (params.screenSize) {
       commands.push(`SetFoliageLODScreenSize ${params.foliageType} ${params.screenSize.join(' ')}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Foliage LOD settings updated' };
+  }
+
+  // Alias for addFoliageType to match interface/handler usage
+  async addFoliage(params: { foliageType: string; locations: Array<{ x: number; y: number; z: number }> }) {
+    // Delegate to paintFoliage which handles placing instances at locations
+    if (params.locations && params.locations.length > 0) {
+      if (!this.automationBridge) {
+        throw new Error('Automation Bridge not available.');
+      }
+
+      const response = await this.automationBridge.sendAutomationRequest('paint_foliage', {
+        foliageTypePath: params.foliageType.includes('/') ? params.foliageType : `/Game/Foliage/${params.foliageType}.${params.foliageType}`,
+        locations: params.locations,
+        brushSize: 0, // Exact placement
+        paintDensity: 1,
+        eraseMode: false
+      });
+
+      if (!response.success) {
+        return { success: false, error: response.error || 'Failed to add foliage instances' };
+      }
+
+      return { success: true, message: `Added ${params.locations.length} foliage instances` };
+    }
+
+    return { success: true, message: 'No locations provided for addFoliage' };
   }
 
   // Create procedural foliage
   async createProceduralFoliage(params: {
-    volumeName: string;
-    position: [number, number, number];
-    size: [number, number, number];
-    foliageTypes: string[];
+    name?: string;
+    volumeName?: string;
+    position?: [number, number, number];
+    size?: [number, number, number];
+    foliageTypes?: string[];
     seed?: number;
     tileSize?: number;
+    bounds?: { location: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } };
   }) {
-  const commands: string[] = [];
-    
-    commands.push(`CreateProceduralFoliageVolume ${params.volumeName} ${params.position.join(' ')} ${params.size.join(' ')}`);
-    
-    for (const type of params.foliageTypes) {
-      commands.push(`AddProceduralFoliageType ${params.volumeName} ${type}`);
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available.');
     }
-    
-    if (params.seed !== undefined) {
-      commands.push(`SetProceduralSeed ${params.volumeName} ${params.seed}`);
+
+    const volName = params.volumeName || params.name || 'ProceduralFoliageVolume';
+    const loc = params.bounds?.location ? [params.bounds.location.x, params.bounds.location.y, params.bounds.location.z] : (params.position || [0, 0, 0]);
+    const size = params.bounds?.size ? [params.bounds.size.x, params.bounds.size.y, params.bounds.size.z] : (params.size || [1000, 1000, 100]);
+
+    const payload = {
+      name: volName,
+      bounds: {
+        location: { x: loc[0], y: loc[1], z: loc[2] },
+        size: { x: size[0], y: size[1], z: size[2] }
+      },
+      foliageTypes: (params.foliageTypes || []).map(t => ({
+        meshPath: t,
+        density: 0.5
+      })),
+      seed: params.seed ?? 42,
+      tileSize: params.tileSize ?? 1000
+    };
+
+    const response = await this.automationBridge.sendAutomationRequest('create_procedural_foliage', payload);
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error || 'Failed to create procedural foliage'
+      };
     }
-    
-    if (params.tileSize !== undefined) {
-      commands.push(`SetProceduralTileSize ${params.volumeName} ${params.tileSize}`);
-    }
-    
-    commands.push(`GenerateProceduralFoliage ${params.volumeName}`);
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: `Procedural foliage volume ${params.volumeName} created` };
+
+    return {
+      success: true,
+      message: `Procedural foliage volume ${volName} created`,
+      details: response
+    };
   }
 
   // Set foliage collision
@@ -328,22 +369,22 @@ export class FoliageTools {
     collisionProfile?: string;
     generateOverlapEvents?: boolean;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.collisionEnabled !== undefined) {
       commands.push(`SetFoliageCollision ${params.foliageType} ${params.collisionEnabled}`);
     }
-    
+
     if (params.collisionProfile) {
       commands.push(`SetFoliageCollisionProfile ${params.foliageType} ${params.collisionProfile}`);
     }
-    
+
     if (params.generateOverlapEvents !== undefined) {
       commands.push(`SetFoliageOverlapEvents ${params.foliageType} ${params.generateOverlapEvents}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Foliage collision settings updated' };
   }
 
@@ -359,26 +400,26 @@ export class FoliageTools {
     windStrength?: number;
     windSpeed?: number;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`CreateGrassSystem ${params.name}`);
-    
+
     for (const grassType of params.grassTypes) {
       const minScale = grassType.minScale || 0.8;
       const maxScale = grassType.maxScale || 1.2;
       commands.push(`AddGrassType ${params.name} ${grassType.meshPath} ${grassType.density} ${minScale} ${maxScale}`);
     }
-    
+
     if (params.windStrength !== undefined) {
       commands.push(`SetGrassWindStrength ${params.name} ${params.windStrength}`);
     }
-    
+
     if (params.windSpeed !== undefined) {
       commands.push(`SetGrassWindSpeed ${params.name} ${params.windSpeed}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Grass system ${params.name} created` };
   }
 
@@ -400,7 +441,7 @@ export class FoliageTools {
     selectAll?: boolean;
   }) {
     let command: string;
-    
+
     if (params.selectAll) {
       command = `SelectAllFoliage ${params.foliageType}`;
     } else if (params.position && params.radius) {
@@ -408,7 +449,7 @@ export class FoliageTools {
     } else {
       command = `SelectFoliageType ${params.foliageType}`;
     }
-    
+
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -419,20 +460,20 @@ export class FoliageTools {
     updateMesh?: boolean;
     newMeshPath?: string;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.updateTransforms) {
       commands.push(`UpdateFoliageTransforms ${params.foliageType}`);
     }
-    
+
     if (params.updateMesh && params.newMeshPath) {
       commands.push(`UpdateFoliageMesh ${params.foliageType} ${params.newMeshPath}`);
     }
-    
+
     commands.push(`RefreshFoliage ${params.foliageType}`);
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Foliage instances updated' };
   }
 
@@ -442,18 +483,18 @@ export class FoliageTools {
     spawnArea: 'Landscape' | 'StaticMesh' | 'BSP' | 'Foliage' | 'All';
     excludeAreas?: Array<[number, number, number, number]>; // [x, y, z, radius]
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`CreateFoliageSpawner ${params.name} ${params.spawnArea}`);
-    
+
     if (params.excludeAreas) {
       for (const area of params.excludeAreas) {
         commands.push(`AddFoliageExclusionArea ${params.name} ${area.join(' ')}`);
       }
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Foliage spawner ${params.name} created` };
   }
 
@@ -465,24 +506,24 @@ export class FoliageTools {
     reduceDrawCalls?: boolean;
   }) {
     const commands = [];
-    
+
     if (params.mergeInstances) {
       commands.push('MergeFoliageInstances');
     }
-    
+
     if (params.generateClusters) {
       const size = params.clusterSize || 100;
       commands.push(`GenerateFoliageClusters ${size}`);
     }
-    
+
     if (params.reduceDrawCalls) {
       commands.push('OptimizeFoliageDrawCalls');
     }
-    
+
     commands.push('RebuildFoliageTree');
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Foliage optimized' };
   }
 }

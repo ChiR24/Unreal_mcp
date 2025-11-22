@@ -42,7 +42,31 @@ const testCases = [
   { scenario: 'Find by class', toolName: 'inspect', arguments: { action: 'find_by_class', className: 'StaticMeshActor' }, expected: 'success or handled' },
   { scenario: 'Get bounding box', toolName: 'inspect', arguments: { action: 'get_bounding_box', name: 'Inspect_A' }, expected: 'success or handled' },
   { scenario: 'Inspect blueprint class (best-effort)', toolName: 'inspect', arguments: { action: 'inspect_class', classPath: '/Game/Blueprints/BP_Auto' }, expected: 'success or handled' },
-  { scenario: 'Verify delete again', toolName: 'inspect', arguments: { action: 'delete_object', name: 'Inspect_A' }, expected: 'success or handled' }
+  { scenario: 'Verify delete again', toolName: 'inspect', arguments: { action: 'delete_object', name: 'Inspect_A' }, expected: 'success or handled' },
+  {
+    scenario: "Error: Invalid object path",
+    toolName: "inspect",
+    arguments: { action: "inspect_object", objectPath: "/Invalid/Path" },
+    expected: "not_found"
+  },
+  {
+    scenario: "Edge: Set invalid property",
+    toolName: "inspect",
+    arguments: { action: "set_property", objectPath: "/Valid", propertyName: "InvalidProp", value: 1 },
+    expected: "error|unknown_property"
+  },
+  {
+    scenario: "Border: Empty tag add",
+    toolName: "inspect",
+    arguments: { action: "add_tag", objectPath: "/Valid", tag: "" },
+    expected: "success|handled"
+  },
+  {
+    scenario: "Error: Find invalid class",
+    toolName: "inspect",
+    arguments: { action: "find_by_class", className: "InvalidClass" },
+    expected: "no_results|success"
+  }
 ];
 
 await runToolTests('Inspect', testCases);

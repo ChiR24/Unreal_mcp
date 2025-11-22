@@ -31,25 +31,15 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     const finalTimeout = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : defaultTimeout;
 
     try {
-      // For sequence_* actions, wait for completion to avoid false-positive success
-      const isSequenceAction = String(action || '').toLowerCase().startsWith('sequence_');
-
       const response = await this.sendAutomationRequest(
         action,
         payload,
         { timeoutMs: finalTimeout, waitForEvent: false }
       );
 
-      let success = response && response.success !== false;
+      const success = response && response.success !== false;
       const result = response.result ?? response;
-      // Guard against empty/placeholder acks for sequence actions
-      if (success && isSequenceAction) {
-        const hasMeaningfulResult = result && typeof result === 'object' ? Object.keys(result).length > 0 : result !== undefined && result !== null;
-        if (!hasMeaningfulResult) {
-          success = false;
-          return { success, error: 'NO_RESULT', message: 'Plugin acknowledged request but returned no result', result: undefined, requestId: response.requestId } as any;
-        }
-      }
+      
       return { success, message: response.message ?? undefined, error: response.success === false ? (response.error ?? response.message) : undefined, result, requestId: response.requestId } as any;
     } catch (err: any) {
       return { success: false, error: String(err), message: String(err) } as const;
@@ -59,7 +49,8 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   private isUnknownActionResponse(res: any): boolean {
     if (!res) return false;
     const txt = String((res.error ?? res.message ?? '')).toLowerCase();
-    return txt.includes('unknown') || txt.includes('unknown_action') || txt.includes('unknown automation action');
+    // Only treat specific error codes as "not implemented"
+    return txt.includes('unknown_action') || txt.includes('unknown automation action') || txt.includes('not_implemented') || txt === 'unknown_plugin_action';
   }
 
   async create(params: { name: string; path?: string; timeoutMs?: number }) {

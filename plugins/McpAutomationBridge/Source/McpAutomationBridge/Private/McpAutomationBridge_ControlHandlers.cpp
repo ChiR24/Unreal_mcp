@@ -49,8 +49,12 @@
 #include "Engine/World.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/StaticMesh.h"
-#include "Math/UnrealMathUtility.h"
+#include "Exporters/Exporter.h"
+#include "Misc/OutputDevice.h"
 #endif
+
+// Helper class for capturing export output
+/* UE5.6: Use built-in FStringOutputDevice from UnrealString.h */
 
 // Helper functions
 static FVector ExtractVectorField(const TSharedPtr<FJsonObject>& Source, const TCHAR* FieldName, const FVector& DefaultValue)
@@ -559,7 +563,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(con
     if (ComponentName.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("componentName required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
 
     const TSharedPtr<FJsonObject>* PropertiesPtr = nullptr;
-    if (!(Payload->TryGetObjectField(TEXT("properties"), PropertiesPtr) && PropertiesPtr && (*PropertiesPtr).IsValid()))
+    if (!(Payload->TryGetObjectField(TEXT("properties"), PropertiesPtr) && PropertiesPtr && PropertiesPtr->IsValid()))
     {
         SendAutomationResponse(Socket, RequestId, false, TEXT("properties object required"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
@@ -939,7 +943,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(cons
     if (TargetName.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
 
     const TSharedPtr<FJsonObject>* VariablesPtr = nullptr;
-    if (!(Payload->TryGetObjectField(TEXT("variables"), VariablesPtr) && VariablesPtr && (*VariablesPtr).IsValid()))
+    if (!(Payload->TryGetObjectField(TEXT("variables"), VariablesPtr) && VariablesPtr && VariablesPtr->IsValid()))
     {
         SendAutomationResponse(Socket, RequestId, false, TEXT("variables object required"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
@@ -1013,36 +1017,101 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCreateSnapshot(const FStri
 #endif
 }
 
-bool UMcpAutomationBridgeSubsystem::HandleControlActorList(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
 #if WITH_EDITOR
-    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-    TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
-    TArray<TSharedPtr<FJsonValue>> Arr;
-    Arr.Reserve(AllActors.Num());
+    FString TargetName; Payload->TryGetStringField(TEXT("actorName"), TargetName);
+    if (TargetName.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
 
-    for (AActor* A : AllActors)
-    {
-        if (!A) continue;
-        TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-        Entry->SetStringField(TEXT("name"), A->GetName());
-        Entry->SetStringField(TEXT("label"), A->GetActorLabel());
-        Entry->SetStringField(TEXT("class"), A->GetClass() ? A->GetClass()->GetPathName() : TEXT(""));
-        Entry->SetStringField(TEXT("path"), A->GetPathName());
-        Arr.Add(MakeShared<FJsonValueObject>(Entry));
+    FString SnapshotName; Payload->TryGetStringField(TEXT("snapshotName"), SnapshotName);
+    if (SnapshotName.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("snapshotName required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+
+    AActor* Found = FindActorByName(TargetName);
+    if (!Found) { SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"), nullptr, TEXT("ACTOR_NOT_FOUND")); return true;
     }
 
+    const FString SnapshotKey = FString::Printf(TEXT("%s::%s"), *Found->GetPathName(), *SnapshotName);
+    if (!CachedActorSnapshots.Contains(SnapshotKey))
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Snapshot not found"), nullptr, TEXT("SNAPSHOT_NOT_FOUND"));
+        return true;
+    }
+
+    const FTransform& SavedTransform = CachedActorSnapshots[SnapshotKey];
+    Found->Modify();
+    Found->SetActorTransform(SavedTransform);
+    Found->MarkComponentsRenderStateDirty();
+    Found->MarkPackageDirty();
+
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetArrayField(TEXT("actors"), Arr);
-    Resp->SetNumberField(TEXT("count"), Arr.Num());
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Actor list retrieved"), Resp, FString());
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("snapshotName"), SnapshotName);
+    Resp->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Snapshot restored"), Resp, FString());
     return true;
 #else
     return false;
 #endif
 }
 
-bool UMcpAutomationBridgeSubsystem::HandleControlActorGet(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+bool UMcpAutomationBridgeSubsystem::HandleControlActorExport(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString TargetName; Payload->TryGetStringField(TEXT("actorName"), TargetName);
+    if (TargetName.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+
+    AActor* Found = FindActorByName(TargetName);
+    if (!Found) { SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"), nullptr, TEXT("ACTOR_NOT_FOUND")); return true; }
+
+    FMcpOutputCapture OutputCapture;
+    UExporter::ExportToOutputDevice(nullptr, Found, nullptr, OutputCapture, TEXT("T3D"), 0, 0, false);
+    FString OutputString = FString::Join(OutputCapture.Consume(), TEXT("\n"));
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("t3d"), OutputString);
+    Resp->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Actor exported"), Resp, FString());
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString TargetName; Payload->TryGetStringField(TEXT("actorName"), TargetName);
+    if (TargetName.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+
+    AActor* Found = FindActorByName(TargetName);
+    if (!Found) { SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"), nullptr, TEXT("ACTOR_NOT_FOUND")); return true; }
+
+    FVector Origin, BoxExtent;
+    Found->GetActorBounds(false, Origin, BoxExtent);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    
+    auto MakeArray = [](const FVector& Vec)
+    {
+        TArray<TSharedPtr<FJsonValue>> Arr;
+        Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
+        Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
+        Arr.Add(MakeShared<FJsonValueNumber>(Vec.Z));
+        return Arr;
+    };
+
+    Resp->SetArrayField(TEXT("origin"), MakeArray(Origin));
+    Resp->SetArrayField(TEXT("extent"), MakeArray(BoxExtent));
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Bounding box retrieved"), Resp, FString());
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlActorGetMetadata(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
 #if WITH_EDITOR
     FString TargetName; Payload->TryGetStringField(TEXT("actorName"), TargetName);
@@ -1057,7 +1126,26 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGet(const FString& Request
     Resp->SetStringField(TEXT("label"), Found->GetActorLabel());
     Resp->SetStringField(TEXT("path"), Found->GetPathName());
     Resp->SetStringField(TEXT("class"), Found->GetClass() ? Found->GetClass()->GetPathName() : TEXT(""));
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Actor resolved"), Resp, FString());
+    
+    TArray<TSharedPtr<FJsonValue>> TagsArray;
+    for (const FName& Tag : Found->Tags)
+    {
+        TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
+    }
+    Resp->SetArrayField(TEXT("tags"), TagsArray);
+
+    const FTransform Current = Found->GetActorTransform();
+    auto MakeArray = [](const FVector& Vec)
+    {
+        TArray<TSharedPtr<FJsonValue>> Arr;
+        Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
+        Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
+        Arr.Add(MakeShared<FJsonValueNumber>(Vec.Z));
+        return Arr;
+    };
+    Resp->SetArrayField(TEXT("location"), MakeArray(Current.GetLocation()));
+    
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Metadata retrieved"), Resp, FString());
     return true;
 #else
     return false;
@@ -1096,6 +1184,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(const FString& Requ
     if (LowerSub == TEXT("delete_by_tag")) return HandleControlActorDeleteByTag(RequestId, Payload, RequestingSocket);
     if (LowerSub == TEXT("set_blueprint_variables")) return HandleControlActorSetBlueprintVariables(RequestId, Payload, RequestingSocket);
     if (LowerSub == TEXT("create_snapshot")) return HandleControlActorCreateSnapshot(RequestId, Payload, RequestingSocket);
+    if (LowerSub == TEXT("restore_snapshot")) return HandleControlActorRestoreSnapshot(RequestId, Payload, RequestingSocket);
+    if (LowerSub == TEXT("export")) return HandleControlActorExport(RequestId, Payload, RequestingSocket);
+    if (LowerSub == TEXT("get_bounding_box")) return HandleControlActorGetBoundingBox(RequestId, Payload, RequestingSocket);
+    if (LowerSub == TEXT("get_metadata")) return HandleControlActorGetMetadata(RequestId, Payload, RequestingSocket);
     if (LowerSub == TEXT("list") || LowerSub == TEXT("list_actors")) return HandleControlActorList(RequestId, Payload, RequestingSocket);
     if (LowerSub == TEXT("get") || LowerSub == TEXT("get_actor") || LowerSub == TEXT("get_actor_by_name")) return HandleControlActorGet(RequestId, Payload, RequestingSocket);
 
@@ -1291,6 +1383,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(const FString& RequestId, 
 {
     const FString Lower = Action.ToLower();
     const bool bIsLevelAction = (
+        Lower == TEXT("manage_level") ||
         Lower == TEXT("save_current_level") ||
         Lower == TEXT("create_new_level") ||
         Lower == TEXT("stream_level") ||
@@ -1298,40 +1391,99 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(const FString& RequestId, 
         Lower == TEXT("build_lighting")
     );
     if (!bIsLevelAction) return false;
+
+    FString EffectiveAction = Lower;
+    
+    // Unpack manage_level
+    if (Lower == TEXT("manage_level"))
+    {
+        if (!Payload.IsValid()) { SendAutomationError(RequestingSocket, RequestId, TEXT("manage_level payload missing"), TEXT("INVALID_PAYLOAD")); return true; }
+        FString SubAction; Payload->TryGetStringField(TEXT("action"), SubAction);
+        const FString LowerSub = SubAction.ToLower();
+        
+        if (LowerSub == TEXT("load") || LowerSub == TEXT("load_level"))
+        {
+            // Map to Open command
+            FString LevelPath; Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+            if (LevelPath.IsEmpty()) { SendAutomationError(RequestingSocket, RequestId, TEXT("levelPath required"), TEXT("INVALID_ARGUMENT")); return true; }
+            const FString Cmd = FString::Printf(TEXT("Open %s"), *LevelPath);
+            TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>(); P->SetStringField(TEXT("command"), Cmd);
+            return HandleExecuteEditorFunction(RequestId, TEXT("execute_console_command"), P, RequestingSocket);
+        }
+        else if (LowerSub == TEXT("save"))
+        {
+            EffectiveAction = TEXT("save_current_level");
+        }
+        else if (LowerSub == TEXT("create_level"))
+        {
+            EffectiveAction = TEXT("create_new_level");
+        }
+        else if (LowerSub == TEXT("stream"))
+        {
+            EffectiveAction = TEXT("stream_level");
+        }
+        else if (LowerSub == TEXT("create_light"))
+        {
+            EffectiveAction = TEXT("spawn_light");
+        }
+        else
+        {
+             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown manage_level action: %s"), *SubAction), TEXT("UNKNOWN_ACTION"));
+             return true;
+        }
+    }
+
 #if WITH_EDITOR
-    if (Lower == TEXT("save_current_level"))
+    if (EffectiveAction == TEXT("save_current_level"))
     {
         TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
         P->SetStringField(TEXT("functionName"), TEXT("SAVE_DIRTY_PACKAGES"));
         return HandleExecuteEditorFunction(RequestId, TEXT("execute_editor_function"), P, RequestingSocket);
     }
-    if (Lower == TEXT("build_lighting"))
+    if (EffectiveAction == TEXT("build_lighting"))
     {
         TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
         P->SetStringField(TEXT("functionName"), TEXT("BUILD_LIGHTING"));
-        if (Payload.IsValid()) { FString Q; if (Payload->TryGetStringField(TEXT("quality"), Q) && !Q.IsEmpty()) P->SetStringField(TEXT("quality"), Q); }
+        if (Payload.IsValid()) { 
+            FString Q; 
+            if (Payload->TryGetStringField(TEXT("quality"), Q) && !Q.IsEmpty()) 
+                P->SetStringField(TEXT("quality"), Q); 
+        }
         return HandleExecuteEditorFunction(RequestId, TEXT("execute_editor_function"), P, RequestingSocket);
     }
-    if (Lower == TEXT("create_new_level"))
+    if (EffectiveAction == TEXT("create_new_level"))
     {
-        FString LevelPath; if (Payload.IsValid()) Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+        FString LevelPath; 
+        if (Payload.IsValid()) 
+            Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
         if (LevelPath.TrimStartAndEnd().IsEmpty()) LevelPath = TEXT("/Engine/Maps/Entry");
         const FString Cmd = FString::Printf(TEXT("Open %s"), *LevelPath);
         TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>(); P->SetStringField(TEXT("command"), Cmd);
         return HandleExecuteEditorFunction(RequestId, TEXT("execute_console_command"), P, RequestingSocket);
     }
-    if (Lower == TEXT("stream_level"))
+    if (EffectiveAction == TEXT("stream_level"))
     {
         FString LevelName; bool bLoad = true; bool bVis = true;
-        if (Payload.IsValid()) { Payload->TryGetStringField(TEXT("levelName"), LevelName); Payload->TryGetBoolField(TEXT("shouldBeLoaded"), bLoad); Payload->TryGetBoolField(TEXT("shouldBeVisible"), bVis); if (LevelName.IsEmpty()) Payload->TryGetStringField(TEXT("levelPath"), LevelName); }
-        if (LevelName.TrimStartAndEnd().IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("stream_level requires levelName or levelPath"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+        if (Payload.IsValid()) { 
+            Payload->TryGetStringField(TEXT("levelName"), LevelName); 
+            Payload->TryGetBoolField(TEXT("shouldBeLoaded"), bLoad); 
+            Payload->TryGetBoolField(TEXT("shouldBeVisible"), bVis); 
+            if (LevelName.IsEmpty()) 
+                Payload->TryGetStringField(TEXT("levelPath"), LevelName); 
+        }
+        if (LevelName.TrimStartAndEnd().IsEmpty()) { 
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("stream_level requires levelName or levelPath"), nullptr, TEXT("INVALID_ARGUMENT")); 
+            return true; 
+        }
         const FString Cmd = FString::Printf(TEXT("StreamLevel %s %s %s"), *LevelName, bLoad ? TEXT("Load") : TEXT("Unload"), bVis ? TEXT("Show") : TEXT("Hide"));
         TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>(); P->SetStringField(TEXT("command"), Cmd);
         return HandleExecuteEditorFunction(RequestId, TEXT("execute_console_command"), P, RequestingSocket);
     }
-    if (Lower == TEXT("spawn_light"))
+    if (EffectiveAction == TEXT("spawn_light"))
     {
-        FString LightType = TEXT("Point"); if (Payload.IsValid()) Payload->TryGetStringField(TEXT("lightType"), LightType);
+        FString LightType = TEXT("Point"); 
+        if (Payload.IsValid()) 
+            Payload->TryGetStringField(TEXT("lightType"), LightType);
         const FString LT = LightType.ToLower();
         FString ClassName;
         if (LT == TEXT("directional")) ClassName = TEXT("DirectionalLight");
@@ -1339,13 +1491,110 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(const FString& RequestId, 
         else if (LT == TEXT("rect")) ClassName = TEXT("RectLight");
         else ClassName = TEXT("PointLight");
         TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
-        if (Payload.IsValid()) { const TSharedPtr<FJsonObject>* L = nullptr; if (Payload->TryGetObjectField(TEXT("location"), L) && L && (*L).IsValid()) Params->SetObjectField(TEXT("location"), *L); const TSharedPtr<FJsonObject>* R = nullptr; if (Payload->TryGetObjectField(TEXT("rotation"), R) && R && (*R).IsValid()) Params->SetObjectField(TEXT("rotation"), *R); }
-        TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>(); P->SetStringField(TEXT("functionName"), TEXT("SPAWN_ACTOR_AT_LOCATION")); P->SetStringField(TEXT("class_path"), ClassName); P->SetObjectField(TEXT("params"), Params.ToSharedRef());
+        if (Payload.IsValid())
+        {
+            const TSharedPtr<FJsonObject>* L = nullptr;
+            if (Payload->TryGetObjectField(TEXT("location"), L) && L && (*L).IsValid()) Params->SetObjectField(TEXT("location"), *L);
+            const TSharedPtr<FJsonObject>* R = nullptr;
+            if (Payload->TryGetObjectField(TEXT("rotation"), R) && R && (*R).IsValid()) Params->SetObjectField(TEXT("rotation"), *R);
+        }
+        TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
+        P->SetStringField(TEXT("functionName"), TEXT("SPAWN_ACTOR_AT_LOCATION"));
+        P->SetStringField(TEXT("class_path"), ClassName);
+        P->SetObjectField(TEXT("params"), Params.ToSharedRef());
         return HandleExecuteEditorFunction(RequestId, TEXT("execute_editor_function"), P, RequestingSocket);
     }
     return false;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Level actions require editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlActorList(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString Filter;
+    Payload->TryGetStringField(TEXT("filter"), Filter);
+
+    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    if (!ActorSS) {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("EditorActorSubsystem unavailable"), nullptr, TEXT("SUBSYSTEM_MISSING"));
+        return true;
+    }
+
+    const TArray<AActor*>& AllActors = ActorSS->GetAllLevelActors();
+    TArray<TSharedPtr<FJsonValue>> ActorsArray;
+
+    for (AActor* Actor : AllActors) {
+        if (!Actor) continue;
+        const FString Label = Actor->GetActorLabel();
+        const FString Name = Actor->GetName();
+        if (!Filter.IsEmpty() && !Label.Contains(Filter) && !Name.Contains(Filter)) continue;
+
+        TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+        Entry->SetStringField(TEXT("label"), Label);
+        Entry->SetStringField(TEXT("name"), Name);
+        Entry->SetStringField(TEXT("path"), Actor->GetPathName());
+        Entry->SetStringField(TEXT("class"), Actor->GetClass() ? Actor->GetClass()->GetPathName() : TEXT(""));
+        ActorsArray.Add(MakeShared<FJsonValueObject>(Entry));
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetArrayField(TEXT("actors"), ActorsArray);
+    Resp->SetNumberField(TEXT("count"), ActorsArray.Num());
+    if (!Filter.IsEmpty()) Resp->SetStringField(TEXT("filter"), Filter);
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Actors listed"), Resp, FString());
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlActorGet(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString TargetName;
+    Payload->TryGetStringField(TEXT("actorName"), TargetName);
+    if (TargetName.IsEmpty()) {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    AActor* Found = FindActorByName(TargetName);
+    if (!Found) {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"), nullptr, TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
+
+    const FTransform Current = Found->GetActorTransform();
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("name"), Found->GetName());
+    Resp->SetStringField(TEXT("label"), Found->GetActorLabel());
+    Resp->SetStringField(TEXT("path"), Found->GetPathName());
+    Resp->SetStringField(TEXT("class"), Found->GetClass() ? Found->GetClass()->GetPathName() : TEXT(""));
+
+    TArray<TSharedPtr<FJsonValue>> TagsArray;
+    for (const FName& Tag : Found->Tags) {
+        TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
+    }
+    Resp->SetArrayField(TEXT("tags"), TagsArray);
+
+    auto MakeArray = [](const FVector& Vec) -> TArray<TSharedPtr<FJsonValue>> {
+        TArray<TSharedPtr<FJsonValue>> Arr;
+        Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
+        Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
+        Arr.Add(MakeShared<FJsonValueNumber>(Vec.Z));
+        return Arr;
+    };
+    Resp->SetArrayField(TEXT("location"), MakeArray(Current.GetLocation()));
+    Resp->SetArrayField(TEXT("scale"), MakeArray(Current.GetScale3D()));
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Actor retrieved"), Resp, FString());
+    return true;
+#else
+    return false;
 #endif
 }

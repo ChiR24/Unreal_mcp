@@ -126,6 +126,39 @@ export const typeDefs = /* GraphQL */ `
     endTime: Float!
   }
 
+  # World Partition types
+  type WorldPartitionCell {
+    name: String!
+    bounds: Box!
+    isLoaded: Boolean!
+    dataLayers: [String!]
+  }
+
+  type Box {
+    min: Vector!
+    max: Vector!
+  }
+
+  # Niagara types
+  type NiagaraSystem {
+    name: String!
+    path: String!
+    emitters: [NiagaraEmitter!]!
+    parameters: [NiagaraParameter!]!
+  }
+
+  type NiagaraEmitter {
+    name: String!
+    isValid: Boolean!
+    enabled: Boolean!
+  }
+
+  type NiagaraParameter {
+    name: String!
+    type: String!
+    value: JSON
+  }
+
   # Query operations
   type Query {
     # Asset queries
@@ -149,6 +182,13 @@ export const typeDefs = /* GraphQL */ `
 
     # Sequence queries
     sequences(filter: SequenceFilter, pagination: PaginationInput): SequenceConnection!
+
+    # World Partition queries
+    worldPartitionCells: [WorldPartitionCell!]!
+
+    # Niagara queries
+    niagaraSystems(filter: NiagaraFilter, pagination: PaginationInput): NiagaraSystemConnection!
+    niagaraSystem(path: String!): NiagaraSystem
 
     # Search across all types
     search(query: String!, type: SearchType): [SearchResult!]!
@@ -181,6 +221,12 @@ export const typeDefs = /* GraphQL */ `
 
   # Input types
   input AssetFilter {
+    class: String
+    tag: String
+    pathStartsWith: String
+  }
+
+  input NiagaraFilter {
     class: String
     tag: String
     pathStartsWith: String
@@ -315,6 +361,17 @@ export const typeDefs = /* GraphQL */ `
     cursor: String!
   }
 
+  type NiagaraSystemConnection {
+    edges: [NiagaraSystemEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+  }
+
+  type NiagaraSystemEdge {
+    node: NiagaraSystem!
+    cursor: String!
+  }
+
   type PageInfo {
     hasNextPage: Boolean!
     hasPreviousPage: Boolean!
@@ -323,7 +380,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   # Search functionality
-  union SearchResult = Asset | Actor | Blueprint | Material | Sequence
+  union SearchResult = Asset | Actor | Blueprint | Material | Sequence | NiagaraSystem
 
   enum SearchType {
     ALL
@@ -332,6 +389,7 @@ export const typeDefs = /* GraphQL */ `
     BLUEPRINTS
     MATERIALS
     SEQUENCES
+    NIAGARA
   }
 `;
 
@@ -360,7 +418,11 @@ export function createGraphQLSchema(
         return 'Blueprint';
       }
       if (obj.name && obj.path && obj.parameters) {
-        return 'Material';
+        // Naive check: Materials and Niagara both have parameters.
+        // Differentiate by checking for 'usedInstances' (Material) vs 'emitters' (Niagara)
+        if (obj.usedInstances) return 'Material';
+        if (obj.emitters) return 'NiagaraSystem';
+        return 'Material'; // Fallback
       }
       if (obj.name && obj.path && obj.tracks) {
         return 'Sequence';

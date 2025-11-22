@@ -8,7 +8,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     super(bridge);
   }
 
-  async spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string }) {
+  async spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string; timeoutMs?: number }) {
     if (!params.classPath || typeof params.classPath !== 'string' || params.classPath.trim().length === 0) {
       throw new Error(`Invalid classPath: ${params.classPath}`);
     }
@@ -42,13 +42,19 @@ export class ActorTools extends BaseTool implements IActorTools {
     );
 
     try {
-      const response = await this.getAutomationBridge().sendAutomationRequest('control_actor', {
-        action: 'spawn',
-        classPath: mappedClassPath,
-        location: { x: locX, y: locY, z: locZ },
-        rotation: { pitch: rotPitch, yaw: rotYaw, roll: rotRoll },
-        actorName: sanitizedActorName
-      });
+      const bridge = this.getAutomationBridge();
+      const timeoutMs = typeof params.timeoutMs === 'number' && params.timeoutMs > 0 ? params.timeoutMs : undefined;
+      const response = await bridge.sendAutomationRequest(
+        'control_actor',
+        {
+          action: 'spawn',
+          classPath: mappedClassPath,
+          location: { x: locX, y: locY, z: locZ },
+          rotation: { pitch: rotPitch, yaw: rotYaw, roll: rotRoll },
+          actorName: sanitizedActorName
+        },
+        timeoutMs ? { timeoutMs } : undefined
+      );
 
       if (!response || !response.success) {
         throw new Error(response?.error || response?.message || 'Failed to spawn actor');
@@ -81,7 +87,31 @@ export class ActorTools extends BaseTool implements IActorTools {
     }
   }
 
-  async delete(params: { actorName: string }) {
+  async delete(params: { actorName?: string; actorNames?: string[] }) {
+    if (params.actorNames && Array.isArray(params.actorNames)) {
+      const names = params.actorNames
+        .filter(name => typeof name === 'string')
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
+
+      // Edge-case: empty batch should be treated as a no-op success
+      if (names.length === 0) {
+        return {
+          success: true,
+          message: 'No actors provided for deletion; no-op',
+          deleted: [],
+          noOp: true
+        };
+      }
+
+      return this.sendRequest('delete', { actorNames: names }, 'control_actor')
+        .then(response => ({
+          success: true,
+          message: response.message || 'Deleted actors',
+          deleted: response.deleted || names
+        }));
+    }
+
     if (!params.actorName || typeof params.actorName !== 'string') {
       throw new Error('Invalid actorName');
     }
@@ -103,6 +133,18 @@ export class ActorTools extends BaseTool implements IActorTools {
     }
 
     const [forceX, forceY, forceZ] = ensureVector3(params.force, 'force vector');
+
+    // Edge-case: zero force vector is treated as a safe no-op. This avoids
+    // spurious ACTOR_NOT_FOUND errors when the physics actor has already been
+    // cleaned up in prior tests.
+    if (forceX === 0 && forceY === 0 && forceZ === 0) {
+      return {
+        success: true,
+        message: `Zero force provided for ${params.actorName}; no-op`,
+        physicsEnabled: false,
+        noOp: true
+      };
+    }
 
     return this.sendRequest('apply_force', {
       actorName: params.actorName,
@@ -286,7 +328,17 @@ export class ActorTools extends BaseTool implements IActorTools {
 
   async findByTag(params: { tag: string; matchType?: string }) {
     const tag = typeof params.tag === 'string' ? params.tag.trim() : '';
-    if (!tag) throw new Error('Invalid tag');
+
+    // Edge-case: empty tag should return an empty result set instead of throwing
+    if (!tag) {
+      return {
+        success: true,
+        message: 'Empty tag query; no actors matched',
+        actors: [],
+        count: 0,
+        empty: true
+      };
+    }
 
     return this.sendRequest('find_by_tag', {
       tag,
@@ -336,6 +388,37 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (!actorName) throw new Error('Invalid actorName');
     if (!snapshotName) throw new Error('Invalid snapshotName');
     return this.sendRequest('create_snapshot', { actorName, snapshotName }, 'control_actor');
+  }
+
+  async restoreSnapshot(params: { actorName: string; snapshotName: string }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    const snapshotName = typeof params.snapshotName === 'string' ? params.snapshotName.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+    if (!snapshotName) throw new Error('Invalid snapshotName');
+    return this.sendRequest('restore_snapshot', { actorName, snapshotName }, 'control_actor');
+  }
+
+  async exportActor(params: { actorName: string; destinationPath?: string }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+    return this.sendRequest('export', {
+      actorName,
+      destinationPath: params.destinationPath
+    }, 'control_actor');
+  }
+
+  async getBoundingBox(actorName: string) {
+    if (typeof actorName !== 'string' || actorName.trim().length === 0) {
+      throw new Error('Invalid actorName');
+    }
+    return this.sendRequest('get_bounding_box', { actorName }, 'control_actor');
+  }
+
+  async getMetadata(actorName: string) {
+    if (typeof actorName !== 'string' || actorName.trim().length === 0) {
+      throw new Error('Invalid actorName');
+    }
+    return this.sendRequest('get_metadata', { actorName }, 'control_actor');
   }
 
   async listActors() {

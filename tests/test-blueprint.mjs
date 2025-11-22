@@ -417,6 +417,30 @@ const testCases = [
       timeoutMs: 30000
     },
     expected: "success"
+  },
+  {
+    scenario: "Error: Invalid graph name",
+    toolName: "manage_blueprint",
+    arguments: { action: "add_node", name: "/ValidBP", graphName: "InvalidGraph", nodeType: "variableget" },
+    expected: "error|graph_not_found"
+  },
+  {
+    scenario: "Edge: Scale 0 transform",
+    toolName: "manage_blueprint",
+    arguments: { action: "set_scs_transform", name: "/ValidBP", componentName: "TestComp", scale: [0,0,0] },
+    expected: "success"
+  },
+  {
+    scenario: "Border: Empty operations array",
+    toolName: "manage_blueprint",
+    arguments: { action: "modify_scs", name: "/ValidBP", operations: [] },
+    expected: "success|no_op"
+  },
+  {
+    scenario: "Error: Connect invalid pins",
+    toolName: "manage_blueprint",
+    arguments: { action: "connect_pins", name: "/ValidBP", fromPin: "InvalidPin", toPin: "InvalidPin" },
+    expected: "error"
   }
 ];
 

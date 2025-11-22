@@ -221,6 +221,54 @@ const testCases = [
     toolName: 'manage_asset',
     arguments: { action: 'delete_assets', paths: ['/Game/Blueprints/BP_TestActor'] },
     expected: 'success - test blueprint deleted'
+  },
+  {
+    scenario: "Error: Invalid action",
+    toolName: "control_actor",
+    arguments: { action: "invalid_action" },
+    expected: "error|validation|unknown_action"
+  },
+  {
+    scenario: "Error: Spawn invalid class",
+    toolName: "control_actor",
+    arguments: { action: "spawn", classPath: "InvalidClassDoesNotExist", actorName: "TestInvalid" },
+    expected: "error|class_not_found"
+  },
+  {
+    scenario: "Edge: Zero force (no-op)",
+    toolName: "control_actor",
+    arguments: { action: "apply_force", actorName: "TC_Physics", force: { x: 0, y: 0, z: 0 } },
+    expected: "success"
+  },
+  {
+    scenario: "Border: Extreme location",
+    toolName: "control_actor",
+    arguments: { action: "spawn", classPath: "/Engine/BasicShapes/Cube", actorName: "TC_Extreme", location: { x: 1000000, y: 1000000, z: 1000000 } },
+    expected: "success"
+  },
+  {
+    scenario: "Error: Non-existent actor",
+    toolName: "control_actor",
+    arguments: { action: "delete", actorName: "NonExistentActor" },
+    expected: "not_found|error"
+  },
+  {
+    scenario: "Edge: Empty tag array (find)",
+    toolName: "control_actor",
+    arguments: { action: "find_by_tag", tag: "" },
+    expected: "success|empty"
+  },
+  {
+    scenario: "Timeout test (short timeout fail)",
+    toolName: "control_actor",
+    arguments: { action: "spawn", classPath: "StaticMeshActor", timeoutMs: 100 },
+    expected: "timeout|error"
+  },
+  {
+    scenario: "Batch delete empty array",
+    toolName: "control_actor",
+    arguments: { action: "delete", actorNames: [] },
+    expected: "success|no_op"
   }
 ];
 

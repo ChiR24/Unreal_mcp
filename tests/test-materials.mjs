@@ -222,6 +222,30 @@ const testCases = [
       ]
     },
     expected: "success"
+  },
+  {
+    scenario: "Error: Invalid parent material",
+    toolName: "manage_asset",
+    arguments: { action: "create_material_instance", name: "TestMI", path: "/Game/Test", parentMaterial: "/Invalid/Parent" },
+    expected: "not_found"
+  },
+  {
+    scenario: "Edge: Empty parameters object",
+    toolName: "manage_asset",
+    arguments: { action: "create_material_instance", name: "Test", path: "/Game/Test", parentMaterial: "/Valid", parameters: {} },
+    expected: "success"
+  },
+  {
+    scenario: "Border: Extreme color param [255,255,255,0]",
+    toolName: "manage_asset",
+    arguments: { action: "create_material_instance", name: "TestExtreme", path: "/Game/Test", parentMaterial: "/Valid", parameters: { BaseColor: [255,255,255,0] } },
+    expected: "success"
+  },
+  {
+    scenario: "Error: Non-material duplicate",
+    toolName: "manage_asset",
+    arguments: { action: "duplicate", assetPath: "/Engine/BasicShapes/Cube" },
+    expected: "error|not_material"
   }
 ];
 

@@ -26,7 +26,43 @@ const testCases = [
   // Real-World Scenario: Editor Automation
   { scenario: 'Editor Auto - Open Asset', toolName: 'control_editor', arguments: { action: 'open_asset', assetPath: '/Engine/BasicShapes/Cube' }, expected: 'success' },
   { scenario: 'Editor Auto - Focus Viewport', toolName: 'control_editor', arguments: { action: 'set_camera', location: { x: 500, y: 500, z: 500 }, rotation: { pitch: -30, yaw: 225, roll: 0 } }, expected: 'success' },
-  { scenario: 'Editor Auto - Run Command', toolName: 'control_editor', arguments: { action: 'execute_command', command: 'stat fps' }, expected: 'success' }
+  { scenario: 'Editor Auto - Run Command', toolName: 'control_editor', arguments: { action: 'execute_command', command: 'stat fps' }, expected: 'success' },
+  {
+    scenario: "Error: Invalid view mode",
+    toolName: "control_editor",
+    arguments: { action: "set_view_mode", viewMode: "InvalidMode" },
+    expected: "error|unknown_viewmode"
+  },
+  {
+    scenario: "Edge: Extreme FOV (1 degree)",
+    toolName: "control_editor",
+    arguments: { action: "set_camera_fov", fov: 1 },
+    expected: "success"
+  },
+  {
+    scenario: "Border: Negative speed",
+    toolName: "control_editor",
+    arguments: { action: "set_game_speed", speed: -1 },
+    expected: "success|handled"
+  },
+  {
+    scenario: "Error: Screenshot invalid res",
+    toolName: "control_editor",
+    arguments: { action: "screenshot", resolution: "invalidxres" },
+    expected: "error"
+  },
+  {
+    scenario: "Edge: Empty command",
+    toolName: "control_editor",
+    arguments: { action: "console_command", command: "" },
+    expected: "error|empty"
+  },
+  {
+    scenario: "Timeout short fail",
+    toolName: "control_editor",
+    arguments: { action: "play", timeoutMs: 1 },
+    expected: "timeout|error"
+  }
 ];
 
 await runToolTests('Editor Control', testCases);

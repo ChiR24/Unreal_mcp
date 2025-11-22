@@ -362,29 +362,38 @@ export class PhysicsTools {
         const missingPlugins = await this.bridge.ensurePluginsEnabled(dependencies, 'physics.configureVehicle');
         if (missingPlugins.length > 0) {
           const missingList = missingPlugins.join(', ');
-          // Surface explicit error when required engine plugins are missing.
           return {
             success: false,
             error: 'MISSING_ENGINE_PLUGINS',
-            message: `Required Unreal plugins not enabled: ${missingList}`,
+            message: `Required Unreal plugins missing: ${missingList}`,
             warnings: [
               `Enable ${missingList} in the editor (Edit > Plugins) and restart the session before running physics.configureVehicle.`
             ]
           };
         }
       }
+      // Basic validation for wheels array: an explicit empty array is considered invalid
+      if (Array.isArray(params.wheels) && params.wheels.length === 0) {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Vehicle configuration validation failed: wheels array must not be empty'
+        };
+      }
 
       const commands = [
         `CreateVehicle ${params.vehicleName} ${params.vehicleType}`
       ];
-      
-      // Configure wheels
-      if (params.wheels) {
+
+      const warnings: string[] = [];
+
+      // Configure wheels when provided
+      if (Array.isArray(params.wheels) && params.wheels.length > 0) {
         for (const wheel of params.wheels) {
           commands.push(
             `AddVehicleWheel ${params.vehicleName} ${wheel.name} ${wheel.radius} ${wheel.width} ${wheel.mass}`
           );
-          
+
           if (wheel.isSteering) {
             commands.push(`SetWheelSteering ${params.vehicleName} ${wheel.name} true`);
           }
@@ -393,37 +402,62 @@ export class PhysicsTools {
           }
         }
       }
-      
-      // Configure engine
+
+      // Configure engine (optional). Clamp negative RPMs and tolerate missing torqueCurve.
       if (params.engine) {
-        commands.push(`SetEngineMaxRPM ${params.vehicleName} ${params.engine.maxRPM}`);
-        
-        for (const [rpm, torque] of params.engine.torqueCurve) {
-          commands.push(`AddTorqueCurvePoint ${params.vehicleName} ${rpm} ${torque}`);
+        let maxRPM = typeof params.engine.maxRPM === 'number' ? params.engine.maxRPM : 0;
+        if (maxRPM < 0) {
+          maxRPM = 0;
+          warnings.push('Engine maxRPM was negative and has been clamped to 0.');
+        }
+        commands.push(`SetEngineMaxRPM ${params.vehicleName} ${maxRPM}`);
+
+        const rawCurve = Array.isArray(params.engine.torqueCurve) ? params.engine.torqueCurve : [];
+        for (const point of rawCurve) {
+          let rpm: number | undefined;
+          let torque: number | undefined;
+
+          if (Array.isArray(point) && point.length >= 2) {
+            rpm = Number(point[0]);
+            torque = Number(point[1]);
+          } else if (point && typeof point === 'object') {
+            const anyPoint: any = point;
+            rpm = typeof anyPoint.rpm === 'number' ? anyPoint.rpm : undefined;
+            torque = typeof anyPoint.torque === 'number' ? anyPoint.torque : undefined;
+          }
+
+          if (typeof rpm === 'number' && typeof torque === 'number') {
+            commands.push(`AddTorqueCurvePoint ${params.vehicleName} ${rpm} ${torque}`);
+          }
         }
       }
-      
+
       // Configure transmission
       if (params.transmission) {
-        for (let i = 0; i < params.transmission.gears.length; i++) {
+        if (Array.isArray(params.transmission.gears)) {
+          for (let i = 0; i < params.transmission.gears.length; i++) {
+            commands.push(
+              `SetGearRatio ${params.vehicleName} ${i} ${params.transmission.gears[i]}`
+            );
+          }
+        }
+        if (typeof params.transmission.finalDriveRatio === 'number') {
           commands.push(
-            `SetGearRatio ${params.vehicleName} ${i} ${params.transmission.gears[i]}`
+            `SetFinalDriveRatio ${params.vehicleName} ${params.transmission.finalDriveRatio}`
           );
         }
-        commands.push(
-          `SetFinalDriveRatio ${params.vehicleName} ${params.transmission.finalDriveRatio}`
-        );
       }
-      
+
       await this.bridge.executeConsoleCommands(commands);
 
-      const warnings: string[] = [];
-      warnings.push('Verify wheel class assignments and offsets in the vehicle movement component to ensure they match your project defaults.');
+      if (warnings.length === 0) {
+        warnings.push('Verify wheel class assignments and offsets in the vehicle movement component to ensure they match your project defaults.');
+      }
 
       return {
         success: true,
         message: `Vehicle ${params.vehicleName} configured`,
-        warnings: warnings.length > 0 ? warnings : undefined
+        warnings
       };
     } catch (err) {
       return { success: false, error: `Failed to configure vehicle: ${err}` };

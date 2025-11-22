@@ -2,21 +2,23 @@ export const consolidatedToolDefinitions = [
   // 1. ASSET MANAGER - Combines asset operations
   {
     name: 'manage_asset',
-  description: `Asset library utility for browsing, importing, bootstrapping materials, and managing asset lifecycles.
+    description: `Asset library utility for browsing, importing, bootstrapping materials, and managing asset lifecycles.
 
 Use it when you need to:
 - explore project content (\u002fContent automatically maps to \u002fGame).
 - import FBX/PNG/WAV/EXR files into the project.
 - spin up a minimal Material asset at a specific path.
 - duplicate, rename, move, or delete assets with optional redirector fixup.
+- check source control status of assets.
+- analyze asset dependency graphs.
 
-Supported actions: list, import, create_material, create_material_instance, duplicate, rename, move, delete, delete_assets, create_folder, get_dependencies, create_thumbnail, set_tags, generate_report, validate, fixup_redirectors, find_by_tag, get_metadata, set_metadata.`,
+Supported actions: list, import, create_material, create_material_instance, duplicate, rename, move, delete, delete_assets, create_folder, get_dependencies, get_source_control_state, analyze_graph, create_thumbnail, set_tags, generate_report, validate, fixup_redirectors, find_by_tag, get_metadata, set_metadata.`,
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
-    enum: ['list', 'import', 'create_material', 'create_material_instance', 'duplicate', 'rename', 'move', 'delete', 'delete_assets', 'create_folder', 'get_dependencies', 'create_thumbnail', 'set_tags', 'generate_report', 'validate', 'fixup_redirectors', 'find_by_tag', 'get_metadata', 'set_metadata'],
+        action: {
+          type: 'string',
+          enum: ['list', 'import', 'create_material', 'create_material_instance', 'duplicate', 'rename', 'move', 'delete', 'delete_assets', 'create_folder', 'get_dependencies', 'get_source_control_state', 'analyze_graph', 'create_thumbnail', 'set_tags', 'generate_report', 'validate', 'fixup_redirectors', 'find_by_tag', 'get_metadata', 'set_metadata'],
           description: 'Action to perform'
         },
         // For list
@@ -44,7 +46,12 @@ Supported actions: list, import, create_material, create_material_instance, dupl
         // Misc/advanced
         tag: { type: 'string', description: 'Tag name for find_by_tag action' },
         metadata: { type: 'object', additionalProperties: true, description: 'Arbitrary metadata map for set_metadata action' },
-        directoryPath: { type: 'string', description: 'Optional directory path for fixup_redirectors' }
+        directoryPath: { type: 'string', description: 'Optional directory path for fixup_redirectors' },
+        // For create_thumbnail
+        width: { type: 'number', description: 'Width for create_thumbnail (default 512).' },
+        height: { type: 'number', description: 'Height for create_thumbnail (default 512).' },
+        // For analyze_graph
+        maxDepth: { type: 'number', description: 'Maximum depth for dependency graph analysis (analyze_graph).' }
       },
       required: ['action']
     },
@@ -52,8 +59,8 @@ Supported actions: list, import, create_material, create_material_instance, dupl
       type: 'object',
       properties: {
         success: { type: 'boolean', description: 'Whether the operation succeeded' },
-        assets: { 
-          type: 'array', 
+        assets: {
+          type: 'array',
           description: 'List of assets (for list action)',
           items: {
             type: 'object',
@@ -66,8 +73,8 @@ Supported actions: list, import, create_material, create_material_instance, dupl
           }
         },
         paths: { type: 'array', items: { type: 'string' }, description: 'Imported asset paths (for import)' },
-  materialPath: { type: 'string', description: 'Created material path (for create_material)' },
-  materialInstancePath: { type: 'string', description: 'Created material instance path (for create_material_instance)' },
+        materialPath: { type: 'string', description: 'Created material path (for create_material)' },
+        materialInstancePath: { type: 'string', description: 'Created material instance path (for create_material_instance)' },
         path: { type: 'string', description: 'Resulting asset path for duplicate, rename, or move actions' },
         conflictPath: { type: 'string', description: 'Conflicting asset path when the operation could not proceed' },
         overwritten: { type: 'boolean', description: 'Whether an existing asset was overwritten during duplication' },
@@ -106,7 +113,7 @@ Inputs:
   // 2. ACTOR CONTROL - Combines actor operations
   {
     name: 'control_actor',
-  description: `Viewport actor toolkit for spawning, removing, or nudging actors with physics forces, plus advanced component and tagging helpers.
+    description: `Viewport actor toolkit for spawning, removing, or nudging actors with physics forces, plus advanced component and tagging helpers.
 
 Use it when you need to:
 - drop a class or mesh into the level (classPath accepts names or asset paths).
@@ -118,8 +125,8 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
+        action: {
+          type: 'string',
           enum: [
             'spawn',
             'spawn_blueprint',
@@ -145,8 +152,8 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
         },
         // Common
         actorName: { type: 'string', description: 'Actor label/name (optional for spawn, auto-generated if not provided; required for most other operations). Case-insensitive for delete and lookup actions.' },
-        classPath: { 
-          type: 'string', 
+        classPath: {
+          type: 'string',
           description: 'Actor class (e.g., "StaticMeshActor", "CameraActor") OR asset path (e.g., "/Engine/BasicShapes/Cube", "/Game/MyMesh"). Asset paths will automatically spawn as StaticMeshActor with the mesh applied. Required for spawn action.'
         },
         blueprintPath: {
@@ -210,7 +217,8 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
         variables: { type: 'object', additionalProperties: true, description: 'Blueprint variable overrides for set_blueprint_variables action.' },
         snapshotName: { type: 'string', description: 'Snapshot identifier for create_snapshot action.' },
         childActor: { type: 'string', description: 'Child actor name used by attach action.' },
-        parentActor: { type: 'string', description: 'Parent actor name used by attach action.' }
+        parentActor: { type: 'string', description: 'Parent actor name used by attach action.' },
+        timeoutMs: { type: 'integer', description: 'Optional per-call timeout override in milliseconds for automation-backed operations.' }
       },
       required: ['action']
     },
@@ -232,7 +240,13 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
             }
           }
         },
-        deleted: { type: 'string', description: 'Deleted actor name (for delete)' },
+        deleted: {
+          anyOf: [
+            { type: 'string' },
+            { type: 'array', items: { type: 'string' } }
+          ],
+          description: 'Deleted actor name or list of names (for delete actions)'
+        },
         physicsEnabled: { type: 'boolean', description: 'Physics state (for apply_force)' },
         message: { type: 'string', description: 'Status message' },
         error: { type: 'string', description: 'Error message if failed' }
@@ -243,7 +257,7 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
   // 3. EDITOR CONTROL - Combines editor operations
   {
     name: 'control_editor',
-  description: `Editor session controls for PIE playback, camera placement, recording, and viewport operations.
+    description: `Editor session controls for PIE playback, camera placement, recording, and viewport operations.
 
 Use it when you need to:
 - start, stop, pause, or resume Play In Editor.
@@ -255,8 +269,8 @@ Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, p
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
+        action: {
+          type: 'string',
           enum: [
             'play',
             'stop',
@@ -303,8 +317,8 @@ Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, p
           }
         },
         // View mode
-        viewMode: { 
-          type: 'string', 
+        viewMode: {
+          type: 'string',
           description: 'View mode for set_view_mode action. Supported: Lit, Unlit, Wireframe, DetailLighting, LightingOnly, LightComplexity, ShaderComplexity. Required for set_view_mode.'
         },
         speed: { type: 'number', description: 'Playback speed multiplier for set_game_speed action.' },
@@ -327,13 +341,13 @@ Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, p
       properties: {
         success: { type: 'boolean', description: 'Whether the operation succeeded' },
         playing: { type: 'boolean', description: 'PIE play state' },
-        location: { 
-          type: 'array', 
+        location: {
+          type: 'array',
           items: { type: 'number' },
           description: 'Camera location [x, y, z]'
         },
-        rotation: { 
-          type: 'array', 
+        rotation: {
+          type: 'array',
           items: { type: 'number' },
           description: 'Camera rotation [pitch, yaw, roll]'
         },
@@ -346,7 +360,7 @@ Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, p
   // 4. LEVEL MANAGER - Combines level and lighting operations
   {
     name: 'manage_level',
-  description: `Level management helper for loading/saving, streaming, light creation, and lighting builds.
+    description: `Level management helper for loading/saving, streaming, light creation, and lighting builds.
 
 Use it when you need to:
 - open or save a level by path.
@@ -359,9 +373,9 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
-          enum: ['load', 'save', 'stream', 'create_level', 'create_light', 'build_lighting'],
+        action: {
+          type: 'string',
+          enum: ['load', 'save', 'stream', 'create_level', 'create_light', 'build_lighting', 'set_metadata'],
           description: 'Level action'
         },
         // Level
@@ -371,8 +385,8 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
         shouldBeLoaded: { type: 'boolean', description: 'Whether to load (true) or unload (false) the streaming level. Required for stream action.' },
         shouldBeVisible: { type: 'boolean', description: 'Whether the streaming level should be visible after loading. Defaults to shouldBeLoaded when omitted.' },
         // Lighting
-        lightType: { 
-          type: 'string', 
+        lightType: {
+          type: 'string',
           enum: ['Directional', 'Point', 'Spot', 'Rect'],
           description: 'Type of light to create. Directional for sun-like lighting, Point for omni-directional, Spot for cone-shaped, Rect for area lighting. Required for create_light.'
         },
@@ -387,11 +401,12 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
           }
         },
         intensity: { type: 'number', description: 'Light intensity value in lumens (for Point/Spot) or lux (for Directional). Typical range: 1000-10000. Optional for create_light.' },
-        quality: { 
+        quality: {
           type: 'string',
           enum: ['Preview', 'Medium', 'High', 'Production'],
           description: 'Lighting build quality level. Preview is fastest, Production is highest quality. Required for build_lighting action.'
-        }
+        },
+        metadata: { type: 'object', additionalProperties: true, description: 'Arbitrary metadata map for set_metadata action targeting the level asset.' }
       },
       required: ['action']
     },
@@ -412,7 +427,7 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
   // 5. ANIMATION SYSTEM - Combines animation and physics setup
   {
     name: 'animation_physics',
-  description: `Animation and physics rigging helper covering Anim BPs, montage playback, ragdolls, state machines, IK, blend spaces/trees, and vehicle setup.
+    description: `Animation and physics rigging helper covering Anim BPs, montage playback, ragdolls, state machines, IK, blend spaces/trees, and vehicle setup.
 
 Use it when you need to:
 - generate an Animation Blueprint for a skeleton.
@@ -426,8 +441,8 @@ Supported actions: create_animation_bp, create_anim_blueprint, create_animation_
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
+        action: {
+          type: 'string',
           enum: [
             'create_animation_bp',
             'create_anim_blueprint',
@@ -524,7 +539,7 @@ Supported actions: create_animation_bp, create_anim_blueprint, create_animation_
         chain: { type: 'object', description: 'IK chain configuration' },
         effector: { type: 'object', description: 'IK effector target' },
         settings: { type: 'object', description: 'Generic settings for procedural animation creation' },
-        dimensions: { anyOf: [ { type: 'number' }, { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 } ], description: 'Blend space dimensions or axis count' },
+        dimensions: { anyOf: [{ type: 'number' }, { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 }], description: 'Blend space dimensions or axis count' },
         horizontalAxis: { type: 'object', properties: { name: { type: 'string' }, minValue: { type: 'number' }, maxValue: { type: 'number' } } },
         verticalAxis: { type: 'object', properties: { name: { type: 'string' }, minValue: { type: 'number' }, maxValue: { type: 'number' } } },
         samples: { type: 'array', items: { type: 'object' }, description: 'Sample animations for blend spaces' },
@@ -557,7 +572,7 @@ Supported actions: create_animation_bp, create_anim_blueprint, create_animation_
   // 6. EFFECTS SYSTEM - Combines particles and visual effects
   {
     name: 'create_effect',
-  description: `FX sandbox for spawning Niagara systems, particle presets, or disposable debug shapes.
+    description: `FX sandbox for spawning Niagara systems, particle presets, or disposable debug shapes.
 
 Use it when you need to:
 - fire a Niagara system at a specific location/scale.
@@ -568,8 +583,8 @@ Supported actions: niagara, particle, debug_shape.`,
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
+        action: {
+          type: 'string',
           enum: [
             'particle',
             'niagara',
@@ -594,14 +609,14 @@ Supported actions: niagara, particle, debug_shape.`,
           }
         },
         // Particles
-        effectType: { 
+        effectType: {
           type: 'string',
           description: 'Preset particle effect type (Fire, Smoke, Water, Explosion, etc.). Used for particle action to spawn common effects.'
         },
         systemPath: { type: 'string', description: 'Content path to Niagara system asset (e.g., "/Game/Effects/MyNiagaraSystem"). Required for niagara action.' },
         scale: { type: 'number', description: 'Uniform scale multiplier for Niagara effect. 1.0 is normal size. Optional, defaults to 1.0.' },
         // Debug
-        shape: { 
+        shape: {
           type: 'string',
           description: 'Debug shape type to draw (Line, Box, Sphere, Capsule, Cone, Cylinder, Arrow). Required for debug_shape action.'
         },
@@ -636,8 +651,8 @@ Supported actions: niagara, particle, debug_shape.`,
         effectName: { type: 'string', description: 'Created effect name' },
         effectPath: { type: 'string', description: 'Effect asset path' },
         spawned: { type: 'boolean', description: 'Whether effect was spawned in level' },
-        location: { 
-          type: 'array', 
+        location: {
+          type: 'array',
           items: { type: 'number' },
           description: 'Effect location [x, y, z]'
         },
@@ -649,7 +664,7 @@ Supported actions: niagara, particle, debug_shape.`,
   // 7. BLUEPRINT MANAGER - Blueprint operations
   {
     name: 'manage_blueprint',
-  description: `Blueprint scaffolding helper for creating assets, attaching components, and mutating defaults.
+    description: `Blueprint scaffolding helper for creating assets, attaching components, and mutating defaults.
 
 Use it when you need to:
 - create a new Blueprint of a specific base type (Actor, Pawn, Character, ...).
@@ -663,15 +678,15 @@ Supported actions: create, add_component, set_default, modify_scs, get_scs, add_
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
-          enum: ['create', 'add_component', 'set_default', 'modify_scs', 'ensure_exists', 'probe_handle', 'add_variable', 'add_function', 'add_event', 'add_construction_script', 'set_variable_metadata', 'get', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property', 'add_node', 'connect_pins'],
+        action: {
+          type: 'string',
+          enum: ['create', 'add_component', 'set_default', 'modify_scs', 'ensure_exists', 'probe_handle', 'add_variable', 'add_function', 'add_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata', 'get', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property', 'add_node', 'connect_pins'],
           description: 'Blueprint action'
         },
         componentClass: { type: 'string', description: 'Optional component class name for probe_handle (e.g., StaticMeshComponent)' },
         name: { type: 'string', description: 'Name for the blueprint asset. Required for create action. For add_component, this is the blueprint asset name or path.' },
         blueprintPath: { type: 'string', description: 'Alternative blueprint identifier for modify_scs when different from name.' },
-        blueprintType: { 
+        blueprintType: {
           type: 'string',
           description: 'Base class type for blueprint (Actor, Pawn, Character, Object, ActorComponent, SceneComponent, etc.). Required for create action.'
         },
@@ -717,6 +732,7 @@ Supported actions: create, add_component, set_default, modify_scs, get_scs, add_
         },
         savePath: { type: 'string', description: 'Content path where blueprint will be saved (e.g., "/Game/Blueprints"). Required for create action.' },
         propertyName: { type: 'string', description: 'Blueprint default property to set when action is set_default.' },
+        metadata: { type: 'object', additionalProperties: true, description: 'Arbitrary metadata map for set_metadata action targeting the Blueprint asset.' },
         value: { description: 'Value to assign to the Blueprint default property when action is set_default. Accepts JSON-compatible values.' },
         compile: { type: 'boolean', description: 'Compile the Blueprint after modify_scs executes.' },
         save: { type: 'boolean', description: 'Save the Blueprint after modify_scs executes.' },
@@ -854,7 +870,7 @@ Supported actions: create, add_component, set_default, modify_scs, get_scs, add_
   // 8. ENVIRONMENT BUILDER - Landscape and foliage
   {
     name: 'build_environment',
-  description: `Environment authoring toolkit for landscapes and foliage, from sculpting to procedural scatters.
+    description: `Environment authoring toolkit for landscapes and foliage, from sculpting to procedural scatters.
 
 Use it when you need to:
 - create or sculpt a landscape actor.
@@ -866,8 +882,8 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
+        action: {
+          type: 'string',
           enum: [
             'create_landscape',
             'sculpt',
@@ -896,7 +912,7 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
         // Landscape
         sizeX: { type: 'number', description: 'Landscape width in components. Each component is typically 63 quads. Required for create_landscape action.' },
         sizeY: { type: 'number', description: 'Landscape height in components. Each component is typically 63 quads. Required for create_landscape action.' },
-        tool: { 
+        tool: {
           type: 'string',
           description: 'Landscape sculpt tool to use (Sculpt, Smooth, Flatten, Ramp, Erosion, Hydro, Noise). Required for sculpt action.'
         },
@@ -978,30 +994,30 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
   // 9. PERFORMANCE & AUDIO - System settings
   {
     name: 'system_control',
-  description: `Runtime/system controls for profiling, quality tiers, audio/UI triggers, screenshots, and editor lifecycle.
+    description: `Runtime/system controls for profiling, quality tiers, audio/UI triggers, and screenshots.
 
 Use it when you need to:
 - toggle stat overlays or targeted profilers.
 - adjust scalability categories (sg.*) or enable FPS display.
 - play a one-shot sound and optionally position it.
 - create/show lightweight widgets.
-- capture a screenshot or start/quit the editor process.
+- capture a screenshot or adjust resolution/fullscreen settings.
 
-Supported actions: profile, show_fps, set_quality, play_sound, create_widget, show_widget, screenshot, engine_start, engine_quit.`,
+Supported actions: profile, show_fps, set_quality, play_sound, create_widget, show_widget, screenshot, set_resolution, set_fullscreen, set_cvar, execute_command.`,
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
-          enum: ['profile', 'show_fps', 'set_quality', 'play_sound', 'create_widget', 'show_widget', 'screenshot', 'engine_start', 'engine_quit', 'set_resolution', 'set_fullscreen', 'set_cvar', 'execute_command'],
+        action: {
+          type: 'string',
+          enum: ['profile', 'show_fps', 'set_quality', 'play_sound', 'create_widget', 'show_widget', 'screenshot', 'set_resolution', 'set_fullscreen', 'set_cvar', 'execute_command'],
           description: 'System action'
         },
         // Performance
-        profileType: { 
+        profileType: {
           type: 'string',
           description: 'Type of profiling to enable: CPU (stat cpu), GPU (stat gpu), Memory (stat memory), FPS (stat fps), Unit (stat unit). Required for profile action.'
         },
-        category: { 
+        category: {
           type: 'string',
           description: 'Scalability quality category to adjust: ViewDistance, AntiAliasing, Shadow/Shadows, PostProcess/PostProcessing, Texture/Textures, Effects, Foliage, Shading. Required for set_quality action.'
         },
@@ -1023,7 +1039,7 @@ Supported actions: profile, show_fps, set_quality, play_sound, create_widget, sh
         is3D: { type: 'boolean', description: 'Whether sound should be played as 3D positional audio (true) or 2D (false). Optional for play_sound, defaults to false.' },
         // UI
         widgetName: { type: 'string', description: 'Name for widget asset or instance. Required for create_widget and show_widget actions.' },
-        widgetType: { 
+        widgetType: {
           type: 'string',
           description: 'Widget blueprint type or category (HUD, Menu, Dialog, Notification, etc.). Optional for create_widget, helps categorize the widget.'
         },
@@ -1033,10 +1049,7 @@ Supported actions: profile, show_fps, set_quality, play_sound, create_widget, sh
         // Resolution / fullscreen control (system_control)
         width: { type: 'number', description: 'Screen width in pixels (set_resolution / set_fullscreen). Required for set_resolution.' },
         height: { type: 'number', description: 'Screen height in pixels (set_resolution / set_fullscreen). Required for set_resolution.' },
-        windowed: { type: 'boolean', description: 'Windowed mode when using set_resolution (true=windowed, false=fullscreen). Optional; defaults to true.' },
-        // Engine lifecycle
-        projectPath: { type: 'string', description: 'Absolute path to .uproject file (e.g., "C:/Projects/MyGame/MyGame.uproject"). Required for engine_start unless UE_PROJECT_PATH environment variable is set.' },
-        editorExe: { type: 'string', description: 'Absolute path to Unreal Editor executable (e.g., "C:/UnrealEngine/Engine/Binaries/Win64/UnrealEditor.exe"). Required for engine_start unless UE_EDITOR_EXE environment variable is set.' }
+        windowed: { type: 'boolean', description: 'Windowed mode when using set_resolution (true=windowed, false=fullscreen). Optional; defaults to true.' }
       },
       required: ['action']
     },
@@ -1062,7 +1075,7 @@ Supported actions: profile, show_fps, set_quality, play_sound, create_widget, sh
   // 10. CONSOLE COMMAND - Universal tool
   {
     name: 'console_command',
-  description: `Guarded console command executor for one-off \`stat\`, \`r.*\`, or viewmode commands.
+    description: `Guarded console command executor for one-off \`stat\`, \`r.*\`, or viewmode commands.
 
 Use it when higher-level tools don't cover the console tweak you need. Hazardous commands (quit/exit, crash triggers, unsafe viewmodes) are blocked, and unknown commands respond with a warning instead of executing blindly.`,
     inputSchema: {
@@ -1089,7 +1102,7 @@ Use it when higher-level tools don't cover the console tweak you need. Hazardous
   // 11. SEQUENCER / CINEMATICS
   {
     name: 'manage_sequence',
-  description: `Sequencer automation helper for Level Sequences: asset management, bindings, and playback control.
+    description: `Sequencer automation helper for Level Sequences: asset management, bindings, and playback control.
 
 Use it when you need to:
 - create or open a sequence asset.
@@ -1101,18 +1114,19 @@ Supported actions: create, open, add_camera, add_actor, add_actors, remove_actor
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
+        action: {
+          type: 'string',
           enum: [
-            'create', 'open', 'add_camera', 'add_actor', 'add_actors', 
+            'create', 'open', 'add_camera', 'add_actor', 'add_actors',
             'remove_actors', 'get_bindings', 'add_spawnable_from_class',
             'play', 'pause', 'stop', 'get_properties', 'set_playback_speed',
-            'list', 'duplicate', 'rename', 'delete', 'get_metadata'
-          ], 
-          description: 'Sequence action' 
+            'list', 'duplicate', 'rename', 'delete', 'get_metadata', 'set_metadata'
+          ],
+          description: 'Sequence action'
         },
         name: { type: 'string', description: 'Name for new Level Sequence asset. Required for create action.' },
         path: { type: 'string', description: 'Content path - for create action: save location (e.g., "/Game/Cinematics"); for open/operations: full asset path (e.g., "/Game/Cinematics/MySequence"). Required for create and open actions.' },
+        metadata: { type: 'object', additionalProperties: true, description: 'Arbitrary metadata map for set_metadata action targeting the sequence asset.' },
         actorName: { type: 'string', description: 'Actor label/name in level to add as possessable binding to sequence. Required for add_actor action.' },
         actorNames: { type: 'array', items: { type: 'string' }, description: 'Array of actor labels/names for batch add or remove operations. Required for add_actors and remove_actors actions.' },
         className: { type: 'string', description: 'Unreal class name for spawnable actor (e.g., "StaticMeshActor", "CineCameraActor", "SkeletalMeshActor"). Required for add_spawnable_from_class action.' },
@@ -1153,20 +1167,49 @@ Supported actions: create, open, add_camera, add_actor, add_actors, remove_actor
   // 12. INTROSPECTION
   {
     name: 'inspect',
-  description: `Introspection utility for reading or mutating properties on actors, components, or CDOs.
+    description: `Introspection utility for reading or mutating properties on actors, components, or CDOs.
 
 Use it when you need to:
 - inspect an object by path and retrieve its serialized properties.
 - set a property value with built-in validation.
+- get or set component properties.
+- manage actor tags and snapshots.
+- export actors or find objects by class.
 
-Supported actions: inspect_object, set_property.`,
+Supported actions: inspect_object, set_property, get_property, get_components, get_component_property, set_component_property, get_metadata, add_tag, find_by_tag, create_snapshot, restore_snapshot, export, delete_object, list_objects, find_by_class, get_bounding_box, inspect_class.`,
     inputSchema: {
       type: 'object',
       properties: {
-  action: { type: 'string', enum: ['inspect_object', 'set_property', 'get_property'], description: 'Introspection action: inspect_object retrieves metadata, set_property mutates a value, get_property fetches a single property.' },
-        objectPath: { type: 'string', description: 'Full object path in Unreal format (e.g., "/Game/Maps/Level.Level:PersistentLevel.StaticMeshActor_0" or "/Script/Engine.Default__StaticMeshActor" for CDO). Required for both actions.' },
-        propertyName: { type: 'string', description: 'Name of the property to modify (e.g., "RelativeLocation", "Mobility", "bHidden"). Required for set_property action.' },
-        value: { description: 'New property value. Must be JSON-serializable and compatible with property type (e.g., {"X":100,"Y":0,"Z":0} for vectors, 5.0 for floats, true for bools, "Value" for strings). Required for set_property action.' },
+        action: {
+          type: 'string',
+          enum: [
+            'inspect_object',
+            'set_property',
+            'get_property',
+            'get_components',
+            'get_component_property',
+            'set_component_property',
+            'get_metadata',
+            'add_tag',
+            'find_by_tag',
+            'create_snapshot',
+            'restore_snapshot',
+            'export',
+            'delete_object',
+            'list_objects',
+            'find_by_class',
+            'get_bounding_box',
+            'inspect_class'
+          ],
+          description: 'Introspection action.'
+        },
+        objectPath: { type: 'string', description: 'Full object path in Unreal format. Required for most actions.' },
+        propertyName: { type: 'string', description: 'Name of the property to modify or retrieve.' },
+        value: { description: 'New property value for set actions.' },
+        actorName: { type: 'string', description: 'Name of the actor for actor-specific actions.' },
+        tag: { type: 'string', description: 'Tag to add or search for.' },
+        snapshotName: { type: 'string', description: 'Name of the snapshot to create or restore.' },
+        className: { type: 'string', description: 'Class name for finding objects or inspecting class.' },
         transport: {
           type: 'string',
           enum: ['automation_bridge'],
@@ -1174,7 +1217,7 @@ Supported actions: inspect_object, set_property.`,
         },
         timeoutMs: {
           type: 'number',
-          description: 'Optional timeout in milliseconds when using the automation bridge transport (default 15000).'
+          description: 'Optional timeout in milliseconds.'
         },
         markDirty: {
           type: 'boolean',
@@ -1193,6 +1236,446 @@ Supported actions: inspect_object, set_property.`,
         value: {},
         transport: { type: 'string' },
         bridge: { type: 'object' }
+      }
+    }
+  },
+
+  // 13. WORLD PARTITION
+  {
+    name: 'manage_world_partition',
+    description: `World Partition management helper for loading cells and managing data layers.
+
+Use it when you need to:
+- load a specific region of the world.
+- manage data layers (activate, deactivate, etc.).
+
+Supported actions: load_cells, set_datalayer.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['load_cells', 'set_datalayer'],
+          description: 'World Partition action'
+        },
+        // load_cells
+        min: { type: 'array', items: { type: 'number' }, description: 'Min bounds [x, y, z]' },
+        max: { type: 'array', items: { type: 'number' }, description: 'Max bounds [x, y, z]' },
+        origin: { type: 'array', items: { type: 'number' }, description: 'Origin [x, y, z]' },
+        extent: { type: 'array', items: { type: 'number' }, description: 'Extent [x, y, z]' },
+        // set_datalayer
+        dataLayerLabel: { type: 'string', description: 'Data Layer label' },
+        dataLayerState: { type: 'string', enum: ['Activated', 'Deactivated', 'Loaded', 'Unloaded'], description: 'Data Layer state' },
+        recursive: { type: 'boolean', description: 'Recursive operation' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 14. RENDER
+  {
+    name: 'manage_render',
+    description: `Render management helper for render targets, Nanite, and Lumen.
+
+Use it when you need to:
+- create or attach render targets.
+- rebuild Nanite meshes.
+- update Lumen scene.
+
+Supported actions: create_render_target, attach_render_target_to_volume, nanite_rebuild_mesh, lumen_update_scene.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['create_render_target', 'attach_render_target_to_volume', 'nanite_rebuild_mesh', 'lumen_update_scene'],
+          description: 'Render action'
+        },
+        // create_render_target
+        assetPath: { type: 'string', description: 'Path to create render target' },
+        width: { type: 'number', description: 'Width' },
+        height: { type: 'number', description: 'Height' },
+        format: { type: 'string', description: 'Pixel format' },
+        // attach_render_target_to_volume
+        volumeName: { type: 'string', description: 'Post Process Volume actor name' },
+        materialPath: { type: 'string', description: 'Material path' },
+        parameterName: { type: 'string', description: 'Texture parameter name' },
+        // nanite_rebuild_mesh
+        meshPath: { type: 'string', description: 'Static Mesh path' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 15. PIPELINE
+  {
+    name: 'manage_pipeline',
+    description: `Pipeline management helper for running UBT and other external processes.
+
+Use it when you need to:
+- run UnrealBuildTool.
+
+Supported actions: run_ubt.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['run_ubt'],
+          description: 'Pipeline action'
+        },
+        target: { type: 'string', description: 'Build target' },
+        platform: { type: 'string', description: 'Build platform' },
+        configuration: { type: 'string', description: 'Build configuration' },
+        arguments: { type: 'string', description: 'Additional arguments' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 16. TESTS
+  {
+    name: 'manage_tests',
+    description: `Test management helper for running automated tests.
+
+Use it when you need to:
+- run automated tests.
+
+Supported actions: run_tests.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['run_tests'],
+          description: 'Test action'
+        },
+        filter: { type: 'string', description: 'Test filter' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 17. LOGS
+  {
+    name: 'manage_logs',
+    description: `Log management helper for subscribing to logs.
+
+Use it when you need to:
+- subscribe to log output.
+
+Supported actions: subscribe.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['subscribe'],
+          description: 'Log action'
+        }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 18. DEBUG
+  {
+    name: 'manage_debug',
+    description: `Debug management helper for gameplay debugger.
+
+Use it when you need to:
+- spawn gameplay debugger categories.
+
+Supported actions: spawn_category.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['spawn_category'],
+          description: 'Debug action'
+        },
+        category: { type: 'string', description: 'Gameplay debugger category' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 19. INSIGHTS
+  {
+    name: 'manage_insights',
+    description: `Insights management helper for profiling sessions.
+
+Use it when you need to:
+- start a profiling session.
+
+Supported actions: start_session.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['start_session'],
+          description: 'Insights action'
+        },
+        channels: { type: 'string', description: 'Trace channels' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 20. UI
+  {
+    name: 'manage_ui',
+    description: `UI management helper for simulating input.
+
+Use it when you need to:
+- simulate keyboard input.
+
+Supported actions: simulate_input.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['simulate_input'],
+          description: 'UI action'
+        },
+        keyName: { type: 'string', description: 'Key name (e.g., "A", "SpaceBar")' },
+        eventType: { type: 'string', enum: ['KeyDown', 'KeyUp', 'Both'], description: 'Event type' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 21. BLUEPRINT GRAPH
+  {
+    name: 'manage_blueprint_graph',
+    description: `Blueprint graph management helper for editing nodes and pins.
+
+Use it when you need to:
+- delete nodes.
+- set node properties.
+- create reroute nodes.
+- get node/graph/pin details.
+
+Supported actions: delete_node, set_node_property, create_reroute_node, get_node_details, get_graph_details, get_pin_details.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details'],
+          description: 'Blueprint graph action'
+        },
+        blueprintPath: { type: 'string', description: 'Blueprint asset path' },
+        graphName: { type: 'string', description: 'Graph name' },
+        nodeType: { type: 'string', description: 'Node type for create_node (e.g., CallFunction, VariableGet)' },
+        memberName: { type: 'string', description: 'Member name for CallFunction/Variable nodes' },
+        nodeId: { type: 'string', description: 'Node ID' },
+        propertyName: { type: 'string', description: 'Property name' },
+        value: { description: 'Property value' },
+        pinName: { type: 'string', description: 'Pin name' },
+        linkedTo: { type: 'string', description: 'Pin to connect to (for connect_pins)' },
+        x: { type: 'number', description: 'X position' },
+        y: { type: 'number', description: 'Y position' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 22. NIAGARA GRAPH
+  {
+    name: 'manage_niagara_graph',
+    description: `Niagara graph management helper.
+
+Use it when you need to:
+- add modules.
+- connect pins.
+- remove nodes.
+- set parameters.
+
+Supported actions: add_module, connect_pins, remove_node, set_parameter.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['add_module', 'connect_pins', 'remove_node', 'set_parameter'],
+          description: 'Niagara graph action'
+        },
+        assetPath: { type: 'string', description: 'Niagara system asset path' },
+        modulePath: { type: 'string', description: 'Module path for add_module' },
+        emitterName: { type: 'string', description: 'Emitter name' },
+        nodeId: { type: 'string', description: 'Node ID' },
+        pinName: { type: 'string', description: 'Pin name' },
+        linkedTo: { type: 'string', description: 'Linked pin name' },
+        parameterName: { type: 'string', description: 'Parameter name' },
+        value: { description: 'Parameter value' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 23. MATERIAL GRAPH
+  {
+    name: 'manage_material_graph',
+    description: `Material graph management helper.
+
+Use it when you need to:
+- remove nodes.
+- break connections.
+- get node details.
+
+Supported actions: remove_node, break_connections, get_node_details.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['add_node', 'connect_pins', 'rebuild', 'remove_node', 'break_connections', 'get_node_details'],
+          description: 'Material graph action'
+        },
+        assetPath: { type: 'string', description: 'Material asset path' },
+        nodeType: { type: 'string', description: 'Node type for add_node (e.g. ScalarParameter)' },
+        nodeId: { type: 'string', description: 'Node ID' },
+        fromNodeId: { type: 'string', description: 'Source node ID' },
+        fromPin: { type: 'string', description: 'Source pin name' },
+        toNodeId: { type: 'string', description: 'Target node ID' },
+        toPin: { type: 'string', description: 'Target pin name' },
+        parameterName: { type: 'string', description: 'Parameter name for new node' },
+        value: { type: 'number', description: 'Value for new node' },
+        x: { type: 'number', description: 'X position' },
+        y: { type: 'number', description: 'Y position' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // 24. BEHAVIOR TREE
+  {
+    name: 'manage_behavior_tree',
+    description: `Behavior Tree management helper.
+
+Use it when you need to:
+- remove nodes.
+- break connections.
+- set node properties.
+
+Supported actions: remove_node, break_connections, set_node_properties.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['add_node', 'connect_nodes', 'remove_node', 'break_connections', 'set_node_properties'],
+          description: 'Behavior Tree action'
+        },
+        assetPath: { type: 'string', description: 'Behavior Tree asset path' },
+        nodeType: { type: 'string', description: 'Node type for add_node (Sequence, Selector, Wait)' },
+        nodeId: { type: 'string', description: 'Node ID' },
+        parentNodeId: { type: 'string', description: 'Parent node ID for connect_nodes' },
+        childNodeId: { type: 'string', description: 'Child node ID for connect_nodes' },
+        comment: { type: 'string', description: 'Comment for set_node_properties' },
+        x: { type: 'number', description: 'X position' },
+        y: { type: 'number', description: 'Y position' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        error: { type: 'string' }
       }
     }
   }

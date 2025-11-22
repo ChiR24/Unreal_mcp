@@ -1,98 +1,80 @@
-````instructions
 # Unreal MCP — AI Agent Quick Guide (for AI coding agents)
 
-This repository runs as two cooperating processes: the Node.js MCP server
-(`src/`) and a native Unreal Editor plugin
-(`plugins/McpAutomationBridge/Source/`). All operations use native C++
-handlers in the plugin for high performance and reliability.
+This repo runs **two cooperating processes**: Node.js MCP server (`src/`) + native C++ UE Editor plugin (`Plugins/McpAutomationBridge/Source/`).
 
-Quick checklist
-- Build and start the Editor plugin (or open the Editor with the built
-  plugin). The plugin listens by default on ports 8090 and 8091.
-- Start the MCP server or run a focused tool test, e.g.:
-  - `npm run test:manage_asset`
-  - `node tests/run-unreal-tool-tests.mjs`
-- For offline development use mock mode: set `UNREAL_MCP_MOCK_MODE=1`.
+**All ops**: JSON payloads → `sendAutomationRequest(action, params)` (TS) → WS → `UMcpAutomationBridgeSubsystem::ProcessAutomationRequest()` (C++) → domain `*Handlers.cpp` (native UE subsystems). Typed via `FJsonObjectConverter::JsonObjectToUStruct()` + `FProperty`; no Python.
 
-High-value files to inspect first
-- `src/unreal-bridge.ts` — Bridge coordination and command routing
-- `src/automation-bridge.ts` — WebSocket transport and handshake handling
-- `src/tools/*` — domain tool classes and consolidated tool dispatch
-- `plugins/McpAutomationBridge/Source/*/Private/*` — native C++ handlers
-  (see `McpAutomationBridge_BlueprintHandlers.cpp`,
-  `McpAutomationBridge_EditorFunctionHandlers.cpp`, 
-  `McpAutomationBridge_AssetHandlers.cpp`)
+## Quickstart Checklist
+- Enable UE Plugins: **MCP Automation Bridge**, **Editor Scripting Utilities**.
+- Sync: `npm run automation:sync -- --project "X:/MyProject/Plugins"`.
+- Verify: `npm run automation:verify -- --project "X:/MyProject/Plugins"`.
+- Editor: Build/start (plugin WS client → Node 8090/8091).
+- Server: `npm run dev` (on-demand `tryConnect()`).
+- Offline: `UNREAL_MCP_MOCK_MODE=1`.
+- WASM: `npm run build:wasm` (5-8x JSON perf).
 
-Native C++ workflow (required)
-1. Implement automation requests using
-   `automationBridge.sendAutomationRequest(actionName, params)`
-2. Implement or update the server `src/tools/*` handler to call the bridge
-3. Add corresponding C++ handler in the plugin if needed:
-   - Add handler method in appropriate *Handlers.cpp file
-   - Register action in HandleAutomationRequest dispatcher
-4. Add tests under `tests/` and a Markdown test case if appropriate
+## High-Value Files
+**Node**:
+- `src/index.ts`: MCP setup, `ensureConnectedOnDemand()`, consolidated tools.
+- `src/unreal-bridge.ts`: Throttling/safety (`executeThrottledCommand()`).
+- `src/automation-bridge.ts`: WS client, `sendAutomationRequest()`, handshake.
+- `src/tools/consolidated-*.ts`: 12 tools dispatch (`handleConsolidatedToolCall()`).
+- `src/tools/*.ts`: Domain impls (e.g., `blueprint.ts`).
 
-Project conventions you must know
-- All operations use native C++ automation bridge handlers
-- Always wrap tool outputs with `responseValidator.wrapResponse(toolName, result)`
-- Asset paths normalize `/Content` → `/Game` (see `src/utils/normalize.ts`)
-- Vector/rotator inputs accept both `{x,y,z}` and `[x,y,z]` — use
-  `toVec3Tuple()` / `toRotTuple()` helpers
-- Command calls are throttled (MIN_COMMAND_DELAY ≈ 100ms); use
-  `ensureConnectedOnDemand()` to obtain a connection before sending commands
-- Automation bridge provides graceful error messages when operations fail
+**Plugin** (`Plugins/McpAutomationBridge/Source/McpAutomationBridge/`):
+- `Private/McpAutomationBridgeSubsystem.cpp`: WS loop, `ProcessAutomationRequest()` dispatcher.
+- `Private/McpBridgeWebSocket.cpp/h`: Custom WS client (reconnect/handshake).
+- `Private/McpAutomationBridgeHelpers.h`: `ResolveClassByName()`, JSON→UStruct.
+- `Private/*Handlers.cpp` (~18): `AssetWorkflowHandlers::CreateMaterial()`, `SCSHandlers::AddComponent()`.
+- `Public/McpAutomationBridgeSubsystem.h`: UEditorSubsystem decls.
 
-Useful commands (PowerShell)
-- Check the plugin listening port: `netstat -ano | findstr :8090`.
-- Clean plugin build artifacts before rebuild:
-  - Delete `Plugins/McpAutomationBridge/Binaries`
-  - Delete `Plugins/McpAutomationBridge/Intermediate`
-- Lint: `npm run lint`
-- Build: `npm run build` (TypeScript → `dist/`)
-- Dev server: `npm run dev`
-- Run a focused tool test: `npm run test:manage_asset`
+## Add New Tool Workflow
+1. **C++**: `*Handlers.cpp` impl → register in `Subsystem.cpp::ProcessAutomationRequest()` switch → `FReply {Success=true, Data=Json}`.
+2. **TS**: `src/tools/<domain>.ts` → `automationBridge.sendAutomationRequest(action, params)`.
+3. **Consolidated**: Route in `consolidated-tool-handlers.ts`.
+4. **Validate/Wrap**: `responseValidator.wrapResponse(tool, resp)`.
+5. **Test**: `tests/test-<domain>.mjs` → `npm run test:<domain>` (Markdown cases).
 
-Debugging and test notes
-- The plugin exposes two health resources: `ue://health` and
-  `ue://automation-bridge` for connection/diagnostics
-- All tools use native C++ handlers - Editor Scripting Utilities plugin
-  provides Editor Actor/Asset subsystems
-- If the automation bridge cannot connect, verify Editor + plugin are running
-  and listening on the configured ports
+**Example** (C++ handler):
+```cpp
+case "create_material":
+    return AssetWorkflowHandlers::CreateMaterial(Payload, Reply);
+```
 
-If you want a minimal PR to add a mapping + server handler + plugin stub,
-specify the operation (e.g. `create_material_instance` or
-`blueprint_add_component`) and I will generate a small, tested change set.
+**Example** (TS call):
+```ts
+const resp = await automationBridge.sendAutomationRequest('create_material', {name, path});
+return responseValidator.wrapResponse('manage_asset', resp);
+```
+
+## Conventions
+- **12 Consolidated Tools Only**: `manage_asset`, `control_actor`, etc. (`consolidated-tool-definitions.ts`).
+- **On-Demand**: `bridge.tryConnect(3)` before ops; no polling.
+- **Paths**: `/Content` → `/Game` (`normalize.ts`).
+- **Vec/Rot**: `{x,y,z}`/`[x,y,z]` → `toVec3Tuple()`.
+- **Throttling**: Queue/prioritize (100ms min; stats 300ms; `unreal-bridge.ts`).
+- **Safety**: Block quit/crash/Python/`&&` (`unreal-bridge.ts`); C++ structured errors.
+- **Typed C++**: JSON → `FProperty`/`UStruct` (`Helpers.h`); `ResolveClassByName(name/path)`.
+- **Responses**: `{success, message?, error?, warnings?, data?}`.
+- **WASM**: Auto (`initializeWASM()`); JSON/math perf.
+
+## Commands (PowerShell)
+- Plugin: `netstat -ano | findstr :8090`; clean `rm Plugins/McpAutomationBridge/{Binaries,Intermediate}`.
+- Lint: `npm run lint`; C++: `npm run lint:cpp`.
+- Build: `npm run build`; WASM: `npm run build:wasm`.
+- Dev/Test: `npm run dev`; `npm run test:manage_asset` (or `test`).
+- Sync/Verify: `npm run automation:sync/verify`.
+
+## Debug/Health
+- MCP Resources: `ue://health` (metrics), `ue://automation-bridge` (pending/handshake).
+- Logs: `LOG_LEVEL=debug`; UE Output Log (`bridge_ack`/`automation_request`).
+- Verify Plugin: `npm run automation:verify`.
+
+Specify op (e.g., `scs_add_component`) for minimal PR/tests.
 
 ---
 
-## Detailed Guide and preserved content
+## Detailed Guide (Preserved)
+Node: `src/index.ts/unreal-bridge/automation-bridge`. Tools: `src/tools/consolidated-*/tools/*`. Plugin: `Plugins/.../Private/*`.
 
-The long-form guidance and examples used by previous agents are preserved
-below for deep-dive reference. Use the Quick Guide above for fast onboarding.
-
-- Node server: `src/index.ts`, `src/unreal-bridge.ts`, `src/automation-bridge.ts`.
-- Consolidated tools: `src/tools/consolidated-tool-definitions.ts`,
-  `src/tools/consolidated-tool-handlers.ts`.
-- Tool classes: `src/tools/*` (each implements domain-specific logic).
-- Plugin native handlers: `plugins/McpAutomationBridge/Source/*/Private/*`.
-
-Key patterns and snippets
-- All operations use `automationBridge.sendAutomationRequest(actionName, params)`
-- C++ handlers return JSON with `{ success, message?, error?, warnings?, data? }`
-
-- Example automation request:
-  ```typescript
-  const resp = await automationBridge.sendAutomationRequest(
-    'create_material',
-    { name, destinationPath },
-    { timeoutMs: 10000 }
-  );
-  ```
-
-- Always return structured results: `{ success, message?, error?, warnings?, data? }` and
-  wrap them via `responseValidator.wrapResponse()`.
-
-- Tests: `tests/run-unreal-tool-tests.mjs` executes tool-level tests using
-  Markdown-designed cases. Use `UNREAL_MCP_MOCK_MODE=1` for offline runs.
-````
+**Tests**: `tests/run-unreal-tool-tests.mjs` (Markdown); `UNREAL_MCP_MOCK_MODE=1`.

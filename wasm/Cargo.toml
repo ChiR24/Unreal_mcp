@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Unreal Engine MCP Team"]
 description = "WebAssembly module for performance-critical operations in Unreal Engine MCP Server"
 license = "MIT"
-repository = "https://github.com/your-org/unreal-engine-mcp-server"
+repository = "https://github.com/ChiR24/unreal-engine-mcp-server"
 
 [lib]
 crate-type = ["cdylib"]

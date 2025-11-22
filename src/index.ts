@@ -21,6 +21,7 @@ import { LightingTools } from './tools/lighting.js';
 import { LandscapeTools } from './tools/landscape.js';
 import { BuildEnvironmentAdvanced } from './tools/build_environment_advanced.js';
 import { FoliageTools } from './tools/foliage.js';
+import { EnvironmentTools } from './tools/environment.js';
 import { DebugVisualizationTools } from './tools/debug.js';
 import { PerformanceTools } from './tools/performance.js';
 import { AudioTools } from './tools/audio.js';
@@ -267,6 +268,7 @@ export function createServer() {
   const landscapeTools = new LandscapeTools(bridge);
   const buildEnvAdvanced = new BuildEnvironmentAdvanced(bridge);
   const foliageTools = new FoliageTools(bridge);
+  const environmentTools = new EnvironmentTools(bridge);
   const debugTools = new DebugVisualizationTools(bridge);
   const performanceTools = new PerformanceTools(bridge);
   const audioTools = new AudioTools(bridge);
@@ -276,10 +278,73 @@ export function createServer() {
   const visualTools = new VisualTools(bridge);
   const engineTools = new EngineTools(bridge);
 
+  // Wire AutomationBridge into tools that support it
+  materialTools.setAutomationBridge(automationBridge);
+  animationTools.setAutomationBridge(automationBridge);
+  physicsTools.setAutomationBridge(automationBridge);
+  niagaraTools.setAutomationBridge(automationBridge);
+  lightingTools.setAutomationBridge(automationBridge);
+  landscapeTools.setAutomationBridge(automationBridge);
+  buildEnvAdvanced.setAutomationBridge(automationBridge);
+  foliageTools.setAutomationBridge(automationBridge);
+  debugTools.setAutomationBridge(automationBridge);
+  performanceTools.setAutomationBridge(automationBridge);
+  audioTools.setAutomationBridge(automationBridge);
+  uiTools.setAutomationBridge(automationBridge);
+  introspectionTools.setAutomationBridge(automationBridge);
+  visualTools.setAutomationBridge(automationBridge);
+  engineTools.setAutomationBridge(automationBridge);
+  environmentTools.setAutomationBridge(automationBridge);
+
   // Initialize resources
   const assetResources = new AssetResources(bridge);
   const actorResources = new ActorResources(bridge);
   const levelResources = new LevelResources(bridge);
+
+  // Lightweight system tools facade used by consolidated handlers
+  const systemTools = {
+    executeConsoleCommand: (command: string) => bridge.executeConsoleCommand(command),
+    async getProjectSettings(section?: string) {
+      const category = typeof section === 'string' && section.trim().length > 0 ? section.trim() : 'Project';
+      if (!automationBridge || !automationBridge.isConnected()) {
+        return {
+          success: false as const,
+          error: 'Automation bridge not connected',
+          section: category
+        };
+      }
+      try {
+        const resp: any = await automationBridge.sendAutomationRequest('system_control', {
+          action: 'get_project_settings',
+          category
+        }, { timeoutMs: 30000 });
+
+        if (!resp || resp.success === false) {
+          return {
+            success: false as const,
+            error: resp?.error || resp?.message || 'Failed to get project settings',
+            section: category,
+            settings: resp?.result
+          };
+        }
+
+        const result = resp.result && typeof resp.result === 'object' ? (resp.result as Record<string, unknown>) : {};
+        const settings = (result.settings && typeof result.settings === 'object') ? (result.settings as Record<string, unknown>) : result;
+
+        return {
+          success: true as const,
+          section: category,
+          settings
+        };
+      } catch (e) {
+        return {
+          success: false as const,
+          error: `Failed to get project settings: ${e instanceof Error ? e.message : String(e)}`,
+          section: category
+        };
+      }
+    }
+  };
 
   // Health checks manager (only active when connected)
   const startHealthChecks = () => {
@@ -574,10 +639,12 @@ export function createServer() {
       lightingTools,
       landscapeTools,
       foliageTools,
+      environmentTools,
       buildEnvAdvanced,
       debugTools,
       performanceTools,
       audioTools,
+      systemTools,
       uiTools,
       sequenceTools,
       introspectionTools,
@@ -668,7 +735,7 @@ export function createServer() {
       const explicitSuccess = typeof (result as any)?.success === 'boolean' ? Boolean((result as any).success) : undefined;
 
       // Validate and enhance response
-      const wrappedResult = responseValidator.wrapResponse(name, result);
+      const wrappedResult = await responseValidator.wrapResponse(name, result);
 
       // Prefer success from structuredContent when present
       let wrappedSuccess: boolean | undefined = undefined;
