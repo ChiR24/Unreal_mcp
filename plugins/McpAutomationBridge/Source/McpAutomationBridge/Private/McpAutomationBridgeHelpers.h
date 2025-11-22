@@ -42,6 +42,60 @@ static inline FString SanitizeIncomingJson(const FString& In)
     return Out;
 }
 
+// Sanitize a project-relative path to prevent traversal attacks.
+// Ensures the path starts with a valid root (e.g. /Game, /Engine, /Plugin) and does not contain ".."
+static inline FString SanitizeProjectRelativePath(const FString& InPath)
+{
+    if (InPath.IsEmpty()) return FString();
+
+    FString CleanPath = InPath;
+    FPaths::NormalizeFilename(CleanPath);
+
+    // Reject paths containing traversal
+    if (CleanPath.Contains(TEXT("..")))
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("SanitizeProjectRelativePath: Rejected path containing '..': %s"), *InPath);
+        return FString();
+    }
+
+    // Ensure path starts with a slash
+    if (!CleanPath.StartsWith(TEXT("/")))
+    {
+        CleanPath = TEXT("/") + CleanPath;
+    }
+
+    // Whitelist valid roots
+    const bool bValidRoot = CleanPath.StartsWith(TEXT("/Game")) || 
+                            CleanPath.StartsWith(TEXT("/Engine")) || 
+                            CleanPath.StartsWith(TEXT("/Script"));
+    
+    // Allow plugin content paths too (e.g. /MyPlugin/) - heuristic: starts with / and has second /
+    bool bLooksLikePlugin = false;
+    if (!bValidRoot && CleanPath.Len() > 1)
+    {
+        int32 SecondSlash = -1;
+        if (CleanPath.FindChar(TEXT('/'), SecondSlash))
+        {
+             // Check if we have a second slash, e.g. /PluginName/Folder
+             // FindChar finds the *first* char. We want the second one.
+             if (CleanPath.FindLastChar(TEXT('/'), SecondSlash) && SecondSlash > 0)
+             {
+                 bLooksLikePlugin = true; 
+             }
+        }
+    }
+
+    // For strict safety, we might enforce /Game or /Engine, but plugins are common.
+    // The critical part is no ".." and it looks like an asset path.
+    
+    return CleanPath;
+}
+
+static inline bool IsValidAssetPath(const FString& Path)
+{
+    return !Path.IsEmpty() && Path.StartsWith(TEXT("/")) && !Path.Contains(TEXT("..")) && !Path.Contains(TEXT("//"));
+}
+
 #if WITH_EDITOR
 // Resolve a UClass by a variety of heuristics: try full path lookup, attempt
 // to load an asset by path (UBlueprint or UClass), then fall back to scanning

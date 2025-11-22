@@ -171,7 +171,7 @@ No additional engine configuration required. The MCP Automation Bridge plugin ha
 }
 ```
 
-## Available Tools (12)
+## Available Tools (24)
 
 | Tool | Description |
 |------|-------------|

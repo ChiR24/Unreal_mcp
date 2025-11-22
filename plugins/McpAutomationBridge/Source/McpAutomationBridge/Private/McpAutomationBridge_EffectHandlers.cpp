@@ -370,7 +370,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
     }
 
     // Spawn Niagara system in-level as a NiagaraActor (editor-only)
-    if (Lower.Equals(TEXT("spawn_niagara")))
+    bool bSpawnNiagara = Lower.Equals(TEXT("spawn_niagara"));
+    if (bIsCreateEffect)
+    {
+        FString Sub; LocalPayload->TryGetStringField(TEXT("action"), Sub);
+        if (Sub.ToLower() == TEXT("niagara")) bSpawnNiagara = true;
+    }
+
+    if (bSpawnNiagara)
     {
         FString SystemPath; LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
         if (SystemPath.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("systemPath required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
@@ -606,7 +613,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
     }
 
     // CREATE DYNAMIC LIGHT (editor-only)
-    if (Lower.Equals(TEXT("create_dynamic_light")))
+    bool bDynamicLight = Lower.Equals(TEXT("create_dynamic_light"));
+    if (bIsCreateEffect)
+    {
+        FString Sub; LocalPayload->TryGetStringField(TEXT("action"), Sub);
+        if (Sub.ToLower() == TEXT("create_dynamic_light")) bDynamicLight = true;
+    }
+
+    if (bDynamicLight)
     {
         FString LightName; LocalPayload->TryGetStringField(TEXT("lightName"), LightName);
         FString LightType; LocalPayload->TryGetStringField(TEXT("lightType"), LightType);
@@ -742,7 +756,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
     }
 
     // CLEANUP EFFECTS - remove actors whose label starts with the provided filter (editor-only)
-    if (Lower.Equals(TEXT("cleanup")))
+    bool bCleanup = Lower.Equals(TEXT("cleanup"));
+    if (bIsCreateEffect)
+    {
+        FString Sub; LocalPayload->TryGetStringField(TEXT("action"), Sub);
+        if (Sub.ToLower() == TEXT("cleanup")) bCleanup = true;
+    }
+
+    if (bCleanup)
     {
         FString Filter; LocalPayload->TryGetStringField(TEXT("filter"), Filter);
         if (Filter.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("filter required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
@@ -798,23 +819,40 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
     }
     
         // STUB HANDLERS FOR TEST COVERAGE - NOW IMPLEMENTED
-        if (Lower.Equals(TEXT("create_niagara_ribbon"))) 
+        bool bCreateRibbon = Lower.Equals(TEXT("create_niagara_ribbon"));
+        bool bCreateFog = Lower.Equals(TEXT("create_volumetric_fog"));
+        bool bCreateTrail = Lower.Equals(TEXT("create_particle_trail"));
+        bool bCreateEnv = Lower.Equals(TEXT("create_environment_effect"));
+        bool bCreateImpact = Lower.Equals(TEXT("create_impact_effect"));
+
+        if (bIsCreateEffect)
+        {
+            FString Sub; LocalPayload->TryGetStringField(TEXT("action"), Sub);
+            FString LSub = Sub.ToLower();
+            if (LSub == TEXT("create_niagara_ribbon")) bCreateRibbon = true;
+            if (LSub == TEXT("create_volumetric_fog")) bCreateFog = true;
+            if (LSub == TEXT("create_particle_trail")) bCreateTrail = true;
+            if (LSub == TEXT("create_environment_effect")) bCreateEnv = true;
+            if (LSub == TEXT("create_impact_effect")) bCreateImpact = true;
+        }
+
+        if (bCreateRibbon) 
         {
             return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_niagara_ribbon"), TEXT("/Niagara/DefaultRibbonSystem.DefaultRibbonSystem"));
         }
-        if (Lower.Equals(TEXT("create_volumetric_fog"))) 
+        if (bCreateFog) 
         {
             return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_volumetric_fog"), TEXT("/Niagara/DefaultVolumetricFog.DefaultVolumetricFog"));
         }
-        if (Lower.Equals(TEXT("create_particle_trail"))) 
+        if (bCreateTrail) 
         {
             return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_particle_trail"), TEXT("/Niagara/DefaultTrailSystem.DefaultTrailSystem"));
         }
-        if (Lower.Equals(TEXT("create_environment_effect"))) 
+        if (bCreateEnv) 
         {
             return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_environment_effect"), TEXT("/Niagara/DefaultEnvironmentSystem.DefaultEnvironmentSystem"));
         }
-        if (Lower.Equals(TEXT("create_impact_effect"))) 
+        if (bCreateImpact) 
         {
             return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_impact_effect"), TEXT("/Niagara/DefaultImpactSystem.DefaultImpactSystem"));
         }

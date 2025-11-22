@@ -1518,6 +1518,12 @@ static bool HandleBlueprintCreate(UMcpAutomationBridgeSubsystem* Self, const FSt
 bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
+    // Explicitly ignore manage_blueprint_graph actions so they fall through to HandleBlueprintGraphAction
+    if (Action.Equals(TEXT("manage_blueprint_graph"), ESearchCase::IgnoreCase))
+    {
+        return false;
+    }
+
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT(">>> HandleBlueprintAction ENTRY: RequestId=%s RawAction='%s'"), *RequestId, *Action);
     
     // Sanitize action to remove control characters and common invisible
@@ -3610,17 +3616,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(const FString& Request
 
             if (!TargetGraph)
             {
-                TargetGraph = FBlueprintEditorUtils::CreateNewGraph(BP, FName(*GraphName), UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
-                if (TargetGraph)
+                // Only auto-create EventGraph if it is missing. For other graphs, require them to exist.
+                if (GraphName.Equals(TEXT("EventGraph"), ESearchCase::IgnoreCase))
                 {
-                    const bool bIsEventGraph = GraphName.Equals(TEXT("EventGraph"), ESearchCase::IgnoreCase);
-                    if (bIsEventGraph)
+                    TargetGraph = FBlueprintEditorUtils::CreateNewGraph(BP, FName(*GraphName), UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+                    if (TargetGraph)
                     {
                         FBlueprintEditorUtils::AddUbergraphPage(BP, TargetGraph);
-                    }
-                    else
-                    {
-                        FBlueprintEditorUtils::AddFunctionGraph<UClass>(BP, TargetGraph, /*bIsUserCreated=*/true, nullptr);
                     }
                 }
             }

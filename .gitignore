@@ -63,3 +63,5 @@ validate-server.js
 .windsurf/rules/copilot-instructions.md
 tmp/
 .claude/settings.local.json
+.gemini/settings.json
+GEMINI.md

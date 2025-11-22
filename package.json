@@ -36,6 +36,7 @@
     "test:manage_level": "node tests/test-manage-level.mjs",
     "test:animation": "node tests/test-animation.mjs",
     "test:blueprint": "node tests/test-blueprint.mjs",
+    "test:blueprint_graph": "node tests/test-blueprint-graph.mjs",
     "test:materials": "node tests/test-materials.mjs",
     "test:niagara": "node tests/test-niagara.mjs",
     "test:landscape": "node tests/test-landscape.mjs",

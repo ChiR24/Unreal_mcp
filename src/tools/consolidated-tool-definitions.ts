@@ -593,7 +593,9 @@ Supported actions: niagara, particle, debug_shape.`,
             'set_niagara_parameter',
             'clear_debug_shapes',
             'create_dynamic_light',
-            'cleanup'
+            'cleanup',
+            'create_niagara_system',
+            'create_niagara_emitter'
           ],
           description: 'Effect type'
         },
@@ -640,7 +642,11 @@ Supported actions: niagara, particle, debug_shape.`,
         parameterName: { type: 'string', description: 'Niagara parameter name (set_niagara_parameter).' },
         parameterType: { type: 'string', description: 'Niagara parameter type (Float, Vector, Color, Bool, Int).' },
         value: { description: 'Value to set for set_niagara_parameter (type dependent).' },
-        isUserParameter: { type: 'boolean', description: 'Whether the parameter is a user-exposed parameter (set_niagara_parameter).' }
+        isUserParameter: { type: 'boolean', description: 'Whether the parameter is a user-exposed parameter (set_niagara_parameter).' },
+        // Niagara creation helpers
+        template: { type: 'string', description: 'Template for Niagara system creation (e.g. "Empty", "Fountain").' },
+        savePath: { type: 'string', description: 'Path to save new Niagara assets.' },
+        emitterName: { type: 'string', description: 'Name of emitter to create/add.' }
       },
       required: ['action']
     },

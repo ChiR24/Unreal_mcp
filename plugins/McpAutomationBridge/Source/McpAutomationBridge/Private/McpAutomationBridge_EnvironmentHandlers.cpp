@@ -753,6 +753,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(const FString& Req
 
 bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    if (!Action.Equals(TEXT("console_command"), ESearchCase::IgnoreCase))
+    {
+        return false;
+    }
+
     if (!Payload.IsValid())
     {
         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Console command requires valid payload"), nullptr, TEXT("INVALID_PAYLOAD"));

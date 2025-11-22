@@ -508,11 +508,11 @@ export const resolvers = {
       }
     },
 
-    worldPartitionCells: async (_: any, __: any, context: GraphQLContext) => {
+    worldPartitionCells: async (_: any, __: any, _context: GraphQLContext) => {
       try {
         // Mock response as actual tool for listing cells might not exist or is complex
         // Using a dummy request to test connectivity or just return empty for now if not implemented
-        return []; 
+        return [];
       } catch (error) {
         console.error('Failed to list world partition cells:', error);
         return [];
@@ -522,7 +522,7 @@ export const resolvers = {
     niagaraSystems: async (_: any, args: any, context: GraphQLContext) => {
       const { filter, pagination } = args;
       try {
-         // Re-use list_assets with filter for NiagaraSystem class
+        // Re-use list_assets with filter for NiagaraSystem class
         const niagaraFilter = { ...filter, class: 'NiagaraSystem' };
         const { assets, totalCount } = await listAssets(
           context.automationBridge,
@@ -533,12 +533,12 @@ export const resolvers = {
         // Enrich assets with emitters/parameters if possible, or return basic asset shape
         // For GraphQL we might need to fetch details for each if fields are requested, 
         // but for list we return the assets cast as NiagaraSystem.
-        
+
         const edges = assets.map((asset, index) => ({
           node: {
-             ...asset,
-             emitters: [], // Placeholder, would require fetch details
-             parameters: [] // Placeholder
+            ...asset,
+            emitters: [], // Placeholder, would require fetch details
+            parameters: [] // Placeholder
           },
           cursor: Buffer.from(`${asset.path}:${index}`).toString('base64')
         }));
@@ -572,21 +572,21 @@ export const resolvers = {
       try {
         // Check if it's a niagara system
         const asset = await context.automationBridge.sendAutomationRequest(
-            'get_asset',
-            { assetPath: path },
-            { timeoutMs: 10000 }
+          'get_asset',
+          { assetPath: path },
+          { timeoutMs: 10000 }
         );
-        if(asset.success && asset.result && (asset.result as any).class === 'NiagaraSystem') {
-             return {
-                 ...(asset.result as any),
-                 emitters: [],
-                 parameters: []
-             };
+        if (asset.success && asset.result && (asset.result as any).class === 'NiagaraSystem') {
+          return {
+            ...(asset.result as any),
+            emitters: [],
+            parameters: []
+          };
         }
         return null;
       } catch (error) {
-         console.error('Failed to get niagara system:', error);
-         return null;
+        console.error('Failed to get niagara system:', error);
+        return null;
       }
     },
 

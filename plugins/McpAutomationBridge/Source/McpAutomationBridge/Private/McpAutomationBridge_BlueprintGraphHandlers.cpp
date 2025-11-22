@@ -43,7 +43,20 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
     FString AssetPath;
     if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'assetPath' in payload."), TEXT("INVALID_ARGUMENT"));
+        // Allow callers to use "blueprintPath" (as exposed by the consolidated
+        // tool schema) as an alias for assetPath so tests and tools do not need
+        // to duplicate the same value under two keys.
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        if (!BlueprintPath.IsEmpty())
+        {
+            AssetPath = BlueprintPath;
+        }
+    }
+
+    if (AssetPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'assetPath' or 'blueprintPath' in payload."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -116,6 +129,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
 
     if (SubAction == TEXT("create_node"))
     {
+        const FScopedTransaction Transaction(FText::FromString(TEXT("Create Blueprint Node")));
+        Blueprint->Modify();
+        TargetGraph->Modify();
+
         FString NodeType;
         Payload->TryGetStringField(TEXT("nodeType"), NodeType);
         float X = 0.0f;
@@ -123,8 +140,30 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
         Payload->TryGetNumberField(TEXT("x"), X);
         Payload->TryGetNumberField(TEXT("y"), Y);
 
-        FGraphNodeCreator<UEdGraphNode> NodeCreator(*TargetGraph);
-        UEdGraphNode* NewNode = nullptr;
+        // Helper to finalize and report
+        auto FinalizeAndReport = [&](auto& NodeCreator, UEdGraphNode* NewNode)
+        {
+            if (NewNode)
+            {
+                NewNode->NodePosX = X;
+                NewNode->NodePosY = Y;
+                
+                NodeCreator.Finalize();
+                
+                NewNode->AllocateDefaultPins();
+                
+                FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
+                TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+                Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
+                Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node created."), Result);
+            }
+            else
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create node (unsupported type or internal error)."), TEXT("CREATE_FAILED"));
+            }
+        };
 
         // Basic node creation logic - this can be expanded significantly
         if (NodeType == TEXT("CallFunction"))
@@ -134,7 +173,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
             FString MemberClass;
             Payload->TryGetStringField(TEXT("memberClass"), MemberClass); // Optional, for static functions
 
-            UK2Node_CallFunction* CallFuncNode = NewObject<UK2Node_CallFunction>(TargetGraph);
+            FGraphNodeCreator<UK2Node_CallFunction> NodeCreator(*TargetGraph);
+            UK2Node_CallFunction* CallFuncNode = NodeCreator.CreateNode(false);
             
             UFunction* Func = nullptr;
             if (!MemberClass.IsEmpty())
@@ -159,7 +199,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
             if (Func)
             {
                 CallFuncNode->SetFromFunction(Func);
-                NewNode = CallFuncNode;
+                FinalizeAndReport(NodeCreator, CallFuncNode);
             }
             else
             {
@@ -171,7 +211,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
         {
              FString VarName;
              Payload->TryGetStringField(TEXT("variableName"), VarName);
-             UK2Node_VariableGet* VarGet = NewObject<UK2Node_VariableGet>(TargetGraph);
+             
+             FGraphNodeCreator<UK2Node_VariableGet> NodeCreator(*TargetGraph);
+             UK2Node_VariableGet* VarGet = NodeCreator.CreateNode(false);
+             
              FName VarFName(*VarName);
              // Basic check if variable exists
              bool bFound = false;
@@ -186,28 +229,31 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
              if (bFound)
              {
                  VarGet->VariableReference.SetSelfMember(VarFName);
-                 NewNode = VarGet;
+                 FinalizeAndReport(NodeCreator, VarGet);
              }
              else
              {
-                 // Try to find property in parent class
-                  if (Blueprint->ParentClass && Blueprint->ParentClass->FindPropertyByName(VarFName))
-                  {
-                      VarGet->VariableReference.SetSelfMember(VarFName);
-                      NewNode = VarGet;
-                  }
-                  else
-                  {
-                      SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Could not find variable '%s'"), *VarName), TEXT("VARIABLE_NOT_FOUND"));
-                      return true;
-                  }
+                 // Use blueprint utils to resolve inherited variables correctly
+                 if (Blueprint->GeneratedClass && Blueprint->GeneratedClass->FindPropertyByName(VarFName) != nullptr)
+                 {
+                     VarGet->VariableReference.SetSelfMember(VarFName);
+                     FinalizeAndReport(NodeCreator, VarGet);
+                 }
+                 else
+                 {
+                     SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Could not find variable '%s'"), *VarName), TEXT("VARIABLE_NOT_FOUND"));
+                     return true;
+                 }
              }
         }
         else if (NodeType == TEXT("VariableSet"))
         {
              FString VarName;
              Payload->TryGetStringField(TEXT("variableName"), VarName);
-             UK2Node_VariableSet* VarSet = NewObject<UK2Node_VariableSet>(TargetGraph);
+             
+             FGraphNodeCreator<UK2Node_VariableSet> NodeCreator(*TargetGraph);
+             UK2Node_VariableSet* VarSet = NodeCreator.CreateNode(false);
+             
              FName VarFName(*VarName);
              bool bFound = false;
              for (const FBPVariableDescription& VarDesc : Blueprint->NewVariables)
@@ -218,10 +264,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
                      break;
                  }
              }
-             if (bFound || (Blueprint->ParentClass && Blueprint->ParentClass->FindPropertyByName(VarFName)))
+             if (bFound || (Blueprint->GeneratedClass && Blueprint->GeneratedClass->FindPropertyByName(VarFName) != nullptr))
              {
                  VarSet->VariableReference.SetSelfMember(VarFName);
-                 NewNode = VarSet;
+                 FinalizeAndReport(NodeCreator, VarSet);
              }
              else
              {
@@ -233,41 +279,84 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
         {
             FString EventName;
             Payload->TryGetStringField(TEXT("eventName"), EventName);
-            UK2Node_CustomEvent* EventNode = NewObject<UK2Node_CustomEvent>(TargetGraph);
+            
+            FGraphNodeCreator<UK2Node_CustomEvent> NodeCreator(*TargetGraph);
+            UK2Node_CustomEvent* EventNode = NodeCreator.CreateNode(false);
+            
             EventNode->CustomFunctionName = FName(*EventName);
-            NewNode = EventNode;
+            FinalizeAndReport(NodeCreator, EventNode);
         }
         else if (NodeType == TEXT("Branch"))
         {
-            NewNode = NewObject<UK2Node_IfThenElse>(TargetGraph);
+            FGraphNodeCreator<UK2Node_IfThenElse> NodeCreator(*TargetGraph);
+            UK2Node_IfThenElse* NewNode = NodeCreator.CreateNode(false);
+            FinalizeAndReport(NodeCreator, NewNode);
         }
         else if (NodeType == TEXT("Sequence"))
         {
-            NewNode = NewObject<UK2Node_ExecutionSequence>(TargetGraph);
+            FGraphNodeCreator<UK2Node_ExecutionSequence> NodeCreator(*TargetGraph);
+            UK2Node_ExecutionSequence* NewNode = NodeCreator.CreateNode(false);
+            FinalizeAndReport(NodeCreator, NewNode);
         }
         else if (NodeType == TEXT("Literal"))
         {
-            // Simplified literal creation
-            // Needs type info
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Literal node creation requires type specifics (not fully implemented)."), TEXT("NOT_IMPLEMENTED"));
-            return true;
-        }
+            // Create a literal node that can hold an object reference. This is a
+            // fully functional K2 literal node that returns the referenced asset
+            // or object when executed in the graph.
+            FString LiteralType;
+            Payload->TryGetStringField(TEXT("literalType"), LiteralType);
+            LiteralType.TrimStartAndEndInline();
+            const FString LiteralTypeLower = LiteralType.IsEmpty() ? TEXT("object") : LiteralType.ToLower();
 
-        if (NewNode)
-        {
-            TargetGraph->AddNode(NewNode, true, false);
-            NewNode->NodePosX = X;
-            NewNode->NodePosY = Y;
-            NewNode->AllocateDefaultPins();
-            NewNode->GetGraph()->NotifyGraphChanged();
-            FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+            if (LiteralTypeLower == TEXT("object") || LiteralTypeLower == TEXT("asset"))
+            {
+                FString ObjectPath;
+                Payload->TryGetStringField(TEXT("objectPath"), ObjectPath);
+                if (ObjectPath.IsEmpty())
+                {
+                    // As a convenience, allow callers to use assetPath as the
+                    // literal source when objectPath is omitted.
+                    Payload->TryGetStringField(TEXT("assetPath"), ObjectPath);
+                }
 
-            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-            Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
-            Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
-            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node created."), Result);
+                if (ObjectPath.IsEmpty())
+                {
+                    SendAutomationError(RequestingSocket, RequestId, TEXT("Literal object creation requires 'objectPath' or 'assetPath'."), TEXT("INVALID_LITERAL"));
+                    return true;
+                }
+
+                UObject* LoadedObject = LoadObject<UObject>(nullptr, *ObjectPath);
+                if (!LoadedObject)
+                {
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Literal object not found at path '%s'"), *ObjectPath), TEXT("OBJECT_NOT_FOUND"));
+                    return true;
+                }
+
+                // Create the node only after successful validation
+                FGraphNodeCreator<UK2Node_Literal> NodeCreator(*TargetGraph);
+                UK2Node_Literal* LiteralNode = NodeCreator.CreateNode(false);
+                if (!LiteralNode)
+                {
+                    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to allocate Literal node."), TEXT("CREATE_FAILED"));
+                    return true;
+                }
+
+                // UK2Node_Literal stores the referenced UObject in a private
+                // member; use its public setter rather than touching the
+                // field directly so we respect engine encapsulation.
+                LiteralNode->SetObjectRef(LoadedObject);
+                FinalizeAndReport(NodeCreator, LiteralNode);
+            }
+            else
+            {
+                // Primitive literal support (float/int/bool/strings) can be
+                // added later by wiring value pins. For now, fail fast rather
+                // than pretending success.
+                SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unsupported literalType '%s' (only 'object'/'asset' supported)."), *LiteralType), TEXT("UNSUPPORTED_LITERAL_TYPE"));
+                return true;
+            }
         }
-        else
+        else 
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create node (unsupported type or internal error)."), TEXT("CREATE_FAILED"));
         }
@@ -275,6 +364,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
     }
     else if (SubAction == TEXT("connect_pins"))
     {
+        const FScopedTransaction Transaction(FText::FromString(TEXT("Connect Blueprint Pins")));
+        Blueprint->Modify();
+        TargetGraph->Modify();
+
         FString FromNodeId, FromPinName, ToNodeId, ToPinName;
         Payload->TryGetStringField(TEXT("fromNodeId"), FromNodeId);
         Payload->TryGetStringField(TEXT("fromPinName"), FromPinName);
@@ -305,6 +398,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
              return true;
         }
 
+        FromNode->Modify();
+        ToNode->Modify();
+
         if (TargetGraph->GetSchema()->TryCreateConnection(FromPin, ToPin))
         {
             FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
@@ -318,6 +414,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
     }
     else if (SubAction == TEXT("break_pin_links"))
     {
+        const FScopedTransaction Transaction(FText::FromString(TEXT("Break Blueprint Pin Links")));
+        Blueprint->Modify();
+        TargetGraph->Modify();
+
         FString NodeId, PinName;
         Payload->TryGetStringField(TEXT("nodeId"), NodeId);
         Payload->TryGetStringField(TEXT("pinName"), PinName);
@@ -345,6 +445,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
             return true;
         }
 
+        TargetNode->Modify();
         TargetGraph->GetSchema()->BreakPinLinks(*Pin, true);
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Pin links broken."));
@@ -353,6 +454,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
 
     else if (SubAction == TEXT("delete_node"))
     {
+        const FScopedTransaction Transaction(FText::FromString(TEXT("Delete Blueprint Node")));
+        Blueprint->Modify();
+        TargetGraph->Modify();
+
         FString NodeId;
         Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
@@ -379,17 +484,25 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
     }
     else if (SubAction == TEXT("create_reroute_node"))
     {
+        const FScopedTransaction Transaction(FText::FromString(TEXT("Create Reroute Node")));
+        Blueprint->Modify();
+        TargetGraph->Modify();
+
         float X = 0.0f;
         float Y = 0.0f;
         Payload->TryGetNumberField(TEXT("x"), X);
         Payload->TryGetNumberField(TEXT("y"), Y);
 
-        UK2Node_Knot* RerouteNode = NewObject<UK2Node_Knot>(TargetGraph);
-        TargetGraph->AddNode(RerouteNode, true, false);
+        FGraphNodeCreator<UK2Node_Knot> NodeCreator(*TargetGraph);
+        UK2Node_Knot* RerouteNode = NodeCreator.CreateNode(false);
+        
         RerouteNode->NodePosX = X;
         RerouteNode->NodePosY = Y;
+        
+        NodeCreator.Finalize();
+        
         RerouteNode->AllocateDefaultPins();
-        RerouteNode->GetGraph()->NotifyGraphChanged();
+        
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
@@ -399,7 +512,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
     }
     else if (SubAction == TEXT("set_node_property"))
     {
-        // Simplified property setting - currently only supports setting 'Comment'
+        const FScopedTransaction Transaction(FText::FromString(TEXT("Set Blueprint Node Property")));
+        Blueprint->Modify();
+        TargetGraph->Modify();
+
+        // Generic property setter for common node properties used by tools.
         FString NodeId;
         Payload->TryGetStringField(TEXT("nodeId"), NodeId);
         FString PropertyName;
@@ -419,14 +536,44 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
 
         if (TargetNode)
         {
+            TargetNode->Modify();
+            bool bHandled = false;
+
             if (PropertyName.Equals(TEXT("Comment"), ESearchCase::IgnoreCase))
             {
                 TargetNode->NodeComment = Value;
-                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node comment updated."));
+                bHandled = true;
+            }
+            else if (PropertyName.Equals(TEXT("X"), ESearchCase::IgnoreCase) || PropertyName.Equals(TEXT("NodePosX"), ESearchCase::IgnoreCase))
+            {
+                double NumValue = 0.0;
+                if (!Payload->TryGetNumberField(TEXT("value"), NumValue))
+                {
+                    NumValue = FCString::Atod(*Value);
+                }
+                TargetNode->NodePosX = static_cast<float>(NumValue);
+                bHandled = true;
+            }
+            else if (PropertyName.Equals(TEXT("Y"), ESearchCase::IgnoreCase) || PropertyName.Equals(TEXT("NodePosY"), ESearchCase::IgnoreCase))
+            {
+                double NumValue = 0.0;
+                if (!Payload->TryGetNumberField(TEXT("value"), NumValue))
+                {
+                    NumValue = FCString::Atod(*Value);
+                }
+                TargetNode->NodePosY = static_cast<float>(NumValue);
+                bHandled = true;
+            }
+
+            if (bHandled)
+            {
+                TargetGraph->NotifyGraphChanged();
+                FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node property updated."));
             }
             else
             {
-                SendAutomationError(RequestingSocket, RequestId, TEXT("Only 'Comment' property is currently supported."), TEXT("NOT_IMPLEMENTED"));
+                SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unsupported node property '%s'"), *PropertyName), TEXT("PROPERTY_NOT_SUPPORTED"));
             }
         }
         else
@@ -496,6 +643,100 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
         Result->SetArrayField(TEXT("nodes"), Nodes);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Graph details retrieved."), Result);
+        return true;
+    }
+    else if (SubAction == TEXT("get_pin_details"))
+    {
+        FString NodeId;
+        Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+        FString PinName;
+        Payload->TryGetStringField(TEXT("pinName"), PinName);
+
+        UEdGraphNode* TargetNode = nullptr;
+        for (UEdGraphNode* Node : TargetGraph->Nodes)
+        {
+            if (Node->NodeGuid.ToString() == NodeId)
+            {
+                TargetNode = Node;
+                break;
+            }
+        }
+
+        if (!TargetNode)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
+            return true;
+        }
+
+        TArray<UEdGraphPin*> PinsToReport;
+        if (!PinName.IsEmpty())
+        {
+            UEdGraphPin* Pin = TargetNode->FindPin(*PinName);
+            if (!Pin)
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Pin not found."), TEXT("PIN_NOT_FOUND"));
+                return true;
+            }
+            PinsToReport.Add(Pin);
+        }
+        else
+        {
+            PinsToReport = TargetNode->Pins;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetStringField(TEXT("nodeId"), NodeId);
+
+        TArray<TSharedPtr<FJsonValue>> PinsJson;
+        for (UEdGraphPin* Pin : PinsToReport)
+        {
+            if (!Pin)
+            {
+                continue;
+            }
+
+            TSharedPtr<FJsonObject> PinObj = MakeShared<FJsonObject>();
+            PinObj->SetStringField(TEXT("pinName"), Pin->PinName.ToString());
+            PinObj->SetStringField(TEXT("direction"), Pin->Direction == EGPD_Input ? TEXT("Input") : TEXT("Output"));
+            PinObj->SetStringField(TEXT("pinType"), Pin->PinType.PinCategory.ToString());
+
+            if (Pin->LinkedTo.Num() > 0)
+            {
+                TArray<TSharedPtr<FJsonValue>> LinkedArray;
+                for (UEdGraphPin* LinkedPin : Pin->LinkedTo)
+                {
+                    if (!LinkedPin)
+                    {
+                        continue;
+                    }
+                    FString LinkedNodeId = LinkedPin->GetOwningNode() ? LinkedPin->GetOwningNode()->NodeGuid.ToString() : FString();
+                    const FString LinkedLabel = LinkedNodeId.IsEmpty()
+                        ? LinkedPin->PinName.ToString()
+                        : FString::Printf(TEXT("%s:%s"), *LinkedNodeId, *LinkedPin->PinName.ToString());
+                    LinkedArray.Add(MakeShared<FJsonValueString>(LinkedLabel));
+                }
+                PinObj->SetArrayField(TEXT("linkedTo"), LinkedArray);
+            }
+
+            if (!Pin->DefaultValue.IsEmpty())
+            {
+                PinObj->SetStringField(TEXT("defaultValue"), Pin->DefaultValue);
+            }
+            else if (!Pin->DefaultTextValue.IsEmptyOrWhitespace())
+            {
+                PinObj->SetStringField(TEXT("defaultTextValue"), Pin->DefaultTextValue.ToString());
+            }
+            else if (Pin->DefaultObject)
+            {
+                PinObj->SetStringField(TEXT("defaultObjectPath"), Pin->DefaultObject->GetPathName());
+            }
+
+            PinsJson.Add(MakeShared<FJsonValueObject>(PinObj));
+        }
+
+        Result->SetArrayField(TEXT("pins"), PinsJson);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Pin details retrieved."), Result);
         return true;
     }
 

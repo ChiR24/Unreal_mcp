@@ -786,19 +786,27 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(const FString& RequestId, 
         return true;
     }
 
+    // Sanitize destination path
+    FString SafeDestPath = SanitizeProjectRelativePath(DestinationPath);
+    if (SafeDestPath.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Invalid destination path"), nullptr, TEXT("INVALID_PATH"));
+        return true;
+    }
+
     // Basic import implementation using AssetTools
     IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
     
     TArray<FString> Files;
     Files.Add(SourcePath);
 
-    FString DestPath = FPaths::GetPath(DestinationPath);
-    FString DestName = FPaths::GetBaseFilename(DestinationPath);
+    FString DestPath = FPaths::GetPath(SafeDestPath);
+    FString DestName = FPaths::GetBaseFilename(SafeDestPath);
 
     // If destination is just a folder, use that
-    if (FPaths::GetExtension(DestinationPath).IsEmpty())
+    if (FPaths::GetExtension(SafeDestPath).IsEmpty())
     {
-        DestPath = DestinationPath;
+        DestPath = SafeDestPath;
         DestName = FPaths::GetBaseFilename(SourcePath);
     }
 
@@ -1130,11 +1138,18 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(const FString& RequestId,
         return true;
     }
 
-    if (UEditorAssetLibrary::MakeDirectory(Path))
+    FString SafePath = SanitizeProjectRelativePath(Path);
+    if (SafePath.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Invalid path: must be project-relative and not contain '..'"), nullptr, TEXT("INVALID_PATH"));
+        return true;
+    }
+
+    if (UEditorAssetLibrary::MakeDirectory(SafePath))
     {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("path"), Path);
+        Resp->SetStringField(TEXT("path"), SafePath);
         SendAutomationResponse(Socket, RequestId, true, TEXT("Folder created"), Resp, FString());
     }
     else
@@ -1155,6 +1170,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(const FString& Request
     {
         SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
+    }
+
+    // Validate path
+    if (!IsValidAssetPath(AssetPath))
+    {
+         SendAutomationResponse(Socket, RequestId, false, TEXT("Invalid asset path"), nullptr, TEXT("INVALID_PATH"));
+         return true;
     }
 
     bool bRecursive = false; Payload->TryGetBoolField(TEXT("recursive"), bRecursive);

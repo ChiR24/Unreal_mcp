@@ -2,6 +2,15 @@
 
 This document tracks ongoing work to replace stubbed or registry-based fallbacks with full native editor implementations across the MCP Automation Bridge plugin.
 
+## Asset Workflow & Source Control
+
+| Action | Current State | Needed Work |
+| --- | --- | --- |
+| `get_source_control_state` | Implemented (checkout status, user). | ✅ Done |
+| `analyze_graph` | Implemented (recursive dependencies + WASM analysis). | ✅ Done |
+| `create_thumbnail` | Implemented (supports width/height params). | ✅ Done |
+| `import` / `export` | Native AssetTools implementation. | ✅ Done |
+
 ## Sequence Handlers
 
 | Action | Current State | Needed Work |
@@ -57,6 +66,14 @@ This document tracks ongoing work to replace stubbed or registry-based fallbacks
 | `get_blueprint_scs` | Requires editor build; returns serialized component tree. | ✅ Done |
 | `blueprint_modify_scs` | Full editor implementation (add/remove/attach). | ✅ Done |
 | `AddSCSComponent` / `RemoveSCSComponent` / `SetSCSComponentTransform` | Editor-only; fail fast when unavailable. | ✅ Done |
+
+## Security & Hardening
+
+| Feature | Status | Details |
+| --- | --- | --- |
+| **Path Sanitization** | ✅ Implemented | Enforces project-relative paths (`/Game`, `/Engine`, `/Script`) and rejects traversal (`..`) in `import`, `create_folder`, etc. |
+| **Pointer Safety** | ✅ Verified | Robust `nullptr` checks and weak pointers in C++ handlers. |
+| **Concurrency** | ✅ Verified | Thread-safe queue and GameThread dispatching for all automation requests. |
 
 ## Blueprint Authoring (Recap)
 

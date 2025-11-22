@@ -1,5 +1,4 @@
 
-import { cleanObject } from '../utils/safe-json.js';
 import { BaseTool } from './base-tool.js';
 import { IAssetTools } from '../types/tool-interfaces.js';
 import { wasmIntegration } from '../wasm/index.js';
@@ -114,7 +113,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       try {
         // Fetch immediate dependencies
         const depsResponse = await this.getDependencies({ assetPath: path, recursive: false });
-        
+
         // If fetch fails or no dependencies, treat as leaf
         if (!depsResponse || !depsResponse.success || !Array.isArray(depsResponse.dependencies)) {
           graph[path] = [];
@@ -135,17 +134,17 @@ export class AssetTools extends BaseTool implements IAssetTools {
         graph[path] = [];
       }
     }
-    
+
     // Use WASM for analysis on the constructed graph
     try {
-        const analysis = await wasmIntegration.analyzeDependencies(
-            params.assetPath, 
-            JSON.stringify(graph), 
-            maxDepth
-        );
-        return { success: true, analysis };
+      const analysis = await wasmIntegration.resolveDependencies(
+        params.assetPath,
+        graph,
+        { maxDepth }
+      );
+      return { success: true, analysis };
     } catch (e: any) {
-        return { success: false, error: `WASM analysis failed: ${e.message}` };
+      return { success: false, error: `WASM analysis failed: ${e.message}` };
     }
   }
 
@@ -181,7 +180,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       return { success: false, error: 'assetPath is required' };
     }
     if (!Number.isFinite(lodCountRaw) || lodCountRaw <= 0) {
-      return { success: false, error: 'lodCount must be a positive number' ;
+      return { success: false, error: 'lodCount must be a positive number' };
     }
     const lodCount = Math.floor(lodCountRaw);
 

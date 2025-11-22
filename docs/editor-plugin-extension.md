@@ -62,6 +62,8 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 - `set_tags` - Asset metadata tagging
 - `generate_report` - Asset reports
 - `validate` - Asset existence validation
+- `get_source_control_state` - Check checkout/revision status
+- `analyze_graph` - Deep dependency analysis (WASM-accelerated)
 
 ### 2. Editor Function Execution (`HandleExecuteEditorFunction`)
 ✅ **Fully Implemented** - Native subsystem operations
