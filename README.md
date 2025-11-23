@@ -60,7 +60,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - Location: `plugins/McpAutomationBridge`
 - Installation: copy the folder into your project's `Plugins/` directory and regenerate project files.
 - Sync helper: run `npm run automation:sync -- --engine "X:/Unreal_Engine/UE_5.6/Engine/Plugins" --project "X:/Newfolder(2)/Game/Unreal/Trial/Plugins" --clean-engine --clean-project` after repo updates to copy the latest bridge build into both plugin folders and strip legacy entries (such as `SupportedTargetPlatforms: ["Editor"]`) that trigger startup warnings.
-- Verification: run `npm run automation:verify -- --project "C:/Path/To/YourProject/Plugins" --config "C:/Path/To/YourProject/Config/DefaultEngine.ini"` to confirm the plugin files and automation bridge environment variables are in place before launching Unreal.
+- Verification: run `node scripts/verify-automation-bridge.js --project "C:/Path/To/YourProject/Plugins" --config "C:/Path/To/YourProject/Config/DefaultEngine.ini"` to confirm the plugin files and automation bridge environment variables are in place before launching Unreal.
 - Configuration: enable **MCP Automation Bridge** in **Edit ▸ Plugins**, restart the editor, then set the endpoint/token under **Edit ▸ Project Settings ▸ Plugins ▸ MCP Automation Bridge**. The bridge ships with its own lightweight WebSocket client, so you no longer need the engine's WebSockets plugin enabled.
 - Startup: after configuration, the Output Log should show a successful connection and the `bridge_started` broadcast; `SendRawMessage` becomes available to Blueprint and C++ callers for manual testing.
 - Current scope: manages a WebSocket session to the Node MCP server (`ws://127.0.0.1:8090` by default), performs optional capability-token handshakes, dispatches inbound JSON to native C++ handlers, implements reconnect backoff, and responds to editor functions, property operations, blueprint actions, and more through native implementations.
@@ -70,31 +70,50 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ### WebAssembly Performance (Optional)
 
-The MCP server includes WebAssembly acceleration for computationally intensive operations. WASM is **automatically enabled** when available, with graceful TypeScript fallbacks.
+The MCP server includes WebAssembly acceleration for computationally intensive operations. WASM is **automatically used when available** and **gracefully falls back** to pure TypeScript when the bundle or toolchain is missing.
 
-**For maximum performance (5-8x faster operations):**
+**To enable full WASM acceleration (5–8x faster operations):**
 
 ```bash
-# Install Rust and wasm-pack
-curl https://sh.rustup.rs -sSf | sh
+# 1. Install Rust toolchain and wasm-pack (once per machine)
+#    See https://rustup.rs for installing Rust.
 cargo install wasm-pack
 
-# Build WASM module
-npm run build:wasm
+# 2. Build TypeScript + WASM bundle
+#    The build script always runs the TypeScript compiler and then
+#    optionally builds the WASM bundle. If wasm-pack is missing the
+#    build will succeed with a warning and the server will use
+#    TypeScript fallbacks.
+npm run build
 
-# Enable WASM (or set in .env)
-export WASM_ENABLED=true
+# 3. Ensure WASM is enabled (default is enabled if WASM_ENABLED is unset)
+#    In .env or your process environment:
+#    WASM_ENABLED=true
 
-# Start server
+# 4. Start the server or run tests – the logs will include a
+#    "WebAssembly module initialized successfully" message when the
+#    bundle is present and loaded.
 npm start
 ```
 
 **Without WASM (still fully functional):**
 
 ```bash
+# Disable WASM explicitly (optional)
+# In .env or environment:
+#   WASM_ENABLED=false
+
 npm start
-# Automatically uses TypeScript fallbacks
+# Server will always use TypeScript implementations only.
 ```
+
+When the WASM bundle is not present or `wasm-pack` is not installed:
+
+- `npm run build` prints a concise message:
+  > WASM build failed or wasm-pack missing; continuing with TypeScript-only build.
+- At runtime, the server attempts to load the bundle once. On `ERR_MODULE_NOT_FOUND`
+  it logs a single warning suggesting `npm run build`/`cargo install wasm-pack` and
+  permanently falls back to TypeScript for that process.
 
 WASM acceleration applies to:
 - JSON property parsing (5-8x faster)
@@ -227,23 +246,36 @@ Blueprints, Materials, Textures, Static/Skeletal Meshes, Levels, Sounds, Particl
 - **Gameplay**: `slomo 0.5`, `god`, `fly`
 - **Rendering**: `r.screenpercentage 50`, `r.vsync 0`
 
-## Configuration
+### Configuration
 
 ### Environment Variables
 
 ```env
 UE_PROJECT_PATH="C:/Users/YourName/Documents/Unreal Projects/YourProject"  # Absolute path to your .uproject file
-LOG_LEVEL=info                       # debug | info | warn | error
-MCP_AUTOMATION_WS_HOST=127.0.0.1     # Host interface for the automation bridge WebSocket server
-MCP_AUTOMATION_WS_PORT=8090          # Port for the automation bridge WebSocket server
-MCP_AUTOMATION_WS_PORTS=8090,8091    # Comma-separated list of ports to listen on simultaneously
-MCP_AUTOMATION_WS_PROTOCOLS=mcp-automation # Preferred WebSocket subprotocols
-MCP_AUTOMATION_CAPABILITY_TOKEN=     # Optional capability token for handshake security
-MCP_AUTOMATION_BRIDGE_ENABLED=true   # Set to false to disable the automation bridge
+LOG_LEVEL=info                        # debug | info | warn | error
+
+# Automation bridge WebSocket client (Node -> Unreal editor)
+MCP_AUTOMATION_WS_HOST=127.0.0.1      # Host/interface for the automation bridge connection
+MCP_AUTOMATION_WS_PORT=8090           # Primary bridge port (must match the plugin's port)
+MCP_AUTOMATION_WS_PORTS=8090,8091     # Optional comma-separated list of additional ports
+MCP_AUTOMATION_WS_PROTOCOLS=mcp-automation
+MCP_AUTOMATION_CAPABILITY_TOKEN=      # Optional capability token for handshake security
+MCP_AUTOMATION_BRIDGE_ENABLED=true    # Set to false to disable the automation bridge client
+
+# WebAssembly acceleration
+WASM_ENABLED=true                     # Default: enabled if unset; set false to force TS-only
+# Optional override when hosting the WASM bundle elsewhere:
+# WASM_PATH=file:///absolute/path/to/unreal_mcp_wasm.js
+
+# Timeouts / caching (advanced – safe defaults are baked in)
+MCP_AUTOMATION_REQUEST_TIMEOUT_MS=120000
+MCP_AUTOMATION_EVENT_TIMEOUT_MS=0
+ASSET_LIST_TTL_MS=10000
 ```
 
 Note on configuration precedence
-- Environment variables (.env / system env) override runtime defaults defined in `src/constants.ts`. The constants file documents safe defaults and provides typed fallbacks when env values are absent (useful for local dev, tests, and CI). Keep secrets in `.env` or a secret manager — do not store secrets in `src/constants.ts`.
+- The server uses `dotenv` to load `.env` for local development. A `.env.production` file is included as a reference for production deployments; copy values into your real environment or secret store as appropriate.
+- Environment variables (.env / system env) override the internal runtime defaults (for example, defaults in `src/index.ts`, `src/automation-bridge.ts`, and individual tool implementations). This lets you tune timeouts, logging, and WASM behavior without modifying source code. Keep secrets in `.env` or a secret manager — do not store secrets in source files.
 
 Mock mode
 - For offline development or CI without an Editor, set `UNREAL_MCP_MOCK_MODE=1` to run tests and tools against a local mock bridge. This is useful for unit tests and continuous integration where launching the Editor is impractical.
@@ -265,7 +297,7 @@ docker run --rm -it mcp/server/unreal-engine-mcp-server:latest
 ## Development
 
 ```bash
-npm run build          # Build TypeScript
+npm run build          # Build TypeScript and (optionally) the WebAssembly bundle
 npm run lint           # Run ESLint
 npm run lint:fix       # Fix linting issues
 ```

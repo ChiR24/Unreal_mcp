@@ -76,6 +76,17 @@ function evaluateExpectation(testCase, response) {
     actualMessage = response.structuredContent.message;
   }
 
+  // Also extract flattened plain-text content for matching when structured
+  // fields are missing or when MCP errors (e.g. timeouts) are only reported
+  // via the textual content array.
+  let contentText = '';
+  if (Array.isArray(response.content) && response.content.length > 0) {
+    contentText = response.content
+      .map((entry) => (entry && typeof entry.text === 'string' ? entry.text : ''))
+      .filter((t) => t.length > 0)
+      .join('\n');
+  }
+
   // Handle multi-condition expectations using "or" or pipe separators
   // e.g., "success or LOAD_FAILED" or "success|no_instances|load_failed"
   if (lowerExpected.includes(' or ') || lowerExpected.includes('|')) {
@@ -90,7 +101,18 @@ function evaluateExpectation(testCase, response) {
       }
       const messageStr = (actualMessage || '').toString().toLowerCase();
       const errorStr = (actualError || '').toString().toLowerCase();
-      if (messageStr.includes(condition) || errorStr.includes(condition)) {
+      const contentStr = contentText.toString().toLowerCase();
+      const combined = `${messageStr} ${errorStr} ${contentStr}`;
+
+      // Special-case timeout expectations so that MCP transport timeouts
+      // (e.g. "Request timed out") satisfy conditions containing "timeout".
+      if (condition === 'timeout' || condition.includes('timeout')) {
+        if (combined.includes('timeout') || combined.includes('timed out')) {
+          return { passed: true, reason: `Expected timeout condition met: ${condition}` };
+        }
+      }
+
+      if (combined.includes(condition)) {
         return { passed: true, reason: `Expected condition met: ${condition}` };
       }
     }
@@ -101,7 +123,7 @@ function evaluateExpectation(testCase, response) {
   // Also flag common automation/plugin failure phrases
   const messageStr = (actualMessage || '').toString().toLowerCase();
   const errorStr = (actualError || '').toString().toLowerCase();
-  const combinedText = (messageStr + ' ' + errorStr).toLowerCase();
+  const combinedText = (messageStr + ' ' + errorStr + ' ' + contentText.toString().toLowerCase()).toLowerCase();
 
   const pluginFailureIndicators = ['does not match prefix', 'unknown', 'not implemented', 'unavailable', 'unsupported'];
   const hasPluginFailure = pluginFailureIndicators.some(term => combinedText.includes(term));
@@ -473,14 +495,35 @@ export async function runToolTests(toolName, testCases) {
       } catch (error) {
         const endTime = performance.now();
         const durationMs = endTime - startTime;
-        console.log(`[FAILED] ${testCase.scenario} (${durationMs.toFixed(1)} ms) => Error: ${error.message}`);
+        const errorMessage = String(error?.message || error || '');
+        const lowerExpected = (testCase.expected || '').toString().toLowerCase();
+        const lowerError = errorMessage.toLowerCase();
+
+        // If the test explicitly expects a timeout (e.g. "timeout|error"), then
+        // an MCP/client timeout should be treated as the expected outcome rather
+        // than as a hard harness failure. Accept both "timeout" and "timed out"
+        // phrasing from different MCP client implementations.
+        if (lowerExpected.includes('timeout') && (lowerError.includes('timeout') || lowerError.includes('timed out'))) {
+          console.log(`[PASSED] ${testCase.scenario} (${durationMs.toFixed(1)} ms)`);
+          results.push({
+            scenario: testCase.scenario,
+            toolName: testCase.toolName,
+            arguments: testCase.arguments,
+            status: 'passed',
+            durationMs,
+            detail: errorMessage
+          });
+          continue;
+        }
+
+        console.log(`[FAILED] ${testCase.scenario} (${durationMs.toFixed(1)} ms) => Error: ${errorMessage}`);
         results.push({
           scenario: testCase.scenario,
           toolName: testCase.toolName,
           arguments: testCase.arguments,
           status: 'failed',
           durationMs,
-          detail: error.message
+          detail: errorMessage
         });
       }
     }

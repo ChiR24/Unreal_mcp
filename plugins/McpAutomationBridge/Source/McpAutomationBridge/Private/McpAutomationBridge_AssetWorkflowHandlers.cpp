@@ -1256,22 +1256,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(const FString& RequestId, cons
         return true;
     }
 
-    // For now, we do not mutate the asset in-place; we simply acknowledge the
-    // requested tags and report success. This keeps behavior simple while still
-    // giving structured feedback to callers.
-    TArray<TSharedPtr<FJsonValue>> TagValues;
-    for (const FString& Tag : Tags)
-    {
-        TagValues.Add(MakeShared<FJsonValueString>(Tag));
-    }
-
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("assetPath"), AssetPath);
-    Resp->SetArrayField(TEXT("tags"), TagValues);
-    Resp->SetNumberField(TEXT("appliedTags"), Tags.Num());
-
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset tags set"), Resp, FString());
+    // "Tags" on generic assets are not a standard engine concept (unlike Actor tags).
+    // Metadata is supported via set_metadata.
+    // We return NOT_IMPLEMENTED to clarify this ambiguity.
+    SendAutomationResponse(Socket, RequestId, false, TEXT("set_tags is not implemented for generic assets. Use set_metadata for package metadata or control_actor:add_tag for actors."), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #else
     return false;
@@ -1535,8 +1523,60 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(const FString& 
         const TSharedPtr<FJsonObject>* ParamsObj;
         if (MIC && Payload->TryGetObjectField(TEXT("parameters"), ParamsObj))
         {
-             // Simple parameter handling implementation would go here
-             // For now we just create the asset
+             // Scalar parameters
+             const TSharedPtr<FJsonObject>* Scalars;
+             if ((*ParamsObj)->TryGetObjectField(TEXT("scalar"), Scalars))
+             {
+                 for (const auto& Kvp : (*Scalars)->Values)
+                 {
+                     double Val = 0.0;
+                     if (Kvp.Value->TryGetNumber(Val))
+                     {
+                         MIC->SetScalarParameterValueEditorOnly(FName(*Kvp.Key), (float)Val);
+                     }
+                 }
+             }
+             
+             // Vector parameters
+             const TSharedPtr<FJsonObject>* Vectors;
+             if ((*ParamsObj)->TryGetObjectField(TEXT("vector"), Vectors))
+             {
+                 for (const auto& Kvp : (*Vectors)->Values)
+                 {
+                     const TSharedPtr<FJsonObject>* VecObj;
+                     if (Kvp.Value->TryGetObject(VecObj))
+                     {
+                         // Try generic RGBA
+                         double R=0, G=0, B=0, A=1;
+                         (*VecObj)->TryGetNumberField(TEXT("r"), R);
+                         (*VecObj)->TryGetNumberField(TEXT("g"), G);
+                         (*VecObj)->TryGetNumberField(TEXT("b"), B);
+                         (*VecObj)->TryGetNumberField(TEXT("a"), A);
+                         MIC->SetVectorParameterValueEditorOnly(FName(*Kvp.Key), FLinearColor((float)R, (float)G, (float)B, (float)A));
+                     }
+                 }
+             }
+             
+             // Texture parameters
+             const TSharedPtr<FJsonObject>* Textures;
+             if ((*ParamsObj)->TryGetObjectField(TEXT("texture"), Textures))
+             {
+                 for (const auto& Kvp : (*Textures)->Values)
+                 {
+                     FString TexPath;
+                     if (Kvp.Value->TryGetString(TexPath) && !TexPath.IsEmpty())
+                     {
+                         UTexture* Tex = LoadObject<UTexture>(nullptr, *TexPath);
+                         if (Tex)
+                         {
+                             MIC->SetTextureParameterValueEditorOnly(FName(*Kvp.Key), Tex);
+                         }
+                     }
+                 }
+             }
+             
+             MIC->PostEditChange();
+             MIC->MarkPackageDirty();
         }
 
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

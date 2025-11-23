@@ -2,14 +2,31 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 
-#if 0
-#include "WorldPartitionEditorSubsystem.h"
-#include "WorldPartition/WorldPartition.h"
-#include "WorldPartition/DataLayer/DataLayer.h"
-#include "WorldPartition/DataLayer/DataLayerSubsystem.h"
+#if WITH_EDITOR
 #include "Editor.h"
 #include "LevelEditor.h"
 #include "Subsystems/EditorActorSubsystem.h"
+#include "WorldPartition/WorldPartition.h"
+
+#if __has_include("WorldPartition/WorldPartitionEditorSubsystem.h")
+#include "WorldPartition/WorldPartitionEditorSubsystem.h"
+#define MCP_HAS_WP_EDITOR_SUBSYSTEM 1
+#elif __has_include("WorldPartitionEditorSubsystem.h")
+#include "WorldPartitionEditorSubsystem.h"
+#define MCP_HAS_WP_EDITOR_SUBSYSTEM 1
+#else
+#define MCP_HAS_WP_EDITOR_SUBSYSTEM 0
+#endif
+
+#include "WorldPartition/DataLayer/DataLayer.h"
+#include "WorldPartition/DataLayer/DataLayerSubsystem.h"
+#if __has_include("WorldPartition/DataLayer/DataLayerEditorSubsystem.h")
+#include "WorldPartition/DataLayer/DataLayerEditorSubsystem.h"
+#define MCP_HAS_DATALAYER_EDITOR 1
+#else
+#define MCP_HAS_DATALAYER_EDITOR 0
+#endif
+#include "WorldPartition/DataLayer/DataLayerInstance.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -19,7 +36,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         return false;
     }
 
-#if WITH_EDITOR && 0
+#if WITH_EDITOR
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
@@ -40,10 +57,15 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         return true;
     }
 
+#if MCP_HAS_WP_EDITOR_SUBSYSTEM
     UWorldPartitionEditorSubsystem* WPEditorSubsystem = GEditor->GetEditorSubsystem<UWorldPartitionEditorSubsystem>();
+#else
+    UObject* WPEditorSubsystem = nullptr;
+#endif
+
     if (!WPEditorSubsystem)
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("WorldPartitionEditorSubsystem not found."), TEXT("SUBSYSTEM_NOT_FOUND"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("WorldPartitionEditorSubsystem not found or not compiled."), TEXT("SUBSYSTEM_NOT_FOUND"));
         return true;
     }
 
@@ -51,32 +73,39 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
 
     if (SubAction == TEXT("load_cells"))
     {
-        // Expect bounds or cell coords
+#if MCP_HAS_WP_EDITOR_SUBSYSTEM
+        // Default to a reasonable area if no bounds provided
         FVector Origin = FVector::ZeroVector;
-        FVector Extent = FVector(10000.0f, 10000.0f, 10000.0f); // Default large box
+        FVector Extent = FVector(25000.0f, 25000.0f, 25000.0f); // 500m box
 
-        if (Payload->HasField(TEXT("origin")))
+        const TArray<TSharedPtr<FJsonValue>>* OriginArr;
+        if (Payload->TryGetArrayField(TEXT("origin"), OriginArr) && OriginArr && OriginArr->Num() >= 3)
         {
-            // Simplified parsing for now, ideally use a helper
-            // Assuming JSON array or object, but let's just take simple fields if present
-            // For now, just use default or what's passed if we can parse it easily.
-            // Implementing a full vector parser here is verbose, so we'll rely on defaults or simple checks.
+            Origin.X = (*OriginArr)[0]->AsNumber();
+            Origin.Y = (*OriginArr)[1]->AsNumber();
+            Origin.Z = (*OriginArr)[2]->AsNumber();
+        }
+        
+        const TArray<TSharedPtr<FJsonValue>>* ExtentArr;
+        if (Payload->TryGetArrayField(TEXT("extent"), ExtentArr) && ExtentArr && ExtentArr->Num() >= 3)
+        {
+            Extent.X = (*ExtentArr)[0]->AsNumber();
+            Extent.Y = (*ExtentArr)[1]->AsNumber();
+            Extent.Z = (*ExtentArr)[2]->AsNumber();
         }
         
         FBox Bounds(Origin - Extent, Origin + Extent);
+        WPEditorSubsystem->LoadRegion(Bounds);
         
-        if (WPEditorSubsystem->LoadRegion(Bounds))
-        {
-             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Cells loaded in region."));
-        }
-        else
-        {
-             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load cells (no cells found or error)."), TEXT("LOAD_FAILED"));
-        }
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Region load requested."));
+#else
+        SendAutomationError(RequestingSocket, RequestId, TEXT("WorldPartitionEditorSubsystem not compiled."), TEXT("NOT_COMPILED"));
+#endif
         return true;
     }
     else if (SubAction == TEXT("set_datalayer"))
     {
+#if MCP_HAS_DATALAYER_EDITOR
         FString ActorPath;
         Payload->TryGetStringField(TEXT("actorPath"), ActorPath);
         FString DataLayerName;
@@ -89,49 +118,51 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
              return true;
         }
 
-        // UE 5.1+ uses DataLayerManager/Subsystem. 
-        // We will try to use the EditorActorSubsystem to manage this if possible, or generic reflection.
-        // But DataLayers are specific.
-        // Let's try to find the DataLayerSubsystem.
-        
         UDataLayerEditorSubsystem* DataLayerSubsystem = GEditor->GetEditorSubsystem<UDataLayerEditorSubsystem>();
         if (DataLayerSubsystem)
         {
-            // This part is highly version dependent. 
-            // We'll attempt to find a DataLayerInstance by name.
-            // For now, we'll return a specific error if we can't find the subsystem, but if we do:
-            
-            // Note: In 5.0 it was different. In 5.1+ it's DataLayerInstance.
-            // We will assume 5.1+ API for now as 5.6 is the target context.
-            /*
-            UDataLayerInstance* Layer = DataLayerSubsystem->GetDataLayerInstance(DataLayerName);
-            if (Layer)
+            UDataLayerInstance* TargetLayer = nullptr;
+            if (WorldPartition)
             {
-                DataLayerSubsystem->AddActorToDataLayer(Layer, Actor);
+                WorldPartition->ForEachDataLayerInstance([&](UDataLayerInstance* LayerInstance) {
+                    if (LayerInstance->GetDataLayerShortName() == DataLayerName || LayerInstance->GetDataLayerFullName() == DataLayerName)
+                    {
+                        TargetLayer = LayerInstance;
+                        return false; // Stop iteration
+                    }
+                    return true; // Continue
+                });
+            }
+
+            if (TargetLayer)
+            {
+                TArray<AActor*> Actors;
+                Actors.Add(Actor);
+                TArray<UDataLayerInstance*> Layers;
+                Layers.Add(TargetLayer);
+                
+                DataLayerSubsystem->AddActorsToDataLayers(Actors, Layers);
                 SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor added to DataLayer."));
             }
             else
             {
-                SendAutomationError(RequestingSocket, RequestId, TEXT("DataLayer not found."), TEXT("DATALAYER_NOT_FOUND"));
+                SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("DataLayer '%s' not found."), *DataLayerName), TEXT("DATALAYER_NOT_FOUND"));
             }
-            */
-             // To avoid compilation errors on older/newer versions without exact API match, 
-             // we will use a safe fallback or just note it's implemented but might fail at runtime if API mismatches.
-             // Actually, let's just try to use the subsystem if available.
-             
-             SendAutomationError(RequestingSocket, RequestId, TEXT("set_datalayer requires exact engine version API match (DataLayerInstance vs DataLayer)."), TEXT("NOT_IMPLEMENTED_SAFELY"));
         }
         else
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("DataLayerEditorSubsystem not found."), TEXT("SUBSYSTEM_NOT_FOUND"));
         }
+#else
+        SendAutomationError(RequestingSocket, RequestId, TEXT("DataLayerEditorSubsystem not compiled."), TEXT("NOT_COMPILED"));
+#endif
         return true;
     }
 
     SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
 #else
-    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("World Partition support disabled due to missing headers"), nullptr, TEXT("NOT_IMPLEMENTED"));
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("World Partition support disabled (non-editor build)"), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #endif
 }

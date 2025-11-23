@@ -14,12 +14,46 @@
 #include "ProceduralFoliageVolume.h"
 #include "ProceduralFoliageComponent.h"
 #include "FoliageTypeObject.h"
+#include "EngineUtils.h"
+#include "WorldPartition/WorldPartition.h"
 
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
 #include "EditorActorSubsystem.h"
 #endif
+#endif
+
+#if WITH_EDITOR
+static AInstancedFoliageActor* GetOrCreateFoliageActorForWorldSafe(UWorld* World, bool bCreateIfNone)
+{
+    if (!World)
+    {
+        return nullptr;
+    }
+
+    if (UWorldPartition* WorldPartition = World->GetWorldPartition())
+    {
+        // Partitioned worlds: use the engine helper that integrates with the actor partition subsystem.
+        return AInstancedFoliageActor::GetInstancedFoliageActorForCurrentLevel(World, bCreateIfNone);
+    }
+
+    // Non-partitioned worlds: avoid ActorPartitionSubsystem ensures by finding or spawning a foliage actor manually.
+    for (TActorIterator<AInstancedFoliageActor> It(World); It; ++It)
+    {
+        return *It;
+    }
+
+    if (!bCreateIfNone)
+    {
+        return nullptr;
+    }
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.ObjectFlags |= RF_Transactional;
+    SpawnParams.OverrideLevel = World->PersistentLevel;
+    return World->SpawnActor<AInstancedFoliageActor>(SpawnParams);
+}
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
@@ -102,7 +136,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
         return true;
     }
 
-    AInstancedFoliageActor* IFA = AInstancedFoliageActor::GetInstancedFoliageActorForCurrentLevel(World, true);
+    AInstancedFoliageActor* IFA = GetOrCreateFoliageActorForWorldSafe(World, true);
     if (!IFA)
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to get foliage actor"), TEXT("FOLIAGE_ACTOR_FAILED"));
@@ -173,7 +207,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
     }
 
     UWorld* World = GEditor->GetEditorWorldContext().World();
-    AInstancedFoliageActor* IFA = AInstancedFoliageActor::GetInstancedFoliageActorForCurrentLevel(World);
+    AInstancedFoliageActor* IFA = GetOrCreateFoliageActorForWorldSafe(World, false);
     if (!IFA)
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("No foliage actor found"), TEXT("FOLIAGE_ACTOR_NOT_FOUND"));
@@ -241,7 +275,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
     }
 
     UWorld* World = GEditor->GetEditorWorldContext().World();
-    AInstancedFoliageActor* IFA = AInstancedFoliageActor::GetInstancedFoliageActorForCurrentLevel(World);
+    AInstancedFoliageActor* IFA = GetOrCreateFoliageActorForWorldSafe(World, false);
     if (!IFA)
     {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -502,7 +536,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
         return true;
     }
 
-    AInstancedFoliageActor* IFA = AInstancedFoliageActor::GetInstancedFoliageActorForCurrentLevel(World, true);
+    AInstancedFoliageActor* IFA = GetOrCreateFoliageActorForWorldSafe(World, true);
     if (!IFA)
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to get foliage actor"), TEXT("FOLIAGE_ACTOR_FAILED"));

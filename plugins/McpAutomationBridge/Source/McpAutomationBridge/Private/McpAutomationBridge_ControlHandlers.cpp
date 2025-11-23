@@ -192,7 +192,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(const FStri
     FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
     UClass* ResolvedClass = nullptr;
-    if (BlueprintPath.StartsWith(TEXT("/")) || BlueprintPath.Contains(TEXT("/")))
+
+    // Prefer the same blueprint resolution heuristics used by manage_blueprint
+    // so that short names and package paths behave consistently.
+    FString NormalizedPath;
+    FString LoadError;
+    if (!BlueprintPath.IsEmpty())
+    {
+        UBlueprint* BlueprintAsset = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
+        if (BlueprintAsset && BlueprintAsset->GeneratedClass)
+        {
+            ResolvedClass = BlueprintAsset->GeneratedClass;
+        }
+    }
+
+    if (!ResolvedClass && (BlueprintPath.StartsWith(TEXT("/")) || BlueprintPath.Contains(TEXT("/"))))
     {
         if (UObject* Loaded = UEditorAssetLibrary::LoadAsset(BlueprintPath))
         {
@@ -271,6 +285,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(const FString& Requ
     }
 
     const bool bAllDeleted = Missing.Num() == 0;
+    const bool bAnyDeleted = Deleted.Num() > 0;
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), bAllDeleted);
     Resp->SetNumberField(TEXT("deletedCount"), Deleted.Num());
@@ -286,8 +301,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(const FString& Requ
         Resp->SetArrayField(TEXT("missing"), MissingArray);
     }
 
-    const FString Message = bAllDeleted ? TEXT("Actors deleted") : TEXT("Some actors could not be deleted");
-    SendAutomationResponse(Socket, RequestId, bAllDeleted, Message, Resp, bAllDeleted ? FString() : TEXT("DELETE_PARTIAL"));
+    FString Message;
+    FString ErrorCode;
+    if (!bAnyDeleted && Missing.Num() > 0)
+    {
+        Message = TEXT("Actors not found");
+        ErrorCode = TEXT("NOT_FOUND");
+    }
+    else
+    {
+        Message = bAllDeleted ? TEXT("Actors deleted") : TEXT("Some actors could not be deleted");
+        ErrorCode = bAllDeleted ? FString() : TEXT("DELETE_PARTIAL");
+    }
+    SendAutomationResponse(Socket, RequestId, bAllDeleted, Message, Resp, ErrorCode);
     return true;
 #else
     return false;

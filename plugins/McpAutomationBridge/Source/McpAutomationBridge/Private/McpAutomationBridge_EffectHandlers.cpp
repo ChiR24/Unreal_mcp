@@ -62,7 +62,16 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
     // Handle create_effect tool with sub-actions
     if (bIsCreateEffect)
     {
-        FString SubAction; LocalPayload->TryGetStringField(TEXT("action"), SubAction);
+        FString SubAction; 
+        LocalPayload->TryGetStringField(TEXT("action"), SubAction);
+        
+        // Fallback: if action field in payload is empty, check if the top-level Action 
+        // is a specific tool (e.g. set_niagara_parameter) and use that as sub-action.
+        if (SubAction.IsEmpty() && !Action.Equals(TEXT("create_effect"), ESearchCase::IgnoreCase))
+        {
+            SubAction = Action;
+        }
+
         const FString LowerSub = SubAction.ToLower();
 
         // Handle particle spawning
@@ -353,19 +362,301 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         }
 
         // Handle niagara sub-action (delegates to existing spawn_niagara logic)
-        if (LowerSub == TEXT("niagara"))
+        if (LowerSub == TEXT("niagara") || LowerSub == TEXT("spawn_niagara"))
         {
-            FString SystemPath; LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
-            if (SystemPath.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("systemPath required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
-            
-            // Reuse spawn_niagara logic below by continuing execution
-            // The existing spawn_niagara handler will process this
+            // Reuse logic below
         }
-
-        // Handle cleanup
-        if (LowerSub == TEXT("cleanup"))
+        else if (LowerSub.Equals(TEXT("set_niagara_parameter")))
         {
-            // Delegate to existing cleanup handler below
+            FString SystemName; LocalPayload->TryGetStringField(TEXT("systemName"), SystemName);
+            FString ParameterName; LocalPayload->TryGetStringField(TEXT("parameterName"), ParameterName);
+            FString ParameterType; LocalPayload->TryGetStringField(TEXT("parameterType"), ParameterType);
+            if (ParameterName.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("parameterName required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+            if (ParameterType.IsEmpty()) ParameterType = TEXT("Float");
+
+#if WITH_EDITOR
+            if (!GEditor)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+                return true;
+            }
+            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+            if (!ActorSS)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+                return true;
+            }
+
+            const FName ParamName(*ParameterName);
+            const TSharedPtr<FJsonValue> ValueField = LocalPayload->TryGetField(TEXT("value"));
+
+            TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+            bool bApplied = false;
+            for (AActor* Actor : AllActors)
+            {
+                if (!Actor) continue;
+                if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) continue;
+                UNiagaraComponent* NiComp = Actor->FindComponentByClass<UNiagaraComponent>();
+                if (!NiComp) continue;
+
+                if (ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
+                {
+                    double NumberValue = 0.0;
+                    bool bHasNumber = LocalPayload->TryGetNumberField(TEXT("value"), NumberValue);
+                    if (!bHasNumber && ValueField.IsValid())
+                    {
+                        if (ValueField->Type == EJson::Number) { NumberValue = ValueField->AsNumber(); bHasNumber = true; }
+                        else if (ValueField->Type == EJson::Object)
+                        {
+                            const TSharedPtr<FJsonObject> Obj = ValueField->AsObject();
+                            if (Obj.IsValid()) bHasNumber = Obj->TryGetNumberField(TEXT("v"), NumberValue);
+                        }
+                    }
+                    if (bHasNumber) { NiComp->SetVariableFloat(ParamName, static_cast<float>(NumberValue)); bApplied = true; }
+                }
+                else if (ParameterType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
+                {
+                    const TArray<TSharedPtr<FJsonValue>>* ArrValue = nullptr;
+                    if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) && ArrValue && ArrValue->Num() >= 3)
+                    {
+                        const float X = static_cast<float>((*ArrValue)[0]->AsNumber());
+                        const float Y = static_cast<float>((*ArrValue)[1]->AsNumber());
+                        const float Z = static_cast<float>((*ArrValue)[2]->AsNumber());
+                        NiComp->SetVariableVec3(ParamName, FVector(X, Y, Z));
+                        bApplied = true;
+                    }
+                }
+                else if (ParameterType.Equals(TEXT("Color"), ESearchCase::IgnoreCase))
+                {
+                    const TArray<TSharedPtr<FJsonValue>>* ArrValue = nullptr;
+                    if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) && ArrValue && ArrValue->Num() >= 3)
+                    {
+                        const float R = static_cast<float>((*ArrValue)[0]->AsNumber());
+                        const float G = static_cast<float>((*ArrValue)[1]->AsNumber());
+                        const float B = static_cast<float>((*ArrValue)[2]->AsNumber());
+                        const float Alpha = ArrValue->Num() > 3 ? static_cast<float>((*ArrValue)[3]->AsNumber()) : 1.0f;
+                        NiComp->SetVariableLinearColor(ParamName, FLinearColor(R, G, B, Alpha));
+                        bApplied = true;
+                    }
+                }
+                if (bApplied) break;
+            }
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), bApplied);
+            if (bApplied) SendAutomationResponse(RequestingSocket, RequestId,true, TEXT("Niagara parameter set"), Resp, FString());
+            else SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Niagara parameter not applied"), Resp, TEXT("SET_NIAGARA_PARAM_FAILED"));
+            return true;
+#else
+            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("set_niagara_parameter requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+            return true;
+#endif
+        }
+        else if (LowerSub.Equals(TEXT("activate_niagara")))
+        {
+            FString SystemName; LocalPayload->TryGetStringField(TEXT("systemName"), SystemName);
+            bool bReset = LocalPayload->HasField(TEXT("reset")) ? LocalPayload->GetBoolField(TEXT("reset")) : true;
+#if WITH_EDITOR
+            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+            TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+            bool bFound = false;
+            for (AActor* Actor : AllActors)
+            {
+                if (!Actor) continue;
+                if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) continue;
+                UNiagaraComponent* NiComp = Actor->FindComponentByClass<UNiagaraComponent>();
+                if (!NiComp) continue;
+                
+                NiComp->Activate(bReset);
+                bFound = true;
+                break;
+            }
+            if (bFound) SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara system activated."));
+            else SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Niagara system not found."), nullptr, TEXT("SYSTEM_NOT_FOUND"));
+            return true;
+#else
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("activate_niagara requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+            return true;
+#endif
+        }
+        else if (LowerSub.Equals(TEXT("create_dynamic_light")))
+        {
+            FString LightName; LocalPayload->TryGetStringField(TEXT("lightName"), LightName);
+            FString LightType; LocalPayload->TryGetStringField(TEXT("lightType"), LightType);
+            if (LightType.IsEmpty()) LightType = TEXT("Point");
+
+            // location
+            FVector Loc(0,0,0);
+            if (LocalPayload->HasField(TEXT("location")))
+            {
+                const TSharedPtr<FJsonValue> LocVal = LocalPayload->TryGetField(TEXT("location"));
+                if (LocVal.IsValid())
+                {
+                    if (LocVal->Type == EJson::Array)
+                    {
+                        const TArray<TSharedPtr<FJsonValue>>& Arr = LocVal->AsArray();
+                        if (Arr.Num() >= 3) Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
+                    }
+                    else if (LocVal->Type == EJson::Object)
+                    {
+                        const TSharedPtr<FJsonObject> O = LocVal->AsObject();
+                        if (O.IsValid()) Loc = FVector((float)(O->HasField(TEXT("x")) ? O->GetNumberField(TEXT("x")) : 0.0), (float)(O->HasField(TEXT("y")) ? O->GetNumberField(TEXT("y")) : 0.0), (float)(O->HasField(TEXT("z")) ? O->GetNumberField(TEXT("z")) : 0.0));
+                    }
+                }
+            }
+
+            double Intensity = 0.0; LocalPayload->TryGetNumberField(TEXT("intensity"), Intensity);
+            // color can be array or object
+            bool bHasColor = false; double Cr=1.0, Cg=1.0, Cb=1.0, Ca=1.0;
+            if (LocalPayload->HasField(TEXT("color")))
+            {
+                const TArray<TSharedPtr<FJsonValue>>* ColArr = nullptr;
+                if (LocalPayload->TryGetArrayField(TEXT("color"), ColArr) && ColArr && ColArr->Num() >= 3)
+                {
+                    bHasColor = true;
+                    Cr = (*ColArr)[0]->AsNumber(); Cg = (*ColArr)[1]->AsNumber(); Cb = (*ColArr)[2]->AsNumber(); Ca = (ColArr->Num() > 3) ? (*ColArr)[3]->AsNumber() : 1.0;
+                }
+                else
+                {
+                    const TSharedPtr<FJsonObject>* CO = nullptr;
+                    if (LocalPayload->TryGetObjectField(TEXT("color"), CO) && CO && (*CO).IsValid())
+                    {
+                        bHasColor = true;
+                        Cr = (*CO)->HasField(TEXT("r")) ? (*CO)->GetNumberField(TEXT("r")) : Cr;
+                        Cg = (*CO)->HasField(TEXT("g")) ? (*CO)->GetNumberField(TEXT("g")) : Cg;
+                        Cb = (*CO)->HasField(TEXT("b")) ? (*CO)->GetNumberField(TEXT("b")) : Cb;
+                        Ca = (*CO)->HasField(TEXT("a")) ? (*CO)->GetNumberField(TEXT("a")) : Ca;
+                    }
+                }
+            }
+
+            // pulse param optional
+            bool bPulseEnabled = false; double PulseFreq = 1.0;
+            if (LocalPayload->HasField(TEXT("pulse")))
+            {
+                const TSharedPtr<FJsonObject>* P = nullptr;
+                if (LocalPayload->TryGetObjectField(TEXT("pulse"), P) && P && (*P).IsValid())
+                {
+                    (*P)->TryGetBoolField(TEXT("enabled"), bPulseEnabled);
+                    (*P)->TryGetNumberField(TEXT("frequency"), PulseFreq);
+                }
+            }
+
+#if WITH_EDITOR
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            if (!GEditor)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+                return true;
+            }
+            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+            if (!ActorSS)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+                return true;
+            }
+
+            UClass* ChosenClass = APointLight::StaticClass();
+            UClass* CompClass = UPointLightComponent::StaticClass();
+            FString LT = LightType.ToLower();
+            if (LT == TEXT("spot") || LT == TEXT("spotlight"))
+            {
+                ChosenClass = ASpotLight::StaticClass();
+                CompClass = USpotLightComponent::StaticClass();
+            }
+            else if (LT == TEXT("directional") || LT == TEXT("directionallight"))
+            {
+                ChosenClass = ADirectionalLight::StaticClass();
+                CompClass = UDirectionalLightComponent::StaticClass();
+            }
+            else if (LT == TEXT("rect") || LT == TEXT("rectlight"))
+            {
+                ChosenClass = ARectLight::StaticClass();
+                CompClass = URectLightComponent::StaticClass();
+            }
+
+            AActor* Spawned = ActorSS->SpawnActorFromClass(ChosenClass, Loc, FRotator::ZeroRotator);
+            if (!Spawned)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to spawn light actor"), nullptr, TEXT("CREATE_DYNAMIC_LIGHT_FAILED"));
+                return true;
+            }
+
+            UActorComponent* C = Spawned->GetComponentByClass(CompClass);
+            if (C)
+            {
+                if (ULightComponent* LC = Cast<ULightComponent>(C))
+                {
+                    LC->SetIntensity(static_cast<float>(Intensity));
+                    if (bHasColor)
+                    {
+                        LC->SetLightColor(FLinearColor(static_cast<float>(Cr), static_cast<float>(Cg), static_cast<float>(Cb), static_cast<float>(Ca)));
+                    }
+                }
+            }
+
+            if (!LightName.IsEmpty())
+            {
+                Spawned->SetActorLabel(LightName);
+            }
+            if (bPulseEnabled)
+            {
+                Spawned->Tags.Add(FName(*FString::Printf(TEXT("MCP_PULSE:%g"), PulseFreq)));
+            }
+
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Dynamic light created"), Resp, FString());
+            return true;
+#else
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_dynamic_light requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+            return true;
+#endif
+        }
+        else if (LowerSub.Equals(TEXT("cleanup")))
+        {
+            FString Filter; LocalPayload->TryGetStringField(TEXT("filter"), Filter);
+            if (Filter.IsEmpty()) 
+            { 
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetNumberField(TEXT("removed"), 0);
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Cleanup skipped (empty filter)"), Resp, FString());
+                return true; 
+            }
+#if WITH_EDITOR
+            if (!GEditor)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+                return true;
+            }
+            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+            if (!ActorSS)
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+                return true;
+            }
+            TArray<AActor*> Actors = ActorSS->GetAllLevelActors();
+            TArray<FString> Removed;
+            for (AActor* A : Actors)
+            {
+                if (!A) continue;
+                FString Label = A->GetActorLabel();
+                if (Label.IsEmpty()) continue;
+                if (!Label.StartsWith(Filter, ESearchCase::IgnoreCase)) continue;
+                bool bDel = ActorSS->DestroyActor(A);
+                if (bDel) Removed.Add(Label);
+            }
+            TArray<TSharedPtr<FJsonValue>> Arr;
+            for (const FString& S : Removed) Arr.Add(MakeShared<FJsonValueString>(S));
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetArrayField(TEXT("removedActors"), Arr);
+            Resp->SetNumberField(TEXT("removed"), Removed.Num());
+            SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Cleanup completed (removed=%d)"), Removed.Num()), Resp, FString());
+            return true;
+#else
+            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("cleanup requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+            return true;
+#endif
         }
     }
 
@@ -374,7 +665,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
     if (bIsCreateEffect)
     {
         FString Sub; LocalPayload->TryGetStringField(TEXT("action"), Sub);
-        if (Sub.ToLower() == TEXT("niagara")) bSpawnNiagara = true;
+        FString LowerSub = Sub.ToLower();
+        if (LowerSub == TEXT("niagara") || LowerSub == TEXT("spawn_niagara")) bSpawnNiagara = true;
+        // If SubAction is empty and Action is create_effect, we fallthrough to legacy behavior below
     }
 
     if (bSpawnNiagara)
@@ -461,7 +754,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         {
             NiComp->SetAsset(Cast<UNiagaraSystem>(NiagObj));
             NiComp->SetWorldScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
-            NiComp->Activate(false);
+            NiComp->Activate(true); // Set to true
         }
 
         if (!AttachToActor.IsEmpty())
@@ -490,267 +783,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         return true;
 #else
         SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("spawn_niagara requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-        return true;
-#endif
-    }
-
-    if (Lower.Equals(TEXT("set_niagara_parameter")))
-    {
-        FString SystemName; LocalPayload->TryGetStringField(TEXT("systemName"), SystemName);
-        FString ParameterName; LocalPayload->TryGetStringField(TEXT("parameterName"), ParameterName);
-        FString ParameterType; LocalPayload->TryGetStringField(TEXT("parameterType"), ParameterType);
-        const bool bIsUser = LocalPayload->HasField(TEXT("isUserParameter")) ? LocalPayload->GetBoolField(TEXT("isUserParameter")) : false;
-        if (ParameterName.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("parameterName required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
-        if (ParameterType.IsEmpty()) ParameterType = TEXT("Float");
-
-#if WITH_EDITOR
-        if (!GEditor)
-        {
-            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
-            return true;
-        }
-        UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-        if (!ActorSS)
-        {
-            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-            return true;
-        }
-
-        const FName ParamName(*ParameterName);
-        const TSharedPtr<FJsonValue> ValueField = LocalPayload->TryGetField(TEXT("value"));
-
-        TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
-        bool bApplied = false;
-        for (AActor* Actor : AllActors)
-        {
-            if (!Actor)
-            {
-                continue;
-            }
-            if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase))
-            {
-                continue;
-            }
-            UNiagaraComponent* NiComp = Actor->FindComponentByClass<UNiagaraComponent>();
-            if (!NiComp)
-            {
-                continue;
-            }
-
-            if (ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
-            {
-                double NumberValue = 0.0;
-                bool bHasNumber = LocalPayload->TryGetNumberField(TEXT("value"), NumberValue);
-                if (!bHasNumber && ValueField.IsValid())
-                {
-                    if (ValueField->Type == EJson::Number)
-                    {
-                        NumberValue = ValueField->AsNumber();
-                        bHasNumber = true;
-                    }
-                    else if (ValueField->Type == EJson::Object)
-                    {
-                        const TSharedPtr<FJsonObject> Obj = ValueField->AsObject();
-                        if (Obj.IsValid())
-                        {
-                            bHasNumber = Obj->TryGetNumberField(TEXT("v"), NumberValue);
-                        }
-                    }
-                }
-                if (bHasNumber)
-                {
-                    NiComp->SetVariableFloat(ParamName, static_cast<float>(NumberValue));
-                    bApplied = true;
-                }
-            }
-            else if (ParameterType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
-            {
-                const TArray<TSharedPtr<FJsonValue>>* ArrValue = nullptr;
-                if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) && ArrValue && ArrValue->Num() >= 3)
-                {
-                    const float X = static_cast<float>((*ArrValue)[0]->AsNumber());
-                    const float Y = static_cast<float>((*ArrValue)[1]->AsNumber());
-                    const float Z = static_cast<float>((*ArrValue)[2]->AsNumber());
-                    NiComp->SetVariableVec3(ParamName, FVector(X, Y, Z));
-                    bApplied = true;
-                }
-            }
-            else if (ParameterType.Equals(TEXT("Color"), ESearchCase::IgnoreCase))
-            {
-                const TArray<TSharedPtr<FJsonValue>>* ArrValue = nullptr;
-                if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) && ArrValue && ArrValue->Num() >= 3)
-                {
-                    const float R = static_cast<float>((*ArrValue)[0]->AsNumber());
-                    const float G = static_cast<float>((*ArrValue)[1]->AsNumber());
-                    const float B = static_cast<float>((*ArrValue)[2]->AsNumber());
-                    const float Alpha = ArrValue->Num() > 3 ? static_cast<float>((*ArrValue)[3]->AsNumber()) : 1.0f;
-                    NiComp->SetVariableLinearColor(ParamName, FLinearColor(R, G, B, Alpha));
-                    bApplied = true;
-                }
-            }
-
-            if (bApplied)
-            {
-                break;
-            }
-        }
-
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), bApplied);
-        if (bApplied)
-        {
-            SendAutomationResponse(RequestingSocket, RequestId,true, TEXT("Niagara parameter set"), Resp, FString());
-        }
-        else
-        {
-            SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Niagara parameter not applied"), Resp, TEXT("SET_NIAGARA_PARAM_FAILED"));
-        }
-        return true;
-#else
-        SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("set_niagara_parameter requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-        return true;
-#endif
-    }
-
-    // CREATE DYNAMIC LIGHT (editor-only)
-    bool bDynamicLight = Lower.Equals(TEXT("create_dynamic_light"));
-    if (bIsCreateEffect)
-    {
-        FString Sub; LocalPayload->TryGetStringField(TEXT("action"), Sub);
-        if (Sub.ToLower() == TEXT("create_dynamic_light")) bDynamicLight = true;
-    }
-
-    if (bDynamicLight)
-    {
-        FString LightName; LocalPayload->TryGetStringField(TEXT("lightName"), LightName);
-        FString LightType; LocalPayload->TryGetStringField(TEXT("lightType"), LightType);
-        if (LightType.IsEmpty()) LightType = TEXT("Point");
-
-        // location
-        FVector Loc(0,0,0);
-        if (LocalPayload->HasField(TEXT("location")))
-        {
-            const TSharedPtr<FJsonValue> LocVal = LocalPayload->TryGetField(TEXT("location"));
-            if (LocVal.IsValid())
-            {
-                if (LocVal->Type == EJson::Array)
-                {
-                    const TArray<TSharedPtr<FJsonValue>>& Arr = LocVal->AsArray();
-                    if (Arr.Num() >= 3) Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
-                }
-                else if (LocVal->Type == EJson::Object)
-                {
-                    const TSharedPtr<FJsonObject> O = LocVal->AsObject();
-                    if (O.IsValid()) Loc = FVector((float)(O->HasField(TEXT("x")) ? O->GetNumberField(TEXT("x")) : 0.0), (float)(O->HasField(TEXT("y")) ? O->GetNumberField(TEXT("y")) : 0.0), (float)(O->HasField(TEXT("z")) ? O->GetNumberField(TEXT("z")) : 0.0));
-                }
-            }
-        }
-
-        double Intensity = 0.0; LocalPayload->TryGetNumberField(TEXT("intensity"), Intensity);
-        // color can be array or object
-        bool bHasColor = false; double Cr=1.0, Cg=1.0, Cb=1.0, Ca=1.0;
-        if (LocalPayload->HasField(TEXT("color")))
-        {
-            const TArray<TSharedPtr<FJsonValue>>* ColArr = nullptr;
-            if (LocalPayload->TryGetArrayField(TEXT("color"), ColArr) && ColArr && ColArr->Num() >= 3)
-            {
-                bHasColor = true;
-                Cr = (*ColArr)[0]->AsNumber(); Cg = (*ColArr)[1]->AsNumber(); Cb = (*ColArr)[2]->AsNumber(); Ca = (ColArr->Num() > 3) ? (*ColArr)[3]->AsNumber() : 1.0;
-            }
-            else
-            {
-                const TSharedPtr<FJsonObject>* CO = nullptr;
-                if (LocalPayload->TryGetObjectField(TEXT("color"), CO) && CO && (*CO).IsValid())
-                {
-                    bHasColor = true;
-                    Cr = (*CO)->HasField(TEXT("r")) ? (*CO)->GetNumberField(TEXT("r")) : Cr;
-                    Cg = (*CO)->HasField(TEXT("g")) ? (*CO)->GetNumberField(TEXT("g")) : Cg;
-                    Cb = (*CO)->HasField(TEXT("b")) ? (*CO)->GetNumberField(TEXT("b")) : Cb;
-                    Ca = (*CO)->HasField(TEXT("a")) ? (*CO)->GetNumberField(TEXT("a")) : Ca;
-                }
-            }
-        }
-
-        // pulse param optional
-        bool bPulseEnabled = false; double PulseFreq = 1.0;
-        if (LocalPayload->HasField(TEXT("pulse")))
-        {
-            const TSharedPtr<FJsonObject>* P = nullptr;
-            if (LocalPayload->TryGetObjectField(TEXT("pulse"), P) && P && (*P).IsValid())
-            {
-                (*P)->TryGetBoolField(TEXT("enabled"), bPulseEnabled);
-                (*P)->TryGetNumberField(TEXT("frequency"), PulseFreq);
-            }
-        }
-
-#if WITH_EDITOR
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        if (!GEditor)
-        {
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
-            return true;
-        }
-        UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-        if (!ActorSS)
-        {
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-            return true;
-        }
-
-        UClass* ChosenClass = APointLight::StaticClass();
-        UClass* CompClass = UPointLightComponent::StaticClass();
-        FString LT = LightType.ToLower();
-        if (LT == TEXT("spot") || LT == TEXT("spotlight"))
-        {
-            ChosenClass = ASpotLight::StaticClass();
-            CompClass = USpotLightComponent::StaticClass();
-        }
-        else if (LT == TEXT("directional") || LT == TEXT("directionallight"))
-        {
-            ChosenClass = ADirectionalLight::StaticClass();
-            CompClass = UDirectionalLightComponent::StaticClass();
-        }
-        else if (LT == TEXT("rect") || LT == TEXT("rectlight"))
-        {
-            ChosenClass = ARectLight::StaticClass();
-            CompClass = URectLightComponent::StaticClass();
-        }
-
-        AActor* Spawned = ActorSS->SpawnActorFromClass(ChosenClass, Loc, FRotator::ZeroRotator);
-        if (!Spawned)
-        {
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to spawn light actor"), nullptr, TEXT("CREATE_DYNAMIC_LIGHT_FAILED"));
-            return true;
-        }
-
-        UActorComponent* C = Spawned->GetComponentByClass(CompClass);
-        if (C)
-        {
-            if (ULightComponent* LC = Cast<ULightComponent>(C))
-            {
-                LC->SetIntensity(static_cast<float>(Intensity));
-                if (bHasColor)
-                {
-                    LC->SetLightColor(FLinearColor(static_cast<float>(Cr), static_cast<float>(Cg), static_cast<float>(Cb), static_cast<float>(Ca)));
-                }
-            }
-        }
-
-        if (!LightName.IsEmpty())
-        {
-            Spawned->SetActorLabel(LightName);
-        }
-        if (bPulseEnabled)
-        {
-            Spawned->Tags.Add(FName(*FString::Printf(TEXT("MCP_PULSE:%g"), PulseFreq)));
-        }
-
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Dynamic light created"), Resp, FString());
-        return true;
-#else
-        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_dynamic_light requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
         return true;
 #endif
     }
@@ -942,7 +974,7 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(const FString& RequestId
     if (NiComp && NiagObj->IsA<UNiagaraSystem>())
     {
         NiComp->SetAsset(Cast<UNiagaraSystem>(NiagObj));
-        NiComp->Activate(false);
+        NiComp->Activate(true);
     }
 
     // Set actor label

@@ -30,7 +30,7 @@ public class McpAutomationBridge : ModuleRules
                 "Niagara","NiagaraEditor","Landscape","LandscapeEditor","LandscapeEditorUtilities","Foliage","FoliageEdit",
                 "AnimGraph","AnimationBlueprintLibrary","Persona","ToolMenus","EditorWidgets","PropertyEditor","LevelEditor",
                 "ControlRig","ControlRigDeveloper","UMG","UMGEditor","ProceduralMeshComponent","MergeActors",
-                "BehaviorTreeEditor", "WorldPartitionEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIModule", "AIGraph"
+                "BehaviorTreeEditor", "WorldPartitionEditor", "DataLayerEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIModule", "AIGraph"
             });
 
             // Ensure editor builds expose full Blueprint graph editing APIs.

@@ -315,14 +315,22 @@ export class FoliageTools {
 
   // Create procedural foliage
   async createProceduralFoliage(params: {
-    name?: string;
+    name: string;
+    bounds?: { location: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } };
+    foliageTypes?: Array<{
+      meshPath: string;
+      density: number;
+      minScale?: number;
+      maxScale?: number;
+      alignToNormal?: boolean;
+      randomYaw?: boolean;
+    }>;
+    // Legacy params compatibility
     volumeName?: string;
     position?: [number, number, number];
     size?: [number, number, number];
-    foliageTypes?: string[];
     seed?: number;
     tileSize?: number;
-    bounds?: { location: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } };
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available.');
@@ -332,16 +340,21 @@ export class FoliageTools {
     const loc = params.bounds?.location ? [params.bounds.location.x, params.bounds.location.y, params.bounds.location.z] : (params.position || [0, 0, 0]);
     const size = params.bounds?.size ? [params.bounds.size.x, params.bounds.size.y, params.bounds.size.z] : (params.size || [1000, 1000, 100]);
 
+    // Normalize foliage types from both formats
+    const foliageTypes = Array.isArray(params.foliageTypes)
+      ? params.foliageTypes.map(t => {
+        if (typeof t === 'string') return { meshPath: t, density: 0.5 };
+        return t;
+      })
+      : [];
+
     const payload = {
       name: volName,
       bounds: {
         location: { x: loc[0], y: loc[1], z: loc[2] },
         size: { x: size[0], y: size[1], z: size[2] }
       },
-      foliageTypes: (params.foliageTypes || []).map(t => ({
-        meshPath: t,
-        density: 0.5
-      })),
+      foliageTypes,
       seed: params.seed ?? 42,
       tileSize: params.tileSize ?? 1000
     };
@@ -355,11 +368,62 @@ export class FoliageTools {
       };
     }
 
+    const result = response.result as any;
     return {
       success: true,
       message: `Procedural foliage volume ${volName} created`,
-      details: response
+      details: response,
+      volumeActor: result?.volume_actor,
+      spawnerPath: result?.spawner_path,
+      foliageTypesCount: result?.foliage_types_count
     };
+  }
+
+  /**
+   * Add foliage instances using InstancedFoliageActor
+   * Direct instance placement approach
+   */
+  async addFoliageInstances(params: {
+    foliageType: string; // Path to FoliageType or mesh
+    transforms: Array<{
+      location: [number, number, number];
+      rotation?: [number, number, number];
+      scale?: [number, number, number];
+    }>;
+  }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Foliage instance placement requires plugin support.');
+    }
+
+    try {
+      const typePath = params.foliageType.includes('/') ? params.foliageType : `/Game/Foliage/${params.foliageType}.${params.foliageType}`;
+      const response = await this.automationBridge.sendAutomationRequest('add_foliage_instances', {
+        foliageType: typePath,
+        transforms: params.transforms
+      }, {
+        timeoutMs: 120000 // 2 minutes for instance placement
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to add foliage instances',
+          message: response.message || 'Failed to add foliage instances'
+        };
+      }
+
+      const result = response.result as any;
+      return {
+        success: true,
+        message: response.message || `Added ${result?.instances_count || params.transforms.length} foliage instances`,
+        instancesCount: result?.instances_count
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to add foliage instances: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
   }
 
   // Set foliage collision

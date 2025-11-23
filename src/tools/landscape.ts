@@ -210,157 +210,75 @@ export class LandscapeTools {
     };
   }
 
-  // Create procedural terrain
+  // Create procedural terrain using ProceduralMeshComponent
   async createProceduralTerrain(params: {
     name: string;
     location?: [number, number, number];
+    sizeX?: number;
+    sizeY?: number;
     subdivisions?: number;
+    heightFunction?: string; // Expression for height calculation
+    material?: string;
     settings?: Record<string, unknown>;
   }) {
     if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available.');
+      throw new Error('Automation Bridge not available. Procedural terrain creation requires plugin support.');
     }
 
-    const [x, y, z] = ensureVector3(params.location ?? [0, 0, 0], 'location');
+    try {
+      // Combine specific params with generic settings
+      const payload = {
+        name: params.name,
+        location: params.location || [0, 0, 0],
+        sizeX: params.sizeX || 2000,
+        sizeY: params.sizeY || 2000,
+        subdivisions: params.subdivisions || 50,
+        heightFunction: params.heightFunction || 'math.sin(x/100) * 50 + math.cos(y/100) * 30',
+        material: params.material,
+        ...params.settings
+      };
 
-    const payload = {
-      name: params.name,
-      // Environment handler reads location as an array [x, y, z]
-      location: [x, y, z] as [number, number, number],
-      // Preserve additional settings for forwards compatibility
-      ...params.settings
-    };
+      const response = await this.automationBridge.sendAutomationRequest('create_procedural_terrain', payload, {
+        timeoutMs: 120000 // 2 minutes for mesh generation
+      });
 
-    const response = await this.automationBridge.sendAutomationRequest('create_procedural_terrain', payload);
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to create procedural terrain',
+          message: response.message || 'Failed to create procedural terrain'
+        };
+      }
 
-    if (!response.success) {
+      const result = response.result as any;
+      return {
+        success: true,
+        message: response.message || `Created procedural terrain '${params.name}'`,
+        actorName: result?.actor_name,
+        vertices: result?.vertices,
+        triangles: result?.triangles,
+        size: result?.size,
+        subdivisions: result?.subdivisions,
+        details: result
+      };
+    } catch (error) {
       return {
         success: false,
-        error: response.error || 'Failed to create procedural terrain'
+        error: `Failed to create procedural terrain: ${error instanceof Error ? error.message : String(error)}`
       };
     }
-
-    return {
-      success: true,
-      message: 'Procedural terrain created',
-      details: response
-    };
-  }
-
-  // Add landscape layer
-  async addLandscapeLayer(params: {
-    landscapeName: string;
-    layerName: string;
-    weightMapPath?: string;
-    blendMode?: 'Weight' | 'Alpha';
-  }) {
-    const commands: string[] = [];
-
-    commands.push(`AddLandscapeLayer ${params.landscapeName} ${params.layerName}`);
-
-    if (params.weightMapPath) {
-      commands.push(`SetLayerWeightMap ${params.layerName} ${params.weightMapPath}`);
-    }
-
-    if (params.blendMode) {
-      commands.push(`SetLayerBlendMode ${params.layerName} ${params.blendMode}`);
-    }
-
-    await this.bridge.executeConsoleCommands(commands);
-
-    return { success: true, message: `Layer ${params.layerName} added to landscape` };
-  }
-
-  // Create landscape spline
-  async createLandscapeSpline(params: {
-    landscapeName: string;
-    splineName: string;
-    points: Array<[number, number, number]>;
-    width?: number;
-    falloffWidth?: number;
-    meshPath?: string;
-  }) {
-    const commands: string[] = [];
-
-    commands.push(`CreateLandscapeSpline ${params.landscapeName} ${params.splineName}`);
-
-    for (const point of params.points) {
-      commands.push(`AddSplinePoint ${params.splineName} ${point.join(' ')}`);
-    }
-
-    if (params.width !== undefined) {
-      commands.push(`SetSplineWidth ${params.splineName} ${params.width}`);
-    }
-
-    if (params.falloffWidth !== undefined) {
-      commands.push(`SetSplineFalloffWidth ${params.splineName} ${params.falloffWidth}`);
-    }
-
-    if (params.meshPath) {
-      commands.push(`SetSplineMesh ${params.splineName} ${params.meshPath}`);
-    }
-
-    await this.bridge.executeConsoleCommands(commands);
-
-    return { success: true, message: `Landscape spline ${params.splineName} created` };
-  }
-
-  // Import heightmap
-  async importHeightmap(params: {
-    landscapeName: string;
-    heightmapPath: string;
-    scale?: [number, number, number];
-  }) {
-    const scale = params.scale || [100, 100, 100];
-    const command = `ImportLandscapeHeightmap ${params.landscapeName} ${params.heightmapPath} ${scale.join(' ')}`;
-    const raw = await this.bridge.executeConsoleCommand(command);
-    const summary = this.bridge.summarizeConsoleCommand(command, raw);
-    const ok = summary.returnValue !== false && !(summary.output && /unknown|invalid/i.test(summary.output));
-    return { success: ok, message: summary.output || (ok ? 'Heightmap import executed' : 'Heightmap import failed'), raw };
-  }
-
-  // Export heightmap
-  async exportHeightmap(params: {
-    landscapeName: string;
-    exportPath: string;
-    format?: 'PNG' | 'RAW';
-  }) {
-    const format = params.format || 'PNG';
-    const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.exportPath} ${format}`;
-    const raw = await this.bridge.executeConsoleCommand(command);
-    const summary = this.bridge.summarizeConsoleCommand(command, raw);
-    const ok = summary.returnValue !== false && !(summary.output && /unknown|invalid/i.test(summary.output));
-    return { success: ok, message: summary.output || (ok ? 'Heightmap export executed' : 'Heightmap export failed'), raw };
-  }
-
-  // Set landscape LOD
-  async setLandscapeLOD(params: {
-    landscapeName: string;
-    lodBias?: number;
-    forcedLOD?: number;
-    lodDistribution?: number;
-  }) {
-    const commands: string[] = [];
-
-    if (params.lodBias !== undefined) {
-      commands.push(`SetLandscapeLODBias ${params.landscapeName} ${params.lodBias}`);
-    }
-
-    if (params.forcedLOD !== undefined) {
-      commands.push(`SetLandscapeForcedLOD ${params.landscapeName} ${params.forcedLOD}`);
-    }
-
-    if (params.lodDistribution !== undefined) {
-      commands.push(`SetLandscapeLODDistribution ${params.landscapeName} ${params.lodDistribution}`);
-    }
-
-    await this.bridge.executeConsoleCommands(commands);
-
-    return { success: true, message: 'Landscape LOD settings updated' };
   }
 
   // Create a LandscapeGrassType asset via AutomationBridge
-  async createLandscapeGrassType(params: { name: string; path?: string; staticMesh?: string }): Promise<any> {
+  async createLandscapeGrassType(params: {
+    name: string;
+    meshPath: string; // Normalized parameter name (was path/staticMesh/meshPath)
+    density?: number;
+    minScale?: number;
+    maxScale?: number;
+    path?: string; // Legacy support
+    staticMesh?: string; // Legacy support
+  }): Promise<any> {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
     }
@@ -371,9 +289,8 @@ export class LandscapeTools {
     }
 
     // Accept mesh path from multiple fields for compatibility
-    const meshPathCandidate = (params as any).meshPath as string | undefined;
-    const meshPathRaw = typeof meshPathCandidate === 'string' && meshPathCandidate.trim().length > 0
-      ? meshPathCandidate.trim()
+    const meshPathRaw = typeof params.meshPath === 'string' && params.meshPath.trim().length > 0
+      ? params.meshPath.trim()
       : (typeof params.path === 'string' && params.path.trim().length > 0
         ? params.path.trim()
         : (typeof params.staticMesh === 'string' && params.staticMesh.trim().length > 0
@@ -387,7 +304,10 @@ export class LandscapeTools {
     try {
       const response: any = await this.automationBridge.sendAutomationRequest('create_landscape_grass_type', {
         name,
-        meshPath: meshPathRaw
+        meshPath: meshPathRaw,
+        density: params.density || 1.0,
+        minScale: params.minScale || 0.8,
+        maxScale: params.maxScale || 1.2
       }, { timeoutMs: 90000 });
 
       if (response && response.success === false) {
@@ -397,10 +317,11 @@ export class LandscapeTools {
         };
       }
 
+      const result = response.result as any;
       return {
         success: true,
         message: response?.message || `Landscape grass type '${name}' created`,
-        assetPath: response?.asset_path || response?.assetPath
+        assetPath: result?.asset_path || response?.assetPath || response?.asset_path
       };
     } catch (error) {
       return {

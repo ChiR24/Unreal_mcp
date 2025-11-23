@@ -1482,7 +1482,52 @@ static bool HandleBlueprintCreate(UMcpAutomationBridgeSubsystem* Self, const FSt
     }
 
     CreatedBlueprint = Cast<UBlueprint>(NewObj);
-    if (!CreatedBlueprint) { CreationError = FString::Printf(TEXT("Created asset is not a Blueprint: %s"), NewObj ? *NewObj->GetPathName() : TEXT("<null>")); Self->SendAutomationResponse(RequestingSocket, RequestId, false, CreationError, nullptr, TEXT("CREATE_FAILED")); return true; }
+    if (!CreatedBlueprint)
+    {
+        // If creation failed, check whether a Blueprint already exists at the
+        // target path. AssetTools will return nullptr when an asset with the
+        // same name already exists; in that case we should treat this as an
+        // idempotent success instead of a hard failure.
+        FString ExistingNormalized;
+        FString ExistingError;
+        UBlueprint* ExistingBP = LoadBlueprintAsset(CreateKey, ExistingNormalized, ExistingError);
+        if (ExistingBP)
+        {
+            CreatedBlueprint = ExistingBP;
+            CreatedNormalizedPath = !ExistingNormalized.TrimStartAndEnd().IsEmpty() ? ExistingNormalized : ExistingBP->GetPathName();
+            if (CreatedNormalizedPath.Contains(TEXT(".")))
+            {
+                CreatedNormalizedPath = CreatedNormalizedPath.Left(CreatedNormalizedPath.Find(TEXT(".")));
+            }
+
+            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+            ResultPayload->SetStringField(TEXT("path"), CreatedNormalizedPath);
+            ResultPayload->SetStringField(TEXT("assetPath"), ExistingBP->GetPathName());
+            ResultPayload->SetBoolField(TEXT("saved"), true);
+
+            FScopeLock Lock(&GBlueprintCreateMutex);
+            if (TArray<TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>>* Subs = GBlueprintCreateInflight.Find(CreateKey))
+            {
+                for (const TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>& Pair : *Subs)
+                {
+                    Self->SendAutomationResponse(Pair.Value, Pair.Key, true, TEXT("Blueprint already exists"), ResultPayload, FString());
+                }
+                GBlueprintCreateInflight.Remove(CreateKey);
+                GBlueprintCreateInflightTs.Remove(CreateKey);
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("blueprint_create RequestId=%s completed (existing blueprint)."), *RequestId);
+            }
+            else
+            {
+                Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blueprint already exists"), ResultPayload, FString());
+            }
+
+            return true;
+        }
+
+        CreationError = FString::Printf(TEXT("Created asset is not a Blueprint: %s"), NewObj ? *NewObj->GetPathName() : TEXT("<null>"));
+        Self->SendAutomationResponse(RequestingSocket, RequestId, false, CreationError, nullptr, TEXT("CREATE_FAILED"));
+        return true;
+    }
 
     CreatedNormalizedPath = CreatedBlueprint->GetPathName(); if (CreatedNormalizedPath.Contains(TEXT("."))) CreatedNormalizedPath = CreatedNormalizedPath.Left(CreatedNormalizedPath.Find(TEXT(".")));
     FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")); AssetRegistryModule.AssetCreated(CreatedBlueprint);

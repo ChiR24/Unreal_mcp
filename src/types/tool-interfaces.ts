@@ -201,8 +201,8 @@ export interface ILandscapeTools {
     createLandscape(params: { name: string; location?: [number, number, number]; sizeX?: number; sizeY?: number; quadsPerSection?: number; sectionsPerComponent?: number; componentCount?: number; materialPath?: string; enableWorldPartition?: boolean; runtimeGrid?: string; isSpatiallyLoaded?: boolean; dataLayers?: string[] }): Promise<any>;
     sculptLandscape(params: { landscapeName: string; tool: string; brushSize?: number; brushFalloff?: number; strength?: number; location?: [number, number, number]; radius?: number }): Promise<any>;
     paintLandscape(params: { landscapeName: string; layerName: string; position: [number, number, number]; brushSize?: number; strength?: number; targetValue?: number; radius?: number; density?: number }): Promise<any>;
-    createProceduralTerrain(params: { name: string; location?: [number, number, number]; subdivisions?: number; settings?: Record<string, unknown> }): Promise<any>;
-    createLandscapeGrassType(params: { name: string; path?: string; staticMesh?: string }): Promise<any>;
+    createProceduralTerrain(params: { name: string; location?: [number, number, number]; subdivisions?: number; heightFunction?: string; material?: string; settings?: Record<string, unknown> }): Promise<any>;
+    createLandscapeGrassType(params: { name: string; meshPath: string; density?: number; minScale?: number; maxScale?: number; path?: string; staticMesh?: string }): Promise<any>;
     setLandscapeMaterial(params: { landscapeName: string; materialPath: string }): Promise<any>;
 }
 
@@ -210,7 +210,8 @@ export interface IFoliageTools {
     addFoliageType(params: { name: string; meshPath: string; density?: number; radius?: number; minScale?: number; maxScale?: number; alignToNormal?: boolean; randomYaw?: boolean; groundSlope?: number }): Promise<any>;
     addFoliage(params: { foliageType: string; locations: Array<{ x: number; y: number; z: number }> }): Promise<any>;
     paintFoliage(params: { foliageType: string; position: [number, number, number]; brushSize?: number; paintDensity?: number; eraseMode?: boolean }): Promise<any>;
-    createProceduralFoliage(params: { name?: string; volumeName?: string; position?: [number, number, number]; size?: [number, number, number]; foliageTypes?: string[]; seed?: number; tileSize?: number; bounds?: { location: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } } }): Promise<any>;
+    createProceduralFoliage(params: { name: string; bounds?: { location: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } }; foliageTypes?: Array<{ meshPath: string; density: number; minScale?: number; maxScale?: number; alignToNormal?: boolean; randomYaw?: boolean }>; volumeName?: string; position?: [number, number, number]; size?: [number, number, number]; seed?: number; tileSize?: number }): Promise<any>;
+    addFoliageInstances(params: { foliageType: string; transforms: Array<{ location: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number] }> }): Promise<any>;
     getFoliageInstances(params: { foliageType?: string }): Promise<any>;
     removeFoliage(params: { foliageType?: string; removeAll?: boolean }): Promise<any>;
     createInstancedMesh(params: { name: string; meshPath: string; instances: Array<{ position: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number] }>; enableCulling?: boolean; cullDistance?: number }): Promise<any>;

@@ -8,6 +8,8 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
+#include "Engine/StaticMesh.h"
+#include "UObject/Package.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -126,21 +128,55 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
     }
     else if (SubAction == TEXT("nanite_rebuild_mesh"))
     {
-        // Call Nanite builder
-        SendAutomationError(RequestingSocket, RequestId, TEXT("nanite_rebuild_mesh not implemented."), TEXT("NOT_IMPLEMENTED"));
+        FString AssetPath;
+        if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UStaticMesh* StaticMesh = LoadObject<UStaticMesh>(nullptr, *AssetPath);
+        if (!StaticMesh)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("StaticMesh not found."), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+
+        // Enable Nanite and rebuild
+        StaticMesh->NaniteSettings.bEnabled = true;
+        
+        if (UPackage* Package = StaticMesh->GetOutermost())
+        {
+            Package->MarkPackageDirty();
+        }
+
+        StaticMesh->Build(true);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nanite enabled and mesh rebuilt."));
         return true;
     }
     else if (SubAction == TEXT("lumen_update_scene"))
     {
-        // Flush Lumen scene
-        SendAutomationError(RequestingSocket, RequestId, TEXT("lumen_update_scene not implemented."), TEXT("NOT_IMPLEMENTED"));
+        // Flush Lumen scene via console command
+        // r.Lumen.Scene.Recapture
+        if (GEditor)
+        {
+            UWorld* World = GEditor->GetEditorWorldContext().World();
+            if (World)
+            {
+                GEngine->Exec(World, TEXT("r.Lumen.Scene.Recapture"));
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lumen scene recapture triggered."));
+                return true;
+            }
+        }
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Could not execute command (no world context)."), TEXT("EXECUTION_FAILED"));
         return true;
     }
 
     SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
 #else
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Editor only."), TEXT("EDITOR_ONLY"));
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Render management requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #endif
 }

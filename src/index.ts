@@ -19,7 +19,6 @@ import { BlueprintTools } from './tools/blueprint.js';
 import { LevelTools } from './tools/level.js';
 import { LightingTools } from './tools/lighting.js';
 import { LandscapeTools } from './tools/landscape.js';
-import { BuildEnvironmentAdvanced } from './tools/build_environment_advanced.js';
 import { FoliageTools } from './tools/foliage.js';
 import { EnvironmentTools } from './tools/environment.js';
 import { DebugVisualizationTools } from './tools/debug.js';
@@ -43,7 +42,6 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { responseValidator } from './utils/response-validator.js';
 import { z } from 'zod';
-import { routeStdoutLogsToStderr } from './utils/stdio-redirect.js';
 import { createElicitationHelper } from './utils/elicitation.js';
 import { cleanObject } from './utils/safe-json.js';
 import { ErrorHandler } from './utils/error-handler.js';
@@ -66,7 +64,25 @@ const DEFAULT_SERVER_VERSION = typeof packageInfo.version === 'string' && packag
   ? packageInfo.version
   : '0.0.0';
 
+function routeStdoutLogsToStderr(): void {
+  const flag = (process.env.MCP_ROUTE_STDOUT_LOGS ?? 'true').toString().toLowerCase();
+  if (flag === 'false' || flag === '0' || flag === 'off') {
+    return;
+  }
 
+  const writeToStderr = (...args: unknown[]): void => {
+    const line = args
+      .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
+      .join(' ');
+    process.stderr.write(`${line}\n`);
+  };
+
+  console.log = (...args: unknown[]): void => { writeToStderr(...args); };
+  console.info = (...args: unknown[]): void => { writeToStderr(...args); };
+  if (typeof console.debug === 'function') {
+    console.debug = (...args: unknown[]): void => { writeToStderr(...args); };
+  }
+}
 
 const log = new Logger('UE-MCP');
 
@@ -172,8 +188,6 @@ async function performHealthCheck(bridge: UnrealBridge): Promise<boolean> {
 
 export function createServer() {
   const bridge = new UnrealBridge();
-  // Disable auto-reconnect loops; connect only on-demand
-  bridge.setAutoReconnectEnabled(false);
 
   const automationBridge = new AutomationBridge({
     serverName: CONFIG.SERVER_NAME,
@@ -211,11 +225,7 @@ export function createServer() {
 
   // Initialize WebAssembly module for high-performance operations (5-8x faster)
   log.debug('Initializing WebAssembly integration...');
-  initializeWASM({
-    enabled: process.env.WASM_ENABLED === 'true',
-    fallbackEnabled: true,
-    performanceMonitoring: true
-  }).then(() => {
+  initializeWASM().then(() => {
     log.info('✅ WebAssembly integration initialized (JSON parsing and math operations)');
   }).catch((error) => {
     log.warn('⚠️ WebAssembly initialization failed, using TypeScript fallbacks:', error);
@@ -266,7 +276,6 @@ export function createServer() {
   const levelTools = new LevelTools(bridge);
   const lightingTools = new LightingTools(bridge);
   const landscapeTools = new LandscapeTools(bridge);
-  const buildEnvAdvanced = new BuildEnvironmentAdvanced(bridge);
   const foliageTools = new FoliageTools(bridge);
   const environmentTools = new EnvironmentTools(bridge);
   const debugTools = new DebugVisualizationTools(bridge);
@@ -285,7 +294,6 @@ export function createServer() {
   niagaraTools.setAutomationBridge(automationBridge);
   lightingTools.setAutomationBridge(automationBridge);
   landscapeTools.setAutomationBridge(automationBridge);
-  buildEnvAdvanced.setAutomationBridge(automationBridge);
   foliageTools.setAutomationBridge(automationBridge);
   debugTools.setAutomationBridge(automationBridge);
   performanceTools.setAutomationBridge(automationBridge);
@@ -640,7 +648,6 @@ export function createServer() {
       landscapeTools,
       foliageTools,
       environmentTools,
-      buildEnvAdvanced,
       debugTools,
       performanceTools,
       audioTools,

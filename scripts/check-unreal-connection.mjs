@@ -2,7 +2,8 @@
 import net from 'node:net';
 
 const HOST = process.env.MCP_AUTOMATION_WS_HOST || '127.0.0.1';
-const PORT = Number(process.env.MCP_AUTOMATION_WS_PORT || 8090);
+const PORT = process.env.MCP_AUTOMATION_WS_PORT ? parseInt(process.env.MCP_AUTOMATION_WS_PORT) : 8091;
+console.log(`Checking connection to Unreal Engine on port ${PORT}...`);
 
 function check(host, port, timeoutMs = 2000) {
   return new Promise((resolve) => {

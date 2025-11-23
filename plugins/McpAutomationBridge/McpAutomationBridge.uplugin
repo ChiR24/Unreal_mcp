@@ -35,6 +35,14 @@
     {
       "Name": "Niagara",
       "Enabled": true
+    },
+    {
+      "Name": "ControlRig",
+      "Enabled": true
+    },
+    {
+      "Name": "ProceduralMeshComponent",
+      "Enabled": true
     }
   ]
 }

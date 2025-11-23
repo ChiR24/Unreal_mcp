@@ -6,6 +6,7 @@
 use serde::{Serialize, Deserialize};
 use serde_json::{Value, Map};
 use wasm_bindgen::prelude::*;
+use serde_wasm_bindgen as swb;
 
 /// A parsed property with metadata
 #[derive(Serialize, Deserialize, Clone)]
@@ -35,17 +36,18 @@ pub struct PropertyParser {
 
 #[wasm_bindgen]
 impl PropertyParser {
-    /// Create a new PropertyParser
-    #[wasm_bindgen(constructor)]
-    pub fn new(max_depth: usize) -> PropertyParser {
-        console_error_panic_hook::set_once();
-        PropertyParser { max_depth }
-    }
-
-    /// Create a PropertyParser with default max depth (100)
+    /// Create a new PropertyParser with default max depth (100)
     #[wasm_bindgen(constructor)]
     pub fn new() -> PropertyParser {
-        PropertyParser::new(100)
+        console_error_panic_hook::set_once();
+        PropertyParser { max_depth: 100 }
+    }
+
+    /// Create a PropertyParser with custom max depth
+    #[wasm_bindgen(js_name = withMaxDepth)]
+    pub fn with_max_depth(max_depth: usize) -> PropertyParser {
+        console_error_panic_hook::set_once();
+        PropertyParser { max_depth }
     }
 
     /// Parse JSON string into structured properties
@@ -61,20 +63,23 @@ impl PropertyParser {
 
         let parse_time = js_sys::Date::now() - start;
 
+        let total_count = self.count_properties(&properties);
+
         let result = ParseResult {
             properties,
-            total_count: self.count_properties(&properties),
+            total_count,
             parse_time_ms: parse_time,
         };
 
-        Ok(JsValue::from_serde(&result).map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?)
+        let js_value = swb::to_value(&result)
+            .map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?;
+        Ok(js_value)
     }
 
     /// Serialize properties back to JSON
     #[wasm_bindgen]
     pub fn serialize_properties(&self, properties_js: &JsValue) -> Result<String, JsValue> {
-        let properties: Vec<ParsedProperty> = properties_js
-            .into_serde()
+        let properties: Vec<ParsedProperty> = swb::from_value(properties_js.clone())
             .map_err(|e| JsValue::from_str(&format!("Deserialize error: {}", e)))?;
 
         let value = self.properties_to_value(&properties);
@@ -91,7 +96,9 @@ impl PropertyParser {
         let mut names = Vec::new();
         self.extract_names(&value, &mut names);
 
-        Ok(JsValue::from_serde(&names).map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?)
+        let js_value = swb::to_value(&names)
+            .map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?;
+        Ok(js_value)
     }
 
     /// Get property type from JSON value
@@ -112,7 +119,6 @@ impl PropertyParser {
         }
 
         let prop_type = self.infer_property_type(value);
-        let is_array = value.is_array();
 
         let mut properties = Vec::new();
 
@@ -243,9 +249,9 @@ impl PropertyParser {
         if properties.len() == 1 {
             let prop = &properties[0];
             if let Some(nested) = &prop.nested_properties {
-                Value::Object(Map::from([
-                    (prop.name.clone(), self.nested_to_value(nested))
-                ]))
+                let mut map = Map::new();
+                map.insert(prop.name.clone(), self.nested_to_value(nested));
+                Value::Object(map)
             } else {
                 prop.value.clone()
             }

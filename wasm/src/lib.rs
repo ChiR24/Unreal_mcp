@@ -95,6 +95,7 @@ pub struct Metrics {
 struct OperationMetric {
     name: String,
     duration_ms: f64,
+    #[allow(dead_code)]
     timestamp: f64,
 }
 

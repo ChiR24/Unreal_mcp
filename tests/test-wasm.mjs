@@ -5,7 +5,8 @@
  * Tests the WebAssembly integration and fallback mechanisms
  */
 
-import { wasmIntegration } from '../src/wasm/index.js';
+import { wasmIntegration } from '../dist/wasm/index.js';
+import { pathToFileURL } from 'node:url';
 
 const log = {
   info: (...args) => console.log('[INFO]', ...args),
@@ -182,7 +183,9 @@ async function testWASMIntegration() {
   process.exit(0);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+const mainScriptUrl = pathToFileURL(process.argv[1]).href;
+
+if (import.meta.url === mainScriptUrl) {
   testWASMIntegration().catch(error => {
     log.error('Test failed with error:', error);
     process.exit(1);

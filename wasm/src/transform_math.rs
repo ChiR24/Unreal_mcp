@@ -8,8 +8,10 @@
 //! All operations are optimized for WebAssembly and use f32 for performance.
 
 use wasm_bindgen::prelude::*;
+use serde::{Serialize, Deserialize};
 
 /// 3D Vector
+#[wasm_bindgen]
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Vector {
@@ -130,6 +132,7 @@ impl Vector {
 }
 
 /// 3D Rotation (Euler angles in degrees)
+#[wasm_bindgen]
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Rotator {
@@ -185,6 +188,7 @@ impl Rotator {
 }
 
 /// Combined Transform
+#[wasm_bindgen]
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Transform {
@@ -280,9 +284,9 @@ impl TransformCalculator {
     #[wasm_bindgen(js_name = composeTransform)]
     pub fn compose_transform(
         &self,
-        location: &[f32; 3],
-        rotation: &[f32; 3],
-        scale: &[f32; 3],
+        location: &[f32],
+        rotation: &[f32],
+        scale: &[f32],
     ) -> Vec<f32> {
         let vec_location = Vector::new(location[0], location[1], location[2]);
         let rotator = Rotator::new(rotation[0], rotation[1], rotation[2]);
@@ -294,54 +298,76 @@ impl TransformCalculator {
 
     /// Decompose a 4x4 transformation matrix
     #[wasm_bindgen(js_name = decomposeMatrix)]
-    pub fn decompose_matrix(&self, matrix: &[f32; 16]) -> Vec<f32> {
-        // Extract location (translation is in the last column)
-        let location = Vector::new(matrix[12], matrix[13], matrix[14]);
+    pub fn decompose_matrix(&self, matrix: &[f32]) -> Vec<f32> {
+        // Support both full 4x4 matrices (len >= 16) and the compact
+        // [location(3), rotation(3), scale(3)] representation (len >= 9).
 
-        // Extract scale (from the first three columns)
-        let scale_x = (matrix[0] * matrix[0] + matrix[1] * matrix[1] + matrix[2] * matrix[2]).sqrt();
-        let scale_y = (matrix[4] * matrix[4] + matrix[5] * matrix[5] + matrix[6] * matrix[6]).sqrt();
-        let scale_z = (matrix[8] * matrix[8] + matrix[9] * matrix[9] + matrix[10] * matrix[10]).sqrt();
+        if matrix.len() >= 16 {
+            // Extract location (translation is in the last column)
+            let location = Vector::new(matrix[12], matrix[13], matrix[14]);
 
-        // Extract rotation from the rotation matrix
-        let m00 = matrix[0] / scale_x;
-        let m01 = matrix[1] / scale_x;
-        let m02 = matrix[2] / scale_x;
+            // Extract scale (from the first three columns)
+            let scale_x = (matrix[0] * matrix[0] + matrix[1] * matrix[1] + matrix[2] * matrix[2]).sqrt();
+            let scale_y = (matrix[4] * matrix[4] + matrix[5] * matrix[5] + matrix[6] * matrix[6]).sqrt();
+            let scale_z = (matrix[8] * matrix[8] + matrix[9] * matrix[9] + matrix[10] * matrix[10]).sqrt();
 
-        let m10 = matrix[4] / scale_y;
-        let m11 = matrix[5] / scale_y;
-        let m12 = matrix[6] / scale_y;
+            // Extract rotation from the rotation matrix
+            let m00 = matrix[0] / scale_x;
+            let _m01 = matrix[1] / scale_x;
+            let m02 = matrix[2] / scale_x;
 
-        let m20 = matrix[8] / scale_z;
-        let m21 = matrix[9] / scale_z;
-        let m22 = matrix[10] / scale_z;
+            let m10 = matrix[4] / scale_y;
+            let _m11 = matrix[5] / scale_y;
+            let m12 = matrix[6] / scale_y;
 
-        // Calculate pitch, yaw, roll
-        let pitch = m21.asin().to_degrees();
-        let roll = m20.atan2(m22).to_degrees();
-        let yaw = (-m00 * roll.sin() + m02 * roll.cos())
-            .atan2(m10 * roll.sin() - m12 * roll.cos())
-            .to_degrees();
+            let m20 = matrix[8] / scale_z;
+            let m21 = matrix[9] / scale_z;
+            let m22 = matrix[10] / scale_z;
 
-        vec![
-            location.x,
-            location.y,
-            location.z,
-            pitch,
-            yaw,
-            roll,
-            scale_x,
-            scale_y,
-            scale_z,
-        ]
+            // Calculate pitch, yaw, roll
+            let pitch = m21.asin().to_degrees();
+            let roll = m20.atan2(m22).to_degrees();
+            let yaw = (-m00 * roll.sin() + m02 * roll.cos())
+                .atan2(m10 * roll.sin() - m12 * roll.cos())
+                .to_degrees();
+
+            vec![
+                location.x,
+                location.y,
+                location.z,
+                pitch,
+                yaw,
+                roll,
+                scale_x,
+                scale_y,
+                scale_z,
+            ]
+        } else if matrix.len() >= 9 {
+            // Compact representation: [lx, ly, lz, pitch, yaw, roll, sx, sy, sz]
+            let lx = matrix[0];
+            let ly = matrix[1];
+            let lz = matrix[2];
+            let pitch = matrix[3];
+            let yaw = matrix[4];
+            let roll = matrix[5];
+            let sx = matrix[6];
+            let sy = matrix[7];
+            let sz = matrix[8];
+
+            vec![lx, ly, lz, pitch, yaw, roll, sx, sy, sz]
+        } else {
+            // Invalid input size; avoid panicking in WASM and return a
+            // zeroed transform instead.
+            vec![0.0; 9]
+        }
     }
 
     /// Apply a transform to a point
     #[wasm_bindgen(js_name = applyTransform)]
     pub fn apply_transform(
         &self,
-        point: &[f32; 3],
-        transform: &[f32; 9],
+        point: &[f32],
+        transform: &[f32],
     ) -> Vec<f32> {
         let px = point[0];
         let py = point[1];
@@ -351,9 +377,9 @@ impl TransformCalculator {
         let ty = transform[1];
         let tz = transform[2];
 
-        let rpitch = transform[3];
-        let ryaw = transform[4];
-        let rroll = transform[5];
+        let _rpitch = transform[3];
+        let _ryaw = transform[4];
+        let _rroll = transform[5];
 
         let sx = transform[6];
         let sy = transform[7];

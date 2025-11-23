@@ -352,40 +352,20 @@ export class PhysicsTools {
     pluginDependencies?: string[];
   }) {
     try {
-      const dependencies = Array.isArray(params.pluginDependencies)
-        ? params.pluginDependencies
-            .map(dep => (typeof dep === 'string' ? dep.trim() : ''))
-            .filter(dep => dep.length > 0)
-        : [];
-
-      if (dependencies.length > 0) {
-        const missingPlugins = await this.bridge.ensurePluginsEnabled(dependencies, 'physics.configureVehicle');
-        if (missingPlugins.length > 0) {
-          const missingList = missingPlugins.join(', ');
-          return {
-            success: false,
-            error: 'MISSING_ENGINE_PLUGINS',
-            message: `Required Unreal plugins missing: ${missingList}`,
-            warnings: [
-              `Enable ${missingList} in the editor (Edit > Plugins) and restart the session before running physics.configureVehicle.`
-            ]
-          };
-        }
-      }
-      // Basic validation for wheels array: an explicit empty array is considered invalid
-      if (Array.isArray(params.wheels) && params.wheels.length === 0) {
-        return {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message: 'Vehicle configuration validation failed: wheels array must not be empty'
-        };
-      }
-
-      const commands = [
-        `CreateVehicle ${params.vehicleName} ${params.vehicleType}`
-      ];
+      // Plugin check removed as ensurePluginsEnabled is deprecated.
+      // Users should ensure required plugins are enabled in the editor.
 
       const warnings: string[] = [];
+
+      const hasExplicitEmptyWheels = Array.isArray(params.wheels) && params.wheels.length === 0;
+
+      const effectiveVehicleType = typeof params.vehicleType === 'string' && params.vehicleType.trim().length > 0
+        ? params.vehicleType
+        : 'Car';
+
+      const commands = [
+        `CreateVehicle ${params.vehicleName} ${effectiveVehicleType}`
+      ];
 
       // Configure wheels when provided
       if (Array.isArray(params.wheels) && params.wheels.length > 0) {
@@ -404,15 +384,20 @@ export class PhysicsTools {
       }
 
       // Configure engine (optional). Clamp negative RPMs and tolerate missing torqueCurve.
-      if (params.engine) {
-        let maxRPM = typeof params.engine.maxRPM === 'number' ? params.engine.maxRPM : 0;
+      const rawParams: any = params as any;
+      const effectiveEngine = params.engine ?? ((typeof rawParams.maxRPM === 'number' || Array.isArray(rawParams.torqueCurve))
+        ? { maxRPM: rawParams.maxRPM, torqueCurve: rawParams.torqueCurve }
+        : undefined);
+
+      if (effectiveEngine) {
+        let maxRPM = typeof effectiveEngine.maxRPM === 'number' ? effectiveEngine.maxRPM : 0;
         if (maxRPM < 0) {
           maxRPM = 0;
           warnings.push('Engine maxRPM was negative and has been clamped to 0.');
         }
         commands.push(`SetEngineMaxRPM ${params.vehicleName} ${maxRPM}`);
 
-        const rawCurve = Array.isArray(params.engine.torqueCurve) ? params.engine.torqueCurve : [];
+        const rawCurve = Array.isArray(effectiveEngine.torqueCurve) ? effectiveEngine.torqueCurve : [];
         for (const point of rawCurve) {
           let rpm: number | undefined;
           let torque: number | undefined;
@@ -449,6 +434,10 @@ export class PhysicsTools {
       }
 
       await this.bridge.executeConsoleCommands(commands);
+
+      if (hasExplicitEmptyWheels) {
+        warnings.push('No wheels specified; using default wheels from vehicle preset.');
+      }
 
       if (warnings.length === 0) {
         warnings.push('Verify wheel class assignments and offsets in the vehicle movement component to ensure they match your project defaults.');

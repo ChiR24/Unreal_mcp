@@ -112,6 +112,15 @@ export class AudioTools {
     }
   }
 
+  // Convenience wrapper used by system_control: best-effort 2D sound playback
+  async playSound(soundPath: string, volume?: number, pitch?: number) {
+    return this.playSound2D({
+      soundPath,
+      volume,
+      pitch
+    });
+  }
+
   // Create audio component (requires C++ plugin)
   async createAudioComponent(_params: {
     actorName: string;

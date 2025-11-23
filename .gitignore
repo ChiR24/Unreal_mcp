@@ -13,6 +13,10 @@ build/
 Warp.md
 .smithery/
 
+# WASM build outputs (Rust/wasm-pack)
+wasm/target/
+src/wasm/pkg/
+
 # Environment files
 .env
 .env.local

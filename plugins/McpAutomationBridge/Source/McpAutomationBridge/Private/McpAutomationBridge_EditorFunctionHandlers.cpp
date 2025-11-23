@@ -74,27 +74,62 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         }
 
         bool bExecCalled = false;
-        bool bEditorOk = false;
+        bool bOk = false;
+
+        // Prefer executing with a valid editor world context where possible to
+        // avoid assertions inside engine helpers that require a proper world
+        // (e.g. when running Open/Map commands).
+        UWorld* TargetWorld = nullptr;
+        #if WITH_EDITOR
         if (GEditor)
         {
-            bEditorOk = GEditor->Exec(nullptr, *Cmd);
+            if (UUnrealEditorSubsystem* UES = GEditor->GetEditorSubsystem<UUnrealEditorSubsystem>())
+            {
+                TargetWorld = UES->GetEditorWorld();
+            }
+            if (!TargetWorld)
+            {
+                TargetWorld = GEditor->GetEditorWorldContext().World();
+            }
+        }
+        #endif
+
+        if (GEditor && TargetWorld)
+        {
+            bOk = GEditor->Exec(TargetWorld, *Cmd);
             bExecCalled = true;
         }
 
-        if (!bEditorOk && GEngine)
+        // Fallback: try all known engine world contexts if the editor world
+        // did not handle the command successfully.
+        if (!bOk && GEngine)
         {
             for (const FWorldContext& Ctx : GEngine->GetWorldContexts())
             {
-                if (UWorld* World = Ctx.World())
+                UWorld* World = Ctx.World();
+                if (!World) continue;
+                const bool bWorldOk = GEngine->Exec(World, *Cmd);
+                bExecCalled = bExecCalled || bWorldOk;
+                if (bWorldOk)
                 {
-                    const bool bWorldOk = GEngine->Exec(World, *Cmd);
-                    bExecCalled = bExecCalled || bWorldOk;
+                    bOk = true;
                     break;
                 }
             }
         }
 
-        const bool bOk = bExecCalled;
+        // If we could not find any valid world to execute against, avoid
+        // invoking the engine command path entirely and return a structured
+        // error instead of risking an assertion.
+        if (!bExecCalled && !TargetWorld)
+        {
+            TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+            Out->SetStringField(TEXT("command"), Cmd);
+            Out->SetBoolField(TEXT("success"), false);
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor world not available for command"), Out, TEXT("EDITOR_WORLD_NOT_AVAILABLE"));
+            return true;
+        }
+
         TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
         Out->SetStringField(TEXT("command"), Cmd);
         Out->SetBoolField(TEXT("success"), bOk);
@@ -350,6 +385,15 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
                 if (LowerQuality == TEXT("preview")) { QualityEnum = ELightingBuildQuality::Quality_Preview; }
                 else if (LowerQuality == TEXT("medium")) { QualityEnum = ELightingBuildQuality::Quality_Medium; }
                 else if (LowerQuality == TEXT("high")) { QualityEnum = ELightingBuildQuality::Quality_High; }
+                else
+                {
+                    TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+                    Err->SetBoolField(TEXT("success"), false);
+                    Err->SetStringField(TEXT("error"), TEXT("unknown_quality"));
+                    Err->SetStringField(TEXT("quality"), Quality);
+                    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Unknown lighting quality"), Err, TEXT("UNKNOWN_QUALITY"));
+                    return true;
+                }
             }
             LES->BuildLightMaps(QualityEnum, /*bWithReflectionCaptures*/false);
             TSharedPtr<FJsonObject> R = MakeShared<FJsonObject>();

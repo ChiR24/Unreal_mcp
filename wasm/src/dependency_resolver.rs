@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashSet, HashMap, VecDeque};
 use wasm_bindgen::prelude::*;
+use serde_wasm_bindgen as swb;
 
 /// Asset dependency information
 #[derive(Serialize, Deserialize, Clone)]
@@ -37,16 +38,18 @@ pub struct DependencyResolver {
 
 #[wasm_bindgen]
 impl DependencyResolver {
-    #[wasm_bindgen(constructor)]
-    pub fn new(max_depth: usize) -> DependencyResolver {
-        console_error_panic_hook::set_once();
-        DependencyResolver { max_depth }
-    }
-
     /// Create a DependencyResolver with default max depth (100)
     #[wasm_bindgen(constructor)]
     pub fn new() -> DependencyResolver {
-        DependencyResolver::new(100)
+        console_error_panic_hook::set_once();
+        DependencyResolver { max_depth: 100 }
+    }
+
+    /// Create a DependencyResolver with custom max depth
+    #[wasm_bindgen(js_name = withMaxDepth)]
+    pub fn with_max_depth(max_depth: usize) -> DependencyResolver {
+        console_error_panic_hook::set_once();
+        DependencyResolver { max_depth }
     }
 
     /// Analyze dependencies for an asset
@@ -92,8 +95,8 @@ impl DependencyResolver {
                 result.push(AssetDependency {
                     path: current_path.clone(),
                     dependencies: deps.clone(),
-                    dependents: self.find_dependents(&current_path, &dependencies_map),
-                    depth: current_depth,
+                    dependents: self.find_dependents_internal(&current_path, &dependencies_map),
+                    depth: current_depth as u32,
                 });
 
                 for dep in deps {
@@ -106,16 +109,20 @@ impl DependencyResolver {
 
         let analysis_time = js_sys::Date::now() - start;
 
+        let total_dependency_count = result.len();
+
         let analysis = DependencyAnalysis {
             asset: asset_path.to_string(),
             dependencies: result,
-            total_dependency_count: result.len(),
+            total_dependency_count,
             max_depth: depth_limit as u32,
             circular_dependencies: circular_deps,
             analysis_time_ms: analysis_time,
         };
 
-        Ok(JsValue::from_serde(&analysis).map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?)
+        let js_value = swb::to_value(&analysis)
+            .map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?;
+        Ok(js_value)
     }
 
     /// Find all dependents of an asset
@@ -130,7 +137,9 @@ impl DependencyResolver {
 
         let dependents = self.find_dependents_internal(asset_path, &dependencies_map);
 
-        Ok(JsValue::from_serde(&dependents).map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?)
+        let js_value = swb::to_value(&dependents)
+            .map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?;
+        Ok(js_value)
     }
 
     /// Calculate dependency depth
@@ -165,7 +174,9 @@ impl DependencyResolver {
 
         let circular_deps = self.find_circular_dependencies_internal(&dependencies_map, depth_limit);
 
-        Ok(JsValue::from_serde(&circular_deps).map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?)
+        let js_value = swb::to_value(&circular_deps)
+            .map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?;
+        Ok(js_value)
     }
 
     /// Topological sort of dependencies
@@ -179,7 +190,9 @@ impl DependencyResolver {
 
         let sorted = self.topological_sort_internal(&dependencies_map)?;
 
-        Ok(JsValue::from_serde(&sorted).map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?)
+        let js_value = swb::to_value(&sorted)
+            .map_err(|e| JsValue::from_str(&format!("Serialize error: {}", e)))?;
+        Ok(js_value)
     }
 }
 
@@ -192,7 +205,7 @@ impl DependencyResolver {
         let mut dependents = Vec::new();
 
         for (path, deps) in dependencies_map {
-            if deps.contains(asset_path) {
+            if deps.contains(&asset_path.to_string()) {
                 dependents.push(path.clone());
             }
         }
@@ -335,7 +348,7 @@ impl DependencyResolver {
         let mut queue: VecDeque<String> = in_degree
             .iter()
             .filter(|(_, &degree)| degree == 0)
-            .map(|(&asset, _)| asset)
+            .map(|(asset, _)| asset.clone())
             .collect();
 
         let mut sorted = Vec::new();

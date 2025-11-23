@@ -132,9 +132,10 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
 
     else if (SubAction == TEXT("connect_pins"))
     {
-        // Niagara pin connection is complex due to the stack model.
-        // This is a placeholder for where that logic would go.
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Niagara pin connection not fully implemented."), TEXT("NOT_IMPLEMENTED"));
+        // Niagara graphs are data-flow based but heavily rely on the "Stack" (System/Emitter/Module) structure.
+        // Connecting pins arbitrarily requires knowing the exact Pin Graph representation (NiagaraNodeInput/Output).
+        // This is significantly more complex than Blueprint graphs.
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Niagara pin connection requires advanced stack context awareness not yet implemented."), TEXT("NOT_IMPLEMENTED"));
         return true;
     }
     else if (SubAction == TEXT("remove_node"))
@@ -165,8 +166,23 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
     }
     else if (SubAction == TEXT("set_parameter"))
     {
-        // This would involve finding a variable/parameter in the graph or stack and setting its value.
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Niagara parameter setting not fully implemented."), TEXT("NOT_IMPLEMENTED"));
+        // Setting a parameter in Niagara usually means setting a user parameter or a module input.
+        // This requires traversing the UNiagaraScript or UNiagaraSystem exposed parameters.
+        FString ParamName;
+        Payload->TryGetStringField(TEXT("parameterName"), ParamName);
+        FString ValueStr;
+        Payload->TryGetStringField(TEXT("value"), ValueStr);
+        
+        // Basic implementation: Try to find a user parameter
+        // NOTE: This requires accessing exposed parameters which might be on the System.
+        if (System)
+        {
+            // UNiagaraSystem::SetParameterValue is not a direct API. 
+            // We need to use FNiagaraUserRedirectionParameterStore or similar.
+            // Due to API volatility between 5.0-5.4, we will defer this.
+        }
+
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Niagara parameter setting requires version-specific API (UserParameters vs VariableStore)."), TEXT("NOT_IMPLEMENTED"));
         return true;
     }
 

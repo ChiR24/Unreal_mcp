@@ -11,7 +11,8 @@
     "unreal-engine-mcp-server": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build:core": "tsc -p tsconfig.json",
+    "build": "npm run build:core && (npm run build:wasm || echo \"WASM build failed or wasm-pack missing; continuing with TypeScript-only build. To enable WASM, install wasm-pack and re-run npm run build.\")",
     "build:watch": "tsc -p tsconfig.json --watch",
     "start": "node dist/cli.js",
     "smithery:dev": "npx @smithery/cli dev",
@@ -51,7 +52,7 @@
     "test:graphql": "node tests/test-graphql.mjs",
     "test:wasm": "node tests/test-wasm.mjs",
     "build:wasm": "echo 'Building WebAssembly module...' && cd wasm && wasm-pack build --target web --out-dir ../src/wasm/pkg",
-    "test:wasm:all": "npm run build:wasm && node tests/test-wasm.mjs",
+    "test:wasm:all": "npm run build:core && npm run build:wasm && node tests/test-wasm.mjs",
     "type-check": "tsc --noEmit",
     "prebuild": "npm run lint && npm run clean"
   },

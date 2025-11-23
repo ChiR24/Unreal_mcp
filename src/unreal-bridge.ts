@@ -170,7 +170,11 @@ export class UnrealBridge {
     }
 
     this.connectPromise = ErrorHandler.retryWithBackoff(
-      () => this.connect(timeoutMs),
+      () => {
+          const envTimeout = process.env.UNREAL_CONNECTION_TIMEOUT ? parseInt(process.env.UNREAL_CONNECTION_TIMEOUT, 10) : 30000;
+          const actualTimeout = envTimeout > 0 ? envTimeout : timeoutMs;
+          return this.connect(actualTimeout);
+      },
       {
         maxRetries: Math.max(0, maxAttempts - 1),
         initialDelay: retryDelayMs,
@@ -648,10 +652,6 @@ export class UnrealBridge {
     return results;
   }
 
-  setAutoReconnectEnabled(_enabled: boolean): void {
-    // Auto-reconnect behavior has been removed; this is now a no-op kept for API compatibility.
-  }
-
   // Graceful shutdown
   async disconnect(): Promise<void> {
     this.connected = false;
@@ -672,24 +672,6 @@ export class UnrealBridge {
     }, _options?.timeoutMs ? { timeoutMs: _options.timeoutMs } : undefined);
 
     return resp && resp.success !== false ? (resp.result ?? resp) : resp;
-  }
-
-  /** Stub - plugin management removed */
-  async ensurePluginsEnabled(pluginNames: string[], context?: string): Promise<string[]> {
-    const names = Array.isArray(pluginNames)
-      ? pluginNames
-          .map((n) => (typeof n === 'string' ? n.trim() : String(n ?? '')))
-          .filter((n) => n.length > 0)
-      : [];
-
-    if (names.length === 0) {
-      return [];
-    }
-
-    this.log.warn(
-      `Plugin management is disabled; treating requested plugins as missing in context '${context ?? 'unknown'}': ${names.join(', ')}`
-    );
-    return names;
   }
 
   /** Get Unreal Engine version */

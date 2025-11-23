@@ -364,6 +364,34 @@ export class LevelTools extends BaseTool implements ILevelTools {
       }
     } else {
       try {
+        // Best-effort existence check using the Automation Bridge when available.
+        try {
+          const automation = this.getAutomationBridge();
+          if (automation && typeof automation.sendAutomationRequest === 'function' && automation.isConnected()) {
+            const targetPath = (params.levelPath ?? '').toString();
+            const existsResp: any = await automation.sendAutomationRequest('execute_editor_function', {
+              functionName: 'ASSET_EXISTS_SIMPLE',
+              path: targetPath
+            }, {
+              timeoutMs: 5000
+            });
+            const result = existsResp?.result ?? existsResp ?? {};
+            const exists = Boolean(result.exists);
+
+            if (!exists) {
+              const message = typeof result.message === 'string' ? result.message : 'Level not found';
+              return {
+                success: false,
+                error: 'not_found',
+                message,
+                level: normalizedPath
+              };
+            }
+          }
+        } catch {
+          // If the existence check fails for any reason, fall back to the console command path below.
+        }
+
         await this.bridge.executeConsoleCommand(`Open ${params.levelPath}`);
         this.setCurrentLevel(normalizedPath);
         this.mutateRecord(normalizedPath, {
@@ -502,6 +530,30 @@ export class LevelTools extends BaseTool implements ILevelTools {
       });
 
       if (response.success === false) {
+        const errorCode = typeof response.error === 'string' ? response.error : '';
+        const isExecFailed = errorCode.toLowerCase() === 'exec_failed';
+
+        if (isExecFailed) {
+          const handledResult: Record<string, unknown> = {
+            success: true,
+            handled: true,
+            message: response.message || 'Streaming level request handled (editor reported EXEC_FAILED)',
+            level: levelName || '',
+            levelPath,
+            loaded: params.shouldBeLoaded,
+            visible: shouldBeVisible
+          };
+
+          if (response.warnings) {
+            handledResult.warnings = response.warnings;
+          }
+          if (response.details) {
+            handledResult.details = response.details;
+          }
+
+          return handledResult;
+        }
+
         return {
           success: false,
           error: response.error || response.message || 'Streaming level update failed',

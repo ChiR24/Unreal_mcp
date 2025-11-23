@@ -11,7 +11,6 @@ import {
 } from './constants.js';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { wasmIntegration } from './wasm/index.js';
 
 function FStringSafe(val: unknown): string {
   try {
@@ -176,8 +175,7 @@ const WAIT_FOR_EVENT_ACTIONS = new Set<string>([
   'generate_report',
   'validate',
   // Generic editor property changes
-  'set_object_property',
-  'execute_editor_function'
+  'set_object_property'
 ]);
 
 export class AutomationBridge extends EventEmitter {
@@ -516,13 +514,11 @@ export class AutomationBridge extends EventEmitter {
 
     socket.on('message', async (data, isBinary) => {
       let parsed: AutomationBridgeMessage;
+      const text = typeof data === 'string' ? data : data.toString('utf8');
       try {
-        const text = typeof data === 'string' ? data : data.toString('utf8');
         log.debug(`[AutomationBridge Client] Received message (binary=${isBinary}, length=${text.length}): ${text.substring(0, 200)}`);
-        // Use WASM for high-performance JSON parsing (5-8x faster)
-        parsed = await wasmIntegration.parseProperties(text) as AutomationBridgeMessage;
+        parsed = JSON.parse(text) as AutomationBridgeMessage;
       } catch (_error) {
-        const text = typeof data === 'string' ? data : data.toString('utf8');
         log.error(`Received non-JSON automation message from server (binary=${isBinary}); closing connection. Data: ${text.substring(0, 500)}`, _error as any);
         socket.close(4003, 'Invalid JSON payload');
         this.lastHandshakeFailure = { reason: 'invalid-json', at: new Date() };

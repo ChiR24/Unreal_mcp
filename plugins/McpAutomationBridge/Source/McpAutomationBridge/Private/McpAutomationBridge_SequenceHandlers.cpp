@@ -704,7 +704,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(const FString& RequestId,
         if (ULevelSequenceEditorBlueprintLibrary::GetCurrentLevelSequence() == LevelSeq)
         {
             ULevelSequenceEditorBlueprintLibrary::Pause();
+            
+            PRAGMA_DISABLE_DEPRECATION_WARNINGS
             ULevelSequenceEditorBlueprintLibrary::SetCurrentTime(0);
+            PRAGMA_ENABLE_DEPRECATION_WARNINGS
+            
             SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence stopped (reset to start)"), nullptr);
             return true;
         }

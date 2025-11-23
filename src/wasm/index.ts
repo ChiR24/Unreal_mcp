@@ -30,6 +30,82 @@ interface PerformanceMetrics {
   useWASM: boolean;
 }
 
+const isNodeEnvironment =
+  typeof process !== 'undefined' &&
+  process.versions != null &&
+  process.versions.node != null;
+
+let nodeFileFetchPatched = false;
+
+async function ensureNodeFileFetchForWasm(): Promise<void> {
+  if (!isNodeEnvironment || nodeFileFetchPatched) {
+    return;
+  }
+
+  const originalFetch = (globalThis as any).fetch as
+    | (typeof fetch)
+    | undefined;
+
+  if (typeof originalFetch !== 'function') {
+    return;
+  }
+
+  try {
+    const fs = await import('node:fs/promises');
+    const url = await import('node:url');
+    const readFile = (fs as any).readFile as (path: string) => Promise<Buffer>;
+    const fileURLToPath = (url as any).fileURLToPath as (u: URL | string) => string;
+
+    const toUrl = (input: any): URL | null => {
+      try {
+        if (input instanceof URL) {
+          return input;
+        }
+        // Node fetch often receives a string URL
+        if (typeof input === 'string') {
+          return new URL(input);
+        }
+        // Handle Request objects if available
+        const RequestCtor = (globalThis as any).Request;
+        if (RequestCtor && input instanceof RequestCtor && typeof input.url === 'string') {
+          return new URL(input.url);
+        }
+      } catch {
+        // Ignore parse errors and fall through
+      }
+      return null;
+    };
+
+    (globalThis as any).fetch = (async (input: any, init?: any) => {
+      try {
+        const target = toUrl(input);
+        if (target && target.protocol === 'file:') {
+          const filePath = fileURLToPath(target);
+          const data = await readFile(filePath);
+
+          // Return a raw ArrayBuffer/Uint8Array so wasm-pack's loader can
+          // pass it directly to WebAssembly.instantiate as a buffer source.
+          const buffer = data.buffer.slice(
+            data.byteOffset,
+            data.byteOffset + data.byteLength
+          );
+
+          return buffer;
+        }
+      } catch {
+        // Fall through to original fetch if anything goes wrong
+      }
+
+      return (originalFetch as any)(input, init);
+    }) as typeof fetch;
+
+    nodeFileFetchPatched = true;
+  } catch {
+    // If the Node-specific modules are unavailable for some reason,
+    // leave fetch as-is and let the normal error handling occur.
+  }
+}
+
 export class WASMIntegration {
   private log = new Logger('WASMIntegration');
   private module: WASMModule | null = null;
@@ -37,11 +113,31 @@ export class WASMIntegration {
   private metrics: PerformanceMetrics[] = [];
   private maxMetrics = 1000;
   private initialized = false;
+  // Track whether we've already determined that the optional WASM bundle is
+  // unavailable (for example, ERR_MODULE_NOT_FOUND). When set, future
+  // initialize() calls become no-ops and rely on TypeScript fallbacks.
+  private moduleUnavailable = false;
 
   constructor(config: WASMConfig = {}) {
+    const envFlag = process.env.WASM_ENABLED;
+    const envEnabled = envFlag === undefined ? true : envFlag === 'true';
+
+    // Resolve a sensible default WASM bundle path that works both when this
+    // module is executed from compiled dist/ (Node runs dist/wasm/index.js)
+    // and when run directly from src/ (e.g. via ts-node). When running from
+    // dist/, the generated bundle lives under src/wasm/pkg by default, so we
+    // point back to the source tree. When running from src/, we expect the
+    // pkg/ directory to sit alongside index.ts.
+    const here = new URL('.', import.meta.url);
+    const herePath = here.pathname.replace(/\\/g, '/');
+    const defaultUrl = herePath.includes('/dist/')
+      ? new URL('../../src/wasm/pkg/unreal_mcp_wasm.js', import.meta.url)
+      : new URL('./pkg/unreal_mcp_wasm.js', import.meta.url);
+    const defaultWasmPath = defaultUrl.href;
+
     this.config = {
-      enabled: config.enabled ?? process.env.WASM_ENABLED === 'true',
-      wasmPath: config.wasmPath ?? process.env.WASM_PATH ?? './pkg/unreal_mcp_wasm.js',
+      enabled: config.enabled ?? envEnabled,
+      wasmPath: config.wasmPath ?? process.env.WASM_PATH ?? defaultWasmPath,
       fallbackEnabled: config.fallbackEnabled ?? true,
       performanceMonitoring: config.performanceMonitoring ?? true
     };
@@ -56,6 +152,13 @@ export class WASMIntegration {
       return;
     }
 
+    // If a prior initialization attempt determined that the module is not
+    // available (for example, ERR_MODULE_NOT_FOUND), do not keep trying to
+    // load it on every call. The TypeScript fallbacks will remain active.
+    if (this.moduleUnavailable) {
+      return;
+    }
+
     if (!this.config.enabled) {
       this.log.info('WASM integration is disabled');
       return;
@@ -63,6 +166,13 @@ export class WASMIntegration {
 
     try {
       this.log.info(`Loading WASM module from ${this.config.wasmPath}...`);
+
+      // When running under Node, wasm-pack's web target will attempt to
+      // fetch() the compiled .wasm via a file:// URL. Node's built-in
+      // fetch does not currently support file://, so we install a narrow
+      // polyfill that handles file URLs by reading from disk and delegates
+      // all other requests to the original fetch implementation.
+      await ensureNodeFileFetchForWasm();
 
       // Dynamic import of the WASM module
       const wasmModule = await import(this.config.wasmPath);
@@ -82,6 +192,17 @@ export class WASMIntegration {
       });
     } catch (error) {
       this.log.error('Failed to initialize WebAssembly module:', error);
+
+      const code = (error as any)?.code;
+      if (code === 'ERR_MODULE_NOT_FOUND') {
+        // The WASM bundle is an optional optimization. When it has not been
+        // built, log a single concise warning and then rely on the
+        // TypeScript fallbacks for the rest of the process without
+        // repeatedly attempting to import the missing file.
+        this.log.warn('WebAssembly module not found. To enable WASM, run "npm run build:wasm". To silence this warning, set WASM_ENABLED=false.');
+        this.moduleUnavailable = true;
+      }
+
       this.log.warn('Falling back to TypeScript implementations');
 
       if (!this.config.fallbackEnabled) {
@@ -153,7 +274,11 @@ export class WASMIntegration {
     if (this.isReady() && this.module && typeof this.module.TransformCalculator === 'function') {
       try {
         const calculator = new this.module.TransformCalculator();
-        const result = calculator.compose_transform(location, rotation, scale);
+        const result = calculator.composeTransform(
+          new Float32Array(location),
+          new Float32Array(rotation),
+          new Float32Array(scale)
+        );
 
         const duration = performance.now() - start;
         this.recordMetrics('compose_transform', duration, true);
@@ -180,7 +305,7 @@ export class WASMIntegration {
     if (this.isReady() && this.module && typeof this.module.TransformCalculator === 'function') {
       try {
         const calculator = new this.module.TransformCalculator();
-        const result = calculator.decompose_matrix(matrix);
+        const result = calculator.decomposeMatrix(matrix);
 
         const duration = performance.now() - start;
         this.recordMetrics('decompose_matrix', duration, true);
@@ -248,7 +373,7 @@ export class WASMIntegration {
       try {
         const resolver = new this.module.DependencyResolver();
         const dependenciesJson = JSON.stringify(dependencies);
-        const result = resolver.analyze_dependencies(
+        const result = resolver.analyzeDependencies(
           assetPath,
           dependenciesJson,
           options?.maxDepth ?? 100

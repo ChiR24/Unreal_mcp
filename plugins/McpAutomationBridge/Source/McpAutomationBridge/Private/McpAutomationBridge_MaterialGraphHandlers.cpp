@@ -575,14 +575,64 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(const FString& Req
         FString NodeId;
         Payload->TryGetStringField(TEXT("nodeId"), NodeId);
         FString PinName;
-        Payload->TryGetStringField(TEXT("pinName"), PinName); // Optional, if empty break all
+        Payload->TryGetStringField(TEXT("pinName"), PinName);
 
-        // Breaking connections in Material Graph is slightly different as expressions hold the connections.
-        // This requires iterating through all expressions and clearing inputs that point to this node,
-        // or clearing outputs of this node.
-        // Simplified: Not fully implemented for specific pins yet.
+        if (NodeId.IsEmpty())
+        {
+            // Disconnect from main material node
+            if (!PinName.IsEmpty())
+            {
+                EMaterialProperty Prop = MP_MAX;
+                if (PinName == TEXT("BaseColor")) Prop = MP_BaseColor;
+                else if (PinName == TEXT("EmissiveColor")) Prop = MP_EmissiveColor;
+                else if (PinName == TEXT("Roughness")) Prop = MP_Roughness;
+                else if (PinName == TEXT("Metallic")) Prop = MP_Metallic;
+                else if (PinName == TEXT("Normal")) Prop = MP_Normal;
+                else if (PinName == TEXT("Opacity")) Prop = MP_Opacity;
+                else if (PinName == TEXT("OpacityMask")) Prop = MP_OpacityMask;
+                
+                if (Prop != MP_MAX)
+                {
+                    // To disconnect, we can set the input to a default initialized input
+                    // Finding the exact property input on UMaterial is manual.
+                    // UMaterialEditingLibrary doesn't have "Disconnect".
+                    // We access the FMaterialInput directly on UMaterial? No, protected.
+                    // We'll assume this action is limited or requires internal access not easily safe here.
+                    // However, we can try setting it to null expression via editing library?
+                    // No, Connect requires an expression.
+                    
+                    // Best effort: Send not implemented for main node disconnection safety
+                    SendAutomationError(RequestingSocket, RequestId, TEXT("Disconnecting main material pins not supported via this API."), TEXT("NOT_IMPLEMENTED"));
+                    return true;
+                }
+            }
+        }
+
+        UMaterialExpression* TargetExpr = nullptr;
+        for (UMaterialExpression* Expr : Material->GetExpressions())
+        {
+            if (Expr->MaterialExpressionGuid.ToString() == NodeId)
+            {
+                TargetExpr = Expr;
+                break;
+            }
+        }
+
+        if (!TargetExpr)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
+            return true;
+        }
+
+        // We want to break connections *from* this node (outputs) or *to* this node (inputs)?
+        // "break_connections" usually means isolating the node.
+        // Let's clear the inputs OF this node.
         
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Break connections not fully implemented for materials."), TEXT("NOT_IMPLEMENTED"));
+        // Reflection based clearing of struct properties that are FMaterialInput?
+        // This is risky.
+        
+        // Fallback: Just acknowledge complexity.
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Breaking arbitrary node connections is not safely supported without reflection."), TEXT("NOT_IMPLEMENTED"));
         return true;
     }
     else if (SubAction == TEXT("get_node_details"))
