@@ -14,7 +14,15 @@ const tests = [
   'test:console_command',
   'test:inspect',
   'test:manage_asset',
-  'test:blueprint'
+  'test:blueprint',
+  'test:blueprint_graph',
+  'test:graphql',
+  'test:wasm:all',
+  'test:no-inline-python',
+  'test:plugin-handshake',
+  'test:asset_advanced',
+  'test:render',
+  'test:world_partition'
 ];
 
 const isWindows = process.platform === 'win32';

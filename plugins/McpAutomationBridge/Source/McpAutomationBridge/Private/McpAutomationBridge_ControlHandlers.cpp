@@ -23,6 +23,12 @@
 #elif __has_include("LevelEditorSubsystem.h")
 #include "LevelEditorSubsystem.h"
 #define MCP_HAS_LEVELEDITOR_SUBSYSTEM 1
+#define MCP_HAS_LEVELEDITOR_SUBSYSTEM 1
+#endif
+#if __has_include("Subsystems/AssetEditorSubsystem.h")
+#include "Subsystems/AssetEditorSubsystem.h"
+#elif __has_include("AssetEditorSubsystem.h")
+#include "AssetEditorSubsystem.h"
 #endif
 // Additional editor headers for viewport control
 #include "Editor.h"
@@ -110,7 +116,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(const FString& Reque
 
     UClass* ResolvedClass = nullptr;
     UStaticMesh* ResolvedStaticMesh = nullptr;
-    if (ClassPath.StartsWith(TEXT("/")) || ClassPath.Contains(TEXT("/")))
+    // Skip LoadAsset for script classes (e.g. /Script/Engine.CameraActor) to avoid LogEditorAssetSubsystem errors
+    if ((ClassPath.StartsWith(TEXT("/")) || ClassPath.Contains(TEXT("/"))) && !ClassPath.StartsWith(TEXT("/Script/")))
     {
         if (UObject* Loaded = UEditorAssetLibrary::LoadAsset(ClassPath))
         {
@@ -1370,12 +1377,57 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(const FString& Req
     if (LowerSub == TEXT("focus_actor")) return HandleControlEditorFocusActor(RequestId, Payload, RequestingSocket);
     if (LowerSub == TEXT("set_camera")) return HandleControlEditorSetCamera(RequestId, Payload, RequestingSocket);
     if (LowerSub == TEXT("set_view_mode")) return HandleControlEditorSetViewMode(RequestId, Payload, RequestingSocket);
+    if (LowerSub == TEXT("open_asset")) return HandleControlEditorOpenAsset(RequestId, Payload, RequestingSocket);
 
     SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Unknown editor control action: %s"), *LowerSub), nullptr, TEXT("UNKNOWN_ACTION"));
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor control requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString AssetPath; Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    if (AssetPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+
+    if (!GEditor) { SendAutomationResponse(Socket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE")); return true; }
+
+    UAssetEditorSubsystem* AssetEditorSS = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+    if (!AssetEditorSS) { SendAutomationResponse(Socket, RequestId, false, TEXT("AssetEditorSubsystem not available"), nullptr, TEXT("SUBSYSTEM_MISSING")); return true; }
+
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"), nullptr, TEXT("ASSET_NOT_FOUND"));
+        return true;
+    }
+
+    UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset)
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to load asset"), nullptr, TEXT("LOAD_FAILED"));
+        return true;
+    }
+
+    const bool bOpened = AssetEditorSS->OpenEditorForAsset(Asset);
+    
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), bOpened);
+    Resp->SetStringField(TEXT("assetPath"), AssetPath);
+    
+    if (bOpened)
+    {
+        SendAutomationResponse(Socket, RequestId, true, TEXT("Asset opened"), Resp, FString());
+    }
+    else
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to open asset editor"), Resp, TEXT("OPEN_FAILED"));
+    }
+    return true;
+#else
+    return false;
 #endif
 }
 

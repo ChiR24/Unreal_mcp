@@ -102,7 +102,12 @@ export class AssetTools extends BaseTool implements IAssetTools {
     visited.add(params.assetPath);
 
     while (queue.length > 0) {
-      const { path, depth } = queue.shift()!;
+      const next = queue.shift();
+      if (!next) {
+        break;
+      }
+
+      const { path, depth } = next;
 
       if (depth >= maxDepth) {
         // If we hit max depth, we don't fetch children, but we should record the node

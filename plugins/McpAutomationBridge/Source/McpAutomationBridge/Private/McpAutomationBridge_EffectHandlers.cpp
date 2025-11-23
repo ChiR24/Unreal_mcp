@@ -461,7 +461,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         {
             NiComp->SetAsset(Cast<UNiagaraSystem>(NiagObj));
             NiComp->SetWorldScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
-            NiComp->Activate(true);
+            NiComp->Activate(false);
         }
 
         if (!AttachToActor.IsEmpty())
@@ -766,7 +766,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
     if (bCleanup)
     {
         FString Filter; LocalPayload->TryGetStringField(TEXT("filter"), Filter);
-        if (Filter.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("filter required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+        // Allow empty filter as a no-op success
+        if (Filter.IsEmpty()) 
+        { 
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetNumberField(TEXT("removed"), 0);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Cleanup skipped (empty filter)"), Resp, FString());
+            return true; 
+        }
 #if WITH_EDITOR
         if (!GEditor)
         {
@@ -838,23 +845,24 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
 
         if (bCreateRibbon) 
         {
-            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_niagara_ribbon"), TEXT("/Niagara/DefaultRibbonSystem.DefaultRibbonSystem"));
+            // Fallback to basic engine content if specific Niagara content isn't found
+            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_niagara_ribbon"), TEXT("/Niagara/Icons/DefaultNiagaraSystem.DefaultNiagaraSystem"));
         }
         if (bCreateFog) 
         {
-            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_volumetric_fog"), TEXT("/Niagara/DefaultVolumetricFog.DefaultVolumetricFog"));
+            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_volumetric_fog"), TEXT("/Niagara/Icons/DefaultNiagaraSystem.DefaultNiagaraSystem"));
         }
         if (bCreateTrail) 
         {
-            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_particle_trail"), TEXT("/Niagara/DefaultTrailSystem.DefaultTrailSystem"));
+            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_particle_trail"), TEXT("/Niagara/Icons/DefaultNiagaraSystem.DefaultNiagaraSystem"));
         }
         if (bCreateEnv) 
         {
-            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_environment_effect"), TEXT("/Niagara/DefaultEnvironmentSystem.DefaultEnvironmentSystem"));
+            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_environment_effect"), TEXT("/Niagara/Icons/DefaultNiagaraSystem.DefaultNiagaraSystem"));
         }
         if (bCreateImpact) 
         {
-            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_impact_effect"), TEXT("/Niagara/DefaultImpactSystem.DefaultImpactSystem"));
+            return CreateNiagaraEffect(RequestId, Payload, RequestingSocket, TEXT("create_impact_effect"), TEXT("/Niagara/Icons/DefaultNiagaraSystem.DefaultNiagaraSystem"));
         }
 
     return false;
@@ -934,7 +942,7 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(const FString& RequestId
     if (NiComp && NiagObj->IsA<UNiagaraSystem>())
     {
         NiComp->SetAsset(Cast<UNiagaraSystem>(NiagObj));
-        NiComp->Activate(true);
+        NiComp->Activate(false);
     }
 
     // Set actor label

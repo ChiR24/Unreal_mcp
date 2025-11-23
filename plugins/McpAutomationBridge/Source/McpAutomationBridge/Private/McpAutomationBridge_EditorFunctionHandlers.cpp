@@ -326,6 +326,21 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
             SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
             return true;
         }
+
+        // Guard against missing editor world; building lighting when there is
+        // no active editor world can trigger engine assertions. If the world
+        // is not available, report a structured error instead of proceeding.
+        UWorld* CurrentWorld = nullptr;
+        if (GEditor)
+        {
+            CurrentWorld = GEditor->GetEditorWorldContext().World();
+        }
+        if (!CurrentWorld)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor world not available for build lighting"), nullptr, TEXT("EDITOR_WORLD_NOT_AVAILABLE"));
+            return true;
+        }
+
         if (ULevelEditorSubsystem* LES = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
         {
             ELightingBuildQuality QualityEnum = ELightingBuildQuality::Quality_Production;

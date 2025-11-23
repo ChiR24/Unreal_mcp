@@ -252,8 +252,8 @@ export class AutomationBridge extends EventEmitter {
 
     const sanitizedPorts = Array.isArray(configuredPortValues)
       ? configuredPortValues
-          .map((value) => sanitizePort(value))
-          .filter((port): port is number => port !== null)
+        .map((value) => sanitizePort(value))
+        .filter((port): port is number => port !== null)
       : [];
 
     if (!sanitizedPorts.includes(defaultPort)) {
@@ -270,8 +270,8 @@ export class AutomationBridge extends EventEmitter {
       : [];
     const envProtocols = process.env.MCP_AUTOMATION_WS_PROTOCOLS
       ? process.env.MCP_AUTOMATION_WS_PROTOCOLS.split(',')
-          .map((token) => token.trim())
-          .filter((token) => token.length > 0)
+        .map((token) => token.trim())
+        .filter((token) => token.length > 0)
       : [];
     this.negotiatedProtocols = Array.from(new Set([...userProtocols, ...envProtocols, ...defaultProtocols]));
     this.port = this.ports[0];
@@ -740,6 +740,21 @@ export class AutomationBridge extends EventEmitter {
           const got = echoed.toLowerCase();
           // Consider it a mismatch if neither starts with the other (allowing minor decoration, e.g. namespaces)
           const startsEitherWay = got.startsWith(expected) || expected.startsWith(got);
+
+          console.log(`[enforceActionMatch] expected='${expected}', echoed='${echoed}', startsEitherWay=${startsEitherWay}`);
+
+          // Special case: 'animation_physics', 'create_effect', and 'build_environment' are consolidated tools
+          // that map to various underlying C++ actions. The C++ response will contain the specific
+          // sub-action name (e.g. 'create_blend_space', 'delete', 'sculpt'), which won't match
+          // the request action 'animation_physics'/'create_effect'/'build_environment'.
+          if (
+            (expected === 'animation_physics' || expected === 'create_effect' || expected === 'build_environment') &&
+            echoed &&
+            echoed !== expected
+          ) {
+            return response;
+          }
+
           if (!startsEitherWay) {
             const mutated: any = { ...resp };
             // Mark as failure without discarding original payload
@@ -787,7 +802,7 @@ export class AutomationBridge extends EventEmitter {
             if (this.pendingRequests.has(requestId)) this.pendingRequests.delete(requestId);
             try {
               pending.reject(new Error(`Timed out waiting for completion event for request ${requestId} after ${evtMs}ms`));
-            } catch {}
+            } catch { }
           }, evtMs);
         } else {
           log.debug(`Waiting indefinitely for completion event for request ${requestId}; no event timeout configured.`);
@@ -1001,7 +1016,7 @@ export class AutomationBridge extends EventEmitter {
       this.coalescedRequests.set(coalesceKey, pendingPromise);
       // Ensure we remove the coalesced entry when the promise settles
       const localKey = coalesceKey;
-      pendingPromise.finally(() => { if (localKey) { this.coalescedRequests.delete(localKey); } }).catch(() => {});
+      pendingPromise.finally(() => { if (localKey) { this.coalescedRequests.delete(localKey); } }).catch(() => { });
     }
 
     return pendingPromise;

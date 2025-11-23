@@ -106,7 +106,8 @@ static inline UClass* ResolveClassByName(const FString& ClassNameOrPath)
     if (ClassNameOrPath.IsEmpty()) return nullptr;
 
     // 1) If it's an asset path, prefer loading the asset and deriving the class
-    if (ClassNameOrPath.StartsWith(TEXT("/")) || ClassNameOrPath.Contains(TEXT("/")))
+    // Skip /Script/ paths as they are native classes, not assets
+    if ((ClassNameOrPath.StartsWith(TEXT("/")) || ClassNameOrPath.Contains(TEXT("/"))) && !ClassNameOrPath.StartsWith(TEXT("/Script/")))
     {
         UObject* Loaded = nullptr;
         // Prefer EditorAssetLibrary when available

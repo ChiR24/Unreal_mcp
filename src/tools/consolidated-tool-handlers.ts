@@ -182,7 +182,7 @@ export async function handleConsolidatedToolCall(
             }
           }
           case 'create_thumbnail': {
-            const res = await tools.assetTools.createThumbnail({ 
+            const res = await tools.assetTools.createThumbnail({
               assetPath: args.assetPath,
               width: args.width,
               height: args.height
@@ -410,7 +410,7 @@ export async function handleConsolidatedToolCall(
           }
           case 'open_asset': {
             const assetPath = requireNonEmptyString(args.assetPath || args.path, 'assetPath');
-            const res = await executeAutomationRequest(tools, 'open_asset_editor', { assetPath });
+            const res = await executeAutomationRequest(tools, 'control_editor', { action: 'open_asset', assetPath });
             return cleanObject(res);
           }
           case 'execute_command': {
@@ -507,8 +507,11 @@ export async function handleConsolidatedToolCall(
             }
           }
           case 'build_lighting': {
-            await tools.editorTools.executeConsoleCommand('BuildLighting');
-            return { success: true, message: 'Lighting build started', action: 'build_lighting' };
+            return cleanObject(await tools.lightingTools.buildLighting({
+              quality: (args.quality as any) || 'Preview',
+              buildOnlySelected: false,
+              buildReflectionCaptures: false
+            }));
           }
           case 'export_level': {
             const res = await tools.levelTools.exportLevel({
@@ -1094,7 +1097,7 @@ export async function handleConsolidatedToolCall(
             }));
           case 'sculpt':
             return cleanObject(await tools.landscapeTools.sculptLandscape({
-              landscapeName: args.landscapeName,
+              landscapeName: args.landscapeName || args.name,
               tool: args.tool,
               location: args.location,
               radius: args.radius,
@@ -1104,7 +1107,7 @@ export async function handleConsolidatedToolCall(
             // Check if this is adding a foliage TYPE (has meshPath) or INSTANCES (has locations/position)
             if (args.meshPath) {
               return cleanObject(await tools.foliageTools.addFoliageType({
-                name: args.foliageType || args.name || 'NewFoliageType',
+                name: args.foliageType || args.name || 'TC_Tree',
                 meshPath: args.meshPath,
                 density: args.density
               }));
@@ -1145,8 +1148,11 @@ export async function handleConsolidatedToolCall(
               reductionSettings: args.reductionSettings
             }));
           case 'bake_lightmap':
-            await tools.editorTools.executeConsoleCommand('BuildLighting');
-            return { success: true, message: 'Lightmap bake started', action: 'bake_lightmap' };
+            return cleanObject(await tools.lightingTools.buildLighting({
+              quality: (args.quality as any) || 'Preview',
+              buildOnlySelected: false,
+              buildReflectionCaptures: false
+            }));
           case 'create_landscape_grass_type':
             return cleanObject(await tools.landscapeTools.createLandscapeGrassType({
               name: args.name,

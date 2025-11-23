@@ -293,7 +293,8 @@ Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, p
             'create_bookmark',
             'jump_to_bookmark',
             'set_preferences',
-            'set_viewport_realtime'
+            'set_viewport_realtime',
+            'open_asset'
           ],
           description: 'Editor action'
         },
@@ -332,7 +333,8 @@ Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, p
         durationSeconds: { type: 'number', description: 'Optional maximum recording duration for start_recording.' },
         bookmarkName: { type: 'string', description: 'Bookmark identifier for create_bookmark or jump_to_bookmark actions.' },
         category: { type: 'string', description: 'Editor preference category for set_preferences action.' },
-        preferences: { type: 'object', additionalProperties: true, description: 'Preference overrides for set_preferences action.' }
+        preferences: { type: 'object', additionalProperties: true, description: 'Preference overrides for set_preferences action.' },
+        assetPath: { type: 'string', description: 'Asset path to open for open_asset action.' }
       },
       required: ['action']
     },

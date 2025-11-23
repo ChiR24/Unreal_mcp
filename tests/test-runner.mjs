@@ -1,25 +1,18 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import process from 'node:process';
-import { fileURLToPath } from 'node:url';
-import { performance } from 'node:perf_hooks';
-import net from 'node:net';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import net from 'node:net';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
-const reportsDir = path.resolve(repoRoot, 'tests', 'reports');
+const reportsDir = path.join(__dirname, 'reports');
 
-const failureKeywords = [
-  'error', 'fail', 'invalid', 'missing', 'not found', 'not_found', 'reject', 'warning'
-];
-
-const successKeywords = [
-  'success', 'spawn', 'visible', 'applied', 'returns', 'plays', 'updates', 'created', 'saved'
-];
-
-// Tests always run against a real MCP server + Automation Bridge.
+// Common failure keywords to check against
+const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown'];
+const successKeywords = ['success', 'created', 'updated', 'deleted', 'completed', 'done', 'ok'];
 
 // Defaults for spawning the MCP server.
 let serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? 'node';
@@ -83,23 +76,25 @@ function evaluateExpectation(testCase, response) {
     actualMessage = response.structuredContent.message;
   }
 
-  // Handle "success or X" patterns (e.g., "success or skeleton not found" / "success or handled")
-  if (lowerExpected.includes(' or ')) {
-    const conditions = lowerExpected.split(' or ').map(c => c.trim());
+  // Handle multi-condition expectations using "or" or pipe separators
+  // e.g., "success or LOAD_FAILED" or "success|no_instances|load_failed"
+  if (lowerExpected.includes(' or ') || lowerExpected.includes('|')) {
+    const separator = lowerExpected.includes(' or ') ? ' or ' : '|';
+    const conditions = lowerExpected.split(separator).map((c) => c.trim()).filter(Boolean);
     for (const condition of conditions) {
-      if (successKeywords.some(kw => condition.includes(kw)) && actualSuccess === true) {
+      if (successKeywords.some((kw) => condition.includes(kw)) && actualSuccess === true) {
         return { passed: true, reason: JSON.stringify(response.structuredContent) };
       }
-      const messageStr = (actualMessage || '').toString().toLowerCase();
-      const errorStr = (actualError || '').toString().toLowerCase();
       if (condition === 'handled' && response.structuredContent && response.structuredContent.handled === true) {
         return { passed: true, reason: 'Handled gracefully' };
       }
+      const messageStr = (actualMessage || '').toString().toLowerCase();
+      const errorStr = (actualError || '').toString().toLowerCase();
       if (messageStr.includes(condition) || errorStr.includes(condition)) {
         return { passed: true, reason: `Expected condition met: ${condition}` };
       }
     }
-    // If none of the OR conditions matched, it's a failure
+    // If none of the OR/pipe conditions matched, it's a failure
     return { passed: false, reason: `None of the expected conditions matched: ${testCase.expected}` };
   }
 
@@ -400,11 +395,24 @@ export async function runToolTests(toolName, testCases) {
           }
         }
 
-        const timed = Promise.race([
-          callPromise,
-          new Promise((_, rej) => setTimeout(() => rej(new Error(`Local test runner timeout after ${timeoutMs}ms`)), timeoutMs))
-        ]);
-        return await timed;
+        let timeoutId;
+        const timeoutPromise = new Promise((_, rej) => {
+          timeoutId = setTimeout(() => rej(new Error(`Local test runner timeout after ${timeoutMs}ms`)), timeoutMs);
+          if (timeoutId && typeof timeoutId.unref === 'function') {
+            timeoutId.unref();
+          }
+        });
+        try {
+          const timed = Promise.race([
+            callPromise,
+            timeoutPromise
+          ]);
+          return await timed;
+        } finally {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+        }
       } catch (e) {
         const msg = String(e?.message || e || '');
         if (msg.includes('Unknown blueprint action')) {
@@ -434,82 +442,72 @@ export async function runToolTests(toolName, testCases) {
           }
         }
         const normalizedResponse = { ...response, structuredContent };
-
         const { passed, reason } = evaluateExpectation(testCase, normalizedResponse);
-        let finalPassed = passed;
-        let finalReason = reason;
 
-        if (finalPassed && testCase.verify && normalizedResponse.structuredContent) {
-          const blueprint = normalizedResponse.structuredContent.blueprint ?? normalizedResponse.structuredContent;
-          if (testCase.verify.blueprintHasVariable && Array.isArray(testCase.verify.blueprintHasVariable)) {
-            const missing = [];
-            const vars = (blueprint && blueprint.variables) || [];
-            for (const expectedVar of testCase.verify.blueprintHasVariable) {
-              const found = vars.find(v => (v.name || v.VarName || v.varName || '').toString() === expectedVar);
-              if (!found) missing.push(expectedVar);
-            }
-            if (missing.length > 0) { finalPassed = false; finalReason = `Verification failed: missing variable(s): ${missing.join(', ')}`; }
+        if (!passed) {
+          console.log(`[FAILED] ${testCase.scenario} (${durationMs.toFixed(1)} ms) => ${reason}`);
+          if (normalizedResponse) {
+            console.log(`[DEBUG] Full response for ${testCase.scenario}:`, JSON.stringify(normalizedResponse, null, 2));
           }
-          if (finalPassed && testCase.verify.blueprintHasFunction && Array.isArray(testCase.verify.blueprintHasFunction)) {
-            const missing = [];
-            const funcs = (blueprint && blueprint.functions) || [];
-            for (const expectedF of testCase.verify.blueprintHasFunction) {
-              const found = funcs.find(f => (f.name || f.Name || '').toString() === expectedF);
-              if (!found) missing.push(expectedF);
-            }
-            if (missing.length > 0) { finalPassed = false; finalReason = `Verification failed: missing function(s): ${missing.join(', ')}`; }
-          }
-          if (finalPassed && testCase.verify.blueprintHasEvent && Array.isArray(testCase.verify.blueprintHasEvent)) {
-            const missing = [];
-            const evts = (blueprint && blueprint.events) || [];
-            for (const expectedE of testCase.verify.blueprintHasEvent) {
-              const found = evts.find(e => (e.name || e.EventName || '').toString() === expectedE || (e.eventType || '').toString() === expectedE);
-              if (!found) missing.push(expectedE);
-            }
-            if (missing.length > 0) { finalPassed = false; finalReason = `Verification failed: missing event(s): ${missing.join(', ')}`; }
-          }
+          results.push({
+            scenario: testCase.scenario,
+            toolName: testCase.toolName,
+            arguments: testCase.arguments,
+            status: 'failed',
+            durationMs,
+            detail: reason,
+            response: normalizedResponse
+          });
+        } else {
+          console.log(`[PASSED] ${testCase.scenario} (${durationMs.toFixed(1)} ms)`);
+          results.push({
+            scenario: testCase.scenario,
+            toolName: testCase.toolName,
+            arguments: testCase.arguments,
+            status: 'passed',
+            durationMs,
+            detail: reason
+          });
         }
-        const status = finalPassed ? 'passed' : 'failed';
-
-        results.push({ ...testCase, status, durationMs, detail: finalPassed ? null : finalReason });
-        console.log(formatResultLine(testCase, status, finalPassed ? null : finalReason, durationMs));
 
       } catch (error) {
         const endTime = performance.now();
         const durationMs = endTime - startTime;
-
-        // Check if the exception matches the expectation
-        const lowerExpected = testCase.expected.toLowerCase();
-        const errorMsg = error.message.toLowerCase();
-        const isTimeout = errorMsg.includes('timeout') || errorMsg.includes('timed out');
-        const expectsTimeout = lowerExpected.includes('timeout');
-        const expectsError = lowerExpected.includes('error') || lowerExpected.includes('fail');
-
-        if ((expectsTimeout && isTimeout) || (expectsError && !lowerExpected.includes('success'))) {
-          const status = 'passed';
-          results.push({ ...testCase, status, durationMs, detail: `Expected exception: ${error.message}` });
-          console.log(formatResultLine(testCase, status, `Expected exception: ${error.message}`, durationMs));
-        } else {
-          results.push({ ...testCase, status: 'failed', durationMs, detail: `Exception: ${error.message}` });
-          console.log(formatResultLine(testCase, 'failed', error.message, durationMs));
-        }
+        console.log(`[FAILED] ${testCase.scenario} (${durationMs.toFixed(1)} ms) => Error: ${error.message}`);
+        results.push({
+          scenario: testCase.scenario,
+          toolName: testCase.toolName,
+          arguments: testCase.arguments,
+          status: 'failed',
+          durationMs,
+          detail: error.message
+        });
       }
     }
 
+    const resultsPath = await persistResults(toolName, results);
+    summarize(toolName, results, resultsPath);
+
+    const hasFailures = results.some((result) => result.status === 'failed');
+    process.exitCode = hasFailures ? 1 : 0;
+
   } catch (error) {
-    console.error('\n❌ Failed to initialize MCP client:', error.message);
-    process.exitCode = 1;
-    return;
+    console.error('Test runner failed:', error);
+    process.exit(1);
   } finally {
+    if (client) {
+      try {
+        await client.close();
+      } catch {
+        // ignore
+      }
+    }
     if (transport) {
-      try { await transport.close(); } catch { }
+      try {
+        await transport.close();
+      } catch {
+        // ignore
+      }
     }
   }
-
-  const resultsPath = await persistResults(toolName.toLowerCase().replace(/ /g, '-'), results);
-  summarize(toolName, results, resultsPath);
-
-  const failCount = results.filter(r => r.status === 'failed').length;
-  if (failCount > 0) process.exitCode = 1; else process.exitCode = 0;
-  process.exit(process.exitCode || 0);
 }

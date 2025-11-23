@@ -58,10 +58,12 @@ export class AnimationTools {
 
   constructor(private bridge: UnrealBridge, automationBridge?: AutomationBridge) {
     this.automationBridge = automationBridge;
+    console.log(`[AnimationTools] Constructor called. Bridge defined: ${!!automationBridge}`);
   }
 
   setAutomationBridge(automationBridge?: AutomationBridge) {
     this.automationBridge = automationBridge;
+    console.log(`[AnimationTools] setAutomationBridge called. Bridge defined: ${!!automationBridge}`);
   }
 
   private trackArtifact(key: string, info: { path?: string; type: string; metadata?: Record<string, unknown> }) {
@@ -220,13 +222,13 @@ export class AnimationTools {
     blueprintPath?: string;
   }): Promise<
     | {
-        success: true;
-        message: string;
-        machineName: string;
-        blueprintPath?: string;
-        states?: Array<{ name: string; animation?: string; isEntry?: boolean; isExit?: boolean }>;
-        transitions?: Array<{ sourceState: string; targetState: string; condition?: string }>;
-      }
+      success: true;
+      message: string;
+      machineName: string;
+      blueprintPath?: string;
+      states?: Array<{ name: string; animation?: string; isEntry?: boolean; isExit?: boolean }>;
+      transitions?: Array<{ sourceState: string; targetState: string; condition?: string }>;
+    }
     | { success: false; message: string; error: string }
   > {
     try {
@@ -236,31 +238,31 @@ export class AnimationTools {
       const normalizedStates: Array<{ name: string; animation?: string; isEntry?: boolean; isExit?: boolean }> =
         Array.isArray(params.states)
           ? params.states
-              .map((s) => {
-                if (typeof s === 'string') {
-                  const name = s.trim();
-                  return name ? { name } : undefined;
-                }
-                if (s && typeof s === 'object' && typeof (s as any).name === 'string') {
-                  const name = (s as any).name.trim();
-                  if (!name) return undefined;
-                  return s as { name: string; animation?: string; isEntry?: boolean; isExit?: boolean };
-                }
-                return undefined;
-              })
-              .filter((s): s is { name: string; animation?: string; isEntry?: boolean; isExit?: boolean } => !!s)
+            .map((s) => {
+              if (typeof s === 'string') {
+                const name = s.trim();
+                return name ? { name } : undefined;
+              }
+              if (s && typeof s === 'object' && typeof (s as any).name === 'string') {
+                const name = (s as any).name.trim();
+                if (!name) return undefined;
+                return s as { name: string; animation?: string; isEntry?: boolean; isExit?: boolean };
+              }
+              return undefined;
+            })
+            .filter((s): s is { name: string; animation?: string; isEntry?: boolean; isExit?: boolean } => !!s)
           : [];
 
       const normalizedTransitionsRaw = Array.isArray(params.transitions)
         ? params.transitions
-            .map((t) => {
-              if (!t || typeof t !== 'object') return undefined;
-              const src = (t.sourceState || '').trim();
-              const dst = (t.targetState || '').trim();
-              if (!src || !dst) return undefined;
-              return { sourceState: src, targetState: dst, condition: t.condition };
-            })
-            .filter((t) => !!t)
+          .map((t) => {
+            if (!t || typeof t !== 'object') return undefined;
+            const src = (t.sourceState || '').trim();
+            const dst = (t.targetState || '').trim();
+            if (!src || !dst) return undefined;
+            return { sourceState: src, targetState: dst, condition: t.condition };
+          })
+          .filter((t) => !!t)
         : [];
 
       const normalizedTransitions = normalizedTransitionsRaw as Array<{
@@ -467,12 +469,12 @@ export class AnimationTools {
     enableFootPlacement?: boolean;
   }): Promise<
     | {
-        success: true;
-        message: string;
-        actorName: string;
-        ikBones?: string[];
-        enableFootPlacement?: boolean;
-      }
+      success: true;
+      message: string;
+      actorName: string;
+      ikBones?: string[];
+      enableFootPlacement?: boolean;
+    }
     | { success: false; message: string; error: string }
   > {
     try {
@@ -515,11 +517,11 @@ export class AnimationTools {
     savePath?: string;
   }): Promise<
     | {
-        success: true;
-        message: string;
-        path: string;
-        systemName: string;
-      }
+      success: true;
+      message: string;
+      path: string;
+      systemName: string;
+    }
     | { success: false; message: string; error: string }
   > {
     try {
@@ -562,11 +564,11 @@ export class AnimationTools {
     savePath?: string;
   }): Promise<
     | {
-        success: true;
-        message: string;
-        path: string;
-        treeName: string;
-      }
+      success: true;
+      message: string;
+      path: string;
+      treeName: string;
+    }
     | { success: false; message: string; error: string }
   > {
     try {
@@ -603,11 +605,11 @@ export class AnimationTools {
 
   async cleanup(artifacts?: string[]): Promise<
     | {
-        success: boolean;
-        message: string;
-        removed?: string[];
-        missing?: string[];
-      }
+      success: boolean;
+      message: string;
+      removed?: string[];
+      missing?: string[];
+    }
     | { success: false; message: string; error: string }
   > {
     try {
@@ -658,12 +660,12 @@ export class AnimationTools {
     assetType?: string;
   }): Promise<
     | {
-        success: true;
-        message: string;
-        path: string;
-        assetType?: string;
-        existingAsset?: boolean;
-      }
+      success: true;
+      message: string;
+      path: string;
+      assetType?: string;
+      existingAsset?: boolean;
+    }
     | { success: false; message: string; error: string }
   > {
     try {
@@ -750,12 +752,12 @@ export class AnimationTools {
     time?: number;
   }): Promise<
     | {
-        success: true;
-        message: string;
-        assetPath: string;
-        notifyName: string;
-        time: number;
-      }
+      success: true;
+      message: string;
+      assetPath: string;
+      notifyName: string;
+      time: number;
+    }
     | { success: false; message: string; error: string }
   > {
     try {
@@ -767,6 +769,8 @@ export class AnimationTools {
 
       const notifyName = (params.notifyName || 'Notify').trim();
       const time = typeof params.time === 'number' && params.time >= 0 ? params.time : 0;
+
+      console.log(`[AnimationTools.addNotify] Bridge defined: ${!!this.automationBridge}, Is Function: ${typeof this.automationBridge?.sendAutomationRequest === 'function'}`);
 
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
         try {
