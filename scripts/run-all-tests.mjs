@@ -7,22 +7,22 @@ const tests = [
   'test:manage_level', // Pass
   'test:animation', // Pass
   'test:materials', // Pass
-  'test:niagara',
+  'test:niagara', // Pass
   'test:landscape', // Pass
-  'test:sequence',
-  'test:system',
-  'test:console_command',
-  'test:inspect',
-  'test:manage_asset',
+  'test:sequence', // Pass
+  'test:system', // Pass
+  'test:console_command', // Pass
+  'test:inspect', // Pass
+  'test:manage_asset', // Pass
   'test:blueprint', // Pass
   'test:blueprint_graph', // Pass
   'test:graphql',
   'test:wasm:all', // Pass
   'test:no-inline-python',
-  'test:plugin-handshake',
-  'test:asset_advanced',
-  'test:render',
-  'test:world_partition'
+  'test:plugin-handshake', // Pass
+  'test:asset_advanced', // Pass
+  'test:render', // Pass
+  'test:world_partition' // Pass
 ];
 
 const isWindows = process.platform === 'win32';

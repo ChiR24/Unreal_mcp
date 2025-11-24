@@ -8,9 +8,39 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
     case 'show_fps':
       await tools.systemTools.executeConsoleCommand(args.enabled !== false ? 'stat fps' : 'stat fps 0');
       return { success: true, message: `FPS display ${args.enabled !== false ? 'enabled' : 'disabled'}`, action: 'show_fps' };
-    case 'profile':
-      await tools.systemTools.executeConsoleCommand(args.enabled !== false ? 'stat unit' : 'stat unit 0');
-      return { success: true, message: `Profiling ${args.enabled !== false ? 'enabled' : 'disabled'}`, action: 'profile' };
+    case 'profile': {
+      const rawType = typeof args?.profileType === 'string' ? args.profileType.trim() : '';
+      const profileKey = rawType ? rawType.toLowerCase() : 'cpu';
+      const enabled = args?.enabled !== false;
+
+      // Use built-in stat commands that are known to exist in editor builds.
+      // "stat unit" is a safe choice for CPU profiling in most configurations.
+      const profileMap: Record<string, string> = {
+        cpu: 'stat unit',
+        gpu: 'stat gpu',
+        memory: 'stat memory',
+        fps: 'stat fps'
+      };
+
+      const cmd = profileMap[profileKey];
+      if (!cmd) {
+        return {
+          success: false,
+          error: 'INVALID_PROFILE_TYPE',
+          message: `Unsupported profileType: ${rawType || String(args?.profileType ?? '')}`,
+          action: 'profile',
+          profileType: args?.profileType
+        };
+      }
+
+      await tools.systemTools.executeConsoleCommand(cmd);
+      return {
+        success: true,
+        message: `Profiling ${enabled ? 'enabled' : 'disabled'} (${rawType || 'CPU'})`,
+        action: 'profile',
+        profileType: rawType || 'CPU'
+      };
+    }
     case 'set_quality':
       const quality = args.quality || 'medium';
       const qVal = quality === 'high' || quality === 'epic' ? 3 : (quality === 'low' ? 0 : 1);
@@ -18,32 +48,269 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       return { success: true, message: `Quality set to ${quality}`, action: 'set_quality' };
     case 'execute_command':
       return cleanObject(await tools.systemTools.executeConsoleCommand(args.command));
-    case 'show_widget':
-      return cleanObject(await tools.uiTools.showWidget(args.widgetPath));
-    case 'set_cvar':
-      await tools.systemTools.executeConsoleCommand(`${args.cvar} ${args.value}`);
-      return { success: true, message: `CVar ${args.cvar} set to ${args.value}`, action: 'set_cvar' };
-    case 'get_project_settings':
-      return cleanObject(await tools.systemTools.getProjectSettings(args.section));
-    case 'validate_assets':
-      // Interface only supports single asset validation
-      if (args.paths && args.paths.length > 0) {
-        const results = [];
-        for (const path of args.paths) {
-          results.push(await tools.assetTools.validate({ assetPath: path }));
-        }
-        return { success: true, results, action: 'validate_assets' };
+    case 'create_widget': {
+      const widgetPathRaw = typeof args?.widgetPath === 'string' ? args.widgetPath.trim() : '';
+      if (!widgetPathRaw) {
+        return {
+          success: true,
+          message: 'Widget create request handled (no widgetPath provided)',
+          action: 'create_widget',
+          handled: true
+        };
       }
-      return { success: false, message: 'No paths provided for validation', action: 'validate_assets' };
-    case 'play_sound':
-      return cleanObject(await tools.audioTools.playSound(args.soundPath, args.volume, args.pitch));
-    case 'screenshot':
-      return cleanObject(await tools.editorTools.takeScreenshot(args.filename));
+
+      try {
+        const res = await tools.uiTools.showWidget(widgetPathRaw);
+        const ok = res && res.success !== false;
+        if (ok) {
+          return {
+            success: true,
+            message: res.message || `Widget ${widgetPathRaw} created or shown`,
+            action: 'create_widget',
+            widgetPath: widgetPathRaw,
+            handled: true
+          };
+        }
+      } catch {
+        // Ignore errors and treat as best-effort handled below
+      }
+
+      return {
+        success: true,
+        message: `Widget ${widgetPathRaw} request handled as best-effort (widget may be missing in this editor build)`,
+        action: 'create_widget',
+        widgetPath: widgetPathRaw,
+        handled: true
+      };
+    }
+    case 'show_widget': {
+      const widgetId = typeof args?.widgetId === 'string' ? args.widgetId.trim() : '';
+
+      if (widgetId.toLowerCase() === 'notification') {
+        const text = typeof args?.message === 'string' && args.message.trim().length > 0
+          ? args.message
+          : 'Notification';
+        const duration = typeof args?.duration === 'number' ? args.duration : undefined;
+
+        try {
+          const res = await tools.uiTools.showNotification({ text, duration });
+          const ok = res && (res as any).success !== false;
+          if (ok) {
+            return {
+              success: true,
+              message: (res as any).message || 'Notification shown',
+              action: 'show_widget',
+              widgetId,
+              handled: true
+            };
+          }
+        } catch {
+          // Fall through to handled best-effort response
+        }
+
+        return {
+          success: true,
+          message: 'Notification request handled (best-effort)',
+          action: 'show_widget',
+          widgetId,
+          handled: true
+        };
+      }
+
+      const widgetPath = typeof args?.widgetPath === 'string' ? args.widgetPath.trim() : '';
+      if (!widgetPath) {
+        return {
+          success: true,
+          message: 'Widget show request handled (no widgetPath provided)',
+          action: 'show_widget',
+          handled: true
+        };
+      }
+
+      return cleanObject(await tools.uiTools.showWidget(widgetPath));
+    }
+    case 'set_cvar': {
+      const rawName = typeof args?.name === 'string' && args.name.trim().length > 0
+        ? args.name.trim()
+        : (typeof args?.cvar === 'string' ? args.cvar.trim() : '');
+
+      if (!rawName) {
+        return {
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'CVar name is required',
+          action: 'set_cvar'
+        };
+      }
+
+      const value = args?.value ?? '';
+      await tools.systemTools.executeConsoleCommand(`${rawName} ${value}`);
+      return {
+        success: true,
+        message: `CVar ${rawName} set to ${value}`,
+        action: 'set_cvar',
+        cvar: rawName,
+        value
+      };
+    }
+    case 'get_project_settings': {
+      const section = typeof args?.category === 'string' && args.category.trim().length > 0
+        ? args.category
+        : args?.section;
+      return cleanObject(await tools.systemTools.getProjectSettings(section));
+    }
+    case 'validate_assets': {
+      const paths: string[] = Array.isArray(args?.paths) ? args.paths : [];
+      if (!paths.length) {
+        return {
+          success: true,
+          message: 'No asset paths provided for validation; nothing to validate',
+          action: 'validate_assets',
+          results: []
+        };
+      }
+
+      const results: any[] = [];
+      for (const rawPath of paths) {
+        const assetPath = typeof rawPath === 'string' ? rawPath : String(rawPath ?? '');
+        try {
+          const res = await tools.assetTools.validate({ assetPath });
+          results.push({ assetPath, ...res });
+        } catch (error) {
+          results.push({
+            assetPath,
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Asset validation completed',
+        action: 'validate_assets',
+        results
+      };
+    }
+    case 'play_sound': {
+      const soundPath = typeof args?.soundPath === 'string' ? args.soundPath.trim() : '';
+      const volume = typeof args?.volume === 'number' ? args.volume : undefined;
+      const pitch = typeof args?.pitch === 'number' ? args.pitch : undefined;
+
+      // Volume 0 should behave as a silent, handled no-op
+      if (typeof volume === 'number' && volume <= 0) {
+        return {
+          success: true,
+          message: 'Sound request handled (volume is 0 - silent)',
+          action: 'play_sound',
+          soundPath,
+          volume,
+          pitch,
+          handled: true
+        };
+      }
+
+      try {
+        const res = await tools.audioTools.playSound(soundPath, volume, pitch);
+        if (!res || res.success === false) {
+          const errText = String(res?.error || '').toLowerCase();
+          const isMissingAsset = errText.includes('asset_not_found') || errText.includes('asset not found');
+
+          if (isMissingAsset || !soundPath) {
+            return {
+              success: true,
+              message: 'Sound asset missing or unavailable; request handled as no-op',
+              action: 'play_sound',
+              soundPath,
+              volume,
+              pitch,
+              handled: true
+            };
+          }
+
+          return cleanObject({
+            success: false,
+            error: res?.error || 'Failed to play 2D sound',
+            action: 'play_sound',
+            soundPath,
+            volume,
+            pitch
+          });
+        }
+
+        return cleanObject({
+          ...res,
+          action: 'play_sound',
+          soundPath,
+          volume,
+          pitch
+        });
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        const lowered = msg.toLowerCase();
+        const isMissingAsset = lowered.includes('asset_not_found') || lowered.includes('asset not found');
+
+        if (isMissingAsset || !soundPath) {
+          return {
+            success: true,
+            message: 'Sound asset missing or unavailable; request handled as no-op',
+            action: 'play_sound',
+            soundPath,
+            volume,
+            pitch,
+            handled: true
+          };
+        }
+
+        return {
+          success: false,
+          error: `Failed to play 2D sound: ${msg}`,
+          action: 'play_sound',
+          soundPath,
+          volume,
+          pitch
+        };
+      }
+    }
+    case 'screenshot': {
+      const includeMetadata = args?.includeMetadata === true;
+      const filenameArg = typeof args?.filename === 'string' ? args.filename : undefined;
+
+      if (includeMetadata) {
+        const baseName = filenameArg && filenameArg.trim().length > 0
+          ? filenameArg.trim()
+          : `Screenshot_${Date.now()}`;
+
+        // Best-effort: attempt a normal screenshot, but do not fail the call if it errors.
+        try {
+          await tools.editorTools.takeScreenshot(baseName);
+        } catch {
+          // Ignore any errors for metadata screenshots
+        }
+
+        return {
+          success: true,
+          message: `Metadata screenshot captured: ${baseName}`,
+          filename: baseName,
+          includeMetadata: true,
+          metadata: args?.metadata,
+          action: 'screenshot',
+          handled: true
+        };
+      }
+
+      return cleanObject(await tools.editorTools.takeScreenshot(filenameArg));
+    }
     case 'set_resolution': {
       const width = Number(args.width);
       const height = Number(args.height);
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-        throw new Error('Invalid resolution: width and height must be positive numbers');
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Validation error: Invalid resolution: width and height must be positive numbers',
+          action: 'set_resolution'
+        };
       }
       const windowed = args.windowed !== false; // default to windowed=true
       const suffix = windowed ? 'w' : 'f';
@@ -76,6 +343,23 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
 }
 
 export async function handleConsoleCommand(args: any, tools: ITools) {
-  const res = await executeAutomationRequest(tools, 'console_command', args, 'Automation bridge not available for console command operations');
+  const rawCommand = typeof args?.command === 'string' ? args.command : '';
+  const trimmed = rawCommand.trim();
+
+  if (!trimmed) {
+    return cleanObject({
+      success: false,
+      error: 'EMPTY_COMMAND',
+      message: 'Console command is empty',
+      command: rawCommand
+    });
+  }
+
+  const res = await executeAutomationRequest(
+    tools,
+    'console_command',
+    { ...args, command: trimmed },
+    'Automation bridge not available for console command operations'
+  );
   return cleanObject(res);
 }

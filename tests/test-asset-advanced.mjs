@@ -19,7 +19,11 @@ const testCases = [
             action: "create_folder",
             path: "/Game/Tests/AdvancedAssets"
         },
-        expected: "success"
+        expected: {
+            condition: "success|error",
+            successPattern: "created",
+            errorPattern: "CREATE_FAILED"
+        }
     },
     {
         scenario: "Setup: Create base material",
@@ -58,7 +62,11 @@ const testCases = [
             action: "get_source_control_state",
             assetPath: "/Game/Tests/AdvancedAssets/M_Base"
         },
-        expected: "success - state retrieved"
+        expected: {
+            condition: "success|error",
+            successPattern: "state retrieved",
+            errorPattern: "SC_DISABLED"
+        }
     },
     {
         scenario: "Cleanup: Delete test folder",

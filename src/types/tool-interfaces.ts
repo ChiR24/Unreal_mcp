@@ -46,6 +46,7 @@ export interface IAssetTools {
     renameAsset(params: { sourcePath: string; destinationPath: string }): Promise<any>;
     moveAsset(params: { sourcePath: string; destinationPath: string }): Promise<any>;
     deleteAssets(params: { paths: string[]; fixupRedirectors?: boolean; timeoutMs?: number }): Promise<any>;
+    searchAssets(params: { classNames?: string[]; packagePaths?: string[]; recursivePaths?: boolean; recursiveClasses?: boolean; limit?: number }): Promise<any>;
     saveAsset(assetPath: string): Promise<any>;
     getDependencies(params: { assetPath: string; recursive?: boolean }): Promise<any>;
     getSourceControlState(params: { assetPath: string }): Promise<SourceControlState | any>;

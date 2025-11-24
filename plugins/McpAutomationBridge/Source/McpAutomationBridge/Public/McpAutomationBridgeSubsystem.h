@@ -317,6 +317,7 @@ private:
     bool HandleSequenceRename(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleSequenceDelete(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleSequenceGetMetadata(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleSequenceAddKeyframe(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 
     // Control handlers
     AActor* FindActorByName(const FString& Target);

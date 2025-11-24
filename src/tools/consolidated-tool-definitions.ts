@@ -18,11 +18,17 @@ Supported actions: list, import, create_material, create_material_instance, dupl
       properties: {
         action: {
           type: 'string',
-          enum: ['list', 'import', 'create_material', 'create_material_instance', 'duplicate', 'rename', 'move', 'delete', 'delete_assets', 'create_folder', 'get_dependencies', 'get_source_control_state', 'analyze_graph', 'create_thumbnail', 'set_tags', 'generate_report', 'validate', 'fixup_redirectors', 'find_by_tag', 'get_metadata', 'set_metadata'],
+          enum: ['list', 'import', 'create_material', 'create_material_instance', 'duplicate', 'rename', 'move', 'delete', 'delete_assets', 'create_folder', 'get_dependencies', 'get_source_control_state', 'analyze_graph', 'create_thumbnail', 'set_tags', 'generate_report', 'validate', 'fixup_redirectors', 'find_by_tag', 'get_metadata', 'set_metadata', 'search_assets'],
           description: 'Action to perform'
         },
         // For list
         directory: { type: 'string', description: 'Directory path to list (shows immediate children only). Automatically maps /Content to /Game. Example: "/Game/MyAssets"' },
+        // For search_assets
+        classNames: { type: 'array', items: { type: 'string' }, description: 'List of class names to search for (e.g., ["StaticMesh", "Blueprint"]).' },
+        packagePaths: { type: 'array', items: { type: 'string' }, description: 'List of package paths to search in (e.g., ["/Game/Folder"]).' },
+        recursivePaths: { type: 'boolean', description: 'Whether to search recursively in packagePaths (default true).' },
+        recursiveClasses: { type: 'boolean', description: 'Whether to search subclasses of classNames (default false).' },
+        limit: { type: 'number', description: 'Maximum number of results to return (default 100).' },
         // For import
         sourcePath: { type: 'string', description: 'Source file path on disk to import (FBX, PNG, WAV, EXR supported). Example: "C:/MyAssets/mesh.fbx"' },
         destinationPath: { type: 'string', description: 'Destination path in project content where asset will be imported. Example: "/Game/ImportedAssets"' },
@@ -1117,8 +1123,9 @@ Use it when you need to:
 - add actors, spawnable cameras, or other bindings.
 - adjust sequence metadata (frame rate, bounds, playback window).
 - drive playback (play/pause/stop), adjust speed, or fetch binding info.
+- add keyframes to tracks (e.g. Transform).
 
-Supported actions: create, open, add_camera, add_actor, add_actors, remove_actors, get_bindings, add_spawnable_from_class, play, pause, stop, get_properties, set_playback_speed, list, duplicate, rename, delete, get_metadata.`,
+Supported actions: create, open, add_camera, add_actor, add_actors, remove_actors, get_bindings, add_spawnable_from_class, play, pause, stop, get_properties, set_playback_speed, list, duplicate, rename, delete, get_metadata, set_metadata, add_keyframe.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -1128,7 +1135,7 @@ Supported actions: create, open, add_camera, add_actor, add_actors, remove_actor
             'create', 'open', 'add_camera', 'add_actor', 'add_actors',
             'remove_actors', 'get_bindings', 'add_spawnable_from_class',
             'play', 'pause', 'stop', 'get_properties', 'set_playback_speed',
-            'list', 'duplicate', 'rename', 'delete', 'get_metadata', 'set_metadata'
+            'list', 'duplicate', 'rename', 'delete', 'get_metadata', 'set_metadata', 'add_keyframe'
           ],
           description: 'Sequence action'
         },
@@ -1146,7 +1153,20 @@ Supported actions: create, open, add_camera, add_actor, add_actors, remove_actor
         speed: { type: 'number', description: 'Playback speed multiplier. 1.0 is normal speed, 2.0 is double speed, 0.5 is half speed. Required for set_playback_speed action.' },
         loopMode: { type: 'string', enum: ['once', 'loop', 'pingpong'], description: 'How sequence loops. (Not currently implemented by plugin; for future use.)' },
         destinationPath: { type: 'string', description: 'Destination content folder for duplicate action (e.g., "/Game/Cinematics/Copies"). Required for duplicate.' },
-        newName: { type: 'string', description: 'New asset name for duplicate/rename actions.' }
+        newName: { type: 'string', description: 'New asset name for duplicate/rename actions.' },
+        // Keyframe params
+        bindingId: { type: 'string', description: 'Binding GUID for add_keyframe action. Alternatively use actorName if unique.' },
+        property: { type: 'string', description: 'Property name to key (e.g. "Transform") for add_keyframe action.' },
+        frame: { type: 'number', description: 'Frame number to add key at.' },
+        value: { 
+            type: 'object', 
+            description: 'Key value. For Transform: { location: {x,y,z}, rotation: {pitch,yaw,roll}, scale: {x,y,z} }.',
+            properties: {
+                location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+                rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } } },
+                scale: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
+            }
+        }
       },
       required: ['action']
     },

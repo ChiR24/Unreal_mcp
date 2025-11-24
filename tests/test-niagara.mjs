@@ -37,7 +37,7 @@ const testCases = [
     scenario: "Error: Invalid Niagara system",
     toolName: "create_effect",
     arguments: { action: "niagara", systemPath: "/Invalid/System" },
-    expected: "not_found"
+    expected: "SYSTEM_NOT_FOUND"
   },
   {
     scenario: "Edge: Scale 0",

@@ -36,6 +36,13 @@ export class AssetTools extends BaseTool implements IAssetTools {
     }, 'bulk_delete');
   }
 
+  async searchAssets(params: { classNames?: string[]; packagePaths?: string[]; recursivePaths?: boolean; recursiveClasses?: boolean; limit?: number }) {
+    return this.sendRequest('search_assets', {
+      ...params,
+      subAction: 'search_assets'
+    }, 'search_assets');
+  }
+
   async saveAsset(assetPath: string) {
     try {
       // Try Automation Bridge first

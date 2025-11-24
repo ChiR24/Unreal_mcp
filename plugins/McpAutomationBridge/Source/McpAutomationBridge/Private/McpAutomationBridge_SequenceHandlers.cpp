@@ -6,63 +6,73 @@
 #include "LevelSequence.h"
 #include "MovieSceneSequence.h"
 
-#if __has_include("Misc/ScopedTransaction.h")
-#include "Misc/ScopedTransaction.h"
-#define MCP_HAS_SCOPED_TRANSACTION 1
-#else
-#define MCP_HAS_SCOPED_TRANSACTION 0
-#endif
-
 #if WITH_EDITOR
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
-#if __has_include("Toolkits/AssetEditorManager.h")
-#include "Toolkits/AssetEditorManager.h"
-#elif __has_include("AssetEditorManager.h")
-#include "AssetEditorManager.h"
-#endif
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
+#define MCP_HAS_EDITOR_ACTOR_SUBSYSTEM 1
 #elif __has_include("EditorActorSubsystem.h")
 #include "EditorActorSubsystem.h"
+#define MCP_HAS_EDITOR_ACTOR_SUBSYSTEM 1
+#else
+#define MCP_HAS_EDITOR_ACTOR_SUBSYSTEM 0
 #endif
+
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
 #include "Engine/Selection.h"
 #include "Subsystems/AssetEditorSubsystem.h"
-#if __has_include("LevelSequenceEditorSubsystem.h")
-#include "LevelSequenceEditorSubsystem.h"
-#define MCP_HAS_LEVELSEQUENCE_EDITOR_SUBSYSTEM 1
-#endif
-#if __has_include("LevelSequence.h")
-#include "LevelSequence.h"
-#define MCP_HAS_LEVELSEQUENCE 1
-#endif
+#include "Editor/EditorEngine.h"
+#include "LevelSequenceEditorBlueprintLibrary.h"
+
+// We trust Build.cs to provide these modules in Editor builds, but paths vary by engine version
 #if __has_include("Factories/LevelSequenceFactoryNew.h")
 #include "Factories/LevelSequenceFactoryNew.h"
+#define MCP_HAS_LEVELSEQUENCE_FACTORY 1
+#elif __has_include("LevelSequenceFactoryNew.h")
+#include "LevelSequenceFactoryNew.h"
 #define MCP_HAS_LEVELSEQUENCE_FACTORY 1
 #else
 #define MCP_HAS_LEVELSEQUENCE_FACTORY 0
 #endif
-#if __has_include("MovieScene.h")
-#include "MovieScene.h"
-#define MCP_HAS_MOVIESCENE 1
+
+#if __has_include("LevelSequenceEditorSubsystem.h")
+#include "LevelSequenceEditorSubsystem.h"
+#define MCP_HAS_LEVELSEQUENCE_EDITOR_SUBSYSTEM 1
+#else
+#define MCP_HAS_LEVELSEQUENCE_EDITOR_SUBSYSTEM 0
 #endif
-#if __has_include("Camera/CameraActor.h")
-#include "Camera/CameraActor.h"
-#endif
-#if __has_include("IAssetTools.h")
-#include "IAssetTools.h"
-#endif
-#include "Editor/EditorEngine.h"
-#include "LevelSequenceEditorBlueprintLibrary.h"
+
 #if __has_include("ILevelSequenceEditorToolkit.h")
 #include "ILevelSequenceEditorToolkit.h"
 #endif
+
 #if __has_include("ISequencer.h")
 #include "ISequencer.h"
 #include "MovieSceneSequencePlayer.h"
+#endif
+
+#if __has_include("Tracks/MovieScene3DTransformTrack.h")
+#include "Tracks/MovieScene3DTransformTrack.h"
+#endif
+#if __has_include("Sections/MovieScene3DTransformSection.h")
+#include "Sections/MovieScene3DTransformSection.h"
+#endif
+#if __has_include("Channels/MovieSceneDoubleChannel.h")
+#include "Channels/MovieSceneDoubleChannel.h"
+#endif
+#if __has_include("Channels/MovieSceneChannelProxy.h")
+#include "Channels/MovieSceneChannelProxy.h"
+#endif
+
+// Optional components check
+#if __has_include("Misc/ScopedTransaction.h")
+#include "Misc/ScopedTransaction.h"
+#endif
+#if __has_include("Camera/CameraActor.h")
+#include "Camera/CameraActor.h"
 #endif
 #endif
 
@@ -101,13 +111,13 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::EnsureSequenceEntry(const
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+#if WITH_EDITOR
     TSharedPtr<FJsonObject> LocalPayload = Payload.IsValid() ? Payload : MakeShared<FJsonObject>();
     FString Name; LocalPayload->TryGetStringField(TEXT("name"), Name);
     FString Path; LocalPayload->TryGetStringField(TEXT("path"), Path);
     if (Name.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_create requires name"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
     FString FullPath = Path.IsEmpty() ? FString::Printf(TEXT("/Game/%s"), *Name) : FString::Printf(TEXT("%s/%s"), *Path, *Name);
 
-#if WITH_EDITOR && defined(MCP_HAS_LEVELSEQUENCE) && MCP_HAS_LEVELSEQUENCE && defined(MCP_HAS_LEVELSEQUENCE_FACTORY) && MCP_HAS_LEVELSEQUENCE_FACTORY
     FString DestFolder = Path.IsEmpty() ? TEXT("/Game") : Path;
     if (DestFolder.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase))
     {
@@ -122,6 +132,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(const FString& RequestI
         return true;
     }
 
+#if MCP_HAS_LEVELSEQUENCE_FACTORY
     ULevelSequenceFactoryNew* Factory = NewObject<ULevelSequenceFactoryNew>();
     FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
     UObject* NewObj = AssetToolsModule.Get().CreateAsset(Name, DestFolder, ULevelSequence::StaticClass(), Factory);
@@ -139,6 +150,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(const FString& RequestI
     }
     return true;
 #else
+    SendAutomationResponse(Socket, RequestId, false, TEXT("ULevelSequenceFactoryNew not available"), nullptr, TEXT("FACTORY_NOT_AVAILABLE"));
+    return true;
+#endif
+
+#else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_create requires editor build"), nullptr, TEXT("NOT_AVAILABLE"));
     return true;
 #endif
@@ -155,7 +171,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(const FString& R
     UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
     if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 
-#if defined(MCP_HAS_LEVELSEQUENCE) && defined(MCP_HAS_MOVIESCENE)
     if (ULevelSequence* LevelSeq = Cast<ULevelSequence>(SeqObj))
     {
         if (UMovieScene* MovieScene = LevelSeq->GetMovieScene())
@@ -219,7 +234,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(const FString& R
             return true;
         }
     }
-#endif
     Resp->SetObjectField(TEXT("frameRate"), MakeShared<FJsonObject>());
     Resp->SetNumberField(TEXT("playbackStart"), 0.0);
     Resp->SetNumberField(TEXT("playbackEnd"), 0.0);
@@ -244,7 +258,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(const FString& RequestId,
     UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
     if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 
-#if defined(MCP_HAS_LEVELSEQUENCE_EDITOR_SUBSYSTEM)
     if (ULevelSequence* LevelSeq = Cast<ULevelSequence>(SeqObj))
     {
         if (GEditor)
@@ -262,7 +275,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(const FString& RequestId,
             }
         }
     }
-#endif
 
     if (GEditor)
     {
@@ -292,6 +304,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(const FString& Reque
     UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
     if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 
+#if MCP_HAS_EDITOR_ACTOR_SUBSYSTEM
     if (GEditor)
     {
         if (UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
@@ -309,6 +322,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(const FString& Reque
     }
     SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to add camera"), nullptr, TEXT("ADD_CAMERA_FAILED"));
     return true;
+#else
+    SendAutomationResponse(Socket, RequestId, false, TEXT("UEditorActorSubsystem not available"), nullptr, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_add_camera requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
@@ -382,6 +399,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(const FString& Reque
     if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
     if (!GEditor) { SendAutomationResponse(Socket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE")); return true; }
 
+#if MCP_HAS_EDITOR_ACTOR_SUBSYSTEM
     if (UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
     {
         TArray<TSharedPtr<FJsonValue>> Results; Results.Reserve(Names.Num());
@@ -423,6 +441,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(const FString& Reque
     }
     SendAutomationResponse(Socket, RequestId, false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
     return true;
+#else
+    SendAutomationResponse(Socket, RequestId, false, TEXT("UEditorActorSubsystem not available"), nullptr, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_add_actors requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
@@ -498,6 +520,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveActors(const FString& Re
     if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
     if (!GEditor) { SendAutomationResponse(Socket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE")); return true; }
 
+#if MCP_HAS_EDITOR_ACTOR_SUBSYSTEM
     if (UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
     {
         TArray<TSharedPtr<FJsonValue>> Removed;
@@ -542,6 +565,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveActors(const FString& Re
     SendAutomationResponse(Socket, RequestId, false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
     return true;
 #else
+    SendAutomationResponse(Socket, RequestId, false, TEXT("UEditorActorSubsystem not available"), nullptr, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+#else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_remove_actors requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #endif
@@ -556,7 +583,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetBindings(const FString& Req
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
     if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
-#if defined(MCP_HAS_MOVIESCENE) && defined(MCP_HAS_LEVELSEQUENCE)
+
     if (ULevelSequence* LevelSeq = Cast<ULevelSequence>(SeqObj))
     {
         if (UMovieScene* MovieScene = LevelSeq->GetMovieScene())
@@ -574,7 +601,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetBindings(const FString& Req
             return true;
         }
     }
-#endif
     Resp->SetArrayField(TEXT("bindings"), TArray<TSharedPtr<FJsonValue>>());
     SendAutomationResponse(Socket, RequestId, true, TEXT("bindings listed (empty)"), Resp, FString());
     return true;
@@ -593,7 +619,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetProperties(const FString& R
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
     if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
-#if defined(MCP_HAS_LEVELSEQUENCE) && defined(MCP_HAS_MOVIESCENE)
+
     if (ULevelSequence* LevelSeq = Cast<ULevelSequence>(SeqObj))
     {
         if (UMovieScene* MovieScene = LevelSeq->GetMovieScene())
@@ -613,7 +639,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetProperties(const FString& R
             return true;
         }
     }
-#endif
     Resp->SetObjectField(TEXT("frameRate"), MakeShared<FJsonObject>());
     Resp->SetNumberField(TEXT("playbackStart"), 0.0);
     Resp->SetNumberField(TEXT("playbackEnd"), 0.0);
@@ -645,7 +670,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(const FString
             IAssetEditorInstance* Editor = AssetEditorSS->FindEditorForAsset(SeqObj, false);
             if (Editor && Editor->GetEditorName() == FName("LevelSequenceEditor"))
             {
-#if defined(MCP_HAS_LEVELSEQUENCE)
                  // We assume it implements ILevelSequenceEditorToolkit if the name matches
                  ILevelSequenceEditorToolkit* LSEditor = static_cast<ILevelSequenceEditorToolkit*>(Editor);
                  if (LSEditor && LSEditor->GetSequencer().IsValid())
@@ -654,7 +678,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(const FString
                      SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Playback speed set to %.2f"), Speed), nullptr);
                      return true;
                  }
-#endif
             }
         }
     }
@@ -705,9 +728,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(const FString& RequestId,
         {
             ULevelSequenceEditorBlueprintLibrary::Pause();
             
-            PRAGMA_DISABLE_DEPRECATION_WARNINGS
-            ULevelSequenceEditorBlueprintLibrary::SetCurrentTime(0);
-            PRAGMA_ENABLE_DEPRECATION_WARNINGS
+            FMovieSceneSequencePlaybackParams PlaybackParams;
+            PlaybackParams.Frame = FFrameTime(0);
+            PlaybackParams.UpdateMethod = EUpdatePositionMethod::Scrub;
+            ULevelSequenceEditorBlueprintLibrary::SetGlobalPosition(PlaybackParams);
             
             SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence stopped (reset to start)"), nullptr);
             return true;
@@ -837,30 +861,182 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetMetadata(const FString& Req
 #endif
 }
 
+bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    TSharedPtr<FJsonObject> LocalPayload = Payload.IsValid() ? Payload : MakeShared<FJsonObject>();
+    FString SeqPath = ResolveSequencePath(LocalPayload);
+    if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_add_keyframe requires a sequence path"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
+
+    FString BindingIdStr; LocalPayload->TryGetStringField(TEXT("bindingId"), BindingIdStr);
+    FString ActorName; LocalPayload->TryGetStringField(TEXT("actorName"), ActorName);
+    FString PropertyName; LocalPayload->TryGetStringField(TEXT("property"), PropertyName);
+    
+    double Frame = 0.0;
+    if (!LocalPayload->TryGetNumberField(TEXT("frame"), Frame))
+    {
+         SendAutomationResponse(Socket, RequestId, false, TEXT("frame number is required"), nullptr, TEXT("INVALID_ARGUMENT"));
+         return true;
+    }
+
+#if WITH_EDITOR
+    UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
+    if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
+
+    if (ULevelSequence* LevelSeq = Cast<ULevelSequence>(SeqObj))
+    {
+        UMovieScene* MovieScene = LevelSeq->GetMovieScene();
+        if (MovieScene)
+        {
+            FGuid BindingGuid;
+            if (!BindingIdStr.IsEmpty())
+            {
+                FGuid::Parse(BindingIdStr, BindingGuid);
+            }
+            else if (!ActorName.IsEmpty())
+            {
+                 for (const FMovieSceneBinding& Binding : MovieScene->GetBindings())
+                 {
+                     if (Binding.GetName().Equals(ActorName, ESearchCase::IgnoreCase))
+                     {
+                         BindingGuid = Binding.GetObjectGuid();
+                         break;
+                     }
+                 }
+            }
+
+            if (!BindingGuid.IsValid())
+            {
+                SendAutomationResponse(Socket, RequestId, false, TEXT("Binding not found"), nullptr, TEXT("BINDING_NOT_FOUND"));
+                return true;
+            }
+
+            FMovieSceneBinding* Binding = MovieScene->FindBinding(BindingGuid);
+            if (!Binding)
+            {
+                SendAutomationResponse(Socket, RequestId, false, TEXT("Binding object not found in sequence"), nullptr, TEXT("BINDING_NOT_FOUND"));
+                return true;
+            }
+
+            if (PropertyName.Equals(TEXT("Transform"), ESearchCase::IgnoreCase))
+            {
+                 UMovieScene3DTransformTrack* Track = MovieScene->FindTrack<UMovieScene3DTransformTrack>(BindingGuid, FName("Transform"));
+                 if (!Track)
+                 {
+                     Track = MovieScene->AddTrack<UMovieScene3DTransformTrack>(BindingGuid);
+                 }
+
+                 if (Track)
+                 {
+                     bool bSectionAdded = false;
+                     UMovieScene3DTransformSection* Section = Cast<UMovieScene3DTransformSection>(Track->FindOrAddSection(0, bSectionAdded));
+                     if (Section)
+                     {
+                         FFrameRate TickResolution = MovieScene->GetTickResolution();
+                         FFrameRate DisplayRate = MovieScene->GetDisplayRate();
+                         FFrameNumber FrameNum = FFrameNumber(static_cast<int32>(Frame));
+                         FFrameNumber TickFrame = FFrameRate::TransformTime(FFrameTime(FrameNum), DisplayRate, TickResolution).FloorToFrame();
+
+                         bool bModified = false;
+                         const TSharedPtr<FJsonObject>* ValueObj = nullptr;
+                         
+                         FMovieSceneChannelProxy& Proxy = Section->GetChannelProxy();
+                         TArrayView<FMovieSceneDoubleChannel*> Channels = Proxy.GetChannels<FMovieSceneDoubleChannel>();
+
+                         if (LocalPayload->TryGetObjectField(TEXT("value"), ValueObj) && ValueObj && Channels.Num() >= 9)
+                         {
+                              const TSharedPtr<FJsonObject>* LocObj = nullptr;
+                              if ((*ValueObj)->TryGetObjectField(TEXT("location"), LocObj))
+                              {
+                                  double X, Y, Z;
+                                  if ((*LocObj)->TryGetNumberField(TEXT("x"), X)) { Channels[0]->GetData().AddKey(TickFrame, FMovieSceneDoubleValue(X)); bModified=true; }
+                                  if ((*LocObj)->TryGetNumberField(TEXT("y"), Y)) { Channels[1]->GetData().AddKey(TickFrame, FMovieSceneDoubleValue(Y)); bModified=true; }
+                                  if ((*LocObj)->TryGetNumberField(TEXT("z"), Z)) { Channels[2]->GetData().AddKey(TickFrame, FMovieSceneDoubleValue(Z)); bModified=true; }
+                              }
+                              
+                              const TSharedPtr<FJsonObject>* RotObj = nullptr;
+                              if ((*ValueObj)->TryGetObjectField(TEXT("rotation"), RotObj))
+                              {
+                                  double P, Yaw, R;
+                                  // 0=Roll(X), 1=Pitch(Y), 2=Yaw(Z) in Transform Track channels usually. Channels 3, 4, 5.
+                                  if ((*RotObj)->TryGetNumberField(TEXT("roll"), R)) { Channels[3]->GetData().AddKey(TickFrame, FMovieSceneDoubleValue(R)); bModified=true; }
+                                  if ((*RotObj)->TryGetNumberField(TEXT("pitch"), P)) { Channels[4]->GetData().AddKey(TickFrame, FMovieSceneDoubleValue(P)); bModified=true; }
+                                  if ((*RotObj)->TryGetNumberField(TEXT("yaw"), Yaw)) { Channels[5]->GetData().AddKey(TickFrame, FMovieSceneDoubleValue(Yaw)); bModified=true; }
+                              }
+
+                              const TSharedPtr<FJsonObject>* ScaleObj = nullptr;
+                              if ((*ValueObj)->TryGetObjectField(TEXT("scale"), ScaleObj))
+                              {
+                                  double X, Y, Z;
+                                  if ((*ScaleObj)->TryGetNumberField(TEXT("x"), X)) { Channels[6]->GetData().AddKey(TickFrame, FMovieSceneDoubleValue(X)); bModified=true; }
+                                  if ((*ScaleObj)->TryGetNumberField(TEXT("y"), Y)) { Channels[7]->GetData().AddKey(TickFrame, FMovieSceneDoubleValue(Y)); bModified=true; }
+                                  if ((*ScaleObj)->TryGetNumberField(TEXT("z"), Z)) { Channels[8]->GetData().AddKey(TickFrame, FMovieSceneDoubleValue(Z)); bModified=true; }
+                              }
+                         }
+                         
+                         if (bModified)
+                         {
+                             MovieScene->Modify();
+                             SendAutomationResponse(Socket, RequestId, true, TEXT("Keyframe added"), nullptr, FString());
+                             return true;
+                         }
+                     }
+                 }
+            }
+            
+            SendAutomationResponse(Socket, RequestId, false, TEXT("Unsupported property or failed to create track"), nullptr, TEXT("UNSUPPORTED_PROPERTY"));
+            return true;
+        }
+    }
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence object is not a LevelSequence"), nullptr, TEXT("INVALID_SEQUENCE_TYPE"));
+    return true;
+#else
+    SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_add_keyframe requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+}
+
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString Lower = Action.ToLower();
-    if (!Lower.StartsWith(TEXT("sequence_"))) return false;
+    // Also handle manage_sequence which acts as a dispatcher for sub-actions
+    if (!Lower.StartsWith(TEXT("sequence_")) && !Lower.Equals(TEXT("manage_sequence"))) return false;
 
-    if (Lower.Equals(TEXT("sequence_create"))) return HandleSequenceCreate(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_set_properties"))) return HandleSequenceSetProperties(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_open"))) return HandleSequenceOpen(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_add_camera"))) return HandleSequenceAddCamera(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_play"))) return HandleSequencePlay(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_add_actor"))) return HandleSequenceAddActor(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_add_actors"))) return HandleSequenceAddActors(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_add_spawnable_from_class"))) return HandleSequenceAddSpawnable(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_remove_actors"))) return HandleSequenceRemoveActors(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_get_bindings"))) return HandleSequenceGetBindings(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_get_properties"))) return HandleSequenceGetProperties(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_set_playback_speed"))) return HandleSequenceSetPlaybackSpeed(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_pause"))) return HandleSequencePause(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_stop"))) return HandleSequenceStop(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_list"))) return HandleSequenceList(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_duplicate"))) return HandleSequenceDuplicate(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_rename"))) return HandleSequenceRename(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_delete"))) return HandleSequenceDelete(RequestId, Payload, RequestingSocket);
-    if (Lower.Equals(TEXT("sequence_get_metadata"))) return HandleSequenceGetMetadata(RequestId, Payload, RequestingSocket);
+    TSharedPtr<FJsonObject> LocalPayload = Payload.IsValid() ? Payload : MakeShared<FJsonObject>();
+    FString EffectiveAction = Lower;
+    
+    // If generic manage_sequence, extract the sub-action to determine behavior
+    if (Lower.Equals(TEXT("manage_sequence")))
+    {
+        FString Sub;
+        if (LocalPayload->TryGetStringField(TEXT("subAction"), Sub) && !Sub.IsEmpty())
+        {
+            EffectiveAction = Sub.ToLower();
+            // If subAction is just "create", map to "sequence_create" for consistency
+            if (EffectiveAction == TEXT("create")) EffectiveAction = TEXT("sequence_create");
+            else if (!EffectiveAction.StartsWith(TEXT("sequence_"))) EffectiveAction = TEXT("sequence_") + EffectiveAction;
+        }
+    }
+
+    if (EffectiveAction == TEXT("sequence_create")) return HandleSequenceCreate(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_set_properties")) return HandleSequenceSetProperties(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_open")) return HandleSequenceOpen(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_add_camera")) return HandleSequenceAddCamera(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_play")) return HandleSequencePlay(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_add_actor")) return HandleSequenceAddActor(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_add_actors")) return HandleSequenceAddActors(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_add_spawnable_from_class")) return HandleSequenceAddSpawnable(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_remove_actors")) return HandleSequenceRemoveActors(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_get_bindings")) return HandleSequenceGetBindings(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_get_properties")) return HandleSequenceGetProperties(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_set_playback_speed")) return HandleSequenceSetPlaybackSpeed(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_pause")) return HandleSequencePause(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_stop")) return HandleSequenceStop(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_list")) return HandleSequenceList(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_duplicate")) return HandleSequenceDuplicate(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_rename")) return HandleSequenceRename(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_delete")) return HandleSequenceDelete(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_get_metadata")) return HandleSequenceGetMetadata(RequestId, LocalPayload, RequestingSocket);
+    if (EffectiveAction == TEXT("sequence_add_keyframe")) return HandleSequenceAddKeyframe(RequestId, LocalPayload, RequestingSocket);
 
     SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Sequence action not implemented by plugin: %s"), *Action), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;

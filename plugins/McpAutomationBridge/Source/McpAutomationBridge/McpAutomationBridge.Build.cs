@@ -11,26 +11,33 @@ public class McpAutomationBridge : ModuleRules
 
         PublicDependencyModuleNames.AddRange(new string[]
         {
-            "Core","CoreUObject","Engine","Json","JsonUtilities"
+            "Core","CoreUObject","Engine","Json","JsonUtilities",
+            "LevelSequence", "MovieScene", "MovieSceneTracks" // Moved from Private to Public for better include visibility
         });
 
         if (Target.bBuildEditor)
         {
+            // Editor-only Public Dependencies
+            PublicDependencyModuleNames.AddRange(new string[] 
+            { 
+                "LevelSequenceEditor", "Sequencer", "MovieSceneTools", "Niagara", "NiagaraEditor", "UnrealEd",
+                "WorldPartitionEditor", "DataLayerEditor"
+            });
+
             PrivateDependencyModuleNames.AddRange(new string[]
             {
                 "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings","EngineSettings",
-                "Sockets","Networking","UnrealEd","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph",
+                "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph",
                 "Kismet","KismetCompiler","AssetRegistry","AssetTools","MaterialEditor","SourceControl",
                 "AudioEditor"
             });
 
             PrivateDependencyModuleNames.AddRange(new string[]
             {
-                "LevelSequence","LevelSequenceEditor","Sequencer","MovieScene","MovieSceneTools","MovieSceneTracks",
-                "Niagara","NiagaraEditor","Landscape","LandscapeEditor","LandscapeEditorUtilities","Foliage","FoliageEdit",
+                "Landscape","LandscapeEditor","LandscapeEditorUtilities","Foliage","FoliageEdit",
                 "AnimGraph","AnimationBlueprintLibrary","Persona","ToolMenus","EditorWidgets","PropertyEditor","LevelEditor",
                 "ControlRig","ControlRigDeveloper","UMG","UMGEditor","ProceduralMeshComponent","MergeActors",
-                "BehaviorTreeEditor", "WorldPartitionEditor", "DataLayerEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIModule", "AIGraph"
+                "BehaviorTreeEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIModule", "AIGraph"
             });
 
             // Ensure editor builds expose full Blueprint graph editing APIs.
@@ -51,6 +58,55 @@ public class McpAutomationBridge : ModuleRules
                         {
                             PrivateDependencyModuleNames.Add("SubobjectData");
                         }
+
+            // Detect whether UWorldPartition supports ForEachDataLayerInstance so we can
+            // safely compile DataLayer-related world partition helpers.
+            try
+            {
+                string engineRootForWP = null;
+                try
+                {
+                    string[] candidatesWP = new string[]
+                    {
+                        Environment.GetEnvironmentVariable("UE_ENGINE_DIR"),
+                        Environment.GetEnvironmentVariable("UE_ENGINE_DIRECTORY"),
+                        Environment.GetEnvironmentVariable("UE_ENGINE_ROOT"),
+                        Target.RelativeEnginePath
+                    };
+                    foreach (var cand in candidatesWP)
+                    {
+                        if (!string.IsNullOrEmpty(cand) && Directory.Exists(cand)) { engineRootForWP = cand; break; }
+                    }
+                    if (engineRootForWP == null)
+                    {
+                        var dir = new DirectoryInfo(ModuleDirectory);
+                        while (dir != null)
+                        {
+                            if (dir.Name.Equals("Engine", StringComparison.OrdinalIgnoreCase) && Directory.Exists(Path.Combine(dir.FullName, "Source")))
+                            {
+                                engineRootForWP = dir.FullName; break;
+                            }
+                            dir = dir.Parent;
+                        }
+                    }
+                }
+                catch { }
+
+                if (!string.IsNullOrEmpty(engineRootForWP))
+                {
+                    var wpHeader = Path.Combine(engineRootForWP, "Source", "Runtime", "Engine", "Public", "WorldPartition", "WorldPartition.h");
+                    bool hasForEach = File.Exists(wpHeader) && File.ReadAllText(wpHeader).Contains("ForEachDataLayerInstance(");
+                    PublicDefinitions.Add(hasForEach ? "MCP_HAS_WP_FOR_EACH_DATALAYER=1" : "MCP_HAS_WP_FOR_EACH_DATALAYER=0");
+                }
+                else
+                {
+                    PublicDefinitions.Add("MCP_HAS_WP_FOR_EACH_DATALAYER=0");
+                }
+            }
+            catch
+            {
+                PublicDefinitions.Add("MCP_HAS_WP_FOR_EACH_DATALAYER=0");
+            }
                         PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=1");
                         addedSubobjectData = true;
                     }

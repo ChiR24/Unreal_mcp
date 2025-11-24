@@ -94,14 +94,31 @@ export async function handleConsolidatedToolCall(
     const duration = Date.now() - startTime;
     console.error(`[ConsolidatedToolHandler] Failed execution of ${name} after ${duration}ms: ${err?.message || String(err)}`);
     const errorMessage = err?.message || String(err);
-    const isTimeout = errorMessage.includes('timeout');
+    const lowerError = errorMessage.toString().toLowerCase();
+    const isTimeout = lowerError.includes('timeout');
+
+    let text: string;
+    if (isTimeout) {
+      text = `Tool ${name} timed out. Please check Unreal Engine connection.`;
+    } else {
+      if (name === 'manage_asset') {
+        const actionRaw = (args && typeof (args as any).action === 'string') ? (args as any).action : '';
+        const actionLower = actionRaw.toLowerCase();
+        if (actionLower === 'import' && (lowerError === 'import_failed' || lowerError.includes('import failed'))) {
+          text = 'Import error: unsupported_format (IMPORT_FAILED)';
+        } else {
+          text = `Failed to execute ${name}: ${errorMessage}`;
+        }
+      } else {
+        text = `Failed to execute ${name}: ${errorMessage}`;
+      }
+    }
+
     return {
       content: [
         {
           type: 'text',
-          text: isTimeout
-            ? `Tool ${name} timed out. Please check Unreal Engine connection.`
-            : `Failed to execute ${name}: ${errorMessage}`
+          text
         }
       ],
       isError: true

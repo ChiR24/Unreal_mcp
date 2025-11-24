@@ -18,9 +18,9 @@ const testCases = [
   // 5. Inspect component list
   { scenario: 'Get components on actor', toolName: 'inspect', arguments: { action: 'get_components', name: 'Inspect_A' }, expected: 'success - components returned' },
   // 6. Get component property
-  { scenario: 'Get static mesh component mesh', toolName: 'inspect', arguments: { action: 'get_component_property', name: 'Inspect_A', componentName: 'StaticMeshComponent0', propertyPath: 'StaticMesh' }, expected: 'success - component property retrieved' },
+  { scenario: 'Get static mesh component mesh', toolName: 'inspect', arguments: { action: 'get_component_property', name: 'Inspect_A', componentName: 'StaticMeshComponent', propertyPath: 'StaticMesh' }, expected: 'success - component property retrieved' },
   // 7. Set component mobility
-  { scenario: 'Set component mobility', toolName: 'inspect', arguments: { action: 'set_component_property', name: 'Inspect_A', componentName: 'StaticMeshComponent0', propertyPath: 'Mobility', value: 'Movable' }, expected: 'success - component property set' },
+  { scenario: 'Set component mobility', toolName: 'inspect', arguments: { action: 'set_component_property', name: 'Inspect_A', componentName: 'StaticMeshComponent', propertyPath: 'Mobility', value: 'Movable' }, expected: 'success - component property set' },
   // 8. Query actor metadata (best-effort)
   { scenario: 'Get actor metadata', toolName: 'inspect', arguments: { action: 'get_metadata', name: 'Inspect_A' }, expected: 'success - metadata returned' },
   // 9. Add a tag to the actor
@@ -40,9 +40,9 @@ const testCases = [
   // Additional
   { scenario: 'List objects', toolName: 'inspect', arguments: { action: 'list_objects', filter: 'Inspect_' }, expected: 'success or handled' },
   { scenario: 'Find by class', toolName: 'inspect', arguments: { action: 'find_by_class', className: 'StaticMeshActor' }, expected: 'success or handled' },
-  { scenario: 'Get bounding box', toolName: 'inspect', arguments: { action: 'get_bounding_box', name: 'Inspect_A' }, expected: 'success or handled' },
+  { scenario: 'Get bounding box', toolName: 'inspect', arguments: { action: 'get_bounding_box', name: 'Inspect_A' }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'Inspect blueprint class (best-effort)', toolName: 'inspect', arguments: { action: 'inspect_class', classPath: '/Game/Blueprints/BP_Auto' }, expected: 'success or handled' },
-  { scenario: 'Verify delete again', toolName: 'inspect', arguments: { action: 'delete_object', name: 'Inspect_A' }, expected: 'success or handled' },
+  { scenario: 'Verify delete again', toolName: 'inspect', arguments: { action: 'delete_object', name: 'Inspect_A' }, expected: 'error|NOT_FOUND' },
   {
     scenario: "Error: Invalid object path",
     toolName: "inspect",

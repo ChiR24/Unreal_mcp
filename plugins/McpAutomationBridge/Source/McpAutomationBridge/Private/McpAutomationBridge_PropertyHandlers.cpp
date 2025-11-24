@@ -41,6 +41,140 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(const FString& Reque
         return true;
     }
 
+    // Special handling for common AActor properties that are actually functions or require setters
+    if (AActor* Actor = Cast<AActor>(RootObject))
+    {
+        if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase))
+        {
+            FVector NewLoc = FVector::ZeroVector;
+            // Parse value as vector
+            if (ValueField->Type == EJson::Object)
+            {
+                const TSharedPtr<FJsonObject>& Obj = ValueField->AsObject();
+                double X = 0, Y = 0, Z = 0;
+                Obj->TryGetNumberField(TEXT("x"), X);
+                Obj->TryGetNumberField(TEXT("y"), Y);
+                Obj->TryGetNumberField(TEXT("z"), Z);
+                NewLoc = FVector(X, Y, Z);
+            }
+            else if (ValueField->Type == EJson::Array)
+            {
+                const TArray<TSharedPtr<FJsonValue>>& Arr = ValueField->AsArray();
+                if (Arr.Num() >= 3)
+                {
+                    NewLoc = FVector(Arr[0]->AsNumber(), Arr[1]->AsNumber(), Arr[2]->AsNumber());
+                }
+            }
+
+            Actor->SetActorLocation(NewLoc);
+            
+            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+            ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
+            ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+            ResultPayload->SetBoolField(TEXT("saved"), true);
+            
+            TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
+            ValObj->SetNumberField(TEXT("x"), NewLoc.X);
+            ValObj->SetNumberField(TEXT("y"), NewLoc.Y);
+            ValObj->SetNumberField(TEXT("z"), NewLoc.Z);
+            ResultPayload->SetField(TEXT("value"), MakeShared<FJsonValueObject>(ValObj));
+
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor location updated."), ResultPayload, FString());
+            return true;
+        }
+        else if (PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase))
+        {
+            FRotator NewRot = FRotator::ZeroRotator;
+            if (ValueField->Type == EJson::Object)
+            {
+                const TSharedPtr<FJsonObject>& Obj = ValueField->AsObject();
+                double P = 0, Y = 0, R = 0;
+                Obj->TryGetNumberField(TEXT("pitch"), P);
+                Obj->TryGetNumberField(TEXT("yaw"), Y);
+                Obj->TryGetNumberField(TEXT("roll"), R);
+                NewRot = FRotator(P, Y, R);
+            }
+             else if (ValueField->Type == EJson::Array)
+            {
+                const TArray<TSharedPtr<FJsonValue>>& Arr = ValueField->AsArray();
+                if (Arr.Num() >= 3)
+                {
+                    NewRot = FRotator(Arr[0]->AsNumber(), Arr[1]->AsNumber(), Arr[2]->AsNumber());
+                }
+            }
+
+            Actor->SetActorRotation(NewRot);
+
+            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+            ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
+            ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+            ResultPayload->SetBoolField(TEXT("saved"), true);
+            
+            TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
+            ValObj->SetNumberField(TEXT("pitch"), NewRot.Pitch);
+            ValObj->SetNumberField(TEXT("yaw"), NewRot.Yaw);
+            ValObj->SetNumberField(TEXT("roll"), NewRot.Roll);
+            ResultPayload->SetField(TEXT("value"), MakeShared<FJsonValueObject>(ValObj));
+
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor rotation updated."), ResultPayload, FString());
+            return true;
+        }
+        else if (PropertyName.Equals(TEXT("ActorScale"), ESearchCase::IgnoreCase) || PropertyName.Equals(TEXT("ActorScale3D"), ESearchCase::IgnoreCase))
+        {
+             FVector NewScale = FVector::OneVector;
+            if (ValueField->Type == EJson::Object)
+            {
+                const TSharedPtr<FJsonObject>& Obj = ValueField->AsObject();
+                double X = 1, Y = 1, Z = 1;
+                Obj->TryGetNumberField(TEXT("x"), X);
+                Obj->TryGetNumberField(TEXT("y"), Y);
+                Obj->TryGetNumberField(TEXT("z"), Z);
+                NewScale = FVector(X, Y, Z);
+            }
+            else if (ValueField->Type == EJson::Array)
+            {
+                const TArray<TSharedPtr<FJsonValue>>& Arr = ValueField->AsArray();
+                if (Arr.Num() >= 3)
+                {
+                    NewScale = FVector(Arr[0]->AsNumber(), Arr[1]->AsNumber(), Arr[2]->AsNumber());
+                }
+            }
+
+            Actor->SetActorScale3D(NewScale);
+
+            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+            ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
+            ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+            ResultPayload->SetBoolField(TEXT("saved"), true);
+            
+            TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
+            ValObj->SetNumberField(TEXT("x"), NewScale.X);
+            ValObj->SetNumberField(TEXT("y"), NewScale.Y);
+            ValObj->SetNumberField(TEXT("z"), NewScale.Z);
+            ResultPayload->SetField(TEXT("value"), MakeShared<FJsonValueObject>(ValObj));
+
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor scale updated."), ResultPayload, FString());
+            return true;
+        }
+        else if (PropertyName.Equals(TEXT("bHidden"), ESearchCase::IgnoreCase))
+        {
+            bool bHidden = false;
+            if (ValueField->Type == EJson::Boolean) bHidden = ValueField->AsBool();
+            else if (ValueField->Type == EJson::Number) bHidden = ValueField->AsNumber() != 0;
+            
+            Actor->SetActorHiddenInGame(bHidden);
+
+            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+            ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
+            ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+            ResultPayload->SetBoolField(TEXT("saved"), true);
+            ResultPayload->SetBoolField(TEXT("value"), bHidden);
+
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor visibility updated."), ResultPayload, FString());
+            return true;
+        }
+    }
+
     // Support nested property paths (e.g., "MyComponent.PropertyName")
     UObject* TargetObject = nullptr;
     FProperty* Property = nullptr;
@@ -95,6 +229,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(const FString& Reque
     TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
     ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
     ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+    ResultPayload->SetBoolField(TEXT("saved"), true);
 
     if (TSharedPtr<FJsonValue> CurrentValue = ExportPropertyToJsonValue(TargetObject, Property))
     {
@@ -135,6 +270,59 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(const FString& Reque
     {
         SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath), TEXT("OBJECT_NOT_FOUND"));
         return true;
+    }
+
+    // Special handling for common AActor properties that are actually functions or require setters
+    if (AActor* Actor = Cast<AActor>(RootObject))
+    {
+        if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase))
+        {
+            FVector Loc = Actor->GetActorLocation();
+            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+            ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
+            ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+            
+            TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
+            ValObj->SetNumberField(TEXT("x"), Loc.X);
+            ValObj->SetNumberField(TEXT("y"), Loc.Y);
+            ValObj->SetNumberField(TEXT("z"), Loc.Z);
+            ResultPayload->SetField(TEXT("value"), MakeShared<FJsonValueObject>(ValObj));
+
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor location retrieved."), ResultPayload, FString());
+            return true;
+        }
+        else if (PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase))
+        {
+            FRotator Rot = Actor->GetActorRotation();
+            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+            ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
+            ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+            
+            TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
+            ValObj->SetNumberField(TEXT("pitch"), Rot.Pitch);
+            ValObj->SetNumberField(TEXT("yaw"), Rot.Yaw);
+            ValObj->SetNumberField(TEXT("roll"), Rot.Roll);
+            ResultPayload->SetField(TEXT("value"), MakeShared<FJsonValueObject>(ValObj));
+
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor rotation retrieved."), ResultPayload, FString());
+            return true;
+        }
+        else if (PropertyName.Equals(TEXT("ActorScale"), ESearchCase::IgnoreCase) || PropertyName.Equals(TEXT("ActorScale3D"), ESearchCase::IgnoreCase))
+        {
+            FVector Scale = Actor->GetActorScale3D();
+            TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+            ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
+            ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+            
+            TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
+            ValObj->SetNumberField(TEXT("x"), Scale.X);
+            ValObj->SetNumberField(TEXT("y"), Scale.Y);
+            ValObj->SetNumberField(TEXT("z"), Scale.Z);
+            ResultPayload->SetField(TEXT("value"), MakeShared<FJsonValueObject>(ValObj));
+
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor scale retrieved."), ResultPayload, FString());
+            return true;
+        }
     }
 
     // Support nested property paths (e.g., "MyComponent.PropertyName")

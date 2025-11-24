@@ -723,7 +723,11 @@ export class AutomationBridge extends EventEmitter {
       return;
     }
 
-    // Helper: enforce that any action echoed by the plugin matches the requested action (prefix-safe)
+    // Helper: enforce that any action echoed by the plugin matches the requested
+    // action (prefix-safe). Consolidated tools (system_control, manage_ui,
+    // animation_physics, create_effect, build_environment) are allowed to
+    // return sub-action names in the C++ layer, so we skip strict matching
+    // for those and accept the plugin's echoed action.
     const enforceActionMatch = (resp: AutomationBridgeResponseMessage): AutomationBridgeResponseMessage => {
       try {
         const expected = (pending.action || '').toString().toLowerCase();
@@ -732,24 +736,29 @@ export class AutomationBridge extends EventEmitter {
           const candidate = (typeof r.action === 'string' && r.action) || (typeof r.result?.action === 'string' && r.result.action);
           return candidate as any;
         })();
+
         if (expected && echoed && typeof echoed === 'string') {
           const got = echoed.toLowerCase();
-          // Consider it a mismatch if neither starts with the other (allowing minor decoration, e.g. namespaces)
+
+          // Consolidated tool actions that intentionally map to sub-actions in C++
+          const consolidatedToolActions = new Set([
+            'animation_physics',
+            'create_effect',
+            'build_environment',
+            'system_control',
+            'manage_ui'
+          ]);
+
+          if (consolidatedToolActions.has(expected) && got !== expected) {
+            // For consolidated tools, accept any echoed sub-action name
+            return response;
+          }
+
+          // Consider it a mismatch if neither starts with the other (allowing
+          // minor decoration, e.g. namespaces).
           const startsEitherWay = got.startsWith(expected) || expected.startsWith(got);
 
           console.log(`[enforceActionMatch] expected='${expected}', echoed='${echoed}', startsEitherWay=${startsEitherWay}`);
-
-          // Special case: 'animation_physics', 'create_effect', and 'build_environment' are consolidated tools
-          // that map to various underlying C++ actions. The C++ response will contain the specific
-          // sub-action name (e.g. 'create_blend_space', 'delete', 'sculpt'), which won't match
-          // the request action 'animation_physics'/'create_effect'/'build_environment'.
-          if (
-            (expected === 'animation_physics' || expected === 'create_effect' || expected === 'build_environment') &&
-            echoed &&
-            echoed !== expected
-          ) {
-            return response;
-          }
 
           if (!startsEitherWay) {
             const mutated: any = { ...resp };

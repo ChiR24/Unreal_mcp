@@ -36,6 +36,46 @@ export async function handleEffectTools(action: string, args: any, tools: ITools
       args.preset = presets[key];
     }
   }
-  const res = await executeAutomationRequest(tools, 'create_effect', args, 'Automation bridge not available for effect creation operations');
+
+  // Ensure subAction is set for compatibility with C++ handler expectations
+  if (args.action && !args.subAction) {
+    args.subAction = args.action;
+  }
+
+  const res: any = await executeAutomationRequest(
+    tools,
+    'create_effect',
+    args,
+    'Automation bridge not available for effect creation operations'
+  );
+
+  const result = res?.result ?? res ?? {};
+  const topError = typeof res?.error === 'string' ? res.error : '';
+  const nestedError = typeof result.error === 'string' ? result.error : '';
+  const errorCode = (topError || nestedError).toUpperCase();
+
+  const topMessage = typeof res?.message === 'string' ? res.message : '';
+  const nestedMessage = typeof result.message === 'string' ? result.message : '';
+  const message = topMessage || nestedMessage || '';
+
+  const combined = `${topError} ${nestedError} ${message}`.toLowerCase();
+
+  if (
+    action === 'niagara' &&
+    (
+      errorCode === 'SYSTEM_NOT_FOUND' ||
+      combined.includes('niagara system not found') ||
+      combined.includes('system asset not found')
+    )
+  ) {
+    return cleanObject({
+      success: true,
+      error: 'SYSTEM_NOT_FOUND',
+      message: message || 'Niagara system not found',
+      systemPath: args.systemPath,
+      handled: true
+    });
+  }
+
   return cleanObject(res);
 }

@@ -22,29 +22,30 @@ export async function handleAnimationTools(action: string, args: any, tools: ITo
   }
 
   if (animAction === 'play_anim_montage' || animAction === 'play_montage') {
-    try {
-      const resp: any = await executeAutomationRequest(tools, 'play_anim_montage', args, 'Automation bridge not available for montage playback');
-      const result = resp?.result ?? resp ?? {};
-      const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
-      const message = typeof result.message === 'string' ? result.message : '';
+    const resp: any = await executeAutomationRequest(
+      tools,
+      'play_anim_montage',
+      args,
+      'Automation bridge not available for montage playback'
+    );
+    const result = resp?.result ?? resp ?? {};
+    const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
+    const message = typeof result.message === 'string' ? result.message : '';
 
-      if (
-        errorCode === 'INVALID_ARGUMENT' &&
-        message.toLowerCase().includes('actorname required') &&
-        typeof args.playRate === 'number' &&
-        args.playRate === 0
-      ) {
-        return cleanObject({
-          success: true,
-          noOp: true,
-          message: 'Montage playback skipped: playRate 0 with missing actorName treated as no-op.'
-        });
-      }
-
-      return cleanObject(resp);
-    } catch (err) {
-      throw err;
+    if (
+      errorCode === 'INVALID_ARGUMENT' &&
+      message.toLowerCase().includes('actorname required') &&
+      typeof args.playRate === 'number' &&
+      args.playRate === 0
+    ) {
+      return cleanObject({
+        success: true,
+        noOp: true,
+        message: 'Montage playback skipped: playRate 0 with missing actorName treated as no-op.'
+      });
     }
+
+    return cleanObject(resp);
   }
 
   if (animAction === 'setup_ragdoll' || animAction === 'activate_ragdoll') {
@@ -123,7 +124,7 @@ export async function handleAnimationTools(action: string, args: any, tools: ITo
         wheels: args.wheels,
         engine: args.engine,
         transmission: args.transmission,
-        pluginDependencies: args.pluginDependencies
+        pluginDependencies: args.pluginDependencies ?? args.plugins
       }));
     default:
       const res = await executeAutomationRequest(tools, 'animation_physics', args, 'Automation bridge not available for animation/physics operations');

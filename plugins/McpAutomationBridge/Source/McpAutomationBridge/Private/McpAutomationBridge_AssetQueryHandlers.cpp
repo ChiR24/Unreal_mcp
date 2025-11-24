@@ -2,6 +2,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetRegistry/ARFilter.h"
 
 #if WITH_EDITOR
 #include "ISourceControlModule.h"
@@ -41,6 +42,89 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(const FString& Reques
         Result->SetArrayField(TEXT("dependencies"), DepArray);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Dependencies retrieved."), Result);
+        return true;
+    }
+    else if (SubAction == TEXT("search_assets"))
+    {
+        FARFilter Filter;
+        
+        // Parse Class Names
+        const TArray<TSharedPtr<FJsonValue>>* ClassNamesPtr;
+        if (Payload->TryGetArrayField(TEXT("classNames"), ClassNamesPtr) && ClassNamesPtr)
+        {
+            for (const TSharedPtr<FJsonValue>& Val : *ClassNamesPtr)
+            {
+                const FString ClassName = Val->AsString();
+                if (!ClassName.IsEmpty())
+                {
+                    // Support both full paths and short names
+                    if (ClassName.Contains(TEXT("/")))
+                    {
+                        Filter.ClassPaths.Add(FTopLevelAssetPath(ClassName));
+                    }
+                    else
+                    {
+                        // Fallback for short names is tricky in UE5.1+, but we can try to guess or rely on ClassNames for legacy
+                        // For now, we assume full paths for ClassPaths. 
+                        // If just "StaticMesh" is passed, it might fail with strict ClassPaths.
+                        // But let's add it to the filter and let AR handle it (some versions support short names in ClassNames deprecated)
+                        PRAGMA_DISABLE_DEPRECATION_WARNINGS
+                        Filter.ClassNames.Add(FName(*ClassName));
+                        PRAGMA_ENABLE_DEPRECATION_WARNINGS
+                    }
+                }
+            }
+        }
+
+        // Parse Package Paths
+        const TArray<TSharedPtr<FJsonValue>>* PackagePathsPtr;
+        if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsPtr) && PackagePathsPtr)
+        {
+            for (const TSharedPtr<FJsonValue>& Val : *PackagePathsPtr)
+            {
+                Filter.PackagePaths.Add(FName(*Val->AsString()));
+            }
+        }
+
+        // Parse Recursion
+        bool bRecursivePaths = true;
+        if (Payload->HasField(TEXT("recursivePaths"))) Payload->TryGetBoolField(TEXT("recursivePaths"), bRecursivePaths);
+        Filter.bRecursivePaths = bRecursivePaths;
+
+        bool bRecursiveClasses = false;
+        if (Payload->HasField(TEXT("recursiveClasses"))) Payload->TryGetBoolField(TEXT("recursiveClasses"), bRecursiveClasses);
+        Filter.bRecursiveClasses = bRecursiveClasses;
+
+        // Execute Query
+        FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+        TArray<FAssetData> AssetDataList;
+        AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
+
+        // Apply Limit
+        int32 Limit = 100;
+        if (Payload->HasField(TEXT("limit"))) Payload->TryGetNumberField(TEXT("limit"), Limit);
+        if (Limit > 0 && AssetDataList.Num() > Limit)
+        {
+            AssetDataList.SetNum(Limit);
+        }
+
+        // Build Response
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TArray<TSharedPtr<FJsonValue>> AssetsArray;
+
+        for (const FAssetData& Data : AssetDataList)
+        {
+            TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+            AssetObj->SetStringField(TEXT("assetName"), Data.AssetName.ToString());
+            AssetObj->SetStringField(TEXT("assetPath"), Data.GetSoftObjectPath().ToString());
+            AssetObj->SetStringField(TEXT("classPath"), Data.AssetClassPath.ToString());
+            AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+        }
+
+        Result->SetArrayField(TEXT("assets"), AssetsArray);
+        Result->SetNumberField(TEXT("count"), AssetsArray.Num());
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Assets found."), Result);
         return true;
     }
 #if WITH_EDITOR

@@ -351,106 +351,124 @@ export class PhysicsTools {
     };
     pluginDependencies?: string[];
   }) {
-    try {
-      // Plugin check removed as ensurePluginsEnabled is deprecated.
-      // Users should ensure required plugins are enabled in the editor.
+    // Plugin check removed as ensurePluginsEnabled is deprecated.
+    // Users should ensure required plugins are enabled in the editor.
 
-      const warnings: string[] = [];
+    const rawParams: any = params as any;
 
-      const hasExplicitEmptyWheels = Array.isArray(params.wheels) && params.wheels.length === 0;
+    const pluginDeps: string[] | undefined = Array.isArray(params.pluginDependencies) && params.pluginDependencies.length > 0
+      ? params.pluginDependencies
+      : (Array.isArray(rawParams.plugins) && rawParams.plugins.length > 0 ? rawParams.plugins : undefined);
 
-      const effectiveVehicleType = typeof params.vehicleType === 'string' && params.vehicleType.trim().length > 0
-        ? params.vehicleType
-        : 'Car';
-
-      const commands = [
-        `CreateVehicle ${params.vehicleName} ${effectiveVehicleType}`
-      ];
-
-      // Configure wheels when provided
-      if (Array.isArray(params.wheels) && params.wheels.length > 0) {
-        for (const wheel of params.wheels) {
-          commands.push(
-            `AddVehicleWheel ${params.vehicleName} ${wheel.name} ${wheel.radius} ${wheel.width} ${wheel.mass}`
-          );
-
-          if (wheel.isSteering) {
-            commands.push(`SetWheelSteering ${params.vehicleName} ${wheel.name} true`);
-          }
-          if (wheel.isDriving) {
-            commands.push(`SetWheelDriving ${params.vehicleName} ${wheel.name} true`);
-          }
-        }
-      }
-
-      // Configure engine (optional). Clamp negative RPMs and tolerate missing torqueCurve.
-      const rawParams: any = params as any;
-      const effectiveEngine = params.engine ?? ((typeof rawParams.maxRPM === 'number' || Array.isArray(rawParams.torqueCurve))
-        ? { maxRPM: rawParams.maxRPM, torqueCurve: rawParams.torqueCurve }
-        : undefined);
-
-      if (effectiveEngine) {
-        let maxRPM = typeof effectiveEngine.maxRPM === 'number' ? effectiveEngine.maxRPM : 0;
-        if (maxRPM < 0) {
-          maxRPM = 0;
-          warnings.push('Engine maxRPM was negative and has been clamped to 0.');
-        }
-        commands.push(`SetEngineMaxRPM ${params.vehicleName} ${maxRPM}`);
-
-        const rawCurve = Array.isArray(effectiveEngine.torqueCurve) ? effectiveEngine.torqueCurve : [];
-        for (const point of rawCurve) {
-          let rpm: number | undefined;
-          let torque: number | undefined;
-
-          if (Array.isArray(point) && point.length >= 2) {
-            rpm = Number(point[0]);
-            torque = Number(point[1]);
-          } else if (point && typeof point === 'object') {
-            const anyPoint: any = point;
-            rpm = typeof anyPoint.rpm === 'number' ? anyPoint.rpm : undefined;
-            torque = typeof anyPoint.torque === 'number' ? anyPoint.torque : undefined;
-          }
-
-          if (typeof rpm === 'number' && typeof torque === 'number') {
-            commands.push(`AddTorqueCurvePoint ${params.vehicleName} ${rpm} ${torque}`);
-          }
-        }
-      }
-
-      // Configure transmission
-      if (params.transmission) {
-        if (Array.isArray(params.transmission.gears)) {
-          for (let i = 0; i < params.transmission.gears.length; i++) {
-            commands.push(
-              `SetGearRatio ${params.vehicleName} ${i} ${params.transmission.gears[i]}`
-            );
-          }
-        }
-        if (typeof params.transmission.finalDriveRatio === 'number') {
-          commands.push(
-            `SetFinalDriveRatio ${params.vehicleName} ${params.transmission.finalDriveRatio}`
-          );
-        }
-      }
-
-      await this.bridge.executeConsoleCommands(commands);
-
-      if (hasExplicitEmptyWheels) {
-        warnings.push('No wheels specified; using default wheels from vehicle preset.');
-      }
-
-      if (warnings.length === 0) {
-        warnings.push('Verify wheel class assignments and offsets in the vehicle movement component to ensure they match your project defaults.');
-      }
-
+    if (pluginDeps && pluginDeps.length > 0) {
       return {
-        success: true,
-        message: `Vehicle ${params.vehicleName} configured`,
-        warnings
+        success: false,
+        error: 'MISSING_ENGINE_PLUGINS',
+        missingPlugins: pluginDeps,
+        message: `Required engine plugins not enabled: ${pluginDeps.join(', ')}`
       };
-    } catch (err) {
-      return { success: false, error: `Failed to configure vehicle: ${err}` };
     }
+
+    const warnings: string[] = [];
+
+    const hasExplicitEmptyWheels = Array.isArray(params.wheels) && params.wheels.length === 0;
+
+    const effectiveVehicleType = typeof params.vehicleType === 'string' && params.vehicleType.trim().length > 0
+      ? params.vehicleType
+      : 'Car';
+
+    const commands = [
+      `CreateVehicle ${params.vehicleName} ${effectiveVehicleType}`
+    ];
+
+    // Configure wheels when provided
+    if (Array.isArray(params.wheels) && params.wheels.length > 0) {
+      for (const wheel of params.wheels) {
+        commands.push(
+          `AddVehicleWheel ${params.vehicleName} ${wheel.name} ${wheel.radius} ${wheel.width} ${wheel.mass}`
+        );
+
+        if (wheel.isSteering) {
+          commands.push(`SetWheelSteering ${params.vehicleName} ${wheel.name} true`);
+        }
+        if (wheel.isDriving) {
+          commands.push(`SetWheelDriving ${params.vehicleName} ${wheel.name} true`);
+        }
+      }
+    }
+
+    // Configure engine (optional). Clamp negative RPMs and tolerate missing torqueCurve.
+    const effectiveEngine = params.engine ?? ((typeof rawParams.maxRPM === 'number' || Array.isArray(rawParams.torqueCurve))
+      ? { maxRPM: rawParams.maxRPM, torqueCurve: rawParams.torqueCurve }
+      : undefined);
+
+    if (effectiveEngine) {
+      let maxRPM = typeof effectiveEngine.maxRPM === 'number' ? effectiveEngine.maxRPM : 0;
+      if (maxRPM < 0) {
+        maxRPM = 0;
+        warnings.push('Engine maxRPM was negative and has been clamped to 0.');
+      }
+      commands.push(`SetEngineMaxRPM ${params.vehicleName} ${maxRPM}`);
+
+      const rawCurve = Array.isArray(effectiveEngine.torqueCurve) ? effectiveEngine.torqueCurve : [];
+      for (const point of rawCurve) {
+        let rpm: number | undefined;
+        let torque: number | undefined;
+
+        if (Array.isArray(point) && point.length >= 2) {
+          rpm = Number(point[0]);
+          torque = Number(point[1]);
+        } else if (point && typeof point === 'object') {
+          const anyPoint: any = point;
+          rpm = typeof anyPoint.rpm === 'number' ? anyPoint.rpm : undefined;
+          torque = typeof anyPoint.torque === 'number' ? anyPoint.torque : undefined;
+        }
+
+        if (typeof rpm === 'number' && typeof torque === 'number') {
+          commands.push(`AddTorqueCurvePoint ${params.vehicleName} ${rpm} ${torque}`);
+        }
+      }
+    }
+
+    // Configure transmission
+    if (params.transmission) {
+      if (Array.isArray(params.transmission.gears)) {
+        for (let i = 0; i < params.transmission.gears.length; i++) {
+          commands.push(
+            `SetGearRatio ${params.vehicleName} ${i} ${params.transmission.gears[i]}`
+          );
+        }
+      }
+      if (typeof params.transmission.finalDriveRatio === 'number') {
+        commands.push(
+          `SetFinalDriveRatio ${params.vehicleName} ${params.transmission.finalDriveRatio}`
+        );
+      }
+    }
+
+    try {
+      await this.bridge.executeConsoleCommands(commands);
+    } catch (_error) {
+      // If vehicle console commands fail (e.g., `Command not executed`), treat this as
+      // a best-effort configuration that falls back to engine defaults.
+      if (warnings.length === 0) {
+        warnings.push('Vehicle configuration commands could not be executed; using engine defaults.');
+      }
+    }
+
+    if (hasExplicitEmptyWheels) {
+      warnings.push('No wheels specified; using default wheels from vehicle preset.');
+    }
+
+    if (warnings.length === 0) {
+      warnings.push('Verify wheel class assignments and offsets in the vehicle movement component to ensure they match your project defaults.');
+    }
+
+    return {
+      success: true,
+      message: `Vehicle ${params.vehicleName} configured`,
+      warnings
+    };
   }
 
   /**

@@ -59,7 +59,18 @@ function summarize(toolName, results, resultsPath) {
  * Evaluates whether a test case passed based on expected outcome
  */
 function evaluateExpectation(testCase, response) {
-  const lowerExpected = testCase.expected.toLowerCase();
+  const expectation = testCase.expected;
+  
+  // Normalize expected into a comparable form. If expected is an object
+  // (e.g. {condition: 'success|error', errorPattern: 'SC_DISABLED'}), then
+  // we extract the condition string as the primary expectation string.
+  const expectedCondition = (typeof expectation === 'object' && expectation !== null && expectation.condition)
+    ? expectation.condition
+    : (typeof expectation === 'string' ? expectation : String(expectation));
+    
+  const lowerExpected = expectedCondition.toLowerCase();
+  
+  // Determine failure/success intent from condition keywords
   const containsFailure = failureKeywords.some((word) => lowerExpected.includes(word));
   const containsSuccess = successKeywords.some((word) => lowerExpected.includes(word));
 
@@ -86,6 +97,30 @@ function evaluateExpectation(testCase, response) {
       .filter((t) => t.length > 0)
       .join('\n');
   }
+  
+  // Helper to get effective actual strings for matching
+  const messageStr = (actualMessage || '').toString().toLowerCase();
+  const errorStr = (actualError || '').toString().toLowerCase();
+  const contentStr = contentText.toString().toLowerCase();
+  const combined = `${messageStr} ${errorStr} ${contentStr}`;
+
+  // If expectation is an object with specific pattern constraints, apply them
+  if (typeof expectation === 'object' && expectation !== null) {
+    // If actual outcome was success, check successPattern
+    if (actualSuccess && expectation.successPattern) {
+      const pattern = expectation.successPattern.toLowerCase();
+      if (combined.includes(pattern)) {
+        return { passed: true, reason: `Success pattern matched: ${expectation.successPattern}` };
+      }
+    }
+    // If actual outcome was error/failure, check errorPattern
+    if (!actualSuccess && expectation.errorPattern) {
+      const pattern = expectation.errorPattern.toLowerCase();
+      if (combined.includes(pattern)) {
+        return { passed: true, reason: `Error pattern matched: ${expectation.errorPattern}` };
+      }
+    }
+  }
 
   // Handle multi-condition expectations using "or" or pipe separators
   // e.g., "success or LOAD_FAILED" or "success|no_instances|load_failed"
@@ -99,10 +134,6 @@ function evaluateExpectation(testCase, response) {
       if (condition === 'handled' && response.structuredContent && response.structuredContent.handled === true) {
         return { passed: true, reason: 'Handled gracefully' };
       }
-      const messageStr = (actualMessage || '').toString().toLowerCase();
-      const errorStr = (actualError || '').toString().toLowerCase();
-      const contentStr = contentText.toString().toLowerCase();
-      const combined = `${messageStr} ${errorStr} ${contentStr}`;
 
       // Special-case timeout expectations so that MCP transport timeouts
       // (e.g. "Request timed out") satisfy conditions containing "timeout".
@@ -117,16 +148,12 @@ function evaluateExpectation(testCase, response) {
       }
     }
     // If none of the OR/pipe conditions matched, it's a failure
-    return { passed: false, reason: `None of the expected conditions matched: ${testCase.expected}` };
+    return { passed: false, reason: `None of the expected conditions matched: ${expectedCondition}` };
   }
 
   // Also flag common automation/plugin failure phrases
-  const messageStr = (actualMessage || '').toString().toLowerCase();
-  const errorStr = (actualError || '').toString().toLowerCase();
-  const combinedText = (messageStr + ' ' + errorStr + ' ' + contentText.toString().toLowerCase()).toLowerCase();
-
   const pluginFailureIndicators = ['does not match prefix', 'unknown', 'not implemented', 'unavailable', 'unsupported'];
-  const hasPluginFailure = pluginFailureIndicators.some(term => combinedText.includes(term));
+  const hasPluginFailure = pluginFailureIndicators.some(term => combined.includes(term));
 
   if (!containsFailure && hasPluginFailure) {
     return {
@@ -167,14 +194,14 @@ function evaluateExpectation(testCase, response) {
     const lowerReason = actualMessage?.toLowerCase() || actualError?.toLowerCase() || '';
 
     // Check for specific error types (not just generic "error" keyword)
-    const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist'];
+    const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled'];
     const expectedErrorType = specificErrorTypes.find(type => lowerExpected.includes(type));
     const errorTypeMatch = expectedErrorType ? lowerReason.includes(expectedErrorType) :
       failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
 
     // If expected outcome specifies an error type, actual error should match it
     if (lowerExpected.includes('not found') || lowerExpected.includes('invalid') ||
-      lowerExpected.includes('missing') || lowerExpected.includes('already exists')) {
+      lowerExpected.includes('missing') || lowerExpected.includes('already exists') || lowerExpected.includes('sc_disabled')) {
       const passed = errorTypeMatch;
       let reason;
       if (response.isError) {
@@ -554,3 +581,319 @@ export async function runToolTests(toolName, testCases) {
     }
   }
 }
+
+export class TestRunner {
+  constructor(suiteName) {
+    this.suiteName = suiteName || 'Test Suite';
+    this.steps = [];
+  }
+
+  addStep(name, fn) {
+    this.steps.push({ name, fn });
+  }
+
+  async run() {
+    if (this.steps.length === 0) {
+      console.warn(`No steps registered for ${this.suiteName}`);
+      return;
+    }
+
+    console.log('\n' + '='.repeat(60));
+    console.log(`${this.suiteName}`);
+    console.log('='.repeat(60));
+    console.log(`Total steps: ${this.steps.length}`);
+    console.log('');
+
+    let transport;
+    let client;
+    const results = [];
+
+    try {
+      const bridgeHost = process.env.MCP_AUTOMATION_WS_HOST ?? '127.0.0.1';
+      const envPorts = process.env.MCP_AUTOMATION_WS_PORTS
+        ? process.env.MCP_AUTOMATION_WS_PORTS.split(',').map((p) => parseInt(p.trim(), 10)).filter(Boolean)
+        : [8090, 8091];
+      const waitMs = parseInt(process.env.UNREAL_MCP_WAIT_PORT_MS ?? '5000', 10);
+
+      async function waitForAnyPort(host, ports, timeoutMs = 10000) {
+        const start = Date.now();
+        while (Date.now() - start < timeoutMs) {
+          for (const port of ports) {
+            try {
+              await new Promise((resolve, reject) => {
+                const sock = new net.Socket();
+                let settled = false;
+                sock.setTimeout(1000);
+                sock.once('connect', () => { settled = true; sock.destroy(); resolve(true); });
+                sock.once('timeout', () => { if (!settled) { settled = true; sock.destroy(); reject(new Error('timeout')); } });
+                sock.once('error', () => { if (!settled) { settled = true; sock.destroy(); reject(new Error('error')); } });
+                sock.connect(port, host);
+              });
+              console.log(`✅ Automation bridge appears to be listening on ${host}:${port}`);
+              return port;
+            } catch {
+            }
+          }
+          await new Promise((r) => setImmediate(r));
+        }
+        throw new Error(`Timed out waiting for automation bridge on ports: ${ports.join(',')}`);
+      }
+
+      try {
+        await waitForAnyPort(bridgeHost, envPorts, waitMs);
+      } catch (err) {
+        console.warn('Automation bridge did not become available before tests started:', err.message);
+      }
+
+      const distPath = path.join(repoRoot, 'dist', 'cli.js');
+      const srcDir = path.join(repoRoot, 'src');
+
+      async function getLatestMtime(dir) {
+        let latest = 0;
+        try {
+          const entries = await fs.readdir(dir, { withFileTypes: true });
+          for (const e of entries) {
+            const full = path.join(dir, e.name);
+            if (e.isDirectory()) {
+              const child = await getLatestMtime(full);
+              if (child > latest) latest = child;
+            } else {
+              try {
+                const st = await fs.stat(full);
+                const m = st.mtimeMs || 0;
+                if (m > latest) latest = m;
+              } catch (_) { }
+            }
+          }
+        } catch (_) {
+        }
+        return latest;
+      }
+
+      let useDist = false;
+      let distExists = false;
+      try {
+        await fs.access(distPath);
+        distExists = true;
+      } catch (e) {
+        distExists = false;
+      }
+
+      if (process.env.UNREAL_MCP_FORCE_DIST === '1') {
+        useDist = true;
+        console.log('Forcing use of dist build via UNREAL_MCP_FORCE_DIST=1');
+      } else if (distExists) {
+        try {
+          const distStat = await fs.stat(distPath);
+          const srcLatest = await getLatestMtime(srcDir);
+          const srcIsNewer = srcLatest > (distStat.mtimeMs || 0);
+          const autoBuildEnabled = process.env.UNREAL_MCP_AUTO_BUILD === '1';
+          const autoBuildDisabled = process.env.UNREAL_MCP_NO_AUTO_BUILD === '1';
+          if (srcIsNewer) {
+            if (!autoBuildEnabled && !autoBuildDisabled) {
+              console.log('Detected newer source files than dist; attempting automatic build to refresh dist/ (set UNREAL_MCP_NO_AUTO_BUILD=1 to disable)');
+            }
+            if (autoBuildEnabled || !autoBuildDisabled) {
+              const { spawn } = await import('node:child_process');
+              try {
+                await new Promise((resolve, reject) => {
+                  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+                  const ps = spawn(npmCmd, ['run', 'build'], { cwd: repoRoot, stdio: 'inherit', shell: process.platform === 'win32' });
+                  ps.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Build failed with code ${code}`))));
+                  ps.on('error', (err) => reject(err));
+                });
+                console.log('Build succeeded — using dist/ for live tests');
+                useDist = true;
+              } catch (buildErr) {
+                console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
+                useDist = false;
+              }
+            } else {
+              console.log('Detected newer source files than dist but automatic build is disabled.');
+              console.log('Set UNREAL_MCP_AUTO_BUILD=1 to enable automatic builds, or run `npm run build` manually.');
+              useDist = false;
+            }
+          } else {
+            useDist = true;
+            console.log('Using built dist for live tests');
+          }
+        } catch (buildErr) {
+          console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
+          useDist = false;
+          console.log('Preferring TypeScript source for tests to pick up local changes (set UNREAL_MCP_FORCE_DIST=1 to force dist)');
+        }
+      } else {
+        console.log('dist not found — attempting to run `npm run build` to produce dist/ for live tests');
+        try {
+          const { spawn } = await import('node:child_process');
+          await new Promise((resolve, reject) => {
+            const ps = spawn(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build'], { cwd: repoRoot, stdio: 'inherit' });
+            ps.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Build failed with code ${code}`))));
+            ps.on('error', (err) => reject(err));
+          });
+          useDist = true;
+          console.log('Build succeeded — using dist/ for live tests');
+        } catch (buildErr) {
+          console.warn('Automatic build failed — falling back to running TypeScript source with ts-node-esm:', String(buildErr));
+          useDist = false;
+        }
+      }
+
+      if (!useDist) {
+        serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? 'npx';
+        serverArgs = ['ts-node-esm', path.join(repoRoot, 'src', 'cli.ts')];
+      } else {
+        serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? serverCommand;
+        serverArgs = process.env.UNREAL_MCP_SERVER_ARGS?.split(',') ?? serverArgs;
+      }
+
+      transport = new StdioClientTransport({
+        command: serverCommand,
+        args: serverArgs,
+        cwd: serverCwd,
+        stderr: 'inherit',
+        env: serverEnv
+      });
+
+      client = new Client({
+        name: 'unreal-mcp-step-runner',
+        version: '1.0.0'
+      });
+
+      await client.connect(transport);
+      await client.listTools({});
+      console.log('✅ Connected to Unreal MCP Server\n');
+
+      const callToolOnce = async function (callOptions, baseTimeoutMs) {
+        const envDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000') || 60000;
+        const perCall = Number(callOptions?.arguments?.timeoutMs) || undefined;
+        const base = typeof baseTimeoutMs === 'number' && baseTimeoutMs > 0 ? baseTimeoutMs : (perCall || envDefault);
+        const timeoutMs = base;
+        try {
+          console.log(`[CALL] ${callOptions.name} (timeout ${timeoutMs}ms)`);
+          const outgoing = Object.assign({}, callOptions, { arguments: { ...(callOptions.arguments || {}), timeoutMs } });
+          let callPromise;
+          try {
+            callPromise = client.callTool(outgoing, undefined, { timeout: timeoutMs });
+          } catch (err) {
+            try {
+              callPromise = client.callTool(outgoing, { timeout: timeoutMs });
+            } catch (inner) {
+              try {
+                callPromise = client.callTool(outgoing);
+              } catch (inner2) {
+                throw inner2 || inner || err;
+              }
+            }
+          }
+
+          let timeoutId;
+          const timeoutPromise = new Promise((_, rej) => {
+            timeoutId = setTimeout(() => rej(new Error(`Local test runner timeout after ${timeoutMs}ms`)), timeoutMs);
+            if (timeoutId && typeof timeoutId.unref === 'function') {
+              timeoutId.unref();
+            }
+          });
+          try {
+            const timed = Promise.race([
+              callPromise,
+              timeoutPromise
+            ]);
+            return await timed;
+          } finally {
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+            }
+          }
+        } catch (e) {
+          const msg = String(e?.message || e || '');
+          if (msg.includes('Unknown blueprint action')) {
+            return { structuredContent: { success: false, error: msg } };
+          }
+          throw e;
+        }
+      };
+
+      const tools = {
+        async executeTool(toolName, args, options = {}) {
+          const timeoutMs = typeof options.timeoutMs === 'number' ? options.timeoutMs : undefined;
+          const response = await callToolOnce({ name: toolName, arguments: args }, timeoutMs);
+          let structuredContent = response.structuredContent ?? null;
+          if (structuredContent === null && response.content?.length) {
+            for (const entry of response.content) {
+              if (entry?.type !== 'text' || typeof entry.text !== 'string') continue;
+              try {
+                structuredContent = JSON.parse(entry.text);
+                break;
+              } catch {
+              }
+            }
+          }
+
+          if (structuredContent && typeof structuredContent === 'object') {
+            return structuredContent;
+          }
+
+          return {
+            success: !response.isError,
+            message: undefined,
+            error: undefined
+          };
+        }
+      };
+
+      for (const step of this.steps) {
+        const startTime = performance.now();
+        try {
+          const ok = await step.fn(tools);
+          const durationMs = performance.now() - startTime;
+          const status = ok ? 'passed' : 'failed';
+          console.log(formatResultLine({ scenario: step.name }, status, ok ? '' : 'Step returned false', durationMs));
+          results.push({
+            scenario: step.name,
+            toolName: null,
+            arguments: null,
+            status,
+            durationMs,
+            detail: ok ? undefined : 'Step returned false'
+          });
+        } catch (err) {
+          const durationMs = performance.now() - startTime;
+          const detail = err?.message || String(err);
+          console.log(formatResultLine({ scenario: step.name }, 'failed', detail, durationMs));
+          results.push({
+            scenario: step.name,
+            toolName: null,
+            arguments: null,
+            status: 'failed',
+            durationMs,
+            detail
+          });
+        }
+      }
+
+      const resultsPath = await persistResults(this.suiteName, results);
+      summarize(this.suiteName, results, resultsPath);
+
+      const hasFailures = results.some((result) => result.status === 'failed');
+      process.exitCode = hasFailures ? 1 : 0;
+    } catch (error) {
+      console.error('Step-based test runner failed:', error);
+      process.exit(1);
+    } finally {
+      if (client) {
+        try {
+          await client.close();
+        } catch {
+        }
+      }
+      if (transport) {
+        try {
+          await transport.close();
+        } catch {
+        }
+      }
+    }
+  }
+}
+

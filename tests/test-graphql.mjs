@@ -6,9 +6,9 @@
  */
 
 import { createServer } from 'http';
-import { GraphQLServer } from '../src/graphql/server.js';
-import { UnrealBridge } from '../src/unreal-bridge.js';
-import { AutomationBridge } from '../src/automation-bridge.js';
+import { GraphQLServer } from '../dist/graphql/server.js';
+import { UnrealBridge } from '../dist/unreal-bridge.js';
+import { AutomationBridge } from '../dist/automation-bridge.js';
 
 // Test automation bridge for verifying GraphQL integration
 class TestAutomationBridge {

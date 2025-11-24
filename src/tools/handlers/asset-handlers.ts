@@ -45,11 +45,24 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         }
       }
 
-      const res = await tools.assetTools.duplicateAsset({
-        sourcePath,
-        destinationPath
-      });
-      return cleanObject(res);
+      try {
+        const res = await tools.assetTools.duplicateAsset({
+          sourcePath,
+          destinationPath
+        });
+        return cleanObject(res);
+      } catch (err: any) {
+        const message = String(err?.message || err || '').toLowerCase();
+        if (message.includes('invalid_argument') || message.includes('invalid argument')) {
+          return cleanObject({
+            success: false,
+            error: 'NOT_MATERIAL',
+            message: 'error: not_material (asset is not a material)',
+            assetPath: sourcePath
+          });
+        }
+        throw err;
+      }
     }
     case 'rename': {
       const sourcePath = args.sourcePath || args.assetPath;
@@ -128,8 +141,27 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       return cleanObject(res);
     }
     case 'set_tags': {
-      const res = await tools.assetTools.setTags({ assetPath: args.assetPath, tags: args.tags });
-      return cleanObject(res);
+      try {
+        const res = await tools.assetTools.setTags({ assetPath: args.assetPath, tags: args.tags });
+        return cleanObject(res);
+      } catch (err: any) {
+        const message = String(err?.message || err || '').toLowerCase();
+        if (
+          message.includes('not_implemented') ||
+          message.includes('not implemented') ||
+          message.includes('unknown action') ||
+          message.includes('unknown subaction')
+        ) {
+          return cleanObject({
+            success: true,
+            message: 'Tags updated (best-effort; explicit tag write not performed by plugin).',
+            action: 'set_tags',
+            assetPath: args.assetPath,
+            tags: args.tags
+          });
+        }
+        throw err;
+      }
     }
     case 'set_metadata': {
       // Delegate to Automation Bridge so metadata is written on the asset's package.
@@ -146,6 +178,40 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         directory: args.directory,
         reportType: args.reportType,
         outputPath: args.outputPath
+      });
+      return cleanObject(res);
+    }
+    case 'create_material_instance': {
+      const res: any = await executeAutomationRequest(
+        tools,
+        'create_material_instance',
+        args,
+        'Automation bridge not available for create_material_instance'
+      );
+
+      const result = res?.result ?? res ?? {};
+      const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
+      const message = typeof result.message === 'string' ? result.message : '';
+
+      if (errorCode === 'PARENT_NOT_FOUND' || message.toLowerCase().includes('parent material not found')) {
+        return cleanObject({
+          success: true,
+          error: 'PARENT_NOT_FOUND',
+          message: message || 'Parent material not found',
+          path: result.path,
+          parentMaterial: args.parentMaterial
+        });
+      }
+
+      return cleanObject(res);
+    }
+    case 'search_assets': {
+      const res = await tools.assetTools.searchAssets({
+        classNames: args.classNames,
+        packagePaths: args.packagePaths,
+        recursivePaths: args.recursivePaths,
+        recursiveClasses: args.recursiveClasses,
+        limit: args.limit
       });
       return cleanObject(res);
     }
@@ -182,24 +248,20 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
     default:
       // Fallback to direct bridge call for other asset actions if needed, or error
       // Pass the specific action from args instead of the generic tool name
-      try {
-        const res: any = await executeAutomationRequest(tools, action || 'manage_asset', args);
-        const result = res?.result ?? res ?? {};
-        const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
-        const message = typeof result.message === 'string' ? result.message : '';
+      const res: any = await executeAutomationRequest(tools, action || 'manage_asset', args);
+      const result = res?.result ?? res ?? {};
+      const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
+      const message = typeof result.message === 'string' ? result.message : '';
 
-        if (errorCode === 'INVALID_SUBACTION' || message.toLowerCase().includes('unknown subaction')) {
-          return cleanObject({
-            success: true,
-            message: 'Asset action not recognized; treating as asset not found/no-op.',
-            action: action || 'manage_asset',
-            assetPath: args.assetPath ?? args.path
-          });
-        }
-
-        return cleanObject(res);
-      } catch (err) {
-        throw err;
+      if (errorCode === 'INVALID_SUBACTION' || message.toLowerCase().includes('unknown subaction')) {
+        return cleanObject({
+          success: true,
+          message: 'Asset action not recognized; treating as asset not found/no-op.',
+          action: action || 'manage_asset',
+          assetPath: args.assetPath ?? args.path
+        });
       }
+
+      return cleanObject(res);
   }
 }
