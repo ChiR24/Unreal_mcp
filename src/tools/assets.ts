@@ -149,12 +149,53 @@ export class AssetTools extends BaseTool implements IAssetTools {
 
     // Use WASM for analysis on the constructed graph
     try {
-      const analysis = await wasmIntegration.resolveDependencies(
+      const base = await wasmIntegration.resolveDependencies(
         params.assetPath,
         graph,
         { maxDepth }
       );
-      return { success: true, analysis };
+
+      const depth = await wasmIntegration.calculateDependencyDepth(
+        params.assetPath,
+        graph,
+        { maxDepth }
+      );
+
+      const circularDependencies = await wasmIntegration.findCircularDependencies(
+        graph,
+        { maxDepth }
+      );
+
+      const topologicalOrder = await wasmIntegration.topologicalSort(graph);
+
+      const dependenciesList = Array.isArray((base as any).dependencies)
+        ? (base as any).dependencies as any[]
+        : [];
+
+      const totalDependencyCount =
+        (base as any).totalDependencyCount ??
+        (base as any).total_dependency_count ??
+        dependenciesList.length;
+
+      const analysis = {
+        asset: (base as any).asset ?? params.assetPath,
+        dependencies: dependenciesList,
+        totalDependencyCount,
+        requestedMaxDepth: maxDepth,
+        maxDepthUsed: depth,
+        circularDependencies,
+        topologicalOrder,
+        stats: {
+          nodeCount: dependenciesList.length,
+          leafCount: dependenciesList.filter((d: any) => !d.dependencies || d.dependencies.length === 0).length
+        }
+      };
+
+      return {
+        success: true,
+        message: 'graph analyzed',
+        analysis
+      };
     } catch (e: any) {
       return { success: false, error: `WASM analysis failed: ${e.message}` };
     }

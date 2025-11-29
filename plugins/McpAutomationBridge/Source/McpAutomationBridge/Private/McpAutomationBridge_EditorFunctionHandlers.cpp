@@ -36,6 +36,7 @@
 #if __has_include("GameFramework/PlayerController.h")
 #include "GameFramework/PlayerController.h"
 #endif
+#include "Misc/OutputDeviceNull.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -348,7 +349,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         }
         else
         {
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("UnrealEditorSubsystem not available"), nullptr, TEXT("NOT_IMPLEMENTED"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("UnrealEditorSubsystem not available"), nullptr, TEXT("SUBSYSTEM_NOT_FOUND"));
         }
         return true;
     }
@@ -402,7 +403,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         }
         else
         {
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("LevelEditorSubsystem not available"), nullptr, TEXT("NOT_IMPLEMENTED"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("LevelEditorSubsystem not available"), nullptr, TEXT("SUBSYSTEM_NOT_FOUND"));
         }
         return true;
     }
@@ -521,7 +522,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
                 SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blueprint CDO info"), Out, FString());
                 return true;
             }
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Blueprint/GeneratedClass not available"), nullptr, TEXT("NOT_IMPLEMENTED"));
+                        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Blueprint/GeneratedClass not available"), nullptr, TEXT("INVALID_BLUEPRINT"));
             return true;
         }
 
@@ -533,7 +534,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
             return true;
         }
 
-        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Blueprint/GeneratedClass not available"), nullptr, TEXT("NOT_IMPLEMENTED"));
+                    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Blueprint/GeneratedClass not available"), nullptr, TEXT("INVALID_BLUEPRINT"));
         return true;
     }
 
@@ -595,7 +596,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         if (SoundPath.IsEmpty()) { SendAutomationError(RequestingSocket, RequestId, TEXT("soundPath or path required"), TEXT("INVALID_ARGUMENT")); return true; }
         if (!GEditor)
         {
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor world not available"), nullptr, TEXT("NOT_IMPLEMENTED"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor world not available"), nullptr, TEXT("EDITOR_WORLD_NOT_AVAILABLE"));
             return true;
         }
         UWorld* World = nullptr;
@@ -605,7 +606,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         }
         if (!World)
         {
-            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor world not available"), nullptr, TEXT("NOT_IMPLEMENTED"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor world not available"), nullptr, TEXT("EDITOR_WORLD_NOT_AVAILABLE"));
             return true;
         }
 
@@ -746,6 +747,98 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         Out->SetStringField(TEXT("message"), TEXT("Memory report generated (check Saved/Profiling/MemReports)"));
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Memory report generated"), Out, FString());
+        return true;
+    }
+
+    // CALL_SUBSYSTEM: generic reflection-based subsystem call
+    if (FN == TEXT("CALL_SUBSYSTEM"))
+    {
+        FString SubsystemName; Payload->TryGetStringField(TEXT("subsystem"), SubsystemName);
+        FString TargetFuncName; Payload->TryGetStringField(TEXT("function"), TargetFuncName);
+        const TSharedPtr<FJsonObject>* Args = nullptr; Payload->TryGetObjectField(TEXT("args"), Args);
+
+        if (SubsystemName.IsEmpty() || TargetFuncName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("subsystem and function required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        if (!GEditor)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+            return true;
+        }
+
+        UObject* TargetSubsystem = nullptr;
+
+        // 1. Try Editor Subsystems
+        if (!TargetSubsystem)
+        {
+             // We can't iterate types easily without object iterator or known list.
+             // Try resolving class first.
+             UClass* SubsystemClass = ResolveClassByName(SubsystemName);
+             if (SubsystemClass)
+             {
+                 if (SubsystemClass->IsChildOf(UEditorSubsystem::StaticClass()))
+                 {
+                     TargetSubsystem = GEditor->GetEditorSubsystemBase(SubsystemClass);
+                 }
+                 else if (SubsystemClass->IsChildOf(UEngineSubsystem::StaticClass()))
+                 {
+                     TargetSubsystem = GEngine->GetEngineSubsystemBase(SubsystemClass);
+                 }
+             }
+        }
+        
+        // 2. Fallback: string-based lookup if class resolve failed or returns null (though GetEditorSubsystemBase handles null class)
+        // Iterate known subsystem collections if we really need to, but resolving class is best.
+
+        if (!TargetSubsystem)
+        {
+             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+             Err->SetStringField(TEXT("error"), FString::Printf(TEXT("Subsystem '%s' not found or not initialized"), *SubsystemName));
+             SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Subsystem not found"), Err, TEXT("SUBSYSTEM_NOT_FOUND"));
+             return true;
+        }
+
+        // Build command string
+        FString CmdString = TargetFuncName;
+        if (Args && (*Args).IsValid())
+        {
+            for (const auto& Pair : (*Args)->Values)
+            {
+                CmdString += TEXT(" ");
+                CmdString += Pair.Key;
+                CmdString += TEXT("=");
+                
+                switch (Pair.Value->Type)
+                {
+                case EJson::String:
+                    CmdString += FString::Printf(TEXT("\"%s\""), *Pair.Value->AsString());
+                    break;
+                case EJson::Number:
+                    CmdString += FString::Printf(TEXT("%f"), Pair.Value->AsNumber());
+                    break;
+                case EJson::Boolean:
+                    CmdString += Pair.Value->AsBool() ? TEXT("True") : TEXT("False");
+                    break;
+                default:
+                    // Object/Array support in command string is limited, pass stringified?
+                    // For now, skip complex types or rely on simple string conversion
+                    break;
+                }
+            }
+        }
+
+        FOutputDeviceNull Ar;
+        bool bResult = TargetSubsystem->CallFunctionByNameWithArguments(*CmdString, Ar, nullptr, true);
+        
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+        Out->SetBoolField(TEXT("success"), bResult);
+        Out->SetStringField(TEXT("subsystem"), SubsystemName);
+        Out->SetStringField(TEXT("function"), TargetFuncName);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, bResult, bResult ? TEXT("Function called") : TEXT("Function call failed"), Out, bResult ? FString() : TEXT("CALL_FAILED"));
         return true;
     }
 

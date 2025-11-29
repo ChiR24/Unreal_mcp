@@ -111,6 +111,17 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
                 PendingRequestsToSockets.Add(RequestId, RequestingSocket);
             }
 
+            // ---------------------------------------------------------
+            // Check Handler Registry (O(1) dispatch)
+            // ---------------------------------------------------------
+            if (const FAutomationHandler* Handler = AutomationHandlers.Find(Action))
+            {
+                 if (HandleAndLog(*Action, [&](){ return (*Handler)(RequestId, Action, Payload, RequestingSocket); }))
+                 {
+                     return;
+                 }
+            }
+
             UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest: Starting handler dispatch for action='%s'"), *Action);
 
             // Prioritize blueprint actions early only for blueprint-like actions to avoid noisy prefix logs

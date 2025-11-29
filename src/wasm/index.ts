@@ -395,6 +395,106 @@ export class WASMIntegration {
     return this.fallbackResolveDependencies(assetPath, dependencies, options);
   }
 
+  async calculateDependencyDepth(
+    assetPath: string,
+    dependencies: Record<string, string[]>,
+    options?: { maxDepth?: number }
+  ): Promise<number> {
+    const start = performance.now();
+
+    if (!this.isReady()) {
+      await this.initialize();
+    }
+
+    if (this.module && typeof this.module.DependencyResolver === 'function') {
+      try {
+        const resolver = new this.module.DependencyResolver();
+        const dependenciesJson = JSON.stringify(dependencies);
+        const result = resolver.calculateDepth(
+          assetPath,
+          dependenciesJson,
+          options?.maxDepth ?? 100
+        );
+
+        const duration = performance.now() - start;
+        this.recordMetrics('calculate_dependency_depth', duration, true);
+
+        return result as number;
+      } catch (error) {
+        this.log.warn('WASM dependency depth calculation failed, falling back to TypeScript:', error);
+      }
+    }
+
+    const duration = performance.now() - start;
+    this.recordMetrics('calculate_dependency_depth', duration, false);
+
+    return this.fallbackCalculateDependencyDepth(assetPath, dependencies, options);
+  }
+
+  async findCircularDependencies(
+    dependencies: Record<string, string[]>,
+    options?: { maxDepth?: number }
+  ): Promise<string[][]> {
+    const start = performance.now();
+
+    if (!this.isReady()) {
+      await this.initialize();
+    }
+
+    if (this.module && typeof this.module.DependencyResolver === 'function') {
+      try {
+        const resolver = new this.module.DependencyResolver();
+        const dependenciesJson = JSON.stringify(dependencies);
+        const result = resolver.findCircularDependencies(
+          dependenciesJson,
+          options?.maxDepth ?? 100
+        );
+
+        const duration = performance.now() - start;
+        this.recordMetrics('find_circular_dependencies', duration, true);
+
+        return result as string[][];
+      } catch (error) {
+        this.log.warn('WASM circular dependency detection failed, falling back to TypeScript:', error);
+      }
+    }
+
+    const duration = performance.now() - start;
+    this.recordMetrics('find_circular_dependencies', duration, false);
+
+    return this.fallbackFindCircularDependencies(dependencies, options);
+  }
+
+  async topologicalSort(
+    dependencies: Record<string, string[]>
+  ): Promise<string[]> {
+    const start = performance.now();
+
+    if (!this.isReady()) {
+      await this.initialize();
+    }
+
+    if (this.module && typeof this.module.DependencyResolver === 'function') {
+      try {
+        const resolver = new this.module.DependencyResolver();
+        const dependenciesJson = JSON.stringify(dependencies);
+        const result = resolver.topologicalSort(dependenciesJson);
+
+        const duration = performance.now() - start;
+        this.recordMetrics('topological_sort', duration, true);
+
+        return result as string[];
+      } catch (error) {
+        this.log.warn('WASM topological sort failed, falling back to TypeScript:', error);
+      }
+    }
+
+    const duration = performance.now() - start;
+    this.recordMetrics('topological_sort', duration, false);
+
+    return this.fallbackTopologicalSort(dependencies);
+  }
+
   /**
    * Get performance metrics for WASM operations
    */
@@ -417,6 +517,21 @@ export class WASMIntegration {
       tsOperations,
       averageTime,
       operations
+    };
+  }
+
+  /**
+   * Lightweight status information for observability/metrics.
+   */
+  getStatus(): {
+    enabled: boolean;
+    ready: boolean;
+    moduleUnavailable: boolean;
+  } {
+    return {
+      enabled: this.config.enabled,
+      ready: this.isReady(),
+      moduleUnavailable: this.moduleUnavailable
     };
   }
 
@@ -562,13 +677,145 @@ export class WASMIntegration {
       }
     }
 
+    const totalCount = result.length;
+
     return {
       asset: assetPath,
       dependencies: result,
-      total_dependency_count: result.length,
+      total_dependency_count: totalCount,
       max_depth: maxDepth,
-      analysis_time_ms: 0
+      analysis_time_ms: 0,
+      totalDependencyCount: totalCount,
+      maxDepth,
+      analysisTimeMs: 0,
+      circular_dependencies: [],
+      circularDependencies: []
     };
+  }
+
+  private fallbackCalculateDependencyDepth(
+    assetPath: string,
+    dependencies: Record<string, string[]>,
+    options?: { maxDepth?: number }
+  ): number {
+    const maxDepth = options?.maxDepth ?? 100;
+    const visited = new Set<string>();
+
+    const dfs = (path: string, depthRemaining: number): number => {
+      if (visited.has(path) || depthRemaining === 0) {
+        return 0;
+      }
+
+      visited.add(path);
+      const deps = dependencies[path] || [];
+      if (!deps.length) {
+        visited.delete(path);
+        return 0;
+      }
+
+      let maxChildDepth = 0;
+      for (const dep of deps) {
+        const childDepth = dfs(dep, depthRemaining - 1);
+        if (childDepth > maxChildDepth) {
+          maxChildDepth = childDepth;
+        }
+      }
+
+      visited.delete(path);
+      return maxChildDepth + 1;
+    };
+
+    return dfs(assetPath, maxDepth);
+  }
+
+  private fallbackFindCircularDependencies(
+    dependencies: Record<string, string[]>,
+    options?: { maxDepth?: number }
+  ): string[][] {
+    const maxDepth = options?.maxDepth ?? 100;
+    const cycles: string[][] = [];
+    const visited = new Set<string>();
+    const stack = new Set<string>();
+
+    const dfs = (current: string, depth: number, path: string[]): void => {
+      if (depth > maxDepth) {
+        return;
+      }
+
+      visited.add(current);
+      stack.add(current);
+      path.push(current);
+
+      const deps = dependencies[current] || [];
+      for (const dep of deps) {
+        if (!visited.has(dep)) {
+          dfs(dep, depth + 1, path);
+        } else if (stack.has(dep)) {
+          const startIndex = path.indexOf(dep);
+          if (startIndex !== -1) {
+            cycles.push(path.slice(startIndex));
+          }
+        }
+      }
+
+      stack.delete(current);
+      path.pop();
+    };
+
+    for (const asset of Object.keys(dependencies)) {
+      if (!visited.has(asset)) {
+        dfs(asset, 0, []);
+      }
+    }
+
+    return cycles;
+  }
+
+  private fallbackTopologicalSort(
+    dependencies: Record<string, string[]>
+  ): string[] {
+    const inDegree = new Map<string, number>();
+    const graph = new Map<string, string[]>();
+
+    for (const [asset, deps] of Object.entries(dependencies)) {
+      if (!inDegree.has(asset)) {
+        inDegree.set(asset, 0);
+      }
+      for (const dep of deps) {
+        if (!inDegree.has(dep)) {
+          inDegree.set(dep, 0);
+        }
+        const list = graph.get(dep) || [];
+        list.push(asset);
+        graph.set(dep, list);
+      }
+    }
+
+    const queue: string[] = [];
+    for (const [asset, degree] of inDegree.entries()) {
+      if (degree === 0) {
+        queue.push(asset);
+      }
+    }
+
+    const sorted: string[] = [];
+
+    while (queue.length > 0) {
+      const asset = queue.shift() as string;
+      sorted.push(asset);
+
+      const dependents = graph.get(asset) || [];
+      for (const dependent of dependents) {
+        const current = inDegree.get(dependent) ?? 0;
+        const next = current - 1;
+        inDegree.set(dependent, next);
+        if (next === 0) {
+          queue.push(dependent);
+        }
+      }
+    }
+
+    return sorted;
   }
 }
 

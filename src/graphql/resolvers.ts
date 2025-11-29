@@ -133,6 +133,20 @@ interface Blueprint {
   scsHierarchy?: Record<string, any>;
 }
 
+function logAutomationFailure(source: string, response: any) {
+  try {
+    if (!response || response.success !== false) {
+      return;
+    }
+    const errorText = (response.error || response.message || '').toString();
+    if (errorText.length === 0) {
+      return;
+    }
+    console.error(`[GraphQL] ${source} automation failure:`, errorText);
+  } catch {
+  }
+}
+
 /**
  * Helper to get actor properties from Unreal Bridge
  */
@@ -179,6 +193,8 @@ async function listAssets(
       };
     }
 
+    logAutomationFailure('list_assets', response);
+    console.error('Failed to list assets:', response);
     return { assets: [], totalCount: 0 };
   } catch (error) {
     console.error('Failed to list assets:', error);
@@ -209,6 +225,7 @@ async function listActors(
       };
     }
 
+    logAutomationFailure('list_actors', response);
     return { actors: [] };
   } catch (error) {
     console.error('Failed to list actors:', error);
@@ -236,6 +253,7 @@ async function getBlueprint(
       return response.result as Blueprint;
     }
 
+    logAutomationFailure('get_blueprint', response);
     return null;
   } catch (error) {
     console.error('Failed to get blueprint:', error);
@@ -298,16 +316,21 @@ export const resolvers = {
       const { filter, pagination } = args;
       const { actors } = await listActors(context.automationBridge, filter);
 
-      const edges = actors.map((actor, index) => ({
+      const offset = pagination?.offset ?? 0;
+      const limit = pagination?.limit ?? 50;
+
+      const paginatedActors = actors.slice(offset, offset + limit);
+
+      const edges = paginatedActors.map((actor, index) => ({
         node: actor,
-        cursor: Buffer.from(`${actor.name}:${index}`).toString('base64')
+        cursor: Buffer.from(`${actor.name}:${offset + index}`).toString('base64')
       }));
 
       return {
         edges,
         pageInfo: {
-          hasNextPage: (pagination?.offset || 0) + actors.length < actors.length, // All actors returned in single page
-          hasPreviousPage: (pagination?.offset || 0) > 0,
+          hasNextPage: offset + paginatedActors.length < actors.length,
+          hasPreviousPage: offset > 0,
           startCursor: edges.length > 0 ? edges[0].cursor : null,
           endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null
         },
@@ -419,33 +442,28 @@ export const resolvers = {
     materials: async (_: any, args: any, context: GraphQLContext) => {
       const { filter, pagination } = args;
       try {
-        const response = await context.automationBridge.sendAutomationRequest(
-          'list_materials',
-          {
-            filter: filter || {},
-            pagination: pagination || { offset: 0, limit: 50 }
-          },
-          { timeoutMs: 30000 }
+        const materialFilter = { ...filter, class: 'MaterialInterface' };
+        const { assets, totalCount } = await listAssets(
+          context.automationBridge,
+          materialFilter,
+          pagination
         );
 
-        const materials = response.success && response.result
-          ? (response.result as any).materials || []
-          : [];
-
-        const edges = materials.map((material: any, index: number) => ({
-          node: material,
-          cursor: Buffer.from(`${material.path}:${index}`).toString('base64')
+        const offset = pagination?.offset ?? 0;
+        const edges = assets.map((material, index) => ({
+          node: material, // Material type in schema matches Asset mostly
+          cursor: Buffer.from(`${material.path}:${offset + index}`).toString('base64')
         }));
 
         return {
           edges,
           pageInfo: {
-            hasNextPage: (pagination?.offset || 0) + materials.length < (response.result as any)?.totalCount || 0,
+            hasNextPage: (pagination?.offset || 0) + assets.length < totalCount,
             hasPreviousPage: (pagination?.offset || 0) > 0,
             startCursor: edges.length > 0 ? edges[0].cursor : null,
             endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null
           },
-          totalCount: materials.length
+          totalCount
         };
       } catch (error) {
         console.error('Failed to list materials:', error);
@@ -465,33 +483,28 @@ export const resolvers = {
     sequences: async (_: any, args: any, context: GraphQLContext) => {
       const { filter, pagination } = args;
       try {
-        const response = await context.automationBridge.sendAutomationRequest(
-          'list_sequences',
-          {
-            filter: filter || {},
-            pagination: pagination || { offset: 0, limit: 50 }
-          },
-          { timeoutMs: 30000 }
+        const sequenceFilter = { ...filter, class: 'LevelSequence' };
+        const { assets, totalCount } = await listAssets(
+          context.automationBridge,
+          sequenceFilter,
+          pagination
         );
 
-        const sequences = response.success && response.result
-          ? (response.result as any).sequences || []
-          : [];
-
-        const edges = sequences.map((sequence: any, index: number) => ({
+        const offset = pagination?.offset ?? 0;
+        const edges = assets.map((sequence, index) => ({
           node: sequence,
-          cursor: Buffer.from(`${sequence.path}:${index}`).toString('base64')
+          cursor: Buffer.from(`${sequence.path}:${offset + index}`).toString('base64')
         }));
 
         return {
           edges,
           pageInfo: {
-            hasNextPage: (pagination?.offset || 0) + sequences.length < (response.result as any)?.totalCount || 0,
+            hasNextPage: (pagination?.offset || 0) + assets.length < totalCount,
             hasPreviousPage: (pagination?.offset || 0) > 0,
             startCursor: edges.length > 0 ? edges[0].cursor : null,
             endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null
           },
-          totalCount: sequences.length
+          totalCount
         };
       } catch (error) {
         console.error('Failed to list sequences:', error);
@@ -534,13 +547,14 @@ export const resolvers = {
         // For GraphQL we might need to fetch details for each if fields are requested, 
         // but for list we return the assets cast as NiagaraSystem.
 
+        const offset = pagination?.offset ?? 0;
         const edges = assets.map((asset, index) => ({
           node: {
             ...asset,
             emitters: [], // Placeholder, would require fetch details
             parameters: [] // Placeholder
           },
-          cursor: Buffer.from(`${asset.path}:${index}`).toString('base64')
+          cursor: Buffer.from(`${asset.path}:${offset + index}`).toString('base64')
         }));
 
         return {

@@ -68,6 +68,15 @@ public:
     UControlRigBlueprint* CreateControlRigBlueprint(const FString& AssetName, const FString& PackagePath, USkeleton* TargetSkeleton, FString& OutError);
     #endif
 
+    // Automation Handler Delegate
+    using FAutomationHandler = TFunction<bool(const FString&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>)>;
+
+    /**
+     * Registers a handler for a specific automation action.
+     * This allows for O(1) dispatch of automation requests and runtime extensibility.
+     */
+    void RegisterHandler(const FString& Action, FAutomationHandler Handler);
+
 private:
     struct FAutomationRequestTelemetry
     {
@@ -160,6 +169,9 @@ private:
     void EmitAutomationTelemetrySummaryIfNeeded(double NowSeconds);
 
     // Action handlers (implemented in separate translation units)
+    TMap<FString, FAutomationHandler> AutomationHandlers;
+    void InitializeHandlers();
+
     /**
      * Handle lightweight, well-known editor function invocations sent from the
      * server. This action is intended as a native replacement for the
@@ -266,6 +278,7 @@ private:
     bool HandleAddFoliageInstances(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     // SCS Blueprint authoring handler
     bool HandleSCSAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
     // Additional consolidated tool handlers
     bool HandleSystemControlAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     bool HandleConsoleCommandAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
@@ -278,6 +291,8 @@ private:
     bool HandleBehaviorTreeAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     bool HandleWorldPartitionAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     bool HandleRenderAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleListBlueprints(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
 
     // 2. Execution & Build / Test Pipeline
     bool HandlePipelineAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);

@@ -58,17 +58,6 @@ export interface IAssetTools {
     generateLODs(params: { assetPath: string; lodCount: number; reductionSettings?: Record<string, unknown> }): Promise<any>;
 }
 
-export interface IEditorTools {
-    playInEditor(): Promise<any>;
-    stopPlayInEditor(): Promise<any>;
-    pausePlayInEditor(): Promise<any>;
-    takeScreenshot(filename?: string): Promise<any>;
-}
-
-export interface ILevelTools {
-    loadLevel(params: { levelPath: string; streaming?: boolean }): Promise<any>;
-}
-
 export interface ISequenceTools {
     create(params: { name: string; path?: string; timeoutMs?: number }): Promise<any>;
     open(params: { path: string }): Promise<any>;
@@ -168,27 +157,6 @@ export interface IEditorTools {
     executeConsoleCommand(command: string): Promise<any>;
 }
 
-export interface ITools {
-    actorTools: IActorTools;
-    assetTools: IAssetTools;
-    blueprintTools: IBlueprintTools;
-    editorTools: IEditorTools;
-    levelTools: ILevelTools;
-    sequenceTools: ISequenceTools;
-    assetResources: IAssetResources;
-    landscapeTools: ILandscapeTools;
-    foliageTools: IFoliageTools;
-    environmentTools: IEnvironmentTools;
-    systemTools: any;
-    uiTools: any;
-    introspectionTools: any;
-    audioTools: any;
-    physicsTools: any;
-    animationTools: any;
-    automationBridge?: AutomationBridge;
-    [key: string]: any;
-}
-
 export interface IEnvironmentTools {
     setTimeOfDay(hour: unknown): Promise<any>;
     setSunIntensity(intensity: unknown): Promise<any>;
@@ -224,4 +192,35 @@ export interface IFoliageTools {
     updateFoliageInstances(params: { foliageType: string; updateTransforms?: boolean; updateMesh?: boolean; newMeshPath?: string }): Promise<any>;
     createFoliageSpawner(params: { name: string; spawnArea: 'Landscape' | 'StaticMesh' | 'BSP' | 'Foliage' | 'All'; excludeAreas?: Array<[number, number, number, number]> }): Promise<any>;
     optimizeFoliage(params: { mergeInstances?: boolean; generateClusters?: boolean; clusterSize?: number; reduceDrawCalls?: boolean }): Promise<any>;
+}
+
+export interface ITools {
+    actorTools: IActorTools;
+    assetTools: IAssetTools;
+    blueprintTools: IBlueprintTools;
+    editorTools: IEditorTools;
+    levelTools: ILevelTools;
+    sequenceTools: ISequenceTools;
+    assetResources: IAssetResources;
+    landscapeTools: ILandscapeTools;
+    foliageTools: IFoliageTools;
+    environmentTools: IEnvironmentTools;
+    
+    // Added newly required tools to remove 'any' casting
+    materialTools: any;
+    niagaraTools: any;
+    animationTools: any;
+    physicsTools: any;
+    lightingTools: any;
+    debugTools: any;
+    performanceTools: any;
+    audioTools: any;
+    uiTools: any;
+    introspectionTools: any;
+    visualTools?: any; // Optional as it's being removed
+    engineTools: any;
+    systemTools: any;
+
+    automationBridge?: AutomationBridge;
+    [key: string]: any;
 }

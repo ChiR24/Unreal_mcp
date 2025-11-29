@@ -9,10 +9,24 @@ import type { AutomationBridge } from '../automation-bridge.js';
  */
 
 export const typeDefs = /* GraphQL */ `
-  # Custom scalars for Unreal types
-  scalar Vector
-  scalar Rotator
-  scalar Transform
+  # Custom types for Unreal math types
+  type Vector {
+    x: Float!
+    y: Float!
+    z: Float!
+  }
+
+  type Rotator {
+    pitch: Float!
+    yaw: Float!
+    roll: Float!
+  }
+
+  type Transform {
+    location: Vector!
+    rotation: Rotator!
+    scale: Vector!
+  }
 
   # Asset-related types
   type Asset {
@@ -411,7 +425,7 @@ export function createGraphQLSchema(
       if (obj.name && obj.path && obj.class) {
         return 'Asset';
       }
-      if (obj.name && obj.class && obj.location) {
+      if (obj.name && obj.class && !obj.path) {
         return 'Actor';
       }
       if (obj.name && obj.path && obj.variables) {
@@ -434,9 +448,6 @@ export function createGraphQLSchema(
   // Merge scalar resolvers with base resolvers
   const mergedResolvers = {
     ...baseResolvers,
-    Vector: scalarResolvers.Vector,
-    Rotator: scalarResolvers.Rotator,
-    Transform: scalarResolvers.Transform,
     JSON: scalarResolvers.JSON,
     SearchResult
   };

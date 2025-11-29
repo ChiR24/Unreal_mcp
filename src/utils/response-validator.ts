@@ -85,7 +85,7 @@ export class ResponseValidator {
     this.ajv = new AjvCtor({
       allErrors: true,
       verbose: true,
-      strict: false // Allow additional properties for flexibility
+      strict: true // Enforce strict schema validation
     });
   }
 

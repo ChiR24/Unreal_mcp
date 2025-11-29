@@ -6,6 +6,8 @@
  */
 
 import { createServer } from 'http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { GraphQLServer } from '../dist/graphql/server.js';
 import { UnrealBridge } from '../dist/unreal-bridge.js';
 import { AutomationBridge } from '../dist/automation-bridge.js';
@@ -14,15 +16,29 @@ import { AutomationBridge } from '../dist/automation-bridge.js';
 class TestAutomationBridge {
   constructor() {
     this.handlers = new Map();
+    this.connected = false;
   }
 
   on(event, handler) {
     this.handlers.set(event, handler);
   }
 
+  off(event, handler) {
+    const existing = this.handlers.get(event);
+    if (!existing) return;
+    if (!handler || existing === handler) {
+      this.handlers.delete(event);
+    }
+  }
+
+  isConnected() {
+    return this.connected;
+  }
+
   start() {
     // Simulate connection
     setTimeout(() => {
+      this.connected = true;
       const handler = this.handlers.get('connected');
       if (handler) {
         handler({ metadata: {}, port: 8090, protocol: 'mcp-automation' });
@@ -290,7 +306,15 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+const thisFilePath = fileURLToPath(import.meta.url);
+const isMainModule = (() => {
+  const argvPath = process.argv[1];
+  if (!argvPath) return false;
+  const resolvedArgvPath = path.resolve(argvPath);
+  return thisFilePath === resolvedArgvPath;
+})();
+
+if (isMainModule) {
   testGraphQLServer().catch(error => {
     log.error('Test failed:', error);
     process.exit(1);

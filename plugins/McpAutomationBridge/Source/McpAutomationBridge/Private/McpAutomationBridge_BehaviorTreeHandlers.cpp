@@ -8,9 +8,15 @@
 #include "BehaviorTreeGraphNode.h"
 #include "BehaviorTreeGraphNode_Composite.h"
 #include "BehaviorTreeGraphNode_Task.h"
+#include "BehaviorTreeGraphNode_Root.h"
 #include "BehaviorTree/Composites/BTComposite_Sequence.h"
 #include "BehaviorTree/Composites/BTComposite_Selector.h"
+#include "BehaviorTree/Composites/BTComposite_SimpleParallel.h"
 #include "BehaviorTree/Tasks/BTTask_Wait.h"
+#include "BehaviorTree/Tasks/BTTask_MoveTo.h"
+#include "BehaviorTree/Tasks/BTTask_RotateToFaceBBEntry.h"
+#include "BehaviorTree/Tasks/BTTask_RunBehavior.h"
+#include "BehaviorTree/Tasks/BTTask_FinishWithResult.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphSchema.h"
 #endif
@@ -77,12 +83,65 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(const FString& Requ
             NodeClass = UBehaviorTreeGraphNode_Composite::StaticClass();
             NodeInstanceClass = UBTComposite_Selector::StaticClass();
         }
+        else if (NodeType == TEXT("SimpleParallel"))
+        {
+            NodeClass = UBehaviorTreeGraphNode_Composite::StaticClass();
+            NodeInstanceClass = UBTComposite_SimpleParallel::StaticClass();
+        }
         else if (NodeType == TEXT("Wait"))
         {
             NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
             NodeInstanceClass = UBTTask_Wait::StaticClass();
         }
-        // Add more types...
+        else if (NodeType == TEXT("MoveTo"))
+        {
+            NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+            NodeInstanceClass = UBTTask_MoveTo::StaticClass();
+        }
+        else if (NodeType == TEXT("RotateTo"))
+        {
+             NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+             NodeInstanceClass = UBTTask_RotateToFaceBBEntry::StaticClass();
+        }
+        else if (NodeType == TEXT("RunBehavior"))
+        {
+             NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+             NodeInstanceClass = UBTTask_RunBehavior::StaticClass();
+        }
+        else if (NodeType == TEXT("Fail"))
+        {
+             NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+             NodeInstanceClass = UBTTask_FinishWithResult::StaticClass();
+        }
+        else if (NodeType == TEXT("Succeed"))
+        {
+             // Succeed is a FinishWithResult task configured to success
+             NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+             NodeInstanceClass = UBTTask_FinishWithResult::StaticClass();
+        }
+        else if (NodeType == TEXT("Root"))
+        {
+             NodeClass = UBehaviorTreeGraphNode_Root::StaticClass();
+             // Root doesn't have an instance class in the same way
+        }
+        else
+        {
+             // Try to resolve as a class path
+             UClass* Resolved = ResolveClassByName(NodeType);
+             if (Resolved)
+             {
+                 if (Resolved->IsChildOf(UBTCompositeNode::StaticClass()))
+                 {
+                     NodeClass = UBehaviorTreeGraphNode_Composite::StaticClass();
+                     NodeInstanceClass = Resolved;
+                 }
+                 else if (Resolved->IsChildOf(UBTTaskNode::StaticClass()))
+                 {
+                     NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+                     NodeInstanceClass = Resolved;
+                 }
+             }
+        }
 
         if (NodeClass)
         {
@@ -93,18 +152,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(const FString& Requ
                 NewNode->NodePosX = X;
                 NewNode->NodePosY = Y;
                 
-                if (NodeInstanceClass)
-                {
-                    if (UBehaviorTreeGraphNode_Composite* CompNode = Cast<UBehaviorTreeGraphNode_Composite>(NewNode))
-                    {
-                        // CompNode->ClassData.NodeClass = NodeInstanceClass; // NodeClass not accessible directly
-                    }
-                    else if (UBehaviorTreeGraphNode_Task* TaskNode = Cast<UBehaviorTreeGraphNode_Task>(NewNode))
-                    {
-                        // TaskNode->ClassData.NodeClass = NodeInstanceClass; // NodeClass not accessible directly
-                    }
-                }
-
                 BTGraph->AddNode(NewNode, true, false);
                 
                 // Initialize the node instance
@@ -239,10 +286,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(const FString& Requ
     {
         FString NodeId;
         Payload->TryGetStringField(TEXT("nodeId"), NodeId);
-        // Simplified: Only supporting node name/comment for now
-        FString Comment;
-        Payload->TryGetStringField(TEXT("comment"), Comment);
-
+        
         UEdGraphNode* TargetNode = nullptr;
         for (UEdGraphNode* Node : BTGraph->Nodes)
         {
@@ -255,7 +299,82 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(const FString& Requ
 
         if (TargetNode)
         {
-            TargetNode->NodeComment = Comment;
+            bool bModified = false;
+            FString Comment;
+            if (Payload->TryGetStringField(TEXT("comment"), Comment))
+            {
+                TargetNode->NodeComment = Comment;
+                bModified = true;
+            }
+
+            // Try to set properties on the underlying NodeInstance
+            UBehaviorTreeGraphNode* BTNode = Cast<UBehaviorTreeGraphNode>(TargetNode);
+            const TSharedPtr<FJsonObject>* Props = nullptr;
+            if (BTNode && BTNode->NodeInstance && Payload->TryGetObjectField(TEXT("properties"), Props))
+            {
+                for (const auto& Pair : (*Props)->Values)
+                {
+                    FProperty* Prop = BTNode->NodeInstance->GetClass()->FindPropertyByName(*Pair.Key);
+                    if (Prop)
+                    {
+                        if (FFloatProperty* FloatProp = CastField<FFloatProperty>(Prop))
+                        {
+                            if (Pair.Value->Type == EJson::Number)
+                            {
+                                FloatProp->SetPropertyValue_InContainer(BTNode->NodeInstance, (float)Pair.Value->AsNumber());
+                                bModified = true;
+                            }
+                        }
+                        else if (FDoubleProperty* DoubleProp = CastField<FDoubleProperty>(Prop))
+                        {
+                            if (Pair.Value->Type == EJson::Number)
+                            {
+                                DoubleProp->SetPropertyValue_InContainer(BTNode->NodeInstance, Pair.Value->AsNumber());
+                                bModified = true;
+                            }
+                        }
+                        else if (FIntProperty* IntProp = CastField<FIntProperty>(Prop))
+                        {
+                            if (Pair.Value->Type == EJson::Number)
+                            {
+                                IntProp->SetPropertyValue_InContainer(BTNode->NodeInstance, (int32)Pair.Value->AsNumber());
+                                bModified = true;
+                            }
+                        }
+                        else if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Prop))
+                        {
+                            if (Pair.Value->Type == EJson::Boolean)
+                            {
+                                BoolProp->SetPropertyValue_InContainer(BTNode->NodeInstance, Pair.Value->AsBool());
+                                bModified = true;
+                            }
+                        }
+                        else if (FStrProperty* StrProp = CastField<FStrProperty>(Prop))
+                        {
+                            if (Pair.Value->Type == EJson::String)
+                            {
+                                StrProp->SetPropertyValue_InContainer(BTNode->NodeInstance, Pair.Value->AsString());
+                                bModified = true;
+                            }
+                        }
+                        else if (FNameProperty* NameProp = CastField<FNameProperty>(Prop))
+                        {
+                            if (Pair.Value->Type == EJson::String)
+                            {
+                                NameProp->SetPropertyValue_InContainer(BTNode->NodeInstance, FName(*Pair.Value->AsString()));
+                                bModified = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (bModified)
+            {
+                BTGraph->NotifyGraphChanged();
+                BT->MarkPackageDirty();
+            }
+
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node properties updated."));
         }
         else

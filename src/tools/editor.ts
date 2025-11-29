@@ -1,6 +1,7 @@
 import { BaseTool } from './base-tool.js';
 import { IEditorTools } from '../types/tool-interfaces.js';
 import { toVec3Object, toRotObject } from '../utils/normalize.js';
+import { DEFAULT_SCREENSHOT_RESOLUTION } from '../constants.js';
 
 export class EditorTools extends BaseTool implements IEditorTools {
   private cameraBookmarks = new Map<string, { location: [number, number, number]; rotation: [number, number, number]; savedAt: number }>();
@@ -220,7 +221,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
       }
 
       const sanitizedFilename = filename ? filename.replace(/[<>:*?"|]/g, '_') : `Screenshot_${Date.now()}`;
-      const resString = resolution || '1920x1080';
+      const resString = resolution || DEFAULT_SCREENSHOT_RESOLUTION;
       const command = filename ? `highresshot ${resString} filename="${sanitizedFilename}"` : 'shot';
 
       await this.bridge.executeConsoleCommand(command);

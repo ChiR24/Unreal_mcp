@@ -52,9 +52,12 @@ export class AudioTools {
   async playSoundAtLocation(params: {
     soundPath: string;
     location: [number, number, number];
+    rotation?: [number, number, number];
     volume?: number;
     pitch?: number;
     startTime?: number;
+    attenuationPath?: string;
+    concurrencyPath?: string;
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Audio operations require plugin support.');
@@ -64,9 +67,12 @@ export class AudioTools {
       const response = await this.automationBridge.sendAutomationRequest('play_sound_at_location', {
         soundPath: params.soundPath,
         location: params.location,
+        rotation: params.rotation ?? [0, 0, 0],
         volume: params.volume ?? 1.0,
         pitch: params.pitch ?? 1.0,
-        startTime: params.startTime ?? 0.0
+        startTime: params.startTime ?? 0.0,
+        attenuationPath: params.attenuationPath,
+        concurrencyPath: params.concurrencyPath
       }, {
         timeoutMs: 30000
       });
@@ -300,12 +306,13 @@ export class AudioTools {
 
   // Create ambient sound (requires C++ plugin)
   async createAmbientSound(_params: {
-    name: string;
-    location: [number, number, number];
     soundPath: string;
+    location: [number, number, number];
     volume?: number;
-    radius?: number;
-    autoPlay?: boolean;
+    pitch?: number;
+    startTime?: number;
+    attenuationPath?: string;
+    concurrencyPath?: string;
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Creating ambient sounds requires plugin support.');
@@ -313,16 +320,17 @@ export class AudioTools {
 
     try {
       const response = await this.automationBridge.sendAutomationRequest('create_ambient_sound', {
-        name: _params.name,
-        location: _params.location,
         soundPath: _params.soundPath,
-        volume: _params.volume,
-        radius: _params.radius,
-        autoPlay: _params.autoPlay ?? true
+        location: _params.location,
+        volume: _params.volume ?? 1.0,
+        pitch: _params.pitch ?? 1.0,
+        startTime: _params.startTime ?? 0.0,
+        attenuationPath: _params.attenuationPath,
+        concurrencyPath: _params.concurrencyPath
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Ambient sound created' }
+        ? { success: true, message: response.message || 'Ambient sound created', componentName: (response.data as any)?.componentName }
         : { success: false, error: response.error || response.message || 'Failed to create ambient sound' };
     } catch (error) {
       return { success: false, error: `Failed to create ambient sound: ${error instanceof Error ? error.message : String(error)}` };

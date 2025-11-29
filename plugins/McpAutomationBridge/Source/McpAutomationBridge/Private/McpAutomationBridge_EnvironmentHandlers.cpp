@@ -84,6 +84,19 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(const FString& 
         FoliagePayload->SetBoolField(TEXT("removeAll"), bRemoveAll);
         return HandleRemoveFoliage(RequestId, TEXT("remove_foliage"), FoliagePayload, RequestingSocket);
     }
+    // Dispatch landscape operations
+    else if (LowerSub == TEXT("paint_landscape") || LowerSub == TEXT("paint_landscape_layer"))
+    {
+        return HandlePaintLandscapeLayer(RequestId, TEXT("paint_landscape_layer"), Payload, RequestingSocket);
+    }
+    else if (LowerSub == TEXT("sculpt_landscape"))
+    {
+        return HandleSculptLandscape(RequestId, TEXT("sculpt_landscape"), Payload, RequestingSocket);
+    }
+    else if (LowerSub == TEXT("modify_heightmap"))
+    {
+        return HandleModifyHeightmap(RequestId, TEXT("modify_heightmap"), Payload, RequestingSocket);
+    }
 
 #if WITH_EDITOR
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -773,17 +786,47 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(const FString& Re
         return true;
     }
 
-    // Block dangerous commands
+    // Block dangerous commands (Defense-in-Depth)
     FString LowerCommand = Command.ToLower();
-    TArray<FString> BlockedCommands = { TEXT("quit"), TEXT("exit"), TEXT("crash"), TEXT("shutdown"), TEXT("restart") };
     
-    for (const FString& Blocked : BlockedCommands)
+    // 1. Explicit command blocking
+    TArray<FString> ExplicitBlockedCommands = { 
+        TEXT("quit"), TEXT("exit"), TEXT("crash"), TEXT("shutdown"), TEXT("restart"), 
+        TEXT("reboot"), TEXT("debug exec")
+    };
+    
+    for (const FString& Blocked : ExplicitBlockedCommands)
     {
-        if (LowerCommand.Contains(Blocked))
+        if (LowerCommand.Equals(Blocked) || LowerCommand.StartsWith(Blocked + TEXT(" ")))
         {
-            SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Command '%s' is blocked for safety"), *Command), nullptr, TEXT("COMMAND_BLOCKED"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Command '%s' is explicitly blocked for safety"), *Command), nullptr, TEXT("COMMAND_BLOCKED"));
             return true;
         }
+    }
+
+    // 2. Token-based blocking (preventing system commands, file manipulation, and python hacks)
+    TArray<FString> ForbiddenTokens = {
+        TEXT("rm "), TEXT("rm-"), TEXT("del "), TEXT("format "), 
+        TEXT("rmdir"), TEXT("mklink"), TEXT("copy "), TEXT("move "), TEXT("start \""), TEXT("system("),
+        TEXT("import os"), TEXT("import subprocess"), TEXT("subprocess."), TEXT("os.system"),
+        TEXT("exec("), TEXT("eval("), TEXT("__import__"), TEXT("import sys"), TEXT("import importlib"),
+        TEXT("with open"), TEXT("open(")
+    };
+
+    for (const FString& Token : ForbiddenTokens)
+    {
+        if (LowerCommand.Contains(Token))
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Command '%s' contains forbidden token '%s' and is blocked"), *Command, *Token), nullptr, TEXT("COMMAND_BLOCKED"));
+            return true;
+        }
+    }
+    
+    // 3. Block Chaining
+    if (LowerCommand.Contains(TEXT("&&")) || LowerCommand.Contains(TEXT("||")))
+    {
+         SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Command chaining is blocked for safety"), nullptr, TEXT("COMMAND_BLOCKED"));
+         return true;
     }
 
     // Execute the command
@@ -902,6 +945,14 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(const FString& RequestId
         {
             SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("set_property requires objectPath and propertyName parameters"), nullptr, TEXT("INVALID_ARGUMENT"));
             return true;
+        }
+
+        // Critical Property Protection
+        TArray<FString> ProtectedProperties = { TEXT("Class"), TEXT("Outer"), TEXT("Archetype"), TEXT("Linker"), TEXT("LinkerIndex") };
+        if (ProtectedProperties.Contains(PropertyName))
+        {
+             SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Modification of critical property '%s' is blocked"), *PropertyName), nullptr, TEXT("PROPERTY_BLOCKED"));
+             return true;
         }
 
         UObject* TargetObject = FindObject<UObject>(nullptr, *ObjectPath);

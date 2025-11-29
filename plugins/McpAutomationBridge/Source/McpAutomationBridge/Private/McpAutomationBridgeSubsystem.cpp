@@ -465,6 +465,9 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
         if (Settings->HeartbeatTimeoutSeconds > 0.0f) HeartbeatTimeoutSeconds = Settings->HeartbeatTimeoutSeconds;
     }
 
+    // Initialize the handler registry
+    InitializeHandlers();
+
     // Start the bridge services (ticker, sockets) on initialization
     StartBridge();
 }
@@ -992,6 +995,50 @@ void UMcpAutomationBridgeSubsystem::SendControlMessage(const TSharedPtr<FJsonObj
             UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Control message event=%s requestId=%s delivered to %d sockets (failed on %d)."), *Message->GetStringField(TEXT("event")), Message->HasField(TEXT("requestId")) ? *Message->GetStringField(TEXT("requestId")) : TEXT("n/a"), SentCount, FailedCount);
         }
     }
+}
+
+void UMcpAutomationBridgeSubsystem::RegisterHandler(const FString& Action, FAutomationHandler Handler)
+{
+    AutomationHandlers.Add(Action, Handler);
+}
+
+void UMcpAutomationBridgeSubsystem::InitializeHandlers()
+{
+    // Core & Properties
+    RegisterHandler(TEXT("execute_editor_function"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleExecuteEditorFunction(R, A, P, S); });
+    RegisterHandler(TEXT("set_object_property"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleSetObjectProperty(R, A, P, S); });
+    RegisterHandler(TEXT("get_object_property"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleGetObjectProperty(R, A, P, S); });
+
+    // Containers (Arrays, Maps, Sets)
+    RegisterHandler(TEXT("array_append"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleArrayAppend(R, A, P, S); });
+    RegisterHandler(TEXT("array_remove"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleArrayRemove(R, A, P, S); });
+    RegisterHandler(TEXT("array_insert"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleArrayInsert(R, A, P, S); });
+    RegisterHandler(TEXT("array_get_element"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleArrayGetElement(R, A, P, S); });
+    RegisterHandler(TEXT("array_set_element"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleArraySetElement(R, A, P, S); });
+    RegisterHandler(TEXT("array_clear"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleArrayClear(R, A, P, S); });
+    
+    RegisterHandler(TEXT("map_set_value"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleMapSetValue(R, A, P, S); });
+    RegisterHandler(TEXT("map_get_value"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleMapGetValue(R, A, P, S); });
+    RegisterHandler(TEXT("map_remove_key"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleMapRemoveKey(R, A, P, S); });
+    RegisterHandler(TEXT("map_has_key"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleMapHasKey(R, A, P, S); });
+    RegisterHandler(TEXT("map_get_keys"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleMapGetKeys(R, A, P, S); });
+    RegisterHandler(TEXT("map_clear"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleMapClear(R, A, P, S); });
+
+    RegisterHandler(TEXT("set_add"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleSetAdd(R, A, P, S); });
+    RegisterHandler(TEXT("set_remove"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleSetRemove(R, A, P, S); });
+    RegisterHandler(TEXT("set_contains"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleSetContains(R, A, P, S); });
+    RegisterHandler(TEXT("set_clear"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleSetClear(R, A, P, S); });
+
+    // Asset Dependency
+    RegisterHandler(TEXT("get_asset_references"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleGetAssetReferences(R, A, P, S); });
+    RegisterHandler(TEXT("get_asset_dependencies"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleGetAssetDependencies(R, A, P, S); });
+
+    // Tools & System
+    RegisterHandler(TEXT("console_command"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleConsoleCommandAction(R, A, P, S); });
+    RegisterHandler(TEXT("inspect"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleInspectAction(R, A, P, S); });
+    RegisterHandler(TEXT("system_control"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleSystemControlAction(R, A, P, S); });
+    RegisterHandler(TEXT("manage_blueprint_graph"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleBlueprintGraphAction(R, A, P, S); });
+    RegisterHandler(TEXT("list_blueprints"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleListBlueprints(R, A, P, S); });
 }
 
 // Drain and process any automation requests that were enqueued while the

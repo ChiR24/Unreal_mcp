@@ -24,6 +24,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - **Pipeline & Testing** - Run UBT, automated tests
 - **Observability** - Log streaming, gameplay debugger, insights, asset queries
 - **Console Commands** - Safe execution with dangerous command filtering
+- **GraphQL API** - Flexible data querying for assets, actors, and blueprints
 
 ### High-Performance WebAssembly
 - **5-8x faster JSON parsing** - WASM-accelerated property parsing
@@ -190,34 +191,28 @@ No additional engine configuration required. The MCP Automation Bridge plugin ha
 }
 ```
 
-## Available Tools (24)
+## Available Tools (12)
 
 | Tool | Description |
 |------|-------------|
-| `manage_asset` | List, create materials, import assets |
-| `control_actor` | Spawn, delete actors, apply physics |
-| `control_editor` | PIE control, camera, view modes |
-| `manage_level` | Load/save levels, lighting |
-| `animation_physics` | Animation blueprints, ragdolls, vehicle setup |
-| `create_effect` | Particles, Niagara, debug shapes |
-| `manage_blueprint` | Create blueprints, add components, edit defaults |
-| `build_environment` | Landscapes, terrain, foliage |
-| `system_control` | Profiling, quality, UI, screenshots |
-| `console_command` | Direct console command execution |
-| `manage_sequence` | Sequencer/cinematics |
-| `inspect` | Object introspection |
-| `manage_blueprint_graph` | Edit Blueprint nodes and pins |
-| `manage_niagara_graph` | Edit Niagara modules and parameters |
-| `manage_material_graph` | Edit Material expressions and connections |
-| `manage_behavior_tree` | Edit Behavior Tree nodes |
-| `manage_world_partition` | Load cells, manage data layers |
-| `manage_render` | Render targets, Nanite, Lumen |
-| `manage_pipeline` | Run UnrealBuildTool |
-| `manage_tests` | Run automated tests |
-| `manage_logs` | Subscribe to log stream |
-| `manage_debug` | Gameplay debugger control |
-| `manage_insights` | Profiling sessions |
-| `manage_ui` | Simulate input |
+| `manage_asset` | Assets, Materials, Render Targets, Behavior Trees |
+| `control_actor` | Spawn, delete, modify, physics |
+| `control_editor` | PIE, Camera, UI Input |
+| `manage_level` | Load/Save, Lighting, World Partition |
+| `animation_physics` | Animation BPs, Vehicles, Ragdolls |
+| `manage_effect` | Niagara, Particles, Debug Shapes |
+| `manage_blueprint` | Create, SCS, Graph Editing |
+| `build_environment` | Landscape, Foliage, Procedural |
+| `system_control` | Profiling, Quality, UBT, Tests, Logs, Debug, Insights |
+| `manage_sequence` | Sequencer/Cinematics |
+| `inspect` | Object Introspection |
+| `manage_audio` | Audio Assets & Components |
+
+## Documentation
+
+- [Handler Mappings](docs/handler-mapping.md) - TypeScript to C++ routing guide
+- [GraphQL API](docs/GraphQL-API.md) - Query and mutation reference
+- [Automation Progress](docs/native-automation-progress.md) - Implementation status
 
 ## Key Features
 
@@ -228,6 +223,7 @@ No additional engine configuration required. The MCP Automation Bridge plugin ha
 - **Command Safety** - Blocks dangerous console commands
 - **Input Flexibility** - Vectors/rotators accept object or array format
 - **Asset Caching** - 10-second TTL for improved performance
+- **GraphQL** - Specialized endpoint for complex queries
 
 ### Native C++ Architecture
 

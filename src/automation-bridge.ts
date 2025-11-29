@@ -118,6 +118,7 @@ type PendingRequest = {
   reject: (reason: Error) => void;
   timeout: NodeJS.Timeout;
   action: string;
+  payload: Record<string, unknown>;
   requestedAt: Date;
   // If waitForEvent is true the initial automation_response will be
   // stored when received and the pending request will remain open until
@@ -225,6 +226,7 @@ export class AutomationBridge extends EventEmitter {
   private heartbeatTimer?: NodeJS.Timeout;
   // Coalescing map for identical, idempotent requests (e.g. blueprint_exists)
   private readonly coalescedRequests = new Map<string, Promise<AutomationBridgeResponseMessage>>();
+  private requestQueue: Array<() => void> = [];
 
   constructor(options: AutomationBridgeOptions = {}) {
     super();
@@ -490,6 +492,14 @@ export class AutomationBridge extends EventEmitter {
     return sentCount > 0;
   }
 
+  private flushQueue(): void {
+    if (this.requestQueue.length === 0) return;
+    log.info(`Flushing ${this.requestQueue.length} queued automation requests`);
+    const queue = [...this.requestQueue];
+    this.requestQueue = [];
+    queue.forEach(fn => fn());
+  }
+
   /** Handles client connection to Unreal Engine plugin server. */
   private handleClientConnection(socket: WebSocket): void {
     let handshakeComplete = false;
@@ -516,10 +526,10 @@ export class AutomationBridge extends EventEmitter {
       let parsed: AutomationBridgeMessage;
       const text = typeof data === 'string' ? data : data.toString('utf8');
       try {
-        log.debug(`[AutomationBridge Client] Received message (binary=${isBinary}, length=${text.length}): ${text.substring(0, 200)}`);
+        log.debug(`[AutomationBridge Client] Received message (binary=${isBinary}, length=${text.length}): ${text.substring(0, 1000)}`);
         parsed = JSON.parse(text) as AutomationBridgeMessage;
       } catch (_error) {
-        log.error(`Received non-JSON automation message from server (binary=${isBinary}); closing connection. Data: ${text.substring(0, 500)}`, _error as any);
+        log.error(`Received non-JSON automation message from server (binary=${isBinary}); closing connection. Data: ${text.substring(0, 2000)}`, _error as any);
         socket.close(4003, 'Invalid JSON payload');
         this.lastHandshakeFailure = { reason: 'invalid-json', at: new Date() };
         this.emitAutomation('handshakeFailed', { reason: 'invalid-json', port: this.clientPort });
@@ -599,7 +609,7 @@ export class AutomationBridge extends EventEmitter {
         log.info(`Automation bridge client socket closed (code=${code}, reason=${reason})`);
         // Only reject pending requests if this was the last connection
         if (this.activeSockets.size === 0) {
-          this.rejectAllPending(new Error(`Automation bridge connection closed (${code}): ${reason || 'no reason'}`));
+          this.requeueAllPending(reason || 'Connection lost');
         }
       }
     });
@@ -634,6 +644,7 @@ export class AutomationBridge extends EventEmitter {
     // Set as primary socket if this is the first connection
     if (!this.primarySocket) {
       this.primarySocket = socket;
+      this.flushQueue();
     }
 
     // Handle WebSocket pong frames for heartbeat tracking
@@ -719,7 +730,7 @@ export class AutomationBridge extends EventEmitter {
 
     const pending = this.pendingRequests.get(requestId);
     if (!pending) {
-      log.debug(`No pending automation request found for requestId=${requestId}; pendingRequests=${this.pendingRequests.size}. Response payload truncated: ${JSON.stringify(response).substring(0, 1000)}`);
+      log.debug(`No pending automation request found for requestId=${requestId}; pendingRequests=${this.pendingRequests.size}. Response payload truncated: ${JSON.stringify(response).substring(0, 5000)}`);
       return;
     }
 
@@ -885,6 +896,29 @@ export class AutomationBridge extends EventEmitter {
     }
   }
 
+  private requeueAllPending(reason: string): void {
+    if (this.pendingRequests.size === 0) return;
+
+    log.info(`Re-queueing ${this.pendingRequests.size} pending requests due to disconnection: ${reason}`);
+
+    for (const [requestId, pending] of this.pendingRequests.entries()) {
+      // We keep the request in the map (so the Promise doesn't settle),
+      // but we push a task to the queue to re-transmit the request frame
+      // once a new connection is established.
+      
+      this.requestQueue.push(() => {
+        log.debug(`Retrying pending request ${requestId} (${pending.action})`);
+        const requestPayload: AutomationBridgeMessage = {
+          type: 'automation_request',
+          requestId,
+          action: pending.action,
+          payload: pending.payload
+        };
+        this.send(requestPayload);
+      });
+    }
+  }
+
   private generateRequestId(): string {
     this.requestCounter = (this.requestCounter + 1) % Number.MAX_SAFE_INTEGER;
     return `req-${Date.now().toString(36)}-${this.requestCounter.toString(36)}`;
@@ -909,6 +943,20 @@ export class AutomationBridge extends EventEmitter {
       defaultTimeout = Math.max(defaultTimeout, 300000); // 5 minutes
     }
     const timeoutMs = Math.max(1000, options.timeoutMs ?? defaultTimeout);
+
+    if (!this.isConnected()) {
+        // Queue the request if we are waiting for connection
+        return new Promise((resolve, reject) => {
+             const timer = setTimeout(() => {
+                 reject(new Error(`Automation request timed out waiting for connection (${timeoutMs}ms)`));
+             }, timeoutMs);
+
+             this.requestQueue.push(() => {
+                 clearTimeout(timer);
+                 this.sendAutomationRequest(action, payload, options).then(resolve).catch(reject);
+             });
+        });
+    }
 
     // Decide whether to wait for a completion signal for this action.
     // If the caller specified waitForEvent explicitly, honor it; otherwise
@@ -991,6 +1039,7 @@ export class AutomationBridge extends EventEmitter {
         reject,
         timeout,
         action,
+        payload, // Store payload for potential retry
         requestedAt: new Date(),
         waitForEvent: useWaitForEvent,
         eventTimeoutMs: waitEventTimeoutMs

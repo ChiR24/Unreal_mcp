@@ -1,14 +1,8 @@
 import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import type { AutomationBridge } from './automation-bridge.js';
-
-interface CommandQueueItem {
-  command: () => Promise<any>;
-  resolve: (value: any) => void;
-  reject: (reason?: any) => void;
-  priority: number;
-  retryCount?: number;
-}
+import { DEFAULT_AUTOMATION_HOST, DEFAULT_AUTOMATION_PORT } from './constants.js';
+import { UnrealCommandQueue } from './utils/unreal-command-queue.js';
 
 export class UnrealBridge {
   private log = new Logger('UnrealBridge');
@@ -19,62 +13,14 @@ export class UnrealBridge {
     disconnected: (info: any) => void;
     handshakeFailed: (info: any) => void;
   };
-  private commandProcessorInitialized = false;
+  private cacheCleanerInitialized = false;
 
   // Command queue for throttling
-  private commandQueue: CommandQueueItem[] = [];
-  private isProcessing = false;
-  private readonly MIN_COMMAND_DELAY = 100; // Increased to prevent console spam
-  private readonly MAX_COMMAND_DELAY = 500; // Maximum delay for heavy operations
-  private readonly STAT_COMMAND_DELAY = 300; // Special delay for stat commands to avoid warnings
-  private lastCommandTime = 0;
-  private lastStatCommandTime = 0; // Track stat commands separately
+  private commandQueue = new UnrealCommandQueue();
 
   // Console object cache to reduce FindConsoleObject warnings
   private consoleObjectCache = new Map<string, any>();
   private readonly CONSOLE_CACHE_TTL = 300000; // 5 minutes TTL for cached objects
-
-  // Unsafe viewmodes that can cause crashes or instability via visualizeBuffer
-  private readonly UNSAFE_VIEWMODES = [
-    'BaseColor', 'WorldNormal', 'Metallic', 'Specular',
-    'Roughness',
-    'SubsurfaceColor',
-    'Opacity',
-    'LightComplexity', 'LightmapDensity',
-    'StationaryLightOverlap', 'CollisionPawn', 'CollisionVisibility'
-  ];
-  private readonly HARD_BLOCKED_VIEWMODES = new Set([
-    'BaseColor', 'WorldNormal', 'Metallic', 'Specular', 'Roughness', 'SubsurfaceColor', 'Opacity'
-  ]);
-  private readonly VIEWMODE_ALIASES = new Map<string, string>([
-    ['lit', 'Lit'],
-    ['unlit', 'Unlit'],
-    ['wireframe', 'Wireframe'],
-    ['brushwireframe', 'BrushWireframe'],
-    ['brush_wireframe', 'BrushWireframe'],
-    ['detaillighting', 'DetailLighting'],
-    ['detail_lighting', 'DetailLighting'],
-    ['lightingonly', 'LightingOnly'],
-    ['lighting_only', 'LightingOnly'],
-    ['lightonly', 'LightingOnly'],
-    ['light_only', 'LightingOnly'],
-    ['lightcomplexity', 'LightComplexity'],
-    ['light_complexity', 'LightComplexity'],
-    ['shadercomplexity', 'ShaderComplexity'],
-    ['shader_complexity', 'ShaderComplexity'],
-    ['lightmapdensity', 'LightmapDensity'],
-    ['lightmap_density', 'LightmapDensity'],
-    ['stationarylightoverlap', 'StationaryLightOverlap'],
-    ['stationary_light_overlap', 'StationaryLightOverlap'],
-    ['reflectionoverride', 'ReflectionOverride'],
-    ['reflection_override', 'ReflectionOverride'],
-    ['texeldensity', 'TexelDensity'],
-    ['texel_density', 'TexelDensity'],
-    ['vertexcolor', 'VertexColor'],
-    ['vertex_color', 'VertexColor'],
-    ['litdetail', 'DetailLighting'],
-    ['lit_only', 'LightingOnly']
-  ]);
 
   get isConnected() { return this.connected; }
 
@@ -96,7 +42,7 @@ export class UnrealBridge {
     const onConnected = (info: any) => {
       this.connected = true;
       this.log.debug('Automation bridge connected', info);
-      this.startCommandProcessor();
+      this.startCacheCleaner();
     };
 
     const onDisconnected = (info: any) => {
@@ -120,7 +66,7 @@ export class UnrealBridge {
     };
 
     if (automationBridge.isConnected()) {
-      this.startCommandProcessor();
+      this.startCacheCleaner();
     }
 
     this.connected = automationBridge.isConnected();
@@ -180,15 +126,15 @@ export class UnrealBridge {
         initialDelay: retryDelayMs,
         maxDelay: 10000,
         backoffMultiplier: 1.5,
-        shouldRetry: (error) => {
+        shouldRetry: (error: any) => {
           const msg = (error as Error)?.message?.toLowerCase() || '';
           return msg.includes('timeout') || msg.includes('connect') || msg.includes('automation');
         }
       }
-    ).catch((err) => {
+    ).catch((err: any) => {
       this.log.warn(`Automation bridge connection failed after ${maxAttempts} attempts:`, err.message);
       this.log.warn('⚠️  Ensure Unreal Editor is running with MCP Automation Bridge plugin enabled');
-      this.log.warn('⚠️  Plugin should listen on ws://127.0.0.1:8091 for MCP server connections');
+      this.log.warn(`⚠️  Plugin should listen on ws://${DEFAULT_AUTOMATION_HOST}:${DEFAULT_AUTOMATION_PORT} for MCP server connections`);
     });
 
     try {
@@ -558,68 +504,6 @@ export class UnrealBridge {
     }
   }
 
-  summarizeConsoleCommand(command: string, response: any) {
-    const trimmedCommand = command.trim();
-    const logLines: string[] = [];
-
-    if (Array.isArray(response?.LogOutput)) {
-      for (const entry of response.LogOutput as any[]) {
-        if (entry === null || entry === undefined) continue;
-        if (typeof entry === 'string') {
-          logLines.push(entry);
-        } else if (typeof entry.Output === 'string') {
-          logLines.push(entry.Output);
-        }
-      }
-    }
-
-    if (Array.isArray(response?.logLines)) {
-      for (const entry of response.logLines as any[]) {
-        if (typeof entry === 'string' && entry.trim().length > 0) {
-          logLines.push(entry);
-        }
-      }
-    }
-
-    if (Array.isArray(response?.logs)) {
-      for (const entry of response.logs as any[]) {
-        if (typeof entry === 'string' && entry.trim().length > 0) {
-          logLines.push(entry);
-        }
-      }
-    }
-
-    let output = logLines.join('\n').trim();
-    if (!output) {
-      if (typeof response === 'string') {
-        output = response.trim();
-      } else if (response && typeof response === 'object') {
-        if (typeof response.output === 'string') {
-          output = response.output.trim();
-        } else if (typeof response.Output === 'string') {
-          output = response.Output.trim();
-        } else if ('result' in response && response.result !== undefined) {
-          output = String(response.result).trim();
-        } else if ('ReturnValue' in response && typeof response.ReturnValue === 'string') {
-          output = response.ReturnValue.trim();
-        }
-      }
-    }
-
-    const returnValue = response && typeof response === 'object'
-      ? ((response as any).ReturnValue ?? (response as any).returnValue ?? ((response as any).result && (response as any).result.ReturnValue))
-      : undefined;
-
-    return {
-      command: trimmedCommand,
-      output,
-      logLines,
-      returnValue,
-      transport: typeof response?.transport === 'string' ? response.transport : undefined,
-      raw: response
-    };
-  }
-
   async executeConsoleCommands(
     commands: Iterable<string | { command: string; priority?: number }>,
     options: { continueOnError?: boolean; delayMs?: number } = {}
@@ -650,11 +534,6 @@ export class UnrealBridge {
     }
 
     return results;
-  }
-
-  // Graceful shutdown
-  async disconnect(): Promise<void> {
-    this.connected = false;
   }
 
   async executeEditorFunction(
@@ -742,120 +621,6 @@ export class UnrealBridge {
   }
 
   /**
-   * Check whether an asset exists using plugin-native methods only
-   */
-  async assetExists(assetPath: string): Promise<boolean> {
-    if (!assetPath || typeof assetPath !== 'string') return false;
-
-    try {
-      const result = await this.executeEditorFunction('ASSET_EXISTS', { path: assetPath });
-      if (result && typeof result === 'object') {
-        if (typeof result.exists === 'boolean') return result.exists;
-        if (typeof (result as any).result === 'object' && typeof (result as any).result.exists === 'boolean') {
-          return (result as any).result.exists;
-        }
-      }
-      if (typeof result === 'boolean') return result;
-    } catch (err) {
-      this.log.debug('assetExists plugin call failed:', (err as Error)?.message ?? err);
-    }
-    return false;
-  }
-
-  /**
-   * SOLUTION 2: Safe ViewMode Switching
-   * Prevent crashes by validating and safely switching viewmodes
-   */
-  async setSafeViewMode(mode: string): Promise<any> {
-    const acceptedModes = Array.from(new Set(this.VIEWMODE_ALIASES.values())).sort();
-
-    if (typeof mode !== 'string') {
-      return {
-        success: false,
-        error: 'View mode must be provided as a string',
-        acceptedModes
-      };
-    }
-
-    const key = mode.trim().toLowerCase().replace(/[\s_-]+/g, '');
-    if (!key) {
-      return {
-        success: false,
-        error: 'View mode cannot be empty',
-        acceptedModes
-      };
-    }
-
-    const targetMode = this.VIEWMODE_ALIASES.get(key);
-    if (!targetMode) {
-      return {
-        success: false,
-        error: `Unknown view mode '${mode}'`,
-        acceptedModes
-      };
-    }
-
-    if (this.HARD_BLOCKED_VIEWMODES.has(targetMode)) {
-      this.log.warn(`Viewmode '${targetMode}' is blocked for safety. Using alternative.`);
-      const alternative = this.getSafeAlternative(targetMode);
-      const altCommand = `viewmode ${alternative}`;
-      const altResult = await this.executeConsoleCommand(altCommand);
-      const altSummary = this.summarizeConsoleCommand(altCommand, altResult);
-      return {
-        ...altSummary,
-        success: false,
-        requestedMode: targetMode,
-        viewMode: alternative,
-        message: `View mode '${targetMode}' is unsafe in remote sessions. Switched to '${alternative}'.`,
-        alternative
-      };
-    }
-
-    const command = `viewmode ${targetMode}`;
-    const rawResult = await this.executeConsoleCommand(command);
-    const summary = this.summarizeConsoleCommand(command, rawResult);
-    const response: any = {
-      ...summary,
-      success: summary.returnValue !== false,
-      requestedMode: targetMode,
-      viewMode: targetMode,
-      message: `View mode set to ${targetMode}`
-    };
-
-    if (this.UNSAFE_VIEWMODES.includes(targetMode)) {
-      response.warning = `View mode '${targetMode}' may be unstable on some engine versions.`;
-    }
-
-    if (summary.output && /unknown|invalid/i.test(summary.output)) {
-      response.success = false;
-      response.error = summary.output;
-    }
-
-    return response;
-  }
-
-  /**
-   * Get safe alternative for unsafe viewmodes
-   */
-  private getSafeAlternative(unsafeMode: string): string {
-    const alternatives: Record<string, string> = {
-      'BaseColor': 'Unlit',
-      'WorldNormal': 'Lit',
-      'Metallic': 'Lit',
-      'Specular': 'Lit',
-      'Roughness': 'Lit',
-      'SubsurfaceColor': 'Lit',
-      'Opacity': 'Lit',
-      'LightComplexity': 'LightingOnly',
-      'ShaderComplexity': 'Wireframe',
-      'CollisionPawn': 'Wireframe',
-      'CollisionVisibility': 'Wireframe'
-    };
-
-    return alternatives[unsafeMode] || 'Lit';
-  }
-
-  /**
    * SOLUTION 3: Command Throttling and Queueing
    * Prevent rapid command execution that can overwhelm the engine
    */
@@ -863,185 +628,18 @@ export class UnrealBridge {
     command: () => Promise<T>,
     priority: number = 5
   ): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.commandQueue.push({
-        command,
-        resolve,
-        reject,
-        priority
-      });
-
-      // Sort by priority (lower number = higher priority)
-      this.commandQueue.sort((a, b) => a.priority - b.priority);
-
-      // Process queue if not already processing
-      if (!this.isProcessing) {
-        this.processCommandQueue();
-      }
-    });
-  }
-
-  /**
-   * Process command queue with appropriate delays
-   */
-  private async processCommandQueue(): Promise<void> {
-    if (this.isProcessing || this.commandQueue.length === 0) {
-      return;
-    }
-
-    this.isProcessing = true;
-
-    while (this.commandQueue.length > 0) {
-      const item = this.commandQueue.shift();
-      if (!item) continue; // Skip if undefined
-
-      // Calculate delay based on time since last command
-      const timeSinceLastCommand = Date.now() - this.lastCommandTime;
-      const requiredDelay = this.calculateDelay(item.priority);
-
-      if (timeSinceLastCommand < requiredDelay) {
-        await this.delay(requiredDelay - timeSinceLastCommand);
-      }
-
-      try {
-        const result = await item.command();
-        item.resolve(result);
-      } catch (error: any) {
-        // Enhanced retry policy: only retry on transient transport/timeouts
-        // and avoid retrying deterministic command failures such as
-        // EXEC_FAILED/Command not executed or client-side validation errors.
-        const msgRaw = error?.message ?? String(error);
-        const msg = String(msgRaw).toLowerCase();
-        if (item.retryCount === undefined) item.retryCount = 0;
-
-        const isTransient = (
-          msg.includes('timeout') ||
-          msg.includes('timed out') ||
-          msg.includes('connect') ||
-          msg.includes('econnrefused') ||
-          msg.includes('econnreset') ||
-          msg.includes('broken pipe') ||
-          msg.includes('automation bridge') ||
-          msg.includes('not connected')
-        );
-
-        const isDeterministicFailure = (
-          msg.includes('command not executed') ||
-          msg.includes('exec_failed') ||
-          msg.includes('invalid command') ||
-          msg.includes('invalid argument') ||
-          msg.includes('unknown_plugin_action') ||
-          msg.includes('unknown action')
-        );
-
-        if (isTransient && item.retryCount < 3) {
-          item.retryCount++;
-          this.log.warn(`Command failed (transient), retrying (${item.retryCount}/3)`);
-          // Re-add to queue with increased priority
-          this.commandQueue.unshift({
-            command: item.command,
-            resolve: item.resolve,
-            reject: item.reject,
-            priority: Math.max(1, item.priority - 1),
-            retryCount: item.retryCount
-          });
-          // Add extra delay before retry
-          await this.delay(500);
-        } else {
-          if (isDeterministicFailure) {
-            // Log once at warning level and do not retry deterministic
-            // failures to avoid noisy repeated attempts.
-            this.log.warn(`Command failed (non-retryable): ${msgRaw}`);
-          }
-          item.reject(error);
-        }
-      }
-
-      this.lastCommandTime = Date.now();
-    }
-
-    this.isProcessing = false;
-  }
-
-  /**
-   * Calculate appropriate delay based on command priority and type
-   */
-  private calculateDelay(priority: number): number {
-    // Priority 1-3: Heavy operations (asset creation, lighting build)
-    if (priority <= 3) {
-      return this.MAX_COMMAND_DELAY;
-    }
-    // Priority 4-6: Medium operations (actor spawning, material changes)
-    else if (priority <= 6) {
-      return 200;
-    }
-    // Priority 8: Stat commands - need special handling
-    else if (priority === 8) {
-      // Check time since last stat command to avoid FindConsoleObject warnings
-      const timeSinceLastStat = Date.now() - this.lastStatCommandTime;
-      if (timeSinceLastStat < this.STAT_COMMAND_DELAY) {
-        return this.STAT_COMMAND_DELAY;
-      }
-      this.lastStatCommandTime = Date.now();
-      return 150;
-    }
-    // Priority 7,9-10: Light operations (console commands, queries)
-    else {
-      // For light operations, add some jitter to prevent thundering herd
-      const baseDelay = this.MIN_COMMAND_DELAY;
-      const jitter = Math.random() * 50; // Add up to 50ms random jitter
-      return baseDelay + jitter;
-    }
-  }
-
-  /**
-   * SOLUTION 4: Enhanced Asset Creation
-   * Use Python scripting for complex asset creation that requires editor scripting
-   */
-  async createComplexAsset(assetType: string, params: Record<string, any>): Promise<any> {
-    const assetCreators: Record<string, string> = {
-      'Material': 'MaterialFactoryNew',
-      'MaterialInstance': 'MaterialInstanceConstantFactoryNew',
-      'Blueprint': 'BlueprintFactory',
-      'AnimationBlueprint': 'AnimBlueprintFactory',
-      'ControlRig': 'ControlRigBlueprintFactory',
-      'NiagaraSystem': 'NiagaraSystemFactoryNew',
-      'NiagaraEmitter': 'NiagaraEmitterFactoryNew',
-      'LandscapeGrassType': 'LandscapeGrassTypeFactory',
-      'PhysicsAsset': 'PhysicsAssetFactory'
-    };
-
-    const factoryClass = assetCreators[assetType];
-    if (!factoryClass) {
-      throw new Error(`Unknown asset type: ${assetType}`);
-    }
-
-    const createParams = {
-      factory_class: factoryClass,
-      asset_class: `unreal.${assetType}`,
-      asset_name: params.name || `New${assetType}`,
-      package_path: params.path || '/Game/CreatedAssets',
-      ...params
-    };
-
-    return this.executeEditorFunction('CREATE_ASSET', createParams);
+    return this.commandQueue.execute(command, priority);
   }
 
   /**
    * Start the command processor
    */
-  private startCommandProcessor(): void {
-    if (this.commandProcessorInitialized) {
+  private startCacheCleaner(): void {
+    if (this.cacheCleanerInitialized) {
       return;
     }
-    this.commandProcessorInitialized = true;
-    // Periodic queue processing to handle any stuck commands
-    setInterval(() => {
-      if (!this.isProcessing && this.commandQueue.length > 0) {
-        this.processCommandQueue();
-      }
-    }, 1000);
-
+    this.cacheCleanerInitialized = true;
+    
     // Clean console cache every 5 minutes
     setInterval(() => {
       this.cleanConsoleCache();
@@ -1070,64 +668,5 @@ export class UnrealBridge {
    */
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Batch command execution with proper delays
-   */
-  async executeBatch(commands: Array<{ command: string; priority?: number }>): Promise<any[]> {
-    return this.executeConsoleCommands(commands.map(cmd => cmd.command));
-  }
-
-  /**
-   * Get safe console commands for common operations
-   */
-  getSafeCommands(): Record<string, string> {
-    return {
-      // Health check (safe, no side effects)
-      'HealthCheck': 'stat none',
-
-      // Performance monitoring (safe)
-      'ShowFPS': 'stat unit',  // Use 'stat unit' instead of 'stat fps'
-      'ShowMemory': 'stat memory',
-      'ShowGame': 'stat game',
-      'ShowRendering': 'stat scenerendering',
-      'ClearStats': 'stat none',
-
-      // Safe viewmodes
-      'ViewLit': 'viewmode lit',
-      'ViewUnlit': 'viewmode unlit',
-      'ViewWireframe': 'viewmode wireframe',
-      'ViewDetailLighting': 'viewmode detaillighting',
-      'ViewLightingOnly': 'viewmode lightingonly',
-
-      // Safe show flags
-      'ShowBounds': 'show bounds',
-      'ShowCollision': 'show collision',
-      'ShowNavigation': 'show navigation',
-      'ShowFog': 'show fog',
-      'ShowGrid': 'show grid',
-
-      // PIE controls
-      'PlayInEditor': 'play',
-      'StopPlay': 'stop',
-      'PausePlay': 'pause',
-
-      // Time control
-      'SlowMotion': 'slomo 0.5',
-      'NormalSpeed': 'slomo 1',
-      'FastForward': 'slomo 2',
-
-      // Camera controls
-      'CameraSpeed1': 'camspeed 1',
-      'CameraSpeed4': 'camspeed 4',
-      'CameraSpeed8': 'camspeed 8',
-
-      // Rendering quality (safe)
-      'LowQuality': 'sg.ViewDistanceQuality 0',
-      'MediumQuality': 'sg.ViewDistanceQuality 1',
-      'HighQuality': 'sg.ViewDistanceQuality 2',
-      'EpicQuality': 'sg.ViewDistanceQuality 3'
-    };
   }
 }

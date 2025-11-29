@@ -132,10 +132,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
 
     else if (SubAction == TEXT("connect_pins"))
     {
-        // Niagara graphs are data-flow based but heavily rely on the "Stack" (System/Emitter/Module) structure.
-        // Connecting pins arbitrarily requires knowing the exact Pin Graph representation (NiagaraNodeInput/Output).
-        // This is significantly more complex than Blueprint graphs.
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Niagara pin connection requires advanced stack context awareness not yet implemented."), TEXT("NOT_IMPLEMENTED"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Niagara pin connection requires advanced stack context."), TEXT("UNSUPPORTED_OPERATION"));
         return true;
     }
     else if (SubAction == TEXT("remove_node"))
@@ -166,23 +163,46 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
     }
     else if (SubAction == TEXT("set_parameter"))
     {
-        // Setting a parameter in Niagara usually means setting a user parameter or a module input.
-        // This requires traversing the UNiagaraScript or UNiagaraSystem exposed parameters.
         FString ParamName;
         Payload->TryGetStringField(TEXT("parameterName"), ParamName);
-        FString ValueStr;
-        Payload->TryGetStringField(TEXT("value"), ValueStr);
         
-        // Basic implementation: Try to find a user parameter
-        // NOTE: This requires accessing exposed parameters which might be on the System.
-        if (System)
+        // Try to find parameter in exposed user parameters
+        FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
+        FNiagaraVariable Var;
+        
+        // Extract value from payload (supports numeric or boolean)
+        float Val = 0.0f;
+        bool bVal = false;
+
+        double NumericValue = 0.0;
+        if (Payload->TryGetNumberField(TEXT("value"), NumericValue))
         {
-            // UNiagaraSystem::SetParameterValue is not a direct API. 
-            // We need to use FNiagaraUserRedirectionParameterStore or similar.
-            // Due to API volatility between 5.0-5.4, we will defer this.
+            Val = static_cast<float>(NumericValue);
+            bVal = (NumericValue != 0.0);
         }
 
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Niagara parameter setting requires version-specific API (UserParameters vs VariableStore)."), TEXT("NOT_IMPLEMENTED"));
+        bool BoolValue = false;
+        if (Payload->TryGetBoolField(TEXT("value"), BoolValue))
+        {
+            bVal = BoolValue;
+            Val = BoolValue ? 1.0f : 0.0f;
+        }
+        
+        // Try float
+        if (UserStore.FindParameterVariable(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName))))
+        {
+            UserStore.SetParameterValue(Val, FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName)));
+            // ...
+        }
+        
+        // Try bool
+        if (UserStore.FindParameterVariable(FNiagaraVariable(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName))))
+        {
+            UserStore.SetParameterValue(bVal, FNiagaraVariable(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName)));
+            // ...
+        }
+
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Parameter not found or type not supported (Float/Bool only)."), TEXT("PARAM_FAILED"));
         return true;
     }
 
