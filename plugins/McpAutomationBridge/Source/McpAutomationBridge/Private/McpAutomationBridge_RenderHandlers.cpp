@@ -10,6 +10,7 @@
 #include "EditorAssetLibrary.h"
 #include "Engine/StaticMesh.h"
 #include "UObject/Package.h"
+#include "Runtime/Launch/Resources/Version.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -143,7 +144,13 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
         }
 
         // Enable Nanite and rebuild
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+        FMeshNaniteSettings Settings = StaticMesh->GetNaniteSettings();
+        Settings.bEnabled = true;
+        StaticMesh->SetNaniteSettings(Settings);
+#else
         StaticMesh->NaniteSettings.bEnabled = true;
+#endif
         
         if (UPackage* Package = StaticMesh->GetOutermost())
         {

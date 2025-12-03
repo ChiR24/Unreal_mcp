@@ -538,9 +538,19 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveActors(const FString& Re
                 if (MovieScene)
                 {
                     bool bRemoved = false;
-                    for (const FMovieSceneBinding& Binding : MovieScene->GetBindings())
+                    for (const FMovieSceneBinding& Binding : const_cast<const UMovieScene*>(MovieScene)->GetBindings())
                     {
-                        if (Binding.GetName().Equals(Name, ESearchCase::IgnoreCase))
+                        FString BindingName;
+                        if (FMovieScenePossessable* Possessable = MovieScene->FindPossessable(Binding.GetObjectGuid()))
+                        {
+                            BindingName = Possessable->GetName();
+                        }
+                        else if (FMovieSceneSpawnable* Spawnable = MovieScene->FindSpawnable(Binding.GetObjectGuid()))
+                        {
+                            BindingName = Spawnable->GetName();
+                        }
+
+                        if (BindingName.Equals(Name, ESearchCase::IgnoreCase))
                         {
                             MovieScene->RemovePossessable(Binding.GetObjectGuid());
                             MovieScene->Modify();
@@ -589,11 +599,22 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetBindings(const FString& Req
         if (UMovieScene* MovieScene = LevelSeq->GetMovieScene())
         {
             TArray<TSharedPtr<FJsonValue>> BindingsArray;
-            for (const FMovieSceneBinding& B : MovieScene->GetBindings())
+            for (const FMovieSceneBinding& B : const_cast<const UMovieScene*>(MovieScene)->GetBindings())
             {
                 TSharedPtr<FJsonObject> Bobj = MakeShared<FJsonObject>();
                 Bobj->SetStringField(TEXT("id"), B.GetObjectGuid().ToString());
-                Bobj->SetStringField(TEXT("name"), B.GetName());
+                
+                FString BindingName;
+                if (FMovieScenePossessable* Possessable = MovieScene->FindPossessable(B.GetObjectGuid()))
+                {
+                    BindingName = Possessable->GetName();
+                }
+                else if (FMovieSceneSpawnable* Spawnable = MovieScene->FindSpawnable(B.GetObjectGuid()))
+                {
+                    BindingName = Spawnable->GetName();
+                }
+                
+                Bobj->SetStringField(TEXT("name"), BindingName);
                 BindingsArray.Add(MakeShared<FJsonValueObject>(Bobj));
             }
             Resp->SetArrayField(TEXT("bindings"), BindingsArray);
@@ -894,9 +915,19 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(const FString& Req
             }
             else if (!ActorName.IsEmpty())
             {
-                 for (const FMovieSceneBinding& Binding : MovieScene->GetBindings())
+                 for (const FMovieSceneBinding& Binding : const_cast<const UMovieScene*>(MovieScene)->GetBindings())
                  {
-                     if (Binding.GetName().Equals(ActorName, ESearchCase::IgnoreCase))
+                     FString BindingName;
+                     if (FMovieScenePossessable* Possessable = MovieScene->FindPossessable(Binding.GetObjectGuid()))
+                     {
+                         BindingName = Possessable->GetName();
+                     }
+                     else if (FMovieSceneSpawnable* Spawnable = MovieScene->FindSpawnable(Binding.GetObjectGuid()))
+                     {
+                         BindingName = Spawnable->GetName();
+                     }
+
+                     if (BindingName.Equals(ActorName, ESearchCase::IgnoreCase))
                      {
                          BindingGuid = Binding.GetObjectGuid();
                          break;

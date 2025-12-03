@@ -65,7 +65,7 @@ public:
 
     bool ExecuteEditorCommands(const TArray<FString>& Commands, FString& OutErrorMessage);
     #if MCP_HAS_CONTROLRIG_FACTORY
-    UControlRigBlueprint* CreateControlRigBlueprint(const FString& AssetName, const FString& PackagePath, USkeleton* TargetSkeleton, FString& OutError);
+    UBlueprint* CreateControlRigBlueprint(const FString& AssetName, const FString& PackagePath, USkeleton* TargetSkeleton, FString& OutError);
     #endif
 
     // Automation Handler Delegate

@@ -40,15 +40,8 @@
 #define MCP_HAS_BLENDSPACE_FACTORY 0
 #endif
 #include "ControlRig.h"
-#include "ControlRigBlueprint.h"
-#include "ControlRigBlueprintGeneratedClass.h"
-#include "ControlRigObjectBinding.h"
-#if __has_include("Factories/ControlRigBlueprintFactory.h")
-#include "Factories/ControlRigBlueprintFactory.h"
-#define MCP_HAS_CONTROLRIG_FACTORY 1
-#else
-#define MCP_HAS_CONTROLRIG_FACTORY 0
-#endif
+// ControlRig headers removed for dynamic loading compatibility
+// #include "ControlRigBlueprint.h" etc.
 #include "Factories/AnimBlueprintFactory.h"
 #include "Factories/AnimMontageFactory.h"
 #include "Factories/AnimSequenceFactory.h"
@@ -199,7 +192,6 @@ namespace
 }
 #else
 #define MCP_HAS_BLENDSPACE_FACTORY 0
-#define MCP_HAS_CONTROLRIG_FACTORY 0
 #endif // WITH_EDITOR
 
 bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -549,7 +541,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
                 else
                 {
                     FString FactoryError;
-                    UControlRigBlueprint* ControlRigBlueprint = nullptr;
+                    UBlueprint* ControlRigBlueprint = nullptr;
 #if MCP_HAS_CONTROLRIG_FACTORY
                     ControlRigBlueprint = CreateControlRigBlueprint(Name, SavePath, TargetSkeleton, FactoryError);
 #else
@@ -1314,24 +1306,58 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(const TArray<FString>&
 }
 
 #if MCP_HAS_CONTROLRIG_FACTORY
-UControlRigBlueprint* UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(const FString& AssetName, const FString& PackagePath, USkeleton* TargetSkeleton, FString& OutError)
+UBlueprint* UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(const FString& AssetName, const FString& PackagePath, USkeleton* TargetSkeleton, FString& OutError)
 {
     OutError.Reset();
 
-    UControlRigBlueprintFactory* Factory = NewObject<UControlRigBlueprintFactory>();
+    // Dynamic load factory class
+    UClass* FactoryClass = LoadClass<UFactory>(nullptr, TEXT("/Script/ControlRigEditor.ControlRigBlueprintFactory"));
+    if (!FactoryClass)
+    {
+        OutError = TEXT("Failed to load ControlRigBlueprintFactory class");
+        return nullptr;
+    }
+
+    UFactory* Factory = NewObject<UFactory>(GetTransientPackage(), FactoryClass);
     if (!Factory)
     {
         OutError = TEXT("Failed to allocate Control Rig factory");
         return nullptr;
     }
 
-    Factory->TargetSkeleton = TargetSkeleton;
-    Factory->BlueprintType = BPTYPE_Normal;
-    Factory->ParentClass = UAnimInstance::StaticClass();
+    // Set properties via reflection
+    if (FProperty* SkelProp = FactoryClass->FindPropertyByName(TEXT("TargetSkeleton")))
+    {
+        if (FObjectProperty* ObjProp = CastField<FObjectProperty>(SkelProp))
+        {
+            ObjProp->SetObjectPropertyValue_InContainer(Factory, TargetSkeleton);
+        }
+    }
+
+    if (FProperty* ParentProp = FactoryClass->FindPropertyByName(TEXT("ParentClass")))
+    {
+        if (FClassProperty* ClassProp = CastField<FClassProperty>(ParentProp))
+        {
+            ClassProp->SetObjectPropertyValue_InContainer(Factory, UAnimInstance::StaticClass());
+        }
+    }
+
+    // Dynamic load blueprint class
+    UClass* BlueprintClass = LoadClass<UBlueprint>(nullptr, TEXT("/Script/ControlRigDeveloper.ControlRigBlueprint"));
+    if (!BlueprintClass)
+    {
+        BlueprintClass = LoadClass<UBlueprint>(nullptr, TEXT("/Script/ControlRig.ControlRigBlueprint"));
+    }
+
+    if (!BlueprintClass)
+    {
+        OutError = TEXT("Failed to load ControlRigBlueprint class");
+        return nullptr;
+    }
 
     FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
-    UObject* NewAsset = AssetToolsModule.Get().CreateAsset(AssetName, PackagePath, UControlRigBlueprint::StaticClass(), Factory);
-    UControlRigBlueprint* ControlRigBlueprint = Cast<UControlRigBlueprint>(NewAsset);
+    UObject* NewAsset = AssetToolsModule.Get().CreateAsset(AssetName, PackagePath, BlueprintClass, Factory);
+    UBlueprint* ControlRigBlueprint = Cast<UBlueprint>(NewAsset);
 
     if (!ControlRigBlueprint)
     {

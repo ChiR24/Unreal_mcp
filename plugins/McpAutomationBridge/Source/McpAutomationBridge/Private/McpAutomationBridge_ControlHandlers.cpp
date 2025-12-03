@@ -48,6 +48,9 @@
 #include "EditorViewportClient.h"
 #include "Engine/Blueprint.h"
 #include "Components/PrimitiveComponent.h"
+#if __has_include("FileHelpers.h")
+#include "FileHelpers.h"
+#endif
 #include "Components/StaticMeshComponent.h"
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
@@ -1598,7 +1601,13 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(const FString& RequestId, 
 #if defined(MCP_HAS_LEVELEDITOR_SUBSYSTEM)
         if (ULevelEditorSubsystem* LevelEditorSS = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
         {
-             bool bSaved = LevelEditorSS->SaveCurrentLevelAs(SavePath);
+             bool bSaved = false;
+#if __has_include("FileHelpers.h")
+             if (UWorld* World = GEditor->GetEditorWorldContext().World())
+             {
+                 bSaved = FEditorFileUtils::SaveMap(World, SavePath);
+             }
+#endif
              if (bSaved)
              {
                  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

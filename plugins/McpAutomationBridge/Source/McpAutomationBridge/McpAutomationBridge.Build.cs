@@ -36,7 +36,7 @@ public class McpAutomationBridge : ModuleRules
             {
                 "Landscape","LandscapeEditor","LandscapeEditorUtilities","Foliage","FoliageEdit",
                 "AnimGraph","AnimationBlueprintLibrary","Persona","ToolMenus","EditorWidgets","PropertyEditor","LevelEditor",
-                "ControlRig","ControlRigDeveloper","UMG","UMGEditor","ProceduralMeshComponent","MergeActors",
+                "ControlRig","ControlRigDeveloper","ControlRigEditor","UMG","UMGEditor","ProceduralMeshComponent","MergeActors",
                 "BehaviorTreeEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIModule", "AIGraph"
             });
 
@@ -49,40 +49,22 @@ public class McpAutomationBridge : ModuleRules
             string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
             
             // 1. SubobjectData Detection
-            bool bHasSubobjectData = false;
-            string ForceSubobject = Environment.GetEnvironmentVariable("MCP_FORCE_SUBOBJECTDATA") ?? "";
-            string IgnoreSubobject = Environment.GetEnvironmentVariable("MCP_IGNORE_SUBOBJECTDATA") ?? "";
+            // UE 5.7 renamed/moved this to SubobjectDataInterface in Editor/
+            bool bHasSubobjectDataInterface = Directory.Exists(Path.Combine(EngineDir, "Source", "Editor", "SubobjectDataInterface"));
             
-            bool bForce = ForceSubobject.Equals("1", StringComparison.OrdinalIgnoreCase) || ForceSubobject.Equals("true", StringComparison.OrdinalIgnoreCase);
-            bool bIgnore = IgnoreSubobject.Equals("1", StringComparison.OrdinalIgnoreCase) || IgnoreSubobject.Equals("true", StringComparison.OrdinalIgnoreCase);
-
-            if (!bIgnore)
+            if (bHasSubobjectDataInterface)
             {
-                if (bForce)
-                {
-                    bHasSubobjectData = true;
-                }
-                else
-                {
-                    // Auto-detect
-                    if (IsSubobjectDataAvailable(EngineDir) || IsSubobjectDataInProject(ModuleDirectory))
-                    {
-                        bHasSubobjectData = true;
-                    }
-                }
+                PrivateDependencyModuleNames.Add("SubobjectDataInterface");
+                PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=1");
             }
-
-            if (bHasSubobjectData)
+            else
             {
+                // Fallback for older versions
                 if (!PrivateDependencyModuleNames.Contains("SubobjectData"))
                 {
                     PrivateDependencyModuleNames.Add("SubobjectData");
                 }
                 PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=1");
-            }
-            else
-            {
-                PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=0");
             }
 
             // 2. WorldPartition Support Detection
@@ -90,7 +72,14 @@ public class McpAutomationBridge : ModuleRules
             bool bHasWPForEach = false;
             try
             {
-                string WPHeader = Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "WorldPartition", "WorldPartition.h");
+                // In UE 5.7, ForEachDataLayerInstance moved to DataLayerManager.h
+                string WPHeader = Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "WorldPartition", "DataLayer", "DataLayerManager.h");
+                if (!File.Exists(WPHeader))
+                {
+                    // Fallback to old location for older engines
+                    WPHeader = Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "WorldPartition", "WorldPartition.h");
+                }
+
                 if (File.Exists(WPHeader))
                 {
                     string Content = File.ReadAllText(WPHeader);
@@ -109,6 +98,9 @@ public class McpAutomationBridge : ModuleRules
             {
                 PublicDefinitions.Add("MCP_ENABLE_EDIT_AND_CONTINUE=1");
             }
+
+            // Control Rig Factory Support
+            PublicDefinitions.Add("MCP_HAS_CONTROLRIG_FACTORY=1");
         }
         else
         {
