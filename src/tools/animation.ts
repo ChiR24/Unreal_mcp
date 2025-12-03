@@ -1,5 +1,5 @@
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { cleanObject } from '../utils/safe-json.js';
 import { validateAssetParams } from '../utils/validation.js';
 
@@ -58,12 +58,10 @@ export class AnimationTools {
 
   constructor(private bridge: UnrealBridge, automationBridge?: AutomationBridge) {
     this.automationBridge = automationBridge;
-    console.log(`[AnimationTools] Constructor called. Bridge defined: ${!!automationBridge}`);
   }
 
   setAutomationBridge(automationBridge?: AutomationBridge) {
     this.automationBridge = automationBridge;
-    console.log(`[AnimationTools] setAutomationBridge called. Bridge defined: ${!!automationBridge}`);
   }
 
   private trackArtifact(key: string, info: { path?: string; type: string; metadata?: Record<string, unknown> }) {
@@ -769,8 +767,6 @@ export class AnimationTools {
 
       const notifyName = (params.notifyName || 'Notify').trim();
       const time = typeof params.time === 'number' && params.time >= 0 ? params.time : 0;
-
-      console.log(`[AnimationTools.addNotify] Bridge defined: ${!!this.automationBridge}, Is Function: ${typeof this.automationBridge?.sendAutomationRequest === 'function'}`);
 
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
         try {

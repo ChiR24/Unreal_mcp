@@ -1,6 +1,6 @@
 // UI tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
 
 export class UITools {
@@ -236,7 +236,7 @@ export class UITools {
   }) {
     const zOrder = params.zOrder ?? 0;
     const playerIndex = params.playerIndex ?? 0;
-    
+
     try {
       const resp = await this.bridge.executeEditorFunction('ADD_WIDGET_TO_VIEWPORT', { widget_path: params.widgetClass, z_order: zOrder, player_index: playerIndex } as any);
       const interpreted = interpretStandardResult(resp, {
@@ -285,19 +285,19 @@ export class UITools {
       position?: [number, number];
     }>;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`CreateMenuWidget ${params.name} ${params.menuType}`);
-    
+
     if (params.buttons) {
       for (const button of params.buttons) {
         const pos = button.position || [0, 0];
         commands.push(`AddMenuButton ${params.name} "${button.text}" ${button.action} ${pos.join(' ')}`);
       }
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Menu ${params.name} created` };
   }
 
@@ -315,23 +315,23 @@ export class UITools {
       }>;
     }>;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`CreateWidgetAnimation ${params.widgetName} ${params.animationName} ${params.duration}`);
-    
+
     if (params.tracks) {
       for (const track of params.tracks) {
         commands.push(`AddAnimationTrack ${params.widgetName}.${params.animationName} ${track.componentName} ${track.property}`);
-        
+
         for (const keyframe of track.keyframes) {
           const value = Array.isArray(keyframe.value) ? keyframe.value.join(' ') : keyframe.value;
           commands.push(`AddAnimationKeyframe ${params.widgetName}.${params.animationName} ${track.componentName} ${keyframe.time} ${value}`);
         }
       }
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Animation ${params.animationName} created` };
   }
 
@@ -344,7 +344,7 @@ export class UITools {
   }) {
     const playMode = params.playMode || 'Forward';
     const loops = params.loops ?? 1;
-    
+
     const command = `PlayWidgetAnimation ${params.widgetName} ${params.animationName} ${playMode} ${loops}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -361,30 +361,30 @@ export class UITools {
       margin?: [number, number, number, number];
     };
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.style.backgroundColor) {
       commands.push(`SetWidgetBackgroundColor ${params.widgetName}.${params.componentName} ${params.style.backgroundColor.join(' ')}`);
     }
-    
+
     if (params.style.borderColor) {
       commands.push(`SetWidgetBorderColor ${params.widgetName}.${params.componentName} ${params.style.borderColor.join(' ')}`);
     }
-    
+
     if (params.style.borderWidth !== undefined) {
       commands.push(`SetWidgetBorderWidth ${params.widgetName}.${params.componentName} ${params.style.borderWidth}`);
     }
-    
+
     if (params.style.padding) {
       commands.push(`SetWidgetPadding ${params.widgetName}.${params.componentName} ${params.style.padding.join(' ')}`);
     }
-    
+
     if (params.style.margin) {
       commands.push(`SetWidgetMargin ${params.widgetName}.${params.componentName} ${params.style.margin.join(' ')}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Widget style updated' };
   }
 
@@ -405,20 +405,20 @@ export class UITools {
     showCursor?: boolean;
     lockCursor?: boolean;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`SetInputMode ${params.mode}`);
-    
+
     if (params.showCursor !== undefined) {
       commands.push(`ShowMouseCursor ${params.showCursor}`);
     }
-    
+
     if (params.lockCursor !== undefined) {
       commands.push(`SetMouseLockMode ${params.lockCursor}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Input mode set to ${params.mode}` };
   }
 
@@ -442,21 +442,21 @@ export class UITools {
     dropTargets?: string[];
   }) {
     const commands = [];
-    
+
     commands.push(`EnableDragDrop ${params.widgetName}.${params.componentName}`);
-    
+
     if (params.dragVisual) {
       commands.push(`SetDragVisual ${params.widgetName}.${params.componentName} ${params.dragVisual}`);
     }
-    
+
     if (params.dropTargets) {
       for (const target of params.dropTargets) {
         commands.push(`AddDropTarget ${params.widgetName}.${params.componentName} ${target}`);
       }
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Drag and drop configured' };
   }
 
@@ -470,7 +470,7 @@ export class UITools {
     const duration = params.duration ?? 3.0;
     const type = params.type || 'Info';
     const position = params.position || 'TopRight';
-    
+
     const command = `ShowNotification "${params.text}" ${duration} ${type} ${position}`;
     return this.bridge.executeConsoleCommand(command);
   }

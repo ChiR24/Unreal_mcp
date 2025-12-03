@@ -26,6 +26,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     if (Lower == TEXT("create_material")) return HandleCreateMaterial(RequestId, Payload, RequestingSocket);
     if (Lower == TEXT("create_material_instance")) return HandleCreateMaterialInstance(RequestId, Payload, RequestingSocket);
     if (Lower == TEXT("get_dependencies")) return HandleGetDependencies(RequestId, Payload, RequestingSocket);
+    if (Lower == TEXT("get_asset_graph")) return HandleGetAssetGraph(RequestId, Payload, RequestingSocket);
     if (Lower == TEXT("set_tags")) return HandleSetTags(RequestId, Payload, RequestingSocket);
     if (Lower == TEXT("set_metadata")) return HandleSetMetadata(RequestId, Payload, RequestingSocket);
     if (Lower == TEXT("validate")) return HandleValidateAsset(RequestId, Payload, RequestingSocket);
@@ -1196,6 +1197,79 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(const FString& Request
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetArrayField(TEXT("dependencies"), DepArray);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Dependencies retrieved"), Resp, FString());
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+    FString AssetPath; Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    if (AssetPath.IsEmpty())
+    {
+        SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    if (!IsValidAssetPath(AssetPath))
+    {
+         SendAutomationResponse(Socket, RequestId, false, TEXT("Invalid asset path"), nullptr, TEXT("INVALID_PATH"));
+         return true;
+    }
+
+    int32 MaxDepth = 3;
+    Payload->TryGetNumberField(TEXT("maxDepth"), MaxDepth);
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+    TSharedPtr<FJsonObject> GraphObj = MakeShared<FJsonObject>();
+    
+    TArray<FString> Queue;
+    Queue.Add(AssetPath);
+    
+    TSet<FString> Visited;
+    Visited.Add(AssetPath);
+    
+    TMap<FString, int32> Depths;
+    Depths.Add(AssetPath, 0);
+
+    int32 Head = 0;
+    while(Head < Queue.Num())
+    {
+        FString Current = Queue[Head++];
+        int32 CurrentDepth = Depths[Current];
+
+        TArray<FName> Dependencies;
+        AssetRegistry.GetDependencies(FName(*Current), Dependencies);
+        
+        TArray<TSharedPtr<FJsonValue>> DepArray;
+        for(const FName& Dep : Dependencies)
+        {
+            FString DepStr = Dep.ToString();
+            if (!DepStr.StartsWith(TEXT("/Game"))) continue; // Only graph Game assets for now
+
+            DepArray.Add(MakeShared<FJsonValueString>(DepStr));
+            
+            if (CurrentDepth < MaxDepth)
+            {
+                if(!Visited.Contains(DepStr))
+                {
+                    Visited.Add(DepStr);
+                    Depths.Add(DepStr, CurrentDepth + 1);
+                    Queue.Add(DepStr);
+                }
+            }
+        }
+        GraphObj->SetArrayField(Current, DepArray);
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetObjectField(TEXT("graph"), GraphObj);
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset graph retrieved"), Resp, FString());
     return true;
 #else
     return false;

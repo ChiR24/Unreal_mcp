@@ -1,5 +1,5 @@
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
 import { lookupPropertyMetadata, normalizeDictionaryKey, PropertyDictionaryEntry } from './property-dictionary.js';
 

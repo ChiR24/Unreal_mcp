@@ -1,6 +1,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
+#include "McpConnectionManager.h"
 #include "Async/Async.h"
 #include "Misc/ScopeExit.h"
 #include "Misc/ScopeLock.h"
@@ -20,7 +21,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
     // Verbose logging to see these messages when required.
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT(">>> ProcessAutomationRequest ENTRY: RequestId=%s action='%s' (thread=%s)"), *RequestId, *Action, IsInGameThread() ? TEXT("GameThread") : TEXT("SocketThread"));
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ProcessAutomationRequest invoked (thread=%s) RequestId=%s action=%s activeSockets=%d pendingQueue=%d"),
-        IsInGameThread() ? TEXT("GameThread") : TEXT("SocketThread"), *RequestId, *Action, ActiveSockets.Num(), PendingAutomationRequests.Num());
+        IsInGameThread() ? TEXT("GameThread") : TEXT("SocketThread"), *RequestId, *Action, ConnectionManager.IsValid() ? ConnectionManager->GetActiveSocketCount() : 0, PendingAutomationRequests.Num());
     if (!IsInGameThread())
     {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("Scheduling ProcessAutomationRequest on GameThread: RequestId=%s action=%s"), *RequestId, *Action);
@@ -38,12 +39,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
 
     const FString LowerAction = Action.ToLower();
 
-    if (!ActiveRequestTelemetry.Contains(RequestId))
+    if (ConnectionManager.IsValid())
     {
-        FAutomationRequestTelemetry Entry;
-        Entry.Action = LowerAction.IsEmpty() ? Action : LowerAction;
-        Entry.StartTimeSeconds = FPlatformTime::Seconds();
-        ActiveRequestTelemetry.Add(RequestId, Entry);
+        ConnectionManager->StartRequestTelemetry(RequestId, Action);
     }
 
     // Reentrancy guard / enqueue
@@ -106,9 +104,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(const FString& Requ
         try
         {
             // Map this requestId to the requesting socket so responses can be delivered reliably
-            if (!RequestId.IsEmpty() && RequestingSocket.IsValid())
+            if (!RequestId.IsEmpty() && RequestingSocket.IsValid() && ConnectionManager.IsValid())
             {
-                PendingRequestsToSockets.Add(RequestId, RequestingSocket);
+                ConnectionManager->RegisterRequestSocket(RequestId, RequestingSocket);
             }
 
             // ---------------------------------------------------------

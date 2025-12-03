@@ -1,10 +1,6 @@
-import type { GraphQLContext } from './schema.js';
+import type { GraphQLContext } from './types.js';
 import type { UnrealBridge } from '../unreal-bridge.js';
-import type { AutomationBridge } from '../automation-bridge.js';
-
-/**
- * Implement actual GraphQL resolvers that integrate with the MCP infrastructure
- */
+import { AutomationBridge } from '../automation/index.js';
 
 export const scalarResolvers = {
   Vector: {
@@ -637,7 +633,7 @@ export const resolvers = {
             assetPath: path,
             newName
           },
-          { timeoutMs: 60000, waitForEvent: true }
+          { timeoutMs: 60000 }
         );
 
         if (response.success && response.result) {
@@ -659,7 +655,7 @@ export const resolvers = {
             assetPath: path,
             destinationPath: newPath
           },
-          { timeoutMs: 60000, waitForEvent: true }
+          { timeoutMs: 60000 }
         );
 
         if (response.success && response.result) {
@@ -753,7 +749,7 @@ export const resolvers = {
         const response = await context.automationBridge.sendAutomationRequest(
           'create_blueprint',
           input,
-          { timeoutMs: 60000, waitForEvent: true }
+          { timeoutMs: 60000 }
         );
 
         if (response.success && response.result) {
@@ -775,7 +771,7 @@ export const resolvers = {
             blueprintPath: path,
             ...input
           },
-          { timeoutMs: 30000, waitForEvent: true }
+          { timeoutMs: 30000 }
         );
 
         if (response.success && response.result) {
@@ -797,7 +793,7 @@ export const resolvers = {
             blueprintPath: path,
             ...input
           },
-          { timeoutMs: 30000, waitForEvent: true }
+          { timeoutMs: 30000 }
         );
 
         if (response.success && response.result) {

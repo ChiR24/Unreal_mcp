@@ -1,12 +1,12 @@
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { sanitizeAssetName, validateAssetParams } from '../utils/validation.js';
 
 type Vector3 = [number, number, number];
 
 
 export class NiagaraTools {
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
@@ -199,44 +199,44 @@ export class NiagaraTools {
     };
   }) {
     if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
-        try {
-            const resp: any = await this.automationBridge.sendAutomationRequest('manage_niagara_graph', {
-                subAction: 'add_emitter',
-                systemName: params.systemName,
-                emitterName: params.emitterName,
-                emitterType: params.emitterType,
-                properties: params.properties
-            });
-            
-            if (resp && resp.success !== false) {
-                return { 
-                    success: true, 
-                    message: resp.message || `Emitter ${params.emitterName} added to ${params.systemName}`,
-                    emitterId: resp.result?.emitterId 
-                };
-            }
-            
-            // If specific failure, check if it's NOT_IMPLEMENTED
-            if (resp?.error === 'NOT_IMPLEMENTED') {
-                 // Graceful stub fallback
-                 return { 
-                     success: true, 
-                     warning: 'Emitter addition simulated (backend support pending)', 
-                     message: `Simulated adding ${params.emitterName} to ${params.systemName}` 
-                 };
-            }
-            
-            return { success: false, error: resp?.error || 'ADD_EMITTER_FAILED', message: resp?.message };
-        } catch (_e) {
-            // Fall through to stub on error
+      try {
+        const resp: any = await this.automationBridge.sendAutomationRequest('manage_niagara_graph', {
+          subAction: 'add_emitter',
+          systemName: params.systemName,
+          emitterName: params.emitterName,
+          emitterType: params.emitterType,
+          properties: params.properties
+        });
+
+        if (resp && resp.success !== false) {
+          return {
+            success: true,
+            message: resp.message || `Emitter ${params.emitterName} added to ${params.systemName}`,
+            emitterId: resp.result?.emitterId
+          };
         }
+
+        // If specific failure, check if it's NOT_IMPLEMENTED
+        if (resp?.error === 'NOT_IMPLEMENTED') {
+          // Graceful stub fallback
+          return {
+            success: true,
+            warning: 'Emitter addition simulated (backend support pending)',
+            message: `Simulated adding ${params.emitterName} to ${params.systemName}`
+          };
+        }
+
+        return { success: false, error: resp?.error || 'ADD_EMITTER_FAILED', message: resp?.message };
+      } catch (_e) {
+        // Fall through to stub on error
+      }
     }
-    
+
     // Fallback graceful stub if bridge unavailable or failed
-    return { 
-        success: true, 
-        warning: 'Emitter addition simulated (bridge unavailable)', 
-        message: `Simulated adding ${params.emitterName} to ${params.systemName}` 
+    return {
+      success: true,
+      warning: 'Emitter addition simulated (bridge unavailable)',
+      message: `Simulated adding ${params.emitterName} to ${params.systemName}`
     };
   }
 
@@ -279,7 +279,7 @@ export class NiagaraTools {
   }) {
     try {
       // Validate effect type at runtime (inputs can come from JSON)
-      const allowedTypes = ['Fire','Smoke','Explosion','Water','Rain','Snow','Magic','Lightning','Dust','Steam','Default'];
+      const allowedTypes = ['Fire', 'Smoke', 'Explosion', 'Water', 'Rain', 'Snow', 'Magic', 'Lightning', 'Dust', 'Steam', 'Default'];
       if (!params || !allowedTypes.includes(String(params.effectType))) {
         return { success: false, error: `Invalid effectType: ${String(params?.effectType)}` };
       }
@@ -330,7 +330,7 @@ export class NiagaraTools {
         if (s.gridResolution) { const r = s.gridResolution; commands.push(`SetGPUGridResolution ${params.name} ${r[0]} ${r[1]} ${r[2]}`); }
         if (s.iterations !== undefined) commands.push(`SetGPUIterations ${params.name} ${s.iterations}`);
       }
-  await this.bridge.executeConsoleCommands(commands);
+      await this.bridge.executeConsoleCommands(commands);
       return { success: true, message: `GPU simulation ${params.name} created`, path: `${path}/${params.name}` };
     } catch (err) {
       return { success: false, error: `Failed to create GPU simulation: ${err}` };

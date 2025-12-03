@@ -1,6 +1,6 @@
 // Foliage tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { coerceBoolean, coerceNumber, coerceString } from '../utils/result-helpers.js';
 
 export class FoliageTools {

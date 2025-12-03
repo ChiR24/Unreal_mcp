@@ -4,34 +4,45 @@ import { promisify } from 'node:util';
 async function doHandshake(port = 8090, capabilityToken) {
   return new Promise((resolve, reject) => {
     const url = `ws://127.0.0.1:${port}`;
-    const socket = new WebSocket(url, { headers: capabilityToken ? { 'X-MCP-Capability': capabilityToken } : undefined });
+    console.log(`Connecting to ${url} with protocol 'mcp-automation'...`);
+    
+    // Correctly pass subprotocol as 2nd arg, options as 3rd
+    const socket = new WebSocket(url, 'mcp-automation', { 
+      headers: capabilityToken ? { 'X-MCP-Capability': capabilityToken } : undefined 
+    });
 
     const timeout = setTimeout(() => {
       try { socket.terminate(); } catch {};
-      reject(new Error('Handshake timed out'));
+      reject(new Error('Handshake timed out (5000ms)'));
     }, 5000);
 
     socket.on('open', () => {
+      console.log('Socket open. Sending bridge_hello...');
       // Send hello
       socket.send(JSON.stringify({ type: 'bridge_hello', capabilityToken: capabilityToken }));
     });
 
     socket.on('message', (data) => {
-      clearTimeout(timeout);
+      // clearTimeout(timeout); // Don't clear yet, wait for ACK
       try {
-        const parsed = JSON.parse(typeof data === 'string' ? data : data.toString('utf8'));
+        const msgStr = typeof data === 'string' ? data : data.toString('utf8');
+        console.log('Received:', msgStr.substring(0, 200));
+        const parsed = JSON.parse(msgStr);
+        
         if (parsed.type === 'bridge_ack') {
+          clearTimeout(timeout);
           socket.close();
           resolve({ success: true, ack: parsed });
         } else if (parsed.type === 'bridge_error') {
+          clearTimeout(timeout);
           socket.close();
           resolve({ success: false, error: parsed.error });
         } else {
-          // Unexpected
-          socket.close();
-          resolve({ success: false, error: 'unexpected-response', payload: parsed });
+          // Might be other messages? Ignore or log.
+          console.log('Ignoring non-ack message:', parsed.type);
         }
       } catch (err) {
+        clearTimeout(timeout);
         socket.close();
         reject(err);
       }
@@ -39,7 +50,12 @@ async function doHandshake(port = 8090, capabilityToken) {
 
     socket.on('error', (err) => {
       clearTimeout(timeout);
+      console.error('Socket error:', err.message);
       reject(err);
+    });
+    
+    socket.on('close', (code, reason) => {
+        console.log(`Socket closed: ${code} - ${reason}`);
     });
   });
 }
@@ -62,7 +78,5 @@ async function run() {
   }
 }
 
-// When run directly as a script, execute the test
-if (import.meta.url === `file://${process.argv[1]}` || import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}`) {
-  run();
-}
+// Execute the test
+run();

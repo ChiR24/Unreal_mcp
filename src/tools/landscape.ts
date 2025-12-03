@@ -1,6 +1,6 @@
 // Landscape tools for Unreal Engine with UE 5.6 World Partition support
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { ensureVector3 } from '../utils/validation.js';
 
 export class LandscapeTools {

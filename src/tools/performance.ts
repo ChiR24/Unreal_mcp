@@ -1,6 +1,6 @@
 // Performance tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
 
 export class PerformanceTools {
@@ -20,8 +20,8 @@ export class PerformanceTools {
     type: 'CPU' | 'GPU' | 'Memory' | 'RenderThread' | 'GameThread' | 'All';
     duration?: number;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     switch (params.type) {
       case 'CPU':
         commands.push('stat startfile');
@@ -44,13 +44,13 @@ export class PerformanceTools {
         commands.push('stat memory');
         break;
     }
-    
+
     if (params.duration) {
       commands.push(`stat stopfile ${params.duration}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `${params.type} profiling started` };
   }
 
@@ -60,9 +60,9 @@ export class PerformanceTools {
       'stat stopfile',
       'stat none'
     ];
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Profiling stopped' };
   }
 
@@ -71,28 +71,28 @@ export class PerformanceTools {
     enabled: boolean;
     verbose?: boolean;
   }) {
-  const startTime = Date.now();
-  this.log.debug('Starting showFPS with params:', params);
-    
+    const startTime = Date.now();
+    this.log.debug('Starting showFPS with params:', params);
+
     try {
       // Use stat fps as requested - shows FPS counter
       // For more detailed timing info, use 'stat unit' instead
-      const command = params.enabled 
+      const command = params.enabled
         ? (params.verbose ? 'stat unit' : 'stat fps')
         : 'stat none';
-      
-  this.log.debug(`Executing command: ${command}`);
+
+      this.log.debug(`Executing command: ${command}`);
       await this.bridge.executeConsoleCommand(command);
-  this.log.debug(`Command completed in ${Date.now() - startTime}ms`);
-      return { 
-        success: true, 
+      this.log.debug(`Command completed in ${Date.now() - startTime}ms`);
+      return {
+        success: true,
         message: params.enabled ? 'FPS display enabled' : 'FPS display disabled',
         fpsVisible: params.enabled,
         command: command
       };
     } catch (error) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: `Failed to ${params.enabled ? 'enable' : 'disable'} FPS display: ${error}`,
         fpsVisible: false
       };
@@ -104,10 +104,10 @@ export class PerformanceTools {
     category: 'Unit' | 'FPS' | 'Memory' | 'Game' | 'Slate' | 'Engine' | 'RHI' | 'Streaming' | 'SceneRendering' | 'Physics' | 'Navigation' | 'Particles' | 'Audio';
     enabled: boolean;
   }) {
-    const command = params.enabled 
+    const command = params.enabled
       ? `stat ${params.category.toLowerCase()}`
       : 'stat none';
-    
+
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -140,16 +140,16 @@ export class PerformanceTools {
     }
 
     const base = categoryBaseMap[params.category] || params.category;
-    
+
     // Use direct console command to set with highest priority (SetByConsole)
     // This avoids conflicts with the scalability system
     const setCommand = `sg.${base}Quality ${requestedLevel}`;
-    
+
     // Apply the console command directly
     await this.bridge.executeConsoleCommand(setCommand);
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       message: `${params.category} quality set to level ${requestedLevel}`,
       method: 'Console'
     };
@@ -163,21 +163,21 @@ export class PerformanceTools {
     if (params.scale === undefined || params.scale === null || isNaN(params.scale)) {
       return { success: false, error: 'Invalid scale parameter' };
     }
-    
+
     // Clamp scale between 10% (0.1) and 200% (2.0) - Unreal Engine limits
     // Note: r.ScreenPercentage takes values from 10 to 200, not 0.5 to 2.0
     const clampedScale = Math.max(0.1, Math.min(2.0, params.scale));
     const percentage = Math.round(clampedScale * 100);
-    
+
     // Ensure percentage is within Unreal's valid range
     const finalPercentage = Math.max(10, Math.min(200, percentage));
-    
+
     const command = `r.ScreenPercentage ${finalPercentage}`;
-    
+
     try {
       await this.bridge.executeConsoleCommand(command);
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: `Resolution scale set to ${finalPercentage}%`,
         actualScale: finalPercentage / 100
       };
@@ -294,25 +294,25 @@ export class PerformanceTools {
     lodBias?: number; // skeletal LOD bias (int)
     distanceScale?: number; // distance scale (float) applied to both static and skeletal
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.forceLOD !== undefined) {
       commands.push(`r.ForceLOD ${params.forceLOD}`);
     }
-    
+
     if (params.lodBias !== undefined) {
       // Skeletal mesh LOD bias is an integer bias value
       commands.push(`r.SkeletalMeshLODBias ${params.lodBias}`);
     }
-    
+
     if (params.distanceScale !== undefined) {
       // Apply distance scale to both static and skeletal meshes
       commands.push(`r.StaticMeshLODDistanceScale ${params.distanceScale}`);
       commands.push(`r.SkeletalMeshLODDistanceScale ${params.distanceScale}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'LOD settings configured' };
   }
 
@@ -402,18 +402,18 @@ export class PerformanceTools {
     method?: 'Hardware' | 'Software' | 'Hierarchical';
     freezeRendering?: boolean;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     // Enable/disable HZB occlusion (boolean)
     commands.push(`r.HZBOcclusion ${params.enabled ? 1 : 0}`);
-    
+
     // Optional freeze rendering toggle
     if (params.freezeRendering !== undefined) {
       commands.push(`FreezeRendering ${params.freezeRendering ? 1 : 0}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Occlusion culling configured' };
   }
 
@@ -423,22 +423,22 @@ export class PerformanceTools {
     cacheShaders?: boolean;
     reducePermutations?: boolean;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.compileOnDemand !== undefined) {
       commands.push(`r.ShaderDevelopmentMode ${params.compileOnDemand ? 1 : 0}`);
     }
-    
+
     if (params.cacheShaders !== undefined) {
       commands.push(`r.ShaderPipelineCache.Enabled ${params.cacheShaders ? 1 : 0}`);
     }
-    
+
     if (params.reducePermutations) {
       commands.push('RecompileShaders changed');
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Shader optimization configured' };
   }
 
@@ -448,20 +448,20 @@ export class PerformanceTools {
     maxPixelsPerEdge?: number;
     streamingPoolSize?: number;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`r.Nanite ${params.enabled ? 1 : 0}`);
-    
+
     if (params.maxPixelsPerEdge !== undefined) {
       commands.push(`r.Nanite.MaxPixelsPerEdge ${params.maxPixelsPerEdge}`);
     }
-    
+
     if (params.streamingPoolSize !== undefined) {
       commands.push(`r.Nanite.StreamingPoolSize ${params.streamingPoolSize}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Nanite configured' };
   }
 
@@ -471,20 +471,20 @@ export class PerformanceTools {
     streamingDistance?: number;
     cellSize?: number;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`wp.Runtime.EnableStreaming ${params.enabled ? 1 : 0}`);
-    
+
     if (params.streamingDistance !== undefined) {
       commands.push(`wp.Runtime.StreamingDistance ${params.streamingDistance}`);
     }
-    
+
     if (params.cellSize !== undefined) {
       commands.push(`wp.Runtime.CellSize ${params.cellSize}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'World Partition configured' };
   }
 
@@ -494,16 +494,16 @@ export class PerformanceTools {
     outputPath?: string;
   }) {
     const duration = params.duration || 60;
-    
-  // Start recording and GPU profiling
-  await this.bridge.executeConsoleCommands(['stat startfile', 'profilegpu']);
-    
+
+    // Start recording and GPU profiling
+    await this.bridge.executeConsoleCommands(['stat startfile', 'profilegpu']);
+
     // Wait for the requested duration
     await new Promise(resolve => setTimeout(resolve, duration * 1000));
-    
+
     // Stop recording and clear stats
     await this.bridge.executeConsoleCommands(['stat stopfile', 'stat none']);
-    
+
     return { success: true, message: `Benchmark completed for ${duration} seconds` };
   }
 }

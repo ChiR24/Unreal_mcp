@@ -2,7 +2,7 @@
 // Uses Automation Bridge and console commands for all operations
 
 import { UnrealBridge } from '../unreal-bridge.js';
-import type { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 
 export class DebugVisualizationTools {
   private bridge: UnrealBridge;
@@ -474,7 +474,7 @@ export class DebugVisualizationTools {
     ];
     if (UNSAFE_VIEWMODES.includes(params.mode)) {
       console.error(`⚠️ Viewmode '${params.mode}' may be unstable in some UE configurations.`);
-      try { await this.bridge.executeConsoleCommand('stop'); } catch {}
+      try { await this.bridge.executeConsoleCommand('stop'); } catch { }
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 

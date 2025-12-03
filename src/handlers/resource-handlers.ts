@@ -1,7 +1,7 @@
 import { ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { AssetResources } from '../resources/assets.js';
 import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
@@ -17,7 +17,7 @@ export class ResourceHandler {
     private levelResources: LevelResources,
     private healthMonitor: HealthMonitor,
     private ensureConnected: () => Promise<boolean>
-  ) {}
+  ) { }
 
   registerHandlers() {
     this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
@@ -71,7 +71,7 @@ export class ResourceHandler {
       if (uri === 'ue://health') {
         const uptimeMs = Date.now() - this.healthMonitor.metrics.uptime;
         const automationStatus = this.automationBridge.getStatus();
-        
+
         let versionInfo: any = {};
         let featureFlags: any = {};
         if (this.bridge.isConnected) {

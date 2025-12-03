@@ -1,11 +1,11 @@
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { loadEnv } from '../types/env.js';
 import { spawn } from 'child_process';
 
 export class EngineTools {
   private env = loadEnv();
-  constructor(_bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(_bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) {
     this.automationBridge = automationBridge;

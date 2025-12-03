@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { DEFAULT_SKYLIGHT_INTENSITY, DEFAULT_SUN_INTENSITY, DEFAULT_TIME_OF_DAY } from '../constants.js';
 
@@ -12,7 +12,7 @@ interface EnvironmentResult {
 }
 
 export class EnvironmentTools {
-  constructor(_bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(_bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) {
     this.automationBridge = automationBridge;
@@ -72,7 +72,7 @@ export class EnvironmentTools {
   private async invoke(action: string, payload: Record<string, unknown>): Promise<EnvironmentResult> {
     try {
       const bridge = this.ensureAutomationBridge();
-      const response = await bridge.controlEnvironment(action, payload, { timeoutMs: 40000 });
+      const response = await bridge.sendAutomationRequest(action, payload, { timeoutMs: 40000 });
       if (response.success === false) {
         return {
           success: false,

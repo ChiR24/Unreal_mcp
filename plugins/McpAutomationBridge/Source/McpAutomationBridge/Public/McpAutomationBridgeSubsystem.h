@@ -44,10 +44,10 @@ public:
     virtual void Deinitialize() override;
 
     UFUNCTION(BlueprintCallable, Category = "MCP Automation")
-    bool IsBridgeActive() const { return bBridgeAvailable; }
+    bool IsBridgeActive() const;
 
     UFUNCTION(BlueprintCallable, Category = "MCP Automation")
-    EMcpAutomationBridgeState GetBridgeState() const { return BridgeState; }
+    EMcpAutomationBridgeState GetBridgeState() const;
 
     UFUNCTION(BlueprintCallable, Category = "MCP Automation")
     bool SendRawMessage(const FString& Message);
@@ -78,61 +78,12 @@ public:
     void RegisterHandler(const FString& Action, FAutomationHandler Handler);
 
 private:
-    struct FAutomationRequestTelemetry
-    {
-        FString Action;
-        double StartTimeSeconds = 0.0;
-    };
-
-    struct FAutomationActionStats
-    {
-        int32 SuccessCount = 0;
-        int32 FailureCount = 0;
-        double TotalSuccessDurationSeconds = 0.0;
-        double TotalFailureDurationSeconds = 0.0;
-        double LastDurationSeconds = 0.0;
-        double LastUpdatedSeconds = 0.0;
-    };
+    // Telemetry structs moved to McpConnectionManager
 
     bool Tick(float DeltaTime);
 
-    void AttemptConnection();
-    void HandleConnected(TSharedPtr<FMcpBridgeWebSocket> Socket);
-    void HandleClientConnected(TSharedPtr<FMcpBridgeWebSocket> ClientSocket);
-    void HandleConnectionError(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Error);
-    void HandleServerConnectionError(const FString& Error);
-    void HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket, int32 StatusCode, const FString& Reason, bool bWasClean);
-    void HandleMessage(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Message);
-    void HandleHeartbeat(TSharedPtr<FMcpBridgeWebSocket> Socket);
-    void ProcessAutomationRequest(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-
-    void StartBridge();
-    void StopBridge();
-
-    bool bBridgeAvailable = false;
-    EMcpAutomationBridgeState BridgeState = EMcpAutomationBridgeState::Disconnected;
-    FTSTicker::FDelegateHandle TickerHandle;
-    TArray<TSharedPtr<FMcpBridgeWebSocket>> ActiveSockets;
-    TMap<FString, TSharedPtr<FMcpBridgeWebSocket>> PendingRequestsToSockets;
-    float TimeUntilReconnect = 0.0f;
-    float AutoReconnectDelaySeconds = 5.0f;
-    FString CapabilityToken;
-    FString EndpointUrl;
-    bool bReconnectEnabled = true;
-
-    FString ServerName;
-    FString ServerVersion;
-    FString ActiveSessionId;
-    // Environment override values (optional)
-    FString EnvListenPorts;
-    FString EnvListenHost;
-    bool bEnvListenPortsSet = false;
-    float HeartbeatTimeoutSeconds = 0.0f;
-    double LastHeartbeatTimestamp = 0.0;
-    bool bHeartbeatTrackingEnabled = false;
-
-    // Client port (optional), read from settings
-    int32 ClientPort = 0;
+    // Connection Manager
+    TSharedPtr<class FMcpConnectionManager> ConnectionManager;
 
     // Track a blueprint currently being modified by this subsystem request
     // so scope-exit handlers can reliably clear busy state without
@@ -140,14 +91,6 @@ private:
     FString CurrentBusyBlueprintKey;
     bool bCurrentBlueprintBusyMarked = false;
     bool bCurrentBlueprintBusyScheduled = false;
-
-    // Whether an incoming capability token is required
-    bool bRequireCapabilityToken = false;
-
-    void RecordHeartbeat();
-    void ResetHeartbeatTracking();
-    void ForceReconnect(const FString& Reason, float ReconnectDelayOverride = -1.0f);
-    void SendControlMessage(const TSharedPtr<FJsonObject>& Message);
 
     // Pending automation request queue (thread-safe). Inbound socket threads
     // will enqueue requests here; the queue is drained sequentially on the
@@ -166,7 +109,6 @@ private:
     void ProcessPendingAutomationRequests();
 
     void RecordAutomationTelemetry(const FString& RequestId, bool bSuccess, const FString& Message, const FString& ErrorCode);
-    void EmitAutomationTelemetrySummaryIfNeeded(double NowSeconds);
 
     // Action handlers (implemented in separate translation units)
     TMap<FString, FAutomationHandler> AutomationHandlers;
@@ -353,6 +295,7 @@ private:
     bool HandleControlActorDetach(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleControlActorFindByTag(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleControlActorAddTag(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleControlActorRemoveTag(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleControlActorFindByName(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleControlActorDeleteByTag(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleControlActorSetBlueprintVariables(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
@@ -384,6 +327,7 @@ private:
     bool HandleListAssets(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleCreateFolder(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleGetDependencies(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleGetAssetGraph(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleCreateThumbnail(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleSetTags(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleSetMetadata(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
@@ -393,11 +337,8 @@ private:
     // Lightweight snapshot cache for automation requests (e.g., create_snapshot)
     TMap<FString, FTransform> CachedActorSnapshots;
 
-    TMap<FString, FAutomationRequestTelemetry> ActiveRequestTelemetry;
-    TMap<FString, FAutomationActionStats> AutomationActionTelemetry;
-    double TelemetrySummaryIntervalSeconds = 120.0;
-    double LastTelemetrySummaryLogSeconds = 0.0;
-
     /** Guards against reentrant automation request processing */
     bool bProcessingAutomationRequest = false;
+
+    void ProcessAutomationRequest(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 };

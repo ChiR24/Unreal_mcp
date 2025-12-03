@@ -256,4 +256,33 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     }
     return resp;
   }
+
+  /**
+   * Add a keyframe to a sequence binding
+   */
+  async addKeyframe(params: {
+    path?: string;
+    bindingId?: string;
+    actorName?: string;
+    property: 'Transform';
+    frame: number;
+    value: {
+      location?: { x: number; y: number; z: number };
+      rotation?: { roll: number; pitch: number; yaw: number };
+      scale?: { x: number; y: number; z: number };
+    };
+  }) {
+    const resp = await this.sendAction('sequence_add_keyframe', {
+      path: params.path,
+      bindingId: params.bindingId,
+      actorName: params.actorName,
+      property: params.property,
+      frame: params.frame,
+      value: params.value
+    });
+    if (!resp.success && this.isUnknownActionResponse(resp)) {
+      return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_add_keyframe' } as const;
+    }
+    return resp;
+  }
 }

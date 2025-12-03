@@ -1,14 +1,14 @@
 // Physics tools for Unreal Engine using Automation Bridge
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay } from '../utils/validation.js';
 import { coerceString, coerceStringArray } from '../utils/result-helpers.js';
 
 export class PhysicsTools {
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
-  
+
   /**
    * Helper to find a valid skeletal mesh in the project
    */
@@ -48,7 +48,7 @@ export class PhysicsTools {
     } catch (error) {
       console.error('Failed to find skeletal mesh:', error);
     }
-    
+
     return '/Engine/EngineMeshes/SkeletalCube';
   }
 
@@ -83,33 +83,33 @@ export class PhysicsTools {
           error: 'Name cannot be empty'
         };
       }
-      
+
       // Check for invalid characters in name
-      if (params.physicsAssetName.includes('@') || params.physicsAssetName.includes('#') || 
-          params.physicsAssetName.includes('$') || params.physicsAssetName.includes('%')) {
+      if (params.physicsAssetName.includes('@') || params.physicsAssetName.includes('#') ||
+        params.physicsAssetName.includes('$') || params.physicsAssetName.includes('%')) {
         return {
           success: false,
           message: 'Failed to setup ragdoll: Name contains invalid characters',
           error: 'Name contains invalid characters'
         };
       }
-      
+
       // Check if skeleton path is provided instead of skeletal mesh
-      if (params.skeletonPath && (params.skeletonPath.includes('_Skeleton') || 
-          params.skeletonPath.includes('SK_Mannequin') && !params.skeletonPath.includes('SKM_'))) {
+      if (params.skeletonPath && (params.skeletonPath.includes('_Skeleton') ||
+        params.skeletonPath.includes('SK_Mannequin') && !params.skeletonPath.includes('SKM_'))) {
         return {
           success: false,
           message: 'Failed to setup ragdoll: Must specify a valid skeletal mesh',
           error: 'Must specify a valid skeletal mesh, not a skeleton'
         };
       }
-      
+
       // Validate and sanitize parameters
       const validation = validateAssetParams({
         name: params.physicsAssetName,
         savePath: params.savePath || '/Game/Physics'
       });
-      
+
       if (!validation.valid) {
         return {
           success: false,
@@ -117,20 +117,20 @@ export class PhysicsTools {
           error: validation.error
         };
       }
-      
+
       const sanitizedParams = validation.sanitized;
       const path = sanitizedParams.savePath || '/Game/Physics';
-      
+
       // Resolve skeletal mesh path
       let meshPath = params.skeletonPath;
-      
+
       // Try to resolve skeleton to mesh mapping
       const resolvedPath = resolveSkeletalMeshPath(meshPath);
       if (resolvedPath && resolvedPath !== meshPath) {
         console.error(`Auto-correcting path from ${meshPath} to ${resolvedPath}`);
         meshPath = resolvedPath;
       }
-      
+
       // Auto-resolve if it looks like a skeleton path or is empty
       if (!meshPath || meshPath.includes('_Skeleton') || meshPath === 'None' || meshPath === '') {
         console.error('Resolving skeletal mesh path...');
@@ -140,15 +140,15 @@ export class PhysicsTools {
           console.error(`Using resolved skeletal mesh: ${meshPath}`);
         }
       }
-      
+
       // Add concurrency delay to prevent race conditions
       await concurrencyDelay();
-      
+
       // IMPORTANT: Physics assets require a SKELETAL MESH, not a skeleton
       // UE5 uses: /Game/Characters/Mannequins/Meshes/SKM_Manny_Simple or SKM_Quinn_Simple
       // UE4 used: /Game/Mannequin/Character/Mesh/SK_Mannequin (which no longer exists)
-  // Alternate path: /Engine/EngineMeshes/SkeletalCube
-      
+      // Alternate path: /Engine/EngineMeshes/SkeletalCube
+
       // Common skeleton paths that should be replaced with actual skeletal mesh paths
       const skeletonToMeshMap: { [key: string]: string } = {
         '/Game/Mannequin/Character/Mesh/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
@@ -157,19 +157,19 @@ export class PhysicsTools {
         '/Game/Characters/Mannequins/Skeletons/UE5_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
         '/Game/Characters/Mannequins/Skeletons/UE5_Female_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple'
       };
-      
+
       // Auto-fix common incorrect paths
       let actualSkeletonPath = params.skeletonPath;
       if (actualSkeletonPath && skeletonToMeshMap[actualSkeletonPath]) {
         console.error(`Auto-correcting path from ${actualSkeletonPath} to ${skeletonToMeshMap[actualSkeletonPath]}`);
         actualSkeletonPath = skeletonToMeshMap[actualSkeletonPath];
       }
-      
+
       if (actualSkeletonPath && (actualSkeletonPath.includes('_Skeleton') || actualSkeletonPath.includes('SK_Mannequin'))) {
         // This is likely a skeleton path, not a skeletal mesh
         console.error('Warning: Path appears to be a skeleton, not a skeletal mesh. Auto-correcting to SKM_Manny_Simple.');
       }
-      
+
       // Use Automation Bridge for physics asset creation
       if (!this.automationBridge) {
         throw new Error('Automation Bridge not available. Physics asset creation requires plugin support.');
@@ -237,17 +237,17 @@ export class PhysicsTools {
       // Spawn constraint actor
       const spawnCmd = `spawnactor /Script/Engine.PhysicsConstraintActor ${params.location[0]} ${params.location[1]} ${params.location[2]}`;
       await this.bridge.executeConsoleCommand(spawnCmd);
-      
+
       // Configure constraint
       const commands = [
         `SetConstraintActors ${params.name} ${params.actor1} ${params.actor2}`,
         `SetConstraintType ${params.name} ${params.constraintType}`
       ];
-      
+
       if (params.breakThreshold) {
         commands.push(`SetConstraintBreakThreshold ${params.name} ${params.breakThreshold}`);
       }
-      
+
       if (params.limits) {
         const limits = params.limits;
         if (limits.swing1 !== undefined) {
@@ -263,12 +263,12 @@ export class PhysicsTools {
           commands.push(`SetConstraintLinear ${params.name} ${limits.linear}`);
         }
       }
-      
+
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
-        message: `Physics constraint ${params.name} created between ${params.actor1} and ${params.actor2}` 
+
+      return {
+        success: true,
+        message: `Physics constraint ${params.name} created between ${params.actor1} and ${params.actor2}`
       };
     } catch (err) {
       return { success: false, error: `Failed to create constraint: ${err}` };
@@ -292,11 +292,11 @@ export class PhysicsTools {
   }) {
     try {
       const path = params.savePath || '/Game/Destruction';
-      
+
       const commands = [
         `CreateGeometryCollection ${params.destructionName} ${params.meshPath} ${path}`
       ];
-      
+
       // Configure fracture
       if (params.fractureSettings) {
         const settings = params.fractureSettings;
@@ -304,21 +304,21 @@ export class PhysicsTools {
           `FractureGeometry ${params.destructionName} ${settings.cellCount} ${settings.minimumVolumeSize} ${settings.seed}`
         );
       }
-      
+
       // Set damage threshold
       if (params.damageThreshold) {
         commands.push(`SetDamageThreshold ${params.destructionName} ${params.damageThreshold}`);
       }
-      
+
       // Set debris lifetime
       if (params.debrisLifetime) {
         commands.push(`SetDebrisLifetime ${params.destructionName} ${params.debrisLifetime}`);
       }
-      
+
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         message: `Chaos destruction ${params.destructionName} created`,
         path: `${path}/${params.destructionName}`
       };
@@ -538,10 +538,10 @@ export class PhysicsTools {
         `EnableClothSimulation ${params.meshName}`,
         `SetClothPreset ${params.meshName} ${params.clothPreset}`
       ];
-      
+
       if (params.clothPreset === 'Custom' && params.customSettings) {
         const settings = params.customSettings;
-        
+
         if (settings.stiffness !== undefined) {
           commands.push(`SetClothStiffness ${params.meshName} ${settings.stiffness}`);
         }
@@ -562,12 +562,12 @@ export class PhysicsTools {
           commands.push(`SetClothWind ${params.meshName} ${wind[0]} ${wind[1]} ${wind[2]}`);
         }
       }
-      
+
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
-        message: `Cloth simulation enabled for ${params.meshName}` 
+
+      return {
+        success: true,
+        message: `Cloth simulation enabled for ${params.meshName}`
       };
     } catch (err) {
       return { success: false, error: `Failed to setup cloth: ${err}` };
@@ -593,14 +593,14 @@ export class PhysicsTools {
     try {
       const locStr = `${params.location[0]} ${params.location[1]} ${params.location[2]}`;
       const volStr = `${params.volume[0]} ${params.volume[1]} ${params.volume[2]}`;
-      
+
       const commands = [
         `CreateFluidSimulation ${params.name} ${params.fluidType} ${locStr} ${volStr}`
       ];
-      
+
       if (params.customSettings) {
         const settings = params.customSettings;
-        
+
         if (settings.viscosity !== undefined) {
           commands.push(`SetFluidViscosity ${params.name} ${settings.viscosity}`);
         }
@@ -620,12 +620,12 @@ export class PhysicsTools {
           );
         }
       }
-      
+
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
-        message: `Fluid simulation ${params.name} created` 
+
+      return {
+        success: true,
+        message: `Fluid simulation ${params.name} created`
       };
     } catch (err) {
       return { success: false, error: `Failed to create fluid simulation: ${err}` };

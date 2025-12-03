@@ -8,7 +8,7 @@ export async function handleAudioTools(
 ) {
   switch (action) {
     case 'create_sound_cue':
-      return await tools.audio.createSoundCue({
+      return await tools.audioTools.createSoundCue({
         name: args.name,
         wavePath: args.wavePath,
         savePath: args.savePath,
@@ -16,7 +16,7 @@ export async function handleAudioTools(
       });
 
     case 'play_sound_at_location':
-      return await tools.audio.playSoundAtLocation({
+      return await tools.audioTools.playSoundAtLocation({
         soundPath: args.soundPath,
         location: [args.location.x, args.location.y, args.location.z],
         rotation: args.rotation ? [args.rotation.pitch, args.rotation.yaw, args.rotation.roll] : undefined,
@@ -28,7 +28,7 @@ export async function handleAudioTools(
       });
 
     case 'play_sound_2d':
-      return await tools.audio.playSound2D({
+      return await tools.audioTools.playSound2D({
         soundPath: args.soundPath,
         volume: args.volume,
         pitch: args.pitch,
@@ -36,7 +36,7 @@ export async function handleAudioTools(
       });
 
     case 'create_audio_component':
-      return await tools.audio.createAudioComponent({
+      return await tools.audioTools.createAudioComponent({
         actorName: args.actorName,
         componentName: args.componentName,
         soundPath: args.soundPath,
@@ -45,7 +45,7 @@ export async function handleAudioTools(
       });
 
     case 'set_sound_attenuation':
-      return await tools.audio.setSoundAttenuation({
+      return await tools.audioTools.setSoundAttenuation({
         name: args.name,
         innerRadius: args.innerRadius,
         falloffDistance: args.falloffDistance,
@@ -54,30 +54,30 @@ export async function handleAudioTools(
       });
 
     case 'create_sound_class':
-      return await tools.audio.createSoundClass({
+      return await tools.audioTools.createSoundClass({
         name: args.name,
         parentClass: args.parentClass,
         properties: args.properties
       });
 
     case 'create_sound_mix':
-      return await tools.audio.createSoundMix({
+      return await tools.audioTools.createSoundMix({
         name: args.name,
         classAdjusters: args.classAdjusters
       });
 
     case 'push_sound_mix':
-      return await tools.audio.pushSoundMix({
+      return await tools.audioTools.pushSoundMix({
         mixName: args.mixName
       });
 
     case 'pop_sound_mix':
-      return await tools.audio.popSoundMix({
+      return await tools.audioTools.popSoundMix({
         mixName: args.mixName
       });
 
     case 'create_ambient_sound':
-      return await tools.audio.createAmbientSound({
+      return await tools.audioTools.createAmbientSound({
         soundPath: args.soundPath,
         location: [args.location.x, args.location.y, args.location.z],
         volume: args.volume,
@@ -88,7 +88,7 @@ export async function handleAudioTools(
       });
 
     case 'create_reverb_zone':
-      return await tools.audio.createReverbZone({
+      return await tools.audioTools.createReverbZone({
         name: args.name,
         location: [args.location.x, args.location.y, args.location.z],
         size: [args.size.x, args.size.y, args.size.z],
@@ -98,14 +98,14 @@ export async function handleAudioTools(
       });
 
     case 'enable_audio_analysis':
-      return await tools.audio.enableAudioAnalysis({
+      return await tools.audioTools.enableAudioAnalysis({
         enabled: args.enabled,
         fftSize: args.fftSize,
         outputType: args.outputType
       });
 
     case 'fade_sound':
-      return await tools.audio.fadeSound({
+      return await tools.audioTools.fadeSound({
         soundName: args.soundName,
         targetVolume: args.targetVolume,
         fadeTime: args.fadeTime,
@@ -113,13 +113,13 @@ export async function handleAudioTools(
       });
 
     case 'set_doppler_effect':
-      return await tools.audio.setDopplerEffect({
+      return await tools.audioTools.setDopplerEffect({
         enabled: args.enabled,
         scale: args.scale
       });
 
     case 'set_audio_occlusion':
-      return await tools.audio.setAudioOcclusion({
+      return await tools.audioTools.setAudioOcclusion({
         enabled: args.enabled,
         lowPassFilterFrequency: args.lowPassFilterFrequency,
         volumeAttenuation: args.volumeAttenuation

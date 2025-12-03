@@ -370,9 +370,9 @@ const testCases = [
   },
   {
     scenario: "Retrieve blueprint details via blueprint_get",
-    toolName: "blueprint_get",
+    toolName: "manage_blueprint",
     arguments: {
-      action: "get",
+      action: "get_blueprint",
       blueprintPath: BP_PATH
     },
     expected: "success"
@@ -441,6 +441,136 @@ const testCases = [
     toolName: "manage_blueprint",
     arguments: { action: "connect_pins", name: BP_PATH, fromPin: "InvalidPin", toPin: "InvalidPin" },
     expected: "error"
+  },
+  // --- New Test Cases (+20) ---
+  {
+    scenario: "Remove variable",
+    toolName: "manage_blueprint",
+    arguments: { action: "remove_variable", name: BP_PATH, variableName: "VarInt" },
+    expected: "success"
+  },
+  {
+    scenario: "Rename variable",
+    toolName: "manage_blueprint",
+    arguments: { action: "rename_variable", name: BP_PATH, oldName: "VarBool", newName: "bIsActive" },
+    expected: "success"
+  },
+  {
+    scenario: "Add Text variable",
+    toolName: "manage_blueprint",
+    arguments: { action: "add_variable", name: BP_PATH, variableName: "TxtMessage", variableType: "Text", defaultValue: "Hello World" },
+    expected: "success"
+  },
+  {
+    scenario: "Add Vector variable",
+    toolName: "manage_blueprint",
+    arguments: { action: "add_variable", name: BP_PATH, variableName: "VecPos", variableType: "Vector", defaultValue: "(X=1.0,Y=2.0,Z=3.0)" },
+    expected: "success"
+  },
+  {
+    scenario: "Add Rotator variable",
+    toolName: "manage_blueprint",
+    arguments: { action: "add_variable", name: BP_PATH, variableName: "RotAng", variableType: "Rotator", defaultValue: "(Pitch=0,Yaw=90,Roll=0)" },
+    expected: "success"
+  },
+  {
+    scenario: "Add Transform variable",
+    toolName: "manage_blueprint",
+    arguments: { action: "add_variable", name: BP_PATH, variableName: "Trans", variableType: "Transform" },
+    expected: "success"
+  },
+  {
+    scenario: "Add Actor Object Reference",
+    toolName: "manage_blueprint",
+    arguments: { action: "add_variable", name: BP_PATH, variableName: "TargetActor", variableType: "Object", subType: "Actor" },
+    expected: "success"
+  },
+  {
+    scenario: "Add Actor Class Reference",
+    toolName: "manage_blueprint",
+    arguments: { action: "add_variable", name: BP_PATH, variableName: "SpawnClass", variableType: "Class", subType: "Actor" },
+    expected: "success"
+  },
+  {
+    scenario: "Add Array (Float)",
+    toolName: "manage_blueprint",
+    arguments: { action: "add_variable", name: BP_PATH, variableName: "FloatArray", variableType: "Float", containerType: "Array" },
+    expected: "success"
+  },
+  {
+    scenario: "Add Set (Int)",
+    toolName: "manage_blueprint",
+    arguments: { action: "add_variable", name: BP_PATH, variableName: "IntSet", variableType: "Int", containerType: "Set" },
+    expected: "success"
+  },
+  {
+    scenario: "Add Map (String->Float)",
+    toolName: "manage_blueprint",
+    arguments: { action: "add_variable", name: BP_PATH, variableName: "ConfigMap", variableType: "Float", containerType: "Map", keyType: "String" },
+    expected: "success"
+  },
+  {
+    scenario: "Create Pawn Blueprint",
+    toolName: "manage_blueprint",
+    arguments: { action: "create", name: `${BP_NAME}_Pawn`, parentClass: "Pawn", savePath: "/Game/Blueprints" },
+    expected: "success"
+  },
+  {
+    scenario: "Create Character Blueprint",
+    toolName: "manage_blueprint",
+    arguments: { action: "create", name: `${BP_NAME}_Character`, parentClass: "Character", savePath: "/Game/Blueprints" },
+    expected: "success"
+  },
+  {
+    scenario: "Create GameMode Blueprint",
+    toolName: "manage_blueprint",
+    arguments: { action: "create", name: `${BP_NAME}_GM`, parentClass: "GameModeBase", savePath: "/Game/Blueprints" },
+    expected: "success"
+  },
+  {
+    scenario: "Create Deeply Nested Blueprint",
+    toolName: "manage_blueprint",
+    arguments: { action: "create", name: "BP_Deep", savePath: "/Game/Tests/Deep/Nested/Structure", parentClass: "Actor" },
+    expected: "success"
+  },
+  {
+    scenario: "Verify Variable Types",
+    toolName: "manage_blueprint",
+    arguments: { action: "get_blueprint", blueprintPath: BP_PATH },
+    expected: "success",
+    verify: {
+        blueprintHasVariable: ["TxtMessage", "VecPos", "RotAng", "Trans", "TargetActor", "SpawnClass", "FloatArray", "IntSet", "ConfigMap"]
+    }
+  },
+  {
+    scenario: "Error: Add duplicate variable",
+    toolName: "manage_blueprint",
+    arguments: { action: "add_variable", name: BP_PATH, variableName: "TxtMessage", variableType: "Text" },
+    expected: "error|exists"
+  },
+  {
+    scenario: "Error: Remove non-existent variable",
+    toolName: "manage_blueprint",
+    arguments: { action: "remove_variable", name: BP_PATH, variableName: "NonExistentVar" },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "Error: Rename non-existent variable",
+    toolName: "manage_blueprint",
+    arguments: { action: "rename_variable", name: BP_PATH, oldName: "GhostVar", newName: "RealVar" },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "Cleanup: Delete all test blueprints",
+    toolName: "manage_asset",
+    arguments: { action: "delete", assetPaths: [
+        BP_PATH, 
+        `/Game/Blueprints/${BP_NAME}_Pawn`,
+        `/Game/Blueprints/${BP_NAME}_Character`,
+        `/Game/Blueprints/${BP_NAME}_GM`,
+        "/Game/Tests/Deep/Nested/Structure/BP_Deep"
+    ]},
+    expected: "success"
   }
 ];
 

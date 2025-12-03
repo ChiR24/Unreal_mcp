@@ -1,9 +1,9 @@
 // Audio tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 
 export class AudioTools {
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
@@ -291,11 +291,11 @@ export class AudioTools {
   }) {
     // Clamp volume between 0 and 1
     const vol = Math.max(0.0, Math.min(1.0, params.volume));
-    
+
     // Use the proper Unreal Engine audio command
     // Note: au.Master.Volume is the correct console variable for master volume
     const command = `au.Master.Volume ${vol}`;
-    
+
     try {
       await this.bridge.executeConsoleCommand(command);
       return { success: true, message: `Master volume set to ${vol}` };

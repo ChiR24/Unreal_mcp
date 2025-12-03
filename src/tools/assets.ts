@@ -102,53 +102,28 @@ export class AssetTools extends BaseTool implements IAssetTools {
 
   async analyzeGraph(params: { assetPath: string; maxDepth?: number }) {
     const maxDepth = params.maxDepth ?? 3;
-    const graph: Record<string, string[]> = {};
-    const visited = new Set<string>();
-    const queue: { path: string; depth: number }[] = [{ path: params.assetPath, depth: 0 }];
 
-    visited.add(params.assetPath);
-
-    while (queue.length > 0) {
-      const next = queue.shift();
-      if (!next) {
-        break;
-      }
-
-      const { path, depth } = next;
-
-      if (depth >= maxDepth) {
-        // If we hit max depth, we don't fetch children, but we should record the node
-        if (!graph[path]) graph[path] = [];
-        continue;
-      }
-
-      try {
-        // Fetch immediate dependencies
-        const depsResponse = await this.getDependencies({ assetPath: path, recursive: false });
-
-        // If fetch fails or no dependencies, treat as leaf
-        if (!depsResponse || !depsResponse.success || !Array.isArray(depsResponse.dependencies)) {
-          graph[path] = [];
-          continue;
-        }
-
-        const deps = depsResponse.dependencies as string[];
-        graph[path] = deps;
-
-        for (const dep of deps) {
-          if (!visited.has(dep)) {
-            visited.add(dep);
-            queue.push({ path: dep, depth: depth + 1 });
-          }
-        }
-      } catch (err) {
-        console.warn(`Failed to fetch dependencies for ${path}:`, err);
-        graph[path] = [];
-      }
-    }
-
-    // Use WASM for analysis on the constructed graph
     try {
+      // Offload the heavy graph traversal to C++
+      const response: any = await this.sendRequest('get_asset_graph', {
+        assetPath: params.assetPath,
+        maxDepth,
+        subAction: 'get_asset_graph'
+      }, 'get_asset_graph');
+
+      if (!response.success || !response.graph) {
+        return { success: false, error: response.error || 'Failed to retrieve asset graph from engine' };
+      }
+
+      const graph: Record<string, string[]> = {};
+      // Convert the JSON object (Record<string, any[]>) to string[]
+      for (const [key, value] of Object.entries(response.graph)) {
+        if (Array.isArray(value)) {
+            graph[key] = value.map(v => String(v));
+        }
+      }
+
+      // Use WASM for analysis on the constructed graph
       const base = await wasmIntegration.resolveDependencies(
         params.assetPath,
         graph,
@@ -197,7 +172,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
         analysis
       };
     } catch (e: any) {
-      return { success: false, error: `WASM analysis failed: ${e.message}` };
+      return { success: false, error: `Analysis failed: ${e.message}` };
     }
   }
 

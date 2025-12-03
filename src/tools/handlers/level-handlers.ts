@@ -11,7 +11,12 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
       return cleanObject(res);
     }
     case 'save': {
-      const res = await tools.levelTools.saveLevel({ levelName: args.levelName, savePath: args.levelPath });
+      const targetPath = args.levelPath || args.savePath;
+      if (targetPath) {
+        const res = await tools.levelTools.saveLevelAs({ targetPath });
+        return cleanObject(res);
+      }
+      const res = await tools.levelTools.saveLevel({ levelName: args.levelName });
       return cleanObject(res);
     }
     case 'create_level': {
@@ -68,13 +73,13 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
     case 'export_level': {
       const res = await tools.levelTools.exportLevel({
         levelPath: args.levelPath,
-        exportPath: args.destinationPath
+        exportPath: args.exportPath || args.destinationPath
       });
       return cleanObject(res);
     }
     case 'import_level': {
       const res = await tools.levelTools.importLevel({
-        packagePath: args.sourcePath,
+        packagePath: args.packagePath || args.sourcePath, // Allow sourcePath as fallback for backward compat
         destinationPath: args.destinationPath
       });
       return cleanObject(res);
@@ -88,7 +93,8 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
       return cleanObject(res);
     }
     case 'delete': {
-      const res = await tools.levelTools.deleteLevels({ levelPaths: [args.levelPath] });
+      const levelPaths = Array.isArray(args.levelPaths) ? args.levelPaths : [args.levelPath];
+      const res = await tools.levelTools.deleteLevels({ levelPaths });
       return cleanObject(res);
     }
     case 'set_metadata': {

@@ -1,4 +1,4 @@
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 
 export interface IBaseTool {
     getAutomationBridge(): AutomationBridge;
@@ -17,6 +17,7 @@ export interface IActorTools {
     getComponents(actorName: string): Promise<any>;
     duplicate(params: { actorName: string; newName?: string; offset?: { x: number; y: number; z: number } }): Promise<any>;
     addTag(params: { actorName: string; tag: string }): Promise<any>;
+    removeTag(params: { actorName: string; tag: string }): Promise<any>;
     findByTag(params: { tag: string; matchType?: string }): Promise<any>;
     findByName(name: string): Promise<any>;
     detach(actorName: string): Promise<any>;
@@ -94,10 +95,13 @@ export interface IBlueprintTools {
     probeSubobjectDataHandle(opts?: { componentClass?: string }): Promise<any>;
     setBlueprintDefault(params: { blueprintName: string; propertyName: string; value: unknown }): Promise<any>;
     addVariable(params: { blueprintName: string; variableName: string; variableType: string; defaultValue?: any; category?: string; isReplicated?: boolean; isPublic?: boolean; variablePinType?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
+    removeVariable(params: { blueprintName: string; variableName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
+    renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     addEvent(params: { blueprintName: string; eventType: string; customEventName?: string; parameters?: Array<{ name: string; type: string }>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     removeEvent(params: { blueprintName: string; eventName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     addFunction(params: { blueprintName: string; functionName: string; inputs?: Array<{ name: string; type: string }>; outputs?: Array<{ name: string; type: string }>; isPublic?: boolean; category?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     setVariableMetadata(params: { blueprintName: string; variableName: string; metadata: Record<string, unknown>; timeoutMs?: number }): Promise<any>;
+    renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     addConstructionScript(params: { blueprintName: string; scriptName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     compileBlueprint(params: { blueprintName: string; saveAfterCompile?: boolean }): Promise<any>;
     getBlueprintSCS(params: { blueprintPath: string; timeoutMs?: number }): Promise<any>;
@@ -205,7 +209,7 @@ export interface ITools {
     landscapeTools: ILandscapeTools;
     foliageTools: IFoliageTools;
     environmentTools: IEnvironmentTools;
-    
+
     // Added newly required tools to remove 'any' casting
     materialTools: any;
     niagaraTools: any;
@@ -220,6 +224,7 @@ export interface ITools {
     visualTools?: any; // Optional as it's being removed
     engineTools: any;
     systemTools: any;
+    behaviorTreeTools: any;
 
     automationBridge?: AutomationBridge;
     [key: string]: any;

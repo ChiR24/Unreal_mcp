@@ -254,6 +254,32 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_ADD_VARIABLE_FAILED', message: pluginResp?.message ?? 'Failed to add variable via automation bridge' } as const;
   }
 
+  async removeVariable(params: { blueprintName: string; variableName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+    const candidates = this.buildCandidates(params.blueprintName);
+    const primary = candidates[0];
+    if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
+    const pluginResp = await this.sendAction('blueprint_remove_variable', { blueprintCandidates: candidates, requestedPath: primary, variableName: params.variableName }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
+    if (pluginResp && pluginResp.success) return pluginResp;
+    if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+      return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_remove_variable' } as const;
+    }
+    return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_REMOVE_VARIABLE_FAILED', message: pluginResp?.message ?? 'Failed to remove variable via automation bridge' } as const;
+  }
+
+  async renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+    const candidates = this.buildCandidates(params.blueprintName);
+    const primary = candidates[0];
+    if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
+    const pluginResp = await this.sendAction('blueprint_rename_variable', { blueprintCandidates: candidates, requestedPath: primary, oldName: params.oldName, newName: params.newName }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
+    if (pluginResp && pluginResp.success) return pluginResp;
+    if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+      return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_rename_variable' } as const;
+    }
+    return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_RENAME_VARIABLE_FAILED', message: pluginResp?.message ?? 'Failed to rename variable via automation bridge' } as const;
+  }
+
+
+
   async addEvent(params: { blueprintName: string; eventType: string; customEventName?: string; parameters?: Array<{ name: string; type: string }>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];

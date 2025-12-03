@@ -246,6 +246,115 @@ const testCases = [
     toolName: "manage_asset",
     arguments: { action: "duplicate", assetPath: "/Engine/BasicShapes/Cube" },
     expected: "error|not_material"
+  },
+  // --- New Test Cases (+20) ---
+  {
+    scenario: "Create Unlit Material",
+    toolName: "manage_asset",
+    arguments: { action: "create_material", name: "M_Unlit_TC", path: "/Game/Materials", properties: { ShadingModel: "Unlit" } },
+    expected: "success"
+  },
+  {
+    scenario: "Create Translucent Material",
+    toolName: "manage_asset",
+    arguments: { action: "create_material", name: "M_Translucent_TC", path: "/Game/Materials", properties: { BlendMode: "Translucent" } },
+    expected: "success"
+  },
+  {
+    scenario: "Create Two-Sided Material",
+    toolName: "manage_asset",
+    arguments: { action: "create_material", name: "M_TwoSided_TC", path: "/Game/Materials", properties: { TwoSided: true } },
+    expected: "success"
+  },
+  {
+    scenario: "Add Scalar Parameter",
+    toolName: "manage_asset",
+    arguments: { action: "add_material_parameter", assetPath: "/Game/Materials/M_MasterMaterial_TC", parameterName: "Roughness", parameterType: "Scalar", defaultValue: 0.5 },
+    expected: "success"
+  },
+  {
+    scenario: "Add Vector Parameter",
+    toolName: "manage_asset",
+    arguments: { action: "add_material_parameter", assetPath: "/Game/Materials/M_MasterMaterial_TC", parameterName: "EmissiveColor", parameterType: "Vector", defaultValue: [1, 0, 0, 1] },
+    expected: "success"
+  },
+  {
+    scenario: "Add Texture Parameter",
+    toolName: "manage_asset",
+    arguments: { action: "add_material_parameter", assetPath: "/Game/Materials/M_MasterMaterial_TC", parameterName: "BaseTexture", parameterType: "Texture" },
+    expected: "success"
+  },
+  {
+    scenario: "Add Static Switch",
+    toolName: "manage_asset",
+    arguments: { action: "add_material_parameter", assetPath: "/Game/Materials/M_MasterMaterial_TC", parameterName: "UseTexture", parameterType: "StaticSwitch", defaultValue: false },
+    expected: "success"
+  },
+  {
+    scenario: "Create Constant Instance",
+    toolName: "manage_asset",
+    arguments: { action: "create_material_instance", name: "MIC_Test", path: "/Game/Materials", parentMaterial: "/Game/Materials/M_MasterMaterial_TC", constant: true },
+    expected: "success"
+  },
+  {
+    scenario: "List Material Instances",
+    toolName: "manage_asset",
+    arguments: { action: "list_instances", assetPath: "/Game/Materials/M_MasterMaterial_TC" },
+    expected: "success"
+  },
+  {
+    scenario: "Reset Instance Parameters",
+    toolName: "manage_asset",
+    arguments: { action: "reset_instance_parameters", assetPath: "/Game/Materials/MI_TestInstance_TC" },
+    expected: "success"
+  },
+  {
+    scenario: "Check Material Exists",
+    toolName: "manage_asset",
+    arguments: { action: "exists", assetPath: "/Game/Materials/M_MasterMaterial_TC" },
+    expected: "true"
+  },
+  {
+    scenario: "Get Material Stats",
+    toolName: "manage_asset",
+    arguments: { action: "get_material_stats", assetPath: "/Game/Materials/M_MasterMaterial_TC" },
+    expected: "success"
+  },
+  {
+    scenario: "Error: Add existing parameter",
+    toolName: "manage_asset",
+    arguments: { action: "add_material_parameter", assetPath: "/Game/Materials/M_MasterMaterial_TC", parameterName: "Roughness", parameterType: "Scalar" },
+    expected: "error|exists"
+  },
+  {
+    scenario: "Error: Create invalid shading model",
+    toolName: "manage_asset",
+    arguments: { action: "create_material", name: "M_Invalid", path: "/Game/Materials", properties: { ShadingModel: "InvalidModel" } },
+    expected: "error|invalid_property"
+  },
+  {
+    scenario: "Edge: Translucent Unlit",
+    toolName: "manage_asset",
+    arguments: { action: "create_material", name: "M_Glass", path: "/Game/Materials", properties: { ShadingModel: "Unlit", BlendMode: "Translucent" } },
+    expected: "success"
+  },
+  {
+    scenario: "Validation: Missing parent for instance",
+    toolName: "manage_asset",
+    arguments: { action: "create_material_instance", name: "MI_Orphan", path: "/Game/Materials" },
+    expected: "error|missing_parent"
+  },
+  {
+    scenario: "Cleanup New Materials",
+    toolName: "manage_asset",
+    arguments: { action: "delete", assetPaths: [
+        "/Game/Materials/M_Unlit_TC",
+        "/Game/Materials/M_Translucent_TC",
+        "/Game/Materials/M_TwoSided_TC",
+        "/Game/Materials/MIC_Test",
+        "/Game/Materials/M_Glass"
+    ]},
+    expected: "success"
   }
 ];
 

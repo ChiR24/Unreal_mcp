@@ -832,7 +832,28 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(const FString& Re
     // Execute the command
     try
     {
-        GEngine->Exec(nullptr, *Command);
+        UWorld* TargetWorld = nullptr;
+#if WITH_EDITOR
+        if (GEditor)
+        {
+            // Prefer PIE world if active, otherwise Editor world
+            TargetWorld = GEditor->PlayWorld;
+            if (!TargetWorld)
+            {
+                TargetWorld = GEditor->GetEditorWorldContext().World();
+            }
+        }
+#endif
+        
+        // Fallback to GWorld if no editor/PIE world found (e.g. game mode)
+        if (!TargetWorld && GEngine)
+        {
+            // Note: In some contexts GWorld is a macro for a proxy, but here we need a raw pointer.
+            // We'll rely on Exec handling nullptr if we really can't find one, 
+            // but explicitly passing the editor world fixes many "command not handled" or crash issues.
+        }
+
+        GEngine->Exec(TargetWorld, *Command);
         
         TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
         Result->SetStringField(TEXT("command"), Command);

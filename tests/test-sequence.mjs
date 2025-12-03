@@ -53,6 +53,121 @@ const testCases = [
     toolName: "manage_sequence",
     arguments: { action: "add_spawnable_from_class", path: seqPath, className: "InvalidClass" },
     expected: "error"
+  },
+  // --- New Test Cases (+20) ---
+  {
+    scenario: "Create Animation Track",
+    toolName: "manage_sequence",
+    arguments: { action: "add_track", path: seqPath, actorName: "TC_Cube", trackType: "Animation" },
+    expected: "success"
+  },
+  {
+    scenario: "Create Transform Track",
+    toolName: "manage_sequence",
+    arguments: { action: "add_track", path: seqPath, actorName: "TC_Cube", trackType: "Transform" },
+    expected: "success"
+  },
+  {
+    scenario: "Create Audio Track",
+    toolName: "manage_sequence",
+    arguments: { action: "add_track", path: seqPath, trackType: "Audio" }, // Master track
+    expected: "success"
+  },
+  {
+    scenario: "Add Audio Section",
+    toolName: "manage_sequence",
+    arguments: { action: "add_section", path: seqPath, trackType: "Audio", assetPath: "/Engine/EditorSounds/Notifications/CompileSuccess", startTime: 0, endTime: 2.0 },
+    expected: "success"
+  },
+  {
+    scenario: "Set Display Rate",
+    toolName: "manage_sequence",
+    arguments: { action: "set_display_rate", path: seqPath, frameRate: "30fps" },
+    expected: "success"
+  },
+  {
+    scenario: "Set Tick Resolution",
+    toolName: "manage_sequence",
+    arguments: { action: "set_tick_resolution", path: seqPath, resolution: "24000fps" },
+    expected: "success"
+  },
+  {
+    scenario: "Set Work Range",
+    toolName: "manage_sequence",
+    arguments: { action: "set_work_range", path: seqPath, start: 0, end: 100 },
+    expected: "success"
+  },
+  {
+    scenario: "Set View Range",
+    toolName: "manage_sequence",
+    arguments: { action: "set_view_range", path: seqPath, start: 0, end: 120 },
+    expected: "success"
+  },
+  {
+    scenario: "Add Event Track",
+    toolName: "manage_sequence",
+    arguments: { action: "add_track", path: seqPath, trackType: "Event" },
+    expected: "success"
+  },
+  {
+    scenario: "Add Event Keyframe",
+    toolName: "manage_sequence",
+    arguments: { action: "add_keyframe", path: seqPath, trackType: "Event", frame: 30, value: "OnTrigger" },
+    expected: "success"
+  },
+  {
+    scenario: "Mute Track",
+    toolName: "manage_sequence",
+    arguments: { action: "set_track_muted", path: seqPath, trackName: "AudioTrack", muted: true },
+    expected: "success"
+  },
+  {
+    scenario: "Solo Track",
+    toolName: "manage_sequence",
+    arguments: { action: "set_track_solo", path: seqPath, trackName: "AudioTrack", solo: true },
+    expected: "success"
+  },
+  {
+    scenario: "Lock Track",
+    toolName: "manage_sequence",
+    arguments: { action: "set_track_locked", path: seqPath, trackName: "AudioTrack", locked: true },
+    expected: "success"
+  },
+  {
+    scenario: "List Tracks",
+    toolName: "manage_sequence",
+    arguments: { action: "list_tracks", path: seqPath },
+    expected: "success"
+  },
+  {
+    scenario: "Remove Track",
+    toolName: "manage_sequence",
+    arguments: { action: "remove_track", path: seqPath, trackName: "AudioTrack" },
+    expected: "success"
+  },
+  {
+    scenario: "Error: Add track to invalid sequence",
+    toolName: "manage_sequence",
+    arguments: { action: "add_track", path: "/Game/InvalidSequence", trackType: "Transform" },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "Error: Invalid display rate",
+    toolName: "manage_sequence",
+    arguments: { action: "set_display_rate", path: seqPath, frameRate: "InvalidFPS" },
+    expected: "error"
+  },
+  {
+    scenario: "Edge: Negative work range",
+    toolName: "manage_sequence",
+    arguments: { action: "set_work_range", path: seqPath, start: -100, end: 0 },
+    expected: "success"
+  },
+  {
+    scenario: "Cleanup Sequence Tests",
+    toolName: "manage_asset",
+    arguments: { action: "delete", assetPaths: [seqPath] },
+    expected: "success"
   }
 ];
 

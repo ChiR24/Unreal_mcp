@@ -1,4 +1,6 @@
 import { cleanObject } from '../utils/safe-json.js';
+import { Logger } from '../utils/logger.js';
+import { ResponseFactory } from '../utils/response-factory.js';
 import { ITools } from '../types/tool-interfaces.js';
 import { executeAutomationRequest, requireAction } from './handlers/common-handlers.js';
 import { handleAssetTools } from './handlers/asset-handlers.js';
@@ -122,40 +124,40 @@ async function invokeNamedTool(
   switch (name) {
     // 1. ASSET MANAGER
     case 'manage_asset': {
-        // Reroute merged functionality
-        if (['create_render_target', 'nanite_rebuild_mesh'].includes(action)) {
-             const payload = { ...args, subAction: action };
-             return cleanObject(await executeAutomationRequest(tools, 'manage_render', payload, `Automation bridge not available for ${action}`));
-        }
-        if (isMaterialGraphAction(action)) {
-             // Map new action names to legacy subActions if needed, or just pass through if plugin supports them.
-             // The plugin expects 'manage_material_graph' for these.
-             // We need to map 'add_material_node' -> 'add_node' etc if the plugin is strict, 
-             // or we assume we updated the plugin. 
-             // For now, let's assume we map them to the old tool 'manage_material_graph' with the old action names.
-             const subAction = MATERIAL_GRAPH_ACTION_MAP[action] || action;
-             
-             return await handleGraphTools('manage_material_graph', subAction, args, tools);
-        }
-        if (isBehaviorTreeGraphAction(action)) {
-             const subAction = BEHAVIOR_TREE_ACTION_MAP[action] || action;
-             return await handleGraphTools('manage_behavior_tree', subAction, args, tools);
-        }
-        return await handleAssetTools(action, args, tools);
+      // Reroute merged functionality
+      if (['create_render_target', 'nanite_rebuild_mesh'].includes(action)) {
+        const payload = { ...args, subAction: action };
+        return cleanObject(await executeAutomationRequest(tools, 'manage_render', payload, `Automation bridge not available for ${action}`));
+      }
+      if (isMaterialGraphAction(action)) {
+        // Map new action names to legacy subActions if needed, or just pass through if plugin supports them.
+        // The plugin expects 'manage_material_graph' for these.
+        // We need to map 'add_material_node' -> 'add_node' etc if the plugin is strict, 
+        // or we assume we updated the plugin. 
+        // For now, let's assume we map them to the old tool 'manage_material_graph' with the old action names.
+        const subAction = MATERIAL_GRAPH_ACTION_MAP[action] || action;
+
+        return await handleGraphTools('manage_material_graph', subAction, args, tools);
+      }
+      if (isBehaviorTreeGraphAction(action)) {
+        const subAction = BEHAVIOR_TREE_ACTION_MAP[action] || action;
+        return await handleGraphTools('manage_behavior_tree', subAction, args, tools);
+      }
+      return await handleAssetTools(action, args, tools);
     }
 
     // 2. BLUEPRINT MANAGER
 
     case 'manage_blueprint': {
-        if (action === 'get_blueprint') {
-            return await handleBlueprintGet(args, tools);
-        }
-        // Graph actions
-        const graphActions = ['create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details'];
-        if (graphActions.includes(action)) {
-            return await handleGraphTools('manage_blueprint_graph', action, args, tools);
-        }
-        return await handleBlueprintTools(action, args, tools);
+      if (action === 'get_blueprint') {
+        return await handleBlueprintGet(args, tools);
+      }
+      // Graph actions
+      const graphActions = ['create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details'];
+      if (graphActions.includes(action)) {
+        return await handleGraphTools('manage_blueprint_graph', action, args, tools);
+      }
+      return await handleBlueprintTools(action, args, tools);
     }
 
     // 3. ACTOR CONTROL
@@ -165,19 +167,19 @@ async function invokeNamedTool(
     // 4. EDITOR CONTROL
     case 'control_editor': {
       if (action === 'simulate_input') {
-          const payload = { ...args, subAction: action };
-          return cleanObject(await executeAutomationRequest(tools, 'manage_ui', payload, 'Automation bridge not available'));
+        const payload = { ...args, subAction: action };
+        return cleanObject(await executeAutomationRequest(tools, 'manage_ui', payload, 'Automation bridge not available'));
       }
       return await handleEditorTools(action, args, tools);
     }
 
     // 5. LEVEL MANAGER
     case 'manage_level': {
-        if (['load_cells', 'set_datalayer'].includes(action)) {
-             const payload = { ...args, subAction: action };
-             return cleanObject(await executeAutomationRequest(tools, 'manage_world_partition', payload, 'Automation bridge not available'));
-        }
-        return await handleLevelTools(action, args, tools);
+      if (['load_cells', 'set_datalayer'].includes(action)) {
+        const payload = { ...args, subAction: action };
+        return cleanObject(await executeAutomationRequest(tools, 'manage_world_partition', payload, 'Automation bridge not available'));
+      }
+      return await handleLevelTools(action, args, tools);
     }
 
     // 6. ANIMATION & PHYSICS
@@ -186,11 +188,11 @@ async function invokeNamedTool(
 
     // 7. EFFECTS MANAGER (Renamed from create_effect)
     case 'manage_effect': {
-        if (isNiagaraGraphAction(action)) {
-             const subAction = NIAGARA_GRAPH_ACTION_MAP[action] || action;
-             return await handleGraphTools('manage_niagara_graph', subAction, args, tools);
-        }
-        return await handleEffectTools(action, args, tools);
+      if (isNiagaraGraphAction(action)) {
+        const subAction = NIAGARA_GRAPH_ACTION_MAP[action] || action;
+        return await handleGraphTools('manage_niagara_graph', subAction, args, tools);
+      }
+      return await handleEffectTools(action, args, tools);
     }
 
     // 8. ENVIRONMENT BUILDER
@@ -199,17 +201,17 @@ async function invokeNamedTool(
 
     // 9. SYSTEM CONTROL
     case 'system_control': {
-        if (action === 'console_command') return await handleConsoleCommand(args, tools);
-        if (action === 'run_ubt') return await handlePipelineTools(action, args, tools);
-        
-        // Bridge forwards
-        if (action === 'run_tests') return cleanObject(await executeAutomationRequest(tools, 'manage_tests', { ...args, subAction: action }, 'Bridge unavailable'));
-        if (action === 'subscribe') return cleanObject(await executeAutomationRequest(tools, 'manage_logs', { ...args, subAction: action }, 'Bridge unavailable'));
-        if (action === 'spawn_category') return cleanObject(await executeAutomationRequest(tools, 'manage_debug', { ...args, subAction: action }, 'Bridge unavailable'));
-        if (action === 'start_session') return cleanObject(await executeAutomationRequest(tools, 'manage_insights', { ...args, subAction: action }, 'Bridge unavailable'));
-        if (action === 'lumen_update_scene') return cleanObject(await executeAutomationRequest(tools, 'manage_render', { ...args, subAction: action }, 'Bridge unavailable'));
+      if (action === 'console_command') return await handleConsoleCommand(args, tools);
+      if (action === 'run_ubt') return await handlePipelineTools(action, args, tools);
 
-        return await handleSystemTools(action, args, tools);
+      // Bridge forwards
+      if (action === 'run_tests') return cleanObject(await executeAutomationRequest(tools, 'manage_tests', { ...args, subAction: action }, 'Bridge unavailable'));
+      if (action === 'subscribe') return cleanObject(await executeAutomationRequest(tools, 'manage_logs', { ...args, subAction: action }, 'Bridge unavailable'));
+      if (action === 'spawn_category') return cleanObject(await executeAutomationRequest(tools, 'manage_debug', { ...args, subAction: action }, 'Bridge unavailable'));
+      if (action === 'start_session') return cleanObject(await executeAutomationRequest(tools, 'manage_insights', { ...args, subAction: action }, 'Bridge unavailable'));
+      if (action === 'lumen_update_scene') return cleanObject(await executeAutomationRequest(tools, 'manage_render', { ...args, subAction: action }, 'Bridge unavailable'));
+
+      return await handleSystemTools(action, args, tools);
     }
 
     // 10. SEQUENCER
@@ -224,6 +226,10 @@ async function invokeNamedTool(
     case 'manage_audio':
       return await handleAudioTools(action, args, tools);
 
+    // 13. BEHAVIOR TREE
+    case 'manage_behavior_tree':
+      return await handleGraphTools('manage_behavior_tree', action, args, tools);
+
     default:
       return cleanObject({ success: false, error: 'UNKNOWN_TOOL', message: `Unknown consolidated tool: ${name}` });
   }
@@ -235,8 +241,9 @@ export async function handleConsolidatedToolCall(
   args: any,
   tools: ITools
 ) {
+  const logger = new Logger('ConsolidatedToolHandler');
   const startTime = Date.now();
-  console.log(`Starting execution of ${name} at ${new Date().toISOString()}`);
+  logger.info(`Starting execution of ${name} at ${new Date().toISOString()}`);
 
   try {
     const normalized = normalizeToolCall(name, args);
@@ -268,7 +275,7 @@ export async function handleConsolidatedToolCall(
     return await defaultHandler();
   } catch (err: any) {
     const duration = Date.now() - startTime;
-    console.error(`[ConsolidatedToolHandler] Failed execution of ${name} after ${duration}ms: ${err?.message || String(err)}`);
+    logger.error(`Failed execution of ${name} after ${duration}ms: ${err?.message || String(err)}`);
     const errorMessage = err?.message || String(err);
     const lowerError = errorMessage.toString().toLowerCase();
     const isTimeout = lowerError.includes('timeout');
@@ -277,17 +284,9 @@ export async function handleConsolidatedToolCall(
     if (isTimeout) {
       text = `Tool ${name} timed out. Please check Unreal Engine connection.`;
     } else {
-       text = `Failed to execute ${name}: ${errorMessage}`;
+      text = `Failed to execute ${name}: ${errorMessage}`;
     }
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text
-        }
-      ],
-      isError: true
-    };
+    return ResponseFactory.error(text);
   }
 }

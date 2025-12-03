@@ -356,6 +356,15 @@ export class ActorTools extends BaseTool implements IActorTools {
     return this.sendRequest('add_tag', { actorName, tag }, 'control_actor');
   }
 
+  async removeTag(params: { actorName: string; tag: string }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    const tag = typeof params.tag === 'string' ? params.tag.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+    if (!tag) throw new Error('Invalid tag');
+
+    return this.sendRequest('remove_tag', { actorName, tag }, 'control_actor');
+  }
+
   async findByTag(params: { tag: string; matchType?: string }) {
     const tag = typeof params.tag === 'string' ? params.tag.trim() : '';
 

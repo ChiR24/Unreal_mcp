@@ -2,8 +2,8 @@
 import { spawn } from 'node:child_process';
 
 const tests = [
-  'test:control_actor', // Pass
-  'test:control_editor', // Pass
+  'test:control_actor', // Pass1 // Pass2
+  'test:control_editor', // Pass1 // Pass2
   'test:manage_level', // Pass
   'test:animation', // Pass
   'test:materials', // Pass
@@ -14,9 +14,9 @@ const tests = [
   'test:console_command', // Pass
   'test:inspect', // Pass
   'test:manage_asset', // Pass
-  'test:blueprint', // Pass
+  'test:blueprint', // Pass1 // Pass2
   'test:blueprint_graph', // Pass
-  'test:graphql',
+  'test:graphql', // Pass
   'test:wasm:all', // Pass
   'test:no-inline-python',
   'test:plugin-handshake', // Pass

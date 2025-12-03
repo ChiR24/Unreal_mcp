@@ -287,33 +287,56 @@ export class LevelTools extends BaseTool implements ILevelTools {
     const source = this.resolveLevelPath(params.sourcePath);
     const target = this.normalizeLevelPath(params.targetPath);
 
-    if (!source) {
-      return { success: false, error: 'No source level available for save-as' };
+    // Delegate to automation bridge
+    try {
+      const response = await this.sendAutomationRequest('manage_level', {
+        action: 'save_level_as',
+        savePath: target.path
+      }, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        return { success: false, error: response.error || response.message || 'Failed to save level as' };
+      }
+
+      // If successful, update local state
+      if (!source) {
+        // If no source known, just ensure target record
+        this.ensureRecord(target.path, {
+          name: target.name,
+          loaded: true,
+          visible: true,
+          createdAt: Date.now(),
+          lastSavedAt: Date.now()
+        });
+      } else {
+        const sourceRecord = this.getRecord(source);
+        const now = Date.now();
+        this.ensureRecord(target.path, {
+          name: target.name,
+          partitioned: sourceRecord?.partitioned ?? true,
+          streaming: sourceRecord?.streaming ?? false,
+          loaded: true,
+          visible: true,
+          metadata: { ...(sourceRecord?.metadata ?? {}), savedFrom: source },
+          exports: sourceRecord?.exports ?? [],
+          lights: sourceRecord?.lights ?? [],
+          createdAt: sourceRecord?.createdAt ?? now,
+          lastSavedAt: now
+        });
+      }
+
+      this.setCurrentLevel(target.path);
+
+      return {
+        success: true,
+        message: response.message || `Level saved as ${target.path}`,
+        levelPath: target.path
+      };
+    } catch (error) {
+       return { success: false, error: `Failed to save level as: ${error instanceof Error ? error.message : String(error)}` };
     }
-
-    const sourceRecord = this.getRecord(source);
-    const now = Date.now();
-
-    this.ensureRecord(target.path, {
-      name: target.name,
-      partitioned: sourceRecord?.partitioned ?? true,
-      streaming: sourceRecord?.streaming ?? false,
-      loaded: sourceRecord?.loaded ?? false,
-      visible: sourceRecord?.visible ?? false,
-      metadata: { ...(sourceRecord?.metadata ?? {}), savedFrom: source },
-      exports: sourceRecord?.exports ?? [],
-      lights: sourceRecord?.lights ?? [],
-      createdAt: sourceRecord?.createdAt ?? now,
-      lastSavedAt: now
-    });
-
-    this.setCurrentLevel(target.path);
-
-    return {
-      success: true,
-      message: `Level saved as ${target.path}`,
-      levelPath: target.path
-    };
   }
 
   async deleteLevels(params: { levelPaths: string[] }) {
@@ -415,12 +438,22 @@ export class LevelTools extends BaseTool implements ILevelTools {
     }
   }
 
-  async saveLevel(_params: {
+  async saveLevel(params: {
     levelName?: string;
     savePath?: string;
   }) {
     try {
-      const response = await this.sendAutomationRequest('save_current_level', {}, {
+      if (params.savePath && !params.savePath.startsWith('/Game/')) {
+        throw new Error(`Invalid save path: ${params.savePath}`);
+      }
+
+      const action = params.savePath ? 'save_level_as' : 'save';
+      const payload: Record<string, unknown> = { action };
+      if (params.savePath) {
+        payload.savePath = params.savePath;
+      }
+
+      const response = await this.sendAutomationRequest('manage_level', payload, {
         timeoutMs: 60000
       });
 

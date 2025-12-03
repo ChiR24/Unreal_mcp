@@ -277,6 +277,177 @@ const testCases = [
             directoryPath: "/Empty/Dir"
         },
         expected: "success|no_op"
+    },
+    // --- New Test Cases (+20) ---
+    {
+        scenario: "Error: Delete non-existent asset",
+        toolName: "manage_asset",
+        arguments: {
+            action: "delete",
+            assetPaths: ["/Game/NonExistentAsset_XYZ"]
+        },
+        expected: "success|not_found" // Ideally should be robust
+    },
+    {
+        scenario: "Edge: Create existing folder",
+        toolName: "manage_asset",
+        arguments: {
+            action: "create_folder",
+            path: "/Game"
+        },
+        expected: "success|exists"
+    },
+    {
+        scenario: "Edge: Move to same path (no-op)",
+        toolName: "manage_asset",
+        arguments: {
+            action: "move",
+            assetPath: "/Engine/BasicShapes/Cube",
+            destinationPath: "/Engine/BasicShapes/Cube"
+        },
+        expected: "success|no_op"
+    },
+    {
+        scenario: "Check existence: Engine asset",
+        toolName: "manage_asset",
+        arguments: {
+            action: "exists",
+            assetPath: "/Engine/BasicShapes/Cube"
+        },
+        expected: "true"
+    },
+    {
+        scenario: "Check existence: Non-existent asset",
+        toolName: "manage_asset",
+        arguments: {
+            action: "exists",
+            assetPath: "/Game/NothingHere"
+        },
+        expected: "false"
+    },
+    {
+        scenario: "Error: Duplicate to existing path",
+        toolName: "manage_asset",
+        arguments: {
+            action: "duplicate",
+            sourcePath: "/Engine/BasicShapes/Cube",
+            destinationPath: "/Engine/BasicShapes",
+            newName: "Sphere" // Assuming Sphere exists
+        },
+        expected: "error|exists"
+    },
+    {
+        scenario: "List assets: Root recursive",
+        toolName: "manage_asset",
+        arguments: {
+            action: "list",
+            directory: "/Game",
+            recursive: true
+        },
+        expected: "success"
+    },
+    {
+        scenario: "List assets: Non-existent directory",
+        toolName: "manage_asset",
+        arguments: {
+            action: "list",
+            directory: "/Game/DoesNotExist/AtAll"
+        },
+        expected: "success|empty"
+    },
+    {
+        scenario: "Rename: Same name (no-op)",
+        toolName: "manage_asset",
+        arguments: {
+            action: "rename",
+            assetPath: "/Engine/BasicShapes/Cube",
+            newName: "Cube"
+        },
+        expected: "success|no_op"
+    },
+    {
+        scenario: "Validation: Invalid path format",
+        toolName: "manage_asset",
+        arguments: {
+            action: "create_folder",
+            path: "Invalid/Path/Without/Slash"
+        },
+        expected: "error|invalid_path"
+    },
+    {
+        scenario: "Validation: Empty path",
+        toolName: "manage_asset",
+        arguments: {
+            action: "create_folder",
+            path: ""
+        },
+        expected: "error|invalid_path"
+    },
+    {
+        scenario: "Metadata: Get metadata (Engine Asset)",
+        toolName: "manage_asset",
+        arguments: {
+            action: "get_metadata",
+            assetPath: "/Engine/BasicShapes/Cube"
+        },
+        expected: "success"
+    },
+    {
+        scenario: "Error: Get metadata (Non-existent)",
+        toolName: "manage_asset",
+        arguments: {
+            action: "get_metadata",
+            assetPath: "/Game/NoMetadataHere"
+        },
+        expected: "error|not_found"
+    },
+    {
+        scenario: "Dependencies: Recursive check",
+        toolName: "manage_asset",
+        arguments: {
+            action: "get_dependencies",
+            assetPath: "/Engine/BasicShapes/Cube",
+            recursive: true
+        },
+        expected: "success"
+    },
+    {
+        scenario: "Referencers: Check engine asset usage",
+        toolName: "manage_asset",
+        arguments: {
+            action: "get_referencers",
+            assetPath: "/Engine/BasicShapes/Cube"
+        },
+        expected: "success"
+    },
+    {
+        scenario: "Report: Count type",
+        toolName: "manage_asset",
+        arguments: {
+            action: "generate_report",
+            directory: "/Engine",
+            reportType: "Count"
+        },
+        expected: "success"
+    },
+    {
+        scenario: "Report: Type distribution",
+        toolName: "manage_asset",
+        arguments: {
+            action: "generate_report",
+            directory: "/Engine",
+            reportType: "TypeDistribution"
+        },
+        expected: "success"
+    },
+    {
+        scenario: "Bulk operation: Rename empty list",
+        toolName: "manage_asset",
+        arguments: {
+            action: "bulk_rename",
+            renames: []
+        },
+        expected: "success|no_op"
     }
 ];
 

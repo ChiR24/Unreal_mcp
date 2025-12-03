@@ -55,6 +55,27 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
       });
       return cleanObject(res);
     }
+    case 'remove_variable': {
+      const res = await tools.blueprintTools.removeVariable({
+        blueprintName: args.name || args.blueprintPath || args.path,
+        variableName: args.variableName,
+        timeoutMs: args.timeoutMs,
+        waitForCompletion: args.waitForCompletion,
+        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
+      });
+      return cleanObject(res);
+    }
+    case 'rename_variable': {
+      const res = await tools.blueprintTools.renameVariable({
+        blueprintName: args.name || args.blueprintPath || args.path,
+        oldName: args.oldName,
+        newName: args.newName,
+        timeoutMs: args.timeoutMs,
+        waitForCompletion: args.waitForCompletion,
+        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
+      });
+      return cleanObject(res);
+    }
     case 'set_metadata': {
       const assetPathRaw = typeof args.assetPath === 'string' ? args.assetPath.trim() : '';
       const blueprintPathRaw = typeof args.blueprintPath === 'string' ? args.blueprintPath.trim() : '';

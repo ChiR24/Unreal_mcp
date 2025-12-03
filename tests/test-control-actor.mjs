@@ -269,6 +269,143 @@ const testCases = [
     toolName: "control_actor",
     arguments: { action: "delete", actorNames: [] },
     expected: "success|no_op"
+  },
+  // --- New Test Cases (+20) ---
+  {
+    scenario: "Restore TC_Cube for new tests",
+    toolName: "control_actor",
+    arguments: { action: "spawn", classPath: "/Engine/BasicShapes/Cube", actorName: "TC_Cube", location: { x: 0, y: 0, z: 0 } },
+    expected: "success"
+  },
+  {
+    scenario: "Set transform: Location only",
+    toolName: "control_actor",
+    arguments: { action: "set_transform", actorName: "TC_Cube", location: { x: 50, y: 50, z: 50 } },
+    expected: "success"
+  },
+  {
+    scenario: "Set transform: Rotation only",
+    toolName: "control_actor",
+    arguments: { action: "set_transform", actorName: "TC_Cube", rotation: { pitch: 90, yaw: 0, roll: 0 } },
+    expected: "success"
+  },
+  {
+    scenario: "Set transform: Scale only",
+    toolName: "control_actor",
+    arguments: { action: "set_transform", actorName: "TC_Cube", scale: { x: 2, y: 2, z: 2 } },
+    expected: "success"
+  },
+  {
+    scenario: "Error: Get transform non-existent",
+    toolName: "control_actor",
+    arguments: { action: "get_transform", actorName: "NonExistentActor_123" },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "Error: Attach to self (cycle)",
+    toolName: "control_actor",
+    arguments: { action: "attach", childActor: "TC_Cube", parentActor: "TC_Cube" },
+    expected: "error|cycle"
+  },
+  {
+    scenario: "Error: Attach to non-existent parent",
+    toolName: "control_actor",
+    arguments: { action: "attach", childActor: "TC_Cube", parentActor: "NonExistentParent" },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "Error: Attach non-existent child",
+    toolName: "control_actor",
+    arguments: { action: "attach", childActor: "NonExistentChild", parentActor: "TC_Cube" },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "Detach: Not attached (safe)",
+    toolName: "control_actor",
+    arguments: { action: "detach", actorName: "TC_Cube" },
+    expected: "success" // Should be safe/idempotent
+  },
+  {
+    scenario: "Visibility: Non-existent actor",
+    toolName: "control_actor",
+    arguments: { action: "set_visibility", actorName: "NonExistentActor_Vis", visible: true },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "Tags: Add existing tag (idempotent)",
+    toolName: "control_actor",
+    arguments: { action: "add_tag", actorName: "TC_Cube", tag: "TC_Tag" },
+    expected: "success"
+  },
+  {
+    scenario: "Tags: Remove non-existent tag",
+    toolName: "control_actor",
+    arguments: { action: "remove_tag", actorName: "TC_Cube", tag: "NonExistentTag" },
+    expected: "success|not_found"
+  },
+  {
+    scenario: "Tags: Remove existing tag",
+    toolName: "control_actor",
+    arguments: { action: "remove_tag", actorName: "TC_Cube", tag: "TC_Tag" },
+    expected: "success"
+  },
+  {
+    scenario: "Components: Get from non-existent",
+    toolName: "control_actor",
+    arguments: { action: "get_components", actorName: "NonExistentActor_Comp" },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "List actors: All",
+    toolName: "control_actor",
+    arguments: { action: "list" },
+    expected: "success"
+  },
+  {
+    scenario: "Snapshot: Non-existent actor",
+    toolName: "control_actor",
+    arguments: { action: "create_snapshot", actorName: "GhostActor", snapshotName: "Snap1" },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "Duplicate: Non-existent actor",
+    toolName: "control_actor",
+    arguments: { action: "duplicate", actorName: "GhostActor", newName: "GhostCopy" },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "Force: Non-existent actor",
+    toolName: "control_actor",
+    arguments: { action: "apply_force", actorName: "GhostActor", force: { x: 100, y: 0, z: 0 } },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "Spawn: Hidden",
+    toolName: "control_actor",
+    arguments: { 
+        action: "spawn", 
+        classPath: "/Engine/BasicShapes/Sphere", 
+        actorName: "TC_HiddenSphere",
+        properties: { bHidden: true }
+    },
+    expected: "success"
+  },
+  {
+    scenario: "Set properties: Non-existent component",
+    toolName: "control_actor",
+    arguments: { 
+        action: "set_component_properties", 
+        actorName: "TC_Cube", 
+        componentName: "InvalidComp",
+        properties: { Intensity: 5000 }
+    },
+    expected: "error|not_found"
+  },
+  {
+    scenario: "Final Cleanup",
+    toolName: "control_actor",
+    arguments: { action: "delete", actorNames: ["TC_Cube", "TC_HiddenSphere"] },
+    expected: "success"
   }
 ];
 

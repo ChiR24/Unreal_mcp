@@ -1,5 +1,5 @@
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { IBaseTool } from '../types/tool-interfaces.js';
 
 export abstract class BaseTool implements IBaseTool {

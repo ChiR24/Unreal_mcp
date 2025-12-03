@@ -50,8 +50,10 @@
     "test:world_partition": "node tests/test-world-partition.mjs",
     "test:no-inline-python": "node tests/test-no-inline-python.mjs",
     "test:graphql": "node tests/test-graphql.mjs",
+    "test:audio": "node tests/test-audio.mjs",
+    "test:behavior_tree": "node tests/test-behavior-tree.mjs",
     "test:wasm": "node tests/test-wasm.mjs",
-    "build:wasm": "echo 'Building WebAssembly module...' && cd wasm && wasm-pack build --target web --out-dir ../src/wasm/pkg",
+    "build:wasm": "echo 'Building WebAssembly module...' && cd wasm && wasm-pack build --target web --out-dir ../src/wasm/pkg && cd .. && node scripts/patch-wasm.js",
     "test:wasm:all": "npm run build:core && npm run build:wasm && node tests/test-wasm.mjs",
     "type-check": "tsc --noEmit",
     "prebuild": "npm run lint && npm run clean"

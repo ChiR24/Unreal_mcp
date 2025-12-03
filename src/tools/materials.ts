@@ -1,8 +1,8 @@
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 
 export class MaterialTools {
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) {
     this.automationBridge = automationBridge;
@@ -44,7 +44,7 @@ export class MaterialTools {
       }
 
       const materialPath = `${cleanPath}/${name}`;
-      
+
       // Use Automation Bridge for material creation
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
         try {
@@ -52,7 +52,7 @@ export class MaterialTools {
             name,
             destinationPath: cleanPath
           });
-          
+
           if (resp && resp.success !== false) {
             return {
               success: true,
@@ -61,7 +61,7 @@ export class MaterialTools {
               warnings: resp.warnings
             };
           }
-          
+
           return {
             success: false,
             error: resp?.error ?? resp?.message ?? 'Failed to create material'
@@ -73,7 +73,7 @@ export class MaterialTools {
           };
         }
       }
-      
+
       return {
         success: false,
         error: 'Material creation requires Automation Bridge connection'
@@ -167,7 +167,7 @@ export class MaterialTools {
           // Save asset (plugin-first via SAVE_ASSET template)
           try {
             await this.bridge.executeEditorFunction('SAVE_ASSET', { path: createdPath });
-          } catch (_) {}
+          } catch (_) { }
           return { success: true, path: createdPath, message: `Material instance ${name} created at ${createdPath}` } as any;
         }
         // If plugin indicated unknown action and python fallback not allowed, surface explicit failure

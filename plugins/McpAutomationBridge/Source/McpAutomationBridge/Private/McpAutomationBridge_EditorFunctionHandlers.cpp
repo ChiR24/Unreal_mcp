@@ -408,6 +408,27 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         return true;
     }
 
+    if (FN == TEXT("SAVE_CURRENT_LEVEL"))
+    {
+        if (!GEditor)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+            return true;
+        }
+
+        bool bSaved = false;
+#if __has_include("EditorLoadingAndSavingUtils.h")
+        bSaved = UEditorLoadingAndSavingUtils::SaveCurrentLevel();
+#elif __has_include("FileHelpers.h")
+        bSaved = FEditorFileUtils::SaveCurrentLevel();
+#endif
+
+        TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+        Out->SetBoolField(TEXT("success"), bSaved);
+        SendAutomationResponse(RequestingSocket, RequestId, bSaved, bSaved ? TEXT("Level saved") : TEXT("Failed to save level"), Out, bSaved ? FString() : TEXT("SAVE_FAILED"));
+        return true;
+    }
+
     // RESOLVE_OBJECT: return basic object/asset discovery info
     if (FN == TEXT("RESOLVE_OBJECT"))
     {

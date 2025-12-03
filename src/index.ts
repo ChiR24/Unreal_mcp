@@ -3,7 +3,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Logger } from './utils/logger.js';
 import { UnrealBridge } from './unreal-bridge.js';
-import { AutomationBridge } from './automation-bridge.js';
+import { AutomationBridge } from './automation/index.js';
 import { createRequire } from 'node:module';
 import { responseValidator } from './utils/response-validator.js';
 import { z } from 'zod';
@@ -12,6 +12,7 @@ import { consolidatedToolDefinitions } from './tools/consolidated-tool-definitio
 import { HealthMonitor } from './services/health-monitor.js';
 import { ServerSetup } from './server-setup.js';
 import { startMetricsServer } from './services/metrics-server.js';
+import { config } from './config.js';
 
 const require = createRequire(import.meta.url);
 const packageInfo: { name?: string; version?: string } = (() => {
@@ -31,8 +32,7 @@ const DEFAULT_SERVER_VERSION = typeof packageInfo.version === 'string' && packag
   : '0.0.0';
 
 function routeStdoutLogsToStderr(): void {
-  const flag = (process.env.MCP_ROUTE_STDOUT_LOGS ?? 'true').toString().toLowerCase();
-  if (flag === 'false' || flag === '0' || flag === 'off') {
+  if (!config.MCP_ROUTE_STDOUT_LOGS) {
     return;
   }
 
@@ -73,10 +73,10 @@ export function createServer() {
     serverName: CONFIG.SERVER_NAME,
     serverVersion: CONFIG.SERVER_VERSION,
     heartbeatIntervalMs: CONFIG.AUTOMATION_HEARTBEAT_MS,
-    clientMode: process.env.MCP_AUTOMATION_CLIENT_MODE === 'true'
+    clientMode: config.MCP_AUTOMATION_CLIENT_MODE
   });
   bridge.setAutomationBridge(automationBridge);
-  automationBridge.start();
+  automationBridge.start(); // Removed to support lazy connection on demand
 
   automationBridge.on('connected', ({ metadata, port, protocol }) => {
     log.info(

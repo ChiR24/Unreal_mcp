@@ -252,7 +252,9 @@ export async function runToolTests(toolName, testCases) {
     const envPorts = process.env.MCP_AUTOMATION_WS_PORTS
       ? process.env.MCP_AUTOMATION_WS_PORTS.split(',').map((p) => parseInt(p.trim(), 10)).filter(Boolean)
       : [8090, 8091];
-    const waitMs = parseInt(process.env.UNREAL_MCP_WAIT_PORT_MS ?? '5000', 10);
+    const waitMs = 10000; // Hardcoded increased timeout
+
+    console.log(`Waiting up to ${waitMs}ms for automation bridge on ${bridgeHost}:${envPorts.join(',')}`);
 
     async function waitForAnyPort(host, ports, timeoutMs = 10000) {
       const start = Date.now();

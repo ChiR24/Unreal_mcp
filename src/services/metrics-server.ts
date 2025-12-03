@@ -1,6 +1,6 @@
 import http from 'http';
 import { HealthMonitor } from './health-monitor.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
 import { wasmIntegration } from '../wasm/index.js';
 import { DEFAULT_AUTOMATION_HOST } from '../constants.js';

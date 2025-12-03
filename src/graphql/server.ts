@@ -1,9 +1,10 @@
 import { createYoga } from 'graphql-yoga';
 import { createServer } from 'http';
 import { Logger } from '../utils/logger.js';
-import { createGraphQLSchema, type GraphQLContext } from './schema.js';
+import { createGraphQLSchema } from './schema.js';
+import type { GraphQLContext } from './types.js';
 import type { UnrealBridge } from '../unreal-bridge.js';
-import type { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 
 export interface GraphQLServerConfig {
   enabled?: boolean;

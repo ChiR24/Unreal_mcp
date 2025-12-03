@@ -7,7 +7,7 @@
 import { runToolTests } from './test-runner.mjs';
 
 const testCases = [
-  { scenario: 'Save current level', toolName: 'manage_level', arguments: { action: 'save' }, expected: 'failure - save failed' },
+  { scenario: 'Save current level', toolName: 'manage_level', arguments: { action: 'save' }, expected: 'success' },
   { scenario: 'Create test level (best-effort)', toolName: 'manage_level', arguments: { action: 'create_level', levelName: 'TC_TestLevel', streaming: false }, expected: 'success - level created' },
   { scenario: 'Load test level', toolName: 'manage_level', arguments: { action: 'load', levelPath: '/Engine/Maps/Entry' }, expected: 'success - level loaded' },
   { scenario: 'Stream sublevel (create then stream)', toolName: 'manage_level', arguments: { action: 'create_level', levelName: 'TC_SubLevel', streaming: true }, expected: 'success - command executed' },
@@ -19,7 +19,7 @@ const testCases = [
   { scenario: 'Import level', toolName: 'manage_level', arguments: { action: 'import_level', filePath: './tests/reports/tc_testlevel_export' }, expected: 'success' },
   { scenario: 'List open levels', toolName: 'manage_level', arguments: { action: 'list_levels' }, expected: 'success' },
   { scenario: 'Get level summary', toolName: 'manage_level', arguments: { action: 'get_summary', levelPath: '/Engine/Maps/Entry' }, expected: 'success' },
-  { scenario: 'Save level as new', toolName: 'manage_level', arguments: { action: 'save', levelPath: '/Game/Maps/TC_TestLevel_SavedAs' }, expected: 'failure - save failed' },
+  { scenario: 'Save level as new', toolName: 'manage_level', arguments: { action: 'save_level_as', savePath: '/Game/Maps/TC_TestLevel_SavedAs' }, expected: 'success' },
   { scenario: 'Unload streaming level', toolName: 'manage_level', arguments: { action: 'stream', levelPath: '/Game/Maps/TC_SubLevel', shouldBeLoaded: false }, expected: 'success - sublevel unloaded' },
   { scenario: 'Delete test levels', toolName: 'manage_level', arguments: { action: 'delete', levelPath: '/Game/Maps/TC_TestLevel_SavedAs' }, expected: 'success' },
   // Additional

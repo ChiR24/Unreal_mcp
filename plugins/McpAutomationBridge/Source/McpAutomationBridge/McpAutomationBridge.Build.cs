@@ -12,7 +12,7 @@ public class McpAutomationBridge : ModuleRules
         PublicDependencyModuleNames.AddRange(new string[]
         {
             "Core","CoreUObject","Engine","Json","JsonUtilities",
-            "LevelSequence", "MovieScene", "MovieSceneTracks" // Moved from Private to Public for better include visibility
+            "LevelSequence", "MovieScene", "MovieSceneTracks"
         });
 
         if (Target.bBuildEditor)
@@ -44,174 +44,65 @@ public class McpAutomationBridge : ModuleRules
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=1");
 
-            // Optional SubobjectData: add only when present or explicitly forced
-            bool addedSubobjectData = false;
-            try
-            {
-                string force = Environment.GetEnvironmentVariable("MCP_FORCE_SUBOBJECTDATA") ?? string.Empty;
-                string ignore = Environment.GetEnvironmentVariable("MCP_IGNORE_SUBOBJECTDATA") ?? string.Empty;
-                if (!ignore.Equals("1", StringComparison.OrdinalIgnoreCase) && !ignore.Equals("true", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (force.Equals("1", StringComparison.OrdinalIgnoreCase) || force.Equals("true", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!PrivateDependencyModuleNames.Contains("SubobjectData"))
-                        {
-                            PrivateDependencyModuleNames.Add("SubobjectData");
-                        }
+            // --- Feature Detection Logic ---
 
-            // Detect whether UWorldPartition supports ForEachDataLayerInstance so we can
-            // safely compile DataLayer-related world partition helpers.
-            try
-            {
-                string engineRootForWP = null;
-                try
-                {
-                    string[] candidatesWP = new string[]
-                    {
-                        Environment.GetEnvironmentVariable("UE_ENGINE_DIR"),
-                        Environment.GetEnvironmentVariable("UE_ENGINE_DIRECTORY"),
-                        Environment.GetEnvironmentVariable("UE_ENGINE_ROOT"),
-                        Target.RelativeEnginePath
-                    };
-                    foreach (var cand in candidatesWP)
-                    {
-                        if (!string.IsNullOrEmpty(cand) && Directory.Exists(cand)) { engineRootForWP = cand; break; }
-                    }
-                    if (engineRootForWP == null)
-                    {
-                        var dir = new DirectoryInfo(ModuleDirectory);
-                        while (dir != null)
-                        {
-                            if (dir.Name.Equals("Engine", StringComparison.OrdinalIgnoreCase) && Directory.Exists(Path.Combine(dir.FullName, "Source")))
-                            {
-                                engineRootForWP = dir.FullName; break;
-                            }
-                            dir = dir.Parent;
-                        }
-                    }
-                }
-                catch { }
+            string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
+            
+            // 1. SubobjectData Detection
+            bool bHasSubobjectData = false;
+            string ForceSubobject = Environment.GetEnvironmentVariable("MCP_FORCE_SUBOBJECTDATA") ?? "";
+            string IgnoreSubobject = Environment.GetEnvironmentVariable("MCP_IGNORE_SUBOBJECTDATA") ?? "";
+            
+            bool bForce = ForceSubobject.Equals("1", StringComparison.OrdinalIgnoreCase) || ForceSubobject.Equals("true", StringComparison.OrdinalIgnoreCase);
+            bool bIgnore = IgnoreSubobject.Equals("1", StringComparison.OrdinalIgnoreCase) || IgnoreSubobject.Equals("true", StringComparison.OrdinalIgnoreCase);
 
-                if (!string.IsNullOrEmpty(engineRootForWP))
+            if (!bIgnore)
+            {
+                if (bForce)
                 {
-                    var wpHeader = Path.Combine(engineRootForWP, "Source", "Runtime", "Engine", "Public", "WorldPartition", "WorldPartition.h");
-                    bool hasForEach = File.Exists(wpHeader) && File.ReadAllText(wpHeader).Contains("ForEachDataLayerInstance(");
-                    PublicDefinitions.Add(hasForEach ? "MCP_HAS_WP_FOR_EACH_DATALAYER=1" : "MCP_HAS_WP_FOR_EACH_DATALAYER=0");
+                    bHasSubobjectData = true;
                 }
                 else
                 {
-                    PublicDefinitions.Add("MCP_HAS_WP_FOR_EACH_DATALAYER=0");
-                }
-            }
-            catch
-            {
-                PublicDefinitions.Add("MCP_HAS_WP_FOR_EACH_DATALAYER=0");
-            }
-                        PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=1");
-                        addedSubobjectData = true;
-                    }
-                    else
+                    // Auto-detect
+                    if (IsSubobjectDataAvailable(EngineDir) || IsSubobjectDataInProject(ModuleDirectory))
                     {
-                        // Detect engine root
-                        string engineRoot = null;
-                        try
-                        {
-                            string[] candidates = new string[]
-                            {
-                                Environment.GetEnvironmentVariable("UE_ENGINE_DIR"),
-                                Environment.GetEnvironmentVariable("UE_ENGINE_DIRECTORY"),
-                                Environment.GetEnvironmentVariable("UE_ENGINE_ROOT"),
-                                Target.RelativeEnginePath
-                            };
-                            foreach (var cand in candidates)
-                            {
-                                if (!string.IsNullOrEmpty(cand) && Directory.Exists(cand)) { engineRoot = cand; break; }
-                            }
-                            if (engineRoot == null)
-                            {
-                                // Walk up from ModuleDirectory to find Engine folder
-                                var dir = new DirectoryInfo(ModuleDirectory);
-                                while (dir != null)
-                                {
-                                    if (dir.Name.Equals("Engine", StringComparison.OrdinalIgnoreCase) && Directory.Exists(Path.Combine(dir.FullName, "Source")))
-                                    {
-                                        engineRoot = dir.FullName; break;
-                                    }
-                                    dir = dir.Parent;
-                                }
-                            }
-                        }
-                        catch { }
-
-                        Func<string, bool> HasSubobjectDataUnder = (root) =>
-                        {
-                            try
-                            {
-                                if (string.IsNullOrEmpty(root)) return false;
-                                var runtimeDir = Path.Combine(root, "Source", "Runtime", "SubobjectData");
-                                if (Directory.Exists(runtimeDir)) return true;
-                                var header = Path.Combine(runtimeDir, "Public", "SubobjectDataSubsystem.h");
-                                if (File.Exists(header)) return true;
-                                var pluginsRuntime = Path.Combine(root, "Plugins", "Runtime");
-                                if (Directory.Exists(pluginsRuntime))
-                                {
-                                    foreach (var d in Directory.EnumerateDirectories(pluginsRuntime, "SubobjectData", SearchOption.AllDirectories))
-                                    {
-                                        return true;
-                                    }
-                                }
-                            }
-                            catch { }
-                            return false;
-                        };
-
-                        bool present = HasSubobjectDataUnder(engineRoot);
-
-                        // Also check project Plugins
-                        if (!present)
-                        {
-                            try
-                            {
-                                string projectRoot = null;
-                                var dir = new DirectoryInfo(ModuleDirectory);
-                                while (dir != null)
-                                {
-                                    if (dir.GetFiles("*.uproject").Length > 0) { projectRoot = dir.FullName; break; }
-                                    dir = dir.Parent;
-                                }
-                                if (!string.IsNullOrEmpty(projectRoot))
-                                {
-                                    var projPlugins = Path.Combine(projectRoot, "Plugins");
-                                    if (Directory.Exists(projPlugins))
-                                    {
-                                        foreach (var d in Directory.EnumerateDirectories(projPlugins, "SubobjectData", SearchOption.AllDirectories))
-                                        {
-                                            present = true; break;
-                                        }
-                                    }
-                                }
-                            }
-                            catch { }
-                        }
-
-                        if (present)
-                        {
-                            if (!PrivateDependencyModuleNames.Contains("SubobjectData"))
-                            {
-                                PrivateDependencyModuleNames.Add("SubobjectData");
-                            }
-                            PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=1");
-                            addedSubobjectData = true;
-                        }
+                        bHasSubobjectData = true;
                     }
                 }
             }
-            catch { }
 
-            if (!addedSubobjectData)
+            if (bHasSubobjectData)
+            {
+                if (!PrivateDependencyModuleNames.Contains("SubobjectData"))
+                {
+                    PrivateDependencyModuleNames.Add("SubobjectData");
+                }
+                PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=1");
+            }
+            else
             {
                 PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=0");
             }
+
+            // 2. WorldPartition Support Detection
+            // Detect whether UWorldPartition supports ForEachDataLayerInstance
+            bool bHasWPForEach = false;
+            try
+            {
+                string WPHeader = Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "WorldPartition", "WorldPartition.h");
+                if (File.Exists(WPHeader))
+                {
+                    string Content = File.ReadAllText(WPHeader);
+                    if (Content.Contains("ForEachDataLayerInstance("))
+                    {
+                        bHasWPForEach = true;
+                    }
+                }
+            }
+            catch {}
+
+            PublicDefinitions.Add(bHasWPForEach ? "MCP_HAS_WP_FOR_EACH_DATALAYER=1" : "MCP_HAS_WP_FOR_EACH_DATALAYER=0");
 
             // Ensure Win64 debug builds emit Edit-and-Continue friendly debug info
             if (Target.Platform == UnrealTargetPlatform.Win64 && Target.Configuration == UnrealTargetConfiguration.Debug)
@@ -224,6 +115,68 @@ public class McpAutomationBridge : ModuleRules
             // Non-editor builds cannot rely on editor-only headers.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=0");
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=0");
+            PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=0");
+            PublicDefinitions.Add("MCP_HAS_WP_FOR_EACH_DATALAYER=0");
         }
+    }
+
+    private bool IsSubobjectDataAvailable(string EngineDir)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(EngineDir)) return false;
+            
+            // Check Runtime module
+            string RuntimeDir = Path.Combine(EngineDir, "Source", "Runtime", "SubobjectData");
+            if (Directory.Exists(RuntimeDir)) return true;
+
+            // Check Plugins
+            string PluginsDir = Path.Combine(EngineDir, "Plugins");
+            if (Directory.Exists(PluginsDir))
+            {
+                // Simple check for the folder in Runtime plugins
+                // A full recursive search might be slow, but we can check common locations or do a search
+                // The original code did a recursive search in Plugins/Runtime
+                string PluginsRuntime = Path.Combine(PluginsDir, "Runtime");
+                if (Directory.Exists(PluginsRuntime))
+                {
+                     var Found = Directory.GetDirectories(PluginsRuntime, "SubobjectData", SearchOption.AllDirectories);
+                     if (Found.Length > 0) return true;
+                }
+            }
+        }
+        catch {}
+        return false;
+    }
+
+    private bool IsSubobjectDataInProject(string ModuleDir)
+    {
+        try
+        {
+            // Find project root by looking for .uproject
+            string ProjectRoot = null;
+            DirectoryInfo Dir = new DirectoryInfo(ModuleDir);
+            while (Dir != null)
+            {
+                if (Dir.GetFiles("*.uproject").Length > 0) 
+                { 
+                    ProjectRoot = Dir.FullName; 
+                    break; 
+                }
+                Dir = Dir.Parent;
+            }
+
+            if (!string.IsNullOrEmpty(ProjectRoot))
+            {
+                string ProjPlugins = Path.Combine(ProjectRoot, "Plugins");
+                if (Directory.Exists(ProjPlugins))
+                {
+                    var Found = Directory.GetDirectories(ProjPlugins, "SubobjectData", SearchOption.AllDirectories);
+                    if (Found.Length > 0) return true;
+                }
+            }
+        }
+        catch {}
+        return false;
     }
 }

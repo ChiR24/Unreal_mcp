@@ -1,9 +1,9 @@
 // Lighting tools for Unreal Engine using Automation Bridge
 import { UnrealBridge } from '../unreal-bridge.js';
-import { AutomationBridge } from '../automation-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 
 export class LightingTools {
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
@@ -91,7 +91,7 @@ export class LightingTools {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge required for light spawning');
     }
-    
+
     // Validate numeric parameters
     if (params.intensity !== undefined) {
       if (typeof params.intensity !== 'number' || !isFinite(params.intensity)) {
@@ -101,13 +101,13 @@ export class LightingTools {
         throw new Error('Invalid intensity: must be non-negative');
       }
     }
-    
+
     if (params.temperature !== undefined) {
       if (typeof params.temperature !== 'number' || !isFinite(params.temperature)) {
         throw new Error(`Invalid temperature value: ${params.temperature}`);
       }
     }
-    
+
     // Validate arrays
     if (params.color !== undefined) {
       if (!Array.isArray(params.color) || params.color.length !== 3) {
@@ -119,7 +119,7 @@ export class LightingTools {
         }
       }
     }
-    
+
     if (params.rotation !== undefined) {
       if (!Array.isArray(params.rotation) || params.rotation.length !== 3) {
         throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
@@ -130,9 +130,9 @@ export class LightingTools {
         }
       }
     }
-    
+
     const rot = params.rotation || [0, 0, 0];
-    
+
     // Build properties for the light
     const properties: Record<string, any> = {};
     if (params.intensity !== undefined) {
@@ -177,7 +177,7 @@ export class LightingTools {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge required for light spawning');
     }
-    
+
     // Validate location array
     if (params.location !== undefined) {
       if (!Array.isArray(params.location) || params.location.length !== 3) {
@@ -189,10 +189,10 @@ export class LightingTools {
         }
       }
     }
-    
+
     // Default location if not provided
     const location = params.location || [0, 0, 0];
-    
+
     // Validate numeric parameters
     if (params.intensity !== undefined) {
       if (typeof params.intensity !== 'number' || !isFinite(params.intensity)) {
@@ -215,7 +215,7 @@ export class LightingTools {
         throw new Error(`Invalid falloffExponent value: ${params.falloffExponent}`);
       }
     }
-    
+
     // Validate color array
     if (params.color !== undefined) {
       if (!Array.isArray(params.color) || params.color.length !== 3) {
@@ -227,7 +227,7 @@ export class LightingTools {
         }
       }
     }
-    
+
     // Build properties for the light
     const properties: Record<string, any> = {};
     if (params.intensity !== undefined) {
@@ -276,7 +276,7 @@ export class LightingTools {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge required for light spawning');
     }
-    
+
     // Validate required location and rotation arrays
     if (!params.location || !Array.isArray(params.location) || params.location.length !== 3) {
       throw new Error('Invalid location: must be an array [x,y,z]');
@@ -286,7 +286,7 @@ export class LightingTools {
         throw new Error('Invalid location component: must be finite numbers');
       }
     }
-    
+
     if (!params.rotation || !Array.isArray(params.rotation) || params.rotation.length !== 3) {
       throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
     }
@@ -295,7 +295,7 @@ export class LightingTools {
         throw new Error('Invalid rotation component: must be finite numbers');
       }
     }
-    
+
     // Validate optional numeric parameters
     if (params.intensity !== undefined) {
       if (typeof params.intensity !== 'number' || !isFinite(params.intensity)) {
@@ -305,7 +305,7 @@ export class LightingTools {
         throw new Error('Invalid intensity: must be non-negative');
       }
     }
-    
+
     if (params.innerCone !== undefined) {
       if (typeof params.innerCone !== 'number' || !isFinite(params.innerCone)) {
         throw new Error(`Invalid innerCone value: ${params.innerCone}`);
@@ -314,7 +314,7 @@ export class LightingTools {
         throw new Error('Invalid innerCone: must be between 0 and 180 degrees');
       }
     }
-    
+
     if (params.outerCone !== undefined) {
       if (typeof params.outerCone !== 'number' || !isFinite(params.outerCone)) {
         throw new Error(`Invalid outerCone value: ${params.outerCone}`);
@@ -323,7 +323,7 @@ export class LightingTools {
         throw new Error('Invalid outerCone: must be between 0 and 180 degrees');
       }
     }
-    
+
     if (params.radius !== undefined) {
       if (typeof params.radius !== 'number' || !isFinite(params.radius)) {
         throw new Error(`Invalid radius value: ${params.radius}`);
@@ -332,7 +332,7 @@ export class LightingTools {
         throw new Error('Invalid radius: must be non-negative');
       }
     }
-    
+
     // Validate color array
     if (params.color !== undefined) {
       if (!Array.isArray(params.color) || params.color.length !== 3) {
@@ -390,7 +390,7 @@ export class LightingTools {
     intensity?: number;
     color?: [number, number, number];
   }) {
-    
+
     const name = this.normalizeName(params.name);
     if (!this.automationBridge) {
       throw new Error('Automation Bridge required for light spawning');
@@ -405,7 +405,7 @@ export class LightingTools {
         throw new Error('Invalid location component: must be finite numbers');
       }
     }
-    
+
     if (!params.rotation || !Array.isArray(params.rotation) || params.rotation.length !== 3) {
       throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
     }
@@ -414,7 +414,7 @@ export class LightingTools {
         throw new Error('Invalid rotation component: must be finite numbers');
       }
     }
-    
+
     // Validate optional numeric parameters
     if (params.width !== undefined) {
       if (typeof params.width !== 'number' || !isFinite(params.width)) {
@@ -424,7 +424,7 @@ export class LightingTools {
         throw new Error('Invalid width: must be positive');
       }
     }
-    
+
     if (params.height !== undefined) {
       if (typeof params.height !== 'number' || !isFinite(params.height)) {
         throw new Error(`Invalid height value: ${params.height}`);
@@ -433,7 +433,7 @@ export class LightingTools {
         throw new Error('Invalid height: must be positive');
       }
     }
-    
+
     if (params.intensity !== undefined) {
       if (typeof params.intensity !== 'number' || !isFinite(params.intensity)) {
         throw new Error(`Invalid intensity value: ${params.intensity}`);
@@ -442,7 +442,7 @@ export class LightingTools {
         throw new Error('Invalid intensity: must be non-negative');
       }
     }
-    
+
     // Validate color array
     if (params.color !== undefined) {
       if (!Array.isArray(params.color) || params.color.length !== 3) {
@@ -650,7 +650,7 @@ export class LightingTools {
     bounces?: number;
   }) {
     const commands = [];
-    
+
     switch (params.method) {
       case 'Lightmass':
         commands.push('r.DynamicGlobalIlluminationMethod 0');
@@ -665,24 +665,24 @@ export class LightingTools {
         commands.push('r.DynamicGlobalIlluminationMethod 3');
         break;
     }
-    
+
     if (params.quality) {
       const qualityMap = { 'Low': 0, 'Medium': 1, 'High': 2, 'Epic': 3 };
       commands.push(`r.Lumen.Quality ${qualityMap[params.quality]}`);
     }
-    
+
     if (params.indirectLightingIntensity !== undefined) {
       commands.push(`r.IndirectLightingIntensity ${params.indirectLightingIntensity}`);
     }
-    
+
     if (params.bounces !== undefined) {
       commands.push(`r.Lumen.MaxReflectionBounces ${params.bounces}`);
     }
-    
+
     for (const cmd of commands) {
       await this.bridge.executeConsoleCommand(cmd);
     }
-    
+
     return { success: true, message: 'Global illumination configured' };
   }
 
@@ -695,32 +695,32 @@ export class LightingTools {
     rayTracedShadows?: boolean;
   }) {
     const commands = [];
-    
+
     if (params.shadowQuality) {
       const qualityMap = { 'Low': 0, 'Medium': 1, 'High': 2, 'Epic': 3 };
       commands.push(`r.ShadowQuality ${qualityMap[params.shadowQuality]}`);
     }
-    
+
     if (params.cascadedShadows !== undefined) {
       commands.push(`r.Shadow.CSM.MaxCascades ${params.cascadedShadows ? 4 : 1}`);
     }
-    
+
     if (params.shadowDistance !== undefined) {
       commands.push(`r.Shadow.DistanceScale ${params.shadowDistance}`);
     }
-    
+
     if (params.contactShadows !== undefined) {
       commands.push(`r.ContactShadows ${params.contactShadows ? 1 : 0}`);
     }
-    
+
     if (params.rayTracedShadows !== undefined) {
       commands.push(`r.RayTracing.Shadows ${params.rayTracedShadows ? 1 : 0}`);
     }
-    
+
     for (const cmd of commands) {
       await this.bridge.executeConsoleCommand(cmd);
     }
-    
+
     return { success: true, message: 'Shadow settings configured' };
   }
 
@@ -852,25 +852,25 @@ export class LightingTools {
     maxBrightness?: number;
   }) {
     const commands = [];
-    
+
     commands.push(`r.EyeAdaptation.ExposureMethod ${params.method === 'Manual' ? 0 : 1}`);
-    
+
     if (params.compensationValue !== undefined) {
       commands.push(`r.EyeAdaptation.ExposureCompensation ${params.compensationValue}`);
     }
-    
+
     if (params.minBrightness !== undefined) {
       commands.push(`r.EyeAdaptation.MinBrightness ${params.minBrightness}`);
     }
-    
+
     if (params.maxBrightness !== undefined) {
       commands.push(`r.EyeAdaptation.MaxBrightness ${params.maxBrightness}`);
     }
-    
+
     for (const cmd of commands) {
       await this.bridge.executeConsoleCommand(cmd);
     }
-    
+
     return { success: true, message: 'Exposure settings updated' };
   }
 
@@ -882,26 +882,26 @@ export class LightingTools {
     quality?: 'Low' | 'Medium' | 'High';
   }) {
     const commands = [];
-    
+
     commands.push(`r.AmbientOcclusion.Enabled ${params.enabled ? 1 : 0}`);
-    
+
     if (params.intensity !== undefined) {
       commands.push(`r.AmbientOcclusion.Intensity ${params.intensity}`);
     }
-    
+
     if (params.radius !== undefined) {
       commands.push(`r.AmbientOcclusion.Radius ${params.radius}`);
     }
-    
+
     if (params.quality) {
       const qualityMap = { 'Low': 0, 'Medium': 1, 'High': 2 };
       commands.push(`r.AmbientOcclusion.Quality ${qualityMap[params.quality]}`);
     }
-    
+
     for (const cmd of commands) {
       await this.bridge.executeConsoleCommand(cmd);
     }
-    
+
     return { success: true, message: 'Ambient occlusion configured' };
   }
 

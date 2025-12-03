@@ -1,8 +1,9 @@
 import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
-import type { AutomationBridge } from './automation-bridge.js';
+import type { AutomationBridge } from './automation/index.js';
 import { DEFAULT_AUTOMATION_HOST, DEFAULT_AUTOMATION_PORT } from './constants.js';
 import { UnrealCommandQueue } from './utils/unreal-command-queue.js';
+import { CommandValidator } from './utils/command-validator.js';
 
 export class UnrealBridge {
   private log = new Logger('UnrealBridge');
@@ -13,14 +14,9 @@ export class UnrealBridge {
     disconnected: (info: any) => void;
     handshakeFailed: (info: any) => void;
   };
-  private cacheCleanerInitialized = false;
 
   // Command queue for throttling
   private commandQueue = new UnrealCommandQueue();
-
-  // Console object cache to reduce FindConsoleObject warnings
-  private consoleObjectCache = new Map<string, any>();
-  private readonly CONSOLE_CACHE_TTL = 300000; // 5 minutes TTL for cached objects
 
   get isConnected() { return this.connected; }
 
@@ -42,7 +38,6 @@ export class UnrealBridge {
     const onConnected = (info: any) => {
       this.connected = true;
       this.log.debug('Automation bridge connected', info);
-      this.startCacheCleaner();
     };
 
     const onDisconnected = (info: any) => {
@@ -64,10 +59,6 @@ export class UnrealBridge {
       disconnected: onDisconnected,
       handshakeFailed: onHandshakeFailed
     };
-
-    if (automationBridge.isConnected()) {
-      this.startCacheCleaner();
-    }
 
     this.connected = automationBridge.isConnected();
   }
@@ -117,9 +108,9 @@ export class UnrealBridge {
 
     this.connectPromise = ErrorHandler.retryWithBackoff(
       () => {
-          const envTimeout = process.env.UNREAL_CONNECTION_TIMEOUT ? parseInt(process.env.UNREAL_CONNECTION_TIMEOUT, 10) : 30000;
-          const actualTimeout = envTimeout > 0 ? envTimeout : timeoutMs;
-          return this.connect(actualTimeout);
+        const envTimeout = process.env.UNREAL_CONNECTION_TIMEOUT ? parseInt(process.env.UNREAL_CONNECTION_TIMEOUT, 10) : 30000;
+        const actualTimeout = envTimeout > 0 ? envTimeout : timeoutMs;
+        return this.connect(actualTimeout);
       },
       {
         maxRetries: Math.max(0, maxAttempts - 1),
@@ -186,6 +177,8 @@ export class UnrealBridge {
         settled = true;
         automationBridge.off('connected', onConnected);
         automationBridge.off('handshakeFailed', onHandshakeFailed);
+        automationBridge.off('error', onError);
+        automationBridge.off('disconnected', onDisconnected);
         clearTimeout(timer);
       };
 
@@ -197,6 +190,22 @@ export class UnrealBridge {
 
       const onHandshakeFailed = (info: any) => {
         this.log.warn('Automation bridge handshake failed while waiting', info);
+        // We don't resolve false immediately here? The original code didn't. 
+        // But handshake failed usually means we should stop waiting.
+        cleanup();
+        resolve(false);
+      };
+
+      const onError = (err: any) => {
+        this.log.warn('Automation bridge error while waiting', err);
+        cleanup();
+        resolve(false);
+      };
+
+      const onDisconnected = (info: any) => {
+        this.log.warn('Automation bridge disconnected while waiting', info);
+        cleanup();
+        resolve(false);
       };
 
       const timer = setTimeout(() => {
@@ -206,6 +215,8 @@ export class UnrealBridge {
 
       automationBridge.on('connected', onConnected);
       automationBridge.on('handshakeFailed', onHandshakeFailed);
+      automationBridge.on('error', onError);
+      automationBridge.on('disconnected', onDisconnected);
     });
   }
 
@@ -401,80 +412,18 @@ export class UnrealBridge {
       throw new Error('Automation bridge not connected');
     }
 
-    // Validate command is not empty
-    if (!command || typeof command !== 'string') {
-      throw new Error('Invalid command: must be a non-empty string');
-    }
-
+    // Validate command
+    CommandValidator.validate(command);
     const cmdTrimmed = command.trim();
     if (cmdTrimmed.length === 0) {
-      // Return success for empty commands to match UE behavior
       return { success: true, message: 'Empty command ignored' };
     }
 
-    if (cmdTrimmed.includes('\n') || cmdTrimmed.includes('\r')) {
-      throw new Error('Multi-line console commands are not allowed. Send one command per call.');
-    }
-
-    const cmdLower = cmdTrimmed.toLowerCase();
-
-    if (cmdLower === 'py' || cmdLower.startsWith('py ')) {
-      throw new Error('Python console commands are blocked from external calls for safety.');
-    }
-
-    // Check for dangerous commands
-    const dangerousCommands = [
-      'quit', 'exit', 'delete', 'destroy', 'kill', 'crash',
-      'viewmode visualizebuffer basecolor',
-      'viewmode visualizebuffer worldnormal',
-      'r.gpucrash',
-      'buildpaths', // Can cause access violation if nav system not initialized
-      'rebuildnavigation' // Can also crash without proper nav setup
-    ];
-    if (dangerousCommands.some(dangerous => cmdLower.includes(dangerous))) {
-      throw new Error(`Dangerous command blocked: ${command}`);
-    }
-
-    const forbiddenTokens = [
-      'rm ', 'rm-', 'del ', 'format ', 'shutdown', 'reboot',
-      'rmdir', 'mklink', 'copy ', 'move ', 'start "', 'system(',
-      'import os', 'import subprocess', 'subprocess.', 'os.system',
-      'exec(', 'eval(', '__import__', 'import sys', 'import importlib',
-      'with open', 'open('
-    ];
-
-    if (cmdLower.includes('&&') || cmdLower.includes('||')) {
-      throw new Error('Command chaining with && or || is blocked for safety.');
-    }
-
-    if (forbiddenTokens.some(token => cmdLower.includes(token))) {
-      throw new Error(`Command contains unsafe token and was blocked: ${command}`);
-    }
-
-    // Determine priority based on command type
-    let priority = 7; // Default priority
-
-    if (command.includes('BuildLighting') || command.includes('BuildPaths')) {
-      priority = 1; // Heavy operation
-    } else if (command.includes('summon') || command.includes('spawn')) {
-      priority = 5; // Medium operation
-    } else if (command.startsWith('stat')) {
-      priority = 8; // Dedicated throttling for stat commands
-    } else if (command.startsWith('show')) {
-      priority = 9; // Light operation
-    }
-
-    // Known invalid command patterns
-    const invalidPatterns = [
-      /^\d+$/,  // Just numbers
-      /^invalid_command/i,
-      /^this_is_not_a_valid/i,
-    ];
-
-    const isLikelyInvalid = invalidPatterns.some(pattern => pattern.test(cmdTrimmed));
-    if (isLikelyInvalid) {
+    if (CommandValidator.isLikelyInvalid(cmdTrimmed)) {
       this.log.warn(`Command appears invalid: ${cmdTrimmed}`);
     }
+
+    const priority = CommandValidator.getPriority(cmdTrimmed);
 
     const executeCommand = async (): Promise<any> => {
       if (!this.automationBridge || !this.automationBridge.isConnected()) {
@@ -482,7 +431,7 @@ export class UnrealBridge {
       }
 
       const pluginResp: any = await this.automationBridge.sendAutomationRequest(
-        'execute_console_command',
+        'console_command',
         { command: cmdTrimmed },
         { timeoutMs: 30000 }
       );
@@ -629,38 +578,6 @@ export class UnrealBridge {
     priority: number = 5
   ): Promise<T> {
     return this.commandQueue.execute(command, priority);
-  }
-
-  /**
-   * Start the command processor
-   */
-  private startCacheCleaner(): void {
-    if (this.cacheCleanerInitialized) {
-      return;
-    }
-    this.cacheCleanerInitialized = true;
-    
-    // Clean console cache every 5 minutes
-    setInterval(() => {
-      this.cleanConsoleCache();
-    }, this.CONSOLE_CACHE_TTL);
-  }
-
-  /**
-   * Clean expired entries from console object cache
-   */
-  private cleanConsoleCache(): void {
-    const now = Date.now();
-    let cleaned = 0;
-    for (const [key, value] of this.consoleObjectCache.entries()) {
-      if (now - (value.timestamp || 0) > this.CONSOLE_CACHE_TTL) {
-        this.consoleObjectCache.delete(key);
-        cleaned++;
-      }
-    }
-    if (cleaned > 0) {
-      this.log.debug(`Cleaned ${cleaned} expired console cache entries`);
-    }
   }
 
   /**

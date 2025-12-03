@@ -29,15 +29,13 @@ Supported actions:
             // Core
             'list', 'import', 'duplicate', 'rename', 'move', 'delete', 'delete_assets', 'create_folder', 'search_assets',
             // Utils
-            'get_dependencies', 'get_source_control_state', 'analyze_graph', 'create_thumbnail', 'set_tags', 'get_metadata', 'set_metadata', 'validate', 'fixup_redirectors', 'find_by_tag', 'generate_report',
+            'get_dependencies', 'get_source_control_state', 'analyze_graph', 'get_asset_graph', 'create_thumbnail', 'set_tags', 'get_metadata', 'set_metadata', 'validate', 'fixup_redirectors', 'find_by_tag', 'generate_report',
             // Creation
             'create_material', 'create_material_instance', 'create_render_target',
             // Rendering
             'nanite_rebuild_mesh',
             // Material Graph
-            'add_material_node', 'connect_material_pins', 'remove_material_node', 'break_material_connections', 'get_material_node_details', 'rebuild_material',
-            // Behavior Tree
-            'add_bt_node', 'connect_bt_nodes', 'remove_bt_node', 'break_bt_connections', 'set_bt_node_properties'
+            'add_material_node', 'connect_material_pins', 'remove_material_node', 'break_material_connections', 'get_material_node_details', 'rebuild_material'
           ],
           description: 'Action to perform'
         },
@@ -142,13 +140,13 @@ Supported actions:
           type: 'string',
           enum: [
             // Lifecycle
-            'create', 'get_blueprint',
+            'create', 'get_blueprint', 'get', 'compile',
             // SCS
             'add_component', 'set_default', 'modify_scs', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property',
             // Helpers
-            'ensure_exists', 'probe_handle', 'add_variable', 'add_function', 'add_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
+            'ensure_exists', 'probe_handle', 'add_variable', 'remove_variable', 'rename_variable', 'add_function', 'add_event', 'remove_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
             // Graph
-            'create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details'
+            'create_node', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details'
           ],
           description: 'Blueprint action'
         },
@@ -169,6 +167,9 @@ Supported actions:
         
         // -- Properties/Defaults --
         propertyName: { type: 'string' },
+        variableName: { type: 'string', description: 'Name of the variable.' },
+        oldName: { type: 'string' },
+        newName: { type: 'string' },
         value: { description: 'Value to set.' },
         metadata: { type: 'object' },
         
@@ -218,7 +219,7 @@ Use it when you need to:
 - modify actor components or tags.
 - apply physics forces.
 
-Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, apply_force, set_transform, get_transform, set_visibility, add_component, set_component_properties, get_components, add_tag, find_by_tag, find_by_name, set_blueprint_variables, create_snapshot, attach, detach.`,
+Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, apply_force, set_transform, get_transform, set_visibility, add_component, set_component_properties, get_components, add_tag, remove_tag, find_by_tag, find_by_name, list, set_blueprint_variables, create_snapshot, attach, detach.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -228,7 +229,7 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
             'spawn', 'spawn_blueprint', 'delete', 'delete_by_tag', 'duplicate', 
             'apply_force', 'set_transform', 'get_transform', 'set_visibility', 
             'add_component', 'set_component_properties', 'get_components', 
-            'add_tag', 'find_by_tag', 'find_by_name', 'set_blueprint_variables', 
+            'add_tag', 'remove_tag', 'find_by_tag', 'find_by_name', 'list', 'set_blueprint_variables', 
             'create_snapshot', 'attach', 'detach'
           ],
           description: 'Action to perform'
@@ -285,7 +286,7 @@ Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, p
           enum: [
             'play', 'stop', 'stop_pie', 'pause', 'resume', 'set_game_speed', 'eject', 'possess', 
             'set_camera', 'set_camera_position', 'set_camera_fov', 'set_view_mode', 
-            'set_viewport_resolution', 'console_command', 'screenshot', 'step_frame', 
+            'set_viewport_resolution', 'console_command', 'execute_command', 'screenshot', 'step_frame', 
             'start_recording', 'stop_recording', 'create_bookmark', 'jump_to_bookmark', 
             'set_preferences', 'set_viewport_realtime', 'open_asset', 'simulate_input'
           ],
@@ -329,13 +330,17 @@ Use it when you need to:
 - build lighting.
 - load world partition cells or toggle data layers.
 
-Supported actions: load, save, stream, create_level, create_light, build_lighting, set_metadata, load_cells, set_datalayer.`,
+Supported actions: load, save, stream, create_level, create_light, build_lighting, set_metadata, load_cells, set_datalayer, export_level, import_level, list_levels, get_summary, delete, validate_level.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['load', 'save', 'stream', 'create_level', 'create_light', 'build_lighting', 'set_metadata', 'load_cells', 'set_datalayer'],
+          enum: [
+            'load', 'save', 'save_as', 'save_level_as', 'stream', 'create_level', 'create_light', 'build_lighting', 
+            'set_metadata', 'load_cells', 'set_datalayer',
+            'export_level', 'import_level', 'list_levels', 'get_summary', 'delete', 'validate_level'
+          ],
           description: 'Action'
         },
         levelPath: { type: 'string' },
@@ -353,7 +358,14 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
         max: { type: 'array', items: { type: 'number' } },
         dataLayerLabel: { type: 'string' },
         dataLayerState: { type: 'string' },
-        recursive: { type: 'boolean' }
+        recursive: { type: 'boolean' },
+        // Export/Import
+        exportPath: { type: 'string' },
+        packagePath: { type: 'string' },
+        destinationPath: { type: 'string' },
+        note: { type: 'string' },
+        // Delete
+        levelPaths: { type: 'array', items: { type: 'string' } }
       },
       required: ['action']
     },
@@ -671,6 +683,47 @@ Supported actions: create_sound_cue, play_sound_at_location, play_sound_2d, crea
       properties: {
         success: { type: 'boolean' },
         message: { type: 'string' }
+      }
+    }
+  },
+
+  // 13. BEHAVIOR TREE
+  {
+    name: 'manage_behavior_tree',
+    description: `Behavior Tree editing tool.
+
+Use it when you need to:
+- add nodes (Sequence, Selector, Tasks).
+- connect nodes.
+- set properties.
+
+Supported actions: add_node, connect_nodes, remove_node, break_connections, set_node_properties.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['add_node', 'connect_nodes', 'remove_node', 'break_connections', 'set_node_properties'],
+          description: 'Action'
+        },
+        assetPath: { type: 'string' },
+        nodeType: { type: 'string' },
+        nodeId: { type: 'string' },
+        parentNodeId: { type: 'string' },
+        childNodeId: { type: 'string' },
+        x: { type: 'number' },
+        y: { type: 'number' },
+        comment: { type: 'string' },
+        properties: { type: 'object' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        nodeId: { type: 'string' }
       }
     }
   }
