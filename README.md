@@ -128,17 +128,7 @@ WASM acceleration applies to:
 
 ### Installation
 
-#### Option 1: NPM Package (Recommended)
-
-```bash
-# Install globally
-npm install -g unreal-engine-mcp-server
-
-# Or install locally in your project
-npm install unreal-engine-mcp-server
-```
-
-#### Option 2: Clone and Build
+Clone and Build
 
 ```bash
 # Clone the repository
