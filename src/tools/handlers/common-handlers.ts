@@ -26,7 +26,8 @@ export async function executeAutomationRequest(
   tools: ITools,
   toolName: string,
   args: any,
-  errorMessage: string = 'Automation bridge not available'
+  errorMessage: string = 'Automation bridge not available',
+  options: { timeoutMs?: number } = {}
 ) {
   const automationBridge = tools.automationBridge;
   // If the bridge is missing or not a function, we can't proceed with automation requests
@@ -38,5 +39,5 @@ export async function executeAutomationRequest(
     throw new Error(`Automation bridge is not connected to Unreal Engine. Please check if the editor is running and the plugin is enabled. Action: ${toolName}`);
   }
 
-  return await automationBridge.sendAutomationRequest(toolName, args);
+  return await automationBridge.sendAutomationRequest(toolName, args, options);
 }

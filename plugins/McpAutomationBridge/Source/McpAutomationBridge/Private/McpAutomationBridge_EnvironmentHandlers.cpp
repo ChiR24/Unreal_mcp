@@ -1,4 +1,4 @@
-#include "McpAutomationBridgeSubsystem.h"
+﻿#include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #if WITH_EDITOR
@@ -26,12 +26,12 @@
 #include "Engine/SkyLight.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
-#include "Math/UnrealMathUtility.h"
 #include "ProceduralMeshComponent.h"
+#include "KismetProceduralMeshLibrary.h"
 #include "GeneralProjectSettings.h"
-#include "Misc/EngineVersion.h"
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
+#include "Developer/AssetTools/Public/AssetToolsModule.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -96,6 +96,22 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(const FString& 
     else if (LowerSub == TEXT("modify_heightmap"))
     {
         return HandleModifyHeightmap(RequestId, TEXT("modify_heightmap"), Payload, RequestingSocket);
+    }
+    else if (LowerSub == TEXT("set_landscape_material"))
+    {
+        return HandleSetLandscapeMaterial(RequestId, TEXT("set_landscape_material"), Payload, RequestingSocket);
+    }
+    else if (LowerSub == TEXT("create_landscape_grass_type"))
+    {
+        return HandleCreateLandscapeGrassType(RequestId, TEXT("create_landscape_grass_type"), Payload, RequestingSocket);
+    }
+    else if (LowerSub == TEXT("generate_lods"))
+    {
+        return HandleGenerateLODs(RequestId, TEXT("generate_lods"), Payload, RequestingSocket);
+    }
+    else if (LowerSub == TEXT("bake_lightmap"))
+    {
+        return HandleBakeLightmap(RequestId, TEXT("bake_lightmap"), Payload, RequestingSocket);
     }
 
 #if WITH_EDITOR
@@ -1352,6 +1368,30 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(const FString&
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("create_procedural_terrain requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+}
+
+
+
+bool UMcpAutomationBridgeSubsystem::HandleBakeLightmap(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    const FString Lower = Action.ToLower();
+    if (!Lower.Equals(TEXT("bake_lightmap"), ESearchCase::IgnoreCase)) { return false; }
+
+#if WITH_EDITOR
+    FString QualityStr = TEXT("Preview");
+    if (Payload.IsValid()) Payload->TryGetStringField(TEXT("quality"), QualityStr);
+    
+    // Reuse HandleExecuteEditorFunction logic
+      TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
+      P->SetStringField(TEXT("functionName"), TEXT("BUILD_LIGHTING"));
+      P->SetStringField(TEXT("quality"), QualityStr);
+      
+      return HandleExecuteEditorFunction(RequestId, TEXT("execute_editor_function"), P, RequestingSocket);
+      
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Requires editor"), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #endif
 }

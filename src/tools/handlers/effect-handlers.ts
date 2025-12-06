@@ -42,6 +42,53 @@ export async function handleEffectTools(action: string, args: any, tools: ITools
     args.subAction = args.action;
   }
 
+  // Map high-level actions to create_effect with subAction
+  const createActions = [
+    'create_volumetric_fog',
+    'create_particle_trail',
+    'create_environment_effect',
+    'create_impact_effect',
+    'create_niagara_ribbon'
+  ];
+  if (createActions.includes(action)) {
+    args.action = action;
+    return executeAutomationRequest(tools, 'create_effect', args);
+  }
+
+  // Map simulation control actions
+  if (action === 'activate') {
+    args.action = 'activate_niagara';
+    args.systemName = args.actorName || args.systemName;
+    args.reset = true;
+    return executeAutomationRequest(tools, 'create_effect', args);
+  }
+  if (action === 'deactivate') {
+    args.action = 'deactivate_niagara';
+    args.systemName = args.actorName || args.systemName;
+    return executeAutomationRequest(tools, 'create_effect', args);
+  }
+  if (action === 'reset') {
+    args.action = 'activate_niagara';
+    args.systemName = args.actorName || args.systemName;
+    args.reset = true;
+    return executeAutomationRequest(tools, 'create_effect', args);
+  }
+  if (action === 'advance_simulation') {
+    args.action = 'advance_simulation';
+    args.systemName = args.actorName || args.systemName;
+    return executeAutomationRequest(tools, 'create_effect', args);
+  }
+
+  // Map parameter setting
+  if (action === 'set_niagara_parameter') {
+    args.action = 'set_niagara_parameter';
+    // If actorName is provided, use it as systemName (which C++ expects for actor label)
+    if (args.actorName && !args.systemName) {
+      args.systemName = args.actorName;
+    }
+    return executeAutomationRequest(tools, 'create_effect', args);
+  }
+
   const res: any = await executeAutomationRequest(
     tools,
     'create_effect',

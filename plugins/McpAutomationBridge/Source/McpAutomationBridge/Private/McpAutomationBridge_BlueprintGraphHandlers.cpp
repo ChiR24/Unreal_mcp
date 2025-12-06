@@ -26,6 +26,15 @@
 #include "K2Node_Knot.h"
 #endif
 
+/**
+ * Handles automation requests for Blueprint graph editing (node creation, connection, etc.).
+ * 
+ * @param RequestId Unique request identifier.
+ * @param Action Action name (must be 'manage_blueprint_graph').
+ * @param Payload JSON payload containing 'blueprintPath', 'graphName', 'subAction', etc.
+ * @param RequestingSocket WebSocket connection.
+ * @return True if handled.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     if (Action != TEXT("manage_blueprint_graph"))
@@ -285,6 +294,47 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(const FString& Re
             
             EventNode->CustomFunctionName = FName(*EventName);
             FinalizeAndReport(NodeCreator, EventNode);
+        }
+        else if (NodeType == TEXT("Event"))
+        {
+            FString EventName;
+            Payload->TryGetStringField(TEXT("eventName"), EventName); // e.g., "ReceiveBeginPlay", "ReceiveTick"
+            FString MemberClass;
+            Payload->TryGetStringField(TEXT("memberClass"), MemberClass); // Optional class override
+
+            if (EventName.IsEmpty())
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("eventName required for Event node"), TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+
+            FGraphNodeCreator<UK2Node_Event> NodeCreator(*TargetGraph);
+            UK2Node_Event* EventNode = NodeCreator.CreateNode(false);
+            
+            UClass* TargetClass = Blueprint->GeneratedClass;
+            if (!MemberClass.IsEmpty())
+            {
+                 TargetClass = FindObject<UClass>(nullptr, *MemberClass);
+            }
+
+            if (TargetClass)
+            {
+                // Find the event function
+                UFunction* EventFunc = TargetClass->FindFunctionByName(*EventName);
+                if (EventFunc)
+                {
+                    EventNode->EventReference.SetFromField<UFunction>(EventFunc, false);
+                    FinalizeAndReport(NodeCreator, EventNode);
+                }
+                else
+                {
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Could not find event '%s' in class '%s'"), *EventName, *TargetClass->GetName()), TEXT("EVENT_NOT_FOUND"));
+                }
+            }
+            else
+            {
+                 SendAutomationError(RequestingSocket, RequestId, TEXT("Could not resolve target class for event"), TEXT("CLASS_NOT_FOUND"));
+            }
         }
         else if (NodeType == TEXT("Branch"))
         {

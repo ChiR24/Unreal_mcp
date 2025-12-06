@@ -32,6 +32,7 @@ This document tracks ongoing work to replace stubbed or registry-based fallbacks
 | Action | Current State | Needed Work |
 | --- | --- | --- |
 | `manage_blueprint` (graph) | Implemented (nodes, pins, properties). | Refine `Literal` node creation. |
+| `manage_blueprint` (add_component) | Implemented (UE 5.7+ SubobjectDataInterface support added). | ✅ Done |
 | `manage_effect` (graph) | Implemented (modules, removal, emitters, params). | ✅ Done |
 | `manage_asset` (material graph) | Implemented (nodes, removal, details, connections). | ✅ Done |
 | `manage_asset` (behavior tree) | Implemented (nodes, removal, connections, properties). | ✅ Done |
@@ -40,7 +41,7 @@ This document tracks ongoing work to replace stubbed or registry-based fallbacks
 
 | Action | Current State | Needed Work |
 | --- | --- | --- |
-| `manage_level` (world partition) | Implemented (`load_cells`, `set_datalayer`). | Refine `set_datalayer` for UE 5.1+ types. |
+| `manage_level` (world partition) | Implemented (`load_cells`, `set_datalayer`). | ✅ Done (UE 5.7+ support added) |
 
 ## System, Render & Pipeline
 

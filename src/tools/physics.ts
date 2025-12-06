@@ -632,4 +632,43 @@ export class PhysicsTools {
     }
   }
 
+  /**
+   * Setup Physics Simulation (Create Physics Asset)
+   */
+  async setupPhysicsSimulation(params: {
+    meshPath?: string;
+    skeletonPath?: string;
+    physicsAssetName?: string;
+    savePath?: string;
+  }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Physics asset creation requires plugin support.');
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('animation_physics', {
+        action: 'setup_physics_simulation',
+        ...params
+      }, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          message: response.error || response.message || 'Failed to setup physics simulation',
+          error: response.error || response.message
+        };
+      }
+
+      return {
+        success: true,
+        message: response.message || 'Physics simulation setup completed',
+        result: response.result
+      };
+    } catch (err) {
+      return { success: false, error: `Failed to setup physics simulation: ${err}` };
+    }
+  }
+
 }

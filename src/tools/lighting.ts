@@ -735,7 +735,7 @@ export class LightingTools {
     }
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('build_lighting', {
+      const response = await this.automationBridge.sendAutomationRequest('bake_lightmap', {
         quality: params.quality || 'High',
         buildOnlySelected: params.buildOnlySelected || false,
         buildReflectionCaptures: params.buildReflectionCaptures !== false

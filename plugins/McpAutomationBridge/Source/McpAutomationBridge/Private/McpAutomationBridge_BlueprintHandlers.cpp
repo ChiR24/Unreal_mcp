@@ -1235,6 +1235,16 @@ static void DiagnosticPatternChecks(const FString& CleanAction, const FString& L
 
 
 
+/**
+ * Central handler for general Blueprint actions (create, add variable/function, modify SCS, etc.).
+ * Dispatches to specific logic based on Action name or nested action field.
+ * 
+ * @param RequestId Unique request identifier.
+ * @param Action Action name (e.g., 'blueprint_create', 'blueprint_add_variable').
+ * @param Payload JSON payload specific to the action.
+ * @param RequestingSocket WebSocket connection.
+ * @return True if handled.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR

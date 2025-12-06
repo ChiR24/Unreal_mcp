@@ -22,6 +22,10 @@
 #elif __has_include("EditorActorSubsystem.h")
 #include "EditorActorSubsystem.h"
 #endif
+
+// Add these includes unconditionally for Editor builds
+#include "ActorPartition/ActorPartitionSubsystem.h"
+#include "EditorBuildUtils.h"
 #endif
 
 #if WITH_EDITOR
@@ -34,8 +38,14 @@ static AInstancedFoliageActor* GetOrCreateFoliageActorForWorldSafe(UWorld* World
 
     if (UWorldPartition* WorldPartition = World->GetWorldPartition())
     {
-        // Partitioned worlds: use the engine helper that integrates with the actor partition subsystem.
-        return AInstancedFoliageActor::GetInstancedFoliageActorForCurrentLevel(World, bCreateIfNone);
+        // Check if the world is actually using the Actor Partition Subsystem to avoid crashes in non-partitioned levels that happen to have a WP object.
+        if (UActorPartitionSubsystem* ActorPartitionSubsystem = World->GetSubsystem<UActorPartitionSubsystem>())
+        {
+            if (ActorPartitionSubsystem->IsLevelPartition())
+            {
+                 return AInstancedFoliageActor::GetInstancedFoliageActorForCurrentLevel(World, bCreateIfNone);
+            }
+        }
     }
 
     // Non-partitioned worlds: avoid ActorPartitionSubsystem ensures by finding or spawning a foliage actor manually.
@@ -396,7 +406,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
         return true;
     }
 
-    UFoliageType_InstancedStaticMesh* FoliageType = NewObject<UFoliageType_InstancedStaticMesh>(Package, FName(*AssetName), RF_Public | RF_Standalone);
+    UFoliageType_InstancedStaticMesh* FoliageType = LoadObject<UFoliageType_InstancedStaticMesh>(Package, *AssetName);
+    if (!FoliageType)
+    {
+        FoliageType = NewObject<UFoliageType_InstancedStaticMesh>(Package, FName(*AssetName), RF_Public | RF_Standalone);
+    }
     if (!FoliageType)
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create foliage type"), TEXT("CREATION_FAILED"));

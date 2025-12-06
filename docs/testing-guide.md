@@ -66,13 +66,16 @@ node tests/test-control-actor.mjs
 ## Prerequisites
 
 ### Unreal Engine Setup
-1. **Unreal Engine 5.6** must be running
+1. **Unreal Engine 5.0-5.7** must be running
 2. **Required plugins enabled:**
    - Native Automation Bridge
    - Python Editor Script Plugin
    - Editor Scripting Utilities
    - Sequencer
+   - Sequencer
    - Level Sequence Editor
+   - Control Rig
+   - Subobject Data Interface (UE 5.7+)
 
 ### Configuration
 **DefaultEngine.ini:**
@@ -85,7 +88,7 @@ DefaultBindAddress=0.0.0.0
 **Environment Variables (optional):**
 ```
 UE_HOST=127.0.0.1
-MCP_AUTOMATION_WS_PORT=8090
+MCP_AUTOMATION_PORT=8091
 ```
 
 ## Test Output

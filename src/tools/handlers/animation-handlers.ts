@@ -126,6 +126,13 @@ export async function handleAnimationTools(action: string, args: any, tools: ITo
         transmission: args.transmission,
         pluginDependencies: args.pluginDependencies ?? args.plugins
       }));
+    case 'setup_physics_simulation':
+      return cleanObject(await tools.physicsTools.setupPhysicsSimulation({
+        meshPath: args.meshPath,
+        skeletonPath: args.skeletonPath,
+        physicsAssetName: args.physicsAssetName,
+        savePath: args.savePath
+      }));
     default:
       const res = await executeAutomationRequest(tools, 'animation_physics', args, 'Automation bridge not available for animation/physics operations');
       return cleanObject(res);

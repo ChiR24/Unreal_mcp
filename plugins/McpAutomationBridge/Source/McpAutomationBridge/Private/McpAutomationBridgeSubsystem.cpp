@@ -66,6 +66,12 @@ void UMcpAutomationBridgeSubsystem::Deinitialize()
 		ConnectionManager.Reset();
 	}
 
+	if (LogCaptureDevice.IsValid())
+    {
+        if (GLog) GLog->RemoveOutputDevice(LogCaptureDevice.Get());
+        LogCaptureDevice.Reset();
+    }
+
 	Super::Deinitialize();
 }
 
@@ -172,6 +178,8 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers()
     RegisterHandler(TEXT("system_control"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleSystemControlAction(R, A, P, S); });
     RegisterHandler(TEXT("manage_blueprint_graph"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleBlueprintGraphAction(R, A, P, S); });
     RegisterHandler(TEXT("list_blueprints"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleListBlueprints(R, A, P, S); });
+    RegisterHandler(TEXT("manage_world_partition"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleWorldPartitionAction(R, A, P, S); });
+    RegisterHandler(TEXT("manage_render"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { return HandleRenderAction(R, A, P, S); });
 }
 
 // Drain and process any automation requests that were enqueued while the

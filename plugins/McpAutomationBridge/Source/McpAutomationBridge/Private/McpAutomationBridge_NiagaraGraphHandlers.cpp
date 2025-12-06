@@ -132,7 +132,70 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
 
     else if (SubAction == TEXT("connect_pins"))
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Niagara pin connection requires advanced stack context."), TEXT("UNSUPPORTED_OPERATION"));
+        FString FromNodeId, FromPinName;
+        FString ToNodeId, ToPinName;
+        if (!Payload->TryGetStringField(TEXT("fromNode"), FromNodeId) || !Payload->TryGetStringField(TEXT("fromPin"), FromPinName) ||
+            !Payload->TryGetStringField(TEXT("toNode"), ToNodeId) || !Payload->TryGetStringField(TEXT("toPin"), ToPinName))
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("connect_pins requires fromNode, fromPin, toNode, toPin"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UEdGraphNode* FromNode = nullptr;
+        UEdGraphNode* ToNode = nullptr;
+
+        for (UEdGraphNode* Node : TargetGraph->Nodes)
+        {
+            if (Node->NodeGuid.ToString() == FromNodeId || Node->GetName() == FromNodeId || Node->GetNodeTitle(ENodeTitleType::ListView).ToString() == FromNodeId)
+            {
+                FromNode = Node;
+            }
+            if (Node->NodeGuid.ToString() == ToNodeId || Node->GetName() == ToNodeId || Node->GetNodeTitle(ENodeTitleType::ListView).ToString() == ToNodeId)
+            {
+                ToNode = Node;
+            }
+        }
+
+        if (!FromNode || !ToNode)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Could not find source or destination node."), TEXT("NODE_NOT_FOUND"));
+            return true;
+        }
+
+        UEdGraphPin* FromPin = FromNode->FindPin(FName(*FromPinName));
+        UEdGraphPin* ToPin = ToNode->FindPin(FName(*ToPinName));
+
+        if (!FromPin)
+        {
+            // Try lenient search
+            for (UEdGraphPin* Pin : FromNode->Pins)
+            {
+                if (Pin->PinName.ToString() == FromPinName || Pin->GetDisplayName().ToString() == FromPinName) { FromPin = Pin; break; }
+            }
+        }
+        if (!ToPin)
+        {
+             for (UEdGraphPin* Pin : ToNode->Pins)
+            {
+                if (Pin->PinName.ToString() == ToPinName || Pin->GetDisplayName().ToString() == ToPinName) { ToPin = Pin; break; }
+            }
+        }
+
+        if (!FromPin || !ToPin)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Could not find source or destination pin."), TEXT("PIN_NOT_FOUND"));
+            return true;
+        }
+
+        const bool bConnected = TargetGraph->GetSchema()->TryCreateConnection(FromPin, ToPin);
+        if (bConnected)
+        {
+             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Pins connected successfully."));
+        }
+        else
+        {
+             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to connect pins (schema blocked connection)."), TEXT("CONNECTION_FAILED"));
+        }
         return true;
     }
     else if (SubAction == TEXT("remove_node"))

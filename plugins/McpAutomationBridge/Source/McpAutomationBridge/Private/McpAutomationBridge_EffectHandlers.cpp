@@ -374,6 +374,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
             if (ParameterName.IsEmpty()) { SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("parameterName required"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
             if (ParameterType.IsEmpty()) ParameterType = TEXT("Float");
 
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("SetNiagaraParameter: Looking for actor '%s' to set param '%s'"), *SystemName, *ParameterName);
+
 #if WITH_EDITOR
             if (!GEditor)
             {
@@ -392,12 +394,21 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
 
             TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
             bool bApplied = false;
+            
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("SetNiagaraParameter: Looking for actor '%s'"), *SystemName);
+
             for (AActor* Actor : AllActors)
             {
                 if (!Actor) continue;
                 if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) continue;
+                
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("SetNiagaraParameter: Found actor '%s'"), *SystemName);
                 UNiagaraComponent* NiComp = Actor->FindComponentByClass<UNiagaraComponent>();
-                if (!NiComp) continue;
+                if (!NiComp) 
+                {
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("SetNiagaraParameter: Actor '%s' has no NiagaraComponent"), *SystemName);
+                    continue;
+                }
 
                 if (ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
                 {
@@ -416,7 +427,11 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
                 }
                 else if (ParameterType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
                 {
+                    const TSharedPtr<FJsonValue> Val = LocalPayload->TryGetField(TEXT("value"));
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Display, TEXT("SetNiagaraParameter: DEBUG - Processing Vector for '%s'"), *ParamName.ToString());
+
                     const TArray<TSharedPtr<FJsonValue>>* ArrValue = nullptr;
+                    const TSharedPtr<FJsonObject>* ObjValue = nullptr;
                     if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) && ArrValue && ArrValue->Num() >= 3)
                     {
                         const float X = static_cast<float>((*ArrValue)[0]->AsNumber());
@@ -424,6 +439,21 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
                         const float Z = static_cast<float>((*ArrValue)[2]->AsNumber());
                         NiComp->SetVariableVec3(ParamName, FVector(X, Y, Z));
                         bApplied = true;
+                        UE_LOG(LogMcpAutomationBridgeSubsystem, Display, TEXT("SetNiagaraParameter: DEBUG - Applied Vector from Array: %f, %f, %f"), X, Y, Z);
+                    }
+                    else if (LocalPayload->TryGetObjectField(TEXT("value"), ObjValue) && ObjValue)
+                    {
+                        double VX = 0, VY = 0, VZ = 0;
+                        (*ObjValue)->TryGetNumberField(TEXT("x"), VX);
+                        (*ObjValue)->TryGetNumberField(TEXT("y"), VY);
+                        (*ObjValue)->TryGetNumberField(TEXT("z"), VZ);
+                        NiComp->SetVariableVec3(ParamName, FVector((float)VX, (float)VY, (float)VZ));
+                        bApplied = true;
+                        UE_LOG(LogMcpAutomationBridgeSubsystem, Display, TEXT("SetNiagaraParameter: DEBUG - Applied Vector from Object: %f, %f, %f"), VX, VY, VZ);
+                    }
+                    else
+                    {
+                         UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("SetNiagaraParameter: DEBUG - Failed to parse Vector value."));
                     }
                 }
                 else if (ParameterType.Equals(TEXT("Color"), ESearchCase::IgnoreCase))
@@ -456,6 +486,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
         {
             FString SystemName; LocalPayload->TryGetStringField(TEXT("systemName"), SystemName);
             bool bReset = LocalPayload->HasField(TEXT("reset")) ? LocalPayload->GetBoolField(TEXT("reset")) : true;
+            
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("ActivateNiagara: Looking for actor '%s'"), *SystemName);
+
 #if WITH_EDITOR
             UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
             TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
@@ -464,6 +497,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
             {
                 if (!Actor) continue;
                 if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) continue;
+                
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("ActivateNiagara: Found actor '%s'"), *SystemName);
                 UNiagaraComponent* NiComp = Actor->FindComponentByClass<UNiagaraComponent>();
                 if (!NiComp) continue;
                 
@@ -476,6 +511,72 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
             return true;
 #else
             SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("activate_niagara requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+            return true;
+#endif
+        }
+        else if (LowerSub.Equals(TEXT("deactivate_niagara")))
+        {
+            FString SystemName; LocalPayload->TryGetStringField(TEXT("systemName"), SystemName);
+            if (SystemName.IsEmpty()) LocalPayload->TryGetStringField(TEXT("actorName"), SystemName);
+            
+#if WITH_EDITOR
+            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+            TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+            bool bFound = false;
+            for (AActor* Actor : AllActors)
+            {
+                if (!Actor) continue;
+                if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) continue;
+                
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("DeactivateNiagara: Found actor '%s'"), *SystemName);
+                UNiagaraComponent* NiComp = Actor->FindComponentByClass<UNiagaraComponent>();
+                if (!NiComp) continue;
+                
+                NiComp->Deactivate();
+                bFound = true;
+                break;
+            }
+            if (bFound) SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara system deactivated."));
+            else SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Niagara system not found."), nullptr, TEXT("SYSTEM_NOT_FOUND"));
+            return true;
+#else
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("deactivate_niagara requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
+            return true;
+#endif
+        }
+        else if (LowerSub.Equals(TEXT("advance_simulation")))
+        {
+            FString SystemName; LocalPayload->TryGetStringField(TEXT("systemName"), SystemName);
+            if (SystemName.IsEmpty()) LocalPayload->TryGetStringField(TEXT("actorName"), SystemName);
+            
+            double DeltaTime = 0.1; LocalPayload->TryGetNumberField(TEXT("deltaTime"), DeltaTime);
+            int32 Steps = 1; LocalPayload->TryGetNumberField(TEXT("steps"), Steps);
+
+#if WITH_EDITOR
+            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+            TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+            bool bFound = false;
+            for (AActor* Actor : AllActors)
+            {
+                if (!Actor) continue;
+                if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) continue;
+                
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("AdvanceSimulation: Found actor '%s'"), *SystemName);
+                UNiagaraComponent* NiComp = Actor->FindComponentByClass<UNiagaraComponent>();
+                if (!NiComp) continue;
+                
+                for(int i=0; i<Steps; i++)
+                {
+                    NiComp->AdvanceSimulation(Steps, DeltaTime);
+                }
+                bFound = true;
+                break;
+            }
+            if (bFound) SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara simulation advanced."));
+            else SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Niagara system not found."), nullptr, TEXT("SYSTEM_NOT_FOUND"));
+            return true;
+#else
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("advance_simulation requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
             return true;
 #endif
         }
@@ -775,7 +876,21 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
             }
         }
 
-        Spawned->SetActorLabel(FString::Printf(TEXT("Niagara_%lld"), FDateTime::Now().ToUnixTimestamp()));
+        // Set actor label
+        FString Name; LocalPayload->TryGetStringField(TEXT("name"), Name);
+        if (Name.IsEmpty()) LocalPayload->TryGetStringField(TEXT("actorName"), Name);
+        
+        if (!Name.IsEmpty())
+        {
+            Spawned->SetActorLabel(Name);
+        }
+        else
+        {
+            Spawned->SetActorLabel(FString::Printf(TEXT("Niagara_%lld"), FDateTime::Now().ToUnixTimestamp()));
+        }
+
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("spawn_niagara: Spawned actor '%s' (ID: %u)"), *Spawned->GetActorLabel(), Spawned->GetUniqueID());
+
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
@@ -978,7 +1093,19 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(const FString& RequestId
     }
 
     // Set actor label
-    Spawned->SetActorLabel(FString::Printf(TEXT("%s_%lld"), *EffectName.Replace(TEXT("create_"), TEXT("")), FDateTime::Now().ToUnixTimestamp()));
+    FString Name; Payload->TryGetStringField(TEXT("name"), Name);
+    if (Name.IsEmpty()) Payload->TryGetStringField(TEXT("actorName"), Name);
+    
+    if (!Name.IsEmpty())
+    {
+        Spawned->SetActorLabel(Name);
+    }
+    else
+    {
+        Spawned->SetActorLabel(FString::Printf(TEXT("%s_%lld"), *EffectName.Replace(TEXT("create_"), TEXT("")), FDateTime::Now().ToUnixTimestamp()));
+    }
+    
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("CreateNiagaraEffect: Spawned actor '%s' (ID: %u)"), *Spawned->GetActorLabel(), Spawned->GetUniqueID());
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);

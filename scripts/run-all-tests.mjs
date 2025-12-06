@@ -4,9 +4,9 @@ import { spawn } from 'node:child_process';
 const tests = [
   'test:control_actor', // Pass1 // Pass2
   'test:control_editor', // Pass1 // Pass2
-  'test:manage_level', // Pass
-  'test:animation', // Pass
-  'test:materials', // Pass
+  'test:manage_level', // Pass1 // Pass2 
+  'test:animation', // Pass // Pass2
+  'test:materials', // Pass // Pass2
   'test:niagara', // Pass
   'test:landscape', // Pass
   'test:sequence', // Pass

@@ -189,6 +189,12 @@ async function invokeNamedTool(
     // 7. EFFECTS MANAGER (Renamed from create_effect)
     case 'manage_effect': {
       if (isNiagaraGraphAction(action)) {
+        // Special case: set_niagara_parameter can be for actor (Effect Tool) or asset (Graph Tool)
+        // If actorName is present, it's an instance operation -> handleEffectTools
+        if (action === 'set_niagara_parameter' && args.actorName) {
+          return await handleEffectTools(action, args, tools);
+        }
+
         const subAction = NIAGARA_GRAPH_ACTION_MAP[action] || action;
         return await handleGraphTools('manage_niagara_graph', subAction, args, tools);
       }
@@ -229,6 +235,18 @@ async function invokeNamedTool(
     // 13. BEHAVIOR TREE
     case 'manage_behavior_tree':
       return await handleGraphTools('manage_behavior_tree', action, args, tools);
+
+    // 14. BLUEPRINT GRAPH DIRECT
+    case 'manage_blueprint_graph':
+      return await handleGraphTools('manage_blueprint_graph', action, args, tools);
+
+    // 15. RENDER TOOLS
+    case 'manage_render':
+      return cleanObject(await executeAutomationRequest(tools, 'manage_render', { ...args, subAction: action }, 'Bridge unavailable'));
+
+    // 16. WORLD PARTITION
+    case 'manage_world_partition':
+      return cleanObject(await executeAutomationRequest(tools, 'manage_world_partition', { ...args, subAction: action }, 'Bridge unavailable'));
 
     default:
       return cleanObject({ success: false, error: 'UNKNOWN_TOOL', message: `Unknown consolidated tool: ${name}` });

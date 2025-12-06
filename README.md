@@ -37,12 +37,14 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ### Prerequisites
 - Node.js 18+
-- Unreal Engine 5.0-5.6
+- Unreal Engine 5.0-5.7
 - Required UE Plugins (enable via **Edit ▸ Plugins**):
   - **MCP Automation Bridge** – Native C++ WebSocket automation transport (ships inside `plugins/McpAutomationBridge`)
   - **Editor Scripting Utilities** – Unlocks Editor Actor/Asset subsystems for native tool operations
   - **Sequencer** *(built-in)* – Keep enabled for cinematic tools
   - **Level Sequence Editor** – Required for `manage_sequence` operations
+  - **Control Rig** – Required for animation and physics tools
+  - **Subobject Data Interface** – Required for Blueprint component manipulation (UE 5.7+)
 
 > 💡 After toggling any plugin, restart the editor to finalize activation. The MCP Automation Bridge provides all automation capabilities through native C++ handlers.
 
@@ -54,6 +56,8 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 | Editor Scripting Utilities | Scripting | Asset/Actor subsystem operations | Supplies Editor Actor/Asset subsystems |
 | Sequencer | Built-in | Sequencer tools | Ensure not disabled in project settings |
 | Level Sequence Editor | Animation | Sequencer tools | Required for `manage_sequence` operations |
+| Control Rig | Animation | Animation/Physics tools | Required for `animation_physics` operations |
+| Subobject Data Interface | Scripting | Blueprint tools | Required for `manage_blueprint` component operations (UE 5.7+) |
 
 > Tools such as `physics.configureVehicle` accept an optional `pluginDependencies` array so you can list the specific Unreal plugins your project relies on (for example, Chaos Vehicles or third-party vehicle frameworks). When provided, the server will verify those plugins are active before running the configuration.
 
@@ -64,7 +68,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - Verification: run `node scripts/verify-automation-bridge.js --project "C:/Path/To/YourProject/Plugins" --config "C:/Path/To/YourProject/Config/DefaultEngine.ini"` to confirm the plugin files and automation bridge environment variables are in place before launching Unreal.
 - Configuration: enable **MCP Automation Bridge** in **Edit ▸ Plugins**, restart the editor, then set the endpoint/token under **Edit ▸ Project Settings ▸ Plugins ▸ MCP Automation Bridge**. The bridge ships with its own lightweight WebSocket client, so you no longer need the engine's WebSockets plugin enabled.
 - Startup: after configuration, the Output Log should show a successful connection and the `bridge_started` broadcast; `SendRawMessage` becomes available to Blueprint and C++ callers for manual testing.
-- Current scope: manages a WebSocket session to the Node MCP server (`ws://127.0.0.1:8090` by default), performs optional capability-token handshakes, dispatches inbound JSON to native C++ handlers, implements reconnect backoff, and responds to editor functions, property operations, blueprint actions, and more through native implementations.
+- Current scope: manages a WebSocket session to the Node MCP server (`ws://127.0.0.1:8091` by default), performs optional capability-token handshakes, dispatches inbound JSON to native C++ handlers, implements reconnect backoff, and responds to editor functions, property operations, blueprint actions, and more through native implementations.
 - Usage: all consolidated tools use the automation bridge for native C++ execution. Keep the plugin enabled for all workflows.
 - Diagnostics: the `ue://automation-bridge` MCP resource surfaces handshake timestamps, recent disconnects, pending automation requests, and whether the Node listener is running—handy when validating editor connectivity from a client.
 - Roadmap: expand the bridge with elevated actions (SCS authoring, typed property marshaling, modal mediation, asset workflows).
@@ -167,7 +171,7 @@ No additional engine configuration required. The MCP Automation Bridge plugin ha
       "args": ["unreal-engine-mcp-server"],
       "env": {
         "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject",
-        "MCP_AUTOMATION_WS_PORT": "8090"
+        "MCP_AUTOMATION_PORT": "8091"
       }
     }
   }
@@ -184,7 +188,7 @@ No additional engine configuration required. The MCP Automation Bridge plugin ha
       "args": ["path/to/Unreal_mcp/dist/cli.js"],
       "env": {
         "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject",
-        "MCP_AUTOMATION_WS_PORT": "8090"
+        "MCP_AUTOMATION_PORT": "8091"
       }
     }
   }
@@ -251,12 +255,14 @@ UE_PROJECT_PATH="C:/Users/YourName/Documents/Unreal Projects/YourProject"  # Abs
 LOG_LEVEL=info                        # debug | info | warn | error
 
 # Automation bridge WebSocket client (Node -> Unreal editor)
-MCP_AUTOMATION_WS_HOST=127.0.0.1      # Host/interface for the automation bridge connection
-MCP_AUTOMATION_WS_PORT=8090           # Primary bridge port (must match the plugin's port)
-MCP_AUTOMATION_WS_PORTS=8090,8091     # Optional comma-separated list of additional ports
-MCP_AUTOMATION_WS_PROTOCOLS=mcp-automation
+MCP_AUTOMATION_HOST=127.0.0.1         # Host/interface for the automation bridge connection
+MCP_AUTOMATION_PORT=8091              # Primary bridge port (must match the plugin's port)
+MCP_AUTOMATION_CLIENT_MODE=true       # Set to false to disable the automation bridge client
 MCP_AUTOMATION_CAPABILITY_TOKEN=      # Optional capability token for handshake security
-MCP_AUTOMATION_BRIDGE_ENABLED=true    # Set to false to disable the automation bridge client
+
+# Legacy/Alternative variables
+# MCP_AUTOMATION_WS_PORT=8090         # Fallback port if MCP_AUTOMATION_PORT is unset
+# MCP_AUTOMATION_BRIDGE_ENABLED=true  # Legacy alias for MCP_AUTOMATION_CLIENT_MODE
 
 # WebAssembly acceleration
 WASM_ENABLED=true                     # Default: enabled if unset; set false to force TS-only

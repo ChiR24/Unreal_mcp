@@ -102,6 +102,7 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       return cleanObject(res);
     }
     case 'delete_assets':
+    case 'delete_asset':
     case 'delete': {
       // Handle various input formats for paths
       let paths: string[] = [];
@@ -131,6 +132,12 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         }
         return { success: true, message: 'Deleted assets via Python', action: 'delete' };
       }
+    }
+    case 'generate_lods': {
+      return cleanObject(await tools.assetTools.generateLODs({
+        assetPath: args.assetPath,
+        lodCount: args.lodCount
+      }));
     }
     case 'create_thumbnail': {
       const res = await tools.assetTools.createThumbnail({
@@ -174,6 +181,7 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       return cleanObject(res);
     }
     case 'generate_report': {
+      // Generate report can be slow for large projects, increase timeout to 2 minutes
       const res = await tools.assetTools.generateReport({
         directory: args.directory,
         reportType: args.reportType,
@@ -243,6 +251,43 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       }
 
       const res = await executeAutomationRequest(tools, 'fixup_redirectors', payload);
+      return cleanObject(res);
+    }
+    case 'add_material_parameter': {
+      const res = await executeAutomationRequest(tools, 'add_material_parameter', {
+        assetPath: args.assetPath,
+        name: args.parameterName,
+        type: args.parameterType,
+        value: args.defaultValue ?? args.value
+      });
+      return cleanObject(res);
+    }
+    case 'list_instances': {
+      const res = await executeAutomationRequest(tools, 'list_instances', {
+        assetPath: args.assetPath
+      });
+      return cleanObject(res);
+    }
+    case 'reset_instance_parameters': {
+      const res = await executeAutomationRequest(tools, 'reset_instance_parameters', {
+        assetPath: args.assetPath
+      });
+      return cleanObject(res);
+    }
+    case 'exists': {
+      // Use the editor tool to check existence if possible, or fall back to automation
+      // But since we want to test the automation handler 'exists', let's route it there.
+      // Wait, 'exists' might be a generic tool. Let's check if C++ implements it.
+      // The C++ handler for 'exists' was added in McpAutomationBridge_AssetWorkflowHandlers.cpp
+      const res = await executeAutomationRequest(tools, 'exists', {
+        assetPath: args.assetPath
+      });
+      return cleanObject(res);
+    }
+    case 'get_material_stats': {
+      const res = await executeAutomationRequest(tools, 'get_material_stats', {
+        assetPath: args.assetPath
+      });
       return cleanObject(res);
     }
     default:

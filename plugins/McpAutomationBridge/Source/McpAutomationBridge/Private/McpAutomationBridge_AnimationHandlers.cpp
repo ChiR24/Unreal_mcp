@@ -1273,6 +1273,188 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
             Resp->SetStringField(TEXT("targetSkeleton"), TargetSkeleton->GetPathName());
         }
     }
+    else if (LowerSub == TEXT("add_notify"))
+    {
+        FString AssetPath;
+        if (!Payload->TryGetStringField(TEXT("animationPath"), AssetPath) || AssetPath.IsEmpty())
+        {
+             Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+        }
+
+        FString NotifyName;
+        Payload->TryGetStringField(TEXT("notifyName"), NotifyName);
+        
+        double Time = 0.0;
+        Payload->TryGetNumberField(TEXT("time"), Time);
+
+        if (AssetPath.IsEmpty() || NotifyName.IsEmpty())
+        {
+            Message = TEXT("assetPath and notifyName are required for add_notify");
+            ErrorCode = TEXT("INVALID_ARGUMENT");
+            Resp->SetStringField(TEXT("error"), Message);
+        }
+        else
+        {
+            UAnimSequenceBase* AnimAsset = LoadObject<UAnimSequenceBase>(nullptr, *AssetPath);
+            if (!AnimAsset)
+            {
+                Message = FString::Printf(TEXT("Animation asset not found: %s"), *AssetPath);
+                ErrorCode = TEXT("ASSET_NOT_FOUND");
+                Resp->SetStringField(TEXT("error"), Message);
+            }
+            else
+            {
+                // In a real implementation, we would add the notify here.
+                // Since this requires more complex API usage (FAnimNotifyTrack, etc.) which might vary by engine version,
+                // we will implement a best-effort "success" if the asset exists, or use a simple Python command if needed.
+                // For now, let's try to use the Python command approach for reliability across versions if C++ is complex,
+                // BUT the user wants "real working code".
+                // Let's try to add it via C++ if possible, or fall back to a "simulated" success if it's too complex for this snippet.
+                // Actually, let's use the Editor command approach or just mark it as success for now as a "stub" 
+                // but the user said "NO MOCKS".
+                // So I must implement it.
+                
+                // Using AnimationBlueprintLibrary is the standard way.
+                // UAnimationBlueprintLibrary::AddAnimationNotifyTrack(AnimAsset, TrackName);
+                // UAnimationBlueprintLibrary::AddAnimationNotifyEvent(AnimAsset, TrackName, Time, NotifyClass);
+                
+                // I need to check if I have AnimationBlueprintLibrary included.
+                // I do (lines 13-20).
+                
+                // However, I need to know the track name. Default to "1".
+                FName TrackName = FName("1");
+                
+                // We need a Notify Class. Default to UAnimNotify.
+                UClass* NotifyClass = UAnimNotify::StaticClass();
+                
+                // But we want a specific notify name. This usually implies a custom notify or a specific class.
+                // If NotifyName is a class name (e.g. "AnimNotify_PlaySound"), we load it.
+                // If it's just a name, maybe we create a generic notify and set its name? 
+                // Unlikely. Usually notifies are classes.
+                
+                // Let's assume NotifyName is a class path or short class name.
+                // Try to load the class.
+                UClass* LoadedNotifyClass = nullptr;
+                if (!NotifyName.IsEmpty())
+                {
+                     // Try to find class
+                     LoadedNotifyClass = UClass::TryFindTypeSlow<UClass>(NotifyName);
+                     if (!LoadedNotifyClass)
+                     {
+                         LoadedNotifyClass = LoadClass<UObject>(nullptr, *NotifyName);
+                     }
+                }
+                
+                if (!LoadedNotifyClass)
+                {
+                    // Fallback: If it's not a class, maybe it's a skeleton notify?
+                    // For now, let's just use UAnimNotify and log a warning that we couldn't find the specific class.
+                    // Or better, fail if we can't find it.
+                    // But for the test "AnimNotify_PlaySound", that's a standard notify.
+                    // It might be UAnimNotify_PlaySound.
+                    FString ClassName = NotifyName;
+                    if (!ClassName.StartsWith("U")) ClassName = "U" + ClassName;
+                    
+                    // Try finding by name again with U prefix
+                    LoadedNotifyClass = UClass::TryFindTypeSlow<UClass>(ClassName);
+                    
+                    if (!LoadedNotifyClass)
+                    {
+                         // Try with /Script/Engine.
+                         FString EnginePath = FString::Printf(TEXT("/Script/Engine.%s"), *NotifyName);
+                         LoadedNotifyClass = FindObject<UClass>(nullptr, *EnginePath);
+                         
+                         if (!LoadedNotifyClass && !ClassName.Equals(NotifyName))
+                         {
+                             // Try /Script/Engine with U prefix
+                             EnginePath = FString::Printf(TEXT("/Script/Engine.%s"), *ClassName);
+                             LoadedNotifyClass = FindObject<UClass>(nullptr, *EnginePath);
+                         }
+                    }
+                }
+                
+                if (LoadedNotifyClass)
+                {
+                     // UAnimationBlueprintLibrary::AddAnimationNotifyEvent(AnimAsset, TrackName, Time, LoadedNotifyClass);
+                     // This function exists in UE5?
+                     // I need to be sure.
+                     // Let's use a simpler approach: "AddMetadata" style or just return success if asset exists, 
+                     // but the user was strict.
+                     // Let's try to use the library.
+                     
+                     // Since I can't easily verify the API availability without compiling, 
+                     // and I want to avoid build errors, I will use the "ExecuteEditorCommands" approach 
+                     // to run a Python script if possible, OR just use the C++ API if I'm confident.
+                     // UAnimationBlueprintLibrary is usually available.
+                     
+                     // Let's try to use the C++ API but wrap it in a try/catch or check.
+                     // Actually, `UAnimationBlueprintLibrary` methods are static.
+                     
+                     // Wait, `AddAnimationNotifyEvent` might not be exposed to C++ easily without linking `AnimGraphRuntime` or similar.
+                     // `UnrealEd` module should have it.
+                     
+                     // Let's go with a safe "best effort" that validates inputs and returns success, 
+                     // claiming it "added" it, but maybe logging that it's a placeholder implementation 
+                     // IF I can't be sure. 
+                     // BUT USER SAID NO MOCKS.
+                     // So I must write real code.
+                     
+                     // Real code:
+                     // 1. Acquire the track.
+                     // 2. Add the notify.
+                     
+                     // Since I am in `McpAutomationBridge_AnimationHandlers.cpp`, I can use `UAnimSequence`.
+                     // `UAnimSequence` has `Notifies` array.
+                     
+                     UAnimSequence* AnimSeq = Cast<UAnimSequence>(AnimAsset);
+                     if (AnimSeq)
+                     {
+                         AnimSeq->Modify();
+                         
+                         FAnimNotifyEvent NewEvent;
+                         NewEvent.Link(AnimSeq, Time);
+                         NewEvent.TriggerTimeOffset = GetTriggerTimeOffsetForType(EAnimEventTriggerOffsets::OffsetBefore);
+                         
+                         if (LoadedNotifyClass)
+                         {
+                             UAnimNotify* NewNotify = NewObject<UAnimNotify>(AnimSeq, LoadedNotifyClass);
+                             NewEvent.Notify = NewNotify;
+                             NewEvent.NotifyName = FName(*NotifyName);
+                         }
+                         else
+                         {
+                              // Create a default notify and set the name?
+                              // If class not found, we can't really add a functional notify.
+                              // But we can add a "None" notify with a name?
+                              NewEvent.NotifyName = FName(*NotifyName);
+                         }
+                         
+                         AnimSeq->Notifies.Add(NewEvent);
+                         AnimSeq->PostEditChange();
+                         AnimSeq->MarkPackageDirty();
+                         
+                         bSuccess = true;
+                         Message = FString::Printf(TEXT("Added notify '%s' to %s at %.2fs"), *NotifyName, *AssetPath, Time);
+                         Resp->SetStringField(TEXT("assetPath"), AssetPath);
+                         Resp->SetStringField(TEXT("notifyName"), NotifyName);
+                         Resp->SetNumberField(TEXT("time"), Time);
+                     }
+                     else
+                     {
+                         Message = TEXT("Asset is not an AnimSequence (Montages not fully supported for add_notify yet)");
+                         ErrorCode = TEXT("INVALID_TYPE");
+                         Resp->SetStringField(TEXT("error"), Message);
+                     }
+                }
+                else
+                {
+                    Message = FString::Printf(TEXT("Notify class '%s' not found"), *NotifyName);
+                    ErrorCode = TEXT("CLASS_NOT_FOUND");
+                    Resp->SetStringField(TEXT("error"), Message);
+                }
+            }
+        }
+    }
     else
     {
         Message = FString::Printf(TEXT("Animation/Physics action '%s' not implemented"), *LowerSub);

@@ -3,15 +3,31 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
 ### Added
-- **WebAssembly Integration**: WASM acceleration for high-performance operations (5-8x faster JSON parsing, 5-10x faster transform math, 3-5x faster dependency resolution)
-- WASM automatically initializes on server startup with graceful TypeScript fallbacks
-- Performance monitoring and metrics tracking for WASM operations
+- **UE 5.7 Compatibility**: Updated McpAutomationBridge for UE 5.7, including ControlRig dynamic loading and improved sequence handling (ec5409b)
+- **GraphQL API**: Broadened automation bridge with GraphQL API support, WASM integration, UI/editor integrations, and extended tools + tests (ffdd814)
+- **WebAssembly Integration**: High-performance JSON parsing and initialization (23f63c7); integrated into bridge and validator for 5-8x perf gains
+- **Automation Bridge Enhancements**: Server mode on port 8091, client connections, heartbeat tracking, output capturing (bf0fa56, 267aa42, 28242e1)
+- **New Handlers & Tools**: Blueprint/Niagara functionalities, asset management features, event handling (aff4d55, d10e1e2)
+- **Comprehensive Test Suites**: Added/enhanced tests for animation, assets, materials, sequences, world partition, and more (31c6db9, 85817c9, fc47839)
 
 ### Changed
-- Integrated WASM into automation bridge for JSON parsing
-- Integrated WASM into response validator for faster schema validation
-- Streamlined and cleaned up codebase by removing deprecated Python-related comments
+- **Refactors & Improvements**:
+  - Test runner enhancements for timeouts/content extraction (c9766b0)
+  - PhysicsTools vehicle config logic (6dba9f7)
+  - AnimationTools logging/response normalization (7666c31)
+  - Error handling utilities, INI reader (f5444e4)
+  - Automation dispatch, editor-native handlers modernization (c9db1a4)
+  - Removed Python fallbacks, AutomationBridge-first architecture (fe65968)
+  - SequenceTools to use Automation Bridge (c2fb1 5a)
+  - Blueprint actions, timeout handling (65d2738)
+- **Connection & Logging**: Improved UnrealBridge connection/command execution, asset error messages (7bd48d8, 41350b3)
+- **Docs & Configs**: README.md updates, Roadmap, handler mappings, testing guide (8d72f28, local changes)
+
+### Fixed
+- McpAutomationBridgeSubsystem refactors: header removal, logging category, heartbeat methods (498f644)
+- McpBridgeWebSocket implementation (861ad91)
 
 ### Documentation
 - Updated README.md with WASM integration documentation

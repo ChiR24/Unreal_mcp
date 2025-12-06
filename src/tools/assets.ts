@@ -7,25 +7,25 @@ export class AssetTools extends BaseTool implements IAssetTools {
   async importAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean; save?: boolean }) {
     return this.sendRequest('import', {
       ...params
-    }, 'import');
+    }, 'import', { timeoutMs: 120000 });
   }
 
   async duplicateAsset(params: { sourcePath: string; destinationPath: string }) {
     return this.sendRequest('duplicate', {
       ...params
-    }, 'duplicate');
+    }, 'duplicate', { timeoutMs: 60000 });
   }
 
   async renameAsset(params: { sourcePath: string; destinationPath: string }) {
     return this.sendRequest('rename', {
       ...params
-    }, 'rename');
+    }, 'rename', { timeoutMs: 60000 });
   }
 
   async moveAsset(params: { sourcePath: string; destinationPath: string }) {
     return this.sendRequest('move', {
       ...params
-    }, 'move');
+    }, 'move', { timeoutMs: 60000 });
   }
 
   async deleteAssets(params: { paths: string[]; fixupRedirectors?: boolean; timeoutMs?: number }) {
@@ -33,14 +33,14 @@ export class AssetTools extends BaseTool implements IAssetTools {
     return this.sendRequest('bulk_delete', {
       assetPaths,
       fixupRedirectors: params.fixupRedirectors
-    }, 'bulk_delete');
+    }, 'bulk_delete', { timeoutMs: 120000 });
   }
 
   async searchAssets(params: { classNames?: string[]; packagePaths?: string[]; recursivePaths?: boolean; recursiveClasses?: boolean; limit?: number }) {
     return this.sendRequest('search_assets', {
       ...params,
       subAction: 'search_assets'
-    }, 'search_assets');
+    }, 'search_assets', { timeoutMs: 60000 });
   }
 
   async saveAsset(assetPath: string) {
@@ -52,7 +52,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
           const response: any = await bridge.sendAutomationRequest(
             'save_asset',
             { assetPath },
-            { timeoutMs: 30000 }
+            { timeoutMs: 60000 }
           );
 
           if (response && response.success !== false) {
@@ -83,7 +83,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
   async createFolder(folderPath: string) {
     return this.sendRequest('create_folder', {
       path: folderPath
-    }, 'create_folder');
+    }, 'create_folder', { timeoutMs: 60000 });
   }
 
   async getDependencies(params: { assetPath: string; recursive?: boolean }) {
@@ -109,7 +109,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
         assetPath: params.assetPath,
         maxDepth,
         subAction: 'get_asset_graph'
-      }, 'get_asset_graph');
+      }, 'get_asset_graph', { timeoutMs: 60000 });
 
       if (!response.success || !response.graph) {
         return { success: false, error: response.error || 'Failed to retrieve asset graph from engine' };
@@ -119,7 +119,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       // Convert the JSON object (Record<string, any[]>) to string[]
       for (const [key, value] of Object.entries(response.graph)) {
         if (Array.isArray(value)) {
-            graph[key] = value.map(v => String(v));
+          graph[key] = value.map(v => String(v));
         }
       }
 
@@ -179,25 +179,25 @@ export class AssetTools extends BaseTool implements IAssetTools {
   async createThumbnail(params: { assetPath: string; width?: number; height?: number }) {
     return this.sendRequest('generate_thumbnail', {
       ...params
-    }, 'generate_thumbnail');
+    }, 'generate_thumbnail', { timeoutMs: 60000 });
   }
 
   async setTags(params: { assetPath: string; tags: string[] }) {
     return this.sendRequest('set_tags', {
       ...params
-    }, 'set_tags');
+    }, 'set_tags', { timeoutMs: 60000 });
   }
 
   async generateReport(params: { directory: string; reportType?: string; outputPath?: string }) {
     return this.sendRequest('generate_report', {
       ...params
-    }, 'generate_report');
+    }, 'generate_report', { timeoutMs: 300000 });
   }
 
   async validate(params: { assetPath: string }) {
     return this.sendRequest('validate', {
       ...params
-    }, 'validate');
+    }, 'validate', { timeoutMs: 300000 });
   }
 
   async generateLODs(params: { assetPath: string; lodCount: number }) {

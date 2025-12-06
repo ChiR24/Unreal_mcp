@@ -25,7 +25,7 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 - **Settings**: `UMcpAutomationBridgeSettings` - configurable via **Project Settings ▸ Plugins ▸ MCP Automation Bridge**
 
 ### Connection Management
-- **WebSocket Server Mode**: Plugin connects TO the MCP server's WebSocket listener (default: `ws://127.0.0.1:8090`)
+- **WebSocket Server Mode**: Plugin connects TO the MCP server's WebSocket listener (default: `ws://127.0.0.1:8091`)
 - **Handshake Protocol**: `bridge_hello` → capability token validation → `bridge_ack`
 - **Reconnection**: Automatic with exponential backoff (configurable delay, 5s default)
 - **Heartbeat**: Optional heartbeat tracking for connection health monitoring
@@ -39,9 +39,9 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 - **Timeout Management**: Configurable timeouts for long-running operations
 
 ## Server Integration (0.1.0)
-- `src/automation-bridge.ts` spins up a lightweight WebSocket server (default `ws://127.0.0.1:8090`) guarded by an optional capability token.
+- `src/automation-bridge.ts` spins up a lightweight WebSocket server (default `ws://127.0.0.1:8091`) guarded by an optional capability token.
 - Handshake flow: editor sends `bridge_hello` → server validates capability token → server responds with `bridge_ack` and caches the socket for future elevated commands.
-- Environment flags: `MCP_AUTOMATION_WS_HOST`, `MCP_AUTOMATION_WS_PORT`, `MCP_AUTOMATION_CAPABILITY_TOKEN`, and `MCP_AUTOMATION_BRIDGE_ENABLED` allow operators to relocate or disable the listener without code changes.
+- Environment flags: `MCP_AUTOMATION_HOST`, `MCP_AUTOMATION_PORT`, `MCP_AUTOMATION_CAPABILITY_TOKEN`, and `MCP_AUTOMATION_CLIENT_MODE` allow operators to relocate or disable the listener without code changes.
 - Health endpoint (`ue://health`) now surfaces bridge connectivity status so MCP clients can confirm when the plugin is online.
 
 ## Implemented Actions (Current)
@@ -200,7 +200,7 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 | | `debug_shape` | ✅ Native | Debug line/box/sphere drawing |
 | | `dynamic_light` | ✅ Native | Dynamic light spawning |
 | **manage_blueprint** | `create` | ✅ Native | Blueprint asset creation |
-| | `add_component` | ⚠️ Partial | SCS manipulation via native APIs; UE 5.6+ SubobjectData integration in progress |
+| | `add_component` | ✅ Native | SCS manipulation via native APIs; UE 5.7+ SubobjectDataInterface support added |
 | | `edit_defaults` | ✅ Native | CDO property modification |
 | **build_environment** | `create_landscape` | ✅ Native | Landscape actor creation |
 | | `sculpt` / `paint` | ✅ Native | Heightmap/layer editing |
@@ -240,7 +240,7 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 
 ### ⚠️ In Progress
 1. **Blueprint SCS Enhancements** - Improving UE 5.6+ SubobjectData subsystem compatibility
-   - Native component addition and modification
+   - Native component addition and modification (UE 5.7+ supported)
    - Full SCS tree manipulation
 2. **Modal Dialog Interception** - Handling blocking editor dialogs
    - Asset save prompts
@@ -315,7 +315,8 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 - **MaterialEditor** - Material editing
 
 ### Optional Modules (Auto-Detected)
-- **SubobjectData** - UE 5.6+ Blueprint SCS subsystem
+- **SubobjectDataInterface** - UE 5.7+ Blueprint SCS subsystem
+- **ControlRig** - Animation and physics tools
 - **SourceControl** - Version control integration
 
 ## Installation & Configuration
@@ -328,7 +329,7 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 
 ### Configuration (Project Settings ▸ Plugins ▸ MCP Automation Bridge)
 - **Server Host**: MCP server address (default: `127.0.0.1`)
-- **Server Port**: WebSocket port (default: `8090`)
+- **Server Port**: WebSocket port (default: `8091`)
 - **Capability Token**: Optional security token
 - **Reconnect Enabled**: Auto-reconnect on disconnect
 - **Reconnect Delay**: Delay between reconnection attempts (default: 5s)
@@ -336,8 +337,8 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 - **Ticker Interval**: Subsystem tick frequency (default: 0.25s)
 
 ### Environment Variables (Override Settings)
-- `MCP_AUTOMATION_WS_HOST` - Server host override
-- `MCP_AUTOMATION_WS_PORTS` - Comma-separated port list
+- `MCP_AUTOMATION_HOST` - Server host override
+- `MCP_AUTOMATION_PORT` - Server port override
 - `MCP_AUTOMATION_CAPABILITY_TOKEN` - Security token
 - `MCP_IGNORE_SUBOBJECTDATA` - Disable SubobjectData detection
 - `MCP_FORCE_SUBOBJECTDATA` - Force SubobjectData module linkage
@@ -358,6 +359,6 @@ Contributions welcome! Please open an issue or discussion before starting major 
 - Register new handlers in `ProcessAutomationRequest()`
 - Update `McpAutomationBridgeSubsystem.h` with handler declarations
 - Add comprehensive error handling with structured error codes
-- Test across multiple UE versions (5.0-5.6)
+- Test across multiple UE versions (5.0-5.7)
 - Document new actions in this file
 - **No Python dependencies** - All new features must be native C++

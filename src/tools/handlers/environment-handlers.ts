@@ -66,12 +66,7 @@ export async function handleEnvironmentTools(action: string, args: any, tools: I
         seed: args.seed,
         tileSize: args.tileSize
       }));
-    case 'generate_lods':
-      return cleanObject(await tools.assetTools.generateLODs({
-        assetPath: args.assetPath,
-        lodCount: args.lodCount,
-        reductionSettings: args.reductionSettings
-      }));
+
     case 'bake_lightmap':
       return cleanObject(await tools.lightingTools.buildLighting({
         quality: (args.quality as any) || 'Preview',
@@ -102,6 +97,12 @@ export async function handleEnvironmentTools(action: string, args: any, tools: I
         landscapeName: args.landscapeName || args.name,
         materialPath: args.materialPath
       }));
+    case 'generate_lods':
+      return cleanObject(await executeAutomationRequest(tools, 'build_environment', {
+        action: 'generate_lods',
+        assetPaths: args.assetPaths || args.assets || (args.path ? [args.path] : []),
+        numLODs: args.numLODs
+      }, 'Bridge unavailable'));
     case 'delete': {
       const names = Array.isArray(args.names)
         ? args.names

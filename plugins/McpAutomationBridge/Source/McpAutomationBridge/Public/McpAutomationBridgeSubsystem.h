@@ -110,6 +110,9 @@ private:
 
     void RecordAutomationTelemetry(const FString& RequestId, bool bSuccess, const FString& Message, const FString& ErrorCode);
 
+    // Active Log Device
+    TSharedPtr<FOutputDevice> LogCaptureDevice;
+
     // Action handlers (implemented in separate translation units)
     TMap<FString, FAutomationHandler> AutomationHandlers;
     void InitializeHandlers();
@@ -188,6 +191,7 @@ private:
     bool HandleCreateProceduralFoliage(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     bool HandleCreateLandscapeGrassType(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     bool HandleGenerateLODs(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleBakeLightmap(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     // Aggregate landscape editor that dispatches to specific edit ops
     bool HandleEditLandscape(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
     // Specific landscape edit operations
@@ -333,6 +337,11 @@ private:
     bool HandleSetMetadata(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleGenerateReport(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleValidateAsset(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleAddMaterialParameter(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleListMaterialInstances(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleResetInstanceParameters(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleDoesAssetExist(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleGetMaterialStats(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 
     // Lightweight snapshot cache for automation requests (e.g., create_snapshot)
     TMap<FString, FTransform> CachedActorSnapshots;

@@ -322,9 +322,12 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyNiagaraParameter(
             bSuccess = true;
         }
     }
+    }
     else if (ParameterType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
     {
         const TSharedPtr<FJsonObject>* VectorObj = nullptr;
+        const TArray<TSharedPtr<FJsonValue>>* VectorArr = nullptr;
+        
         if (Payload->TryGetObjectField(TEXT("value"), VectorObj) && VectorObj)
         {
             double VX = 0.0, VY = 0.0, VZ = 0.0;
@@ -333,6 +336,39 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyNiagaraParameter(
             (*VectorObj)->TryGetNumberField(TEXT("z"), VZ);
             NiagaraComp->SetVectorParameter(FName(*ParameterName), FVector(VX, VY, VZ));
             bSuccess = true;
+        }
+        else if (Payload->TryGetArrayField(TEXT("value"), VectorArr) && VectorArr && VectorArr->Num() >= 3)
+        {
+             double VX = (*VectorArr)[0]->AsNumber();
+             double VY = (*VectorArr)[1]->AsNumber();
+             double VZ = (*VectorArr)[2]->AsNumber();
+             NiagaraComp->SetVectorParameter(FName(*ParameterName), FVector(VX, VY, VZ));
+             bSuccess = true;
+        }
+    }
+    else if (ParameterType.Equals(TEXT("Color"), ESearchCase::IgnoreCase))
+    {
+        const TSharedPtr<FJsonObject>* ColorObj = nullptr;
+        const TArray<TSharedPtr<FJsonValue>>* ColorArr = nullptr;
+        
+        if (Payload->TryGetObjectField(TEXT("value"), ColorObj) && ColorObj)
+        {
+            double R = 0.0, G = 0.0, B = 0.0, A = 1.0;
+            (*ColorObj)->TryGetNumberField(TEXT("r"), R);
+            (*ColorObj)->TryGetNumberField(TEXT("g"), G);
+            (*ColorObj)->TryGetNumberField(TEXT("b"), B);
+            (*ColorObj)->TryGetNumberField(TEXT("a"), A);
+            NiagaraComp->SetColorParameter(FName(*ParameterName), FLinearColor(R, G, B, A));
+            bSuccess = true;
+        }
+        else if (Payload->TryGetArrayField(TEXT("value"), ColorArr) && ColorArr && ColorArr->Num() >= 3)
+        {
+             double R = (*ColorArr)[0]->AsNumber();
+             double G = (*ColorArr)[1]->AsNumber();
+             double B = (*ColorArr)[2]->AsNumber();
+             double A = (ColorArr->Num() > 3) ? (*ColorArr)[3]->AsNumber() : 1.0;
+             NiagaraComp->SetColorParameter(FName(*ParameterName), FLinearColor(R, G, B, A));
+             bSuccess = true;
         }
     }
     else if (ParameterType.Equals(TEXT("Bool"), ESearchCase::IgnoreCase))

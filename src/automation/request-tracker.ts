@@ -64,7 +64,8 @@ export class RequestTracker {
                 action,
                 payload,
                 requestedAt: new Date(),
-                waitForEvent
+                waitForEvent,
+                eventTimeoutMs: timeoutMs
             });
         });
 

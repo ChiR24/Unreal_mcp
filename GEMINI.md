@@ -29,7 +29,7 @@ The system is composed of three main components:
 
 ### Prerequisites
 *   Node.js (v18 or higher)
-*   Unreal Engine (5.0 or higher)
+*   Unreal Engine (5.0-5.7)
 *   Rust (optional, if modifying WASM components)
 
 ### Setup
