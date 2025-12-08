@@ -104,7 +104,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
                 else
                 {
                     UObject* NewAsset = Factory->FactoryCreateNew(UWidgetBlueprint::StaticClass(), 
-                        UEditorAssetLibrary::LoadAsset(NormalizedPath), FName(*WidgetName), 
+                        UEditorAssetLibrary::DoesAssetExist(NormalizedPath) ? UEditorAssetLibrary::LoadAsset(NormalizedPath) : nullptr, FName(*WidgetName), 
                         RF_Standalone, nullptr, GWarn);
 
                     UWidgetBlueprint* WidgetBlueprint = Cast<UWidgetBlueprint>(NewAsset);

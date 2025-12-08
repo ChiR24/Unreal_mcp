@@ -90,6 +90,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
         return true;
     }
 
+    // Auto-resolve simple name
+    if (!FoliageTypePath.IsEmpty() && FPaths::GetPath(FoliageTypePath).IsEmpty())
+    {
+        FoliageTypePath = FString::Printf(TEXT("/Game/Foliage/%s"), *FoliageTypePath);
+    }
+
     // Accept single 'position' or array of 'locations'
     TArray<FVector> Locations;
     const TArray<TSharedPtr<FJsonValue>>* LocationsArray = nullptr;
@@ -207,6 +213,12 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
     FString FoliageTypePath;
     Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath);
 
+    // Auto-resolve simple name
+    if (!FoliageTypePath.IsEmpty() && FPaths::GetPath(FoliageTypePath).IsEmpty())
+    {
+        FoliageTypePath = FString::Printf(TEXT("/Game/Foliage/%s"), *FoliageTypePath);
+    }
+
     bool bRemoveAll = false;
     Payload->TryGetBoolField(TEXT("removeAll"), bRemoveAll);
 
@@ -277,6 +289,12 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
 
     FString FoliageTypePath;
     Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath);
+
+    // Auto-resolve simple name
+    if (!FoliageTypePath.IsEmpty() && FPaths::GetPath(FoliageTypePath).IsEmpty())
+    {
+        FoliageTypePath = FString::Printf(TEXT("/Game/Foliage/%s"), *FoliageTypePath);
+    }
 
     if (!GEditor || !GEditor->GetEditorWorldContext().World())
     {
@@ -484,6 +502,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("foliageType or foliageTypePath required"), TEXT("INVALID_ARGUMENT"));
         return true;
+    }
+
+    // Auto-resolve simple name
+    if (!FoliageTypePath.IsEmpty() && FPaths::GetPath(FoliageTypePath).IsEmpty())
+    {
+        FoliageTypePath = FString::Printf(TEXT("/Game/Foliage/%s"), *FoliageTypePath);
     }
 
     // Parse transforms -> locations (optional rotation/scale ignored for now)

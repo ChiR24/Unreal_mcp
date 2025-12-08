@@ -15,9 +15,6 @@
     "build": "npm run build:core && (npm run build:wasm || echo \"WASM build failed or wasm-pack missing; continuing with TypeScript-only build. To enable WASM, install wasm-pack and re-run npm run build.\")",
     "build:watch": "tsc -p tsconfig.json --watch",
     "start": "node dist/cli.js",
-    "smithery:dev": "npx @smithery/cli dev",
-    "smithery:build": "npx @smithery/cli build",
-    "smithery:ci": "npm run build && npx @smithery/cli build",
     "dev": "ts-node-esm src/cli.ts",
     "lint": "echo \"Lint: typescript/javascript, C, C++, C#\" && eslint . --ext .ts || exit 0",
     "lint:fix": "eslint . --ext .ts --fix",
@@ -88,7 +85,6 @@
     "zod": "^3.22.2"
   },
   "devDependencies": {
-    "@smithery/cli": "^1.6.3",
     "@types/json5": "^0.0.30",
     "@types/node": "^20.12.7",
     "@types/ws": "^8.5.10",

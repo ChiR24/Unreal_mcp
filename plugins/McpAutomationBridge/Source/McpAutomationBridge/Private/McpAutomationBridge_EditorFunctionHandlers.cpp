@@ -36,6 +36,7 @@
 #if __has_include("GameFramework/PlayerController.h")
 #include "GameFramework/PlayerController.h"
 #endif
+#include "GameFramework/WorldSettings.h"
 #include "Misc/OutputDeviceNull.h"
 #endif
 
@@ -396,6 +397,18 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
                     return true;
                 }
             }
+            if (AWorldSettings* WS = CurrentWorld->GetWorldSettings())
+            {
+                if (WS->bForceNoPrecomputedLighting)
+                {
+                    TSharedPtr<FJsonObject> R = MakeShared<FJsonObject>();
+                    R->SetBoolField(TEXT("skipped"), true);
+                    R->SetStringField(TEXT("reason"), TEXT("bForceNoPrecomputedLighting is true"));
+                    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lighting build skipped (precomputed lighting disabled)"), R, FString());
+                    return true;
+                }
+            }
+
             LES->BuildLightMaps(QualityEnum, /*bWithReflectionCaptures*/false);
             TSharedPtr<FJsonObject> R = MakeShared<FJsonObject>();
             R->SetBoolField(TEXT("requested"), true);
@@ -524,6 +537,12 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         FString BlueprintPath; Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
         if (BlueprintPath.IsEmpty()) { SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT")); return true; }
 
+        if (!UEditorAssetLibrary::DoesAssetExist(BlueprintPath))
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Blueprint not found"), nullptr, TEXT("NOT_FOUND"));
+            return true;
+        }
+
         TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
         UObject* Obj = UEditorAssetLibrary::LoadAsset(BlueprintPath);
         if (!Obj)
@@ -628,6 +647,14 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         if (!World)
         {
             SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor world not available"), nullptr, TEXT("EDITOR_WORLD_NOT_AVAILABLE"));
+            return true;
+        }
+
+        if (!UEditorAssetLibrary::DoesAssetExist(SoundPath))
+        {
+            TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+            Err->SetStringField(TEXT("error"), TEXT("Sound asset not found"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Sound not found"), Err, TEXT("NOT_FOUND"));
             return true;
         }
 

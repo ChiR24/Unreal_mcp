@@ -29,7 +29,7 @@ public class McpAutomationBridge : ModuleRules
                 "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings","EngineSettings",
                 "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph",
                 "Kismet","KismetCompiler","AssetRegistry","AssetTools","MaterialEditor","SourceControl",
-                "AudioEditor"
+                "AudioEditor", "DataValidation"
             });
 
             PrivateDependencyModuleNames.AddRange(new string[]

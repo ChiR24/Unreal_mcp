@@ -525,7 +525,8 @@ export class IntrospectionTools {
     const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response = await automationBridge.sendAutomationRequest('get_class_default_object', {
+        const response = await automationBridge.sendAutomationRequest('inspect', {
+          subAction: 'inspect_class',
           className
         }, {
           timeoutMs: 60000
@@ -562,7 +563,8 @@ export class IntrospectionTools {
     const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response = await automationBridge.sendAutomationRequest('find_objects_by_class', {
+        const response = await automationBridge.sendAutomationRequest('inspect', {
+          subAction: 'find_by_class',
           className,
           limit
         }, {

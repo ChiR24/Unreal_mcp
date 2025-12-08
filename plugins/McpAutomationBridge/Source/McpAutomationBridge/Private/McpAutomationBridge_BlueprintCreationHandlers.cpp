@@ -230,6 +230,42 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(UMcpAutomationBridgeSubsy
     FString CreatedNormalizedPath;
     FString CreationError;
 
+    // Check if asset already exists to avoid "Overwrite" dialogs which can crash the editor/driver
+    FString PreExistingNormalized;
+    FString PreExistingError;
+    if (UBlueprint* PreExistingBP = LoadBlueprintAsset(CreateKey, PreExistingNormalized, PreExistingError))
+    {
+        CreatedBlueprint = PreExistingBP;
+        CreatedNormalizedPath = !PreExistingNormalized.TrimStartAndEnd().IsEmpty() ? PreExistingNormalized : PreExistingBP->GetPathName();
+        if (CreatedNormalizedPath.Contains(TEXT(".")))
+        {
+            CreatedNormalizedPath = CreatedNormalizedPath.Left(CreatedNormalizedPath.Find(TEXT(".")));
+        }
+
+        TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+        ResultPayload->SetStringField(TEXT("path"), CreatedNormalizedPath);
+        ResultPayload->SetStringField(TEXT("assetPath"), PreExistingBP->GetPathName());
+        ResultPayload->SetBoolField(TEXT("saved"), true);
+
+        FScopeLock Lock(&GBlueprintCreateMutex);
+        if (TArray<TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>>* Subs = GBlueprintCreateInflight.Find(CreateKey))
+        {
+            for (const TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>& Pair : *Subs)
+            {
+                Self->SendAutomationResponse(Pair.Value, Pair.Key, true, TEXT("Blueprint already exists"), ResultPayload, FString());
+            }
+            GBlueprintCreateInflight.Remove(CreateKey);
+            GBlueprintCreateInflightTs.Remove(CreateKey);
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("blueprint_create RequestId=%s completed (existing blueprint found early)."), *RequestId);
+        }
+        else
+        {
+            Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blueprint already exists"), ResultPayload, FString());
+        }
+
+        return true;
+    }
+
     UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
     UClass* ResolvedParent = nullptr;
     if (!ParentClassSpec.IsEmpty())

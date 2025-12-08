@@ -8,7 +8,7 @@
 #include "Subsystems/EditorActorSubsystem.h"
 #include "WorldPartition/WorldPartition.h"
 
-// Check for WorldPartitionEditorSubsystem (UE 5.0-5.5)
+// Check for WorldPartitionEditorSubsystem (UE 5.0-5.3)
 #if defined(__has_include)
 #  if __has_include("WorldPartition/WorldPartitionEditorSubsystem.h")
 #    include "WorldPartition/WorldPartitionEditorSubsystem.h"
@@ -21,6 +21,19 @@
 #  endif
 #else
 #  define MCP_HAS_WP_EDITOR_SUBSYSTEM 0 
+#endif
+
+// Check for WorldPartitionEditorLoaderAdapter (UE 5.4+)
+#if defined(__has_include)
+#  if __has_include("WorldPartition/WorldPartitionEditorLoaderAdapter.h")
+#    include "WorldPartition/WorldPartitionEditorLoaderAdapter.h"
+#    include "WorldPartition/LoaderAdapter/LoaderAdapterShape.h"
+#    define MCP_HAS_WP_LOADER_ADAPTER 1
+#  else
+#    define MCP_HAS_WP_LOADER_ADAPTER 0
+#  endif
+#else
+#  define MCP_HAS_WP_LOADER_ADAPTER 0
 #endif
 
 #include "WorldPartition/DataLayer/DataLayer.h"
@@ -77,14 +90,6 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
 
     if (SubAction == TEXT("load_cells"))
     {
-#if MCP_HAS_WP_EDITOR_SUBSYSTEM
-        UWorldPartitionEditorSubsystem* WPEditorSubsystem = GEditor->GetEditorSubsystem<UWorldPartitionEditorSubsystem>();
-        if (!WPEditorSubsystem)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("WorldPartitionEditorSubsystem instance is null."), TEXT("SUBSYSTEM_INSTANCE_NULL"));
-            return true;
-        }
-
         // Default to a reasonable area if no bounds provided
         FVector Origin = FVector::ZeroVector;
         FVector Extent = FVector(25000.0f, 25000.0f, 25000.0f); // 500m box
@@ -106,16 +111,38 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         }
         
         FBox Bounds(Origin - Extent, Origin + Extent);
-        WPEditorSubsystem->LoadRegion(Bounds);
-        
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Region load requested."));
-#else
-        // In newer engine versions where WP Editor Subsystem is moved or removed,
-        // we might default to just loading everything or logging a specific message.
-        // For now, we acknowledge the request but warn it's not fully supported.
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("WorldPartitionEditorSubsystem not available. LoadRegion skipped."));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Region load requested (Simulated - Subsystem missing)."));
+
+#if MCP_HAS_WP_EDITOR_SUBSYSTEM
+        // Old method (UE 5.0-5.3)
+        UWorldPartitionEditorSubsystem* WPEditorSubsystem = GEditor->GetEditorSubsystem<UWorldPartitionEditorSubsystem>();
+        if (WPEditorSubsystem)
+        {
+            WPEditorSubsystem->LoadRegion(Bounds);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Region load requested."));
+            return true;
+        }
 #endif
+
+#if MCP_HAS_WP_LOADER_ADAPTER
+        // New method (UE 5.4+)
+        if (WorldPartition)
+        {
+             // Create a user-created loader adapter to load the region
+             UWorldPartitionEditorLoaderAdapter* EditorLoaderAdapter = WorldPartition->CreateEditorLoaderAdapter<FLoaderAdapterShape>(World, Bounds, TEXT("MCP Loaded Region"));
+             if (EditorLoaderAdapter && EditorLoaderAdapter->GetLoaderAdapter())
+             {
+                 EditorLoaderAdapter->GetLoaderAdapter()->SetUserCreated(true);
+                 EditorLoaderAdapter->GetLoaderAdapter()->Load();
+                 SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Region load requested via LoaderAdapter."));
+                 return true;
+             }
+        }
+#endif
+
+        // If we reach here, neither subsystem nor adapter logic was available/successful
+        // But we should avoid sending error if it was just a fallback case; however if both failed it means not supported.
+        // Since we are refactoring to SUPPORT it, failure here is real failure.
+        SendAutomationError(RequestingSocket, RequestId, TEXT("WorldPartition region loading not supported or failed in this engine version."), TEXT("NOT_SUPPORTED"));
         return true;
     }
     else if (SubAction == TEXT("set_datalayer"))
@@ -129,7 +156,24 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         AActor* Actor = FindObject<AActor>(nullptr, *ActorPath);
         if (!Actor)
         {
-             SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found."), TEXT("ACTOR_NOT_FOUND"));
+            // Fallback: Try to find by Actor Label
+            if (UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
+            {
+                TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+                for (AActor* A : AllActors)
+                {
+                    if (A && A->GetActorLabel().Equals(ActorPath, ESearchCase::IgnoreCase))
+                    {
+                         Actor = A;
+                         break;
+                    }
+                }
+            }
+        }
+
+        if (!Actor)
+        {
+             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorPath), TEXT("ACTOR_NOT_FOUND"));
              return true;
         }
 

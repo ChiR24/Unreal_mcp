@@ -8,6 +8,7 @@
 #include "LevelEditor.h"
 #include "Engine/LevelStreaming.h"
 #include "Engine/World.h"
+#include "RenderingThread.h"
 
 // Check for LevelEditorSubsystem
 #if defined(__has_include)
@@ -93,6 +94,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(const FString& RequestId, 
     }
     if (EffectiveAction == TEXT("save_level_as"))
     {
+        // Force cleanup to prevent potential deadlocks with HLODs/WorldPartition during save
+        if (GEditor)
+        {
+            FlushRenderingCommands();
+            GEditor->ForceGarbageCollection(true);
+            FlushRenderingCommands();
+        }
+
         FString SavePath;
         if (Payload.IsValid()) Payload->TryGetStringField(TEXT("savePath"), SavePath);
         if (SavePath.IsEmpty()) {
@@ -139,13 +148,82 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(const FString& RequestId, 
     }
     if (EffectiveAction == TEXT("create_new_level"))
     {
+        FString LevelName;
+        if (Payload.IsValid()) Payload->TryGetStringField(TEXT("levelName"), LevelName);
+        
         FString LevelPath; 
-        if (Payload.IsValid()) 
-            Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
-        if (LevelPath.TrimStartAndEnd().IsEmpty()) LevelPath = TEXT("/Engine/Maps/Entry");
-        const FString Cmd = FString::Printf(TEXT("Open %s"), *LevelPath);
+        if (Payload.IsValid()) Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+        
+        // Construct valid package path
+        FString SavePath = LevelPath;
+        if (SavePath.IsEmpty() && !LevelName.IsEmpty())
+        {
+            if (LevelName.StartsWith(TEXT("/"))) 
+                SavePath = LevelName;
+            else
+                SavePath = FString::Printf(TEXT("/Game/Maps/%s"), *LevelName);
+        }
+        
+        if (SavePath.IsEmpty())
+        {
+             SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("levelName or levelPath required for create_level"), nullptr, TEXT("INVALID_ARGUMENT"));
+             return true;
+        }
+
+        // Check if map already exists
+        if (FPackageName::DoesPackageExist(SavePath))
+        {
+             // If exists, just open it
+             const FString Cmd = FString::Printf(TEXT("Open %s"), *SavePath);
+             TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>(); P->SetStringField(TEXT("command"), Cmd);
+             return HandleExecuteEditorFunction(RequestId, TEXT("execute_console_command"), P, RequestingSocket);
+        }
+
+        // Create new map
+#if defined(MCP_HAS_LEVELEDITOR_SUBSYSTEM) && __has_include("FileHelpers.h")
+        if (GEditor->IsPlaySessionInProgress())
+        {
+             GEditor->RequestEndPlayMap();
+             SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Cannot create level while Play In Editor is active."), nullptr, TEXT("PIE_ACTIVE"));
+             return true;
+        }
+
+        // Force cleanup of previous world/resources to prevent RenderCore/Driver crashes (monza/D3D12)
+        // especially when tests run back-to-back triggering thumbnail generation or world partition shutdown.
+        if (GEditor)
+        {
+            FlushRenderingCommands();
+            GEditor->ForceGarbageCollection(true);
+            FlushRenderingCommands();
+        }
+
+        if (UWorld* NewWorld = GEditor->NewMap(true)) // true = force new map (creates untitled)
+        {
+             GEditor->GetEditorWorldContext().SetCurrentWorld(NewWorld);
+             
+             // Save it to valid path
+             if (FEditorFileUtils::SaveMap(NewWorld, SavePath))
+             {
+                 TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); 
+                 Resp->SetStringField(TEXT("levelPath"), SavePath);
+                 SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Level created: %s"), *SavePath), Resp, FString());
+             }
+             else
+             {
+                 SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to save new level"), nullptr, TEXT("SAVE_FAILED"));
+             }
+        }
+        else
+        {
+             SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Failed to create new map"), nullptr, TEXT("CREATION_FAILED"));
+        }
+        return true;
+#else
+        // Fallback for missing headers (shouldn't happen given build.cs)
+        const FString Cmd = FString::Printf(TEXT("Open %s"), *SavePath);
         TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>(); P->SetStringField(TEXT("command"), Cmd);
         return HandleExecuteEditorFunction(RequestId, TEXT("execute_console_command"), P, RequestingSocket);
+#endif
     }
     if (EffectiveAction == TEXT("stream_level"))
     {

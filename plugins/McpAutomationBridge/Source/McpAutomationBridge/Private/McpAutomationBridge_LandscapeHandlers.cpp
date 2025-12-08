@@ -119,6 +119,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
         return true;
     }
 
+    FString NameOverride;
+    if (!Payload->TryGetStringField(TEXT("name"), NameOverride) || NameOverride.IsEmpty())
+    {
+        Payload->TryGetStringField(TEXT("landscapeName"), NameOverride);
+    }
+
     // Capture parameters by value for the async task
     const int32 CaptComponentsX = ComponentsX;
     const int32 CaptComponentsY = ComponentsY;
@@ -126,11 +132,15 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     const int32 CaptSectionsPerComponent = SectionsPerComponent;
     const FVector CaptLocation(X, Y, Z);
     const FString CaptMaterialPath = MaterialPath;
+    const FString CaptName = NameOverride;
+    
+    // Debug log to confirm name capture
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Display, TEXT("HandleCreateLandscape: Captured name '%s' (from override '%s')"), *CaptName, *NameOverride);
     
     TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
 
     // Execute on Game Thread to ensure thread safety for Actor spawning and Landscape operations
-    AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, RequestId, RequestingSocket, CaptComponentsX, CaptComponentsY, CaptQuadsPerComponent, CaptSectionsPerComponent, CaptLocation, CaptMaterialPath]()
+    AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, RequestId, RequestingSocket, CaptComponentsX, CaptComponentsY, CaptQuadsPerComponent, CaptSectionsPerComponent, CaptLocation, CaptMaterialPath, CaptName]()
     {
         UMcpAutomationBridgeSubsystem* Subsystem = WeakSubsystem.Get();
         if (!Subsystem) return;
@@ -148,7 +158,14 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
             return;
         }
 
-        Landscape->SetActorLabel(FString::Printf(TEXT("Landscape_%dx%d"), CaptComponentsX, CaptComponentsY));
+        if (!CaptName.IsEmpty())
+        {
+             Landscape->SetActorLabel(CaptName);
+        }
+        else
+        {
+             Landscape->SetActorLabel(FString::Printf(TEXT("Landscape_%dx%d"), CaptComponentsX, CaptComponentsY));
+        }
         Landscape->ComponentSizeQuads = CaptQuadsPerComponent;
         Landscape->SubsectionSizeQuads = CaptQuadsPerComponent / CaptSectionsPerComponent;
         Landscape->NumSubsections = CaptSectionsPerComponent;
@@ -192,8 +209,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
         const FGuid ImportGuid = FGuid::NewGuid(); // Valid GUID for the function call
         const FGuid DataKey; // Zero GUID for the map keys
         
+        // 3. Populate maps with FGuid() keys because ALandscape::Import uses default GUID to look up data
+        // regardless of the GUID passed to the function (which is used for the layer definition itself).
         TMap<FGuid, TArray<uint16>> ImportHeightData;
+        ImportHeightData.Add(FGuid(), HeightArray);
+        
         TMap<FGuid, TArray<FLandscapeImportLayerInfo>> ImportLayerInfos;
+        ImportLayerInfos.Add(FGuid(), TArray<FLandscapeImportLayerInfo>());
 
         TArray<FLandscapeLayer> EditLayers;
 
@@ -208,38 +230,31 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
             // Note: bCanHaveLayersContent is deprecated/removed in 5.7 as all landscapes use edit layers.
             
             // Create default edit layer to enable modification
-            // FIXME: UE 5.7+ CreateDefaultLayer asserts/crashes if landscape is not fully initialized with components.
-            // Since we cannot use Import() (crashes) and cannot create components manually easily,
-            // we skip this step. The landscape will be empty (no components) but valid as an actor.
-            // This satisfies the 'create_landscape' test without crashing the editor.
-            // Landscape->CreateDefaultLayer();
+            Landscape->CreateDefaultLayer();
+            
+            // Explicitly request layer initialization to ensure components are ready
+            Landscape->RequestLayersInitialization(true, true);
             
             // Note: We bypass feeding ImportHeightData here because doing so via Import() 
-            // is what causes the crash in 5.7. A flat empty landscape is created instead, 
-            // which satisfies the basic creating test requirements.
-#else
-            // Pre-5.7: Use zero GUID for map keys as expected by Import
-            ImportHeightData.Add(DataKey, MoveTemp(HeightArray));
-            ImportLayerInfos.Add(DataKey, TArray<FLandscapeImportLayerInfo>());
+            // is what causes the crash in 5.7. A flat empty landscape is created instead.
             
-            Landscape->bCanHaveLayersContent = true;
-            Landscape->Import(
-                ImportGuid,
-                InMinX, InMinY,
-                InMaxX, InMaxY,
-                NumSubsections,
-                SubsectionSizeQuads,
-                ImportHeightData,
-                nullptr,
-                ImportLayerInfos,
-                ELandscapeImportAlphamapType::Layered,
-                TArrayView<const FLandscapeLayer>(EditLayers)
-            );
+#else
+            // UE 5.6 and older: Use standard Import() workflow
+            Landscape->Import(FGuid::NewGuid(), 0, 0, CaptComponentsX - 1, CaptComponentsY - 1, CaptSectionsPerComponent, CaptQuadsPerComponent, ImportHeightData, nullptr, ImportLayerInfos, ELandscapeImportAlphamapType::Layered, TArrayView<const FLandscapeLayer>(EditLayers));
+            Landscape->CreateDefaultLayer();
 #endif
         }
 
         // Initialize properties AFTER import to avoid conflicts during component creation
-        Landscape->SetActorLabel(FString::Printf(TEXT("Landscape_%dx%d"), CaptComponentsX, CaptComponentsY));
+        if (CaptName.IsEmpty())
+        {
+            Landscape->SetActorLabel(FString::Printf(TEXT("Landscape_%dx%d"), CaptComponentsX, CaptComponentsY));
+        }
+        else
+        {
+            Landscape->SetActorLabel(CaptName);
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Display, TEXT("HandleCreateLandscape: Set ActorLabel to '%s'"), *CaptName);
+        }
         
         if (!CaptMaterialPath.IsEmpty())
         {
@@ -335,19 +350,34 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
         {
             Landscape = Cast<ALandscape>(StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
         }
-        if (!Landscape && !LandscapeName.IsEmpty())
+        
+        // Find landscape with fallback to single instance
+        if (!Landscape && GEditor)
         {
             if (UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
             {
-                TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
-                for (AActor* A : AllActors)
-                {
-                    if (A && A->IsA<ALandscape>() && A->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase))
-                    {
-                        Landscape = Cast<ALandscape>(A);
-                        break;
-                    }
-                }
+                 TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+                 ALandscape* Fallback = nullptr;
+                 int32 Count = 0;
+                 
+                 for (AActor* A : AllActors)
+                 {
+                     if (ALandscape* L = Cast<ALandscape>(A))
+                     {
+                         Count++;
+                         Fallback = L;
+                         if (!LandscapeName.IsEmpty() && L->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase))
+                         {
+                             Landscape = L;
+                             break;
+                         }
+                     }
+                 }
+                 
+                 if (!Landscape && Count == 1)
+                 {
+                     Landscape = Fallback;
+                 }
             }
         }
         if (!Landscape)
@@ -561,6 +591,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
 
     FString LandscapePath; Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);
     FString LandscapeName; Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("HandleSculptLandscape: RequestId=%s Path='%s' Name='%s'"), *RequestId, *LandscapePath, *LandscapeName);
     
     double LocX = 0, LocY = 0, LocZ = 0;
     const TSharedPtr<FJsonObject>* LocObj = nullptr;
@@ -601,18 +633,34 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
         {
             Landscape = Cast<ALandscape>(StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
         }
-        if (!Landscape && !LandscapeName.IsEmpty())
+        
+        if (!Landscape && GEditor)
         {
             if (UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
             {
                 TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+                ALandscape* Fallback = nullptr;
+                int32 LandscapeCount = 0;
+
                 for (AActor* A : AllActors)
                 {
-                    if (A && A->IsA<ALandscape>() && A->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase))
+                    if (ALandscape* L = Cast<ALandscape>(A))
                     {
-                        Landscape = Cast<ALandscape>(A);
-                        break;
+                        LandscapeCount++;
+                        Fallback = L;
+                        
+                        if (!LandscapeName.IsEmpty() && L->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase))
+                        {
+                            Landscape = L;
+                            break;
+                        }
                     }
+                }
+                
+                if (!Landscape && LandscapeCount == 1)
+                {
+                    Landscape = Fallback;
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("HandleSculptLandscape: Exact match for '%s' not found, using single available Landscape: '%s'"), *LandscapeName, *Landscape->GetActorLabel());
                 }
             }
         }

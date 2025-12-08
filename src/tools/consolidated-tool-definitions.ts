@@ -469,10 +469,11 @@ Supported actions:
         // Graph
         modulePath: { type: 'string' },
         emitterName: { type: 'string' },
-        nodeId: { type: 'string' },
         pinName: { type: 'string' },
         linkedTo: { type: 'string' },
         parameterName: { type: 'string' },
+        parameterType: { type: 'string', description: 'Float, Vector, Color, Bool, etc.' },
+        type: { type: 'string', description: 'Alias for parameterType' },
         value: { description: 'Value.' }
       },
       required: ['action']

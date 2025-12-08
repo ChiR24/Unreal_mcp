@@ -20,6 +20,7 @@
 #endif
 #include "Editor.h"
 #include "Editor/EditorEngine.h"
+#include "RenderingThread.h"
 #include "Animation/BlendSpace.h"
 #include "Animation/BlendSpace1D.h"
 #if __has_include("Animation/BlendSpaceBase.h")
@@ -240,19 +241,28 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
                     continue;
                 }
 
-                if (!UEditorAssetLibrary::DoesAssetExist(ArtifactPath))
+                if (UEditorAssetLibrary::DoesAssetExist(ArtifactPath))
                 {
-                    Missing.Add(ArtifactPath);
-                    continue;
-                }
+                    // Flush before deleting to release references
+                    if (GEditor)
+                    {
+                        FlushRenderingCommands();
+                        GEditor->ForceGarbageCollection(true);
+                        FlushRenderingCommands();
+                    }
 
-                if (UEditorAssetLibrary::DeleteAsset(ArtifactPath))
-                {
-                    Cleaned.Add(ArtifactPath);
+                    if (UEditorAssetLibrary::DeleteAsset(ArtifactPath))
+                    {
+                        Cleaned.Add(ArtifactPath);
+                    }
+                    else
+                    {
+                        Failed.Add(ArtifactPath);
+                    }
                 }
                 else
                 {
-                    Failed.Add(ArtifactPath);
+                    Missing.Add(ArtifactPath);
                 }
             }
 
@@ -767,31 +777,45 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
         USkeletalMesh* TargetMesh = nullptr;
         if (bMeshProvided)
         {
-            TargetMesh = LoadObject<USkeletalMesh>(nullptr, *MeshPath);
-            if (!TargetMesh)
+            if (UEditorAssetLibrary::DoesAssetExist(MeshPath))
+            {
+                TargetMesh = LoadObject<USkeletalMesh>(nullptr, *MeshPath);
+                if (!TargetMesh)
+                {
+                    bMeshLoadFailed = true;
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("setup_physics_simulation: failed to load mesh %s"), *MeshPath);
+                }
+            }
+            else
             {
                 bMeshLoadFailed = true;
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("setup_physics_simulation: failed to load mesh %s"), *MeshPath);
             }
         }
 
         USkeleton* TargetSkeleton = nullptr;
         if (!TargetMesh && bSkeletonProvided)
         {
-            TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
-            if (TargetSkeleton)
+            if (UEditorAssetLibrary::DoesAssetExist(SkeletonPath))
             {
-                TargetMesh = TargetSkeleton->GetPreviewMesh();
-                if (!TargetMesh)
+                TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+                if (TargetSkeleton)
                 {
-                    bSkeletonMissingPreview = true;
-                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("setup_physics_simulation: skeleton %s has no preview mesh"), *SkeletonPath);
+                    TargetMesh = TargetSkeleton->GetPreviewMesh();
+                    if (!TargetMesh)
+                    {
+                        bSkeletonMissingPreview = true;
+                        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("setup_physics_simulation: skeleton %s has no preview mesh"), *SkeletonPath);
+                    }
+                }
+                else
+                {
+                    bSkeletonLoadFailed = true;
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("setup_physics_simulation: failed to load skeleton %s"), *SkeletonPath);
                 }
             }
             else
             {
                 bSkeletonLoadFailed = true;
-                UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("setup_physics_simulation: failed to load skeleton %s"), *SkeletonPath);
             }
         }
 
@@ -985,7 +1009,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
             const bool bHadSkeletonPath = !SkeletonPath.IsEmpty();
             if (bHadSkeletonPath)
             {
-                TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+                if (UEditorAssetLibrary::DoesAssetExist(SkeletonPath))
+                {
+                    TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+                }
             }
 
             if (!TargetSkeleton)
@@ -1273,7 +1300,110 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
             Resp->SetStringField(TEXT("targetSkeleton"), TargetSkeleton->GetPathName());
         }
     }
+    else if (LowerSub == TEXT("play_montage") || LowerSub == TEXT("play_anim_montage"))
+    {
+        // Dispatch to the dedicated handler, but force the action name to what it expects
+        return HandlePlayAnimMontage(RequestId, TEXT("play_anim_montage"), Payload, RequestingSocket);
+    }
     else if (LowerSub == TEXT("add_notify"))
+    {
+        FString AssetPath;
+        if (!Payload->TryGetStringField(TEXT("animationPath"), AssetPath) || AssetPath.IsEmpty())
+        {
+             Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+        }
+
+        FString NotifyName;
+        Payload->TryGetStringField(TEXT("notifyName"), NotifyName);
+        
+        double Time = 0.0;
+        Payload->TryGetNumberField(TEXT("time"), Time);
+
+        if (AssetPath.IsEmpty() || NotifyName.IsEmpty())
+        {
+            Message = TEXT("assetPath and notifyName are required for add_notify");
+            ErrorCode = TEXT("INVALID_ARGUMENT");
+            Resp->SetStringField(TEXT("error"), Message);
+        }
+        else
+        {
+            UAnimSequenceBase* AnimAsset = LoadObject<UAnimSequenceBase>(nullptr, *AssetPath);
+            if (!AnimAsset)
+            {
+                Message = FString::Printf(TEXT("Animation asset not found: %s"), *AssetPath);
+                ErrorCode = TEXT("ASSET_NOT_FOUND");
+                Resp->SetStringField(TEXT("error"), Message);
+            }
+            else
+            {
+                UAnimSequence* AnimSeq = Cast<UAnimSequence>(AnimAsset);
+                if (AnimSeq)
+                {
+                     // Resolve Notify Class
+                     UClass* LoadedNotifyClass = nullptr;
+                     FString SearchName = NotifyName;
+                     
+                     // 1. Try exact match
+                     LoadedNotifyClass = UClass::TryFindTypeSlow<UClass>(SearchName);
+                     
+                     // 2. Try with U prefix
+                     if (!LoadedNotifyClass && !SearchName.StartsWith(TEXT("U")))
+                     {
+                         LoadedNotifyClass = UClass::TryFindTypeSlow<UClass>(TEXT("U") + SearchName);
+                     }
+                     
+                     // 3. Try standard Engine path variants
+                     if (!LoadedNotifyClass)
+                     {
+                         // e.g. /Script/Engine.AnimNotify_PlaySound
+                         LoadedNotifyClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *SearchName));
+                     }
+                     if (!LoadedNotifyClass && !SearchName.StartsWith(TEXT("U")))
+                     {
+                         // e.g. /Script/Engine.UAnimNotify_PlaySound (UE sometimes uses U prefix in code reflection)
+                         LoadedNotifyClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.U%s"), *SearchName));
+                     }
+
+                     AnimSeq->Modify();
+                     
+                     FAnimNotifyEvent NewEvent;
+                     NewEvent.Link(AnimSeq, (float)Time);
+                     NewEvent.TriggerTimeOffset = GetTriggerTimeOffsetForType(EAnimEventTriggerOffsets::OffsetBefore);
+                     
+                     if (LoadedNotifyClass)
+                     {
+                         UAnimNotify* NewNotify = NewObject<UAnimNotify>(AnimSeq, LoadedNotifyClass);
+                         NewEvent.Notify = NewNotify;
+                         NewEvent.NotifyName = FName(*NotifyName);
+                     }
+                     else
+                     {
+                          // Default simple notify structure
+                          NewEvent.NotifyName = FName(*NotifyName);
+                     }
+                     
+                     AnimSeq->Notifies.Add(NewEvent);
+                     
+                     AnimSeq->PostEditChange();
+                     AnimSeq->MarkPackageDirty();
+                     
+                     bSuccess = true;
+                     Message = FString::Printf(TEXT("Added notify '%s' to %s at %.2fs"), *NotifyName, *AssetPath, Time);
+                     Resp->SetStringField(TEXT("assetPath"), AssetPath);
+                     Resp->SetStringField(TEXT("notifyName"), NotifyName);
+                     Resp->SetStringField(TEXT("notifyClass"), LoadedNotifyClass ? LoadedNotifyClass->GetName() : TEXT("None"));
+                     Resp->SetNumberField(TEXT("time"), Time);
+                }
+                else
+                {
+                     Message = TEXT("Asset is not an AnimSequence (add_notify currently supports AnimSequence only)");
+                     ErrorCode = TEXT("INVALID_TYPE");
+                     Resp->SetStringField(TEXT("error"), Message);
+                }
+            }
+        }
+    }
+    else if (LowerSub == TEXT("add_notify_old_unused"))
     {
         FString AssetPath;
         if (!Payload->TryGetStringField(TEXT("animationPath"), AssetPath) || AssetPath.IsEmpty())
@@ -1584,6 +1714,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
         return true;
     }
 
+    if (!UEditorAssetLibrary::DoesAssetExist(SkeletonPath))
+    {
+         const FString SkelMessage = FString::Printf(TEXT("Skeleton not found: %s"), *SkeletonPath);
+         SendAutomationError(RequestingSocket, RequestId, SkelMessage, TEXT("ASSET_NOT_FOUND"));
+         return true;
+    }
+
     USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
     if (!Skeleton)
     {
@@ -1653,9 +1790,17 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     }
 
     FString MontagePath;
+    // Check both montagePath and assetPath for flexibility
     if (!Payload->TryGetStringField(TEXT("montagePath"), MontagePath) || MontagePath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("montagePath required"), TEXT("INVALID_ARGUMENT"));
+         Payload->TryGetStringField(TEXT("assetPath"), MontagePath);
+    }
+
+    if (MontagePath.IsEmpty())
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetStringField(TEXT("error"), TEXT("montagePath required"));
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("montagePath required"), Resp, TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -1708,6 +1853,14 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     if (!SkelMeshComp)
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Skeletal mesh component not found"), TEXT("COMPONENT_NOT_FOUND"));
+        return true;
+    }
+
+    if (!UEditorAssetLibrary::DoesAssetExist(MontagePath))
+    {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetStringField(TEXT("error"), FString::Printf(TEXT("Montage asset not found: %s"), *MontagePath));
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Montage not found"), Resp, TEXT("ASSET_NOT_FOUND"));
         return true;
     }
 

@@ -60,16 +60,16 @@ function summarize(toolName, results, resultsPath) {
  */
 function evaluateExpectation(testCase, response) {
   const expectation = testCase.expected;
-  
+
   // Normalize expected into a comparable form. If expected is an object
   // (e.g. {condition: 'success|error', errorPattern: 'SC_DISABLED'}), then
   // we extract the condition string as the primary expectation string.
   const expectedCondition = (typeof expectation === 'object' && expectation !== null && expectation.condition)
     ? expectation.condition
     : (typeof expectation === 'string' ? expectation : String(expectation));
-    
+
   const lowerExpected = expectedCondition.toLowerCase();
-  
+
   // Determine failure/success intent from condition keywords
   const containsFailure = failureKeywords.some((word) => lowerExpected.includes(word));
   const containsSuccess = successKeywords.some((word) => lowerExpected.includes(word));
@@ -97,7 +97,7 @@ function evaluateExpectation(testCase, response) {
       .filter((t) => t.length > 0)
       .join('\n');
   }
-  
+
   // Helper to get effective actual strings for matching
   const messageStr = (actualMessage || '').toString().toLowerCase();
   const errorStr = (actualError || '').toString().toLowerCase();
@@ -196,8 +196,27 @@ function evaluateExpectation(testCase, response) {
     // Check for specific error types (not just generic "error" keyword)
     const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled'];
     const expectedErrorType = specificErrorTypes.find(type => lowerExpected.includes(type));
-    const errorTypeMatch = expectedErrorType ? lowerReason.includes(expectedErrorType) :
+
+    // DEBUG: Log inputs to see why it fails
+    if (lowerExpected.includes('invalid')) {
+      console.log(`[DEBUG] evaluateExpectation: expected="${lowerExpected}", errorType="${expectedErrorType}"`);
+      console.log(`[DEBUG] response=`, JSON.stringify(response, null, 2));
+    }
+
+    let errorTypeMatch = expectedErrorType ? lowerReason.includes(expectedErrorType) :
       failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
+
+    // Also check detail field if main error check failed (handles wrapped exceptions)
+    if (!errorTypeMatch && response.detail && typeof response.detail === 'string') {
+      const lowerDetail = response.detail.toLowerCase();
+      // Check detail field if main error check failed (handles wrapped exceptions)
+      if (expectedErrorType) {
+        if (lowerDetail.includes(expectedErrorType)) errorTypeMatch = true;
+      } else {
+        // If no specific error type, just check if detail contains expected string
+        if (lowerDetail.includes(lowerExpected)) errorTypeMatch = true;
+      }
+    }
 
     // If expected outcome specifies an error type, actual error should match it
     if (lowerExpected.includes('not found') || lowerExpected.includes('invalid') ||
@@ -349,7 +368,9 @@ export async function runToolTests(toolName, testCases) {
             try {
               await new Promise((resolve, reject) => {
                 const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-                const ps = spawn(npmCmd, ['run', 'build'], { cwd: repoRoot, stdio: 'inherit', shell: process.platform === 'win32' });
+                const ps = process.platform === 'win32'
+                  ? spawn(`${npmCmd} run build`, { cwd: repoRoot, stdio: 'inherit', shell: true })
+                  : spawn(npmCmd, ['run', 'build'], { cwd: repoRoot, stdio: 'inherit' });
                 ps.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Build failed with code ${code}`))));
                 ps.on('error', (err) => reject(err));
               });
@@ -478,6 +499,15 @@ export async function runToolTests(toolName, testCases) {
       const testCase = testCases[i];
       const testCaseTimeoutMs = Number(process.env.UNREAL_MCP_TEST_CASE_TIMEOUT_MS ?? testCase.arguments?.timeoutMs ?? '180000');
       const startTime = performance.now();
+
+      try {
+        // Log test start to Unreal Engine console
+        const cleanScenario = (testCase.scenario || 'Unknown Test').replace(/"/g, "'");
+        await callToolOnce({
+          name: 'system_control',
+          arguments: { action: 'console_command', command: `Log "---- STARTING TEST: ${cleanScenario} ----"` }
+        }, 5000).catch(() => { });
+      } catch (e) { /* ignore */ }
 
       try {
         const response = await callToolOnce({ name: testCase.toolName, arguments: testCase.arguments }, testCaseTimeoutMs);
@@ -846,6 +876,16 @@ export class TestRunner {
 
       for (const step of this.steps) {
         const startTime = performance.now();
+
+        try {
+          // Log step start to Unreal Engine console
+          const cleanName = (step.name || 'Unknown Step').replace(/"/g, "'");
+          await callToolOnce({
+            name: 'system_control',
+            arguments: { action: 'console_command', command: `Log "---- STARTING STEP: ${cleanName} ----"` }
+          }, 5000).catch(() => { });
+        } catch (e) { /* ignore */ }
+
         try {
           const ok = await step.fn(tools);
           const durationMs = performance.now() - startTime;

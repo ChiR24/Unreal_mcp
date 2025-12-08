@@ -3914,10 +3914,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(const FString& Request
         return true;
     }
 
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Unhandled blueprint action: Action=%s Clean=%s AlphaNum=%s RequestId=%s - returning UNKNOWN_PLUGIN_ACTION"), *CleanAction, *CleanAction, *AlphaNumLower, *RequestId);
-
-    SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Blueprint action not implemented by plugin: %s"), *Action), nullptr, TEXT("UNKNOWN_PLUGIN_ACTION"));
-    return true;
+    // If we reached here, it's not a blueprint action we recognize.
+    // Return false to allow other handlers (like HandleInspectAction) to try.
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("HandleBlueprintAction: Action '%s' not recognized, returning false to continue dispatch."), *Action);
+    return false;
 #else
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("HandleBlueprintAction: Editor-only functionality requested in non-editor build (Action=%s)"), *Action);
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Blueprint actions require editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));

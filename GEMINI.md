@@ -109,5 +109,7 @@ The project includes a suite of integration tests located in the `tests/` direct
 - The user explicitly wants real, working code only. I must never add mocks, placeholders, false-passed success code, or any non-functional code. All solutions should be directly applicable to a live editor and pass all relevant tests genuinely.
 - The user explicitly requires real, working code only. I must never add mocks, placeholders, false-passed success codes, or any non-functional code. All solutions must be directly applicable to a live editor and pass all relevant tests genuinely.
 - Always read full file content.
+- Engine path: X:\Unreal_Engine\UE_5.0\Engine
 - Engine path: X:\Unreal_Engine\UE_5.6\Engine
+- Engine path: X:\Unreal_Engine\UE_5.7\Engine
 - Before editing codes in plugin make sure to check before in engine's code so that all code are correct.

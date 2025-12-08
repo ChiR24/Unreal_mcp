@@ -27,16 +27,8 @@
 #include "Editor/EditorEngine.h"
 #include "LevelSequenceEditorBlueprintLibrary.h"
 
-// We trust Build.cs to provide these modules in Editor builds, but paths vary by engine version
-#if __has_include("Factories/LevelSequenceFactoryNew.h")
-#include "Factories/LevelSequenceFactoryNew.h"
-#define MCP_HAS_LEVELSEQUENCE_FACTORY 1
-#elif __has_include("LevelSequenceFactoryNew.h")
-#include "LevelSequenceFactoryNew.h"
-#define MCP_HAS_LEVELSEQUENCE_FACTORY 1
-#else
-#define MCP_HAS_LEVELSEQUENCE_FACTORY 0
-#endif
+// Header checks removed causing issues with private headers
+
 
 #if __has_include("LevelSequenceEditorSubsystem.h")
 #include "LevelSequenceEditorSubsystem.h"
@@ -82,15 +74,19 @@ FString UMcpAutomationBridgeSubsystem::ResolveSequencePath(const TSharedPtr<FJso
     if (Payload.IsValid() && Payload->TryGetStringField(TEXT("path"), Path) && !Path.IsEmpty())
     {
 #if WITH_EDITOR
-        UObject* Obj = UEditorAssetLibrary::LoadAsset(Path);
-        if (Obj)
+        // Check existence first to avoid error log spam
+        if (UEditorAssetLibrary::DoesAssetExist(Path))
         {
-            FString Norm = Obj->GetPathName();
-            if (Norm.Contains(TEXT(".")))
+            UObject* Obj = UEditorAssetLibrary::LoadAsset(Path);
+            if (Obj)
             {
-                Norm = Norm.Left(Norm.Find(TEXT(".")));
+                FString Norm = Obj->GetPathName();
+                if (Norm.Contains(TEXT(".")))
+                {
+                    Norm = Norm.Left(Norm.Find(TEXT(".")));
+                }
+                return Norm;
             }
-            return Norm;
         }
 #endif
         return Path;
@@ -124,35 +120,54 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(const FString& RequestI
         DestFolder = FString::Printf(TEXT("/Game%s"), *DestFolder.RightChop(8));
     }
 
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
+    FString RequestIdArg = RequestId;
+
+    // Execute on Game Thread
+    UMcpAutomationBridgeSubsystem* Subsystem = this;
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("HandleSequenceCreate: Handing RequestID=%s Path=%s"), *RequestIdArg, *FullPath);
+    
+    // Check existence first to avoid error log spam
     if (UEditorAssetLibrary::DoesAssetExist(FullPath))
     {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetStringField(TEXT("sequencePath"), FullPath);
-        SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence already exists"), Resp, FString());
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("HandleSequenceCreate: Sequence exists, sending response for RequestID=%s"), *RequestIdArg);
+        Subsystem->SendAutomationResponse(Socket, RequestIdArg, true, TEXT("Sequence already exists"), Resp, FString());
         return true;
     }
 
-#if MCP_HAS_LEVELSEQUENCE_FACTORY
-    ULevelSequenceFactoryNew* Factory = NewObject<ULevelSequenceFactoryNew>();
-    FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
-    UObject* NewObj = AssetToolsModule.Get().CreateAsset(Name, DestFolder, ULevelSequence::StaticClass(), Factory);
-    if (NewObj)
+    // Dynamic factory lookup
+    UClass* FactoryClass = FindObject<UClass>(nullptr, TEXT("/Script/LevelSequenceEditor.LevelSequenceFactoryNew"));
+    if (!FactoryClass) FactoryClass = LoadClass<UClass>(nullptr, TEXT("/Script/LevelSequenceEditor.LevelSequenceFactoryNew"));
+    
+    if (FactoryClass)
     {
-        UEditorAssetLibrary::SaveAsset(FullPath);
-        GCurrentSequencePath = FullPath;
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetStringField(TEXT("sequencePath"), FullPath);
-        SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence created"), Resp, FString());
+        UFactory* Factory = NewObject<UFactory>(GetTransientPackage(), FactoryClass);
+        FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
+        UObject* NewObj = AssetToolsModule.Get().CreateAsset(Name, DestFolder, ULevelSequence::StaticClass(), Factory);
+        if (NewObj)
+        {
+            UEditorAssetLibrary::SaveAsset(FullPath);
+            GCurrentSequencePath = FullPath;
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetStringField(TEXT("sequencePath"), FullPath);
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("HandleSequenceCreate: Created sequence, sending response for RequestID=%s"), *RequestIdArg);
+            Subsystem->SendAutomationResponse(Socket, RequestIdArg, true, TEXT("Sequence created"), Resp, FString());
+        }
+        else
+        {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("HandleSequenceCreate: Failed to create asset for RequestID=%s"), *RequestIdArg);
+            Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("Failed to create sequence asset"), nullptr, TEXT("CREATE_ASSET_FAILED"));
+        }
     }
     else
     {
-        SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create sequence asset"), nullptr, TEXT("CREATE_ASSET_FAILED"));
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("HandleSequenceCreate: Factory not found for RequestID=%s"), *RequestIdArg);
+        Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("LevelSequenceFactoryNew class not found (Module not loaded?)"), nullptr, TEXT("FACTORY_NOT_AVAILABLE"));
     }
     return true;
-#else
-    SendAutomationResponse(Socket, RequestId, false, TEXT("ULevelSequenceFactoryNew not available"), nullptr, TEXT("FACTORY_NOT_AVAILABLE"));
     return true;
-#endif
 
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_create requires editor build"), nullptr, TEXT("NOT_AVAILABLE"));
@@ -167,9 +182,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(const FString& R
     if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_set_properties requires a sequence path"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 
 #if WITH_EDITOR
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
+    FString RequestIdArg = RequestId;
+    
+    // Capture simple types. For JsonObject, we need to capture the data, not the pointer if we want to be safe, but since we parsed it above, 
+    // we should capture the parsed values.
+    // Parsing logic happens above. We'll capture the parsed variables.
+    // But wait, the parsing logic in the original code is INSIDE the block I'm replacing (lines 176-185).
+    // I need to include the parsing inside the Async task or move it out.
+    // I'll move the parsing INSIDE the Async task, but I need to capture LocalPayload. LocalPayload is a SharedPtr, so it's safe to capture.
+    
+    UMcpAutomationBridgeSubsystem* Subsystem = this;
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
-    if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
+    if (!SeqObj) { Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 
     if (ULevelSequence* LevelSeq = Cast<ULevelSequence>(SeqObj))
     {
@@ -188,7 +214,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(const FString& R
 
             if (bHasFrameRate)
             {
-                if (FrameRateValue <= 0.0) { SendAutomationResponse(Socket, RequestId, false, TEXT("frameRate must be > 0"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+                if (FrameRateValue <= 0.0) { Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("frameRate must be > 0"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
                 const int32 Rounded = FMath::Clamp<int32>(FMath::RoundToInt(FrameRateValue), 1, 960);
                 FFrameRate CurrentRate = MovieScene->GetDisplayRate();
                 FFrameRate NewRate(Rounded, 1);
@@ -230,7 +256,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(const FString& R
             Resp->SetNumberField(TEXT("duration"), End - Start);
             Resp->SetBoolField(TEXT("applied"), bModified);
 
-            SendAutomationResponse(Socket, RequestId, true, TEXT("properties updated"), Resp, FString());
+            Subsystem->SendAutomationResponse(Socket, RequestIdArg, true, TEXT("properties updated"), Resp, FString());
             return true;
         }
     }
@@ -239,7 +265,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(const FString& R
     Resp->SetNumberField(TEXT("playbackEnd"), 0.0);
     Resp->SetNumberField(TEXT("duration"), 0.0);
     Resp->SetBoolField(TEXT("applied"), false);
-    SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_set_properties is not available in this editor build or for this sequence type"), Resp, TEXT("NOT_IMPLEMENTED"));
+    Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("sequence_set_properties is not available in this editor build or for this sequence type"), Resp, TEXT("NOT_IMPLEMENTED"));
+    return true;
     return true;
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_set_properties requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -254,9 +281,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(const FString& RequestId,
     if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_open requires a sequence path"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 
 #if WITH_EDITOR
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
+    FString RequestIdArg = RequestId;
+    UMcpAutomationBridgeSubsystem* Subsystem = this;
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("HandleSequenceOpen: Opening sequence %s for RequestID=%s"), *SeqPath, *RequestIdArg);
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
-    if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
+    if (!SeqObj) { Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 
     if (ULevelSequence* LevelSeq = Cast<ULevelSequence>(SeqObj))
     {
@@ -269,7 +300,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(const FString& RequestId,
                     AssetEditorSS->OpenEditorForAsset(LevelSeq);
                     Resp->SetStringField(TEXT("sequencePath"), SeqPath);
                     Resp->SetStringField(TEXT("message"), TEXT("Sequence opened"));
-                    SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence opened"), Resp, FString());
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("HandleSequenceOpen: Successfully opened in LSES, sending response for RequestID=%s"), *RequestIdArg);
+                    Subsystem->SendAutomationResponse(Socket, RequestIdArg, true, TEXT("Sequence opened"), Resp, FString());
                     return true;
                 }
             }
@@ -285,7 +317,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(const FString& RequestId,
     }
     Resp->SetStringField(TEXT("sequencePath"), SeqPath);
     Resp->SetStringField(TEXT("message"), TEXT("Sequence opened (asset editor)"));
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence opened"), Resp, FString());
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("HandleSequenceOpen: Opened via AssetEditorSS, sending response for RequestID=%s"), *RequestIdArg);
+    Subsystem->SendAutomationResponse(Socket, RequestIdArg, true, TEXT("Sequence opened"), Resp, FString());
+    return true;
     return true;
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_open requires editor build."), nullptr, TEXT("NOT_AVAILABLE"));
@@ -339,17 +373,21 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(const FString& RequestId,
     if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("No sequence selected or path provided"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
     
 #if WITH_EDITOR
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
+    FString RequestIdArg = RequestId;
+    UMcpAutomationBridgeSubsystem* Subsystem = this;
     ULevelSequence* LevelSeq = Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
     if (LevelSeq)
     {
         if (ULevelSequenceEditorBlueprintLibrary::OpenLevelSequence(LevelSeq))
         {
             ULevelSequenceEditorBlueprintLibrary::Play();
-            SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence playing"), nullptr);
+            Subsystem->SendAutomationResponse(Socket, RequestIdArg, true, TEXT("Sequence playing"), nullptr);
             return true;
         }
     }
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to open or play sequence"), nullptr, TEXT("EXECUTION_ERROR"));
+    Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("Failed to open or play sequence"), nullptr, TEXT("EXECUTION_ERROR"));
+    return true;
     return true;
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_play requires editor build."), nullptr, TEXT("NOT_AVAILABLE"));
@@ -395,9 +433,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(const FString& Reque
     TArray<FString> Names; Names.Reserve(Arr->Num());
     for (const TSharedPtr<FJsonValue>& V : *Arr) { if (V.IsValid() && V->Type == EJson::String) Names.Add(V->AsString()); }
 
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
+    FString RequestIdArg = RequestId;
+    UMcpAutomationBridgeSubsystem* Subsystem = this;
     UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
-    if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
-    if (!GEditor) { SendAutomationResponse(Socket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE")); return true; }
+    if (!SeqObj) { Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
+    if (!GEditor) { Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE")); return true; }
 
 #if MCP_HAS_EDITOR_ACTOR_SUBSYSTEM
     if (UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
@@ -436,15 +477,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(const FString& Reque
         }
         TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
         Out->SetArrayField(TEXT("results"), Results);
-        SendAutomationResponse(Socket, RequestId, true, TEXT("Actors processed"), Out, FString());
+        Subsystem->SendAutomationResponse(Socket, RequestIdArg, true, TEXT("Actors processed"), Out, FString());
         return true;
     }
-    SendAutomationResponse(Socket, RequestId, false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+    Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("EditorActorSubsystem not available"), nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
     return true;
 #else
-    SendAutomationResponse(Socket, RequestId, false, TEXT("UEditorActorSubsystem not available"), nullptr, TEXT("NOT_AVAILABLE"));
-    return true;
+    Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("UEditorActorSubsystem not available"), nullptr, TEXT("NOT_AVAILABLE"));
 #endif
+    return true;
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_add_actors requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
@@ -681,8 +722,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(const FString
     if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_set_playback_speed requires a sequence path"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 
 #if WITH_EDITOR
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
+    FString RequestIdArg = RequestId; // Capture
+    
+    // Execute on Game Thread
+    UMcpAutomationBridgeSubsystem* Subsystem = this;
     UObject* SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
-    if (!SeqObj) { SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
+    if (!SeqObj) { Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("Sequence not found"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
+
 
     if (GEditor)
     {
@@ -691,19 +738,25 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(const FString
             IAssetEditorInstance* Editor = AssetEditorSS->FindEditorForAsset(SeqObj, false);
             if (Editor && Editor->GetEditorName() == FName("LevelSequenceEditor"))
             {
-                 // We assume it implements ILevelSequenceEditorToolkit if the name matches
-                 ILevelSequenceEditorToolkit* LSEditor = static_cast<ILevelSequenceEditorToolkit*>(Editor);
-                 if (LSEditor && LSEditor->GetSequencer().IsValid())
-                 {
-                     LSEditor->GetSequencer()->SetPlaybackSpeed(static_cast<float>(Speed));
-                     SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Playback speed set to %.2f"), Speed), nullptr);
-                     return true;
-                 }
+                    // We assume it implements ILevelSequenceEditorToolkit if the name matches
+                    ILevelSequenceEditorToolkit* LSEditor = static_cast<ILevelSequenceEditorToolkit*>(Editor);
+                    if (LSEditor && LSEditor->GetSequencer().IsValid())
+                    {
+                        UE_LOG(LogMcpAutomationBridgeSubsystem, Display, TEXT("HandleSequenceSetPlaybackSpeed: Setting speed to %.2f"), Speed);
+                        LSEditor->GetSequencer()->SetPlaybackSpeed(static_cast<float>(Speed));
+                        Subsystem->SendAutomationResponse(Socket, RequestIdArg, true, FString::Printf(TEXT("Playback speed set to %.2f"), Speed), nullptr);
+                        return true;
+                    }
+                    else
+                    {
+                        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("HandleSequenceSetPlaybackSpeed: Sequencer invalid for asset %s"), *SeqObj->GetName());
+                    }
             }
         }
     }
     
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence editor not open or interface unavailable"), nullptr, TEXT("EDITOR_NOT_OPEN"));
+    Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("Sequence editor not open or interface unavailable"), nullptr, TEXT("EDITOR_NOT_OPEN"));
+    return true;
     return true;
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_set_playback_speed requires editor build."), nullptr, TEXT("NOT_AVAILABLE"));
@@ -717,6 +770,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePause(const FString& RequestId
     FString SeqPath = ResolveSequencePath(LocalPayload);
     if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_pause requires a sequence path"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 #if WITH_EDITOR
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
+    FString RequestIdArg = RequestId;
+    UMcpAutomationBridgeSubsystem* Subsystem = this;
+    
     ULevelSequence* LevelSeq = Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
     if (LevelSeq)
     {
@@ -724,11 +781,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePause(const FString& RequestId
         if (ULevelSequenceEditorBlueprintLibrary::GetCurrentLevelSequence() == LevelSeq)
         {
             ULevelSequenceEditorBlueprintLibrary::Pause();
-            SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence paused"), nullptr);
+            Subsystem->SendAutomationResponse(Socket, RequestIdArg, true, TEXT("Sequence paused"), nullptr);
             return true;
         }
     }
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not currently open in editor"), nullptr, TEXT("EXECUTION_ERROR"));
+    Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("Sequence not currently open in editor"), nullptr, TEXT("EXECUTION_ERROR"));
+    return true;
     return true;
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_pause requires editor build."), nullptr, TEXT("NOT_AVAILABLE"));
@@ -742,6 +800,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(const FString& RequestId,
     FString SeqPath = ResolveSequencePath(LocalPayload);
     if (SeqPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_stop requires a sequence path"), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
 #if WITH_EDITOR
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
+    FString RequestIdArg = RequestId;
+    UMcpAutomationBridgeSubsystem* Subsystem = this;
+
     ULevelSequence* LevelSeq = Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
     if (LevelSeq)
     {
@@ -754,11 +816,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(const FString& RequestId,
             PlaybackParams.UpdateMethod = EUpdatePositionMethod::Scrub;
             ULevelSequenceEditorBlueprintLibrary::SetGlobalPosition(PlaybackParams);
             
-            SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence stopped (reset to start)"), nullptr);
+            Subsystem->SendAutomationResponse(Socket, RequestIdArg, true, TEXT("Sequence stopped (reset to start)"), nullptr);
             return true;
         }
     }
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not currently open in editor"), nullptr, TEXT("EXECUTION_ERROR"));
+    Subsystem->SendAutomationResponse(Socket, RequestIdArg, false, TEXT("Sequence not currently open in editor"), nullptr, TEXT("EXECUTION_ERROR"));
+    return true;
     return true;
 #else
     SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_stop requires editor build."), nullptr, TEXT("NOT_AVAILABLE"));
@@ -797,6 +860,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDuplicate(const FString& Reque
     FString SourcePath; LocalPayload->TryGetStringField(TEXT("path"), SourcePath);
     FString DestinationPath; LocalPayload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
     if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_duplicate requires path and destinationPath"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+    
+    // Auto-resolve relative destination path (if just a name is provided)
+    if (!DestinationPath.IsEmpty() && !DestinationPath.StartsWith(TEXT("/")))
+    {
+         FString ParentPath = FPaths::GetPath(SourcePath);
+         DestinationPath = FString::Printf(TEXT("%s/%s"), *ParentPath, *DestinationPath);
+    }
+
 #if WITH_EDITOR
     UObject* SourceSeq = UEditorAssetLibrary::LoadAsset(SourcePath);
     if (!SourceSeq) { SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Source sequence not found: %s"), *SourcePath), nullptr, TEXT("INVALID_SEQUENCE")); return true; }
@@ -824,6 +895,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRename(const FString& RequestI
     FString Path; LocalPayload->TryGetStringField(TEXT("path"), Path);
     FString NewName; LocalPayload->TryGetStringField(TEXT("newName"), NewName);
     if (Path.IsEmpty() || NewName.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_rename requires path and newName"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
+    
+    // Auto-resolve relative new name to full path
+    if (!NewName.IsEmpty() && !NewName.StartsWith(TEXT("/")))
+    {
+         FString ParentPath = FPaths::GetPath(Path);
+         NewName = FString::Printf(TEXT("%s/%s"), *ParentPath, *NewName);
+    }
+
 #if WITH_EDITOR
     if (UEditorAssetLibrary::RenameAsset(Path, NewName))
     {
@@ -847,6 +926,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDelete(const FString& RequestI
     FString Path; LocalPayload->TryGetStringField(TEXT("path"), Path);
     if (Path.IsEmpty()) { SendAutomationResponse(Socket, RequestId, false, TEXT("sequence_delete requires path"), nullptr, TEXT("INVALID_ARGUMENT")); return true; }
 #if WITH_EDITOR
+    if (!UEditorAssetLibrary::DoesAssetExist(Path))
+    {
+         // Idempotent success - if it's already gone, good.
+         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+         Resp->SetStringField(TEXT("deletedPath"), Path);
+         SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence deleted (or did not exist)"), Resp, FString());
+         return true;
+    }
+
     if (UEditorAssetLibrary::DeleteAsset(Path))
     {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

@@ -205,6 +205,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnNiagaraActor(
 
     UWorld* World = GEditor->GetEditorWorldContext().World();
 
+    if (!UEditorAssetLibrary::DoesAssetExist(SystemPath))
+    {
+        SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Niagara system asset not found: %s"), *SystemPath), nullptr, TEXT("ASSET_NOT_FOUND"));
+        return true;
+    }
+
     UNiagaraSystem* NiagaraSystem = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
     if (!NiagaraSystem)
     {
@@ -276,7 +282,10 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyNiagaraParameter(
     }
 
     FString ParameterType;
-    Payload->TryGetStringField(TEXT("parameterType"), ParameterType);
+    if (!Payload->TryGetStringField(TEXT("parameterType"), ParameterType))
+    {
+        Payload->TryGetStringField(TEXT("type"), ParameterType);
+    }
     if (ParameterType.IsEmpty()) ParameterType = TEXT("Float");
 
     if (!GEditor || !GEditor->GetEditorWorldContext().World())
@@ -321,7 +330,6 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyNiagaraParameter(
             NiagaraComp->SetFloatParameter(FName(*ParameterName), static_cast<float>(Value));
             bSuccess = true;
         }
-    }
     }
     else if (ParameterType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
     {

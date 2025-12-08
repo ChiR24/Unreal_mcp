@@ -12,6 +12,9 @@
 
 bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    const FString Lower = Action.ToLower();
+    if (!Lower.Equals(TEXT("asset_query"), ESearchCase::IgnoreCase)) return false;
+
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));

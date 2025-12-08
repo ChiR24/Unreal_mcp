@@ -101,9 +101,12 @@ AActor* UMcpAutomationBridgeSubsystem::FindActorByName(const FString& Target)
     }
     
     // Fallback: try to load as asset if it looks like a path
-    if (UObject* Obj = UEditorAssetLibrary::LoadAsset(Target))
+    if (Target.StartsWith(TEXT("/")))
     {
-        return Cast<AActor>(Obj);
+         if (UObject* Obj = UEditorAssetLibrary::LoadAsset(Target))
+         {
+             return Cast<AActor>(Obj);
+         }
     }
 #endif
     return nullptr;

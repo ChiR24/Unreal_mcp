@@ -32,6 +32,7 @@
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
 #include "Developer/AssetTools/Public/AssetToolsModule.h"
+#include "EditorValidatorSubsystem.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -771,6 +772,103 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(const FString& Req
 #endif
     }
 
+    if (LowerSub == TEXT("validate_assets"))
+    {
+#if WITH_EDITOR
+        const TArray<TSharedPtr<FJsonValue>>* PathsPtr = nullptr;
+        if (!Payload->TryGetArrayField(TEXT("paths"), PathsPtr) || !PathsPtr)
+        {
+             SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("paths array required"), nullptr, TEXT("INVALID_ARGUMENT"));
+             return true;
+        }
+
+        TArray<FString> AssetPaths;
+        for (const auto& Val : *PathsPtr)
+        {
+            if (Val.IsValid() && Val->Type == EJson::String)
+            {
+                AssetPaths.Add(Val->AsString());
+            }
+        }
+
+        if (AssetPaths.Num() == 0)
+        {
+             SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("No paths provided"), nullptr, TEXT("INVALID_ARGUMENT"));
+             return true;
+        }
+
+        if (GEditor)
+        {
+            if (UEditorValidatorSubsystem* Validator = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>())
+            {
+                FValidateAssetsSettings Settings;
+                Settings.bSkipExcludedDirectories = true;
+                Settings.bShowIfNoFailures = false;
+                Settings.ValidationUsecase = EDataValidationUsecase::Script;
+
+                TArray<FAssetData> AssetsToValidate;
+                for (const FString& Path : AssetPaths)
+                {
+                    // Simple logic: if it's a folder, list assets; if it's a file, try to find it.
+                    // We assume anything without a dot is a folder, effectively.
+                    // But UEditorAssetLibrary::ListAssets works recursively on module paths.
+                    if (UEditorAssetLibrary::DoesDirectoryExist(Path))
+                    {
+                         TArray<FString> FoundAssets = UEditorAssetLibrary::ListAssets(Path, true);
+                         for (const FString& AssetPath : FoundAssets)
+                         {
+                             FAssetData AssetData = UEditorAssetLibrary::FindAssetData(AssetPath);
+                             if (AssetData.IsValid())
+                             {
+                                 AssetsToValidate.Add(AssetData);
+                             }
+                         }
+                    }
+                    else
+                    {
+                         FAssetData SpecificAsset = UEditorAssetLibrary::FindAssetData(Path);
+                         if (SpecificAsset.IsValid())
+                         {
+                             AssetsToValidate.AddUnique(SpecificAsset);
+                         }
+                    }
+                }
+
+                if (AssetsToValidate.Num() == 0)
+                {
+                    Result->SetBoolField(TEXT("success"), true);
+                    Result->SetStringField(TEXT("message"), TEXT("No assets found to validate"));
+                    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Validation skipped (no assets)"), Result, FString());
+                     return true;
+                }
+
+                FValidateAssetsResults ValidationResults;
+                 int32 NumChecked = Validator->ValidateAssetsWithSettings(AssetsToValidate, Settings, ValidationResults);
+                 
+                 Result->SetNumberField(TEXT("checkedCount"), NumChecked);
+                 Result->SetNumberField(TEXT("failedCount"), ValidationResults.NumInvalid);
+                 Result->SetNumberField(TEXT("warningCount"), ValidationResults.NumWarnings);
+                 Result->SetNumberField(TEXT("skippedCount"), ValidationResults.NumSkipped);
+                 
+                bool bOverallSuccess = (ValidationResults.NumInvalid == 0);
+                 Result->SetStringField(TEXT("result"), bOverallSuccess ? TEXT("Valid") : TEXT("Invalid"));
+                 
+                 SendAutomationResponse(RequestingSocket, RequestId, true, bOverallSuccess ? TEXT("Validation Passed") : TEXT("Validation Failed"), Result, FString());
+                 return true;
+            }
+             else
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("EditorValidatorSubsystem not available"), nullptr, TEXT("SUBSYSTEM_MISSING"));
+                return true;
+            }
+        }
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("validate_assets requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+
     // Engine quit (disabled for safety)
     if (LowerSub == TEXT("engine_quit"))
     {
@@ -1220,7 +1318,100 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(const FString& RequestId
 #endif
     }
 
-    SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Unknown inspect action: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));
+    // Find by class (find_by_class)
+    if (LowerSub == TEXT("find_by_class"))
+    {
+#if WITH_EDITOR
+        FString ClassName;
+        Payload->TryGetStringField(TEXT("className"), ClassName);
+        
+        if (GEditor)
+        {
+            UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+            if (ActorSS)
+            {
+               TArray<AActor*> Actors = ActorSS->GetAllLevelActors();
+               TArray<TSharedPtr<FJsonValue>> Matches;
+               
+               for (AActor* Actor : Actors)
+               {
+                   if (!Actor) continue;
+                   FString ActorClassName = Actor->GetClass()->GetName();
+                   FString ActorClassPath = Actor->GetClass()->GetPathName();
+                   
+                   // Support partial matching if requested, or strict
+                   if (ClassName.IsEmpty() || ActorClassName.Contains(ClassName) || ActorClassPath.Contains(ClassName))
+                   {
+                       TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+                       Entry->SetStringField(TEXT("name"), Actor->GetActorLabel());
+                       Entry->SetStringField(TEXT("path"), Actor->GetPathName());
+                       Entry->SetStringField(TEXT("class"), ActorClassPath);
+                       Matches.Add(MakeShared<FJsonValueObject>(Entry));
+                   }
+               }
+               
+               Result->SetBoolField(TEXT("success"), true);
+               Result->SetArrayField(TEXT("actors"), Matches);
+               Result->SetNumberField(TEXT("count"), Matches.Num());
+               SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Found actors by class"), Result, FString());
+               return true;
+            }
+        }
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+        return true;
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("find_by_class requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+#endif
+    }
+    
+    // Inspect class (inspect_class)
+    if (LowerSub == TEXT("inspect_class"))
+    {
+        FString ClassPath;
+        if (!Payload->TryGetStringField(TEXT("classPath"), ClassPath))
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("classPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UClass* ResolvedClass = ResolveClassByName(ClassPath);
+        if (!ResolvedClass)
+        {
+            // Try loading as asset
+           if (UObject* Found = StaticLoadObject(UObject::StaticClass(), nullptr, *ClassPath))
+           {
+               if (UBlueprint* BP = Cast<UBlueprint>(Found)) ResolvedClass = BP->GeneratedClass;
+               else if (UClass* C = Cast<UClass>(Found)) ResolvedClass = C;
+           }
+        }
+
+        if (ResolvedClass)
+        {
+            Result->SetStringField(TEXT("className"), ResolvedClass->GetName());
+            Result->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
+            if (ResolvedClass->GetSuperClass()) Result->SetStringField(TEXT("parentClass"), ResolvedClass->GetSuperClass()->GetName());
+            
+            // List properties
+            TArray<TSharedPtr<FJsonValue>> Props;
+            for (TFieldIterator<FProperty> PropIt(ResolvedClass); PropIt; ++PropIt)
+            {
+                FProperty* Prop = *PropIt;
+                TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
+                P->SetStringField(TEXT("name"), Prop->GetName());
+                P->SetStringField(TEXT("type"), Prop->GetClass()->GetName());
+                Props.Add(MakeShared<FJsonValueObject>(P));
+            }
+            Result->SetArrayField(TEXT("properties"), Props);
+            
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Class inspected"), Result, FString());
+            return true;
+        }
+
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Class not found"), nullptr, TEXT("CLASS_NOT_FOUND"));
+        return true;
+    }
+
     return true;
 }
 

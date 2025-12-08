@@ -16,14 +16,14 @@ const testCases = [
   { scenario: 'Set shadow quality to medium', toolName: 'system_control', arguments: { action: 'set_quality', category: 'Shadow', level: 1 }, expected: 'success - quality set' },
   { scenario: 'Set texture quality to high', toolName: 'system_control', arguments: { action: 'set_quality', category: 'Texture', level: 2 }, expected: 'success - quality set' },
   { scenario: 'Execute console command (stat fps)', toolName: 'system_control', arguments: { action: 'execute_command', command: 'stat fps' }, expected: 'success - console command executed' },
-  { scenario: 'Take a screenshot', toolName: 'system_control', arguments: { action: 'screenshot', filename: './tests/reports/tc_sys_screenshot' }, expected: 'success - screenshot taken' },
+  { scenario: 'Take a screenshot', toolName: 'system_control', arguments: { action: 'screenshot', filename: 'tc_sys_screenshot' }, expected: 'success - screenshot taken' },
   { scenario: 'Take screenshot with metadata', toolName: 'system_control', arguments: { action: 'screenshot', includeMetadata: true, metadata: { test: 'system_tc' } }, expected: 'success - metadata screenshot taken' },
-  { scenario: 'Create debug widget (no-op if missing)', toolName: 'system_control', arguments: { action: 'create_widget', widgetPath: '/Engine/EditorWidgets/WBP_Debug', owningPlayer: 0 }, expected: 'success - widget created or handled' },
+  { scenario: 'Create debug widget asset', toolName: 'system_control', arguments: { action: 'create_widget', name: 'TestWidget_Safe', savePath: '/Game/Tests' }, expected: 'success - widget created or handled' },
   { scenario: 'Show short notification', toolName: 'system_control', arguments: { action: 'show_widget', widgetId: 'Notification', visible: true, message: 'TC: Notification', duration: 1.5 }, expected: 'success - notification shown' },
   { scenario: 'Set VSync CVAR', toolName: 'system_control', arguments: { action: 'set_cvar', name: 'r.VSync', value: '0' }, expected: 'success - CVAR set' },
   { scenario: 'Set max FPS CVAR', toolName: 'system_control', arguments: { action: 'set_cvar', name: 't.MaxFPS', value: '60' }, expected: 'success - CVAR set' },
-  { scenario: 'Play short UI sound (best-effort)', toolName: 'system_control', arguments: { action: 'play_sound', soundPath: '/Engine/EditorSounds/Generic', volume: 0.5 }, expected: 'success - sound played or handled' },
-  { scenario: 'Create & remove lightweight console widget (cleanup)', toolName: 'system_control', arguments: { action: 'create_widget', widgetPath: '/Engine/EditorWidgets/WBP_Console', owningPlayer: 0 }, expected: 'success - widget created or handled' },
+  { scenario: 'Play short UI sound (best-effort)', toolName: 'system_control', arguments: { action: 'play_sound', soundPath: '/Engine/EditorSounds/Notifications/CompileSuccess.CompileSuccess', volume: 0.5 }, expected: 'success - sound played or handled' },
+  { scenario: 'Create console widget asset', toolName: 'system_control', arguments: { action: 'create_widget', name: 'TestWidget_Console', savePath: '/Game/Tests' }, expected: 'success - widget created or handled' },
   // Additional
   // Real-World Scenario: Project Validation
   { scenario: 'Validation - Check Settings', toolName: 'system_control', arguments: { action: 'get_project_settings', category: 'Project' }, expected: 'success' },
@@ -43,7 +43,7 @@ const testCases = [
   {
     scenario: "Border: Volume 0 (silent)",
     toolName: "system_control",
-    arguments: { action: "play_sound", soundPath: "/ValidSound", volume: 0 },
+    arguments: { action: "play_sound", soundPath: "/Engine/EditorSounds/Notifications/CompileSuccess.CompileSuccess", volume: 0 },
     expected: "success"
   },
   {

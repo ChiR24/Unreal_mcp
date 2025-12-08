@@ -86,6 +86,10 @@ export async function handleEffectTools(action: string, args: any, tools: ITools
     if (args.actorName && !args.systemName) {
       args.systemName = args.actorName;
     }
+    // Map 'type' to 'parameterType' if provided and parameterType is missing
+    if (args.type && !args.parameterType) {
+      args.parameterType = args.type.charAt(0).toUpperCase() + args.type.slice(1);
+    }
     return executeAutomationRequest(tools, 'create_effect', args);
   }
 

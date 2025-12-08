@@ -22,9 +22,35 @@ public:
 
         // Filter out very verbose logs if needed, but for now allow all
         // Prevent infinite recursion if our own logging causes more logging
-        if (Category == LogMcpAutomationBridgeSubsystem.GetCategoryName())
+        // Filter out highly verbose categories that clutter test output
+        // Use string comparison to be robust against FName issues
+        FString CategoryStr = Category.ToString();
+
+        if (Category == LogMcpAutomationBridgeSubsystem.GetCategoryName() ||
+            CategoryStr == TEXT("LogRHI") ||
+            CategoryStr == TEXT("LogEOSSDK") ||
+            CategoryStr == TEXT("LogCsvProfiler"))
         {
             return; 
+        }
+
+        // Filter specific noisy warnings
+        if (Verbosity == ELogVerbosity::Warning && CategoryStr == TEXT("LogSlateStyle"))
+        {
+            // "Missing Resource from 'ProfileVisualizerStyle'" is a known engine warning during 'show collision'
+            if (FString(V).Contains(TEXT("Missing Resource from 'ProfileVisualizerStyle'")))
+            {
+                return;
+            }
+        }
+
+        if (CategoryStr == TEXT("LogStats")) 
+        {
+             // "There is no thread with id" is noise during stat commands
+             if (FString(V).Contains(TEXT("There is no thread with id")))
+             {
+                 return;
+             }
         }
 
         FString VerbosityString;

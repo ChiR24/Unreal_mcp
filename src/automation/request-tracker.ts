@@ -2,17 +2,6 @@ import { PendingRequest, AutomationBridgeResponseMessage } from './types.js';
 import { randomUUID, createHash } from 'node:crypto';
 
 const WAIT_FOR_EVENT_ACTIONS = new Set<string>([
-    'sequence_create',
-    'sequence_open',
-    'sequence_add_camera',
-    'sequence_add_actor',
-    'sequence_add_actors',
-    'sequence_remove_actors',
-    'sequence_set_properties',
-    'sequence_set_playback_speed',
-    'sequence_get_properties',
-    'sequence_get_bindings',
-    'sequence_add_spawnable_from_class',
     'add_sequencer_keyframe',
     'manage_sequencer_track',
     'duplicate_asset',
