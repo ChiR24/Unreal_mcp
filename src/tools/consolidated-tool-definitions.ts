@@ -342,7 +342,8 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
           enum: [
             'load', 'save', 'save_as', 'save_level_as', 'stream', 'create_level', 'create_light', 'build_lighting',
             'set_metadata', 'load_cells', 'set_datalayer',
-            'export_level', 'import_level', 'list_levels', 'get_summary', 'delete', 'validate_level'
+            'export_level', 'import_level', 'list_levels', 'get_summary', 'delete', 'validate_level',
+            'cleanup_invalid_datalayers'
           ],
           description: 'Action'
         },
@@ -453,7 +454,7 @@ Supported actions:
             'particle', 'niagara', 'debug_shape', 'spawn_niagara', 'create_dynamic_light',
             'create_niagara_system', 'create_niagara_emitter',
             'create_volumetric_fog', 'create_particle_trail', 'create_environment_effect', 'create_impact_effect', 'create_niagara_ribbon',
-            'activate', 'deactivate', 'reset', 'advance_simulation',
+            'activate', 'activate_effect', 'deactivate', 'reset', 'advance_simulation',
             'add_niagara_module', 'connect_niagara_pins', 'remove_niagara_node', 'set_niagara_parameter',
             'clear_debug_shapes', 'cleanup'
           ],

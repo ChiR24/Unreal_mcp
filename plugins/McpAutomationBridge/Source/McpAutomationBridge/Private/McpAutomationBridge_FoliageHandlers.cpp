@@ -145,6 +145,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
 
     UWorld* World = GEditor->GetEditorWorldContext().World();
 
+    if (!UEditorAssetLibrary::DoesAssetExist(FoliageTypePath))
+    {
+        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Foliage type asset not found: %s"), *FoliageTypePath), TEXT("ASSET_NOT_FOUND"));
+        return true;
+    }
+
     UFoliageType* FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
     if (!FoliageType)
     {
@@ -250,15 +256,18 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
     }
     else if (!FoliageTypePath.IsEmpty())
     {
-        UFoliageType* FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
-        if (FoliageType)
+        if (UEditorAssetLibrary::DoesAssetExist(FoliageTypePath))
         {
-            FFoliageInfo* Info = IFA->FindInfo(FoliageType);
-            if (Info)
+            UFoliageType* FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
+            if (FoliageType)
             {
-                RemovedCount = Info->Instances.Num();
-                Info->Instances.Empty();
-                IFA->Modify();
+                FFoliageInfo* Info = IFA->FindInfo(FoliageType);
+                if (Info)
+                {
+                    RemovedCount = Info->Instances.Num();
+                    Info->Instances.Empty();
+                    IFA->Modify();
+                }
             }
         }
     }
@@ -317,6 +326,16 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
 
     if (!FoliageTypePath.IsEmpty())
     {
+        if (!UEditorAssetLibrary::DoesAssetExist(FoliageTypePath))
+        {
+             // If asked for a specific type that doesn't exist, return empty list gracefully (or could error, but empty list seems safer for 'get')
+             TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+             Resp->SetBoolField(TEXT("success"), true);
+             Resp->SetArrayField(TEXT("instances"), TArray<TSharedPtr<FJsonValue>>());
+             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Foliage type not found, 0 instances"), Resp, FString());
+             return true;
+        }
+
         UFoliageType* FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
         if (FoliageType)
         {
@@ -406,10 +425,19 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
     bool RandomYaw = true;
     Payload->TryGetBoolField(TEXT("randomYaw"), RandomYaw);
 
-    UStaticMesh* StaticMesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+    // Use Silent load to avoid engine warnings
+    UStaticMesh* StaticMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *MeshPath, nullptr, LOAD_NoWarn));
     if (!StaticMesh)
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load static mesh"), TEXT("LOAD_FAILED"));
+        // Check if it was a valid package path at least?
+        if (!FPackageName::IsValidLongPackageName(MeshPath))
+        {
+             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Invalid package path: %s"), *MeshPath), TEXT("INVALID_ARGUMENT"));
+        }
+        else
+        {
+             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Static mesh not found: %s"), *MeshPath), TEXT("ASSET_NOT_FOUND"));
+        }
         return true;
     }
 
@@ -424,7 +452,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
         return true;
     }
 
-    UFoliageType_InstancedStaticMesh* FoliageType = LoadObject<UFoliageType_InstancedStaticMesh>(Package, *AssetName);
+    UFoliageType_InstancedStaticMesh* FoliageType = nullptr;
+    if (UEditorAssetLibrary::DoesAssetExist(FullPackagePath))
+    {
+        FoliageType = LoadObject<UFoliageType_InstancedStaticMesh>(Package, *AssetName);
+    }
     if (!FoliageType)
     {
         FoliageType = NewObject<UFoliageType_InstancedStaticMesh>(Package, FName(*AssetName), RF_Public | RF_Standalone);
@@ -567,11 +599,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
     }
 
     UWorld* World = GEditor->GetEditorWorldContext().World();
-    UFoliageType* FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
+
+
+    // Use Silent load to avoid engine warnings
+    UFoliageType* FoliageType = Cast<UFoliageType>(StaticLoadObject(UFoliageType::StaticClass(), nullptr, *FoliageTypePath, nullptr, LOAD_NoWarn));
     if (!FoliageType)
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load foliage type"), TEXT("LOAD_FAILED"));
-        return true;
+         SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Foliage type asset not found: %s"), *FoliageTypePath), TEXT("ASSET_NOT_FOUND"));
+         return true;
     }
 
     AInstancedFoliageActor* IFA = GetOrCreateFoliageActorForWorldSafe(World, true);

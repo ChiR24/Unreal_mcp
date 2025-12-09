@@ -60,6 +60,15 @@
 #elif __has_include("EditorActorSubsystem.h")
 #include "EditorActorSubsystem.h"
 #endif
+#if __has_include("Subsystems/AssetEditorSubsystem.h")
+#include "Subsystems/AssetEditorSubsystem.h"
+#define MCP_HAS_ASSET_EDITOR_SUBSYSTEM 1
+#elif __has_include("AssetEditorSubsystem.h")
+#include "AssetEditorSubsystem.h"
+#define MCP_HAS_ASSET_EDITOR_SUBSYSTEM 1
+#else
+#define MCP_HAS_ASSET_EDITOR_SUBSYSTEM 0
+#endif
 #include "UObject/UnrealType.h"
 #include "UObject/Script.h"
 
@@ -243,6 +252,21 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
 
                 if (UEditorAssetLibrary::DoesAssetExist(ArtifactPath))
                 {
+                    // Close editors to ensure asset can be deleted
+                    #if MCP_HAS_ASSET_EDITOR_SUBSYSTEM
+                    if (GEditor)
+                    {
+                        UObject* Asset = LoadObject<UObject>(nullptr, *ArtifactPath);
+                        if (Asset)
+                        {
+                            if (UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
+                            {
+                                AssetEditorSubsystem->CloseAllEditorsForAsset(Asset);
+                            }
+                        }
+                    }
+                    #endif
+
                     // Flush before deleting to release references
                     if (GEditor)
                     {
@@ -1249,22 +1273,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
                     TArray<UAnimSequence*> DestinationList;
                     DestinationList.Add(DestinationSequence);
 
-                    #if WITH_EDITOR
                     // Animation retargeting in UE5 requires IK Rig system
-                    // For now, just copy the asset without retargeting
-                    FString AdjustedDestinationPath = DestinationObjectPath;
-                    if (AdjustedDestinationPath.StartsWith(TEXT("/Content")))
-                    {
-                        AdjustedDestinationPath = FString::Printf(TEXT("/Game%s"), *AdjustedDestinationPath.RightChop(8));
-                    }
-                    DestinationSequence = Cast<UAnimSequence>(UEditorAssetLibrary::DuplicateAsset(SourceSequence->GetPathName(), AdjustedDestinationPath));
+                    // For now, just use the duplicated asset (created above) without full retargeting
                     UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Animation asset copied (retargeting requires IK Rig setup)"));
 
                     UEditorAssetLibrary::SaveAsset(DestinationSequence->GetPathName());
                     RetargetedAssets.Add(DestinationSequence->GetPathName());
-                    #else
-                    WarningArray.Add(MakeShared<FJsonValueString>(TEXT("Retargeting requires editor animation blueprint library")));
-                    #endif
                 }
             }
 

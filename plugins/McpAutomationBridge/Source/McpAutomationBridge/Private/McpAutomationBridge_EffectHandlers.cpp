@@ -397,18 +397,26 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
             
             UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("SetNiagaraParameter: Looking for actor '%s'"), *SystemName);
 
+            bool bActorFound = false;
+            bool bComponentFound = false;
+
             for (AActor* Actor : AllActors)
             {
                 if (!Actor) continue;
                 if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) continue;
                 
+                bActorFound = true;
                 UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("SetNiagaraParameter: Found actor '%s'"), *SystemName);
                 UNiagaraComponent* NiComp = Actor->FindComponentByClass<UNiagaraComponent>();
                 if (!NiComp) 
                 {
                     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("SetNiagaraParameter: Actor '%s' has no NiagaraComponent"), *SystemName);
-                    continue;
+                    continue; // Keep looking? No, actor label is unique-ish. But let's assume unique.
+                    // But maybe we should break if we found the actor but no component?
+                    bComponentFound = false;
+                    break; 
                 }
+                bComponentFound = true;
 
                 if (ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
                 {
@@ -479,14 +487,44 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
                         bApplied = true;
                     }
                 }
-
-                if (bApplied) break;
+                
+                // If we found the actor and component but failed to apply, we stop searching.
+                break;
             }
 
             TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
             Resp->SetBoolField(TEXT("success"), bApplied);
-            if (bApplied) SendAutomationResponse(RequestingSocket, RequestId,true, TEXT("Niagara parameter set"), Resp, FString());
-            else SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("Niagara parameter not applied"), Resp, TEXT("SET_NIAGARA_PARAM_FAILED"));
+            
+            if (bApplied) 
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Niagara parameter set"), Resp, FString());
+            }
+            else
+            {
+                FString ErrMsg = TEXT("Niagara parameter not applied");
+                FString ErrCode = TEXT("SET_NIAGARA_PARAM_FAILED");
+                
+                if (!bActorFound) {
+                    ErrMsg = FString::Printf(TEXT("Actor '%s' not found"), *SystemName);
+                    ErrCode = TEXT("ACTOR_NOT_FOUND");
+                } else if (!bComponentFound) {
+                    ErrMsg = FString::Printf(TEXT("Actor '%s' has no Niagara component"), *SystemName);
+                    ErrCode = TEXT("COMPONENT_NOT_FOUND");
+                } else {
+                     // Check common failure reasons
+                     // Invalid Type?
+                     if (!ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase) &&
+                         !ParameterType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase) &&
+                         !ParameterType.Equals(TEXT("Color"), ESearchCase::IgnoreCase) &&
+                         !ParameterType.Equals(TEXT("Bool"), ESearchCase::IgnoreCase)) 
+                     {
+                         ErrMsg = FString::Printf(TEXT("Invalid parameter type: %s"), *ParameterType);
+                         ErrCode = TEXT("INVALID_ARGUMENT");
+                     }
+                }
+                
+                SendAutomationResponse(RequestingSocket, RequestId, false, ErrMsg, Resp, ErrCode);
+            }
             return true;
 #else
             SendAutomationResponse(RequestingSocket, RequestId,false, TEXT("set_niagara_parameter requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
@@ -907,7 +945,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(const FString& RequestId,
             Spawned->SetActorLabel(FString::Printf(TEXT("Niagara_%lld"), FDateTime::Now().ToUnixTimestamp()));
         }
 
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("spawn_niagara: Spawned actor '%s' (ID: %u)"), *Spawned->GetActorLabel(), Spawned->GetUniqueID());
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Display, TEXT("spawn_niagara: Spawned actor '%s' (ID: %u)"), *Spawned->GetActorLabel(), Spawned->GetUniqueID());
 
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);

@@ -94,10 +94,10 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async getSourceControlState(params: { assetPath: string }) {
-    return this.sendRequest('get_source_control_state', {
+    return this.sendRequest('asset_query', {
       ...params,
       subAction: 'get_source_control_state'
-    }, 'get_source_control_state');
+    }, 'asset_query');
   }
 
   async analyzeGraph(params: { assetPath: string; maxDepth?: number }) {

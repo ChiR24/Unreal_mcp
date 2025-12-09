@@ -103,6 +103,13 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
       const res = await executeAutomationRequest(tools, 'set_metadata', { assetPath: levelPath, metadata });
       return cleanObject(res);
     }
+    case 'cleanup_invalid_datalayers': {
+      // Route to manage_world_partition
+      const res = await executeAutomationRequest(tools, 'manage_world_partition', {
+        subAction: 'cleanup_invalid_datalayers'
+      }, 'World Partition support not available');
+      return cleanObject(res);
+    }
     case 'validate_level': {
       const levelPath = requireNonEmptyString(args.levelPath, 'levelPath', 'Missing required parameter: levelPath');
 

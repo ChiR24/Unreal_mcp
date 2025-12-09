@@ -1149,14 +1149,21 @@ static inline UBlueprint* LoadBlueprintAsset(const FString& Req, FString& OutNor
     UBlueprint* BP = nullptr;
     if (Req.Contains(TEXT(".")))
     {
-        BP = LoadObject<UBlueprint>(nullptr, *Req);
+        if (UEditorAssetLibrary::DoesAssetExist(Req))
+        {
+            BP = LoadObject<UBlueprint>(nullptr, *Req);
+        }
         if (BP) { OutNormalized = BP->GetPathName(); if (OutNormalized.Contains(TEXT("."))) OutNormalized = OutNormalized.Left(OutNormalized.Find(TEXT("."))); return BP; }
     }
 
     FString Candidate = Req;
     if (!Candidate.StartsWith(TEXT("/"))) Candidate = FString::Printf(TEXT("/Game/%s"), *Req);
     const FString AssetRef = FString::Printf(TEXT("%s.%s"), *Candidate, *FPaths::GetCleanFilename(Candidate));
-    BP = LoadObject<UBlueprint>(nullptr, *AssetRef);
+    
+    if (UEditorAssetLibrary::DoesAssetExist(AssetRef))
+    {
+        BP = LoadObject<UBlueprint>(nullptr, *AssetRef);
+    }
     if (BP)
     {
         OutNormalized = Candidate;

@@ -600,7 +600,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     {
         if (UEditorAssetLibrary::DoesAssetExist(AssetPath))
         {
-            if (UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath))
+            if (UObject* Asset = Cast<UObject>(StaticLoadObject(UObject::StaticClass(), nullptr, *AssetPath, nullptr, LOAD_Quiet | LOAD_NoWarn)))
             {
                 ObjectsToDelete.Add(Asset);
                 ValidPaths.Add(AssetPath);

@@ -56,7 +56,7 @@ export async function handleEffectTools(action: string, args: any, tools: ITools
   }
 
   // Map simulation control actions
-  if (action === 'activate') {
+  if (action === 'activate' || action === 'activate_effect') {
     args.action = 'activate_niagara';
     args.systemName = args.actorName || args.systemName;
     args.reset = true;

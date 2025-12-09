@@ -230,10 +230,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
             // Note: bCanHaveLayersContent is deprecated/removed in 5.7 as all landscapes use edit layers.
             
             // Create default edit layer to enable modification
-            Landscape->CreateDefaultLayer();
+            if (Landscape->GetLayersConst().Num() == 0)
+            {
+                Landscape->CreateDefaultLayer();
+            }
             
             // Explicitly request layer initialization to ensure components are ready
-            Landscape->RequestLayersInitialization(true, true);
+            // Landscape->RequestLayersInitialization(true, true); // Removed to prevent crash: LandscapeEditLayers.cpp confirms this resets init state which is unstable here
             
             // Note: We bypass feeding ImportHeightData here because doing so via Import() 
             // is what causes the crash in 5.7. A flat empty landscape is created instead.
@@ -835,14 +838,24 @@ bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
         }
         if (!Landscape)
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to find landscape"), TEXT("LOAD_FAILED"));
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to find landscape and no name provided"), TEXT("LOAD_FAILED"));
             return;
         }
 
-        UMaterialInterface* Mat = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
+        // Use Silent load to avoid engine warnings if path is invalid or type mismatch
+        UMaterialInterface* Mat = Cast<UMaterialInterface>(StaticLoadObject(UMaterialInterface::StaticClass(), nullptr, *MaterialPath, nullptr, LOAD_NoWarn));
+        
         if (!Mat)
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load material"), TEXT("LOAD_FAILED"));
+             // Check existence separately only if load failed, to distinguish error type (optional)
+            if (!UEditorAssetLibrary::DoesAssetExist(MaterialPath))
+            {
+                 Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Material asset not found: %s"), *MaterialPath), TEXT("ASSET_NOT_FOUND"));
+            }
+            else
+            {
+                 Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load material (invalid type?)"), TEXT("LOAD_FAILED"));
+            }
             return;
         }
 
@@ -902,11 +915,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(const FString
         UMcpAutomationBridgeSubsystem* Subsystem = WeakSubsystem.Get();
         if (!Subsystem) return;
 
-        UStaticMesh* StaticMesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+        // Use Silent load to avoid engine warnings
+        UStaticMesh* StaticMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *MeshPath, nullptr, LOAD_NoWarn));
         if (!StaticMesh)
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load static mesh"), TEXT("LOAD_FAILED"));
-            return;
+             Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Static mesh not found: %s"), *MeshPath), TEXT("ASSET_NOT_FOUND"));
+             return;
         }
 
         FString PackagePath = TEXT("/Game/Landscape");

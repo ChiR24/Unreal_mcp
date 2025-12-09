@@ -56,6 +56,7 @@ export class LandscapeTools {
       const quadsPerComponent = quadsPerSection; // Plugin uses quadsPerComponent
 
       const payload: Record<string, unknown> = {
+        name,
         x: locX,
         y: locY,
         z: locZ,

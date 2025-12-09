@@ -90,17 +90,26 @@ const handlers: Record<string, ActorActionHandler> = {
         const tag = requireNonEmptyString(args.tag, 'tag');
         return tools.actorTools.deleteByTag(tag);
     },
+    spawn_blueprint: async (args, tools) => {
+        const blueprintPath = requireNonEmptyString(args.blueprintPath, 'blueprintPath', 'Invalid blueprintPath: must be a non-empty string');
+        return tools.actorTools.spawnBlueprint({
+            blueprintPath,
+            actorName: args.actorName,
+            location: args.location,
+            rotation: args.rotation
+        });
+    },
     list: async (_args, tools) => {
         return tools.actorTools.listActors();
     }
 };
 
 export async function handleActorTools(action: string, args: any, tools: ITools) {
-  const handler = handlers[action];
-  if (handler) {
-    const res = await handler(args, tools);
-    return cleanObject(res);
-  }
-  // Fallback to direct bridge call or error
-  return executeAutomationRequest(tools, 'control_actor', args);
+    const handler = handlers[action];
+    if (handler) {
+        const res = await handler(args, tools);
+        return cleanObject(res);
+    }
+    // Fallback to direct bridge call or error
+    return executeAutomationRequest(tools, 'control_actor', args);
 }

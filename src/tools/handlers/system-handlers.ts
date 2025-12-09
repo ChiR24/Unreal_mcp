@@ -42,10 +42,30 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       };
     }
     case 'set_quality':
-      const quality = args.quality || 'medium';
-      const qVal = quality === 'high' || quality === 'epic' ? 3 : (quality === 'low' ? 0 : 1);
-      await tools.systemTools.executeConsoleCommand(`sg.ViewDistanceQuality ${qVal}`);
-      return { success: true, message: `Quality set to ${quality}`, action: 'set_quality' };
+      const quality = args.quality || args.level || 'medium'; // handle 'level' as well since test uses it
+      let qVal: number;
+      if (typeof quality === 'number') {
+        qVal = quality;
+      } else {
+        const qStr = String(quality).toLowerCase();
+        qVal = (qStr === 'high' || qStr === 'epic') ? 3 : (qStr === 'low' ? 0 : (qStr === 'cinematic' ? 4 : 1));
+      }
+
+      const category = String(args.category || 'ViewDistance').toLowerCase();
+      let cvar = 'sg.ViewDistanceQuality';
+
+      if (category.includes('shadow')) cvar = 'sg.ShadowQuality';
+      else if (category.includes('texture')) cvar = 'sg.TextureQuality';
+      else if (category.includes('effect')) cvar = 'sg.EffectsQuality';
+      else if (category.includes('postprocess')) cvar = 'sg.PostProcessQuality';
+      else if (category.includes('foliage')) cvar = 'sg.FoliageQuality';
+      else if (category.includes('shading')) cvar = 'sg.ShadingQuality';
+      else if (category.includes('globalillumination') || category.includes('gi')) cvar = 'sg.GlobalIlluminationQuality';
+      else if (category.includes('reflection')) cvar = 'sg.ReflectionQuality';
+      else if (category.includes('viewdistance')) cvar = 'sg.ViewDistanceQuality';
+
+      await tools.systemTools.executeConsoleCommand(`${cvar} ${qVal}`);
+      return { success: true, message: `${category} quality derived from '${quality}' set to ${qVal} via ${cvar}`, action: 'set_quality' };
     case 'execute_command':
       return cleanObject(await tools.systemTools.executeConsoleCommand(args.command));
     case 'create_widget': {

@@ -56,6 +56,7 @@
 
 #include "WorldPartition/DataLayer/DataLayerInstance.h"
 #include "WorldPartition/DataLayer/DataLayerManager.h"
+#include "WorldPartition/DataLayer/DataLayerAsset.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -145,6 +146,82 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         SendAutomationError(RequestingSocket, RequestId, TEXT("WorldPartition region loading not supported or failed in this engine version."), TEXT("NOT_SUPPORTED"));
         return true;
     }
+    else if (SubAction == TEXT("create_datalayer"))
+    {
+#if MCP_HAS_DATALAYER_EDITOR
+        FString DataLayerName;
+        Payload->TryGetStringField(TEXT("dataLayerName"), DataLayerName);
+
+        if (DataLayerName.IsEmpty())
+        {
+             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing dataLayerName."), TEXT("INVALID_PARAMS"));
+             return true;
+        }
+
+        UDataLayerEditorSubsystem* DataLayerSubsystem = GEditor->GetEditorSubsystem<UDataLayerEditorSubsystem>();
+        if (DataLayerSubsystem)
+        {
+            // Check existence
+            bool bExists = false;
+            UWorldPartition* WP = World->GetWorldPartition();
+            if (UDataLayerManager* DataLayerManager = WP ? WP->GetDataLayerManager() : nullptr)
+            {
+                DataLayerManager->ForEachDataLayerInstance([&](UDataLayerInstance* LayerInstance) {
+                    if (LayerInstance->GetDataLayerShortName() == DataLayerName || LayerInstance->GetDataLayerFullName() == DataLayerName)
+                    {
+                        bExists = true;
+                        return false; 
+                    }
+                    return true;
+                });
+            }
+
+            if (bExists)
+            {
+                 SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("DataLayer '%s' already exists."), *DataLayerName));
+                 return true;
+            }
+
+            // Create Data Layer
+            // UE 5.1+ API: CreateDataLayerInstance(const FDataLayerCreationParameters& Parameters)
+            // A DataLayerAsset is required.
+            
+            UDataLayerInstance* NewLayer = nullptr;
+
+            // Create a transient UDataLayerAsset. 
+            // In a real editor workflow, we would create a package and save it, 
+            // but for automation/testing we can create it in the transient package 
+            // or better yet, in the World's package so it persists if saved.
+            // Using GetTransientPackage() to avoid cluttering content unless saved.
+            // However, DataLayer logic might require it to be rooted or referenced.
+            
+            UDataLayerAsset* NewAsset = NewObject<UDataLayerAsset>(GetTransientPackage(), *DataLayerName, RF_Public | RF_Transactional);
+            
+            if (NewAsset && DataLayerSubsystem)
+            {
+                 FDataLayerCreationParameters Params;
+                 Params.DataLayerAsset = NewAsset;
+                 NewLayer = DataLayerSubsystem->CreateDataLayerInstance(Params);
+            }
+        
+            if (NewLayer)
+            {
+                 SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("DataLayer '%s' created."), *DataLayerName));
+            }
+            else
+            {
+                 SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create DataLayer (Subsystem returned null)."), TEXT("CREATE_FAILED"));
+            }
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("DataLayerEditorSubsystem not found."), TEXT("SUBSYSTEM_NOT_FOUND"));
+        }
+#else
+        SendAutomationError(RequestingSocket, RequestId, TEXT("DataLayerEditorSubsystem not available."), TEXT("NOT_SUPPORTED"));
+#endif
+        return true;
+    }
     else if (SubAction == TEXT("set_datalayer"))
     {
 #if MCP_HAS_DATALAYER_EDITOR
@@ -220,8 +297,46 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
 #endif
         return true;
     }
+    else if (SubAction == TEXT("cleanup_invalid_datalayers"))
+    {
+#if MCP_HAS_DATALAYER_EDITOR
+        UDataLayerEditorSubsystem* DataLayerSubsystem = GEditor->GetEditorSubsystem<UDataLayerEditorSubsystem>();
+        if (!DataLayerSubsystem)
+        {
+             SendAutomationError(RequestingSocket, RequestId, TEXT("DataLayerEditorSubsystem not found."), TEXT("SUBSYSTEM_NOT_FOUND"));
+             return true;
+        }
 
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
+        UDataLayerManager* DataLayerManager = WorldPartition ? WorldPartition->GetDataLayerManager() : nullptr;
+        if (!DataLayerManager)
+        {
+             SendAutomationError(RequestingSocket, RequestId, TEXT("DataLayerManager not found."), TEXT("MANAGER_NOT_FOUND"));
+             return true;
+        }
+
+        TArray<UDataLayerInstance*> InvalidInstances;
+        DataLayerManager->ForEachDataLayerInstance([&](UDataLayerInstance* LayerInstance) {
+            // Use GetAsset() as GetDataLayerAsset() is not a member (UE 5.x change)
+            if (LayerInstance && !LayerInstance->GetAsset())
+            {
+                InvalidInstances.Add(LayerInstance);
+            }
+            return true;
+        });
+
+        int32 DeletedCount = 0;
+        for (UDataLayerInstance* InvalidInstance : InvalidInstances)
+        {
+            DataLayerSubsystem->DeleteDataLayer(InvalidInstance);
+            DeletedCount++;
+        }
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Cleaned up %d invalid Data Layer Instances."), DeletedCount));
+#else
+        SendAutomationError(RequestingSocket, RequestId, TEXT("DataLayerEditorSubsystem not available."), TEXT("NOT_SUPPORTED"));
+#endif
+        return true;
+    }
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("World Partition support disabled (non-editor build)"), nullptr, TEXT("NOT_IMPLEMENTED"));

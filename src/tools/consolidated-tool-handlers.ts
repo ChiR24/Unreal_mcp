@@ -190,8 +190,9 @@ async function invokeNamedTool(
     case 'manage_effect': {
       if (isNiagaraGraphAction(action)) {
         // Special case: set_niagara_parameter can be for actor (Effect Tool) or asset (Graph Tool)
-        // If actorName is present, it's an instance operation -> handleEffectTools
-        if (action === 'set_niagara_parameter' && args.actorName) {
+        // If actorName is present, or systemName is present but no path, it's an instance operation -> handleEffectTools
+        const isInstanceOp = action === 'set_niagara_parameter' && (args.actorName || (args.systemName && !args.assetPath && !args.systemPath));
+        if (isInstanceOp) {
           return await handleEffectTools(action, args, tools);
         }
 

@@ -43,6 +43,18 @@
     {
       "Name": "ProceduralMeshComponent",
       "Enabled": true
+    },
+    {
+      "Name": "Interchange",
+      "Enabled": true
+    },
+    {
+      "Name": "InterchangeOpenUSD",
+      "Enabled": true
+    },
+    {
+      "Name": "DataValidation",
+      "Enabled": true
     }
   ]
 }
