@@ -24,6 +24,9 @@ Each tool has a dedicated test file in `tests/`:
 - **test-performance.mjs** - Performance profiling (FPS, memory, stats, profiling)
 - **test-system.mjs** - System control (engine info, settings, plugins, Python execution)
 - **test-debug.mjs** - Debug visualization (draw lines, boxes, spheres, points, clear)
+- **test-behavior-tree.mjs** - Behavior Tree editing (add nodes, connect, properties)
+- **test-audio.mjs** - Audio management (sound cues, play sounds, audio components)
+- **test-inspect.mjs** - Object introspection (get/set properties, components)
 
 ### Shared Test Runner
 All test files use `test-runner.mjs` which provides:
@@ -53,7 +56,11 @@ npm run test:physics          # Test physics only
 npm run test:performance      # Test performance profiling only
 npm run test:system           # Test system control only
 npm run test:debug            # Test debug visualization only
-npm run test:sequence        # Test Sequencer actions only
+npm run test:behavior_tree    # Test behavior tree editing only
+npm run test:audio            # Test audio management only
+npm run test:inspect          # Test object introspection only
+npm run test:graphql          # Test GraphQL API only
+npm run test:wasm             # Test WebAssembly acceleration only
 ```
 
 ### Run Tests Directly

@@ -17,19 +17,28 @@ const testCases = [
   { scenario: 'Create animation blueprint minimal', toolName: 'animation_physics', arguments: { action: 'create_animation_bp', blueprintName: 'TC_AnimBP', parentClass: 'AnimInstance', targetSkeleton: '/Engine/Tutorial/SubEditors/TutorialAssets/Character/TutorialTPP_Skeleton', stateMachines: [] }, expected: 'success or not found' },
   // { scenario: 'Activate ragdoll trigger (no-op)', toolName: 'animation_physics', arguments: { action: 'activate_ragdoll', actorName: 'Character', blendTime: 0.2 }, expected: 'success' },
   { scenario: 'Create blend tree', toolName: 'animation_physics', arguments: { action: 'create_blend_tree', treeName: 'TC_UpperBody', basePose: '/Game/Animations/BasePose', additiveAnimations: [] }, expected: 'success' },
-  { scenario: 'Retargeting sequence (best-effort)', toolName: 'animation_physics', arguments: { action: 'setup_retargeting', sourceSkeleton: '/Engine/Tutorial/SubEditors/TutorialAssets/Character/TutorialTPP_Skeleton', targetSkeleton: '/Engine/Tutorial/SubEditors/TutorialAssets/Character/TutorialTPP_Skeleton', assets: ['/Game/Animations/Idle'], savePath: '/Game/Animations/Retargeted', overwrite: true }, expected: 'success or not connected or not found' },
-  { scenario: 'Setup physics simulation (best-effort)', toolName: 'animation_physics', arguments: { action: 'setup_physics_simulation', skeletonPath: '/Engine/Tutorial/SubEditors/TutorialAssets/Character/TutorialTPP_Skeleton', savePath: '/Game/Physics', physicsAssetName: 'PA_TC', assignToMesh: false }, expected: 'success or not found' },
   { scenario: 'Create simple animation asset', toolName: 'animation_physics', arguments: { action: 'create_animation_asset', name: 'ANIM_TC', skeletonPath: '/Engine/Tutorial/SubEditors/TutorialAssets/Character/TutorialTPP_Skeleton', savePath: '/Game/Animations', assetType: 'sequence' }, expected: 'success or not found' },
+
+  // PRE-CLEANUP: Ensure target doesn't exist to avoid "DuplicateAsset failed"
+  { scenario: 'Pre-cleanup Retargeted asset', toolName: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/Animations/Retargeted/ANIM_TC_Retargeted' }, expected: 'success|not_found|error' },
+
+  { scenario: 'Retargeting sequence (best-effort)', toolName: 'animation_physics', arguments: { action: 'setup_retargeting', sourceSkeleton: '/Engine/Tutorial/SubEditors/TutorialAssets/Character/TutorialTPP_Skeleton', targetSkeleton: '/Engine/Tutorial/SubEditors/TutorialAssets/Character/TutorialTPP_Skeleton', assets: ['/Game/Animations/ANIM_TC'], savePath: '/Game/Animations/Retargeted', overwrite: true }, expected: 'success or not connected or not found' },
+  { scenario: 'Setup physics simulation (best-effort)', toolName: 'animation_physics', arguments: { action: 'setup_physics_simulation', skeletonPath: '/Engine/Tutorial/SubEditors/TutorialAssets/Character/TutorialTPP_Skeleton', savePath: '/Game/Physics', physicsAssetName: 'PA_TC', assignToMesh: false }, expected: 'success or not found' },
   { scenario: 'Play and stop a short montage (best-effort)', toolName: 'animation_physics', arguments: { action: 'play_montage', actorName: 'SkeletalCharacter', montagePath: '/Game/Animations/AM_Test', playRate: 1.0 }, expected: 'success or not found' },
-  { scenario: 'Cleanup animation artifacts', toolName: 'animation_physics', arguments: { action: 'cleanup', artifacts: ['ABP_TC', 'TC_AnimBP', 'ANIM_TC'] }, expected: 'success or no matching' },
+
   { scenario: 'Anim Setup - Create Montage', toolName: 'animation_physics', arguments: { action: 'create_animation_asset', name: 'AM_Setup', skeletonPath: '/Engine/Tutorial/SubEditors/TutorialAssets/Character/TutorialTPP_Skeleton', savePath: '/Game/Animations', assetType: 'montage' }, expected: 'success or not found' },
   { scenario: 'Anim Setup - Add Notify', toolName: 'animation_physics', arguments: { action: 'add_notify', assetPath: '/Game/Animations/AM_Setup', notifyName: 'AnimNotify_PlaySound', time: 0.5 }, expected: 'success or not found or AUTOMATION_BRIDGE_UNAVAILABLE' },
-  { scenario: 'Cleanup - Delete Montage', toolName: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/Animations/AM_Setup' }, expected: 'success or not found' },
+
+  // Edge cases
   { scenario: 'Error: Invalid skeleton path', toolName: 'animation_physics', arguments: { action: 'create_animation_asset', assetName: 'InvalidAnim', skeletonPath: '/Game/Invalid/Skeleton' }, expected: 'error|asset_not_found' },
-  { scenario: 'Edge: Play rate 0 (pause)', toolName: 'animation_physics', arguments: { action: 'play_montage', assetPath: '/Game/Animations/AM_Setup', playRate: 0 }, expected: 'success|no_op' },
+  { scenario: 'Edge: Play rate 0 (pause)', toolName: 'animation_physics', arguments: { action: 'play_montage', actorName: 'SkeletalCharacter', montagePath: '/Game/Animations/AM_Setup', playRate: 0 }, expected: 'success|no_op' },
   { scenario: 'Border: Negative RPM vehicle', toolName: 'animation_physics', arguments: { action: 'configure_vehicle', vehicleName: 'TestVehicle', maxRPM: -1000 }, expected: 'success|clamped' },
   { scenario: 'Error: Empty wheels array', toolName: 'animation_physics', arguments: { action: 'configure_vehicle', vehicleName: 'TestVehicle', wheels: [] }, expected: 'success|default_wheels' },
-  { scenario: 'Edge: No plugin deps', toolName: 'animation_physics', arguments: { action: 'configure_vehicle', vehicleName: 'TestVehicle', plugins: ['InvalidPlugin'] }, expected: 'error|plugin_missing|MISSING_ENGINE_PLUGINS' }
+  { scenario: 'Edge: No plugin deps', toolName: 'animation_physics', arguments: { action: 'configure_vehicle', vehicleName: 'TestVehicle', plugins: ['InvalidPlugin'] }, expected: 'error|plugin_missing|MISSING_ENGINE_PLUGINS' },
+
+  // FINAL CLEANUP
+  { scenario: 'Cleanup all animation artifacts', toolName: 'animation_physics', arguments: { action: 'cleanup', artifacts: ['ABP_TC', 'TC_AnimBP', 'ANIM_TC', 'AM_Setup', 'TC_Locomotion', 'PA_TC', 'TC_States', 'TC_UpperBody'] }, expected: 'success or no matching' },
+  { scenario: 'Cleanup retargeted asset', toolName: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/Animations/Retargeted/ANIM_TC_Retargeted' }, expected: 'success|not_found' }
 ];
 
 await runToolTests('Animation & Physics', testCases);

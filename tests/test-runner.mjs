@@ -191,25 +191,17 @@ function evaluateExpectation(testCase, response) {
   const expectedFailure = containsFailure && !containsSuccess;
   if (expectedFailure && !actualSuccess) {
     // Test expects failure and got failure - but verify it's the RIGHT kind of failure
-    const lowerReason = actualMessage?.toLowerCase() || actualError?.toLowerCase() || '';
+    const lowerReason = actualMessage?.toLowerCase() || actualError?.toLowerCase() || contentStr || '';
 
     // Check for specific error types (not just generic "error" keyword)
     const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled'];
     const expectedErrorType = specificErrorTypes.find(type => lowerExpected.includes(type));
-
-    // DEBUG: Log inputs to see why it fails
-    if (lowerExpected.includes('invalid')) {
-      console.log(`[DEBUG] evaluateExpectation: expected="${lowerExpected}", errorType="${expectedErrorType}"`);
-      console.log(`[DEBUG] response=`, JSON.stringify(response, null, 2));
-    }
-
     let errorTypeMatch = expectedErrorType ? lowerReason.includes(expectedErrorType) :
       failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
 
     // Also check detail field if main error check failed (handles wrapped exceptions)
     if (!errorTypeMatch && response.detail && typeof response.detail === 'string') {
       const lowerDetail = response.detail.toLowerCase();
-      // Check detail field if main error check failed (handles wrapped exceptions)
       if (expectedErrorType) {
         if (lowerDetail.includes(expectedErrorType)) errorTypeMatch = true;
       } else {

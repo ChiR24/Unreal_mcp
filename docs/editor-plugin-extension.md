@@ -215,6 +215,12 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 | **inspect** | `get_property` | ✅ Native | `FProperty` → JSON serialization |
 | | `set_property` | ✅ Native | JSON → `FProperty` typed marshaling |
 | | `list` | ✅ Native | Actor/asset listing via subsystems |
+| **manage_audio** | `create_sound_cue` | ✅ Native | Sound Cue asset creation |
+| | `play_sound_at_location` | ✅ Native | 3D spatial sound playback |
+| | `create_audio_component` | ✅ Native | Audio component creation |
+| **manage_behavior_tree** | `add_node` | ✅ Native | Behavior Tree node creation |
+| | `connect_nodes` | ✅ Native | Node connection management |
+| | `set_node_properties` | ✅ Native | Node property editing |
 
 **Legend:**
 - ✅ **Native** = Fully implemented in C++ plugin

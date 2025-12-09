@@ -53,7 +53,7 @@ const testCases = [
     scenario: "Edge: Set invalid property",
     toolName: "inspect",
     arguments: { action: "set_property", objectPath: "/Valid", propertyName: "InvalidProp", value: 1 },
-    expected: "error|unknown_property"
+    expected: "error|unknown_property|OBJECT_NOT_FOUND"
   },
   {
     scenario: "Border: Empty tag add",

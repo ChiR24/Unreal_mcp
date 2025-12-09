@@ -185,7 +185,7 @@ No additional engine configuration required. The MCP Automation Bridge plugin ha
 }
 ```
 
-## Available Tools (12)
+## Available Tools (13)
 
 | Tool | Description |
 |------|-------------|
@@ -201,6 +201,8 @@ No additional engine configuration required. The MCP Automation Bridge plugin ha
 | `manage_sequence` | Sequencer/Cinematics |
 | `inspect` | Object Introspection |
 | `manage_audio` | Audio Assets & Components |
+| `manage_behavior_tree` | Behavior Tree Graph Editing |
+
 
 ## Documentation
 

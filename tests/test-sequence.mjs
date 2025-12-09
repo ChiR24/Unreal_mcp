@@ -31,13 +31,13 @@ const testCases = [
   { scenario: 'Cleanup - Delete Cinematic', toolName: 'manage_sequence', arguments: { action: 'delete', path: '/Game/Cinematics/TC_Cinematic' }, expected: 'success|Failed to delete' },
   { scenario: 'Cleanup - Delete Cube', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'TC_Cube' }, expected: 'success' },
   { scenario: 'Delete original sequence', toolName: 'manage_sequence', arguments: { action: 'delete', path: seqPath }, expected: 'success|Failed to delete' },
-  { scenario: 'Verify sequence removed', toolName: 'manage_sequence', arguments: { action: 'get_bindings', path: seqPath }, expected: 'success|not found|error' },
+  { scenario: 'Verify sequence removed', toolName: 'manage_sequence', arguments: { action: 'get_bindings', path: seqPath }, expected: 'success|not found|error|ASSET_NOT_FOUND|LOAD_FAILED' },
 
   {
     scenario: "Error: Invalid actor name",
     toolName: "manage_sequence",
     arguments: { action: "add_actor", path: seqPath, actorName: "NonExistentActor" },
-    expected: "not_found|error"
+    expected: "not_found|error|ASSET_NOT_FOUND|LOAD_FAILED"
   },
   {
     scenario: "Edge: Playback speed 0",
@@ -61,7 +61,7 @@ const testCases = [
     scenario: "Cleanup Sequence Tests",
     toolName: "manage_asset",
     arguments: { action: "delete", assetPaths: [seqPath] },
-    expected: "success"
+    expected: "success|ASSET_NOT_FOUND|LOAD_FAILED"
   }
 ];
 

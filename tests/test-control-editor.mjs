@@ -7,6 +7,18 @@
 import { runToolTests } from './test-runner.mjs';
 
 const testCases = [
+  {
+    scenario: 'Pre-Fix: Remove Invalid Data Layers (Native)',
+    toolName: 'manage_level',
+    arguments: {
+      action: 'cleanup_invalid_datalayers'
+    },
+    // We expect success if supported, or error if not. 
+    // Since we just added it, it should succeed if plugin is rebuilt.
+    // If plugin is NOT rebuilt yet, this will fail with valid error or "unknown action" depending on how it falls through.
+    // But since the user is expected to rebuild, we expect success.
+    expected: 'success'
+  },
   { scenario: 'Start PIE (Play in Editor)', toolName: 'control_editor', arguments: { action: 'play' }, expected: 'success - PIE started' },
   { scenario: 'Stop PIE', toolName: 'control_editor', arguments: { action: 'stop' }, expected: 'success - PIE stopped' },
   { scenario: 'Set camera location', toolName: 'control_editor', arguments: { action: 'set_camera', location: { x: 0, y: 0, z: 500 }, rotation: { pitch: -45, yaw: 0, roll: 0 } }, expected: 'success - camera set' },

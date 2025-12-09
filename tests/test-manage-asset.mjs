@@ -11,21 +11,19 @@
 import { runToolTests } from './test-runner.mjs';
 
 const testCases = [
+    // "Pre-cleanup: Python Force Delete (Robust)" removed - Python blocked by CommandValidator
     {
-        scenario: "Pre-cleanup: Remove test artifacts",
+        scenario: "Pre-cleanup: Remove test artifacts (Standard)",
         toolName: "manage_asset",
         arguments: {
             action: "delete",
             assetPaths: [
                 "/Game/Tests/ManageAsset",
                 "/Game/Tests/Reorg",
-                "/Game/Tests/ManageAsset",
-                "/Game/Tests/Reorg",
-                "/Game/Tests/DeepCopy",
-                "/Game/Tests/ManageAsset/Copies/MI_TestInstance_Renamed"
+                "/Game/Tests/DeepCopy"
             ]
         },
-        expected: "success|not_found" // Should succeed even if they don't exist (handled by bridge or ignored)
+        expected: "success|not_found"
     },
     {
         scenario: "List /Game root assets",
