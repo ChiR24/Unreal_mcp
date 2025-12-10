@@ -326,7 +326,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(const FString& R
         return true;
     }
 
-    if (FN == TEXT("SET_VIEWPORT_CAMERA") || FN == TEXT("SET_VIEWPORT_CAMERA_INFO"))
+    if (FN == TEXT("SET_VIEWPORT_CAMERA") || FN == TEXT("SET_VIEWPORT_CAMERA_INFO") || FN == TEXT("SET_CAMERA_POSITION"))
     {
         const TSharedPtr<FJsonObject>* Params = nullptr; FVector Loc(0,0,0); FRotator Rot(0,0,0);
         if (Payload->TryGetObjectField(TEXT("params"), Params) && Params && (*Params).IsValid()) { ReadVectorField(*Params, TEXT("location"), Loc, Loc); ReadRotatorField(*Params, TEXT("rotation"), Rot, Rot); }

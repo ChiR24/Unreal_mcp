@@ -39,7 +39,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
 
       const success = response && response.success !== false;
       const result = response.result ?? response;
-      
+
       return { success, message: response.message ?? undefined, error: response.success === false ? (response.error ?? response.message) : undefined, result, requestId: response.requestId } as any;
     } catch (err: any) {
       return { success: false, error: String(err), message: String(err) } as const;
@@ -147,6 +147,17 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     const resp = await this.sendAction('sequence_set_properties', payload);
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_set_properties' } as const;
+    }
+    return resp;
+  }
+
+  /**
+   * Set display rate (fps)
+   */
+  async setDisplayRate(params: { path?: string; frameRate: string | number }) {
+    const resp = await this.sendAction('sequence_set_display_rate', { path: params.path, frameRate: params.frameRate });
+    if (!resp.success && this.isUnknownActionResponse(resp)) {
+      return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_set_display_rate' } as const;
     }
     return resp;
   }

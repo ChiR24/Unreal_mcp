@@ -5,8 +5,63 @@ import { executeAutomationRequest } from './common-handlers.js';
 export async function handleAssetTools(action: string, args: any, tools: ITools) {
   switch (action) {
     case 'list': {
-      const res = await tools.assetResources.list(args.directory || '/Game', false);
-      return cleanObject(res);
+      // Route through C++ HandleListAssets for proper asset enumeration
+      const pathFilter = args.directory || args.path || '/Game';
+      const limit = typeof args.limit === 'number' ? args.limit : 50;
+      // Default to non-recursive (current directory only) unless specified
+      const recursive = args.recursive === true;
+      const depth = typeof args.depth === 'number' ? args.depth : undefined;
+
+      const res = await executeAutomationRequest(tools, 'list', {
+        path: pathFilter,
+        recursive: recursive || (depth !== undefined && depth > 0), // Enable recursion if depth is requested
+        depth: depth
+      });
+
+      // const result = cleanObject(res); // Unused
+      const response = res as any;
+      const assets = (Array.isArray(response.assets) ? response.assets :
+        (Array.isArray(response.result) ? response.result : (response.result?.assets || [])));
+
+      // New: Handle folders
+      const folders = Array.isArray(response.folders) ? response.folders : (response.result?.folders || []);
+
+      const totalCount = assets.length;
+      const limitedAssets = assets.slice(0, limit);
+      const remaining = Math.max(0, totalCount - limit);
+
+      let message = `Found ${totalCount} assets`;
+      if (folders.length > 0) {
+        message += ` and ${folders.length} folders`;
+      }
+      message += `: ${limitedAssets.map((a: any) => a.path || a.package || a.name).join(', ')}`;
+
+      if (folders.length > 0 && limitedAssets.length < limit) {
+        // If we have space in the limit, maybe show some folder names?
+        // Or just list them separately?
+        // The prompt was "list folder as well".
+        // Let's append them to the list if it's short, or just mention them.
+        // Simpler: Just append to the text list.
+        const remainingLimit = limit - limitedAssets.length;
+        if (remainingLimit > 0) {
+          const limitedFolders = folders.slice(0, remainingLimit);
+          if (limitedAssets.length > 0) message += ', ';
+          message += `Folders: [${limitedFolders.join(', ')}]`;
+          if (folders.length > remainingLimit) message += '...';
+        }
+      }
+
+      if (remaining > 0) {
+        message += `... and ${remaining} others`;
+      }
+
+      return {
+        message: message,
+        assets: limitedAssets,
+        folders: folders,
+        totalCount: totalCount,
+        count: limitedAssets.length
+      };
     }
     case 'create_folder': {
       if (typeof args.path !== 'string' || args.path.trim() === '') {

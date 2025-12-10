@@ -2,7 +2,14 @@ import { z } from 'zod';
 import { Logger } from './utils/logger.js';
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Suppress dotenv output to avoid corrupting MCP stdout stream
+const originalWrite = process.stdout.write;
+process.stdout.write = function () { return true; } as any;
+try {
+  dotenv.config();
+} finally {
+  process.stdout.write = originalWrite;
+}
 
 const log = new Logger('Config');
 
@@ -29,17 +36,17 @@ export const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('debug'),
   MCP_ROUTE_STDOUT_LOGS: z.preprocess(stringToBoolean, z.boolean().default(true)),
-  
+
   // Unreal Settings
   UE_PROJECT_PATH: z.string().optional(),
   UE_EDITOR_EXE: z.string().optional(),
   UE_SCREENSHOT_DIR: z.string().optional(),
-  
+
   // Connection Settings
   MCP_AUTOMATION_PORT: z.preprocess((v) => stringToNumber(v, 8091), z.number().default(8091)),
   MCP_AUTOMATION_HOST: z.string().default('127.0.0.1'),
   MCP_AUTOMATION_CLIENT_MODE: z.preprocess(stringToBoolean, z.boolean().default(false)),
-  
+
   // Timeouts
   MCP_CONNECTION_TIMEOUT_MS: z.preprocess((v) => stringToNumber(v, 5000), z.number().default(5000)),
   MCP_REQUEST_TIMEOUT_MS: z.preprocess((v) => stringToNumber(v, 30000), z.number().default(30000)),

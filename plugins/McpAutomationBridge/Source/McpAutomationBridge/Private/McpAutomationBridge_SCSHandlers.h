@@ -36,5 +36,5 @@ public:
         const FString& BlueprintPath,
         const FString& ComponentName,
         const FString& PropertyName,
-        const FString& PropertyValueJson);
+        const TSharedPtr<FJsonValue>& PropertyValue);
 };

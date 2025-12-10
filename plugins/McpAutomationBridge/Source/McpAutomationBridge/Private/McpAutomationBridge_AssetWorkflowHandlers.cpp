@@ -600,7 +600,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     {
         if (UEditorAssetLibrary::DoesAssetExist(AssetPath))
         {
-            if (UObject* Asset = Cast<UObject>(StaticLoadObject(UObject::StaticClass(), nullptr, *AssetPath, nullptr, LOAD_Quiet | LOAD_NoWarn)))
+            if (UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath))
             {
                 ObjectsToDelete.Add(Asset);
                 ValidPaths.Add(AssetPath);
@@ -1245,10 +1245,15 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(const FString& RequestId,
 bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
 #if WITH_EDITOR
-    FString Path; Payload->TryGetStringField(TEXT("path"), Path);
+    FString Path;
+    if (!Payload->TryGetStringField(TEXT("path"), Path) || Path.IsEmpty())
+    {
+        Payload->TryGetStringField(TEXT("directoryPath"), Path);
+    }
+
     if (Path.IsEmpty())
     {
-        SendAutomationResponse(Socket, RequestId, false, TEXT("path required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        SendAutomationResponse(Socket, RequestId, false, TEXT("path (or directoryPath) required"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
 

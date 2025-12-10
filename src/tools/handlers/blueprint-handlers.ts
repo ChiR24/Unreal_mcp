@@ -5,11 +5,12 @@ import { executeAutomationRequest } from './common-handlers.js';
 export async function handleBlueprintTools(action: string, args: any, tools: ITools) {
   switch (action) {
     case 'create': {
-      // Support 'path' argument by splitting it into name and savePath if not provided
+      // Support 'path' or 'blueprintPath' argument by splitting it into name and savePath if not provided
       let name = args.name;
       let savePath = args.savePath;
-      if (!name && args.path) {
-        const parts = args.path.split('/');
+      const pathArg = args.path || args.blueprintPath;
+      if (!name && pathArg) {
+        const parts = pathArg.split('/');
         name = parts.pop();
         savePath = parts.join('/');
         if (!savePath) savePath = '/Game';
@@ -138,7 +139,7 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
     case 'add_component': {
       const res = await tools.blueprintTools.addComponent({
         blueprintName: args.name || args.blueprintPath || args.path,
-        componentType: args.componentType,
+        componentType: args.componentType || args.componentClass,
         componentName: args.componentName,
         attachTo: args.attachTo,
         transform: args.transform,
@@ -192,6 +193,8 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
         functionName: args.functionName,
         variableName: args.variableName,
         nodeName: args.nodeName,
+        eventName: args.eventName,
+        memberClass: args.memberClass,
         posX: args.posX,
         posY: args.posY,
         timeoutMs: args.timeoutMs
@@ -201,7 +204,7 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
     case 'add_scs_component': {
       const res = await tools.blueprintTools.addSCSComponent({
         blueprintPath: args.name || args.blueprintPath || args.path,
-        componentClass: args.componentType,
+        componentClass: args.componentClass || args.componentType,
         componentName: args.componentName,
         timeoutMs: args.timeoutMs
       });

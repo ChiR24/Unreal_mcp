@@ -38,13 +38,13 @@ export async function handleEnvironmentTools(action: string, args: any, tools: I
         }));
       } else {
         return cleanObject(await tools.foliageTools.addFoliage({
-          foliageType: args.foliageType,
+          foliageType: args.foliageType || args.foliageTypePath,
           locations: args.locations || (args.position ? [args.position] : [])
         }));
       }
     case 'paint_foliage':
       return cleanObject(await tools.foliageTools.paintFoliage({
-        foliageType: args.foliageType,
+        foliageType: args.foliageType || args.foliageTypePath,
         position: args.position || args.location, // Handle both
         brushSize: args.brushSize || args.radius,
         paintDensity: args.density || args.strength, // Map strength/density

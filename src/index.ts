@@ -1,4 +1,4 @@
-import 'dotenv/config';
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Logger } from './utils/logger.js';
@@ -76,7 +76,7 @@ export function createServer() {
     clientMode: config.MCP_AUTOMATION_CLIENT_MODE
   });
   bridge.setAutomationBridge(automationBridge);
-  automationBridge.start(); // Removed to support lazy connection on demand
+
 
   automationBridge.on('connected', ({ metadata, port, protocol }) => {
     log.info(

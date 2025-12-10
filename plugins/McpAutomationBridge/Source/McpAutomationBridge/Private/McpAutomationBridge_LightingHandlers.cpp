@@ -105,6 +105,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(const FString& RequestI
             NewLight->SetActorLabel(Name);
         }
 
+        // Default to Movable for immediate feedback
+        if (ULightComponent* BaseLightComp = NewLight->FindComponentByClass<ULightComponent>())
+        {
+            BaseLightComp->SetMobility(EComponentMobility::Movable);
+        }
+
         // Apply properties
         const TSharedPtr<FJsonObject>* Props;
         if (Payload->TryGetObjectField(TEXT("properties"), Props))

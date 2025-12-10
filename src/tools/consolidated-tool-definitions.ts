@@ -59,6 +59,10 @@ Supported actions:
         assetPaths: { type: 'array', items: { type: 'string' }, description: 'Batch asset paths.' },
         lodCount: { type: 'number', description: 'Number of LODs to generate.' },
         reductionSettings: { type: 'object', description: 'LOD reduction settings.' },
+        nodeName: { type: 'string', description: 'Variable name or Function name, depending on node type' },
+        eventName: { type: 'string', description: 'For Event nodes (e.g. ReceiveBeginPlay) or CustomEvent nodes' },
+        memberClass: { type: 'string', description: 'For Event nodes, the class defining the event (optional)' },
+        posX: { type: 'number' },
         newName: { type: 'string', description: 'New name for rename/duplicate.' },
         overwrite: { type: 'boolean' },
         save: { type: 'boolean' },
@@ -69,7 +73,7 @@ Supported actions:
         name: { type: 'string', description: 'Name of new asset.' },
         path: { type: 'string', description: 'Directory to create asset in.' },
         parentMaterial: { type: 'string', description: 'Parent material for instances.' },
-        parameters: { type: 'object', additionalProperties: true, description: 'Material instance parameters.' },
+        parameters: { type: 'object', description: 'Material instance parameters.' },
 
         // -- Render Target --
         width: { type: 'number' },
@@ -81,7 +85,7 @@ Supported actions:
 
         // -- Metadata/Tags --
         tag: { type: 'string' },
-        metadata: { type: 'object', additionalProperties: true },
+        metadata: { type: 'object' },
 
         // -- Graph Editing (Material/BT) --
         graphName: { type: 'string' },
@@ -239,6 +243,7 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
         },
         actorName: { type: 'string' },
         classPath: { type: 'string' },
+        meshPath: { type: 'string' },
         blueprintPath: { type: 'string' },
         location: commonSchemas.location,
         rotation: commonSchemas.rotation,
@@ -246,7 +251,7 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
         force: commonSchemas.vector3,
         componentType: { type: 'string' },
         componentName: { type: 'string' },
-        properties: { type: 'object', additionalProperties: true },
+        properties: { type: 'object' },
         visible: { type: 'boolean' },
         newName: { type: 'string' },
         tag: { type: 'string' },
@@ -513,12 +518,52 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
           ],
           description: 'Action'
         },
+        // Common
+        name: { type: 'string', description: 'Name of landscape, foliage type, or procedural volume.' },
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+        scale: commonSchemas.scale,
+
+        // Landscape
         sizeX: { type: 'number' },
         sizeY: { type: 'number' },
+        sectionSize: { type: 'number' },
+        sectionsPerComponent: { type: 'number' },
+        componentCount: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } } },
+        materialPath: { type: 'string' },
+
+        // Sculpt/Paint
         tool: { type: 'string' },
+        radius: { type: 'number' },
+        strength: { type: 'number' },
+        falloff: { type: 'number' },
+        brushSize: { type: 'number' },
+        layerName: { type: 'string' },
+        eraseMode: { type: 'boolean' },
+
+        // Foliage
         foliageType: { type: 'string' },
+        foliageTypePath: { type: 'string' },
         meshPath: { type: 'string' },
-        density: { type: 'number' }
+        density: { type: 'number' },
+        minScale: { type: 'number' },
+        maxScale: { type: 'number' },
+        cullDistance: { type: 'number' },
+        alignToNormal: { type: 'boolean' },
+        randomYaw: { type: 'boolean' },
+        locations: { type: 'array', items: commonSchemas.location },
+        position: commonSchemas.location,
+
+        // Procedural
+        bounds: { type: 'object' },
+        volumeName: { type: 'string' },
+        seed: { type: 'number' },
+        foliageTypes: { type: 'array', items: { type: 'object' } },
+
+        // General
+        path: { type: 'string' },
+        filename: { type: 'string' },
+        assetPaths: { type: 'array', items: { type: 'string' } }
       },
       required: ['action']
     },
@@ -561,7 +606,7 @@ Supported actions:
           enum: [
             'profile', 'show_fps', 'set_quality', 'screenshot', 'set_resolution', 'set_fullscreen', 'execute_command', 'console_command',
             'run_ubt', 'run_tests', 'subscribe', 'spawn_category', 'start_session', 'lumen_update_scene',
-            'play_sound', 'create_widget', 'show_widget',
+            'play_sound', 'create_widget', 'show_widget', 'add_widget_child',
             // Added missing actions
             'set_cvar', 'get_project_settings', 'validate_assets'
           ],
@@ -586,7 +631,12 @@ Supported actions:
         filter: { type: 'string' },
 
         // Insights
-        channels: { type: 'string' }
+        channels: { type: 'string' },
+
+        // UI Widget Management
+        widgetPath: { type: 'string', description: 'Path to the widget blueprint (for add_widget_child).' },
+        childClass: { type: 'string', description: 'Class of the child widget to add (e.g. /Script/UMG.Button).' },
+        parentName: { type: 'string', description: 'Name of the parent widget to add to (optional).' }
       },
       required: ['action']
     },

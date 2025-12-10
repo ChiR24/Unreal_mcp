@@ -4,8 +4,12 @@
 #include "CoreMinimal.h"
 #include "HAL/CriticalSection.h"
 
-extern TMap<FString, TArray<TPair<FString, TSharedPtr<class FMcpBridgeWebSocket>>>> GBlueprintExistsInflight;
-extern TMap<FString, TArray<TPair<FString, TSharedPtr<class FMcpBridgeWebSocket>>>> GBlueprintCreateInflight;
+extern TMap<FString,
+            TArray<TPair<FString, TSharedPtr<class FMcpBridgeWebSocket>>>>
+    GBlueprintExistsInflight;
+extern TMap<FString,
+            TArray<TPair<FString, TSharedPtr<class FMcpBridgeWebSocket>>>>
+    GBlueprintCreateInflight;
 extern TMap<FString, double> GBlueprintCreateInflightTs;
 extern FCriticalSection GBlueprintCreateMutex;
 extern double GBlueprintCreateStaleTimeoutSec;
@@ -21,7 +25,6 @@ extern FString GCurrentSequencePath;
 // Niagara assets even when on-disk creation is not possible.
 extern TMap<FString, TSharedPtr<FJsonObject>> GNiagaraRegistry;
 
-// Recent asset save tracking to throttle frequent SaveLoadedAsset calls
 extern TMap<FString, double> GRecentAssetSaveTs;
 extern FCriticalSection GRecentAssetSaveMutex;
 extern double GRecentAssetSaveThrottleSeconds;

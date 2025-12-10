@@ -37,10 +37,11 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async searchAssets(params: { classNames?: string[]; packagePaths?: string[]; recursivePaths?: boolean; recursiveClasses?: boolean; limit?: number }) {
-    return this.sendRequest('search_assets', {
+    // Route via asset_query action with subAction 'search_assets'
+    return this.sendRequest('asset_query', {
       ...params,
       subAction: 'search_assets'
-    }, 'search_assets', { timeoutMs: 60000 });
+    }, 'asset_query', { timeoutMs: 60000 });
   }
 
   async saveAsset(assetPath: string) {

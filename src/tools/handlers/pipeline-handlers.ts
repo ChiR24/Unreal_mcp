@@ -20,7 +20,7 @@ export async function handlePipelineTools(action: string, args: any, tools: IToo
       // Try to find UnrealBuildTool
       let ubtPath = 'UnrealBuildTool'; // Assume in PATH by default
       const enginePath = process.env.UE_ENGINE_PATH || process.env.UNREAL_ENGINE_PATH;
-      
+
       if (enginePath) {
         const possiblePath = path.join(enginePath, 'Engine', 'Binaries', 'DotNET', 'UnrealBuildTool', 'UnrealBuildTool.exe');
         if (fs.existsSync(possiblePath)) {
@@ -30,22 +30,22 @@ export async function handlePipelineTools(action: string, args: any, tools: IToo
 
       const projectPath = process.env.UE_PROJECT_PATH;
       if (!projectPath) {
-         return { success: false, error: 'MISSING_PROJECT_PATH', message: 'UE_PROJECT_PATH environment variable is not set.' };
+        return { success: false, error: 'MISSING_PROJECT_PATH', message: 'UE_PROJECT_PATH environment variable is not set.' };
       }
-      
+
       // If projectPath points to a .uproject file, use it. If it's a directory, look for a .uproject file.
       let uprojectFile = projectPath;
       if (!uprojectFile.endsWith('.uproject')) {
-          // Find first .uproject in the directory
-          try {
-              const files = fs.readdirSync(projectPath);
-              const found = files.find(f => f.endsWith('.uproject'));
-              if (found) {
-                  uprojectFile = path.join(projectPath, found);
-              }
-          } catch (_e) {
-               return { success: false, error: 'INVALID_PROJECT_PATH', message: `Could not read project directory: ${projectPath}` };
+        // Find first .uproject in the directory
+        try {
+          const files = fs.readdirSync(projectPath);
+          const found = files.find(f => f.endsWith('.uproject'));
+          if (found) {
+            uprojectFile = path.join(projectPath, found);
           }
+        } catch (_e) {
+          return { success: false, error: 'INVALID_PROJECT_PATH', message: `Could not read project directory: ${projectPath}` };
+        }
       }
 
       const cmdArgs = [
@@ -58,32 +58,32 @@ export async function handlePipelineTools(action: string, args: any, tools: IToo
 
       return new Promise((resolve) => {
         const child = spawn(ubtPath, cmdArgs, { shell: true });
-        
+
         const MAX_OUTPUT_SIZE = 20 * 1024; // 20KB cap
         let stdout = '';
         let stderr = '';
 
-        child.stdout.on('data', (data) => { 
-            const str = data.toString();
-            process.stdout.write(str); // Stream to server console
-            stdout += str;
-            if (stdout.length > MAX_OUTPUT_SIZE) {
-                stdout = stdout.substring(stdout.length - MAX_OUTPUT_SIZE);
-            }
+        child.stdout.on('data', (data) => {
+          const str = data.toString();
+          process.stderr.write(str); // Stream to server console (stderr to avoid MCP corruption)
+          stdout += str;
+          if (stdout.length > MAX_OUTPUT_SIZE) {
+            stdout = stdout.substring(stdout.length - MAX_OUTPUT_SIZE);
+          }
         });
 
-        child.stderr.on('data', (data) => { 
-            const str = data.toString();
-            process.stderr.write(str); // Stream to server console
-            stderr += str;
-             if (stderr.length > MAX_OUTPUT_SIZE) {
-                stderr = stderr.substring(stderr.length - MAX_OUTPUT_SIZE);
-            }
+        child.stderr.on('data', (data) => {
+          const str = data.toString();
+          process.stderr.write(str); // Stream to server console
+          stderr += str;
+          if (stderr.length > MAX_OUTPUT_SIZE) {
+            stderr = stderr.substring(stderr.length - MAX_OUTPUT_SIZE);
+          }
         });
 
         child.on('close', (code) => {
-          const truncatedNote = (stdout.length >= MAX_OUTPUT_SIZE || stderr.length >= MAX_OUTPUT_SIZE) 
-            ? '\n[Output truncated for response payload]' 
+          const truncatedNote = (stdout.length >= MAX_OUTPUT_SIZE || stderr.length >= MAX_OUTPUT_SIZE)
+            ? '\n[Output truncated for response payload]'
             : '';
 
           if (code === 0) {
@@ -106,12 +106,12 @@ export async function handlePipelineTools(action: string, args: any, tools: IToo
         });
 
         child.on('error', (err) => {
-             resolve({
-              success: false,
-              error: 'SPAWN_FAILED',
-              message: `Failed to spawn UnrealBuildTool: ${err.message}`,
-              command: `${ubtPath} ${cmdArgs.join(' ')}`
-            });
+          resolve({
+            success: false,
+            error: 'SPAWN_FAILED',
+            message: `Failed to spawn UnrealBuildTool: ${err.message}`,
+            command: `${ubtPath} ${cmdArgs.join(' ')}`
+          });
         });
       });
     }

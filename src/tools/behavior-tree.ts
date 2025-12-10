@@ -38,4 +38,8 @@ export class BehaviorTreeTools extends BaseTool {
   async setNodeProperties(params: { assetPath: string; nodeId: string; comment?: string; properties?: Record<string, unknown> }) {
     return this.sendAction('set_node_properties', params);
   }
+
+  async create(params: { name: string; savePath?: string }) {
+    return this.sendAction('create', params);
+  }
 }

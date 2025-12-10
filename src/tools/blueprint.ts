@@ -611,6 +611,8 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     functionName?: string;
     variableName?: string;
     nodeName?: string;
+    eventName?: string;
+    memberClass?: string;
     posX?: number;
     posY?: number;
     timeoutMs?: number;
@@ -626,6 +628,8 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       functionName: params.functionName,
       variableName: params.variableName,
       nodeName: params.nodeName,
+      eventName: params.eventName,
+      memberClass: params.memberClass,
       posX: params.posX,
       posY: params.posY
     };

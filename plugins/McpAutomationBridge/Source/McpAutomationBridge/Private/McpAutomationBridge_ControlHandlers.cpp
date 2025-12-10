@@ -32,6 +32,7 @@
 #endif
 // Additional editor headers for viewport control
 #include "Editor.h"
+#include "Components/LightComponent.h"
 #include "Modules/ModuleManager.h"
 #if __has_include("LevelEditor.h")
 #include "LevelEditor.h"
@@ -66,19 +67,7 @@
 /* UE5.6: Use built-in FStringOutputDevice from UnrealString.h */
 
 // Helper functions
-static FVector ExtractVectorField(const TSharedPtr<FJsonObject>& Source, const TCHAR* FieldName, const FVector& DefaultValue)
-{
-    FVector Parsed = DefaultValue;
-    ReadVectorField(Source, FieldName, Parsed, DefaultValue);
-    return Parsed;
-}
-
-static FRotator ExtractRotatorField(const TSharedPtr<FJsonObject>& Source, const TCHAR* FieldName, const FRotator& DefaultValue)
-{
-    FRotator Parsed = DefaultValue;
-    ReadRotatorField(Source, FieldName, Parsed, DefaultValue);
-    return Parsed;
-}
+// (ExtractVectorField and ExtractRotatorField moved to McpAutomationBridgeHelpers.h)
 
 AActor* UMcpAutomationBridgeSubsystem::FindActorByName(const FString& Target)
 {
@@ -121,7 +110,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(const FString& Reque
     FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
     UClass* ResolvedClass = nullptr;
+    FString MeshPath; Payload->TryGetStringField(TEXT("meshPath"), MeshPath);
     UStaticMesh* ResolvedStaticMesh = nullptr;
+    
     // Skip LoadAsset for script classes (e.g. /Script/Engine.CameraActor) to avoid LogEditorAssetSubsystem errors
     if ((ClassPath.StartsWith(TEXT("/")) || ClassPath.Contains(TEXT("/"))) && !ClassPath.StartsWith(TEXT("/Script/")))
     {
@@ -132,29 +123,54 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(const FString& Reque
             else if (UStaticMesh* Mesh = Cast<UStaticMesh>(Loaded)) ResolvedStaticMesh = Mesh;
         }
     }
-    if (!ResolvedClass) ResolvedClass = ResolveClassByName(ClassPath);
+    if (!ResolvedClass && !ResolvedStaticMesh) ResolvedClass = ResolveClassByName(ClassPath);
 
-    const bool bSpawnStaticMeshActor = (ResolvedClass == nullptr && ResolvedStaticMesh != nullptr);
+    // If explicit mesh path provided for a general spawn request
+    if (!ResolvedStaticMesh && !MeshPath.IsEmpty())
+    {
+         if (UObject* MeshObj = UEditorAssetLibrary::LoadAsset(MeshPath))
+         {
+             ResolvedStaticMesh = Cast<UStaticMesh>(MeshObj);
+         }
+    }
+
+    // Force StaticMeshActor if we have a resolved mesh, regardless of class input (unless it's a specific subclass)
+    bool bSpawnStaticMeshActor = (ResolvedStaticMesh != nullptr);
+    if (!bSpawnStaticMeshActor && ResolvedClass)
+    {
+        bSpawnStaticMeshActor = ResolvedClass->IsChildOf(AStaticMeshActor::StaticClass());
+    }
+    
+    // Explicitly use StaticMeshActor class if we have a mesh but no class, or if we decided to spawn a static mesh actor
+    if (bSpawnStaticMeshActor && !ResolvedClass) 
+    {
+        ResolvedClass = AStaticMeshActor::StaticClass();
+    }
 
     if (!ResolvedClass && !bSpawnStaticMeshActor)
     {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("error"), TEXT("Class not found"));
-        SendAutomationResponse(Socket, RequestId, false, TEXT("Actor class not found"), Resp, TEXT("CLASS_NOT_FOUND"));
+        const FString ErrorMsg = FString::Printf(TEXT("Class not found: %s. Verify plugin is enabled if using a plugin class."), *ClassPath);
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>(); Resp->SetStringField(TEXT("error"), ErrorMsg);
+        SendAutomationResponse(Socket, RequestId, false, ErrorMsg, Resp, TEXT("CLASS_NOT_FOUND"));
         return true;
     }
 
     UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
     AActor* Spawned = nullptr;
+    
     if (bSpawnStaticMeshActor)
     {
-        Spawned = ActorSS->SpawnActorFromClass(AStaticMeshActor::StaticClass(), Location, Rotation);
+        Spawned = ActorSS->SpawnActorFromClass(ResolvedClass ? ResolvedClass : AStaticMeshActor::StaticClass(), Location, Rotation);
         if (Spawned)
         {
             if (AStaticMeshActor* StaticMeshActor = Cast<AStaticMeshActor>(Spawned))
             {
                 if (UStaticMeshComponent* MeshComponent = StaticMeshActor->GetStaticMeshComponent())
                 {
-                    MeshComponent->SetStaticMesh(ResolvedStaticMesh);
+                    if (ResolvedStaticMesh)
+                    {
+                        MeshComponent->SetStaticMesh(ResolvedStaticMesh);
+                    }
                     MeshComponent->SetMobility(EComponentMobility::Movable);
                     MeshComponent->MarkRenderStateDirty();
                 }
@@ -179,7 +195,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(const FString& Reque
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
     Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
-    if (bSpawnStaticMeshActor && ResolvedStaticMesh) Resp->SetStringField(TEXT("meshPath"), ResolvedStaticMesh->GetPathName());
+    if (ResolvedStaticMesh) Resp->SetStringField(TEXT("meshPath"), ResolvedStaticMesh->GetPathName());
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display, TEXT("ControlActor: Spawned actor '%s'"), *Spawned->GetActorLabel());
     SendAutomationResponse(Socket, RequestId, true, TEXT("Actor spawned"), Resp, FString());
     return true;
@@ -231,6 +247,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(const FStri
     }
 
     UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    
+    // Debug log the received location
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Display, TEXT("spawn_blueprint: Location=(%f, %f, %f) Rotation=(%f, %f, %f)"),
+        Location.X, Location.Y, Location.Z, Rotation.Pitch, Rotation.Yaw, Rotation.Roll);
+    
     AActor* Spawned = ActorSS->SpawnActorFromClass(ResolvedClass, Location, Rotation);
     if (!Spawned)
     {
@@ -239,6 +260,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(const FStri
         return true;
     }
 
+    // Explicitly set location and rotation in case SpawnActorFromClass didn't apply them correctly
+    Spawned->SetActorLocationAndRotation(Location, Rotation, false, nullptr, ETeleportType::TeleportPhysics);
+    
     if (!ActorName.IsEmpty()) Spawned->SetActorLabel(ActorName);
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -554,6 +578,33 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(const FString
         if (Found->GetRootComponent() && !SceneComp->GetAttachParent())
         {
             SceneComp->SetupAttachment(Found->GetRootComponent());
+        }
+    }
+
+    // Force lights to be movable to ensure they work without baking (Issue #6 fix)
+    // We check for "LightComponent" class name to avoid dependency issues if header is obscure, 
+    // but ULightComponent is standard.
+    if (NewComponent->IsA(ULightComponent::StaticClass()))
+    {
+         if (USceneComponent* SC = Cast<USceneComponent>(NewComponent))
+         {
+             SC->SetMobility(EComponentMobility::Movable);
+         }
+    }
+
+    // Special handling for StaticMeshComponent meshPath convenience
+    if (UStaticMeshComponent* SMC = Cast<UStaticMeshComponent>(NewComponent))
+    {
+        FString MeshPath;
+        if (Payload->TryGetStringField(TEXT("meshPath"), MeshPath) && !MeshPath.IsEmpty())
+        {
+             if (UObject* LoadedMesh = UEditorAssetLibrary::LoadAsset(MeshPath))
+             {
+                 if (UStaticMesh* Mesh = Cast<UStaticMesh>(LoadedMesh))
+                 {
+                     SMC->SetStaticMesh(Mesh);
+                 }
+             }
         }
     }
 
@@ -1471,7 +1522,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(const FString& Req
     if (LowerSub == TEXT("play")) return HandleControlEditorPlay(RequestId, Payload, RequestingSocket);
     if (LowerSub == TEXT("stop")) return HandleControlEditorStop(RequestId, Payload, RequestingSocket);
     if (LowerSub == TEXT("focus_actor")) return HandleControlEditorFocusActor(RequestId, Payload, RequestingSocket);
-    if (LowerSub == TEXT("set_camera")) return HandleControlEditorSetCamera(RequestId, Payload, RequestingSocket);
+    if (LowerSub == TEXT("set_camera") || LowerSub == TEXT("set_camera_position") || LowerSub == TEXT("set_viewport_camera")) return HandleControlEditorSetCamera(RequestId, Payload, RequestingSocket);
     if (LowerSub == TEXT("set_view_mode")) return HandleControlEditorSetViewMode(RequestId, Payload, RequestingSocket);
     if (LowerSub == TEXT("open_asset")) return HandleControlEditorOpenAsset(RequestId, Payload, RequestingSocket);
 

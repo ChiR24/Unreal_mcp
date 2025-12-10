@@ -25,6 +25,7 @@ const handlers: Record<string, ActorActionHandler> = {
             actorName: args.actorName,
             location: args.location,
             rotation: args.rotation,
+            meshPath: args.meshPath,
             timeoutMs
         });
     },
@@ -99,8 +100,17 @@ const handlers: Record<string, ActorActionHandler> = {
             rotation: args.rotation
         });
     },
-    list: async (_args, tools) => {
-        return tools.actorTools.listActors();
+    list: async (args, tools) => {
+        const result = await tools.actorTools.listActors();
+        if (result && result.actors && Array.isArray(result.actors)) {
+            const limit = typeof args.limit === 'number' ? args.limit : 50;
+            const count = result.actors.length;
+            const names = result.actors.slice(0, limit).map((a: any) => a.label || a.name).join(', ');
+            const remaining = count - limit;
+            const suffix = remaining > 0 ? `... and ${remaining} others` : '';
+            (result as any).message = `Found ${count} actors: ${names}${suffix}`;
+        }
+        return result;
     }
 };
 

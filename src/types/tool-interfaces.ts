@@ -5,7 +5,7 @@ export interface IBaseTool {
 }
 
 export interface IActorTools {
-    spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string; timeoutMs?: number }): Promise<any>;
+    spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string; meshPath?: string; timeoutMs?: number }): Promise<any>;
     delete(params: { actorName?: string; actorNames?: string[] }): Promise<any>;
     applyForce(params: { actorName: string; force: { x: number; y: number; z: number } }): Promise<any>;
     spawnBlueprint(params: { blueprintPath: string; actorName?: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }): Promise<any>;
@@ -110,7 +110,7 @@ export interface IBlueprintTools {
     reparentSCSComponent(params: { blueprintPath: string; componentName: string; newParent: string; timeoutMs?: number }): Promise<any>;
     setSCSComponentTransform(params: { blueprintPath: string; componentName: string; location?: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number]; timeoutMs?: number }): Promise<any>;
     setSCSComponentProperty(params: { blueprintPath: string; componentName: string; propertyName: string; propertyValue: any; timeoutMs?: number }): Promise<any>;
-    addNode(params: { blueprintName: string; nodeType: string; graphName?: string; functionName?: string; variableName?: string; nodeName?: string; posX?: number; posY?: number; timeoutMs?: number }): Promise<any>;
+    addNode(params: { blueprintName: string; nodeType: string; graphName?: string; functionName?: string; variableName?: string; nodeName?: string; eventName?: string; memberClass?: string; posX?: number; posY?: number; timeoutMs?: number }): Promise<any>;
     connectPins(params: { blueprintName: string; sourceNodeGuid: string; targetNodeGuid: string; sourcePinName?: string; targetPinName?: string; timeoutMs?: number }): Promise<any>;
 }
 

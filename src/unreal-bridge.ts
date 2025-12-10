@@ -149,6 +149,10 @@ export class UnrealBridge {
       return;
     }
 
+    // Start the bridge connection if it's not active
+    // This supports lazy connection where the bridge doesn't start until a tool is used
+    automationBridge.start();
+
     const success = await this.waitForAutomationConnection(timeoutMs);
     if (!success) {
       throw new Error('Automation bridge connection timeout');

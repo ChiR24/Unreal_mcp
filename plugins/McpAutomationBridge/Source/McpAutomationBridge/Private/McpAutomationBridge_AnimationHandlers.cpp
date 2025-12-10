@@ -337,6 +337,89 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
             }
         }
     }
+    else if (LowerSub == TEXT("create_animation_bp"))
+    {
+        FString Name;
+        if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty())
+        {
+            Message = TEXT("name field required for animation blueprint creation");
+            ErrorCode = TEXT("INVALID_ARGUMENT");
+            Resp->SetStringField(TEXT("error"), Message);
+        }
+        else
+        {
+            FString SavePath;
+            Payload->TryGetStringField(TEXT("savePath"), SavePath);
+            if (SavePath.IsEmpty())
+            {
+                SavePath = TEXT("/Game/Animations");
+            }
+
+            FString SkeletonPath;
+            Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+            USkeleton* TargetSkeleton = nullptr;
+            if (!SkeletonPath.IsEmpty())
+            {
+                TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+            }
+            
+            // Fallback: try meshPath if skeleton missing
+            if (!TargetSkeleton)
+            {
+                 FString MeshPath;
+                 if (Payload->TryGetStringField(TEXT("meshPath"), MeshPath) && !MeshPath.IsEmpty())
+                 {
+                      USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr, *MeshPath);
+                      if (Mesh)
+                      {
+                          TargetSkeleton = Mesh->GetSkeleton();
+                      }
+                 }
+            }
+
+            if (!TargetSkeleton)
+            {
+                Message = TEXT("Valid skeletonPath or meshPath required to find skeleton");
+                ErrorCode = TEXT("INVALID_ARGUMENT");
+                Resp->SetStringField(TEXT("error"), Message);
+            }
+            else
+            {
+                UAnimBlueprintFactory* Factory = NewObject<UAnimBlueprintFactory>();
+                Factory->TargetSkeleton = TargetSkeleton;
+                
+                // Allow parent class override
+                FString ParentClassPath;
+                if (Payload->TryGetStringField(TEXT("parentClass"), ParentClassPath) && !ParentClassPath.IsEmpty())
+                {
+                     UClass* ParentClass = LoadClass<UObject>(nullptr, *ParentClassPath);
+                     if (ParentClass)
+                     {
+                         Factory->ParentClass = ParentClass;
+                     }
+                }
+
+                FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+                UObject* NewAsset = AssetToolsModule.Get().CreateAsset(Name, SavePath, UAnimBlueprint::StaticClass(), Factory);
+                
+                if (NewAsset)
+                {
+                    bSuccess = true;
+                    Message = TEXT("Animation Blueprint created");
+                    Resp->SetStringField(TEXT("blueprintPath"), NewAsset->GetPathName());
+                    Resp->SetStringField(TEXT("skeletonPath"), TargetSkeleton->GetPathName());
+                    UEditorAssetLibrary::SaveAsset(NewAsset->GetPathName());
+                }
+                else
+                {
+                    Message = TEXT("Failed to create Animation Blueprint asset");
+                    ErrorCode = TEXT("ASSET_CREATION_FAILED");
+                    Resp->SetStringField(TEXT("error"), Message);
+                }
+            }
+        }
+    }
     else if (LowerSub == TEXT("create_blend_space") || LowerSub == TEXT("create_blend_tree") || LowerSub == TEXT("create_procedural_anim"))
     {
         FString Name;
@@ -380,51 +463,98 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
                         Dimensions = static_cast<int32>(DimensionsNumber);
                     }
                     const bool bTwoDimensional = LowerSub != TEXT("create_blend_space") ? true : (Dimensions >= 2);
-                    FString FactoryError;
-                    #if MCP_HAS_BLENDSPACE_FACTORY
-                    UObject* CreatedBlendAsset = CreateBlendSpaceAsset(Name, SavePath, TargetSkeleton, bTwoDimensional, FactoryError);
-                    if (CreatedBlendAsset)
+                    
+                    // Validation for Issue #10
+                    double MinX = 0.0, MaxX = 1.0, GridX = 3.0;
+                    Payload->TryGetNumberField(TEXT("minX"), MinX);
+                    Payload->TryGetNumberField(TEXT("maxX"), MaxX);
+                    Payload->TryGetNumberField(TEXT("gridX"), GridX);
+
+                    if (MinX >= MaxX)
                     {
-                        ApplyBlendSpaceConfiguration(CreatedBlendAsset, Payload, bTwoDimensional);
-#if MCP_HAS_BLENDSPACE_BASE
-                        if (UBlendSpaceBase* BlendSpace = Cast<UBlendSpaceBase>(CreatedBlendAsset))
-                        {
-                            UEditorAssetLibrary::SaveAsset(BlendSpace->GetPathName());
-
-                            bSuccess = true;
-                            Message = TEXT("Blend space created successfully");
-                            Resp->SetStringField(TEXT("blendSpacePath"), BlendSpace->GetPathName());
-                            Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
-                            Resp->SetBoolField(TEXT("twoDimensional"), bTwoDimensional);
-                        }
-                        else
-                        {
-                            Message = TEXT("Created asset is not a BlendSpaceBase instance");
-                            ErrorCode = TEXT("TYPE_MISMATCH");
-                            Resp->SetStringField(TEXT("error"), Message);
-                        }
-#else
-                        UEditorAssetLibrary::SaveAsset(CreatedBlendAsset->GetPathName());
-
-                        bSuccess = true;
-                        Message = TEXT("Blend space created (limited configuration)");
-                        Resp->SetStringField(TEXT("blendSpacePath"), CreatedBlendAsset->GetPathName());
-                        Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
-                        Resp->SetBoolField(TEXT("twoDimensional"), bTwoDimensional);
-                        Resp->SetStringField(TEXT("warning"), TEXT("BlendSpaceBase headers unavailable; axis configuration skipped."));
-#endif // MCP_HAS_BLENDSPACE_BASE
+                        Message = TEXT("minX must be less than maxX");
+                        ErrorCode = TEXT("INVALID_ARGUMENT");
+                        Resp->SetStringField(TEXT("error"), Message);
+                    }
+                    else if (GridX <= 0)
+                    {
+                        Message = TEXT("gridX must be greater than 0");
+                        ErrorCode = TEXT("INVALID_ARGUMENT");
+                        Resp->SetStringField(TEXT("error"), Message);
                     }
                     else
                     {
-                        Message = FactoryError.IsEmpty() ? TEXT("Failed to create blend space asset") : FactoryError;
-                        ErrorCode = TEXT("ASSET_CREATION_FAILED");
+                        if (bTwoDimensional)
+                        {
+                            double MinY = 0.0, MaxY = 1.0, GridY = 3.0;
+                            Payload->TryGetNumberField(TEXT("minY"), MinY);
+                            Payload->TryGetNumberField(TEXT("maxY"), MaxY);
+                            Payload->TryGetNumberField(TEXT("gridY"), GridY);
+                             
+                            if (MinY >= MaxY)
+                            {
+                                Message = TEXT("minY must be less than maxY");
+                                ErrorCode = TEXT("INVALID_ARGUMENT");
+                                Resp->SetStringField(TEXT("error"), Message);
+                                goto ValidationFailed;
+                            }
+                            if (GridY <= 0)
+                            {
+                                Message = TEXT("gridY must be greater than 0");
+                                ErrorCode = TEXT("INVALID_ARGUMENT");
+                                Resp->SetStringField(TEXT("error"), Message);
+                                goto ValidationFailed;
+                            }
+                        }
+
+                        FString FactoryError;
+                        #if MCP_HAS_BLENDSPACE_FACTORY
+                        UObject* CreatedBlendAsset = CreateBlendSpaceAsset(Name, SavePath, TargetSkeleton, bTwoDimensional, FactoryError);
+                        if (CreatedBlendAsset)
+                        {
+                            ApplyBlendSpaceConfiguration(CreatedBlendAsset, Payload, bTwoDimensional);
+#if MCP_HAS_BLENDSPACE_BASE
+                            if (UBlendSpaceBase* BlendSpace = Cast<UBlendSpaceBase>(CreatedBlendAsset))
+                            {
+                                UEditorAssetLibrary::SaveAsset(BlendSpace->GetPathName());
+
+                                bSuccess = true;
+                                Message = TEXT("Blend space created successfully");
+                                Resp->SetStringField(TEXT("blendSpacePath"), BlendSpace->GetPathName());
+                                Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+                                Resp->SetBoolField(TEXT("twoDimensional"), bTwoDimensional);
+                            }
+                            else
+                            {
+                                Message = TEXT("Created asset is not a BlendSpaceBase instance");
+                                ErrorCode = TEXT("TYPE_MISMATCH");
+                                Resp->SetStringField(TEXT("error"), Message);
+                            }
+#else
+                            UEditorAssetLibrary::SaveAsset(CreatedBlendAsset->GetPathName());
+
+                            bSuccess = true;
+                            Message = TEXT("Blend space created (limited configuration)");
+                            Resp->SetStringField(TEXT("blendSpacePath"), CreatedBlendAsset->GetPathName());
+                            Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+                            Resp->SetBoolField(TEXT("twoDimensional"), bTwoDimensional);
+                            Resp->SetStringField(TEXT("warning"), TEXT("BlendSpaceBase headers unavailable; axis configuration skipped."));
+#endif // MCP_HAS_BLENDSPACE_BASE
+                        }
+                        else
+                        {
+                            Message = FactoryError.IsEmpty() ? TEXT("Failed to create blend space asset") : FactoryError;
+                            ErrorCode = TEXT("ASSET_CREATION_FAILED");
+                            Resp->SetStringField(TEXT("error"), Message);
+                        }
+                        #else
+                        Message = TEXT("Blend space creation requires editor blend space factories");
+                        ErrorCode = TEXT("NOT_AVAILABLE");
                         Resp->SetStringField(TEXT("error"), Message);
-                    }
-                    #else
-                    Message = TEXT("Blend space creation requires editor blend space factories");
-                    ErrorCode = TEXT("NOT_AVAILABLE");
-                    Resp->SetStringField(TEXT("error"), Message);
-                    #endif
+                        #endif
+                    } // End valid params
+                    
+ValidationFailed: ;
                 }
             }
         }
@@ -540,8 +670,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
     }
     else if (LowerSub == TEXT("setup_ik"))
     {
-        FString Name;
-        if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty())
+        FString IKName;
+        if (!Payload->TryGetStringField(TEXT("name"), IKName) || IKName.IsEmpty())
         {
             Message = TEXT("name field required for IK setup");
             ErrorCode = TEXT("INVALID_ARGUMENT");
@@ -577,7 +707,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
                     FString FactoryError;
                     UBlueprint* ControlRigBlueprint = nullptr;
 #if MCP_HAS_CONTROLRIG_FACTORY
-                    ControlRigBlueprint = CreateControlRigBlueprint(Name, SavePath, TargetSkeleton, FactoryError);
+                    ControlRigBlueprint = CreateControlRigBlueprint(IKName, SavePath, TargetSkeleton, FactoryError);
 #else
                     FactoryError = TEXT("Control Rig factory not available in this editor build");
 #endif
@@ -799,15 +929,25 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
         bool bSkeletonMissingPreview = false;
 
         USkeletalMesh* TargetMesh = nullptr;
+        bool bMeshTypeMismatch = false;
+        FString FoundClassName;
+
         if (bMeshProvided)
         {
             if (UEditorAssetLibrary::DoesAssetExist(MeshPath))
             {
-                TargetMesh = LoadObject<USkeletalMesh>(nullptr, *MeshPath);
-                if (!TargetMesh)
+                UObject* Asset = UEditorAssetLibrary::LoadAsset(MeshPath);
+                TargetMesh = Cast<USkeletalMesh>(Asset);
+                if (!TargetMesh && Asset)
+                {
+                    bMeshTypeMismatch = true;
+                    FoundClassName = Asset->GetClass()->GetName();
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("setup_physics_simulation: Asset %s is not a SkeletalMesh (Class: %s)"), *MeshPath, *FoundClassName);
+                }
+                else if (!Asset)
                 {
                     bMeshLoadFailed = true;
-                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("setup_physics_simulation: failed to load mesh %s"), *MeshPath);
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("setup_physics_simulation: failed to load mesh asset %s"), *MeshPath);
                 }
             }
             else
@@ -850,7 +990,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(const FString& 
 
         if (!TargetMesh)
         {
-            if (bMeshLoadFailed)
+            if (bMeshTypeMismatch)
+            {
+                 Message = FString::Printf(TEXT("asset found but is not a SkeletalMesh: %s (is %s)"), *MeshPath, *FoundClassName);
+                 ErrorCode = TEXT("TYPE_MISMATCH");
+                 Resp->SetStringField(TEXT("meshPath"), MeshPath);
+                 Resp->SetStringField(TEXT("actualClass"), FoundClassName);
+            }
+            else if (bMeshLoadFailed)
             {
                 Message = FString::Printf(TEXT("asset not found: skeletal mesh %s"), *MeshPath);
                 ErrorCode = TEXT("ASSET_NOT_FOUND");
@@ -1715,11 +1862,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
     }
 
     FString SkeletonPath;
-    if (!Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath) || SkeletonPath.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletonPath required"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
+    Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+    FString MeshPath;
+    Payload->TryGetStringField(TEXT("meshPath"), MeshPath);
 
     FString SavePath;
     if (!Payload->TryGetStringField(TEXT("savePath"), SavePath) || SavePath.IsEmpty())
@@ -1728,18 +1874,41 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
         return true;
     }
 
-    if (!UEditorAssetLibrary::DoesAssetExist(SkeletonPath))
+    USkeleton* Skeleton = nullptr;
+    if (!SkeletonPath.IsEmpty())
     {
-         const FString SkelMessage = FString::Printf(TEXT("Skeleton not found: %s"), *SkeletonPath);
-         SendAutomationError(RequestingSocket, RequestId, SkelMessage, TEXT("ASSET_NOT_FOUND"));
-         return true;
+        if (UEditorAssetLibrary::DoesAssetExist(SkeletonPath))
+        {
+            Skeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+        }
+        
+        if (!Skeleton)
+        {
+             const FString SkelMessage = FString::Printf(TEXT("Skeleton not found: %s"), *SkeletonPath);
+             SendAutomationError(RequestingSocket, RequestId, SkelMessage, TEXT("ASSET_NOT_FOUND"));
+             return true;
+        }
     }
-
-    USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
-    if (!Skeleton)
+    else if (!MeshPath.IsEmpty())
     {
-        const FString SkelMessage = FString::Printf(TEXT("Skeleton not found: %s"), *SkeletonPath);
-        SendAutomationError(RequestingSocket, RequestId, SkelMessage, TEXT("ASSET_NOT_FOUND"));
+        if (UEditorAssetLibrary::DoesAssetExist(MeshPath))
+        {
+             if (USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr, *MeshPath))
+             {
+                 Skeleton = Mesh->GetSkeleton();
+             }
+        }
+        
+        if (!Skeleton)
+        {
+             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not infer skeleton from meshPath, and skeletonPath was not provided"), TEXT("ASSET_NOT_FOUND"));
+             return true;
+        }
+        SkeletonPath = Skeleton->GetPathName();
+    }
+    else
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletonPath or meshPath required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 

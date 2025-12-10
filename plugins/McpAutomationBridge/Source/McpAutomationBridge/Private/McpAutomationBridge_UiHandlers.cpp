@@ -8,6 +8,17 @@
 #include "EditorAssetLibrary.h"
 #include "WidgetBlueprint.h"
 #include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetTree.h"
+#include "Components/PanelWidget.h"
+#include "Engine/GameViewportClient.h"
+#include "UnrealClient.h"
+#include "ImageUtils.h"
+#include "IImageWrapper.h"
+#include "IImageWrapperModule.h"
+#include "Misc/Base64.h"
+#include "Misc/FileHelper.h"
+#include "HAL/FileManager.h"
+#include "Misc/Paths.h"
 #if __has_include("Factories/WidgetBlueprintFactory.h")
 #include "Factories/WidgetBlueprintFactory.h"
 #define MCP_HAS_WIDGET_FACTORY 1
@@ -137,14 +148,142 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         Resp->SetStringField(TEXT("error"), Message);
 #endif
     }
+    else if (LowerSub == TEXT("add_widget_child"))
+    {
+#if WITH_EDITOR && MCP_HAS_WIDGET_FACTORY
+        FString WidgetPath;
+        if (!Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath) || WidgetPath.IsEmpty())
+        {
+            Message = TEXT("widgetPath required for add_widget_child");
+            ErrorCode = TEXT("INVALID_ARGUMENT");
+            Resp->SetStringField(TEXT("error"), Message);
+        }
+        else
+        {
+            UWidgetBlueprint* WidgetBP = LoadObject<UWidgetBlueprint>(nullptr, *WidgetPath);
+            if (!WidgetBP)
+            {
+                Message = FString::Printf(TEXT("Could not find Widget Blueprint at %s"), *WidgetPath);
+                ErrorCode = TEXT("ASSET_NOT_FOUND");
+                Resp->SetStringField(TEXT("error"), Message);
+            }
+            else
+            {
+                FString ChildClassPath;
+                if (!Payload->TryGetStringField(TEXT("childClass"), ChildClassPath) || ChildClassPath.IsEmpty())
+                {
+                    // Fallback to commonly used types if only short name provided? 
+                    // For now require full path or class name if it can be found.
+                    Message = TEXT("childClass required (e.g. /Script/UMG.Button)");
+                    ErrorCode = TEXT("INVALID_ARGUMENT");
+                    Resp->SetStringField(TEXT("error"), Message);
+                }
+                else
+                {
+                     UClass* WidgetClass = UEditorAssetLibrary::FindAssetData(ChildClassPath).GetAsset().IsValid() ? 
+                         LoadClass<UObject>(nullptr, *ChildClassPath) : 
+                         FindObject<UClass>(nullptr, *ChildClassPath);
+
+                     // Try partial search for common UMG widgets
+                     if (!WidgetClass)
+                     {
+                         if (ChildClassPath.Contains(TEXT(".")))
+                            WidgetClass = FindObject<UClass>(nullptr, *ChildClassPath);
+                         else
+                            WidgetClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/UMG.%s"), *ChildClassPath));
+                     }
+
+                     if (!WidgetClass || !WidgetClass->IsChildOf(UWidget::StaticClass()))
+                     {
+                         Message = FString::Printf(TEXT("Could not resolve valid UWidget class from '%s'"), *ChildClassPath);
+                         ErrorCode = TEXT("CLASS_NOT_FOUND");
+                         Resp->SetStringField(TEXT("error"), Message);
+                     }
+                     else
+                     {
+                         FString ParentName;
+                         Payload->TryGetStringField(TEXT("parentName"), ParentName);
+                         
+                         WidgetBP->Modify();
+                         
+                         UWidget* NewWidget = WidgetBP->WidgetTree->ConstructWidget<UWidget>(WidgetClass);
+                         
+                         bool bAdded = false;
+                         bool bIsRoot = false;
+
+                         if (ParentName.IsEmpty())
+                         {
+                             // Try to set as RootWidget if empty
+                             if (WidgetBP->WidgetTree->RootWidget == nullptr)
+                             {
+                                 WidgetBP->WidgetTree->RootWidget = NewWidget;
+                                 bAdded = true;
+                                 bIsRoot = true;
+                             }
+                             else
+                             {
+                                 // Try to add to existing root if it's a panel
+                                 UPanelWidget* RootPanel = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
+                                 if (RootPanel)
+                                 {
+                                     RootPanel->AddChild(NewWidget);
+                                     bAdded = true;
+                                 }
+                                 else
+                                 {
+                                     Message = TEXT("Root widget is not a panel and already exists. Specify parentName.");
+                                     ErrorCode = TEXT("ROOT_Full");
+                                 }
+                             }
+                         }
+                         else
+                         {
+                             // Find parent
+                             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentName));
+                             UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+                             if (ParentPanel)
+                             {
+                                 ParentPanel->AddChild(NewWidget);
+                                 bAdded = true;
+                             }
+                             else
+                             {
+                                 Message = FString::Printf(TEXT("Parent '%s' not found or is not a PanelWidget"), *ParentName);
+                                 ErrorCode = TEXT("PARENT_NOT_FOUND");
+                             }
+                         }
+
+                         if (bAdded)
+                         {
+                             UEditorAssetLibrary::SaveAsset(WidgetBP->GetPathName());
+                             bSuccess = true;
+                             Message = FString::Printf(TEXT("Added %s to %s"), *WidgetClass->GetName(), *WidgetBP->GetName());
+                             Resp->SetStringField(TEXT("widgetName"), NewWidget->GetName());
+                             Resp->SetStringField(TEXT("childClass"), WidgetClass->GetName());
+                         }
+                         else
+                         {
+                             if (Message.IsEmpty()) Message = TEXT("Failed to add widget child.");
+                             Resp->SetStringField(TEXT("error"), Message);
+                         }
+                     }
+                }
+            }
+        }
+#else
+        Message = TEXT("add_widget_child requires editor build");
+        ErrorCode = TEXT("NOT_AVAILABLE");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+    }
     else if (LowerSub == TEXT("screenshot"))
     {
-        // Take a screenshot of the viewport
+        // Take a screenshot of the viewport and return as base64
         FString ScreenshotPath;
         Payload->TryGetStringField(TEXT("path"), ScreenshotPath);
         if (ScreenshotPath.IsEmpty())
         {
-            ScreenshotPath = TEXT("../../../Saved/Screenshots/WindowsEditor");
+            ScreenshotPath = FPaths::ProjectSavedDir() / TEXT("Screenshots/WindowsEditor");
         }
         
         FString Filename;
@@ -154,22 +293,100 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
             Filename = FString::Printf(TEXT("Screenshot_%lld"), FDateTime::Now().ToUnixTimestamp());
         }
 
-        // Execute screenshot command
-        FString FullCommand = FString::Printf(TEXT("shot %s/%s"), *ScreenshotPath, *Filename);
-        bool bCommandSuccess = GEditor->Exec(nullptr, *FullCommand);
-        
-        if (bCommandSuccess)
+        bool bReturnBase64 = true;
+        Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
+
+        // Get viewport
+        if (!GEngine || !GEngine->GameViewport)
         {
-            bSuccess = true;
-            Message = FString::Printf(TEXT("Screenshot saved to %s/%s.png"), *ScreenshotPath, *Filename);
-            Resp->SetStringField(TEXT("screenshotPath"), ScreenshotPath);
-            Resp->SetStringField(TEXT("filename"), Filename);
+            Message = TEXT("No game viewport available");
+            ErrorCode = TEXT("NO_VIEWPORT");
+            Resp->SetStringField(TEXT("error"), Message);
         }
         else
         {
-            Message = TEXT("Failed to take screenshot");
-            ErrorCode = TEXT("SCREENSHOT_FAILED");
-            Resp->SetStringField(TEXT("error"), Message);
+            UGameViewportClient* ViewportClient = GEngine->GameViewport;
+            FViewport* Viewport = ViewportClient->Viewport;
+            
+            if (!Viewport)
+            {
+                Message = TEXT("No viewport available");
+                ErrorCode = TEXT("NO_VIEWPORT");
+                Resp->SetStringField(TEXT("error"), Message);
+            }
+            else
+            {
+                // Capture viewport pixels
+                TArray<FColor> Bitmap;
+                FIntVector Size(Viewport->GetSizeXY().X, Viewport->GetSizeXY().Y, 0);
+                
+                bool bReadSuccess = Viewport->ReadPixels(Bitmap);
+                
+                if (!bReadSuccess || Bitmap.Num() == 0)
+                {
+                    Message = TEXT("Failed to read viewport pixels");
+                    ErrorCode = TEXT("CAPTURE_FAILED");
+                    Resp->SetStringField(TEXT("error"), Message);
+                }
+                else
+                {
+                    // Ensure we have the right size
+                    const int32 Width = Size.X;
+                    const int32 Height = Size.Y;
+                    
+                    // Compress to PNG
+                    TArray<uint8> PngData;
+                    FImageUtils::ThumbnailCompressImageArray(Width, Height, Bitmap, PngData);
+                    
+                    if (PngData.Num() == 0)
+                    {
+                        // Alternative: compress as PNG using IImageWrapper
+                        IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+                        TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+                        
+                        if (ImageWrapper.IsValid())
+                        {
+                            TArray<uint8> RawData;
+                            RawData.SetNum(Width * Height * 4);
+                            for (int32 i = 0; i < Bitmap.Num(); ++i)
+                            {
+                                RawData[i * 4 + 0] = Bitmap[i].R;
+                                RawData[i * 4 + 1] = Bitmap[i].G;
+                                RawData[i * 4 + 2] = Bitmap[i].B;
+                                RawData[i * 4 + 3] = Bitmap[i].A;
+                            }
+                            
+                            if (ImageWrapper->SetRaw(RawData.GetData(), RawData.Num(), Width, Height, ERGBFormat::RGBA, 8))
+                            {
+                                PngData = ImageWrapper->GetCompressed(100);
+                            }
+                        }
+                    }
+                    
+                    FString FullPath = FPaths::Combine(ScreenshotPath, Filename + TEXT(".png"));
+                    FPaths::MakeStandardFilename(FullPath);
+                    
+                    // Always save to disk
+                    IFileManager::Get().MakeDirectory(*ScreenshotPath, true);
+                    bool bSaved = FFileHelper::SaveArrayToFile(PngData, *FullPath);
+                    
+                    bSuccess = true;
+                    Message = FString::Printf(TEXT("Screenshot captured (%dx%d)"), Width, Height);
+                    Resp->SetStringField(TEXT("screenshotPath"), FullPath);
+                    Resp->SetStringField(TEXT("filename"), Filename);
+                    Resp->SetNumberField(TEXT("width"), Width);
+                    Resp->SetNumberField(TEXT("height"), Height);
+                    Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
+                    
+                    // Return base64 encoded image if requested
+                    if (bReturnBase64 && PngData.Num() > 0)
+                    {
+                        FString Base64Data = FBase64::Encode(PngData);
+                        Resp->SetStringField(TEXT("imageBase64"), Base64Data);
+                        Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
+                    }
+                }
+            }
         }
     }
     else if (LowerSub == TEXT("play_in_editor"))
