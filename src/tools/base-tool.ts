@@ -23,7 +23,20 @@ export abstract class BaseTool implements IBaseTool {
         }, options);
 
         if (!response || response.success === false) {
-            throw new Error(response?.error || response?.message || `Failed to execute ${action} in ${toolName}`);
+            let errorMessage = `Failed to execute ${action} in ${toolName}`;
+            if (response?.error) {
+                if (typeof response.error === 'string') {
+                    errorMessage = response.error;
+                } else if (typeof response.error === 'object') {
+                    const errObj = response.error as any;
+                    if (errObj.message) {
+                        errorMessage = `${errObj.message} (Code: ${errObj.code || 'UNKNOWN'})`;
+                    }
+                }
+            } else if (response?.message) {
+                errorMessage = response.message;
+            }
+            throw new Error(errorMessage);
         }
 
         return response.result ?? response;

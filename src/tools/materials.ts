@@ -10,27 +10,37 @@ export class MaterialTools {
 
   async createMaterial(name: string, path: string) {
     try {
-      if (!name || name.trim() === '') {
+      // Support unified assetPath in 'name' argument
+      let effectiveName = name;
+      let effectivePath = path;
+
+      if (name && name.includes('/')) {
+        const lastSlashIndex = name.lastIndexOf('/');
+        effectiveName = name.substring(lastSlashIndex + 1);
+        const derivedPath = name.substring(0, lastSlashIndex);
+        // If path was not provided or is just root, prefer the derived path
+        if (!path || path === '/Game' || path === '') {
+          effectivePath = derivedPath;
+        }
+      }
+
+      if (!effectiveName || effectiveName.trim() === '') {
         return { success: false, error: 'Material name cannot be empty' };
       }
 
-      if (name.length > 100) {
-        return { success: false, error: `Material name too long (${name.length} chars). Maximum is 100 characters.` };
+      if (effectiveName.length > 100) {
+        return { success: false, error: `Material name too long (${effectiveName.length} chars). Maximum is 100 characters.` };
       }
 
       const invalidChars = /[\s./<>|{}[\]()@#\\]/;
-      if (invalidChars.test(name)) {
-        const foundChars = name.match(invalidChars);
+      if (invalidChars.test(effectiveName)) {
+        const foundChars = effectiveName.match(invalidChars);
         return { success: false, error: `Material name contains invalid characters: '${foundChars?.[0]}'. Avoid spaces, dots, slashes, backslashes, brackets, and special symbols.` };
       }
 
-      if (typeof path !== 'string') {
-        return { success: false, error: `Invalid path type: expected string, got ${typeof path}` };
-      }
-
-      const trimmedPath = path.trim();
-      const effectivePath = trimmedPath.length === 0 ? '/Game' : trimmedPath;
-      const cleanPath = effectivePath.replace(/\/$/, '');
+      const trimmedPath = (effectivePath || '').trim();
+      const cleanPathStr = trimmedPath.length === 0 ? '/Game' : trimmedPath;
+      const cleanPath = cleanPathStr.replace(/\/$/, '');
 
       if (!cleanPath.startsWith('/Game') && !cleanPath.startsWith('/Engine')) {
         return { success: false, error: `Invalid path: must start with /Game or /Engine, got ${cleanPath}` };
@@ -43,13 +53,13 @@ export class MaterialTools {
         return { success: false, error: errorMessage, message: errorMessage };
       }
 
-      const materialPath = `${cleanPath}/${name}`;
+      const materialPath = `${cleanPath}/${effectiveName}`;
 
       // Use Automation Bridge for material creation
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
         try {
           const resp: any = await this.automationBridge.sendAutomationRequest('create_material', {
-            name,
+            name: effectiveName,
             destinationPath: cleanPath
           });
 
@@ -184,5 +194,96 @@ export class MaterialTools {
     } catch (err) {
       return { success: false, error: `Failed to create material instance: ${err}` };
     }
+  }
+  async addNode(params: {
+    materialPath: string;
+    nodeType: string;
+    x: number;
+    y: number;
+    name?: string; // For parameter nodes
+    timeoutMs?: number;
+  }) {
+    if (!params.materialPath) return { success: false, error: 'INVALID_MATERIAL_PATH', message: 'Material path is required' } as const;
+    if (!params.nodeType) return { success: false, error: 'INVALID_NODE_TYPE', message: 'Node type is required' } as const;
+
+    const res = await this.automationBridge?.sendAutomationRequest('manage_material_graph', {
+      subAction: 'add_node',
+      assetPath: params.materialPath,
+      nodeType: params.nodeType,
+      x: params.x,
+      y: params.y,
+      name: params.name
+    });
+    return res;
+  }
+
+  async removeNode(params: {
+    materialPath: string;
+    nodeId: string;
+    timeoutMs?: number;
+  }) {
+    if (!params.materialPath) return { success: false, error: 'INVALID_MATERIAL_PATH', message: 'Material path is required' } as const;
+    if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
+
+    const res = await this.automationBridge?.sendAutomationRequest('manage_material_graph', {
+      subAction: 'remove_node',
+      assetPath: params.materialPath,
+      nodeId: params.nodeId
+    });
+    return res;
+  }
+
+  async connectNodes(params: {
+    materialPath: string;
+    sourceNodeId: string;
+    targetNodeId: string; // Use 'Main' for main material node
+    inputName: string; // Input pin name on target
+    timeoutMs?: number;
+  }) {
+    if (!params.materialPath) return { success: false, error: 'INVALID_MATERIAL_PATH', message: 'Material path is required' } as const;
+    if (!params.sourceNodeId) return { success: false, error: 'INVALID_SOURCE_NODE', message: 'Source node ID is required' } as const;
+    if (!params.inputName) return { success: false, error: 'INVALID_INPUT_NAME', message: 'Input name is required' } as const;
+
+    const res = await this.automationBridge?.sendAutomationRequest('manage_material_graph', {
+      subAction: 'connect_nodes',
+      assetPath: params.materialPath,
+      sourceNodeId: params.sourceNodeId,
+      targetNodeId: params.targetNodeId,
+      inputName: params.inputName
+    });
+    return res;
+  }
+
+  async breakConnections(params: {
+    materialPath: string;
+    nodeId: string;
+    pinName?: string;
+    timeoutMs?: number;
+  }) {
+    if (!params.materialPath) return { success: false, error: 'INVALID_MATERIAL_PATH', message: 'Material path is required' } as const;
+    if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
+
+    const res = await this.automationBridge?.sendAutomationRequest('manage_material_graph', {
+      subAction: 'break_connections',
+      assetPath: params.materialPath,
+      nodeId: params.nodeId,
+      pinName: params.pinName
+    });
+    return res;
+  }
+
+  async getNodeDetails(params: {
+    materialPath: string;
+    nodeId?: string; // If omitted, lists all nodes
+    timeoutMs?: number;
+  }) {
+    if (!params.materialPath) return { success: false, error: 'INVALID_MATERIAL_PATH', message: 'Material path is required' } as const;
+
+    const res = await this.automationBridge?.sendAutomationRequest('manage_material_graph', {
+      subAction: 'get_node_details',
+      assetPath: params.materialPath,
+      nodeId: params.nodeId
+    });
+    return res;
   }
 }

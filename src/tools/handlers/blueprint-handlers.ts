@@ -21,6 +21,7 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
         blueprintType: args.blueprintType,
         savePath: savePath,
         parentClass: args.parentClass,
+        properties: args.properties,
         timeoutMs: args.timeoutMs,
         waitForCompletion: args.waitForCompletion,
         waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
@@ -125,7 +126,7 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
     case 'add_function': {
       const res = await tools.blueprintTools.addFunction({
         blueprintName: args.name || args.blueprintPath || args.path,
-        functionName: args.functionName,
+        functionName: args.functionName || args.memberName,
         inputs: args.inputs,
         outputs: args.outputs,
         isPublic: args.isPublic,
@@ -206,6 +207,8 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
         blueprintPath: args.name || args.blueprintPath || args.path,
         componentClass: args.componentClass || args.componentType,
         componentName: args.componentName,
+        meshPath: args.meshPath,
+        materialPath: args.materialPath,
         timeoutMs: args.timeoutMs
       });
       return cleanObject(res);

@@ -1,7 +1,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { ensureRotation, ensureVector3 } from '../utils/validation.js';
 import { BaseTool } from './base-tool.js';
-import { IActorTools } from '../types/tool-interfaces.js';
+import { IActorTools, StandardActionResponse } from '../types/tool-interfaces.js';
 
 export class ActorTools extends BaseTool implements IActorTools {
   constructor(bridge: UnrealBridge) {
@@ -61,20 +61,24 @@ export class ActorTools extends BaseTool implements IActorTools {
         throw new Error(response?.error || response?.message || 'Failed to spawn actor');
       }
 
-      const result: Record<string, unknown> = {
+      const data = (response as any).data || {};
+      const result: StandardActionResponse = {
         success: true,
         message: response.message || `Spawned actor ${className}`,
-        actorName: response.actorName,
-        actorPath: response.actorPath,
+        actorName: data.name || (response as any).actorName,
+        actorPath: data.objectPath || (response as any).actorPath,
         resolvedClass: mappedClassPath,
         requestedClass: className,
         location: { x: locX, y: locY, z: locZ },
-        rotation: { pitch: rotPitch, yaw: rotYaw, roll: rotRoll }
+        rotation: { pitch: rotPitch, yaw: rotYaw, roll: rotRoll },
+        data: data
       };
 
       if ((response as any).warnings?.length) {
         result.warnings = (response as any).warnings;
       }
+
+      // Legacy support for older fields if they exist at top level
       if ((response as any).details?.length) {
         result.details = (response as any).details;
       }
@@ -114,10 +118,12 @@ export class ActorTools extends BaseTool implements IActorTools {
         actorNames: names
       });
 
-      const result = response?.result ?? response ?? {};
+      const result = (response?.data || response?.result || response) ?? {};
       const deleted = result.deleted ?? names;
       const missing = result.missing ?? [];
-      const errorCode = String(response?.error || result.error || '').toUpperCase();
+      // Check for structured error in response.error OR legacy top-level error
+      const errorObj = response?.error;
+      const errorCode = (typeof errorObj === 'object' ? errorObj.code : String(errorObj || result.error || '')).toUpperCase();
 
       // If some actors were removed and others were already missing,
       // surface this as a partial but still successful cleanup so the
@@ -125,34 +131,30 @@ export class ActorTools extends BaseTool implements IActorTools {
       if (response && response.success === false && errorCode === 'DELETE_PARTIAL') {
         return {
           success: true,
-          message: response.message || 'Some actors could not be deleted',
+          message: errorObj?.message || response.message || 'Some actors could not be deleted',
           deleted,
           missing,
           partial: true
-        };
+        } as StandardActionResponse;
       }
 
       if (!response || response.success === false) {
-        throw new Error(response?.error || response?.message || 'Failed to delete actors');
+        throw new Error(errorObj?.message || response?.message || 'Failed to delete actors');
       }
 
       return {
         success: true,
         message: response.message || 'Deleted actors',
-        deleted
-      };
+        deleted: result.deleted || deleted,
+        ...result
+      } as StandardActionResponse;
     }
 
     if (!params.actorName || typeof params.actorName !== 'string') {
       throw new Error('Invalid actorName');
     }
 
-    return this.sendRequest('delete', { actorName: params.actorName }, 'control_actor')
-      .then(response => ({
-        success: true,
-        message: response.message || `Deleted actor ${params.actorName}`,
-        deleted: params.actorName
-      }));
+    return this.sendRequest('delete', { actorName: params.actorName }, 'control_actor');
   }
 
   async applyForce(params: { actorName: string; force: { x: number; y: number; z: number } }) {
@@ -180,11 +182,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     return this.sendRequest('apply_force', {
       actorName: params.actorName,
       force: { x: forceX, y: forceY, z: forceZ }
-    }, 'control_actor').then(response => ({
-      success: true,
-      message: response.message || `Applied force to ${params.actorName}`,
-      physicsEnabled: response.physicsEnabled ?? true
-    }));
+    }, 'control_actor');
   }
 
   private resolveActorClass(classPath: string): string {
@@ -287,7 +285,12 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    return this.sendRequest('get_transform', { actorName }, 'control_actor');
+    return this.sendRequest('get_transform', { actorName }, 'control_actor')
+      .then(response => {
+        // If response is standardized, extract data or return as is.
+        // For now, return the full response which includes data.
+        return response;
+      });
   }
 
   async setVisibility(params: { actorName: string; visible: boolean }) {
@@ -374,9 +377,10 @@ export class ActorTools extends BaseTool implements IActorTools {
       return {
         success: true,
         message: 'Empty tag query; no actors matched',
-        actors: [],
-        count: 0,
-        empty: true
+        data: {
+          actors: [],
+          count: 0
+        }
       };
     }
 

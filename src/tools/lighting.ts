@@ -36,7 +36,7 @@ export class LightingTools {
     params: {
       name: string;
       location?: [number, number, number];
-      rotation?: [number, number, number];
+      rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
       properties?: Record<string, any>;
     }
   ) {
@@ -55,7 +55,11 @@ export class LightingTools {
       }
 
       if (params.rotation) {
-        payload.rotation = { pitch: params.rotation[0], yaw: params.rotation[1], roll: params.rotation[2] };
+        if (Array.isArray(params.rotation)) {
+          payload.rotation = { pitch: params.rotation[0], yaw: params.rotation[1], roll: params.rotation[2] };
+        } else {
+          payload.rotation = params.rotation;
+        }
       }
 
       if (params.properties) {
@@ -83,9 +87,11 @@ export class LightingTools {
     name: string;
     intensity?: number;
     color?: [number, number, number];
-    rotation?: [number, number, number];
+    rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
     castShadows?: boolean;
     temperature?: number;
+    useAsAtmosphereSunLight?: boolean;
+    properties?: Record<string, any>;
   }) {
     const name = this.normalizeName(params.name);
     if (!this.automationBridge) {
@@ -121,12 +127,14 @@ export class LightingTools {
     }
 
     if (params.rotation !== undefined) {
-      if (!Array.isArray(params.rotation) || params.rotation.length !== 3) {
-        throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
-      }
-      for (const r of params.rotation) {
-        if (typeof r !== 'number' || !isFinite(r)) {
-          throw new Error('Invalid rotation component: must be finite numbers');
+      if (Array.isArray(params.rotation)) {
+        if (params.rotation.length !== 3) {
+          throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
+        }
+        for (const r of params.rotation) {
+          if (typeof r !== 'number' || !isFinite(r)) {
+            throw new Error('Invalid rotation component: must be finite numbers');
+          }
         }
       }
     }
@@ -134,7 +142,7 @@ export class LightingTools {
     const rot = params.rotation || [0, 0, 0];
 
     // Build properties for the light
-    const properties: Record<string, any> = {};
+    const properties: Record<string, any> = params.properties || {};
     if (params.intensity !== undefined) {
       properties.intensity = params.intensity;
     }
@@ -146,6 +154,9 @@ export class LightingTools {
     }
     if (params.temperature !== undefined) {
       properties.temperature = params.temperature;
+    }
+    if (params.useAsAtmosphereSunLight !== undefined) {
+      properties.useAsAtmosphereSunLight = params.useAsAtmosphereSunLight;
     }
 
     try {
@@ -172,6 +183,7 @@ export class LightingTools {
     color?: [number, number, number];
     falloffExponent?: number;
     castShadows?: boolean;
+    rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
   }) {
     const name = this.normalizeName(params.name);
     if (!this.automationBridge) {
@@ -250,6 +262,7 @@ export class LightingTools {
       await this.spawnLightViaAutomation('PointLight', {
         name,
         location,
+        rotation: params.rotation,
         properties
       });
 
@@ -264,7 +277,7 @@ export class LightingTools {
   async createSpotLight(params: {
     name: string;
     location: [number, number, number];
-    rotation: [number, number, number];
+    rotation: [number, number, number] | { pitch: number, yaw: number, roll: number };
     intensity?: number;
     innerCone?: number;
     outerCone?: number;
@@ -287,12 +300,17 @@ export class LightingTools {
       }
     }
 
-    if (!params.rotation || !Array.isArray(params.rotation) || params.rotation.length !== 3) {
-      throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
+    if (!params.rotation) {
+      throw new Error('Rotation is required');
     }
-    for (const r of params.rotation) {
-      if (typeof r !== 'number' || !isFinite(r)) {
-        throw new Error('Invalid rotation component: must be finite numbers');
+    if (Array.isArray(params.rotation)) {
+      if (params.rotation.length !== 3) {
+        throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
+      }
+      for (const r of params.rotation) {
+        if (typeof r !== 'number' || !isFinite(r)) {
+          throw new Error('Invalid rotation component: must be finite numbers');
+        }
       }
     }
 
@@ -384,11 +402,12 @@ export class LightingTools {
   async createRectLight(params: {
     name: string;
     location: [number, number, number];
-    rotation: [number, number, number];
+    rotation: [number, number, number] | { pitch: number, yaw: number, roll: number };
     width?: number;
     height?: number;
     intensity?: number;
     color?: [number, number, number];
+    castShadows?: boolean;
   }) {
 
     const name = this.normalizeName(params.name);
@@ -406,12 +425,17 @@ export class LightingTools {
       }
     }
 
-    if (!params.rotation || !Array.isArray(params.rotation) || params.rotation.length !== 3) {
-      throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
+    if (!params.rotation) {
+      throw new Error('Rotation is required');
     }
-    for (const r of params.rotation) {
-      if (typeof r !== 'number' || !isFinite(r)) {
-        throw new Error('Invalid rotation component: must be finite numbers');
+    if (Array.isArray(params.rotation)) {
+      if (params.rotation.length !== 3) {
+        throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
+      }
+      for (const r of params.rotation) {
+        if (typeof r !== 'number' || !isFinite(r)) {
+          throw new Error('Invalid rotation component: must be finite numbers');
+        }
       }
     }
 
@@ -485,7 +509,7 @@ export class LightingTools {
   }
 
   /**
-   * Create dynamic light (plugin-first when available)
+   * Create dynamic light
    */
   async createDynamicLight(params: {
     name?: string;
@@ -501,34 +525,16 @@ export class LightingTools {
       const lightTypeRaw = typeof params.lightType === 'string' && params.lightType.trim().length > 0 ? params.lightType.trim() : 'Point';
       const location = Array.isArray(params.location) ? { x: params.location[0], y: params.location[1], z: params.location[2] } : (params.location || { x: 0, y: 0, z: 100 });
 
-      // Try plugin-first transport
-      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
-        try {
-          const resp: any = await this.automationBridge.sendAutomationRequest('create_dynamic_light', {
-            lightName: name,
-            lightType: lightTypeRaw,
-            location,
-            rotation: params.rotation,
-            intensity: params.intensity,
-            color: params.color,
-            pulse: params.pulse
-          });
-          if (resp && resp.success !== false) {
-            return { success: true, message: resp.message || `Dynamic light ${name} created`, actor: resp.actor || resp.result?.actor } as any;
-          }
-          // Don't mask errors - if the plugin returned a failure, report it
-          return { success: false, error: resp?.error ?? resp?.message ?? 'CREATE_DYNAMIC_LIGHT_FAILED' } as any;
-        } catch (_e) {
-          // fall back to Python/bridge implementation below
-        }
-      }
+      // C++ plugin does not strictly implement 'create_dynamic_light' action; it supports 'spawn_light'.
+      // However, we rely on the specific helper methods below which correctly map to 'spawn_light'
+      // with the appropriate class and properties.
 
-      // Fallback to specific light creation methods
       const toArray3 = (loc: any): [number, number, number] => Array.isArray(loc)
         ? [Number(loc[0]) || 0, Number(loc[1]) || 0, Number(loc[2]) || 0]
         : [Number(loc?.x) || 0, Number(loc?.y) || 0, Number(loc?.z) || 0];
       const locArr = toArray3(location);
       const typeNorm = (lightTypeRaw || 'Point').toLowerCase();
+
       switch (typeNorm) {
         case 'directional': case 'directionallight':
           return await this.createDirectionalLight({ name, intensity: params.intensity, color: Array.isArray(params.color) ? [params.color[0], params.color[1], params.color[2]] as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined), rotation: params.rotation as any });
@@ -552,6 +558,11 @@ export class LightingTools {
     cubemapPath?: string;
     intensity?: number;
     recapture?: boolean;
+    location?: [number, number, number];
+    rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
+    realTimeCapture?: boolean;
+    castShadows?: boolean;
+    color?: [number, number, number];
   }) {
     const name = this.normalizeName(params.name);
     if (params.sourceType === 'SpecifiedCubemap' && (!params.cubemapPath || params.cubemapPath.trim().length === 0)) {
@@ -564,9 +575,18 @@ export class LightingTools {
     }
 
     try {
+      const properties: Record<string, any> = {};
+      if (params.intensity !== undefined) properties.Intensity = params.intensity;
+      if (params.castShadows !== undefined) properties.CastShadows = params.castShadows;
+      if (params.realTimeCapture !== undefined) properties.RealTimeCapture = params.realTimeCapture;
+      if (params.color) properties.LightColor = { r: params.color[0], g: params.color[1], b: params.color[2], a: 1.0 };
+
       const payload: Record<string, any> = {
         name,
         sourceType: params.sourceType || 'CapturedScene',
+        location: params.location,
+        rotation: params.rotation,
+        properties
       };
 
       if (params.cubemapPath) {
@@ -593,7 +613,7 @@ export class LightingTools {
       return {
         success: true,
         message: response.message || 'Sky light created',
-        warnings: (response.result as any)?.warnings
+        ...(response.result || {})
       };
     } catch (error) {
       return {
@@ -628,11 +648,10 @@ export class LightingTools {
         };
       }
 
-      const result = response.result as any;
       return {
         success: true,
-        removed: result?.removed || 0,
-        message: response.message || `Ensured single SkyLight (removed ${result?.removed || 0})`
+        message: response.message || `Ensured single SkyLight (removed ${(response.result as any)?.removed || 0})`,
+        ...(response.result || {})
       };
     } catch (error) {
       return {
@@ -649,6 +668,20 @@ export class LightingTools {
     indirectLightingIntensity?: number;
     bounces?: number;
   }) {
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('setup_global_illumination', {
+          method: params.method,
+          quality: params.quality,
+          indirectLightingIntensity: params.indirectLightingIntensity,
+          bounces: params.bounces
+        });
+        if (response.success) return { success: true, message: 'Global illumination configured via bridge', ...(response.result || {}) };
+      } catch (_e) {
+        // Fallback to console commands
+      }
+    }
+
     const commands = [];
 
     switch (params.method) {
@@ -683,7 +716,7 @@ export class LightingTools {
       await this.bridge.executeConsoleCommand(cmd);
     }
 
-    return { success: true, message: 'Global illumination configured' };
+    return { success: true, message: 'Global illumination configured (console)' };
   }
 
   // Configure shadows
@@ -694,6 +727,22 @@ export class LightingTools {
     contactShadows?: boolean;
     rayTracedShadows?: boolean;
   }) {
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('configure_shadows', {
+          shadowQuality: params.shadowQuality,
+          cascadedShadows: params.cascadedShadows,
+          shadowDistance: params.shadowDistance,
+          contactShadows: params.contactShadows,
+          rayTracedShadows: params.rayTracedShadows,
+          virtualShadowMaps: params.rayTracedShadows // Map to VSM for C++ handler
+        });
+        if (response.success) return { success: true, message: 'Shadow settings configured via bridge', ...(response.result || {}) };
+      } catch (_e) {
+        // Fallback
+      }
+    }
+
     const commands = [];
 
     if (params.shadowQuality) {
@@ -721,7 +770,7 @@ export class LightingTools {
       await this.bridge.executeConsoleCommand(cmd);
     }
 
-    return { success: true, message: 'Shadow settings configured' };
+    return { success: true, message: 'Shadow settings configured (console)' };
   }
 
   // Build lighting
@@ -752,7 +801,8 @@ export class LightingTools {
 
       return {
         success: true,
-        message: response.message || 'Lighting build started'
+        message: response.message || 'Lighting build started',
+        ...(response.result || {})
       } as any;
     } catch (error) {
       return {
@@ -778,7 +828,8 @@ export class LightingTools {
       const response = await this.automationBridge.sendAutomationRequest('create_lighting_enabled_level', {
         levelName,
         copyActors: params?.copyActors === true,
-        useTemplate: params?.useTemplate === true
+        useTemplate: params?.useTemplate === true,
+        path: params?.levelName ? `/Game/Maps/${params.levelName}` : undefined // Ensure path is sent
       }, {
         timeoutMs: 120000 // 2 minutes for level creation
       });
@@ -790,11 +841,10 @@ export class LightingTools {
         };
       }
 
-      const result = response.result as any;
       return {
         success: true,
         message: response.message || `Created new level "${levelName}" with lighting enabled`,
-        path: result?.path
+        ...(response.result || {})
       };
     } catch (error) {
       return {
@@ -834,7 +884,8 @@ export class LightingTools {
 
       return {
         success: true,
-        message: `LightmassImportanceVolume '${name}' created`
+        message: `LightmassImportanceVolume '${name}' created`,
+        ...(response.result || {})
       };
     } catch (error) {
       return {
@@ -851,6 +902,20 @@ export class LightingTools {
     minBrightness?: number;
     maxBrightness?: number;
   }) {
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('set_exposure', {
+          method: params.method,
+          compensationValue: params.compensationValue,
+          minBrightness: params.minBrightness,
+          maxBrightness: params.maxBrightness
+        });
+        if (response.success) return { success: true, message: 'Exposure settings updated via bridge', ...(response.result || {}) };
+      } catch (_e) {
+        // Fallback
+      }
+    }
+
     const commands = [];
 
     commands.push(`r.EyeAdaptation.ExposureMethod ${params.method === 'Manual' ? 0 : 1}`);
@@ -871,7 +936,7 @@ export class LightingTools {
       await this.bridge.executeConsoleCommand(cmd);
     }
 
-    return { success: true, message: 'Exposure settings updated' };
+    return { success: true, message: 'Exposure settings updated (console)' };
   }
 
   // Set ambient occlusion
@@ -881,6 +946,20 @@ export class LightingTools {
     radius?: number;
     quality?: 'Low' | 'Medium' | 'High';
   }) {
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('set_ambient_occlusion', {
+          enabled: params.enabled,
+          intensity: params.intensity,
+          radius: params.radius,
+          quality: params.quality
+        });
+        if (response.success) return { success: true, message: 'Ambient occlusion configured via bridge', ...(response.result || {}) };
+      } catch (_e) {
+        // Fallback
+      }
+    }
+
     const commands = [];
 
     commands.push(`r.AmbientOcclusion.Enabled ${params.enabled ? 1 : 0}`);
@@ -902,7 +981,7 @@ export class LightingTools {
       await this.bridge.executeConsoleCommand(cmd);
     }
 
-    return { success: true, message: 'Ambient occlusion configured' };
+    return { success: true, message: 'Ambient occlusion configured (console)' };
   }
 
   // Setup volumetric fog
@@ -941,7 +1020,8 @@ export class LightingTools {
 
       return {
         success: true,
-        message: 'Volumetric fog configured'
+        message: 'Volumetric fog configured',
+        ...(response.result || {})
       };
     } catch (error) {
       return {

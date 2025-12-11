@@ -1,20 +1,10 @@
 import { PendingRequest, AutomationBridgeResponseMessage } from './types.js';
 import { randomUUID, createHash } from 'node:crypto';
 
+// Disabled: The two-phase event pattern was causing timeouts because C++ handlers
+// send a single response, not request+event. All actions now use simple request-response.
 const WAIT_FOR_EVENT_ACTIONS = new Set<string>([
-    'add_sequencer_keyframe',
-    'manage_sequencer_track',
-    'duplicate_asset',
-    'rename_asset',
-    'delete_assets',
-    'move_asset',
-    'import_asset',
-    'save_asset',
-    'set_tags',
-    'create_thumbnail',
-    'generate_report',
-    'validate',
-    'set_object_property'
+    // Empty - all actions use single response pattern
 ]);
 
 export class RequestTracker {

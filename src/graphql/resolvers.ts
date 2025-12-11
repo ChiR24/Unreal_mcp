@@ -517,10 +517,17 @@ export const resolvers = {
       }
     },
 
-    worldPartitionCells: async (_: any, __: any, _context: GraphQLContext) => {
+    worldPartitionCells: async (_: any, __: any, context: GraphQLContext) => {
       try {
-        // Mock response as actual tool for listing cells might not exist or is complex
-        // Using a dummy request to test connectivity or just return empty for now if not implemented
+        const response = await context.automationBridge.sendAutomationRequest(
+          'manage_world_partition',
+          { subAction: 'get_cells' },
+          { timeoutMs: 10000 }
+        );
+        
+        if (response.success && response.result) {
+            return (response.result as any).cells || [];
+        }
         return [];
       } catch (error) {
         console.error('Failed to list world partition cells:', error);
@@ -539,16 +546,12 @@ export const resolvers = {
           pagination
         );
 
-        // Enrich assets with emitters/parameters if possible, or return basic asset shape
-        // For GraphQL we might need to fetch details for each if fields are requested, 
-        // but for list we return the assets cast as NiagaraSystem.
-
         const offset = pagination?.offset ?? 0;
         const edges = assets.map((asset, index) => ({
           node: {
             ...asset,
-            emitters: [], // Placeholder, would require fetch details
-            parameters: [] // Placeholder
+            emitters: [], 
+            parameters: []
           },
           cursor: Buffer.from(`${asset.path}:${offset + index}`).toString('base64')
         }));

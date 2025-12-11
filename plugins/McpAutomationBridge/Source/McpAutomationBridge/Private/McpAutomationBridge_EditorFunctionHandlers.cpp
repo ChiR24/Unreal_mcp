@@ -270,7 +270,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
                              TEXT("CLASS_NOT_FOUND"));
       return true;
     }
-    AActor *Spawned = ActorSS->SpawnActorFromClass(Resolved, Loc, Rot);
+    AActor *Spawned = SpawnActorInActiveWorld<AActor>(Resolved, Loc, Rot);
     if (!Spawned) {
       TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
       Err->SetStringField(TEXT("error"), TEXT("Spawn failed"));
@@ -795,6 +795,104 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
 
     return HandleBlueprintAction(RequestId, TEXT("blueprint_modify_scs"),
                                  SCSPayload, RequestingSocket);
+  }
+
+  if (FN == TEXT("CREATE_ASSET")) {
+    // Check if we have a nested "params" object, which is standard for
+    // ExecuteEditorFunction
+    const TSharedPtr<FJsonObject> *ParamsObj;
+    const TSharedPtr<FJsonObject> SourceObj =
+        (Payload->TryGetObjectField(TEXT("params"), ParamsObj)) ? *ParamsObj
+                                                                : Payload;
+
+    FString AssetName;
+    SourceObj->TryGetStringField(TEXT("asset_name"), AssetName);
+    FString PackagePath;
+    SourceObj->TryGetStringField(TEXT("package_path"), PackagePath);
+    FString AssetClass;
+    SourceObj->TryGetStringField(TEXT("asset_class"), AssetClass);
+    FString FactoryClass;
+    SourceObj->TryGetStringField(TEXT("factory_class"), FactoryClass);
+
+    if (AssetName.IsEmpty() || PackagePath.IsEmpty() ||
+        FactoryClass.IsEmpty()) {
+      SendAutomationError(
+          RequestingSocket, RequestId,
+          TEXT("asset_name, package_path, and factory_class required"),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    if (!GEditor) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Editor not available"), nullptr,
+                             TEXT("EDITOR_NOT_AVAILABLE"));
+      return true;
+    }
+
+    IAssetTools &AssetTools =
+        FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools")
+            .Get();
+
+    // Resolve factory
+    UClass *FactoryUClass = ResolveClassByName(FactoryClass);
+    if (!FactoryUClass) {
+      // Try finding by short name or full path
+      FactoryUClass = UClass::TryFindTypeSlow<UClass>(FactoryClass);
+    }
+
+    // Quick factory lookup by short name if full resolution failed
+    if (!FactoryUClass) {
+      for (TObjectIterator<UClass> It; It; ++It) {
+        if (It->GetName().Equals(FactoryClass) ||
+            It->GetName().Equals(FactoryClass + TEXT("Factory"))) {
+          if (It->IsChildOf(UFactory::StaticClass())) {
+            FactoryUClass = *It;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!FactoryUClass) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Factory class '%s' not found"), *FactoryClass),
+          nullptr, TEXT("FACTORY_NOT_FOUND"));
+      return true;
+    }
+
+    UFactory *Factory =
+        NewObject<UFactory>(GetTransientPackage(), FactoryUClass);
+    if (!Factory) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to instantiate factory"), nullptr,
+                             TEXT("FACTORY_CREATION_FAILED"));
+      return true;
+    }
+
+    // Attempt creation
+    UObject *NewAsset =
+        AssetTools.CreateAsset(AssetName, PackagePath, nullptr, Factory);
+    if (NewAsset) {
+      // Force save
+      TArray<UPackage *> PackagesToSave;
+      PackagesToSave.Add(NewAsset->GetOutermost());
+      FEditorFileUtils::PromptForCheckoutAndSave(PackagesToSave, false, false);
+
+      TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+      Out->SetStringField(TEXT("name"), NewAsset->GetName());
+      Out->SetStringField(TEXT("path"), NewAsset->GetPathName());
+      Out->SetBoolField(TEXT("success"), true);
+
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Asset created"), Out, FString());
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to create asset via AssetTools"),
+                             nullptr, TEXT("ASSET_CREATION_FAILED"));
+    }
+    return true;
   }
 
   // PLAY_SOUND helpers

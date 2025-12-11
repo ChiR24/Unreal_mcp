@@ -2270,8 +2270,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     Payload->TryGetStringField(TEXT("component_name"), CompName);
     FString ParentName;
     Payload->TryGetStringField(TEXT("parent_component"), ParentName);
-    TSharedPtr<FJsonObject> Result =
-        FSCSHandlers::AddSCSComponent(BPPath, CompClass, CompName, ParentName);
+    // Feature #1, #2: Extract mesh and material paths for assignment
+    FString MeshPath;
+    Payload->TryGetStringField(TEXT("mesh_path"), MeshPath);
+    FString MaterialPath;
+    Payload->TryGetStringField(TEXT("material_path"), MaterialPath);
+    TSharedPtr<FJsonObject> Result = FSCSHandlers::AddSCSComponent(
+        BPPath, CompClass, CompName, ParentName, MeshPath, MaterialPath);
     SendAutomationResponse(RequestingSocket, RequestId,
                            Result->GetBoolField(TEXT("success")),
                            SafeGetStr(Result, TEXT("message")), Result,
@@ -2736,26 +2741,15 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       PinType.PinSubCategoryObject = UObject::StaticClass();
     } else if (!VarType.TrimStartAndEnd().IsEmpty()) {
       PinType.PinCategory = MCP_PC_Object;
-      UClass *FoundClass = FindObject<UClass>(nullptr, *VarType);
-      if (!FoundClass) {
-        FoundClass = LoadObject<UClass>(nullptr, *VarType);
-      }
-      if (!FoundClass) {
-        const TArray<FString> Prefixes = {TEXT("/Script/Engine."),
-                                          TEXT("/Script/CoreUObject.")};
-        for (const FString &Prefix : Prefixes) {
-          const FString Guess = Prefix + VarType;
-          FoundClass = FindObject<UClass>(nullptr, *Guess);
-          if (!FoundClass) {
-            FoundClass = LoadObject<UClass>(nullptr, *Guess);
-          }
-          if (FoundClass) {
-            break;
-          }
-        }
-      }
+      UClass *FoundClass = ResolveUClass(VarType);
       if (FoundClass) {
         PinType.PinSubCategoryObject = FoundClass;
+      } else {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(TEXT("Could not resolve class '%s'"), *VarType),
+            TEXT("CLASS_NOT_FOUND"));
+        return true;
       }
     } else {
       PinType.PinCategory = MCP_PC_Wildcard;
@@ -2894,6 +2888,135 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("blueprint_add_variable requires editor build"),
+                           nullptr, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  if (ActionMatchesPattern(TEXT("blueprint_set_default")) ||
+      ActionMatchesPattern(TEXT("set_default")) ||
+      AlphaNumLower.Contains(TEXT("blueprintsetdefault")) ||
+      AlphaNumLower.Contains(TEXT("setdefault"))) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Entered blueprint_set_default handler: RequestId=%s"),
+           *RequestId);
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_set_default requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString PropertyName;
+    LocalPayload->TryGetStringField(TEXT("propertyName"), PropertyName);
+    if (PropertyName.TrimStartAndEnd().IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("propertyName required"), nullptr,
+                             TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    const TSharedPtr<FJsonValue> ValueField =
+        LocalPayload->TryGetField(TEXT("value"));
+    if (!ValueField.IsValid()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("value field required"), nullptr,
+                             TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+#if WITH_EDITOR
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("HandleBlueprintAction: blueprint_set_default start "
+                "RequestId=%s Path=%s Prop=%s"),
+           *RequestId, *Path, *PropertyName);
+
+    FString LocalNormalized;
+    FString LocalLoadError;
+    UBlueprint *Blueprint =
+        LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
+    if (!Blueprint) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             LocalLoadError.IsEmpty()
+                                 ? TEXT("Failed to load blueprint")
+                                 : LocalLoadError,
+                             nullptr, TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    if (!Blueprint->GeneratedClass) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Blueprint has no generated class"), nullptr,
+                             TEXT("INVALID_BLUEPRINT"));
+      return true;
+    }
+
+    UObject *CDO = Blueprint->GeneratedClass->GetDefaultObject();
+    if (!CDO) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Could not get CDO"), nullptr,
+                             TEXT("INVALID_BLUEPRINT"));
+      return true;
+    }
+
+    void *TargetContainer = nullptr;
+    FProperty *Property = nullptr;
+    FString ResolveError;
+
+    if (PropertyName.Contains(TEXT("."))) {
+      Property = ResolveNestedPropertyPath(CDO, PropertyName, TargetContainer,
+                                           ResolveError);
+    } else {
+      TargetContainer = CDO;
+      Property = CDO->GetClass()->FindPropertyByName(*PropertyName);
+      if (!Property) {
+        ResolveError =
+            FString::Printf(TEXT("Property '%s' not found"), *PropertyName);
+      }
+    }
+
+    if (!Property || !TargetContainer) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             ResolveError.IsEmpty() ? TEXT("Property not found")
+                                                    : ResolveError,
+                             nullptr, TEXT("PROPERTY_NOT_FOUND"));
+      return true;
+    }
+
+    Blueprint->Modify();
+    CDO->Modify();
+
+    FString ConversionError;
+    if (!ApplyJsonValueToProperty(TargetContainer, Property, ValueField,
+                                  ConversionError)) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             ConversionError, nullptr,
+                             TEXT("CONVERSION_FAILED"));
+      return true;
+    }
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("propertyName"), PropertyName);
+    Result->SetStringField(TEXT("blueprintPath"), LocalNormalized);
+
+    const TSharedPtr<FJsonValue> CurrentValue =
+        ExportPropertyToJsonValue(TargetContainer, Property);
+    if (CurrentValue.IsValid()) {
+      Result->SetField(TEXT("value"), CurrentValue);
+    }
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Default value set successfully"), Result);
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("blueprint_set_default requires editor build"),
                            nullptr, TEXT("NOT_AVAILABLE"));
     return true;
 #endif
@@ -3159,58 +3282,151 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       return true;
     }
 
+    // Extract parameters from payload
+    int32 EventPosX = 0;
+    int32 EventPosY = 0;
+    if (const TSharedPtr<FJsonObject> *LocObj = nullptr;
+        Payload->TryGetObjectField(TEXT("location"), LocObj)) {
+      EventPosX = (*LocObj)->GetIntegerField(TEXT("x"));
+      EventPosY = (*LocObj)->GetIntegerField(TEXT("y"));
+    } else {
+      EventPosX = Payload->GetIntegerField(TEXT("x"));
+      EventPosY = Payload->GetIntegerField(TEXT("y"));
+    }
+
     const FString FinalType = EventType.IsEmpty() ? TEXT("custom") : EventType;
-    const FName EventName =
-        CustomName.IsEmpty()
-            ? FName(*FString::Printf(TEXT("Event_%s"),
-                                     *FGuid::NewGuid().ToString()))
-            : FName(*CustomName);
+    const bool bIsCustomEvent =
+        FinalType.Equals(TEXT("custom"), ESearchCase::IgnoreCase);
 
-    float EventPosX = 0.0f;
-    float EventPosY = 0.0f;
-    LocalPayload->TryGetNumberField(TEXT("posX"), EventPosX);
-    LocalPayload->TryGetNumberField(TEXT("posY"), EventPosY);
-
+    FName EventName;
     UK2Node_CustomEvent *CustomEventNode = nullptr;
-    for (UEdGraphNode *Node : EventGraph->Nodes) {
-      if (UK2Node_CustomEvent *ExistingNode = Cast<UK2Node_CustomEvent>(Node)) {
-        if (ExistingNode->CustomFunctionName == EventName) {
-          CustomEventNode = ExistingNode;
-          break;
+
+    // If it's a custom event, use the existing logic
+    if (bIsCustomEvent) {
+      EventName = CustomName.IsEmpty()
+                      ? FName(*FString::Printf(TEXT("Event_%s"),
+                                               *FGuid::NewGuid().ToString()))
+                      : FName(*CustomName);
+
+      for (UEdGraphNode *Node : EventGraph->Nodes) {
+        if (UK2Node_CustomEvent *ExistingNode =
+                Cast<UK2Node_CustomEvent>(Node)) {
+          if (ExistingNode->CustomFunctionName == EventName) {
+            CustomEventNode = ExistingNode;
+            break;
+          }
         }
       }
-    }
 
-    if (!CustomEventNode) {
-      EventGraph->Modify();
-      FGraphNodeCreator<UK2Node_CustomEvent> NodeCreator(*EventGraph);
-      CustomEventNode = NodeCreator.CreateNode();
-      CustomEventNode->CustomFunctionName = EventName;
-      CustomEventNode->NodePosX = EventPosX;
-      CustomEventNode->NodePosY = EventPosY;
-      NodeCreator.Finalize();
-      CustomEventNode->AllocateDefaultPins();
-    }
+      if (!CustomEventNode) {
+        EventGraph->Modify();
+        FGraphNodeCreator<UK2Node_CustomEvent> NodeCreator(*EventGraph);
+        CustomEventNode = NodeCreator.CreateNode();
+        CustomEventNode->CustomFunctionName = EventName;
+        CustomEventNode->NodePosX = EventPosX;
+        CustomEventNode->NodePosY = EventPosY;
+        NodeCreator.Finalize();
+        CustomEventNode->AllocateDefaultPins();
+      } else {
+        CustomEventNode->NodePosX = EventPosX;
+        CustomEventNode->NodePosY = EventPosY;
+      }
 
-    if (CustomEventNode && Params.Num() > 0) {
-      CustomEventNode->Modify();
-      CustomEventNode->Pins.Empty();
-      CustomEventNode->CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec,
-                                 NAME_None);
-      CustomEventNode->CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Exec,
-                                 NAME_None);
-      for (const TSharedPtr<FJsonValue> &ParamVal : Params) {
-        if (!ParamVal.IsValid() || ParamVal->Type != EJson::Object)
-          continue;
-        const TSharedPtr<FJsonObject> ParamObj = ParamVal->AsObject();
-        if (!ParamObj.IsValid())
-          continue;
-        FString ParamName;
-        ParamObj->TryGetStringField(TEXT("name"), ParamName);
-        FString ParamType;
-        ParamObj->TryGetStringField(TEXT("type"), ParamType);
-        FMcpAutomationBridge_AddUserDefinedPin(CustomEventNode, ParamName,
-                                               ParamType, EGPD_Output);
+      // Handle parameters for custom events
+      if (CustomEventNode && Params.Num() > 0) {
+        CustomEventNode->Modify();
+        // Clear existing user pins first? Or append? Assuming fresh definition.
+        // For custom events, we usually manage UserDefinedPins.
+        // We will just add them if they don't exist, or recreation.
+        // Ideally we shouldn't wipe outputs like 'Then'.
+        // Implementation: AddUserDefinedPin helper
+
+        for (const TSharedPtr<FJsonValue> &ParamVal : Params) {
+          if (!ParamVal.IsValid() || ParamVal->Type != EJson::Object)
+            continue;
+          const TSharedPtr<FJsonObject> ParamObj = ParamVal->AsObject();
+          if (!ParamObj.IsValid())
+            continue;
+          FString ParamName;
+          ParamObj->TryGetStringField(TEXT("name"), ParamName);
+          FString ParamType;
+          ParamObj->TryGetStringField(TEXT("type"), ParamType);
+          // Default to Output for CustomEvent parameters (they appear as output
+          // pins on the node)
+          FMcpAutomationBridge_AddUserDefinedPin(CustomEventNode, ParamName,
+                                                 ParamType, EGPD_Output);
+        }
+
+        CustomEventNode->ReconstructNode();
+      }
+
+    } else {
+      // Standard event logic
+      FString TargetEventName = FinalType;
+      static TMap<FString, FString> EventNameAliases = {
+          {TEXT("BeginPlay"), TEXT("ReceiveBeginPlay")},
+          {TEXT("Tick"), TEXT("ReceiveTick")},
+          {TEXT("EndPlay"), TEXT("ReceiveEndPlay")},
+      };
+
+      if (const FString *Alias = EventNameAliases.Find(TargetEventName)) {
+        TargetEventName = *Alias;
+      }
+
+      EventName = FName(*TargetEventName);
+
+      UClass *TargetClass = nullptr;
+      UFunction *EventFunc = nullptr;
+
+      // Search hierarchy
+      UClass *SearchClass = BP->ParentClass;
+      while (SearchClass && !EventFunc) {
+        EventFunc = SearchClass->FindFunctionByName(
+            *TargetEventName, EIncludeSuperFlag::ExcludeSuper);
+        if (EventFunc) {
+          TargetClass = SearchClass;
+          break;
+        }
+        SearchClass = SearchClass->GetSuperClass();
+      }
+
+      if (!EventFunc) {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(TEXT("Could not find event '%s' (resolved to '%s') "
+                                 "in parent class."),
+                            *FinalType, *TargetEventName),
+            TEXT("EVENT_NOT_FOUND"));
+        return true;
+      }
+
+      // Check if node already exists
+      bool bExists = false;
+      for (UEdGraphNode *Node : EventGraph->Nodes) {
+        if (UK2Node_Event *EventNode = Cast<UK2Node_Event>(Node)) {
+          if (EventNode->EventReference.GetMemberName() ==
+              EventFunc->GetFName()) {
+            bExists = true;
+            break;
+          }
+        }
+      }
+
+      if (!bExists) {
+        EventGraph->Modify();
+        FGraphNodeCreator<UK2Node_Event> NodeCreator(*EventGraph);
+        UK2Node_Event *EventNode = NodeCreator.CreateNode();
+        EventNode->EventReference.SetFromField<UFunction>(EventFunc, false);
+        EventNode->bOverrideFunction = true;
+        EventNode->NodePosX = EventPosX;
+        EventNode->NodePosY = EventPosY;
+        NodeCreator.Finalize();
+      } else {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(TEXT("Event %s already exists"), *TargetEventName),
+            TEXT("EVENT_ALREADY_EXISTS"));
+        return true;
       }
     }
 
@@ -3218,6 +3434,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     FKismetEditorUtilities::CompileBlueprint(BP);
     const bool bSaved = SaveLoadedAssetThrottled(BP);
 
+    // Update Registry (Persistent list of events)
     TSharedPtr<FJsonObject> Entry =
         FMcpAutomationBridge_EnsureBlueprintEntry(RegistryKey);
     TArray<TSharedPtr<FJsonValue>> Events =
@@ -3430,16 +3647,21 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     }
 
     FString FuncName;
-    // Accept both 'functionName' and 'name' for parameter name consistency
+    // Feature #5: Accept 'functionName', 'name', or 'memberName' for parameter
+    // consistency
     if (!LocalPayload->TryGetStringField(TEXT("functionName"), FuncName) ||
         FuncName.IsEmpty()) {
-      LocalPayload->TryGetStringField(TEXT("name"), FuncName);
+      if (!LocalPayload->TryGetStringField(TEXT("name"), FuncName) ||
+          FuncName.IsEmpty()) {
+        LocalPayload->TryGetStringField(TEXT("memberName"), FuncName);
+      }
     }
     if (FuncName.TrimStartAndEnd().IsEmpty()) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("functionName or name required. Example: "
-                                  "{\"functionName\": \"MyFunction\"}"),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("functionName, name, or memberName required. Example: "
+               "{\"functionName\": \"MyFunction\"}"),
+          nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
     }
 

@@ -4,32 +4,44 @@ export interface IBaseTool {
     getAutomationBridge(): AutomationBridge;
 }
 
+export interface StandardActionResponse<T = any> {
+    success: boolean;
+    data?: T;
+    warnings?: string[];
+    error?: {
+        code: string;
+        message: string;
+        [key: string]: unknown;
+    } | null;
+    [key: string]: unknown; // Allow compatibility fields
+}
+
 export interface IActorTools {
-    spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string; meshPath?: string; timeoutMs?: number }): Promise<any>;
-    delete(params: { actorName?: string; actorNames?: string[] }): Promise<any>;
-    applyForce(params: { actorName: string; force: { x: number; y: number; z: number } }): Promise<any>;
-    spawnBlueprint(params: { blueprintPath: string; actorName?: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }): Promise<any>;
-    setTransform(params: { actorName: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; scale?: { x: number; y: number; z: number } }): Promise<any>;
-    getTransform(actorName: string): Promise<any>;
-    setVisibility(params: { actorName: string; visible: boolean }): Promise<any>;
-    addComponent(params: { actorName: string; componentType: string; componentName?: string; properties?: Record<string, unknown> }): Promise<any>;
-    setComponentProperties(params: { actorName: string; componentName: string; properties: Record<string, unknown> }): Promise<any>;
-    getComponents(actorName: string): Promise<any>;
-    duplicate(params: { actorName: string; newName?: string; offset?: { x: number; y: number; z: number } }): Promise<any>;
-    addTag(params: { actorName: string; tag: string }): Promise<any>;
-    removeTag(params: { actorName: string; tag: string }): Promise<any>;
-    findByTag(params: { tag: string; matchType?: string }): Promise<any>;
-    findByName(name: string): Promise<any>;
-    detach(actorName: string): Promise<any>;
-    attach(params: { childActor: string; parentActor: string }): Promise<any>;
-    deleteByTag(tag: string): Promise<any>;
-    setBlueprintVariables(params: { actorName: string; variables: Record<string, unknown> }): Promise<any>;
-    createSnapshot(params: { actorName: string; snapshotName: string }): Promise<any>;
-    restoreSnapshot(params: { actorName: string; snapshotName: string }): Promise<any>;
-    listActors(): Promise<any>;
-    getMetadata(actorName: string): Promise<any>;
-    exportActor(params: { actorName: string; destinationPath?: string }): Promise<any>;
-    getBoundingBox(actorName: string): Promise<any>;
+    spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string; meshPath?: string; timeoutMs?: number }): Promise<StandardActionResponse>;
+    delete(params: { actorName?: string; actorNames?: string[] }): Promise<StandardActionResponse>;
+    applyForce(params: { actorName: string; force: { x: number; y: number; z: number } }): Promise<StandardActionResponse>;
+    spawnBlueprint(params: { blueprintPath: string; actorName?: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }): Promise<StandardActionResponse>;
+    setTransform(params: { actorName: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; scale?: { x: number; y: number; z: number } }): Promise<StandardActionResponse>;
+    getTransform(actorName: string): Promise<StandardActionResponse>;
+    setVisibility(params: { actorName: string; visible: boolean }): Promise<StandardActionResponse>;
+    addComponent(params: { actorName: string; componentType: string; componentName?: string; properties?: Record<string, unknown> }): Promise<StandardActionResponse>;
+    setComponentProperties(params: { actorName: string; componentName: string; properties: Record<string, unknown> }): Promise<StandardActionResponse>;
+    getComponents(actorName: string): Promise<StandardActionResponse>;
+    duplicate(params: { actorName: string; newName?: string; offset?: { x: number; y: number; z: number } }): Promise<StandardActionResponse>;
+    addTag(params: { actorName: string; tag: string }): Promise<StandardActionResponse>;
+    removeTag(params: { actorName: string; tag: string }): Promise<StandardActionResponse>;
+    findByTag(params: { tag: string; matchType?: string }): Promise<StandardActionResponse>;
+    findByName(name: string): Promise<StandardActionResponse>;
+    detach(actorName: string): Promise<StandardActionResponse>;
+    attach(params: { childActor: string; parentActor: string }): Promise<StandardActionResponse>;
+    deleteByTag(tag: string): Promise<StandardActionResponse>;
+    setBlueprintVariables(params: { actorName: string; variables: Record<string, unknown> }): Promise<StandardActionResponse>;
+    createSnapshot(params: { actorName: string; snapshotName: string }): Promise<StandardActionResponse>;
+    restoreSnapshot(params: { actorName: string; snapshotName: string }): Promise<StandardActionResponse>;
+    listActors(): Promise<StandardActionResponse>;
+    getMetadata(actorName: string): Promise<StandardActionResponse>;
+    exportActor(params: { actorName: string; destinationPath?: string }): Promise<StandardActionResponse>;
+    getBoundingBox(actorName: string): Promise<StandardActionResponse>;
 }
 
 export interface SourceControlState {
@@ -49,6 +61,7 @@ export interface IAssetTools {
     deleteAssets(params: { paths: string[]; fixupRedirectors?: boolean; timeoutMs?: number }): Promise<any>;
     searchAssets(params: { classNames?: string[]; packagePaths?: string[]; recursivePaths?: boolean; recursiveClasses?: boolean; limit?: number }): Promise<any>;
     saveAsset(assetPath: string): Promise<any>;
+    findByTag(params: { tag: string; value?: string }): Promise<any>;
     getDependencies(params: { assetPath: string; recursive?: boolean }): Promise<any>;
     getSourceControlState(params: { assetPath: string }): Promise<SourceControlState | any>;
     analyzeGraph(params: { assetPath: string; maxDepth?: number }): Promise<any>;
@@ -79,6 +92,8 @@ export interface ISequenceTools {
     rename(params: { path: string; newName: string }): Promise<any>;
     deleteSequence(params: { path: string }): Promise<any>;
     getMetadata(params: { path: string }): Promise<any>;
+    listTracks(params: { path: string }): Promise<any>;
+    setWorkRange(params: { path?: string; start: number; end: number }): Promise<any>;
 }
 
 export interface IAssetResources {
@@ -86,7 +101,7 @@ export interface IAssetResources {
 }
 
 export interface IBlueprintTools {
-    createBlueprint(params: { name: string; blueprintType?: string; savePath?: string; parentClass?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
+    createBlueprint(params: { name: string; blueprintType?: string; savePath?: string; parentClass?: string; properties?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     modifyConstructionScript(params: { blueprintPath: string; operations: any[]; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     addComponent(params: { blueprintName: string; componentType: string; componentName: string; attachTo?: string; transform?: Record<string, unknown>; properties?: Record<string, unknown>; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     waitForBlueprint(blueprintRef: string | string[], timeoutMs?: number): Promise<any>;
@@ -105,7 +120,7 @@ export interface IBlueprintTools {
     addConstructionScript(params: { blueprintName: string; scriptName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     compileBlueprint(params: { blueprintName: string; saveAfterCompile?: boolean }): Promise<any>;
     getBlueprintSCS(params: { blueprintPath: string; timeoutMs?: number }): Promise<any>;
-    addSCSComponent(params: { blueprintPath: string; componentClass: string; componentName: string; parentComponent?: string; timeoutMs?: number }): Promise<any>;
+    addSCSComponent(params: { blueprintPath: string; componentClass: string; componentName: string; parentComponent?: string; meshPath?: string; materialPath?: string; timeoutMs?: number }): Promise<any>;
     removeSCSComponent(params: { blueprintPath: string; componentName: string; timeoutMs?: number }): Promise<any>;
     reparentSCSComponent(params: { blueprintPath: string; componentName: string; newParent: string; timeoutMs?: number }): Promise<any>;
     setSCSComponentTransform(params: { blueprintPath: string; componentName: string; location?: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number]; timeoutMs?: number }): Promise<any>;

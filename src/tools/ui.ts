@@ -21,6 +21,7 @@ export class UITools {
     savePath?: string;
   }) {
     const path = params.savePath || '/Game/UI/Widgets';
+
     // Plugin-first: attempt to create the widget asset via the Automation Bridge.
     if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
       try {
@@ -39,7 +40,8 @@ export class UITools {
             success: true,
             message,
             widgetPath,
-            exists: Boolean(resultObj?.exists)
+            exists: Boolean(resultObj?.exists),
+            ...(resultObj || {})
           };
         }
       } catch (error) {
@@ -84,7 +86,7 @@ export class UITools {
     return this.addWidgetToViewport({ widgetClass: widgetPath });
   }
 
-  // Add widget component (requires C++ plugin)
+  // Add widget component
   async addWidgetComponent(_params: {
     widgetName: string;
     componentType: 'Button' | 'Text' | 'Image' | 'ProgressBar' | 'Slider' | 'CheckBox' | 'ComboBox' | 'TextBox' | 'ScrollBox' | 'Canvas' | 'VerticalBox' | 'HorizontalBox' | 'Grid' | 'Overlay';
@@ -101,15 +103,16 @@ export class UITools {
     }
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('add_widget_component', {
-        widgetName: _params.widgetName,
-        componentType: _params.componentType,
-        componentName: _params.componentName,
-        slot: _params.slot
+      // Map correctly to McpAutomationBridge_UiHandlers.cpp: add_widget_child
+      const response = await this.automationBridge.sendAutomationRequest('manage_ui', {
+        action: 'add_widget_child', // Use 'action' inside payload for subAction
+        widgetPath: _params.widgetName, // C++ expects 'widgetPath'
+        childClass: _params.componentType, // C++ expects 'childClass'
+        parentName: _params.slot ? 'Root' : undefined, // Rudimentary mapping
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Widget component added' }
+        ? { success: true, message: response.message || 'Widget component added', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to add widget component' };
     } catch (error) {
       return { success: false, error: `Failed to add widget component: ${error instanceof Error ? error.message : String(error)}` };
@@ -118,29 +121,24 @@ export class UITools {
 
   // Set text (requires C++ plugin)
   async setWidgetText(_params: {
-    widgetName: string;
-    componentName: string;
-    text: string;
-    fontSize?: number;
-    color?: [number, number, number, number];
-    fontFamily?: string;
+    key: string; // The widget name to find
+    value: string; // The text to set
+    componentName?: string; // Legacy/Unused in new impl
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation bridge required for setting widget text');
     }
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('set_widget_text', {
-        widgetName: _params.widgetName,
-        componentName: _params.componentName,
-        text: _params.text,
-        fontSize: _params.fontSize,
-        color: _params.color,
-        fontFamily: _params.fontFamily
+      // Changed to 'system_control' with subAction
+      const response = await this.automationBridge.sendAutomationRequest('system_control', {
+        subAction: 'set_widget_text',
+        key: _params.key,
+        value: _params.value
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Widget text set' }
+        ? { success: true, message: response.message || 'Widget text set', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to set widget text' };
     } catch (error) {
       return { success: false, error: `Failed to set widget text: ${error instanceof Error ? error.message : String(error)}` };
@@ -149,27 +147,23 @@ export class UITools {
 
   // Set image (requires C++ plugin)
   async setWidgetImage(_params: {
-    widgetName: string;
-    componentName: string;
-    imagePath: string;
-    tint?: [number, number, number, number];
-    sizeToContent?: boolean;
+    key: string;
+    texturePath: string;
+    componentName?: string; // Unused
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation bridge required for setting widget images');
     }
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('set_widget_image', {
-        widgetName: _params.widgetName,
-        componentName: _params.componentName,
-        imagePath: _params.imagePath,
-        tint: _params.tint,
-        sizeToContent: _params.sizeToContent
+      const response = await this.automationBridge.sendAutomationRequest('system_control', {
+        subAction: 'set_widget_image',
+        key: _params.key,
+        texturePath: _params.texturePath
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Widget image set' }
+        ? { success: true, message: response.message || 'Widget image set', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to set widget image' };
     } catch (error) {
       return { success: false, error: `Failed to set widget image: ${error instanceof Error ? error.message : String(error)}` };
@@ -179,54 +173,59 @@ export class UITools {
   // Create HUD (requires C++ plugin)
   async createHUD(_params: {
     name: string;
-    elements?: Array<{
-      type: 'HealthBar' | 'AmmoCounter' | 'Score' | 'Timer' | 'Minimap' | 'Crosshair';
-      position: [number, number];
-      size?: [number, number];
-    }>;
+    elements?: Array<any>;
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation bridge required for creating HUDs');
     }
 
+    // Default path assumption or require full path?
+    // C++ expects 'widgetPath'. If name is just "MyHUD", we might need to resolve it.
+    // For now, assume name is the path or user provides path.
+    const widgetPath = _params.name.startsWith('/Game') ? _params.name : `/Game/UI/${_params.name}`;
+
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_hud', {
-        name: _params.name,
-        elements: _params.elements
+      const response = await this.automationBridge.sendAutomationRequest('system_control', {
+        subAction: 'create_hud',
+        widgetPath: widgetPath
       });
 
       return response.success
-        ? { success: true, message: response.message || 'HUD created' }
+        ? { success: true, message: response.message || 'HUD created', widgetName: (response.result as any)?.widgetName, ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to create HUD' };
     } catch (error) {
       return { success: false, error: `Failed to create HUD: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
 
-  // Show/Hide widget (requires C++ plugin)
-  async setWidgetVisibility(_params: {
-    widgetName: string;
+  async setWidgetVisibility(params: {
+    key: string;
     visible: boolean;
-    playerIndex?: number;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation bridge required for showing/hiding widgets');
-    }
-
-    try {
-      const response = await this.automationBridge.sendAutomationRequest('set_widget_visibility', {
-        widgetName: _params.widgetName,
-        visible: _params.visible,
-        playerIndex: _params.playerIndex ?? 0
-      });
-
-      return response.success
-        ? { success: true, message: response.message || `Widget ${_params.visible ? 'shown' : 'hidden'}` }
-        : { success: false, error: response.error || response.message || 'Failed to set widget visibility' };
-    } catch (error) {
-      return { success: false, error: `Failed to set widget visibility: ${error instanceof Error ? error.message : String(error)}` };
-    }
+    if (!this.automationBridge) return { success: false, error: 'NO_BRIDGE' };
+    const response = await this.automationBridge.sendAutomationRequest('system_control', {
+      subAction: 'set_widget_visibility',
+      key: params.key,
+      visible: params.visible
+    });
+    return response.success
+      ? { success: true, message: response.message || 'Widget visibility set', ...(response.result || {}) }
+      : { success: false, error: response.error || response.message || 'Failed to set widget visibility' };
   }
+
+  async removeWidgetFromViewport(params: {
+    key?: string;
+  }) {
+    if (!this.automationBridge) return { success: false, error: 'NO_BRIDGE' };
+    const response = await this.automationBridge.sendAutomationRequest('system_control', {
+      subAction: 'remove_widget_from_viewport',
+      key: params.key
+    });
+    return response.success
+      ? { success: true, message: response.message || 'Widget removed from viewport', ...(response.result || {}) }
+      : { success: false, error: response.error || response.message || 'Failed to remove widget from viewport' };
+  }
+
 
   // Add widget to viewport
   async addWidgetToViewport(params: {
@@ -252,28 +251,6 @@ export class UITools {
     }
   }
 
-  // Remove widget from viewport (requires C++ plugin)
-  async removeWidgetFromViewport(_params: {
-    widgetName: string;
-    playerIndex?: number;
-  }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation bridge required for removing widgets');
-    }
-
-    try {
-      const response = await this.automationBridge.sendAutomationRequest('remove_widget_from_viewport', {
-        widgetName: _params.widgetName,
-        playerIndex: _params.playerIndex ?? 0
-      });
-
-      return response.success
-        ? { success: true, message: response.message || 'Widget removed from viewport' }
-        : { success: false, error: response.error || response.message || 'Failed to remove widget from viewport' };
-    } catch (error) {
-      return { success: false, error: `Failed to remove widget from viewport: ${error instanceof Error ? error.message : String(error)}` };
-    }
-  }
 
   // Create menu
   async createMenu(params: {

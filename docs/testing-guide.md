@@ -16,17 +16,18 @@ Each tool has a dedicated test file in `tests/`:
 - **test-blueprint.mjs** - Blueprint operations (execute function, get/set variables)
 - **test-materials.mjs** - Material tools (create instance, set parameters, apply)
 - **test-niagara.mjs** - Niagara VFX (spawn system, set parameters, stop)
-- **test-lighting.mjs** - Lighting tools (create lights, set intensity/color, build)
+- **test-render.mjs** - Rendering tools (render targets, Lumen, lighting)
 - **test-landscape.mjs** - Landscape tools (create, sculpt, paint, get info)
 - **test-sequence.mjs** - Sequencer (create sequence, add tracks, keyframes, play, export)
-- **test-ui.mjs** - UI/UMG (create widget, show, hide, set properties)
-- **test-physics.mjs** - Physics (simulate, apply force/impulse, set material, mass)
-- **test-performance.mjs** - Performance profiling (FPS, memory, stats, profiling)
 - **test-system.mjs** - System control (engine info, settings, plugins, Python execution)
-- **test-debug.mjs** - Debug visualization (draw lines, boxes, spheres, points, clear)
 - **test-behavior-tree.mjs** - Behavior Tree editing (add nodes, connect, properties)
 - **test-audio.mjs** - Audio management (sound cues, play sounds, audio components)
 - **test-inspect.mjs** - Object introspection (get/set properties, components)
+- **test-console-command.mjs** - Console command execution
+- **test-asset-advanced.mjs** - Advanced asset operations (dependencies, etc.)
+- **test-world-partition.mjs** - World Partition management
+- **test-graphql.mjs** - GraphQL API testing
+- **test-wasm.mjs** - WebAssembly module testing
 
 ### Shared Test Runner
 All test files use `test-runner.mjs` which provides:
@@ -40,27 +41,26 @@ All test files use `test-runner.mjs` which provides:
 
 ### Run a Specific Tool Test
 ```bash
-npm run test:manage_asset    # Test asset management only
-npm run test:control_actor    # Test actor operations only
-npm run test:control_editor   # Test editor controls only
-npm run test:manage_level     # Test level management only
-npm run test:animation        # Test animation tools only
-npm run test:blueprint        # Test blueprint operations only
-npm run test:materials        # Test material tools only
-npm run test:niagara          # Test Niagara VFX only
-npm run test:lighting         # Test lighting tools only
-npm run test:landscape        # Test landscape tools only
-npm run test:sequence         # Test sequencer only
-npm run test:ui               # Test UI/UMG only
-npm run test:physics          # Test physics only
-npm run test:performance      # Test performance profiling only
-npm run test:system           # Test system control only
-npm run test:debug            # Test debug visualization only
-npm run test:behavior_tree    # Test behavior tree editing only
-npm run test:audio            # Test audio management only
-npm run test:inspect          # Test object introspection only
-npm run test:graphql          # Test GraphQL API only
-npm run test:wasm             # Test WebAssembly acceleration only
+npm run test:manage_asset     # Test asset management
+npm run test:control_actor    # Test actor operations
+npm run test:control_editor   # Test editor controls
+npm run test:manage_level     # Test level management
+npm run test:animation        # Test animation tools
+npm run test:blueprint        # Test blueprint operations
+npm run test:materials        # Test material tools
+npm run test:niagara          # Test Niagara VFX
+npm run test:render           # Test rendering tools
+npm run test:landscape        # Test landscape tools
+npm run test:sequence         # Test sequencer
+npm run test:system           # Test system control
+npm run test:behavior_tree    # Test behavior tree editing
+npm run test:audio            # Test audio management
+npm run test:inspect          # Test object introspection
+npm run test:console_command  # Test console commands
+npm run test:asset_advanced   # Test advanced asset tools
+npm run test:world_partition  # Test World Partition
+npm run test:graphql          # Test GraphQL API
+npm run test:wasm             # Test WebAssembly
 ```
 
 ### Run Tests Directly
@@ -78,7 +78,6 @@ node tests/test-control-actor.mjs
    - Native Automation Bridge
    - Python Editor Script Plugin
    - Editor Scripting Utilities
-   - Sequencer
    - Sequencer
    - Level Sequence Editor
    - Control Rig

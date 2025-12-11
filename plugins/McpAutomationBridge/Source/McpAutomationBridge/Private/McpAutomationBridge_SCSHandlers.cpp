@@ -9,15 +9,19 @@
 #include "Components/ActorComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
+#include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Materials/MaterialInterface.h"
 #include "UObject/UObjectIterator.h"
 
 #endif
@@ -188,7 +192,8 @@ FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
 // Add component to SCS
 TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     const FString &BlueprintPath, const FString &ComponentClass,
-    const FString &ComponentName, const FString &ParentComponentName) {
+    const FString &ComponentName, const FString &ParentComponentName,
+    const FString &MeshPath, const FString &MaterialPath) {
   TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
 
 #if WITH_EDITOR
@@ -295,6 +300,43 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     SCS->AddNode(NewNode);
   }
 
+  // Apply mesh if specified (Feature #1: Mesh Assignment)
+  // Uses: SetStaticMesh - Engine/StaticMeshComponent.cpp:2265
+  //       SetSkeletalMesh - Engine/SkeletalMeshComponent.cpp:3322
+  bool bMeshApplied = false;
+  if (!MeshPath.IsEmpty() && NewNode->ComponentTemplate) {
+    if (UStaticMeshComponent *SMC =
+            Cast<UStaticMeshComponent>(NewNode->ComponentTemplate)) {
+      UStaticMesh *Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+      if (Mesh) {
+        SMC->SetStaticMesh(Mesh);
+        bMeshApplied = true;
+      }
+    } else if (USkeletalMeshComponent *SkMC =
+                   Cast<USkeletalMeshComponent>(NewNode->ComponentTemplate)) {
+      USkeletalMesh *Mesh = LoadObject<USkeletalMesh>(nullptr, *MeshPath);
+      if (Mesh) {
+        SkMC->SetSkeletalMesh(Mesh, true);
+        bMeshApplied = true;
+      }
+    }
+  }
+
+  // Apply material if specified (Feature #2: Material Assignment)
+  // Uses: SetMaterial - Engine/PrimitiveComponent.cpp:2477
+  bool bMaterialApplied = false;
+  if (!MaterialPath.IsEmpty() && NewNode->ComponentTemplate) {
+    if (UPrimitiveComponent *PC =
+            Cast<UPrimitiveComponent>(NewNode->ComponentTemplate)) {
+      UMaterialInterface *Mat =
+          LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
+      if (Mat) {
+        PC->SetMaterial(0, Mat);
+        bMaterialApplied = true;
+      }
+    }
+  }
+
   // Finalize blueprint change (compile/save)
   bool bCompiled = false;
   bool bSaved = false;
@@ -331,6 +373,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
                                              : ParentComponentName);
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
+  // Feature #1, #2: Report mesh/material assignment status
+  Result->SetBoolField(TEXT("mesh_applied"), bMeshApplied);
+  Result->SetBoolField(TEXT("material_applied"), bMaterialApplied);
 #else
   return UnsupportedSCSAction();
 #endif
@@ -798,6 +843,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     // ResolveNestedPropertyPath now returns the container pointer
     void *ContainerPtr = nullptr;
     FString ResolveError;
+    FString FailureMessage;
+    FString FailureCode;
+    bool bAppliedValue = false;
     FProperty *TargetProp =
         ResolveNestedPropertyPath(ComponentNode->ComponentTemplate,
                                   PropertyName, ContainerPtr, ResolveError);
@@ -819,20 +867,23 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     } else {
       FailureCode = TEXT("SCS_PROPERTY_APPLY_FAILED");
     }
-  } else {
-    FailureMessage = TEXT("Property value is invalid");
-    FailureCode = TEXT("SCS_PROPERTY_INVALID_VALUE");
-  }
 
-  if (!bAppliedValue) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"),
-                           FailureMessage.IsEmpty()
-                               ? TEXT("Failed to apply property value")
-                               : FailureMessage);
-    if (!FailureCode.IsEmpty()) {
-      Result->SetStringField(TEXT("errorCode"), FailureCode);
+    if (!bAppliedValue) {
+      Result->SetBoolField(TEXT("success"), false);
+      Result->SetStringField(TEXT("error"),
+                             FailureMessage.IsEmpty()
+                                 ? TEXT("Failed to apply property value")
+                                 : FailureMessage);
+      if (!FailureCode.IsEmpty()) {
+        Result->SetStringField(TEXT("errorCode"), FailureCode);
+      }
+      return Result;
     }
+  } else {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(TEXT("error"), TEXT("Property value is invalid"));
+    Result->SetStringField(TEXT("errorCode"),
+                           TEXT("SCS_PROPERTY_INVALID_VALUE"));
     return Result;
   }
 

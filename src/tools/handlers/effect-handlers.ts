@@ -128,5 +128,15 @@ export async function handleEffectTools(action: string, args: any, tools: ITools
     });
   }
 
+  // Handle debug shapes
+  if (action === 'debug_shape') {
+    // Map 'shape' to 'shapeType' if provided (schema uses 'shape', C++ uses 'shapeType')
+    if (args.shape && !args.shapeType) {
+      args.shapeType = args.shape;
+    }
+    args.subAction = 'debug_shape';
+    return executeAutomationRequest(tools, 'create_effect', args);
+  }
+
   return cleanObject(res);
 }

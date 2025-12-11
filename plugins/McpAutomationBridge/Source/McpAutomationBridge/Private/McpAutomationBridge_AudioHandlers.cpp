@@ -62,27 +62,33 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
   if (Sound)
     return Sound;
 
-  // Fallback: Try to find ANY sound to ensure the command succeeds
-  // visually/audibly
+  // Fallback: Try to find the asset by Name if the full path failed
+  FString AssetName = FPaths::GetBaseFilename(SoundPath);
   FAssetRegistryModule &AssetRegistryModule =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   TArray<FAssetData> AssetData;
   FARFilter Filter;
-  // Use ClassPaths for UE 5.1+
   Filter.ClassPaths.Add(USoundWave::StaticClass()->GetClassPathName());
   Filter.ClassPaths.Add(USoundCue::StaticClass()->GetClassPathName());
   Filter.bRecursivePaths = true;
   Filter.PackagePaths.Add(TEXT("/Game"));
   AssetRegistryModule.Get().GetAssets(Filter, AssetData);
 
-  if (AssetData.Num() > 0) {
-    Sound = Cast<USoundBase>(AssetData[0].GetAsset());
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-           TEXT("Sound asset '%s' not found, falling back to '%s'"), *SoundPath,
-           *Sound->GetName());
+  for (const FAssetData &Data : AssetData) {
+    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase)) {
+      Sound = Cast<USoundBase>(Data.GetAsset());
+      if (Sound) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+               TEXT("Resolved sound '%s' to '%s'"), *SoundPath,
+               *Sound->GetPathName());
+        return Sound;
+      }
+    }
   }
 
-  return Sound;
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+         TEXT("Sound asset '%s' not found."), *SoundPath);
+  return nullptr;
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
@@ -271,8 +277,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         World, Sound, Location, Rotation, (float)Volume, (float)Pitch,
         (float)StartTime, Attenuation, Concurrency);
 
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("soundPath"), SoundPath);
+    TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+    LocObj->SetNumberField(TEXT("x"), Location.X);
+    LocObj->SetNumberField(TEXT("y"), Location.Y);
+    LocObj->SetNumberField(TEXT("z"), Location.Z);
+    Resp->SetObjectField(TEXT("location"), LocObj);
+
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Sound played at location"), nullptr);
+                           TEXT("Sound played at location"), Resp);
     return true;
   } else if (Lower == TEXT("play_sound_2d")) {
     FString SoundPath;
@@ -310,8 +325,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     UGameplayStatics::PlaySound2D(World, Sound, (float)Volume, (float)Pitch,
                                   (float)StartTime);
 
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("soundPath"), SoundPath);
+    Resp->SetNumberField(TEXT("volume"), Volume);
+    Resp->SetNumberField(TEXT("pitch"), Pitch);
+
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Sound played 2D"), nullptr);
+                           TEXT("Sound played 2D"), Resp);
     return true;
   } else if (Lower == TEXT("create_sound_class")) {
     FString Name;
@@ -354,8 +375,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       }
 
       UEditorAssetLibrary::SaveAsset(SoundClass->GetPathName());
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("path"), SoundClass->GetPathName());
+      Resp->SetStringField(TEXT("name"), SoundClass->GetName());
+
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("SoundClass created"), nullptr);
+                             TEXT("SoundClass created"), Resp);
     } else {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("Failed to create SoundClass"),
@@ -403,8 +429,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       }
 
       UEditorAssetLibrary::SaveAsset(SoundMix->GetPathName());
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("path"), SoundMix->GetPathName());
+      Resp->SetStringField(TEXT("name"), SoundMix->GetName());
+
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("SoundMix created"), nullptr);
+                             TEXT("SoundMix created"), Resp);
     } else {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("Failed to create SoundMix"),
@@ -425,8 +456,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       if (GEditor && GEditor->GetEditorWorldContext().World()) {
         UGameplayStatics::PushSoundMixModifier(
             GEditor->GetEditorWorldContext().World(), Mix);
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("mixName"), MixName);
         SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("SoundMix pushed"), nullptr);
+                               TEXT("SoundMix pushed"), Resp);
       } else {
         SendAutomationError(RequestingSocket, RequestId,
                             TEXT("No World Context"), TEXT("NO_WORLD"));
@@ -450,8 +484,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       if (GEditor && GEditor->GetEditorWorldContext().World()) {
         UGameplayStatics::PopSoundMixModifier(
             GEditor->GetEditorWorldContext().World(), Mix);
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("mixName"), MixName);
         SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("SoundMix popped"), nullptr);
+                               TEXT("SoundMix popped"), Resp);
       } else {
         SendAutomationError(RequestingSocket, RequestId,
                             TEXT("No World Context"), TEXT("NO_WORLD"));
@@ -489,8 +526,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       UGameplayStatics::SetSoundMixClassOverride(
           GEditor->GetEditorWorldContext().World(), Mix, Class, (float)Volume,
           (float)Pitch, (float)FadeTime, bApply);
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("mixName"), MixName);
+      Resp->SetStringField(TEXT("className"), ClassName);
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Sound mix override set"), nullptr);
+                             TEXT("Sound mix override set"), Resp);
     } else {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
                           TEXT("NO_WORLD"));
@@ -586,8 +627,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         else
           AudioComp->FadeOut((float)FadeTime, (float)TargetVol);
 
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("actorName"), ActorName);
+        Resp->SetStringField(TEXT("action"), Lower);
         SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Sound fading"), nullptr);
+                               TEXT("Sound fading"), Resp);
         return true;
       }
     }
@@ -666,6 +711,132 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("Failed to create ambient sound"),
                           TEXT("SPAWN_FAILED"));
     }
+    return true;
+  } else if (Lower == TEXT("spawn_sound_at_location")) {
+    // Similar to create_ambient_sound but explicit action name
+    FString SoundPath;
+    if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
+        SoundPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("soundPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    USoundBase *Sound = ResolveSoundAsset(SoundPath);
+    if (!Sound) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Sound asset not found"),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    FVector Location = FVector::ZeroVector;
+    const TArray<TSharedPtr<FJsonValue>> *LocArr;
+    if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr &&
+        LocArr->Num() >= 3) {
+      Location = FVector((*LocArr)[0]->AsNumber(), (*LocArr)[1]->AsNumber(),
+                         (*LocArr)[2]->AsNumber());
+    }
+
+    FRotator Rotation = FRotator::ZeroRotator;
+    const TArray<TSharedPtr<FJsonValue>> *RotArr;
+    if (Payload->TryGetArrayField(TEXT("rotation"), RotArr) && RotArr &&
+        RotArr->Num() >= 3) {
+      Rotation = FRotator((*RotArr)[0]->AsNumber(), (*RotArr)[1]->AsNumber(),
+                          (*RotArr)[2]->AsNumber());
+    }
+
+    double Volume = 1.0;
+    Payload->TryGetNumberField(TEXT("volume"), Volume);
+    double Pitch = 1.0;
+    Payload->TryGetNumberField(TEXT("pitch"), Pitch);
+    double StartTime = 0.0;
+    Payload->TryGetNumberField(TEXT("startTime"), StartTime);
+
+    if (!GEditor)
+      return true;
+    UWorld *World = GEditor->GetEditorWorldContext().World();
+    if (!World) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
+                          TEXT("NO_WORLD"));
+      return true;
+    }
+
+    UAudioComponent *AudioComp = UGameplayStatics::SpawnSoundAtLocation(
+        World, Sound, Location, Rotation, (float)Volume, (float)Pitch,
+        (float)StartTime, nullptr, nullptr, true);
+
+    if (AudioComp) {
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
+      Resp->SetStringField(TEXT("componentPath"), AudioComp->GetPathName());
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Sound spawned"), Resp);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Failed to spawn sound"), TEXT("SPAWN_FAILED"));
+    }
+    return true;
+  } else if (Lower == TEXT("clear_sound_mix_class_override")) {
+    FString MixName, ClassName;
+    Payload->TryGetStringField(TEXT("mixName"), MixName);
+    Payload->TryGetStringField(TEXT("soundClassName"), ClassName);
+
+    USoundMix *Mix = LoadObject<USoundMix>(nullptr, *MixName);
+    USoundClass *Class = LoadObject<USoundClass>(nullptr, *ClassName);
+
+    if (!Mix || !Class) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Mix or Class not found"),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    double FadeTime = 1.0;
+    Payload->TryGetNumberField(TEXT("fadeOutTime"), FadeTime);
+
+    if (GEditor && GEditor->GetEditorWorldContext().World()) {
+      UGameplayStatics::ClearSoundMixClassOverride(
+          GEditor->GetEditorWorldContext().World(), Mix, Class,
+          (float)FadeTime);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Sound mix override cleared"), nullptr);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
+                          TEXT("NO_WORLD"));
+    }
+    return true;
+  } else if (Lower == TEXT("set_base_sound_mix")) {
+    FString MixName;
+    Payload->TryGetStringField(TEXT("mixName"), MixName);
+    USoundMix *Mix = LoadObject<USoundMix>(nullptr, *MixName);
+    if (!Mix) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Mix not found"),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+    if (GEditor && GEditor->GetEditorWorldContext().World()) {
+      UGameplayStatics::SetBaseSoundMix(
+          GEditor->GetEditorWorldContext().World(), Mix);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Base sound mix set"), nullptr);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
+                          TEXT("NO_WORLD"));
+    }
+    return true;
+  } else if (Lower == TEXT("prime_sound")) {
+    FString SoundPath;
+    Payload->TryGetStringField(TEXT("soundPath"), SoundPath);
+    USoundBase *Sound = ResolveSoundAsset(SoundPath);
+    if (!Sound) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Sound not found"),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+    UGameplayStatics::PrimeSound(Sound);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Sound primed"), nullptr);
     return true;
   }
 

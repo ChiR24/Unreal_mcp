@@ -103,6 +103,37 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
       const res = await executeAutomationRequest(tools, 'set_metadata', { assetPath: levelPath, metadata });
       return cleanObject(res);
     }
+    case 'load_cells': {
+      // Calculate origin/extent if min/max provided for C++ handler compatibility
+      let origin = args.origin;
+      let extent = args.extent;
+      
+      if (!origin && args.min && args.max) {
+          const min = args.min;
+          const max = args.max;
+          origin = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
+          extent = [(max[0] - min[0]) / 2, (max[1] - min[1]) / 2, (max[2] - min[2]) / 2];
+      }
+      
+      const payload = {
+          subAction: 'load_cells',
+          origin: origin,
+          extent: extent,
+          ...args // Allow other args to override if explicit
+      };
+      
+      const res = await executeAutomationRequest(tools, 'manage_world_partition', payload);
+      return cleanObject(res);
+    }
+    case 'set_datalayer': {
+        const res = await executeAutomationRequest(tools, 'manage_world_partition', {
+            subAction: 'set_datalayer',
+            actorPath: args.actorPath,
+            dataLayerName: args.dataLayerLabel, // Map label to name
+            ...args
+        });
+        return cleanObject(res);
+    }
     case 'cleanup_invalid_datalayers': {
       // Route to manage_world_partition
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {

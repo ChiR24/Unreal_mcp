@@ -21,7 +21,7 @@ public class McpAutomationBridge : ModuleRules
             PublicDependencyModuleNames.AddRange(new string[] 
             { 
                 "LevelSequenceEditor", "Sequencer", "MovieSceneTools", "Niagara", "NiagaraEditor", "UnrealEd",
-                "WorldPartitionEditor", "DataLayerEditor"
+                "WorldPartitionEditor", "DataLayerEditor", "EnhancedInput", "InputEditor"
             });
 
             PrivateDependencyModuleNames.AddRange(new string[]

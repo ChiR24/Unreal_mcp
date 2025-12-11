@@ -1,12 +1,14 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
-
 #if WITH_EDITOR
 #include "AssetToolsModule.h"
 #include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/WidgetTree.h"
+#include "Components/Image.h"
 #include "Components/PanelWidget.h"
+#include "Components/TextBlock.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/GameViewportClient.h"
 #include "HAL/FileManager.h"
@@ -458,6 +460,189 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       Message = FString::Printf(TEXT("Invalid key name: %s"), *KeyName);
       ErrorCode = TEXT("INVALID_KEY");
       Resp->SetStringField(TEXT("error"), Message);
+    }
+  } else if (LowerSub == TEXT("create_hud")) {
+    FString WidgetPath;
+    Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
+    UClass *WidgetClass = LoadClass<UUserWidget>(nullptr, *WidgetPath);
+    if (WidgetClass && GEngine && GEngine->GameViewport) {
+      UWorld *World = GEngine->GameViewport->GetWorld();
+      if (World) {
+        UUserWidget *Widget = CreateWidget<UUserWidget>(World, WidgetClass);
+        if (Widget) {
+          Widget->AddToViewport();
+          bSuccess = true;
+          Message = TEXT("HUD created and added to viewport");
+          Resp->SetStringField(TEXT("widgetName"), Widget->GetName());
+        } else {
+          Message = TEXT("Failed to create widget");
+          ErrorCode = TEXT("CREATE_FAILED");
+        }
+      } else {
+        Message = TEXT("No world context found (is PIE running?)");
+        ErrorCode = TEXT("NO_WORLD");
+      }
+    } else {
+      Message =
+          FString::Printf(TEXT("Failed to load widget class: %s"), *WidgetPath);
+      ErrorCode = TEXT("CLASS_NOT_FOUND");
+    }
+  } else if (LowerSub == TEXT("set_widget_text")) {
+    FString Key, Value;
+    Payload->TryGetStringField(TEXT("key"), Key);
+    Payload->TryGetStringField(TEXT("value"), Value);
+
+    bool bFound = false;
+    // Iterate all widgets to find one matching Key (Name)
+    TArray<UUserWidget *> Widgets;
+    UWidgetBlueprintLibrary::GetAllWidgetsOfClass(
+        GEditor->GetEditorWorldContext().World(), Widgets,
+        UUserWidget::StaticClass(), false);
+    // Also try Game Viewport world if Editor World is not right context (PIE)
+    if (GEngine && GEngine->GameViewport && GEngine->GameViewport->GetWorld()) {
+      UWidgetBlueprintLibrary::GetAllWidgetsOfClass(
+          GEngine->GameViewport->GetWorld(), Widgets,
+          UUserWidget::StaticClass(), false);
+    }
+
+    for (UUserWidget *Widget : Widgets) {
+      // Search inside this widget for a TextBlock named Key
+      UWidget *Child = Widget->GetWidgetFromName(FName(*Key));
+      if (UTextBlock *TextBlock = Cast<UTextBlock>(Child)) {
+        TextBlock->SetText(FText::FromString(Value));
+        bFound = true;
+        bSuccess = true;
+        Message =
+            FString::Printf(TEXT("Set text on '%s' to '%s'"), *Key, *Value);
+        break;
+      }
+      // Also check if the widget ITSELF is the one (though UserWidget !=
+      // TextBlock usually)
+      if (Widget->GetName() == Key) {
+        // Can't set text on UserWidget directly unless it implements interface?
+        // Assuming Key refers to child widget name usually
+      }
+    }
+
+    if (!bFound) {
+      // Fallback: Use TObjectIterator to find ANY UTextBlock with that name,
+      // risky but covers cases
+      for (TObjectIterator<UTextBlock> It; It; ++It) {
+        if (It->GetName() == Key && It->GetWorld()) {
+          It->SetText(FText::FromString(Value));
+          bFound = true;
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Set text on global '%s'"), *Key);
+          break;
+        }
+      }
+    }
+
+    if (!bFound) {
+      Message = FString::Printf(TEXT("Widget/TextBlock '%s' not found"), *Key);
+      ErrorCode = TEXT("WIDGET_NOT_FOUND");
+    }
+  } else if (LowerSub == TEXT("set_widget_image")) {
+    FString Key, TexturePath;
+    Payload->TryGetStringField(TEXT("key"), Key);
+    Payload->TryGetStringField(TEXT("texturePath"), TexturePath);
+    UTexture2D *Texture = LoadObject<UTexture2D>(nullptr, *TexturePath);
+    if (Texture) {
+      bool bFound = false;
+      for (TObjectIterator<UImage> It; It; ++It) {
+        if (It->GetName() == Key && It->GetWorld()) {
+          It->SetBrushFromTexture(Texture);
+          bFound = true;
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Set image on '%s'"), *Key);
+          break;
+        }
+      }
+      if (!bFound) {
+        Message = FString::Printf(TEXT("Image widget '%s' not found"), *Key);
+        ErrorCode = TEXT("WIDGET_NOT_FOUND");
+      }
+    } else {
+      Message = TEXT("Failed to load texture");
+      ErrorCode = TEXT("ASSET_NOT_FOUND");
+    }
+  } else if (LowerSub == TEXT("set_widget_visibility")) {
+    FString Key;
+    bool bVisible = true;
+    Payload->TryGetStringField(TEXT("key"), Key);
+    Payload->TryGetBoolField(TEXT("visible"), bVisible);
+
+    bool bFound = false;
+    // Try UserWidgets
+    for (TObjectIterator<UUserWidget> It; It; ++It) {
+      if (It->GetName() == Key && It->GetWorld()) {
+        It->SetVisibility(bVisible ? ESlateVisibility::Visible
+                                   : ESlateVisibility::Collapsed);
+        bFound = true;
+        bSuccess = true;
+        break;
+      }
+    }
+    // If not found, try generic UWidget
+    if (!bFound) {
+      for (TObjectIterator<UWidget> It; It; ++It) {
+        if (It->GetName() == Key && It->GetWorld()) {
+          It->SetVisibility(bVisible ? ESlateVisibility::Visible
+                                     : ESlateVisibility::Collapsed);
+          bFound = true;
+          bSuccess = true;
+          break;
+        }
+      }
+    }
+
+    if (bFound) {
+      Message = FString::Printf(TEXT("Set visibility on '%s' to %s"), *Key,
+                                bVisible ? TEXT("Visible") : TEXT("Collapsed"));
+    } else {
+      Message = FString::Printf(TEXT("Widget '%s' not found"), *Key);
+      ErrorCode = TEXT("WIDGET_NOT_FOUND");
+    }
+  } else if (LowerSub == TEXT("remove_widget_from_viewport")) {
+    FString Key;
+    Payload->TryGetStringField(TEXT("key"),
+                               Key); // If empty, remove all? OR specific
+
+    if (Key.IsEmpty()) {
+      // Remove all user widgets?
+      TArray<UUserWidget *> TempWidgets;
+      UWidgetBlueprintLibrary::GetAllWidgetsOfClass(
+          GEditor->GetEditorWorldContext().World(), TempWidgets,
+          UUserWidget::StaticClass(), true);
+      // Implementation:
+      if (GEngine && GEngine->GameViewport &&
+          GEngine->GameViewport->GetWorld()) {
+        TArray<UUserWidget *> Widgets;
+        UWidgetBlueprintLibrary::GetAllWidgetsOfClass(
+            GEngine->GameViewport->GetWorld(), Widgets,
+            UUserWidget::StaticClass(), true);
+        for (UUserWidget *W : Widgets) {
+          W->RemoveFromParent();
+        }
+        bSuccess = true;
+        Message = TEXT("Removed all widgets");
+      }
+    } else {
+      bool bFound = false;
+      for (TObjectIterator<UUserWidget> It; It; ++It) {
+        if (It->GetName() == Key && It->GetWorld()) {
+          It->RemoveFromParent();
+          bFound = true;
+          bSuccess = true;
+          break;
+        }
+      }
+      if (bFound) {
+        Message = FString::Printf(TEXT("Removed widget '%s'"), *Key);
+      } else {
+        Message = FString::Printf(TEXT("Widget '%s' not found"), *Key);
+        ErrorCode = TEXT("WIDGET_NOT_FOUND");
+      }
     }
   } else {
     Message = FString::Printf(

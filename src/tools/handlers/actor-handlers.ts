@@ -6,7 +6,34 @@ type ActorActionHandler = (args: any, tools: ITools) => Promise<any>;
 
 const handlers: Record<string, ActorActionHandler> = {
     spawn: async (args, tools) => {
-        const classPath = requireNonEmptyString(args.classPath, 'classPath', 'Invalid classPath: must be a non-empty string');
+        // Class name aliases for user-friendly names
+        const classAliases: Record<string, string> = {
+            'SplineActor': '/Script/Engine.Actor',  // Use Actor with SplineComponent
+            'Spline': '/Script/Engine.Actor',       // Use Actor with SplineComponent
+            'PointLight': '/Script/Engine.PointLight',
+            'SpotLight': '/Script/Engine.SpotLight',
+            'DirectionalLight': '/Script/Engine.DirectionalLight',
+            'Camera': '/Script/Engine.CameraActor',
+            'CameraActor': '/Script/Engine.CameraActor',
+            'StaticMeshActor': '/Script/Engine.StaticMeshActor',
+            'SkeletalMeshActor': '/Script/Engine.SkeletalMeshActor',
+            'PlayerStart': '/Script/Engine.PlayerStart',
+            'TriggerBox': '/Script/Engine.TriggerBox',
+            'TriggerSphere': '/Script/Engine.TriggerSphere',
+            'BlockingVolume': '/Script/Engine.BlockingVolume',
+            'Pawn': '/Script/Engine.Pawn',
+            'Character': '/Script/Engine.Character',
+            'Actor': '/Script/Engine.Actor'
+        };
+
+        let classPath = args.classPath;
+
+        // Apply alias if classPath matches a known alias
+        if (classPath && classAliases[classPath]) {
+            classPath = classAliases[classPath];
+        }
+
+        classPath = requireNonEmptyString(classPath, 'classPath', 'Invalid classPath: must be a non-empty string');
         const timeoutMs = typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined;
 
         // Extremely small timeouts are treated as an immediate timeout-style
@@ -20,13 +47,19 @@ const handlers: Record<string, ActorActionHandler> = {
             });
         }
 
+        // For SplineActor alias, add SplineComponent automatically
+        const componentToAdd = (args.classPath === 'SplineActor' || args.classPath === 'Spline')
+            ? 'SplineComponent'
+            : undefined;
+
         return tools.actorTools.spawn({
             classPath,
             actorName: args.actorName,
             location: args.location,
             rotation: args.rotation,
             meshPath: args.meshPath,
-            timeoutMs
+            timeoutMs,
+            ...(componentToAdd ? { componentToAdd } : {})
         });
     },
     delete: async (args, tools) => {
@@ -111,6 +144,18 @@ const handlers: Record<string, ActorActionHandler> = {
             (result as any).message = `Found ${count} actors: ${names}${suffix}`;
         }
         return result;
+    },
+    find_by_name: async (args, tools) => {
+        // Support both actorName and name parameters for consistency
+        const actorName = args.actorName || args.name || '';
+        if (!actorName) {
+            return { success: false, error: 'actorName or name is required' };
+        }
+        // Use automation bridge to find actor by name
+        return executeAutomationRequest(tools, 'control_actor', {
+            action: 'get_actor_by_name',
+            actorName
+        });
     }
 };
 

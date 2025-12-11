@@ -45,6 +45,18 @@
 #include "MovieSceneSequencePlayer.h"
 #endif
 
+#if __has_include("Tracks/MovieSceneFloatTrack.h")
+#include "Sections/MovieSceneFloatSection.h"
+#include "Tracks/MovieSceneFloatTrack.h"
+
+#endif
+
+#if __has_include("Tracks/MovieSceneBoolTrack.h")
+#include "Sections/MovieSceneBoolSection.h"
+#include "Tracks/MovieSceneBoolTrack.h"
+
+#endif
+
 #if __has_include("Tracks/MovieScene3DTransformTrack.h")
 #include "Tracks/MovieScene3DTransformTrack.h"
 #endif
@@ -534,32 +546,29 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(
 
 #if MCP_HAS_EDITOR_ACTOR_SUBSYSTEM
   if (GEditor) {
-    if (UEditorActorSubsystem *ActorSS =
-            GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
-      UClass *CameraClass = ACameraActor::StaticClass();
-      AActor *Spawned = ActorSS->SpawnActorFromClass(
-          CameraClass, FVector::ZeroVector, FRotator::ZeroRotator);
-      if (Spawned) {
-        // Fix for Issue #6: Auto-bind the camera to the sequence
-        if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
-          if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
-            FGuid BindingGuid = MovieScene->AddPossessable(
-                Spawned->GetActorLabel(), Spawned->GetClass());
-            if (MovieScene->FindPossessable(BindingGuid)) {
-              MovieScene->Modify();
-              Resp->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
-            }
+    UClass *CameraClass = ACameraActor::StaticClass();
+    AActor *Spawned = SpawnActorInActiveWorld<AActor>(
+        CameraClass, FVector::ZeroVector, FRotator::ZeroRotator,
+        TEXT("SequenceCamera"));
+    if (Spawned) {
+      // Fix for Issue #6: Auto-bind the camera to the sequence
+      if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
+        if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
+          FGuid BindingGuid = MovieScene->AddPossessable(
+              Spawned->GetActorLabel(), Spawned->GetClass());
+          if (MovieScene->FindPossessable(BindingGuid)) {
+            MovieScene->Modify();
+            Resp->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
           }
         }
-
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("actorLabel"), Spawned->GetActorLabel());
-        SendAutomationResponse(
-            Socket, RequestId, true,
-            TEXT("Camera actor spawned and bound to sequence"), Resp,
-            FString());
-        return true;
       }
+
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("actorLabel"), Spawned->GetActorLabel());
+      SendAutomationResponse(Socket, RequestId, true,
+                             TEXT("Camera actor spawned and bound to sequence"),
+                             Resp, FString());
+      return true;
     }
   }
   SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to add camera"),
@@ -1688,6 +1697,80 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
             }
           }
         }
+      } else {
+        // Try generic property tracks
+        const TSharedPtr<FJsonValue> Val =
+            LocalPayload->TryGetField(TEXT("value"));
+        if (Val.IsValid() && Val->Type == EJson::Number) {
+          UMovieSceneFloatTrack *Track =
+              MovieScene->FindTrack<UMovieSceneFloatTrack>(
+                  BindingGuid, FName(*PropertyName));
+          if (!Track) {
+            Track = MovieScene->AddTrack<UMovieSceneFloatTrack>(BindingGuid);
+            if (Track)
+              Track->SetPropertyNameAndPath(FName(*PropertyName), PropertyName);
+          }
+          if (Track) {
+            bool bSectionAdded = false;
+            UMovieSceneFloatSection *Section = Cast<UMovieSceneFloatSection>(
+                Track->FindOrAddSection(0, bSectionAdded));
+            if (Section) {
+              FFrameRate TickResolution = MovieScene->GetTickResolution();
+              FFrameRate DisplayRate = MovieScene->GetDisplayRate();
+              FFrameNumber FrameNum = FFrameNumber(static_cast<int32>(Frame));
+              FFrameNumber TickFrame =
+                  FFrameRate::TransformTime(FFrameTime(FrameNum), DisplayRate,
+                                            TickResolution)
+                      .FloorToFrame();
+
+              FMovieSceneFloatChannel *Channel =
+                  Section->GetChannelProxy()
+                      .GetChannel<FMovieSceneFloatChannel>(0);
+              if (Channel) {
+                Channel->GetData().UpdateOrAddKey(
+                    TickFrame, FMovieSceneFloatValue((float)Val->AsNumber()));
+                MovieScene->Modify();
+                SendAutomationResponse(Socket, RequestId, true,
+                                       TEXT("Float Keyframe added"), nullptr);
+                return true;
+              }
+            }
+          }
+        } else if (Val.IsValid() && Val->Type == EJson::Boolean) {
+          UMovieSceneBoolTrack *Track =
+              MovieScene->FindTrack<UMovieSceneBoolTrack>(BindingGuid,
+                                                          FName(*PropertyName));
+          if (!Track) {
+            Track = MovieScene->AddTrack<UMovieSceneBoolTrack>(BindingGuid);
+            if (Track)
+              Track->SetPropertyNameAndPath(FName(*PropertyName), PropertyName);
+          }
+          if (Track) {
+            bool bSectionAdded = false;
+            UMovieSceneBoolSection *Section = Cast<UMovieSceneBoolSection>(
+                Track->FindOrAddSection(0, bSectionAdded));
+            if (Section) {
+              FFrameRate TickResolution = MovieScene->GetTickResolution();
+              FFrameRate DisplayRate = MovieScene->GetDisplayRate();
+              FFrameNumber FrameNum = FFrameNumber(static_cast<int32>(Frame));
+              FFrameNumber TickFrame =
+                  FFrameRate::TransformTime(FFrameTime(FrameNum), DisplayRate,
+                                            TickResolution)
+                      .FloorToFrame();
+
+              FMovieSceneBoolChannel *Channel =
+                  Section->GetChannelProxy().GetChannel<FMovieSceneBoolChannel>(
+                      0);
+              if (Channel) {
+                Channel->GetData().UpdateOrAddKey(TickFrame, Val->AsBool());
+                MovieScene->Modify();
+                SendAutomationResponse(Socket, RequestId, true,
+                                       TEXT("Bool Keyframe added"), nullptr);
+                return true;
+              }
+            }
+          }
+        }
       }
 
       SendAutomationResponse(
@@ -1785,6 +1868,273 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
     return HandleSequenceGetMetadata(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_add_keyframe"))
     return HandleSequenceAddKeyframe(RequestId, LocalPayload, RequestingSocket);
+  if (EffectiveAction == TEXT("sequence_add_track")) {
+    // add_track action: Add a track to a binding in a level sequence
+    FString SeqPath = ResolveSequencePath(LocalPayload);
+    if (SeqPath.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("sequence_add_track requires a sequence path"), nullptr,
+          TEXT("INVALID_SEQUENCE"));
+      return true;
+    }
+
+    ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
+    if (!Sequence) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Level sequence not found"), nullptr,
+                             TEXT("SEQUENCE_NOT_FOUND"));
+      return true;
+    }
+
+    UMovieScene *MovieScene = Sequence->GetMovieScene();
+    if (!MovieScene) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("MovieScene not available"), nullptr,
+                             TEXT("MOVIESCENE_UNAVAILABLE"));
+      return true;
+    }
+
+    FString TrackType;
+    LocalPayload->TryGetStringField(TEXT("trackType"), TrackType);
+    if (TrackType.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("trackType required (e.g., Transform, Animation, Audio, Event)"),
+          nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString TrackName;
+    LocalPayload->TryGetStringField(TEXT("trackName"), TrackName);
+
+    FString ActorName;
+    LocalPayload->TryGetStringField(TEXT("actorName"), ActorName);
+
+    // Find or use master track if no actor specified
+    FGuid BindingGuid;
+    if (!ActorName.IsEmpty()) {
+      // Find binding by actor name
+      // Use const interface to avoid deprecation warning
+      const UMovieScene *ConstMovieScene = MovieScene;
+      for (const FMovieSceneBinding &Binding : ConstMovieScene->GetBindings()) {
+        FString BindingName;
+        if (FMovieScenePossessable *Possessable =
+                MovieScene->FindPossessable(Binding.GetObjectGuid())) {
+          BindingName = Possessable->GetName();
+        } else if (FMovieSceneSpawnable *Spawnable =
+                       MovieScene->FindSpawnable(Binding.GetObjectGuid())) {
+          BindingName = Spawnable->GetName();
+        }
+
+        if (BindingName.Contains(ActorName)) {
+          BindingGuid = Binding.GetObjectGuid();
+          break;
+        }
+      }
+      if (!BindingGuid.IsValid()) {
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Binding not found for actor: %s"),
+                            *ActorName),
+            nullptr, TEXT("BINDING_NOT_FOUND"));
+        return true;
+      }
+    }
+
+    // Add the track
+    UMovieSceneTrack *NewTrack = nullptr;
+    FString TrackTypeLower = TrackType.ToLower();
+
+#if __has_include("Tracks/MovieScene3DTransformTrack.h")
+    if (TrackTypeLower == TEXT("transform") ||
+        TrackTypeLower == TEXT("3dtransform")) {
+      if (BindingGuid.IsValid()) {
+        NewTrack = MovieScene->AddTrack(
+            UMovieScene3DTransformTrack::StaticClass(), BindingGuid);
+      }
+    }
+#endif
+
+    // For master tracks or other track types, would need additional
+    // implementation based on available track classes
+
+    if (NewTrack) {
+      Sequence->MarkPackageDirty();
+
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+      Resp->SetStringField(TEXT("trackType"), TrackType);
+      Resp->SetStringField(TEXT("trackName"),
+                           TrackName.IsEmpty() ? TrackType : TrackName);
+      if (!ActorName.IsEmpty()) {
+        Resp->SetStringField(TEXT("actorName"), ActorName);
+        Resp->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
+      }
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Track added successfully"), Resp, FString());
+    } else {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Failed to add track of type: %s"), *TrackType),
+          nullptr, TEXT("TRACK_CREATION_FAILED"));
+    }
+    return true;
+  }
+
+  // sequence_list_tracks: List all tracks for a sequence binding
+  if (EffectiveAction == TEXT("sequence_list_tracks")) {
+    FString SeqPath = ResolveSequencePath(LocalPayload);
+    if (SeqPath.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("sequence_list_tracks requires a sequence path"), nullptr,
+          TEXT("INVALID_SEQUENCE"));
+      return true;
+    }
+
+#if WITH_EDITOR
+    ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
+    if (!Sequence) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Level sequence not found"), nullptr,
+                             TEXT("SEQUENCE_NOT_FOUND"));
+      return true;
+    }
+
+    UMovieScene *MovieScene = Sequence->GetMovieScene();
+    if (!MovieScene) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("MovieScene not available"), nullptr,
+                             TEXT("MOVIESCENE_UNAVAILABLE"));
+      return true;
+    }
+
+    TArray<TSharedPtr<FJsonValue>> TracksArray;
+
+    // Get Tracks (formerly GetMasterTracks)
+    for (UMovieSceneTrack *Track : MovieScene->GetTracks()) {
+      if (!Track)
+        continue;
+      TSharedPtr<FJsonObject> TrackObj = MakeShared<FJsonObject>();
+      TrackObj->SetStringField(TEXT("trackName"), Track->GetName());
+      TrackObj->SetStringField(TEXT("trackType"), Track->GetClass()->GetName());
+      TrackObj->SetStringField(TEXT("displayName"),
+                               Track->GetDisplayName().ToString());
+      TrackObj->SetBoolField(TEXT("isMasterTrack"), true);
+      TrackObj->SetNumberField(TEXT("sectionCount"),
+                               Track->GetAllSections().Num());
+      TracksArray.Add(MakeShared<FJsonValueObject>(TrackObj));
+    }
+
+    // Get tracks from bindings
+    for (const FMovieSceneBinding &Binding :
+         const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
+      FString BindingName;
+      if (FMovieScenePossessable *Possessable =
+              MovieScene->FindPossessable(Binding.GetObjectGuid())) {
+        BindingName = Possessable->GetName();
+      } else if (FMovieSceneSpawnable *Spawnable =
+                     MovieScene->FindSpawnable(Binding.GetObjectGuid())) {
+        BindingName = Spawnable->GetName();
+      }
+
+      for (UMovieSceneTrack *Track : Binding.GetTracks()) {
+        if (!Track)
+          continue;
+        TSharedPtr<FJsonObject> TrackObj = MakeShared<FJsonObject>();
+        TrackObj->SetStringField(TEXT("trackName"), Track->GetName());
+        TrackObj->SetStringField(TEXT("trackType"),
+                                 Track->GetClass()->GetName());
+        TrackObj->SetStringField(TEXT("displayName"),
+                                 Track->GetDisplayName().ToString());
+        TrackObj->SetBoolField(TEXT("isMasterTrack"), false);
+        TrackObj->SetStringField(TEXT("bindingName"), BindingName);
+        TrackObj->SetStringField(TEXT("bindingGuid"),
+                                 Binding.GetObjectGuid().ToString());
+        TrackObj->SetNumberField(TEXT("sectionCount"),
+                                 Track->GetAllSections().Num());
+        TracksArray.Add(MakeShared<FJsonValueObject>(TrackObj));
+      }
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetArrayField(TEXT("tracks"), TracksArray);
+    Resp->SetNumberField(TEXT("trackCount"), TracksArray.Num());
+    Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+    SendAutomationResponse(
+        RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("Found %d tracks"), TracksArray.Num()), Resp,
+        FString());
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("sequence_list_tracks requires editor build"),
+                           nullptr, TEXT("EDITOR_ONLY"));
+    return true;
+#endif
+  }
+
+  // sequence_set_work_range: Set the work range of a sequence
+  if (EffectiveAction == TEXT("sequence_set_work_range")) {
+    FString SeqPath = ResolveSequencePath(LocalPayload);
+    if (SeqPath.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("sequence_set_work_range requires a sequence path"), nullptr,
+          TEXT("INVALID_SEQUENCE"));
+      return true;
+    }
+
+#if WITH_EDITOR
+    ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
+    if (!Sequence) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Level sequence not found"), nullptr,
+                             TEXT("SEQUENCE_NOT_FOUND"));
+      return true;
+    }
+
+    UMovieScene *MovieScene = Sequence->GetMovieScene();
+    if (!MovieScene) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("MovieScene not available"), nullptr,
+                             TEXT("MOVIESCENE_UNAVAILABLE"));
+      return true;
+    }
+
+    double Start = 0.0, End = 0.0;
+    LocalPayload->TryGetNumberField(TEXT("start"), Start);
+    LocalPayload->TryGetNumberField(TEXT("end"), End);
+
+    FFrameRate TickResolution = MovieScene->GetTickResolution();
+    // Round to int32 for FFrameNumber constructor
+    FFrameNumber StartFrame(
+        (int32)FMath::RoundToInt(Start * TickResolution.AsDecimal()));
+    FFrameNumber EndFrame(
+        (int32)FMath::RoundToInt(End * TickResolution.AsDecimal()));
+
+    // SetWorkingRange expects seconds (double)
+    MovieScene->SetWorkingRange(Start, End);
+    MovieScene->Modify();
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetNumberField(TEXT("startFrame"), StartFrame.Value);
+    Resp->SetNumberField(TEXT("endFrame"), EndFrame.Value);
+    Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Work range set successfully"), Resp,
+                           FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("sequence_set_work_range requires editor build"), nullptr,
+        TEXT("EDITOR_ONLY"));
+    return true;
+#endif
+  }
 
   SendAutomationResponse(
       RequestingSocket, RequestId, false,

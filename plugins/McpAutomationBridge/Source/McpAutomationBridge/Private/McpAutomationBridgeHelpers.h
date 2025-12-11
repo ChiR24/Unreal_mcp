@@ -7,7 +7,9 @@
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "JsonObjectConverter.h"
+#include "Misc/FileHelper.h"
 #include "Misc/OutputDevice.h"
+#include "Misc/Paths.h"
 #include "Misc/ScopeLock.h"
 #include "UObject/UnrealType.h"
 #include <type_traits>
@@ -478,8 +480,8 @@ ExportPropertyToJsonValue(void *TargetContainer, FProperty *Property) {
 
   // Arrays: try to export inner values as strings
   if (FArrayProperty *AP = CastField<FArrayProperty>(Property)) {
-    FScriptArrayHelper Helper(AP,
-                              AP->ContainerPtrToValuePtr<void>(TargetObject));
+    FScriptArrayHelper Helper(
+        AP, AP->ContainerPtrToValuePtr<void>(TargetContainer));
     TArray<TSharedPtr<FJsonValue>> Out;
     for (int32 i = 0; i < Helper.Num(); ++i) {
       void *ElemPtr = Helper.GetRawPtr(i);
@@ -528,7 +530,8 @@ ExportPropertyToJsonValue(void *TargetContainer, FProperty *Property) {
   // Maps: export as JSON object with key-value pairs
   if (FMapProperty *MP = CastField<FMapProperty>(Property)) {
     TSharedPtr<FJsonObject> MapObj = MakeShared<FJsonObject>();
-    FScriptMapHelper Helper(MP, MP->ContainerPtrToValuePtr<void>(TargetObject));
+    FScriptMapHelper Helper(MP,
+                            MP->ContainerPtrToValuePtr<void>(TargetContainer));
 
     for (int32 i = 0; i < Helper.Num(); ++i) {
       if (!Helper.IsValidIndex(i))
@@ -577,7 +580,8 @@ ExportPropertyToJsonValue(void *TargetContainer, FProperty *Property) {
   // Sets: export as JSON array
   if (FSetProperty *SP = CastField<FSetProperty>(Property)) {
     TArray<TSharedPtr<FJsonValue>> Out;
-    FScriptSetHelper Helper(SP, SP->ContainerPtrToValuePtr<void>(TargetObject));
+    FScriptSetHelper Helper(SP,
+                            SP->ContainerPtrToValuePtr<void>(TargetContainer));
 
     for (int32 i = 0; i < Helper.Num(); ++i) {
       if (!Helper.IsValidIndex(i))
@@ -618,9 +622,18 @@ ExportPropertyToJsonValue(void *TargetContainer, FProperty *Property) {
 // timestamps (GRecentAssetSaveTs) and skips saves that occur within the
 // configured throttle window. Skipped saves return 'true' to preserve
 // idempotent behavior for callers that treat a skipped save as a success.
+// Throttled wrapper around UEditorAssetLibrary::SaveLoadedAsset to avoid
+// triggering rapid repeated SavePackage calls which can cause engine
+// warnings (FlushRenderingCommands called recursively) during heavy
+// test activity. The helper consults a plugin-wide map of recent save
+// timestamps (GRecentAssetSaveTs) and skips saves that occur within the
+// configured throttle window. Skipped saves return 'true' to preserve
+// idempotent behavior for callers that treat a skipped save as a success.
+//
+// bForce: If true, ignore throttling and force an immediate save.
 static inline bool
-SaveLoadedAssetThrottled(UObject *Asset,
-                         double ThrottleSecondsOverride = -1.0) {
+SaveLoadedAssetThrottled(UObject *Asset, double ThrottleSecondsOverride = -1.0,
+                         bool bForce = false) {
   if (!Asset)
     return false;
   const double Now = FPlatformTime::Seconds();
@@ -633,15 +646,17 @@ SaveLoadedAssetThrottled(UObject *Asset,
 
   {
     FScopeLock Lock(&GRecentAssetSaveMutex);
-    if (double *Last = GRecentAssetSaveTs.Find(Key)) {
-      const double Elapsed = Now - *Last;
-      if (Elapsed < Throttle) {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose,
-               TEXT("SaveLoadedAssetThrottled: skipping save for '%s' "
-                    "(last=%.3fs, throttle=%.3fs)"),
-               *Key, Elapsed, Throttle);
-        // Treat skip as success to avoid bubbling save failures into tests
-        return true;
+    if (!bForce) {
+      if (double *Last = GRecentAssetSaveTs.Find(Key)) {
+        const double Elapsed = Now - *Last;
+        if (Elapsed < Throttle) {
+          UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose,
+                 TEXT("SaveLoadedAssetThrottled: skipping save for '%s' "
+                      "(last=%.3fs, throttle=%.3fs)"),
+                 *Key, Elapsed, Throttle);
+          // Treat skip as success to avoid bubbling save failures into tests
+          return true;
+        }
       }
     }
   }
@@ -659,12 +674,29 @@ SaveLoadedAssetThrottled(UObject *Asset,
   }
   return bSaved;
 }
+
+// Force a synchronous scan of a specific package or folder path to ensure
+// the Asset Registry is up-to-date immediately after asset creation.
+static inline void ScanPathSynchronous(const FString &InPath,
+                                       bool bRecursive = true) {
+  FAssetRegistryModule &AssetRegistryModule =
+      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+  IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+
+  // Scan specific path
+  TArray<FString> PathsToScan;
+  PathsToScan.Add(InPath);
+  AssetRegistry.ScanPathsSynchronous(PathsToScan, bRecursive);
+}
 #else
 static inline bool
 SaveLoadedAssetThrottled(UObject * /*Asset*/,
-                         double /*ThrottleSecondsOverride*/ = -1.0) {
+                         double /*ThrottleSecondsOverride*/ = -1.0,
+                         bool /*bForce*/ = false) {
   return false;
 }
+static inline void ScanPathSynchronous(const FString & /*InPath*/,
+                                       bool /*bRecursive*/ = true) {}
 #endif
 
 // Apply a JSON value to an FProperty on a UObject. Returns true on success and
@@ -1402,3 +1434,227 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
   return false;
 #endif
 }
+
+/**
+ * Robustly resolves a UClass from a string input.
+ * Input can be:
+ * 1. Full path: "/Script/Engine.Actor"
+ * 2. Short name: "Actor", "WidgetBlueprint" (searches common packages)
+ * 3. Class path: "/Game/MyBP.MyBP_C"
+ */
+static inline UClass *ResolveUClass(const FString &Input) {
+  if (Input.IsEmpty())
+    return nullptr;
+
+  // 1. Try finding it directly (full path or already loaded)
+  UClass *Found = FindObject<UClass>(nullptr, *Input);
+  if (Found)
+    return Found;
+
+  // 2. Try loading it directly
+  Found = LoadObject<UClass>(nullptr, *Input);
+  if (Found)
+    return Found;
+
+  // 3. Handle Blueprint Generated Classes explicitly
+  // parsing "MyBP" -> "/Game/MyBP.MyBP_C" logic is hard without path,
+  // but if input ends in _C, treat as class path.
+  if (Input.EndsWith(TEXT("_C"))) {
+    // Already tried loading, maybe it needs a package path fix?
+    // Assuming the user provided a full path if they included _C.
+    return nullptr;
+  }
+
+  // 4. Short name resolution
+  // Check common script packages
+  const TArray<FString> ScriptPackages = {TEXT("/Script/Engine"),
+                                          TEXT("/Script/CoreUObject"),
+                                          TEXT("/Script/UMG"),
+                                          TEXT("/Script/AIModule"),
+                                          TEXT("/Script/NavigationSystem"),
+                                          TEXT("/Script/Niagara")};
+
+  for (const FString &Pkg : ScriptPackages) {
+    FString TryPath = FString::Printf(TEXT("%s.%s"), *Pkg, *Input);
+    Found = FindObject<UClass>(nullptr, *TryPath);
+    if (Found)
+      return Found;
+    Found = LoadObject<UClass>(nullptr, *TryPath);
+    if (Found)
+      return Found;
+  }
+
+  // 5. Native class search by iteration (slow fallback, but useful for obscure
+  // plugins)
+  // Only doing this for exact short name matches to avoid false positives
+  for (TObjectIterator<UClass> It; It; ++It) {
+    if (It->GetName() == Input) {
+      return *It;
+    }
+  }
+
+  return nullptr;
+}
+
+// Standardized Response Helpers
+// See: https://google.github.io/styleguide/jsoncstyleguide.xml
+
+/**
+ * Sends a standardized success response with a "data" envelope.
+ *
+ * Format:
+ * {
+ *   "success": true,
+ *   "data": { ... },
+ *   "warnings": [],
+ *   "error": null
+ * }
+ */
+static inline void SendStandardSuccessResponse(
+    UMcpAutomationBridgeSubsystem *Subsystem,
+    TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &RequestId,
+    const FString &Message, const TSharedPtr<FJsonObject> &Data,
+    const TArray<FString> &Warnings = TArray<FString>()) {
+  if (!Subsystem)
+    return;
+
+  TSharedPtr<FJsonObject> Envelope = MakeShared<FJsonObject>();
+  Envelope->SetBoolField(TEXT("success"), true);
+  Envelope->SetObjectField(TEXT("data"),
+                           Data.IsValid() ? Data : MakeShared<FJsonObject>());
+
+  TArray<TSharedPtr<FJsonValue>> WarningVals;
+  for (const FString &W : Warnings) {
+    WarningVals.Add(MakeShared<FJsonValueString>(W));
+  }
+  Envelope->SetArrayField(TEXT("warnings"), WarningVals);
+
+  Envelope->SetField(TEXT("error"), MakeShared<FJsonValueNull>());
+
+  Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Envelope,
+                                    FString());
+}
+
+/**
+ * Sends a standardized error response with structured error details.
+ *
+ * Format:
+ * {
+ *   "success": false,
+ *   "error": {
+ *     "code": "ERROR_CODE",
+ *     "message": "Human readable message",
+ *     "parameter": "optional_param_name",
+ *     ...
+ *   }
+ * }
+ */
+static inline void SendStandardErrorResponse(
+    UMcpAutomationBridgeSubsystem *Subsystem,
+    TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &RequestId,
+    const FString &ErrorCode, const FString &ErrorMessage,
+    const TSharedPtr<FJsonObject> &ErrorDetails = nullptr) {
+  if (!Subsystem)
+    return;
+
+  TSharedPtr<FJsonObject> Envelope = MakeShared<FJsonObject>();
+  Envelope->SetBoolField(TEXT("success"), false);
+
+  TSharedPtr<FJsonObject> ErrorObj = MakeShared<FJsonObject>();
+  ErrorObj->SetStringField(TEXT("code"), ErrorCode);
+  ErrorObj->SetStringField(TEXT("message"), ErrorMessage);
+
+  if (ErrorDetails.IsValid()) {
+    // Merge details into error object
+    for (const auto &Pair : ErrorDetails->Values) {
+      ErrorObj->SetField(Pair.Key, Pair.Value);
+    }
+  }
+
+  Envelope->SetObjectField(TEXT("error"), ErrorObj);
+
+  Subsystem->SendAutomationResponse(Socket, RequestId, false, ErrorMessage,
+                                    Envelope, ErrorCode);
+}
+
+// ============================================================================
+// ROBUST ACTOR SPAWNING HELPER
+// ============================================================================
+//
+// SpawnActorInActiveWorld solves the "transient actor" issue where actors
+// spawned via EditorActorSubsystem->SpawnActorFromClass may end up in the
+// /Engine/Transient package, making them invisible in the World Outliner.
+//
+// This helper properly handles both PIE (Play-In-Editor) and regular Editor
+// modes by:
+// 1. Checking if GEditor->PlayWorld is active (PIE mode)
+// 2. Using TargetWorld->SpawnActor for PIE (proper world context)
+// 3. Using EditorActorSubsystem for Editor mode with explicit transform
+// 4. Optionally setting an actor label for easy identification
+//
+// Usage:
+//   AActor* MyActor = SpawnActorInActiveWorld<AActor>(
+//       ADirectionalLight::StaticClass(),
+//       FVector(0, 0, 100),
+//       FRotator(-45, 0, 0),
+//       TEXT("MySunLight")
+//   );
+//
+// See: ControlHandlers.cpp HandleControlActorSpawn for the original pattern.
+// ============================================================================
+
+#if WITH_EDITOR
+#include "Editor.h"
+#include "GameFramework/Actor.h"
+#if __has_include("Subsystems/EditorActorSubsystem.h")
+#include "Subsystems/EditorActorSubsystem.h"
+#elif __has_include("EditorActorSubsystem.h")
+#include "EditorActorSubsystem.h"
+#endif
+
+template <typename T = AActor>
+static inline T *
+SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
+                        const FRotator &Rotation,
+                        const FString &OptionalLabel = FString()) {
+  static_assert(std::is_base_of<AActor, T>::value,
+                "T must be derived from AActor");
+
+  if (!GEditor || !ActorClass)
+    return nullptr;
+
+  AActor *Spawned = nullptr;
+
+  // Check if PIE is active
+  UWorld *TargetWorld = GEditor->PlayWorld;
+
+  if (TargetWorld) {
+    // PIE Path: Use World->SpawnActor for proper world context
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+    Spawned =
+        TargetWorld->SpawnActor(ActorClass, &Location, &Rotation, SpawnParams);
+  } else {
+    // Editor Path: Use EditorActorSubsystem with explicit transform
+    UEditorActorSubsystem *ActorSS =
+        GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    if (ActorSS) {
+      Spawned = ActorSS->SpawnActorFromClass(ActorClass, Location, Rotation);
+      if (Spawned) {
+        // Explicit transform to ensure proper placement and registration
+        Spawned->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
+                                             ETeleportType::TeleportPhysics);
+      }
+    }
+  }
+
+  // Set optional label for easy identification in World Outliner
+  if (Spawned && !OptionalLabel.IsEmpty()) {
+    Spawned->SetActorLabel(OptionalLabel);
+  }
+
+  return Cast<T>(Spawned);
+}
+
+#endif

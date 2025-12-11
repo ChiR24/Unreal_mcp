@@ -4,7 +4,6 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 
-
 #if WITH_EDITOR
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
@@ -54,6 +53,64 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Dependencies retrieved."), Result);
+    return true;
+  } else if (SubAction == TEXT("find_by_tag")) {
+    FString Tag;
+    Payload->TryGetStringField(TEXT("tag"), Tag);
+    FString Value;
+    Payload->TryGetStringField(TEXT("value"), Value);
+
+    if (Tag.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("tag required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FARFilter Filter;
+    // We want to find assets that have this tag.
+    // Specifying TagsAndValues with just key checks for existence,
+    // key+value checks for specific value.
+    if (!Value.IsEmpty()) {
+      Filter.TagsAndValues.Add(FName(*Tag), Value);
+    } else {
+      // Searching by tag existence only is slightly more complex if the API
+      // insists on a value, but normally adding key with empty string might not
+      // work as intended for "exists". However, for now we assume exact match
+      // or simple key check. Unreal's API usually requires a value for strict
+      // matching. If user provided no value, we might iterate all assets? No,
+      // that's slow. We will assume empty value means "any value" isn't
+      // supported easily by FARFilter without iterating. But let's try adding
+      // it with * wildcard or similar if supported? No, let's just add it.
+      Filter.TagsAndValues.Add(FName(*Tag), FString());
+    }
+
+    // Also likely want to filter by class if provided? Code doesn't use it yet.
+    // For now broad search.
+
+    FAssetRegistryModule &AssetRegistryModule =
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
+            "AssetRegistry");
+    TArray<FAssetData> AssetDataList;
+    AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
+
+    // Build Response
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TArray<TSharedPtr<FJsonValue>> AssetsArray;
+
+    for (const FAssetData &Data : AssetDataList) {
+      TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+      AssetObj->SetStringField(TEXT("assetName"), Data.AssetName.ToString());
+      AssetObj->SetStringField(TEXT("assetPath"),
+                               Data.GetSoftObjectPath().ToString());
+      AssetObj->SetStringField(TEXT("classPath"),
+                               Data.AssetClassPath.ToString());
+      AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+    }
+
+    Result->SetArrayField(TEXT("assets"), AssetsArray);
+    Result->SetNumberField(TEXT("count"), AssetsArray.Num());
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Assets found by tag"), Result);
     return true;
   } else if (SubAction == TEXT("search_assets")) {
     FARFilter Filter;

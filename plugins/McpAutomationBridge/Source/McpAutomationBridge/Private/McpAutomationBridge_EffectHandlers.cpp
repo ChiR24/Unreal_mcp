@@ -198,7 +198,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       const FRotator SpawnRot(static_cast<float>(RotArr[0]),
                               static_cast<float>(RotArr[1]),
                               static_cast<float>(RotArr[2]));
-      AActor *Spawned = ActorSS->SpawnActorFromClass(
+      AActor *Spawned = SpawnActorInActiveWorld<AActor>(
           ANiagaraActor::StaticClass(), Loc, SpawnRot);
       if (!Spawned) {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -564,8 +564,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
               LogMcpAutomationBridgeSubsystem, Warning,
               TEXT("SetNiagaraParameter: Actor '%s' has no NiagaraComponent"),
               *SystemName);
-          continue; // Keep looking? No, actor label is unique-ish. But let's
-                    // assume unique.
+          // Keep looking? No, actor label is unique-ish. But let's
+          // assume unique.
           // But maybe we should break if we found the actor but no component?
           bComponentFound = false;
           break;
@@ -664,6 +664,10 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), bApplied);
+      Resp->SetBoolField(TEXT("applied"), bApplied);
+      Resp->SetStringField(TEXT("actorName"), SystemName);
+      Resp->SetStringField(TEXT("parameterName"), ParameterName);
+      Resp->SetStringField(TEXT("parameterType"), ParameterType);
 
       if (bApplied) {
         SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -735,10 +739,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         bFound = true;
         break;
       }
-      if (bFound)
+      if (bFound) {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("actorName"), SystemName);
+        Resp->SetBoolField(TEXT("active"), true);
         SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Niagara system activated."));
-      else
+                               TEXT("Niagara system activated."), Resp);
+      } else
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Niagara system not found."), nullptr,
                                TEXT("SYSTEM_NOT_FOUND"));
@@ -777,10 +785,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         bFound = true;
         break;
       }
-      if (bFound)
+      if (bFound) {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("actorName"), SystemName);
+        Resp->SetBoolField(TEXT("active"), false);
         SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Niagara system deactivated."));
-      else
+                               TEXT("Niagara system deactivated."), Resp);
+      } else
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Niagara system not found."), nullptr,
                                TEXT("SYSTEM_NOT_FOUND"));
@@ -826,10 +838,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         bFound = true;
         break;
       }
-      if (bFound)
+      if (bFound) {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("actorName"), SystemName);
+        Resp->SetNumberField(TEXT("steps"), Steps);
         SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Niagara simulation advanced."));
-      else
+                               TEXT("Niagara simulation advanced."), Resp);
+      } else
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Niagara system not found."), nullptr,
                                TEXT("SYSTEM_NOT_FOUND"));
@@ -948,8 +964,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         CompClass = URectLightComponent::StaticClass();
       }
 
-      AActor *Spawned =
-          ActorSS->SpawnActorFromClass(ChosenClass, Loc, FRotator::ZeroRotator);
+      AActor *Spawned = SpawnActorInActiveWorld<AActor>(ChosenClass, Loc,
+                                                        FRotator::ZeroRotator);
       if (!Spawned) {
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Failed to spawn light actor"), nullptr,
@@ -1167,8 +1183,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     const FRotator SpawnRot(static_cast<float>(RotArr[0]),
                             static_cast<float>(RotArr[1]),
                             static_cast<float>(RotArr[2]));
-    AActor *Spawned = ActorSS->SpawnActorFromClass(ANiagaraActor::StaticClass(),
-                                                   Loc, SpawnRot);
+    AActor *Spawned = SpawnActorInActiveWorld<AActor>(
+        ANiagaraActor::StaticClass(), Loc, SpawnRot);
     if (!Spawned) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Failed to spawn NiagaraActor"), nullptr,
@@ -1448,8 +1464,8 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
   }
 
   // Spawn the actor
-  AActor *Spawned = ActorSS->SpawnActorFromClass(ANiagaraActor::StaticClass(),
-                                                 Loc, FRotator::ZeroRotator);
+  AActor *Spawned = SpawnActorInActiveWorld<AActor>(
+      ANiagaraActor::StaticClass(), Loc, FRotator::ZeroRotator);
   if (!Spawned) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), false);

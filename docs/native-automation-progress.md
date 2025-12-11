@@ -43,6 +43,12 @@ This document tracks ongoing work to replace stubbed or registry-based fallbacks
 | --- | --- | --- |
 | `manage_level` (world partition) | Implemented (`load_cells`, `set_datalayer`). | ✅ Done (UE 5.7+ support added) |
 
+## Input System
+
+| Action | Current State | Needed Work |
+| --- | --- | --- |
+| `manage_input` | Implemented (Input Actions, Mapping Contexts, Bindings). | ✅ Done |
+
 ## System, Render & Pipeline
 
 | Action | Current State | Needed Work |
@@ -51,6 +57,8 @@ This document tracks ongoing work to replace stubbed or registry-based fallbacks
 | `system_control` (lumen) | Implemented (`lumen_update_scene`). | |
 | `system_control` (pipeline) | Implemented (`run_ubt`). | ✅ Done (Streamed via Node) |
 | `system_control` (tests) | Implemented (`run_tests`). | Add result streaming. |
+| `system_control` (settings) | Implemented (`set_project_setting`). | ✅ Done |
+| `manage_blueprint` (events) | Implemented (`add_event` for Custom/Standard). | ✅ Done |
 
 ## Observability
 
@@ -92,8 +100,19 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 | --- | --- | --- |
 | `spawn_niagara` | Spawns Niagara actors. | Support attachment targets, optional lifespan, undo stack. |
 | `set_niagara_parameter` | Supports float/vector/color/bool/int params. | ✅ Done |
+| `create_niagara_ribbon` | Implemented (spawns actor, sets user params). | ✅ Done |
 | `manage_effect` (legacy actions) | Stubbed (`NOT_IMPLEMENTED`). | Define expected presets and implement spawn routines + cleanup. |
 | `create_dynamic_light` | Spawns lights, sets intensity/color; no undo/pulse logic. | Add transactions, pulse animation, optional mobility + cleanup helpers. |
+
+## UI Handlers
+
+| Action | Current State | Needed Work |
+| --- | --- | --- |
+| `create_hud` | Implemented (creates widget + adds to viewport). | ✅ Done |
+| `set_widget_text` | Implemented (finds widget + sets text). | ✅ Done |
+| `set_widget_image` | Implemented (loads texture + sets image). | ✅ Done |
+| `set_widget_visibility` | Implemented (finds widget + sets visibility). | ✅ Done |
+| `remove_widget_from_viewport` | Implemented (removes widget). | ✅ Done |
 
 ## Editor Function Helpers
 

@@ -49,7 +49,8 @@ GetOrCreateFoliageActorForWorldSafe(UWorld *World, bool bCreateIfNone) {
 
   // Non-partitioned worlds: avoid ActorPartitionSubsystem ensures by finding or
   // spawning a foliage actor manually.
-  for (TActorIterator<AInstancedFoliageActor> It(World); It; ++It) {
+  TActorIterator<AInstancedFoliageActor> It(World);
+  if (It) {
     return *It;
   }
 
@@ -906,11 +907,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   FAssetRegistryModule::AssetCreated(Spawner);
 
   // Spawn Volume
-  UEditorActorSubsystem *ActorSS =
-      GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   AProceduralFoliageVolume *Volume = Cast<AProceduralFoliageVolume>(
-      ActorSS->SpawnActorFromClass(AProceduralFoliageVolume::StaticClass(),
-                                   Location, FRotator::ZeroRotator));
+      SpawnActorInActiveWorld<AActor>(AProceduralFoliageVolume::StaticClass(),
+                                      Location, FRotator::ZeroRotator, Name));
   if (!Volume) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Failed to spawn volume"), TEXT("SPAWN_FAILED"));

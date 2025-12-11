@@ -6,7 +6,6 @@
 #include "Misc/ScopeExit.h"
 #include "Misc/ScopeLock.h"
 
-
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
@@ -22,7 +21,7 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "UObject/UObjectIterator.h"
-
+#include "UObject/UnrealType.h"
 
 // Respect build-rule's PublicDefinitions: if the build rule set
 // MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=1 then include the subsystem headers.
@@ -218,6 +217,59 @@ bool FBlueprintCreationHandlers::HandleBlueprintProbeSubobjectHandle(
 #endif // WITH_EDITOR
 }
 
+static void ApplyPropertiesToObject(UObject *TargetObj,
+                                    const TSharedPtr<FJsonObject> &Properties) {
+  if (!TargetObj || !Properties.IsValid()) {
+    return;
+  }
+
+  for (const auto &Pair : Properties->Values) {
+    FProperty *Property = TargetObj->GetClass()->FindPropertyByName(*Pair.Key);
+    if (!Property) {
+      continue;
+    }
+
+    // 1. Handle Object Properties (Recursion for Components/Subobjects)
+    if (FObjectProperty *ObjProp = CastField<FObjectProperty>(Property)) {
+      if (Pair.Value->Type == EJson::Object) {
+        // This is likely a component or subobject property we want to edit
+        // inline
+        UObject *ChildObj =
+            ObjProp->GetObjectPropertyValue_InContainer(TargetObj);
+        if (ChildObj) {
+          ApplyPropertiesToObject(ChildObj, Pair.Value->AsObject());
+        }
+        continue;
+      }
+    }
+
+    // 2. Handle generic property setting via text import
+    FString TextValue;
+
+    if (Pair.Value->Type == EJson::String) {
+      TextValue = Pair.Value->AsString();
+    } else if (Pair.Value->Type == EJson::Number) {
+      double Val = Pair.Value->AsNumber();
+      // Heuristic: check if target is integer to avoid floating point syntax
+      // issues if any
+      if (Property->IsA<FIntProperty>() || Property->IsA<FInt64Property>() ||
+          Property->IsA<FByteProperty>()) {
+        TextValue = FString::Printf(TEXT("%lld"), (long long)Val);
+      } else {
+        TextValue = FString::SanitizeFloat(Val);
+      }
+    } else if (Pair.Value->Type == EJson::Boolean) {
+      TextValue = Pair.Value->AsBool() ? TEXT("True") : TEXT("False");
+    }
+
+    if (!TextValue.IsEmpty()) {
+      Property->ImportText_Direct(
+          *TextValue, Property->ContainerPtrToValuePtr<void>(TargetObj),
+          TargetObj, 0);
+    }
+  }
+}
+
 bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     UMcpAutomationBridgeSubsystem *Self, const FString &RequestId,
     const TSharedPtr<FJsonObject> &LocalPayload,
@@ -399,6 +451,20 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   }
 
   CreatedBlueprint = Cast<UBlueprint>(NewObj);
+
+  // Apply optional CDO properties immediately if provided
+  if (CreatedBlueprint && CreatedBlueprint->GeneratedClass) {
+    const TSharedPtr<FJsonObject> *PropertiesPtr;
+    if (LocalPayload->TryGetObjectField(TEXT("properties"), PropertiesPtr)) {
+      UObject *CDO = CreatedBlueprint->GeneratedClass->GetDefaultObject();
+      if (CDO) {
+        ApplyPropertiesToObject(CDO, *PropertiesPtr);
+        // Mark dirty
+        CreatedBlueprint->Modify();
+      }
+    }
+  }
+
   if (!CreatedBlueprint) {
     // If creation failed, check whether a Blueprint already exists at the
     // target path. AssetTools will return nullptr when an asset with the

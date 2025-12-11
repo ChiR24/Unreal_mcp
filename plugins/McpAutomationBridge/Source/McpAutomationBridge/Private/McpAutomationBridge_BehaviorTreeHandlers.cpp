@@ -19,6 +19,7 @@
 #include "BehaviorTreeGraphNode_Task.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphSchema.h"
+#include "EdGraphSchema_BehaviorTree.h"
 
 #endif
 
@@ -90,8 +91,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
       return true;
     }
 
-    // Initialize the BT graph (EdGraph will be created when opened in editor)
-    // Just mark the package dirty for now
+    // Initialize the BT graph (EdGraph)
+    UEdGraph *NewGraph =
+        NewObject<UBehaviorTreeGraph>(NewBT, TEXT("BehaviorTree"));
+    NewGraph->Schema = UEdGraphSchema_BehaviorTree::StaticClass();
+    NewBT->BTGraph = NewGraph;
+
+    // Create default nodes (Root)
+    NewGraph->GetSchema()->CreateDefaultNodesForGraph(*NewGraph);
 
     // Save the asset
     FAssetRegistryModule::AssetCreated(NewBT);

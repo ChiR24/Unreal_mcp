@@ -206,6 +206,37 @@ export class LevelTools extends BaseTool implements ILevelTools {
   }
 
   async listLevels() {
+    // Try to get actual levels from UE via automation bridge
+    try {
+      const response = await this.sendAutomationRequest('list_levels', {}, {
+        timeoutMs: 10000
+      });
+
+      if (response && response.success !== false) {
+        const result: Record<string, unknown> = {
+          success: true,
+          message: 'Levels listed from Unreal Engine',
+          currentMap: response.currentMap,
+          currentMapPath: response.currentMapPath,
+          currentWorldLevels: response.currentWorldLevels || [],
+          currentWorldLevelCount: response.currentWorldLevelCount || 0,
+          allMaps: response.allMaps || [],
+          allMapsCount: response.allMapsCount || 0,
+          ...response
+        };
+
+        // Also include managed levels for backwards compatibility
+        const managed = this.listManagedLevels();
+        result.managedLevels = managed.levels;
+        result.managedLevelCount = managed.count;
+
+        return result;
+      }
+    } catch {
+      // Fall back to managed levels if automation bridge fails
+    }
+
+    // Fallback to locally managed levels
     return this.listManagedLevels();
   }
 
@@ -240,23 +271,23 @@ export class LevelTools extends BaseTool implements ILevelTools {
       return { success: false, error: 'No level specified for export' };
     }
 
-    this.mutateRecord(resolved, {
-      exports: [
-        {
-          target: params.exportPath,
-          timestamp: Date.now(),
-          note: params.note
-        }
-      ],
-      lastSavedAt: Date.now()
-    });
+    try {
+      const res = await this.sendAutomationRequest('manage_level', {
+        action: 'export_level',
+        levelPath: resolved,
+        exportPath: params.exportPath
+      }, { timeoutMs: 60000 });
 
-    return {
-      success: true,
-      message: `Level exported to ${params.exportPath}`,
-      levelPath: resolved,
-      exportPath: params.exportPath
-    };
+      return {
+        success: true,
+        message: `Level exported to ${params.exportPath}`,
+        levelPath: resolved,
+        exportPath: params.exportPath,
+        details: res
+      };
+    } catch (e: any) {
+      return { success: false, error: `Export failed: ${e.message}` };
+    }
   }
 
   async importLevel(params: { packagePath: string; destinationPath?: string; streaming?: boolean }) {
@@ -264,23 +295,24 @@ export class LevelTools extends BaseTool implements ILevelTools {
       ? this.normalizeLevelPath(params.destinationPath)
       : this.normalizeLevelPath(`/Game/Maps/Imported_${Math.floor(Date.now() / 1000)}`);
 
-    this.ensureRecord(destination.path, {
-      name: destination.name,
-      streaming: Boolean(params.streaming),
-      partitioned: true,
-      loaded: false,
-      visible: false,
-      metadata: { importedFrom: params.packagePath },
-      createdAt: Date.now()
-    });
+    try {
+      const res = await this.sendAutomationRequest('manage_level', {
+        action: 'import_level',
+        packagePath: params.packagePath,
+        destinationPath: destination.path
+      }, { timeoutMs: 60000 });
 
-    return {
-      success: true,
-      message: `Level imported to ${destination.path}`,
-      levelPath: destination.path,
-      partitioned: true,
-      streaming: Boolean(params.streaming)
-    };
+      return {
+        success: true,
+        message: `Level imported to ${destination.path}`,
+        levelPath: destination.path,
+        partitioned: true,
+        streaming: Boolean(params.streaming),
+        details: res
+      };
+    } catch (e: any) {
+      return { success: false, error: `Import failed: ${e.message}` };
+    }
   }
 
   async saveLevelAs(params: { sourcePath?: string; targetPath: string }) {
@@ -335,7 +367,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         levelPath: target.path
       };
     } catch (error) {
-       return { success: false, error: `Failed to save level as: ${error instanceof Error ? error.message : String(error)}` };
+      return { success: false, error: `Failed to save level as: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
 
@@ -386,6 +418,32 @@ export class LevelTools extends BaseTool implements ILevelTools {
         };
       }
     } else {
+      // Try loading via automation bridge first (more robust)
+      try {
+        const response = await this.sendAutomationRequest('manage_level', {
+          action: 'load',
+          levelPath: params.levelPath
+        }, { timeoutMs: 30000 });
+
+        if (response.success) {
+          this.setCurrentLevel(normalizedPath);
+          this.mutateRecord(normalizedPath, {
+            streaming: false,
+            loaded: true,
+            visible: true
+          });
+          return {
+            success: true,
+            message: `Level loaded: ${params.levelPath}`,
+            level: normalizedPath,
+            streaming: false,
+            ...response
+          };
+        }
+      } catch (_e) {
+        // Fallback to console logic
+      }
+
       try {
         // Best-effort existence check using the Automation Bridge when available.
         try {
@@ -463,7 +521,8 @@ export class LevelTools extends BaseTool implements ILevelTools {
 
       const result: Record<string, unknown> = {
         success: true,
-        message: response.message || 'Level saved'
+        message: response.message || 'Level saved',
+        ...response
       };
 
       if (response.skipped) {
@@ -514,8 +573,11 @@ export class LevelTools extends BaseTool implements ILevelTools {
       const result: Record<string, unknown> = {
         success: true,
         message: response.message || 'Level created',
-        path: fullPath,
-        partitioned: isPartitioned
+        path: response.levelPath || fullPath,
+        packagePath: response.packagePath ?? fullPath,
+        objectPath: response.objectPath,
+        partitioned: isPartitioned,
+        ...response
       };
 
       if (response.warnings) {

@@ -69,39 +69,53 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
     case 'execute_command':
       return cleanObject(await tools.systemTools.executeConsoleCommand(args.command));
     case 'create_widget': {
+      const name = typeof args?.name === 'string' ? args.name.trim() : '';
       const widgetPathRaw = typeof args?.widgetPath === 'string' ? args.widgetPath.trim() : '';
-      if (!widgetPathRaw) {
+
+      // If name is missing but widgetPath is provided, try to extract name from path
+      let effectiveName = name;
+      let effectivePath = typeof args?.savePath === 'string' ? args.savePath.trim() : '';
+
+      if (!effectiveName && widgetPathRaw) {
+        const parts = widgetPathRaw.split('/').filter((p: string) => p.length > 0);
+        if (parts.length > 0) {
+          effectiveName = parts[parts.length - 1];
+          // If path was provided as widgetPath, use the directory as savePath if savePath wasn't explicit
+          if (!effectivePath) {
+            effectivePath = '/' + parts.slice(0, parts.length - 1).join('/');
+          }
+        }
+      }
+
+      if (!effectiveName) {
         return {
-          success: true,
-          message: 'Widget create request handled (no widgetPath provided)',
-          action: 'create_widget',
-          handled: true
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Widget name is required for creation',
+          action: 'create_widget'
         };
       }
 
       try {
-        const res = await tools.uiTools.showWidget(widgetPathRaw);
-        const ok = res && res.success !== false;
-        if (ok) {
-          return {
-            success: true,
-            message: res.message || `Widget ${widgetPathRaw} created or shown`,
-            action: 'create_widget',
-            widgetPath: widgetPathRaw,
-            handled: true
-          };
-        }
-      } catch {
-        // Ignore errors and treat as best-effort handled below
-      }
+        const res = await tools.uiTools.createWidget({
+          name: effectiveName,
+          type: args?.widgetType,
+          savePath: effectivePath
+        });
 
-      return {
-        success: true,
-        message: `Widget ${widgetPathRaw} request handled as best-effort (widget may be missing in this editor build)`,
-        action: 'create_widget',
-        widgetPath: widgetPathRaw,
-        handled: true
-      };
+        return cleanObject({
+          ...res,
+          action: 'create_widget'
+        });
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        return {
+          success: false,
+          error: `Failed to create widget: ${msg}`,
+          message: msg,
+          action: 'create_widget'
+        };
+      }
     }
     case 'show_widget': {
       const widgetId = typeof args?.widgetId === 'string' ? args.widgetId.trim() : '';

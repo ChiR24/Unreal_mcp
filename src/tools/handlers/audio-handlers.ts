@@ -125,6 +125,29 @@ export async function handleAudioTools(
         volumeAttenuation: args.volumeAttenuation
       });
 
+    case 'spawn_sound_at_location':
+      // Direct pass-through to C++ handler
+      return await tools.automationBridge?.sendAutomationRequest('spawn_sound_at_location', args);
+
+    case 'play_sound_attached':
+      return await tools.automationBridge?.sendAutomationRequest('play_sound_attached', args);
+
+    case 'set_sound_mix_class_override':
+      return await tools.automationBridge?.sendAutomationRequest('set_sound_mix_class_override', args);
+
+    case 'clear_sound_mix_class_override':
+      return await tools.automationBridge?.sendAutomationRequest('clear_sound_mix_class_override', args);
+
+    case 'set_base_sound_mix':
+      return await tools.automationBridge?.sendAutomationRequest('set_base_sound_mix', args);
+
+    case 'prime_sound':
+      return await tools.automationBridge?.sendAutomationRequest('prime_sound', args);
+
+    case 'fade_sound_in':
+    case 'fade_sound_out':
+      return await tools.automationBridge?.sendAutomationRequest(action, args);
+
     default:
       return cleanObject({ success: false, error: 'UNKNOWN_ACTION', message: `Unknown audio action: ${action}` });
   }

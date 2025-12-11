@@ -198,10 +198,9 @@ export class PhysicsTools {
         return {
           success: true,
           message: response.message || `Ragdoll physics setup completed for ${sanitizedParams.name}`,
-          path: coerceString(result?.path) ?? `${path}/${sanitizedParams.name}`,
+          path: coerceString(result?.path) ?? coerceString(result?.physicsAssetPath) ?? `${path}/${sanitizedParams.name}`,
           existingAsset: result?.existingAsset,
-          warnings: result?.warnings,
-          details: result?.details
+          ...(result || {})
         };
       } catch (error) {
         return {
@@ -511,7 +510,7 @@ export class PhysicsTools {
         success: true,
         message: response.message || `Applied ${params.forceType} to ${params.actorName}`,
         availableActors: result?.available_actors ? coerceStringArray(result.available_actors) : undefined,
-        details: result?.details
+        ...(result || {})
       };
     } catch (err) {
       return { success: false, error: `Failed to apply force: ${err}` };
@@ -664,7 +663,7 @@ export class PhysicsTools {
       return {
         success: true,
         message: response.message || 'Physics simulation setup completed',
-        result: response.result
+        ...(response.result || {})
       };
     } catch (err) {
       return { success: false, error: `Failed to setup physics simulation: ${err}` };

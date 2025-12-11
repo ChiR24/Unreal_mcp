@@ -1878,6 +1878,58 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
 }
 
 /**
+ * Handles requests to get detailed information about a single asset.
+ *
+ * @param RequestId Unique request identifier.
+ * @param Payload JSON payload containing 'assetPath'.
+ * @param Socket WebSocket connection.
+ * @return True if handled.
+ */
+bool UMcpAutomationBridgeSubsystem::HandleGetAsset(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("get_asset payload missing"), nullptr, TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString AssetPath;
+  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"), nullptr, TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  FAssetData AssetData = UEditorAssetLibrary::FindAssetData(AssetPath);
+  if (!AssetData.IsValid()) {
+      SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to find asset data"), nullptr, TEXT("ASSET_DATA_INVALID"));
+      return true;
+  }
+
+  TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+  AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+  AssetObj->SetStringField(TEXT("path"), AssetData.GetSoftObjectPath().ToString());
+  AssetObj->SetStringField(TEXT("class"), AssetData.AssetClassPath.ToString());
+  AssetObj->SetStringField(TEXT("packagePath"), AssetData.PackagePath.ToString());
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetObjectField(TEXT("result"), AssetObj);
+
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Asset details retrieved"), Resp, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+/**
  * Handles requests to generate an asset report (CSV/JSON).
  *
  * @param RequestId Unique request identifier.

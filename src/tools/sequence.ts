@@ -296,4 +296,26 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     }
     return resp;
   }
+
+  /**
+   * List tracks in a sequence
+   */
+  async listTracks(params: { path: string }) {
+    const resp = await this.sendAction('sequence_list_tracks', { path: params.path });
+    if (!resp.success && this.isUnknownActionResponse(resp)) {
+      return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_list_tracks' } as const;
+    }
+    return resp;
+  }
+
+  /**
+   * Set playback work range
+   */
+  async setWorkRange(params: { path?: string; start: number; end: number }) {
+    const resp = await this.sendAction('sequence_set_work_range', { path: params.path, start: params.start, end: params.end });
+    if (!resp.success && this.isUnknownActionResponse(resp)) {
+      return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_set_work_range' } as const;
+    }
+    return resp;
+  }
 }

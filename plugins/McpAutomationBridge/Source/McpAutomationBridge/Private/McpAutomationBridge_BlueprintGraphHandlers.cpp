@@ -24,6 +24,7 @@
 #include "K2Node_VariableGet.h"
 #include "K2Node_VariableSet.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -229,6 +230,24 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
          MakeTuple(TEXT("UKismetSystemLibrary"), TEXT("IsValid"))},
         {TEXT("IsValidClass"),
          MakeTuple(TEXT("UKismetSystemLibrary"), TEXT("IsValidClass"))},
+        // Math Nodes
+        {TEXT("Add_IntInt"),
+         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Add_IntInt"))},
+        {TEXT("Subtract_IntInt"),
+         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Subtract_IntInt"))},
+        {TEXT("Multiply_IntInt"),
+         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Multiply_IntInt"))},
+        {TEXT("Divide_IntInt"),
+         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Divide_IntInt"))},
+        {TEXT("Add_DoubleDouble"),
+         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Add_DoubleDouble"))},
+        {TEXT("Subtract_DoubleDouble"),
+         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Subtract_DoubleDouble"))},
+        {TEXT("Multiply_DoubleDouble"),
+         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Multiply_DoubleDouble"))},
+        {TEXT("Divide_DoubleDouble"),
+         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Divide_DoubleDouble"))},
+        {TEXT("FTrunc"), MakeTuple(TEXT("UKismetMathLibrary"), TEXT("FTrunc"))},
     };
 
     // Check if this is a common function node shortcut
@@ -245,10 +264,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         Class = UGameplayStatics::StaticClass();
       } else if (ClassName == TEXT("AActor")) {
         Class = AActor::StaticClass();
+      } else if (ClassName == TEXT("UKismetMathLibrary")) {
+        Class = UKismetMathLibrary::StaticClass();
       } else {
-        // Try to find by full path
-        Class = FindObject<UClass>(
-            nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ClassName));
+        Class = ResolveUClass(ClassName);
       }
 
       UFunction *Func = nullptr;
@@ -299,12 +318,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       Payload->TryGetStringField(TEXT("memberClass"),
                                  MemberClass); // Optional, for static functions
 
-      FGraphNodeCreator<UK2Node_CallFunction> NodeCreator(*TargetGraph);
-      UK2Node_CallFunction *CallFuncNode = NodeCreator.CreateNode(false);
-
       UFunction *Func = nullptr;
       if (!MemberClass.IsEmpty()) {
-        UClass *Class = FindObject<UClass>(nullptr, *MemberClass);
+        UClass *Class = ResolveUClass(MemberClass);
         if (Class) {
           Func = Class->FindFunctionByName(*MemberName);
         }
@@ -312,12 +328,25 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         // Try to find in blueprint context
         Func = Blueprint->GeneratedClass->FindFunctionByName(*MemberName);
         if (!Func) {
-          // Try global search if simple name
+          // Try global search if simple name, or check common libraries
           Func = FindObject<UFunction>(nullptr, *MemberName);
+          if (!Func) {
+            // Fallback: Check common libraries
+            if (UClass *KSL = UKismetSystemLibrary::StaticClass())
+              Func = KSL->FindFunctionByName(*MemberName);
+            if (!Func)
+              if (UClass *GPS = UGameplayStatics::StaticClass())
+                Func = GPS->FindFunctionByName(*MemberName);
+            if (!Func)
+              if (UClass *KML = UKismetMathLibrary::StaticClass())
+                Func = KML->FindFunctionByName(*MemberName);
+          }
         }
       }
 
       if (Func) {
+        FGraphNodeCreator<UK2Node_CallFunction> NodeCreator(*TargetGraph);
+        UK2Node_CallFunction *CallFuncNode = NodeCreator.CreateNode(false);
         CallFuncNode->SetFromFunction(Func);
         FinalizeAndReport(NodeCreator, CallFuncNode);
       } else {
@@ -330,12 +359,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     } else if (NodeType == TEXT("VariableGet")) {
       FString VarName;
       Payload->TryGetStringField(TEXT("variableName"), VarName);
-
-      FGraphNodeCreator<UK2Node_VariableGet> NodeCreator(*TargetGraph);
-      UK2Node_VariableGet *VarGet = NodeCreator.CreateNode(false);
-
       FName VarFName(*VarName);
-      // Basic check if variable exists
+
+      // Validation BEFORE creation
       bool bFound = false;
       for (const FBPVariableDescription &VarDesc : Blueprint->NewVariables) {
         if (VarDesc.VarName == VarFName) {
@@ -343,51 +369,53 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
           break;
         }
       }
-      if (bFound) {
-        VarGet->VariableReference.SetSelfMember(VarFName);
-        FinalizeAndReport(NodeCreator, VarGet);
-      } else {
-        // Use blueprint utils to resolve inherited variables correctly
-        if (Blueprint->GeneratedClass &&
-            Blueprint->GeneratedClass->FindPropertyByName(VarFName) !=
-                nullptr) {
-          VarGet->VariableReference.SetSelfMember(VarFName);
-          FinalizeAndReport(NodeCreator, VarGet);
-        } else {
-          SendAutomationError(
-              RequestingSocket, RequestId,
-              FString::Printf(TEXT("Could not find variable '%s'"), *VarName),
-              TEXT("VARIABLE_NOT_FOUND"));
-          return true;
-        }
+      if (!bFound && Blueprint->GeneratedClass &&
+          Blueprint->GeneratedClass->FindPropertyByName(VarFName)) {
+        bFound = true;
       }
-    } else if (NodeType == TEXT("VariableSet")) {
-      FString VarName;
-      Payload->TryGetStringField(TEXT("variableName"), VarName);
 
-      FGraphNodeCreator<UK2Node_VariableSet> NodeCreator(*TargetGraph);
-      UK2Node_VariableSet *VarSet = NodeCreator.CreateNode(false);
-
-      FName VarFName(*VarName);
-      bool bFound = false;
-      for (const FBPVariableDescription &VarDesc : Blueprint->NewVariables) {
-        if (VarDesc.VarName == VarFName) {
-          bFound = true;
-          break;
-        }
-      }
-      if (bFound || (Blueprint->GeneratedClass &&
-                     Blueprint->GeneratedClass->FindPropertyByName(VarFName) !=
-                         nullptr)) {
-        VarSet->VariableReference.SetSelfMember(VarFName);
-        FinalizeAndReport(NodeCreator, VarSet);
-      } else {
+      if (!bFound) {
         SendAutomationError(
             RequestingSocket, RequestId,
             FString::Printf(TEXT("Could not find variable '%s'"), *VarName),
             TEXT("VARIABLE_NOT_FOUND"));
         return true;
       }
+
+      FGraphNodeCreator<UK2Node_VariableGet> NodeCreator(*TargetGraph);
+      UK2Node_VariableGet *VarGet = NodeCreator.CreateNode(false);
+      VarGet->VariableReference.SetSelfMember(VarFName);
+      FinalizeAndReport(NodeCreator, VarGet);
+    } else if (NodeType == TEXT("VariableSet")) {
+      FString VarName;
+      Payload->TryGetStringField(TEXT("variableName"), VarName);
+      FName VarFName(*VarName);
+
+      // Validation BEFORE creation
+      bool bFound = false;
+      for (const FBPVariableDescription &VarDesc : Blueprint->NewVariables) {
+        if (VarDesc.VarName == VarFName) {
+          bFound = true;
+          break;
+        }
+      }
+      if (!bFound && Blueprint->GeneratedClass &&
+          Blueprint->GeneratedClass->FindPropertyByName(VarFName)) {
+        bFound = true;
+      }
+
+      if (!bFound) {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(TEXT("Could not find variable '%s'"), *VarName),
+            TEXT("VARIABLE_NOT_FOUND"));
+        return true;
+      }
+
+      FGraphNodeCreator<UK2Node_VariableSet> NodeCreator(*TargetGraph);
+      UK2Node_VariableSet *VarSet = NodeCreator.CreateNode(false);
+      VarSet->VariableReference.SetSelfMember(VarFName);
+      FinalizeAndReport(NodeCreator, VarSet);
     } else if (NodeType == TEXT("CustomEvent")) {
       FString EventName;
       Payload->TryGetStringField(TEXT("eventName"), EventName);
@@ -397,7 +425,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
       EventNode->CustomFunctionName = FName(*EventName);
       FinalizeAndReport(NodeCreator, EventNode);
-    } else if (NodeType == TEXT("Event")) {
+    } else if (NodeType == TEXT("Event") || NodeType == TEXT("K2Node_Event")) {
       FString EventName;
       Payload->TryGetStringField(
           TEXT("eventName"),
@@ -432,16 +460,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         EventName = *Alias;
       }
 
-      FGraphNodeCreator<UK2Node_Event> NodeCreator(*TargetGraph);
-      UK2Node_Event *EventNode = NodeCreator.CreateNode(false);
-
       // Determine target class: use explicit MemberClass or search hierarchy
       UClass *TargetClass = nullptr;
       UFunction *EventFunc = nullptr;
 
       if (!MemberClass.IsEmpty()) {
         // Explicit class specified
-        TargetClass = FindObject<UClass>(nullptr, *MemberClass);
+        TargetClass = ResolveUClass(MemberClass);
         if (TargetClass) {
           EventFunc = TargetClass->FindFunctionByName(*EventName);
         }
@@ -470,6 +495,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       }
 
       if (EventFunc && TargetClass) {
+        FGraphNodeCreator<UK2Node_Event> NodeCreator(*TargetGraph);
+        UK2Node_Event *EventNode = NodeCreator.CreateNode(false);
         EventNode->EventReference.SetFromField<UFunction>(EventFunc, false);
         EventNode->bOverrideFunction = true;
         FinalizeAndReport(NodeCreator, EventNode);
@@ -625,7 +652,76 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
                           TEXT("CONNECTION_FAILED"));
     }
     return true;
-  } else if (SubAction == TEXT("break_pin_links")) {
+  } else if (SubAction == TEXT("get_nodes")) {
+    TArray<TSharedPtr<FJsonValue>> NodesArray;
+
+    for (UEdGraphNode *Node : TargetGraph->Nodes) {
+      if (!Node)
+        continue;
+
+      TSharedPtr<FJsonObject> NodeObj = MakeShared<FJsonObject>();
+      NodeObj->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());
+      NodeObj->SetStringField(TEXT("nodeName"), Node->GetName());
+      NodeObj->SetStringField(TEXT("nodeType"), Node->GetClass()->GetName());
+      NodeObj->SetStringField(
+          TEXT("nodeTitle"),
+          Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+      NodeObj->SetStringField(TEXT("comment"), Node->NodeComment);
+      NodeObj->SetNumberField(TEXT("x"), Node->NodePosX);
+      NodeObj->SetNumberField(TEXT("y"), Node->NodePosY);
+
+      TArray<TSharedPtr<FJsonValue>> PinsArray;
+      for (UEdGraphPin *Pin : Node->Pins) {
+        if (!Pin)
+          continue;
+
+        TSharedPtr<FJsonObject> PinObj = MakeShared<FJsonObject>();
+        PinObj->SetStringField(TEXT("pinName"), Pin->PinName.ToString());
+        PinObj->SetStringField(TEXT("pinType"),
+                               Pin->PinType.PinCategory.ToString());
+        PinObj->SetStringField(TEXT("direction"), Pin->Direction == EGPD_Input
+                                                      ? TEXT("Input")
+                                                      : TEXT("Output"));
+
+        // Add pin sub-category object type if applicable
+        if (Pin->PinType.PinCategory == TEXT("object") ||
+            Pin->PinType.PinCategory == TEXT("class") ||
+            Pin->PinType.PinCategory == TEXT("struct")) {
+          if (Pin->PinType.PinSubCategoryObject.IsValid()) {
+            PinObj->SetStringField(
+                TEXT("pinSubType"),
+                Pin->PinType.PinSubCategoryObject->GetName());
+          }
+        }
+
+        TArray<TSharedPtr<FJsonValue>> LinkedToFileArray;
+        for (UEdGraphPin *LinkedPin : Pin->LinkedTo) {
+          if (LinkedPin && LinkedPin->GetOwningNode()) {
+            TSharedPtr<FJsonObject> LinkObj = MakeShared<FJsonObject>();
+            LinkObj->SetStringField(
+                TEXT("nodeId"),
+                LinkedPin->GetOwningNode()->NodeGuid.ToString());
+            LinkObj->SetStringField(TEXT("pinName"),
+                                    LinkedPin->PinName.ToString());
+            LinkedToFileArray.Add(MakeShared<FJsonValueObject>(LinkObj));
+          }
+        }
+        PinObj->SetArrayField(TEXT("linkedTo"), LinkedToFileArray);
+        PinsArray.Add(MakeShared<FJsonValueObject>(PinObj));
+      }
+      NodeObj->SetArrayField(TEXT("pins"), PinsArray);
+
+      NodesArray.Add(MakeShared<FJsonValueObject>(NodeObj));
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetArrayField(TEXT("nodes"), NodesArray);
+    Result->SetStringField(TEXT("graphName"), TargetGraph->GetName());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Nodes retrieved."), Result);
+    return true;
+
     const FScopedTransaction Transaction(
         FText::FromString(TEXT("Break Blueprint Pin Links")));
     Blueprint->Modify();

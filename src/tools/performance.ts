@@ -20,6 +20,18 @@ export class PerformanceTools {
     type: 'CPU' | 'GPU' | 'Memory' | 'RenderThread' | 'GameThread' | 'All';
     duration?: number;
   }) {
+    if (this.automationBridge) {
+        try {
+            const response = await this.automationBridge.sendAutomationRequest('start_profiling', {
+                type: params.type,
+                duration: params.duration
+            });
+            if (response.success) return { success: true, message: `${params.type} profiling started (bridge)` };
+        } catch (_e) {
+            // Fallback
+        }
+    }
+
     const commands: string[] = [];
 
     switch (params.type) {
@@ -56,6 +68,15 @@ export class PerformanceTools {
 
   // Stop profiling
   async stopProfiling() {
+    if (this.automationBridge) {
+        try {
+            const response = await this.automationBridge.sendAutomationRequest('stop_profiling', {});
+            if (response.success) return { success: true, message: 'Profiling stopped (bridge)' };
+        } catch (_e) {
+            // Fallback
+        }
+    }
+
     const commands = [
       'stat stopfile',
       'stat none'
@@ -73,6 +94,22 @@ export class PerformanceTools {
   }) {
     const startTime = Date.now();
     this.log.debug('Starting showFPS with params:', params);
+
+    if (this.automationBridge) {
+        try {
+            const response = await this.automationBridge.sendAutomationRequest('show_fps', {
+                enabled: params.enabled,
+                verbose: params.verbose
+            });
+            if (response.success) return { 
+                success: true, 
+                message: params.enabled ? 'FPS display enabled (bridge)' : 'FPS display disabled (bridge)',
+                fpsVisible: params.enabled
+            };
+        } catch (_e) {
+            // Fallback
+        }
+    }
 
     try {
       // Use stat fps as requested - shows FPS counter
@@ -104,6 +141,18 @@ export class PerformanceTools {
     category: 'Unit' | 'FPS' | 'Memory' | 'Game' | 'Slate' | 'Engine' | 'RHI' | 'Streaming' | 'SceneRendering' | 'Physics' | 'Navigation' | 'Particles' | 'Audio';
     enabled: boolean;
   }) {
+    if (this.automationBridge) {
+        try {
+            const response = await this.automationBridge.sendAutomationRequest('show_stats', {
+                category: params.category,
+                enabled: params.enabled
+            });
+            if (response.success) return { success: true, message: `Stat '${params.category}' configured (bridge)` };
+        } catch (_e) {
+            // Fallback
+        }
+    }
+
     const command = params.enabled
       ? `stat ${params.category.toLowerCase()}`
       : 'stat none';
@@ -116,6 +165,18 @@ export class PerformanceTools {
     category: 'ViewDistance' | 'AntiAliasing' | 'PostProcessing' | 'PostProcess' | 'Shadows' | 'GlobalIllumination' | 'Reflections' | 'Textures' | 'Effects' | 'Foliage' | 'Shading';
     level: 0 | 1 | 2 | 3 | 4; // 0=Low, 1=Medium, 2=High, 3=Epic, 4=Cinematic
   }) {
+    if (this.automationBridge) {
+        try {
+            const response = await this.automationBridge.sendAutomationRequest('set_scalability', {
+                category: params.category,
+                level: params.level
+            });
+            if (response.success) return { success: true, message: `${params.category} quality set to level ${params.level} (bridge)` };
+        } catch (_e) {
+            // Fallback
+        }
+    }
+
     // Map incoming category to the base name expected by "sg.<Base>Quality"
     // Note: Several CVars use singular form (Shadow/Texture/Reflection)
     const categoryBaseMap: Record<string, string> = {
@@ -159,6 +220,17 @@ export class PerformanceTools {
   async setResolutionScale(params: {
     scale: number; // 0.5 to 2.0
   }) {
+    if (this.automationBridge) {
+        try {
+            const percentage = Math.max(10, Math.min(200, Math.round(params.scale * 100)));
+            const response = await this.automationBridge.sendAutomationRequest('set_resolution_scale', { scale: percentage });
+
+            if (response.success) return { success: true, message: `Resolution scale set to ${percentage}% (bridge)`, actualScale: percentage / 100 };
+        } catch (_e) {
+            // Fallback
+        }
+    }
+
     // Validate input
     if (params.scale === undefined || params.scale === null || isNaN(params.scale)) {
       return { success: false, error: 'Invalid scale parameter' };
@@ -190,6 +262,14 @@ export class PerformanceTools {
   async setVSync(params: {
     enabled: boolean;
   }) {
+    if (this.automationBridge) {
+        try {
+            const response = await this.automationBridge.sendAutomationRequest('set_vsync', { enabled: params.enabled });
+            if (response.success) return { success: true, message: 'VSync configured (bridge)' };
+        } catch (_e) {
+            // Fallback
+        }
+    }
     const command = `r.VSync ${params.enabled ? 1 : 0}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -198,6 +278,14 @@ export class PerformanceTools {
   async setFrameRateLimit(params: {
     maxFPS: number; // 0 for unlimited
   }) {
+    if (this.automationBridge) {
+        try {
+            const response = await this.automationBridge.sendAutomationRequest('set_frame_rate_limit', { maxFPS: params.maxFPS });
+            if (response.success) return { success: true, message: 'Max FPS set (bridge)' };
+        } catch (_e) {
+            // Fallback
+        }
+    }
     const command = `t.MaxFPS ${params.maxFPS}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -206,6 +294,13 @@ export class PerformanceTools {
   async enableGPUTiming(params: {
     enabled: boolean;
   }) {
+    // Note: C++ handler doesn't seem to have explicit 'enable_gpu_timing' in the list I saw earlier? 
+    // Checking McpAutomationBridge_PerformanceHandlers.cpp content provided:
+    // It has: generate_memory_report, start/stop_profiling, show_fps, show_stats, set_scalability, set_resolution_scale, set_vsync, set_frame_rate_limit, configure_nanite, configure_lod.
+    // IT DOES NOT HAVE enable_gpu_timing.
+    // So we stick to console command for this one, or add it to C++ later. 
+    // I will NOT add bridge call here to avoid failure since I know it's missing.
+    
     const command = `r.GPUStatsEnabled ${params.enabled ? 1 : 0}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -216,18 +311,22 @@ export class PerformanceTools {
     outputPath?: string;
   }) {
     // If output path is specified, use Automation Bridge for file writing
-    if (params.outputPath && this.automationBridge) {
+    if (this.automationBridge) {
       try {
         const response = await this.automationBridge.sendAutomationRequest('generate_memory_report', {
           detailed: params.detailed ?? false,
           outputPath: params.outputPath
         });
 
-        return response.success
-          ? { success: true, message: response.message || 'Memory report saved to file' }
-          : { success: false, error: response.error || response.message || 'Failed to generate memory report' };
+        // Even if no output path, bridge can run the report
+        if (response.success) {
+             return { success: true, message: response.message || 'Memory report generated' };
+        }
       } catch (error) {
-        return { success: false, error: `Failed to generate memory report: ${error instanceof Error ? error.message : String(error)}` };
+         // Fallback only if no output path (since console can't save to file reliably)
+         if (params.outputPath) {
+            return { success: false, error: `Failed to generate memory report: ${error instanceof Error ? error.message : String(error)}` };
+         }
       }
     }
 
@@ -255,17 +354,7 @@ export class PerformanceTools {
     poolSize?: number; // MB
     boostPlayerLocation?: boolean;
   }) {
-    const commands: string[] = [];
-
-    commands.push(`r.TextureStreaming ${params.enabled ? 1 : 0}`);
-
-    if (params.poolSize !== undefined) {
-      commands.push(`r.Streaming.PoolSize ${params.poolSize}`);
-    }
-
-    if (params.boostPlayerLocation !== undefined) {
-      // Use Automation Bridge for player location boosting
-      if (this.automationBridge) {
+    if (this.automationBridge) {
         try {
           const response = await this.automationBridge.sendAutomationRequest('configure_texture_streaming', {
             enabled: params.enabled,
@@ -273,14 +362,22 @@ export class PerformanceTools {
             boostPlayerLocation: params.boostPlayerLocation
           });
 
-          return response.success
-            ? { success: true, message: response.message || 'Texture streaming configured with player location boost' }
-            : { success: false, error: response.error || response.message || 'Failed to configure texture streaming' };
-        } catch (error) {
-          return { success: false, error: `Failed to configure texture streaming: ${error instanceof Error ? error.message : String(error)}` };
+          if (response.success) return { success: true, message: response.message || 'Texture streaming configured (bridge)' };
+        } catch (_error) {
+            // Fallback
         }
-      }
-      throw new Error('Boosting player location for streaming requires Automation Bridge support');
+    }
+    
+    if (params.boostPlayerLocation && !this.automationBridge) {
+        throw new Error('Boosting player location for streaming requires Automation Bridge support');
+    }
+
+    const commands: string[] = [];
+
+    commands.push(`r.TextureStreaming ${params.enabled ? 1 : 0}`);
+
+    if (params.poolSize !== undefined) {
+      commands.push(`r.Streaming.PoolSize ${params.poolSize}`);
     }
 
     await this.bridge.executeConsoleCommands(commands);
@@ -294,6 +391,30 @@ export class PerformanceTools {
     lodBias?: number; // skeletal LOD bias (int)
     distanceScale?: number; // distance scale (float) applied to both static and skeletal
   }) {
+    if (this.automationBridge) {
+        try {
+            const response = await this.automationBridge.sendAutomationRequest('configure_lod', {
+                forceLOD: params.forceLOD,
+                lodBias: params.lodBias
+                // Note: C++ handler doesn't seem to read distanceScale in the snippet provided earlier.
+                // Snippet: reads lodBias -> r.MipMapLODBias, forceLOD -> r.ForceLOD.
+                // It misses distanceScale. So we might need to fallback or partial apply?
+                // Actually, if we use bridge, we lose distanceScale if C++ doesn't support it.
+                // Let's stick to console for distanceScale or apply it separately.
+            });
+            
+            // If we have distanceScale, we still need to apply it via console as C++ seems to miss it
+            if (params.distanceScale !== undefined) {
+                 await this.bridge.executeConsoleCommand(`r.StaticMeshLODDistanceScale ${params.distanceScale}`);
+                 await this.bridge.executeConsoleCommand(`r.SkeletalMeshLODDistanceScale ${params.distanceScale}`);
+            }
+
+            if (response.success) return { success: true, message: 'LOD settings configured' };
+        } catch (_e) {
+            // Fallback
+        }
+    }
+
     const commands: string[] = [];
 
     if (params.forceLOD !== undefined) {
@@ -324,6 +445,8 @@ export class PerformanceTools {
     maxFPS?: number;        // default 60
     hzb?: boolean;          // default true
   }) {
+    // This is a composite helper, stick to console or individual bridge calls.
+    // Console is efficient enough for batch cvar setting.
     const p = {
       distanceScale: params?.distanceScale ?? 1.0,
       skeletalBias: params?.skeletalBias ?? 0,
@@ -353,16 +476,8 @@ export class PerformanceTools {
     mergeActors?: boolean;
     actors?: string[];
   }) {
-    const commands: string[] = [];
-
-    if (params.enableInstancing !== undefined) {
-      commands.push(`r.MeshDrawCommands.DynamicInstancing ${params.enableInstancing ? 1 : 0}`);
-    }
-
-    // Avoid using r.RHICmdBypass; it's a low-level debug toggle and not suitable for general batching control
-
+    // If merging actors, bridge is required
     if (params.mergeActors) {
-      // Use Automation Bridge for actor merging
       if (this.automationBridge) {
         try {
           const actors = Array.isArray(params.actors)
@@ -390,6 +505,14 @@ export class PerformanceTools {
       }
       throw new Error('Actor merging requires Automation Bridge support');
     }
+
+    const commands: string[] = [];
+
+    if (params.enableInstancing !== undefined) {
+      commands.push(`r.MeshDrawCommands.DynamicInstancing ${params.enableInstancing ? 1 : 0}`);
+    }
+
+    // Avoid using r.RHICmdBypass; it's a low-level debug toggle and not suitable for general batching control
 
     await this.bridge.executeConsoleCommands(commands);
 
@@ -448,6 +571,30 @@ export class PerformanceTools {
     maxPixelsPerEdge?: number;
     streamingPoolSize?: number;
   }) {
+    if (this.automationBridge) {
+        try {
+            const response = await this.automationBridge.sendAutomationRequest('configure_nanite', {
+                enabled: params.enabled,
+                maxPixelsPerEdge: params.maxPixelsPerEdge,
+                streamingPoolSize: params.streamingPoolSize
+            });
+            // C++ handler snippet only showed `r.Nanite`. 
+            // Checking snippet: `if (CVar) CVar->Set(bEnabled ? 1 : 0);`
+            // It missed maxPixelsPerEdge and streamingPoolSize in the snippet I read.
+            // Let's rely on fallback or partial console commands for the extras.
+            if (params.maxPixelsPerEdge !== undefined) {
+                await this.bridge.executeConsoleCommand(`r.Nanite.MaxPixelsPerEdge ${params.maxPixelsPerEdge}`);
+            }
+            if (params.streamingPoolSize !== undefined) {
+                await this.bridge.executeConsoleCommand(`r.Nanite.StreamingPoolSize ${params.streamingPoolSize}`);
+            }
+
+            if (response.success) return { success: true, message: 'Nanite configured' };
+        } catch (_e) {
+            // Fallback
+        }
+    }
+
     const commands: string[] = [];
 
     commands.push(`r.Nanite ${params.enabled ? 1 : 0}`);

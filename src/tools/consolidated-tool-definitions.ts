@@ -179,6 +179,7 @@ Supported actions:
         newName: { type: 'string' },
         value: { description: 'Value to set.' },
         metadata: { type: 'object' },
+        properties: { type: 'object', description: 'Initial CDO properties for new blueprints.' },
 
         // -- Graph Editing --
         graphName: { type: 'string' },
@@ -198,7 +199,12 @@ Supported actions:
         // -- Batch Operations --
         operations: { type: 'array', items: { type: 'object' } },
         compile: { type: 'boolean' },
-        save: { type: 'boolean' }
+        save: { type: 'boolean' },
+
+        // -- Events --
+        eventType: { type: 'string', description: 'Event type (e.g. "BeginPlay", "Tick", "custom").' },
+        customEventName: { type: 'string', description: 'Name for custom event.' },
+        parameters: { type: 'array', items: { type: 'object' }, description: 'Parameters for the event.' }
       },
       required: ['action']
     },
@@ -268,7 +274,20 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
         success: { type: 'boolean' },
         actor: { type: 'string' },
         actorPath: { type: 'string' },
-        message: { type: 'string' }
+        message: { type: 'string' },
+        components: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              class: { type: 'string' },
+              relativeLocation: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+              relativeRotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } } },
+              relativeScale: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
+            }
+          }
+        }
       }
     }
   },
@@ -605,10 +624,11 @@ Supported actions:
           type: 'string',
           enum: [
             'profile', 'show_fps', 'set_quality', 'screenshot', 'set_resolution', 'set_fullscreen', 'execute_command', 'console_command',
-            'run_ubt', 'run_tests', 'subscribe', 'spawn_category', 'start_session', 'lumen_update_scene',
+            'run_ubt', 'run_tests', 'subscribe', 'unsubscribe', 'spawn_category', 'start_session', 'lumen_update_scene',
             'play_sound', 'create_widget', 'show_widget', 'add_widget_child',
             // Added missing actions
-            'set_cvar', 'get_project_settings', 'validate_assets'
+            'set_cvar', 'get_project_settings', 'validate_assets',
+            'set_project_setting'
           ],
           description: 'Action'
         },
@@ -636,7 +656,13 @@ Supported actions:
         // UI Widget Management
         widgetPath: { type: 'string', description: 'Path to the widget blueprint (for add_widget_child).' },
         childClass: { type: 'string', description: 'Class of the child widget to add (e.g. /Script/UMG.Button).' },
-        parentName: { type: 'string', description: 'Name of the parent widget to add to (optional).' }
+        parentName: { type: 'string', description: 'Name of the parent widget to add to (optional).' },
+
+        // Project Settings
+        section: { type: 'string', description: 'Config section (e.g. /Script/EngineSettings.GeneralProjectSettings).' },
+        key: { type: 'string', description: 'Config key (e.g. ProjectID).' },
+        value: { type: 'string', description: 'Config value.' },
+        configName: { type: 'string', description: 'Config file name (Game, Engine, Input, etc.). Defaults to Game.' }
       },
       required: ['action']
     },
@@ -737,7 +763,53 @@ Supported actions:
     }
   },
 
-  // 11. INTROSPECTION (INSPECT)
+  // 11. INPUT MANAGEMENT
+  {
+    name: 'manage_input',
+    description: `Enhanced Input management.
+
+Use it when you need to:
+- create Input Actions (IA_*)
+- create Input Mapping Contexts (IMC_*)
+- bind keys to actions in a mapping context.
+
+Supported actions:
+- create_input_action: Create a UInputAction asset.
+- create_input_mapping_context: Create a UInputMappingContext asset.
+- add_mapping: Add a key mapping to a context.
+- remove_mapping: Remove a mapping from a context.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'create_input_action',
+            'create_input_mapping_context',
+            'add_mapping',
+            'remove_mapping'
+          ],
+          description: 'Action to perform'
+        },
+        name: { type: 'string', description: 'Name of the asset (for creation).' },
+        path: { type: 'string', description: 'Path to save the asset (e.g. /Game/Input).' },
+        contextPath: { type: 'string', description: 'Path to the Input Mapping Context.' },
+        actionPath: { type: 'string', description: 'Path to the Input Action.' },
+        key: { type: 'string', description: 'Key name (e.g. "SpaceBar", "W", "Gamepad_FaceButton_Bottom").' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        assetPath: { type: 'string' }
+      }
+    }
+  },
+
+  // 12. INTROSPECTION (INSPECT)
   {
     name: 'inspect',
     description: `Low-level object inspection and property manipulation.
@@ -808,20 +880,38 @@ Use it when you need to:
 - play sounds (3D/2D).
 - control audio components.
 
-Supported actions: create_sound_cue, play_sound_at_location, play_sound_2d, create_audio_component, create_sound_mix, push_sound_mix.`,
+Supported actions: create_sound_cue, play_sound_at_location, play_sound_2d, create_audio_component, create_sound_mix, push_sound_mix, pop_sound_mix, set_sound_mix_class_override, clear_sound_mix_class_override, set_base_sound_mix, prime_sound, play_sound_attached, spawn_sound_at_location, fade_sound_in, fade_sound_out.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create_sound_cue', 'play_sound_at_location', 'play_sound_2d', 'create_audio_component', 'create_sound_mix', 'push_sound_mix'],
+          enum: [
+            'create_sound_cue', 'play_sound_at_location', 'play_sound_2d', 'create_audio_component',
+            'create_sound_mix', 'push_sound_mix', 'pop_sound_mix',
+            'set_sound_mix_class_override', 'clear_sound_mix_class_override', 'set_base_sound_mix',
+            'prime_sound', 'play_sound_attached', 'spawn_sound_at_location',
+            'fade_sound_in', 'fade_sound_out', 'create_ambient_sound'
+          ],
           description: 'Action'
         },
         name: { type: 'string' },
         soundPath: { type: 'string' },
         location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
         volume: { type: 'number' },
-        pitch: { type: 'number' }
+        pitch: { type: 'number' },
+        startTime: { type: 'number' },
+        attenuationPath: { type: 'string' },
+        concurrencyPath: { type: 'string' },
+        mixName: { type: 'string' },
+        soundClassName: { type: 'string' },
+        fadeInTime: { type: 'number' },
+        fadeOutTime: { type: 'number' },
+        fadeTime: { type: 'number' },
+        targetVolume: { type: 'number' },
+        attachPointName: { type: 'string' },
+        actorName: { type: 'string' }
       },
       required: ['action']
     },
@@ -840,19 +930,24 @@ Supported actions: create_sound_cue, play_sound_at_location, play_sound_2d, crea
     description: `Behavior Tree editing tool.
 
 Use it when you need to:
+- create new Behavior Tree assets.
 - add nodes (Sequence, Selector, Tasks).
 - connect nodes.
 - set properties.
 
-Supported actions: add_node, connect_nodes, remove_node, break_connections, set_node_properties.`,
+Supported actions: create, add_node, connect_nodes, remove_node, break_connections, set_node_properties.`,
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['add_node', 'connect_nodes', 'remove_node', 'break_connections', 'set_node_properties'],
+          enum: ['create', 'add_node', 'connect_nodes', 'remove_node', 'break_connections', 'set_node_properties'],
           description: 'Action'
         },
+        // For create action
+        name: { type: 'string', description: 'Name of the new Behavior Tree asset' },
+        savePath: { type: 'string', description: 'Path to save the new Behavior Tree (e.g., /Game/AI)' },
+        // Existing params
         assetPath: { type: 'string' },
         nodeType: { type: 'string' },
         nodeId: { type: 'string' },
@@ -871,6 +966,233 @@ Supported actions: add_node, connect_nodes, remove_node, break_connections, set_
         success: { type: 'boolean' },
         message: { type: 'string' },
         nodeId: { type: 'string' }
+      }
+    }
+  },
+
+  // 14. BLUEPRINT GRAPH DIRECT
+  {
+    name: 'manage_blueprint_graph',
+    description: `Direct Blueprint Graph manipulation.
+
+Use it when you need to:
+- add nodes (Function, Variable, Event, Macro).
+- connect/disconnect pins.
+- create reroute nodes.
+- set node properties.
+- get node/graph details.
+
+Supported actions: create_node, delete_node, connect_pins, break_pin_links, set_node_property, create_reroute_node, get_node_details, get_graph_details, get_pin_details.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property',
+            'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details'
+          ],
+          description: 'Action'
+        },
+        blueprintPath: { type: 'string' },
+        graphName: { type: 'string' },
+        nodeType: { type: 'string' },
+        nodeId: { type: 'string' },
+        pinName: { type: 'string' },
+        linkedTo: { type: 'string' },
+        memberName: { type: 'string' },
+        x: { type: 'number' },
+        y: { type: 'number' },
+        propertyName: { type: 'string' },
+        value: { description: 'Value.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        nodeId: { type: 'string' },
+        details: { type: 'object' }
+      }
+    }
+  },
+
+  // 15. LIGHTING MANAGER
+  {
+    name: 'manage_lighting',
+    description: `Lighting and Rendering configuration.
+
+Use it when you need to:
+- spawn and configure lights (Directional, Point, Spot, Rect, Sky).
+- configure Global Illumination (Lumen, Lightmass) and Shadows.
+- setup Volumetric Fog and Atmosphere.
+- build lighting (bake).
+- set exposure and post-process settings.
+
+Supported actions: 
+- Spawning: spawn_light, create_light, spawn_sky_light, create_sky_light, ensure_single_sky_light, create_lightmass_volume, create_lighting_enabled_level, create_dynamic_light.
+- Configuration: setup_global_illumination, configure_shadows, set_exposure, set_ambient_occlusion, setup_volumetric_fog.
+- Building: build_lighting.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'spawn_light', 'create_light', 'spawn_sky_light', 'create_sky_light', 'ensure_single_sky_light',
+            'create_lightmass_volume', 'create_lighting_enabled_level', 'create_dynamic_light',
+            'setup_global_illumination', 'configure_shadows', 'set_exposure', 'set_ambient_occlusion', 'setup_volumetric_fog',
+            'build_lighting'
+          ],
+          description: 'Action'
+        },
+        // Common
+        name: { type: 'string' },
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+
+        // Light Properties
+        lightType: { type: 'string', enum: ['Directional', 'Point', 'Spot', 'Rect'] },
+        intensity: { type: 'number' },
+        color: { type: 'array', items: { type: 'number' } },
+        castShadows: { type: 'boolean' },
+        useAsAtmosphereSunLight: { type: 'boolean', description: 'For Directional Lights, use as Atmosphere Sun Light.' },
+        temperature: { type: 'number' },
+        radius: { type: 'number' },
+        falloffExponent: { type: 'number' },
+        innerCone: { type: 'number' },
+        outerCone: { type: 'number' },
+        width: { type: 'number' },
+        height: { type: 'number' },
+
+        // Sky Light
+        sourceType: { type: 'string', enum: ['CapturedScene', 'SpecifiedCubemap'] },
+        cubemapPath: { type: 'string' },
+        recapture: { type: 'boolean' },
+
+        // Global Illumination
+        method: { type: 'string', enum: ['Lightmass', 'LumenGI', 'ScreenSpace', 'None'] },
+        quality: { type: 'string' }, // 'Low' | 'Medium' | 'High' | 'Epic' | 'Preview' | 'Production'
+        indirectLightingIntensity: { type: 'number' },
+        bounces: { type: 'number' },
+
+        // Shadows
+        shadowQuality: { type: 'string' },
+        cascadedShadows: { type: 'boolean' },
+        shadowDistance: { type: 'number' },
+        contactShadows: { type: 'boolean' },
+        rayTracedShadows: { type: 'boolean' },
+
+        // Exposure / Post Process
+        compensationValue: { type: 'number' },
+        minBrightness: { type: 'number' },
+        maxBrightness: { type: 'number' },
+        enabled: { type: 'boolean' },
+
+        // Volumetric Fog
+        density: { type: 'number' },
+        scatteringIntensity: { type: 'number' },
+        fogHeight: { type: 'number' },
+
+        // Building
+        buildOnlySelected: { type: 'boolean' },
+        buildReflectionCaptures: { type: 'boolean' },
+
+        // Level
+        levelName: { type: 'string' },
+        copyActors: { type: 'boolean' },
+        useTemplate: { type: 'boolean' },
+
+        // Volume
+        size: commonSchemas.scale
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        actorName: { type: 'string' }
+      }
+    }
+  },
+
+  // 16. PERFORMANCE MANAGER
+  {
+    name: 'manage_performance',
+    description: `Performance profiling and optimization.
+
+Use it when you need to:
+- profiling (CPU, GPU, Memory, RenderThread).
+- optimize content (LODs, texture streaming, draw calls).
+- benchmark the scene.
+- configure rendering features (Nanite, Lumen, World Partition).
+
+Supported actions: 
+- Profiling: start_profiling, stop_profiling, run_benchmark, show_fps, show_stats, generate_memory_report.
+- Settings: set_scalability, set_resolution_scale, set_vsync, set_frame_rate_limit, enable_gpu_timing.
+- Optimization: configure_texture_streaming, configure_lod, apply_baseline_settings, optimize_draw_calls, merge_actors, configure_occlusion_culling, optimize_shaders.
+- Features: configure_nanite, configure_world_partition.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'start_profiling', 'stop_profiling', 'run_benchmark', 'show_fps', 'show_stats', 'generate_memory_report',
+            'set_scalability', 'set_resolution_scale', 'set_vsync', 'set_frame_rate_limit', 'enable_gpu_timing',
+            'configure_texture_streaming', 'configure_lod', 'apply_baseline_settings', 'optimize_draw_calls', 'merge_actors',
+            'configure_occlusion_culling', 'optimize_shaders', 'configure_nanite', 'configure_world_partition'
+          ],
+          description: 'Action'
+        },
+        // Profiling
+        type: { type: 'string', enum: ['CPU', 'GPU', 'Memory', 'RenderThread', 'GameThread', 'All'] },
+        duration: { type: 'number' },
+        outputPath: { type: 'string' },
+        detailed: { type: 'boolean' },
+        category: { type: 'string' },
+
+        // Settings
+        level: { type: 'number' },
+        scale: { type: 'number' },
+        enabled: { type: 'boolean' },
+        maxFPS: { type: 'number' },
+        verbose: { type: 'boolean' },
+
+        // Optimization
+        poolSize: { type: 'number' },
+        boostPlayerLocation: { type: 'boolean' },
+        forceLOD: { type: 'number' },
+        lodBias: { type: 'number' },
+        distanceScale: { type: 'number' },
+        skeletalBias: { type: 'number' },
+        hzb: { type: 'boolean' },
+        enableInstancing: { type: 'boolean' },
+        enableBatching: { type: 'boolean' },
+        mergeActors: { type: 'boolean' },
+        actors: { type: 'array', items: { type: 'string' } },
+        freezeRendering: { type: 'boolean' },
+        compileOnDemand: { type: 'boolean' },
+        cacheShaders: { type: 'boolean' },
+        reducePermutations: { type: 'boolean' },
+
+        // Features
+        maxPixelsPerEdge: { type: 'number' },
+        streamingPoolSize: { type: 'number' },
+        streamingDistance: { type: 'number' },
+        cellSize: { type: 'number' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        params: { type: 'object' }
       }
     }
   }

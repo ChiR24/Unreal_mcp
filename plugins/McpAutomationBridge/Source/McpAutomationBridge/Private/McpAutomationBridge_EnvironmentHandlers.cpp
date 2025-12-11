@@ -288,16 +288,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
           nullptr, TEXT("/Script/Engine.Blueprint'/Engine/Maps/Templates/"
                         "SkySphere.SkySphere_C'"));
       if (SkySphereClass) {
-        UEditorActorSubsystem *ActorSS =
-            GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-        if (ActorSS) {
-          AActor *SkySphere = ActorSS->SpawnActorFromClass(
-              SkySphereClass, FVector::ZeroVector, FRotator::ZeroRotator);
-          if (SkySphere) {
-            bSuccess = true;
-            Message = TEXT("Sky sphere created");
-            Resp->SetStringField(TEXT("actorName"), SkySphere->GetActorLabel());
-          }
+        AActor *SkySphere = SpawnActorInActiveWorld<AActor>(
+            SkySphereClass, FVector::ZeroVector, FRotator::ZeroRotator,
+            TEXT("SkySphere"));
+        if (SkySphere) {
+          bSuccess = true;
+          Message = TEXT("Sky sphere created");
+          Resp->SetStringField(TEXT("actorName"), SkySphere->GetActorLabel());
         }
       }
     }
@@ -345,16 +342,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
       UClass *FogClass = LoadClass<AActor>(
           nullptr, TEXT("/Script/Engine.ExponentialHeightFog"));
       if (FogClass) {
-        UEditorActorSubsystem *ActorSS =
-            GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-        if (ActorSS) {
-          AActor *FogVolume = ActorSS->SpawnActorFromClass(
-              FogClass, Location, FRotator::ZeroRotator);
-          if (FogVolume) {
-            bSuccess = true;
-            Message = TEXT("Fog volume created");
-            Resp->SetStringField(TEXT("actorName"), FogVolume->GetActorLabel());
-          }
+        AActor *FogVolume = SpawnActorInActiveWorld<AActor>(
+            FogClass, Location, FRotator::ZeroRotator, TEXT("FogVolume"));
+        if (FogVolume) {
+          bSuccess = true;
+          Message = TEXT("Fog volume created");
+          Resp->SetStringField(TEXT("actorName"), FogVolume->GetActorLabel());
         }
       }
     }
@@ -772,6 +765,58 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
 #endif
   }
 
+  if (LowerSub == TEXT("set_project_setting")) {
+#if WITH_EDITOR
+    FString Section;
+    FString Key;
+    FString Value;
+    FString ConfigName;
+
+    if (!Payload->TryGetStringField(TEXT("section"), Section) ||
+        !Payload->TryGetStringField(TEXT("key"), Key) ||
+        !Payload->TryGetStringField(TEXT("value"), Value)) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Missing section, key, or value"), nullptr,
+                             TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Default to GGameIni (DefaultGame.ini) but allow overrides
+    if (!Payload->TryGetStringField(TEXT("configName"), ConfigName) ||
+        ConfigName.IsEmpty()) {
+      ConfigName = GGameIni;
+    } else if (ConfigName == TEXT("Engine")) {
+      ConfigName = GEngineIni;
+    } else if (ConfigName == TEXT("Input")) {
+      ConfigName = GInputIni;
+    } else if (ConfigName == TEXT("Game")) {
+      ConfigName = GGameIni;
+    }
+
+    if (!GConfig) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("GConfig not available"), nullptr,
+                             TEXT("ENGINE_ERROR"));
+      return true;
+    }
+
+    GConfig->SetString(*Section, *Key, *Value, ConfigName);
+    GConfig->Flush(false, ConfigName);
+
+    SendAutomationResponse(
+        RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("Project setting set: [%s] %s = %s"), *Section,
+                        *Key, *Value),
+        nullptr);
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("set_project_setting requires editor build"),
+                           nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+  }
+
   if (LowerSub == TEXT("validate_assets")) {
 #if WITH_EDITOR
     const TArray<TSharedPtr<FJsonValue>> *PathsPtr = nullptr;
@@ -883,11 +928,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     return true;
   }
 
-  SendAutomationResponse(
-      RequestingSocket, RequestId, false,
-      FString::Printf(TEXT("Unknown system control action: %s"), *SubAction),
-      nullptr, TEXT("UNKNOWN_ACTION"));
-  return true;
+  // Unknown sub-action: return false to allow other handlers (e.g.
+  // HandleUiAction) to attempt handling it.
+  // NOTE: Simple return false is not enough if the dispatcher doesn't fallback.
+  // We explicitly try the UI handler here as system_control and ui actions
+  // overlap.
+  return HandleUiAction(RequestId, Action, Payload, RequestingSocket);
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
@@ -1256,148 +1302,88 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     return true;
   }
 
-  // Activate effect (activate_effect)
-  if (LowerSub == TEXT("activate_effect")) {
+  // Get bounding box (get_bounding_box)
+  if (LowerSub == TEXT("get_bounding_box")) {
     FString ActorName;
-    if (!Payload->TryGetStringField(TEXT("actorName"), ActorName)) {
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    FString ObjectPath;
+    Payload->TryGetStringField(TEXT("objectPath"), ObjectPath);
+
+    if (ActorName.IsEmpty() && ObjectPath.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
-          TEXT("activate_effect requires actorName parameter"), nullptr,
+          TEXT("get_bounding_box requires actorName or objectPath"), nullptr,
           TEXT("INVALID_ARGUMENT"));
       return true;
     }
 
-#if WITH_EDITOR
-    if (!GEditor) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Editor not available"), nullptr,
-                             TEXT("EDITOR_NOT_AVAILABLE"));
-      return true;
-    }
-    UEditorActorSubsystem *ActorSS =
-        GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-    if (!ActorSS) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("EditorActorSubsystem not available"),
-                             nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-      return true;
-    }
-
-    TArray<AActor *> Actors = ActorSS->GetAllLevelActors();
     AActor *TargetActor = nullptr;
-    for (AActor *A : Actors) {
-      if (A && (A->GetActorLabel() == ActorName || A->GetName() == ActorName)) {
-        TargetActor = A;
-        break;
+    UPrimitiveComponent *PrimComp = nullptr;
+
+#if WITH_EDITOR
+    if (GEditor && !ActorName.IsEmpty()) {
+      UEditorActorSubsystem *ActorSS =
+          GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+      if (ActorSS) {
+        TArray<AActor *> Actors = ActorSS->GetAllLevelActors();
+        for (AActor *A : Actors) {
+          if (A &&
+              (A->GetActorLabel() == ActorName || A->GetName() == ActorName)) {
+            TargetActor = A;
+            break;
+          }
+        }
+      }
+    }
+#endif
+
+    if (!TargetActor && !ObjectPath.IsEmpty()) {
+      UObject *Obj = FindObject<UObject>(nullptr, *ObjectPath);
+      if (Obj) {
+        if (AActor *A = Cast<AActor>(Obj)) {
+          TargetActor = A;
+        } else if (UPrimitiveComponent *PC = Cast<UPrimitiveComponent>(Obj)) {
+          PrimComp = PC;
+        }
       }
     }
 
-    if (!TargetActor) {
-      SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr,
-          TEXT("ACTOR_NOT_FOUND"));
-      return true;
+    FBox Box(ForceInit);
+    bool bFound = false;
+
+    if (TargetActor) {
+      Box = TargetActor->GetComponentsBoundingBox(true);
+      bFound = true;
+    } else if (PrimComp) {
+      Box = PrimComp->Bounds.GetBox();
+      bFound = true;
     }
 
-    UNiagaraComponent *NiComp =
-        TargetActor->FindComponentByClass<UNiagaraComponent>();
-    if (NiComp) {
-      NiComp->Activate(true);
+    if (bFound) {
+      FVector Origin = Box.GetCenter();
+      FVector Extent = Box.GetExtent();
+      TSharedPtr<FJsonObject> BoxObj = MakeShared<FJsonObject>();
+
+      TSharedPtr<FJsonObject> OrgObj = MakeShared<FJsonObject>();
+      OrgObj->SetNumberField(TEXT("x"), Origin.X);
+      OrgObj->SetNumberField(TEXT("y"), Origin.Y);
+      OrgObj->SetNumberField(TEXT("z"), Origin.Z);
+      BoxObj->SetObjectField(TEXT("origin"), OrgObj);
+
+      TSharedPtr<FJsonObject> ExtObj = MakeShared<FJsonObject>();
+      ExtObj->SetNumberField(TEXT("x"), Extent.X);
+      ExtObj->SetNumberField(TEXT("y"), Extent.Y);
+      ExtObj->SetNumberField(TEXT("z"), Extent.Z);
+      BoxObj->SetObjectField(TEXT("extent"), ExtObj);
+
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Effect activated"), nullptr, FString());
-      return true;
-    }
-
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Actor does not have a NiagaraComponent"),
-                           nullptr, TEXT("COMPONENT_NOT_FOUND"));
-    return true;
-#else
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("activate_effect requires editor build"),
-                           nullptr, TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
-  }
-
-  // Set Niagara Parameter (set_niagara_parameter)
-  if (LowerSub == TEXT("set_niagara_parameter")) {
-    FString SystemName;
-    FString ParameterName;
-    FString ParameterType;
-    double FloatVal = 0.0;
-    bool bHasFloat = false;
-
-    if (!Payload->TryGetStringField(TEXT("systemName"), SystemName) ||
-        !Payload->TryGetStringField(TEXT("parameterName"), ParameterName)) {
-      SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("set_niagara_parameter requires systemName and parameterName"),
-          nullptr, TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    bHasFloat = Payload->TryGetNumberField(TEXT("value"), FloatVal);
-
-#if WITH_EDITOR
-    if (!GEditor) {
+                             TEXT("Bounding box retrieved"), BoxObj, FString());
+    } else {
       SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Editor not available"), nullptr,
-                             TEXT("EDITOR_NOT_AVAILABLE"));
-      return true;
+                             TEXT("Object not found or has no bounds"), nullptr,
+                             TEXT("OBJECT_NOT_FOUND"));
     }
-    UEditorActorSubsystem *ActorSS =
-        GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-    if (!ActorSS) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("EditorActorSubsystem not available"),
-                             nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-      return true;
-    }
-
-    TArray<AActor *> Actors = ActorSS->GetAllLevelActors();
-    AActor *TargetActor = nullptr;
-    for (AActor *A : Actors) {
-      if (A &&
-          (A->GetActorLabel() == SystemName || A->GetName() == SystemName)) {
-        TargetActor = A;
-        break;
-      }
-    }
-
-    if (!TargetActor) {
-      SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          FString::Printf(TEXT("Niagara actor not found: %s"), *SystemName),
-          nullptr, TEXT("ACTOR_NOT_FOUND"));
-      return true;
-    }
-
-    UNiagaraComponent *NiComp =
-        TargetActor->FindComponentByClass<UNiagaraComponent>();
-    if (!NiComp) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Actor is not a Niagara system"), nullptr,
-                             TEXT("COMPONENT_NOT_FOUND"));
-      return true;
-    }
-
-    // Set the parameter based on inferred type or explicit type
-    // Currently simplified to just float support as per test requirement
-    NiComp->SetVariableFloat(FName(*ParameterName), (float)FloatVal);
-
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           FString::Printf(TEXT("Set parameter %s to %f"),
-                                           *ParameterName, FloatVal),
-                           nullptr, FString());
     return true;
-#else
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("set_niagara_parameter requires editor build"),
-                           nullptr, TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
   }
 
   // Find by class (find_by_class)
@@ -1603,15 +1589,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
     return true;
   }
 
-  AActor *NewActor = ActorSS->SpawnActorFromClass(
-      AActor::StaticClass(), Location, FRotator::ZeroRotator);
+  AActor *NewActor = SpawnActorInActiveWorld<AActor>(
+      AActor::StaticClass(), Location, FRotator::ZeroRotator, Name);
   if (!NewActor) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Failed to spawn actor"), TEXT("SPAWN_FAILED"));
     return true;
   }
-
-  NewActor->SetActorLabel(Name);
 
   UProceduralMeshComponent *ProcMesh = NewObject<UProceduralMeshComponent>(
       NewActor, FName(TEXT("ProceduralTerrain")));

@@ -396,6 +396,66 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
       const res = await executeAutomationRequest(tools, 'set_metadata', { assetPath: path, metadata });
       return cleanObject(res);
     }
+    case 'add_track': {
+      // Forward add_track to the C++ plugin - it requires MovieScene API
+      const path = typeof args.path === 'string' ? args.path.trim() : '';
+      const trackType = typeof args.trackType === 'string' ? args.trackType : '';
+      const trackName = typeof args.trackName === 'string' ? args.trackName : '';
+      const actorName = typeof args.actorName === 'string' ? args.actorName : undefined;
+
+      const payload = {
+        ...args,
+        path: path || args.path,
+        trackType,
+        trackName,
+        actorName,
+        subAction: 'add_track'
+      };
+
+      const res = await executeAutomationRequest(tools, 'manage_sequence', payload);
+      return cleanObject(res);
+    }
+    case 'add_section': {
+      // Forward add_section to C++
+      const payload = { ...args, subAction: 'add_section' };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'remove_track': {
+      // Forward remove_track to C++
+      const payload = { ...args, subAction: 'remove_track' };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'set_track_muted': {
+      const payload = { ...args, subAction: 'set_track_muted' };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'set_track_solo': {
+      const payload = { ...args, subAction: 'set_track_solo' };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'set_track_locked': {
+      const payload = { ...args, subAction: 'set_track_locked' };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'list_tracks': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const res = await tools.sequenceTools.listTracks({ path });
+      return cleanObject(res);
+    }
+    case 'set_work_range': {
+      const start = Number(args.start);
+      const end = Number(args.end);
+      // Validate start/end are numbers
+      if (!Number.isFinite(start)) throw new Error('Invalid start: must be a number');
+      if (!Number.isFinite(end)) throw new Error('Invalid end: must be a number');
+
+      const res = await tools.sequenceTools.setWorkRange({
+        path: args.path,
+        start,
+        end
+      });
+      return cleanObject(res);
+    }
     default:
       // Ensure subAction is set for compatibility with C++ handler expectations
       if (args.action && !args.subAction) {

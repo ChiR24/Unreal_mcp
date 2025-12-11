@@ -185,23 +185,27 @@ No additional engine configuration required. The MCP Automation Bridge plugin ha
 }
 ```
 
-## Available Tools (13)
+## Available Tools (17)
 
 | Tool | Description |
 |------|-------------|
 | `manage_asset` | Assets, Materials, Render Targets, Behavior Trees |
 | `control_actor` | Spawn, delete, modify, physics |
 | `control_editor` | PIE, Camera, UI Input |
-| `manage_level` | Load/Save, Lighting, World Partition |
+| `manage_level` | Load/Save, World Partition |
+| `manage_lighting` | Spawn Lights, GI, Shadows, Build Lighting |
+| `manage_performance` | Profiling, Optimization, Scalability |
 | `animation_physics` | Animation BPs, Vehicles, Ragdolls |
 | `manage_effect` | Niagara, Particles, Debug Shapes |
 | `manage_blueprint` | Create, SCS, Graph Editing |
+| `manage_blueprint_graph` | Direct Blueprint Graph Manipulation |
 | `build_environment` | Landscape, Foliage, Procedural |
-| `system_control` | Profiling, Quality, UBT, Tests, Logs, Debug, Insights |
+| `system_control` | UBT, Tests, Logs, Project Settings, CVars |
 | `manage_sequence` | Sequencer/Cinematics |
 | `inspect` | Object Introspection |
 | `manage_audio` | Audio Assets & Components |
 | `manage_behavior_tree` | Behavior Tree Graph Editing |
+| `manage_input` | Enhanced Input Actions & Contexts |
 
 
 ## Documentation

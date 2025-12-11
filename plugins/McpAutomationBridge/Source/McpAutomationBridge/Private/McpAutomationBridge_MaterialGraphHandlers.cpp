@@ -389,10 +389,15 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
     UMaterialExpression *TargetExpr = nullptr;
-    for (UMaterialExpression *Expr : Material->GetExpressions()) {
-      if (Expr->MaterialExpressionGuid.ToString() == NodeId) {
-        TargetExpr = Expr;
-        break;
+    auto AllExpressions = Material->GetExpressions();
+
+    // If nodeId provided, try to find that specific node
+    if (!NodeId.IsEmpty()) {
+      for (UMaterialExpression *Expr : AllExpressions) {
+        if (Expr->MaterialExpressionGuid.ToString() == NodeId) {
+          TargetExpr = Expr;
+          break;
+        }
       }
     }
 
@@ -407,8 +412,37 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Node details retrieved."), Result);
     } else {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."),
-                          TEXT("NODE_NOT_FOUND"));
+      // List all available nodes to help the user
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      TArray<TSharedPtr<FJsonValue>> NodeList;
+
+      for (int32 i = 0; i < AllExpressions.Num(); ++i) {
+        UMaterialExpression *Expr = AllExpressions[i];
+        TSharedPtr<FJsonObject> NodeInfo = MakeShared<FJsonObject>();
+        NodeInfo->SetStringField(TEXT("nodeId"),
+                                 Expr->MaterialExpressionGuid.ToString());
+        NodeInfo->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
+        NodeInfo->SetNumberField(TEXT("index"), i);
+        if (!Expr->Desc.IsEmpty()) {
+          NodeInfo->SetStringField(TEXT("desc"), Expr->Desc);
+        }
+        NodeList.Add(MakeShared<FJsonValueObject>(NodeInfo));
+      }
+
+      Result->SetArrayField(TEXT("availableNodes"), NodeList);
+      Result->SetNumberField(TEXT("nodeCount"), AllExpressions.Num());
+
+      FString Message =
+          NodeId.IsEmpty()
+              ? FString::Printf(
+                    TEXT("No nodeId provided. Material has %d nodes."),
+                    AllExpressions.Num())
+              : FString::Printf(
+                    TEXT("Node '%s' not found. Material has %d nodes."),
+                    *NodeId, AllExpressions.Num());
+
+      SendAutomationResponse(RequestingSocket, RequestId, false, Message,
+                             Result, TEXT("NODE_NOT_FOUND"));
     }
     return true;
   }

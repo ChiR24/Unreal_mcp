@@ -278,6 +278,14 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       });
       return cleanObject(res);
     }
+    case 'find_by_tag': {
+      const tag = args.tag;
+      const value = args.value;
+      if (!tag) {
+        throw new Error('tag is required');
+      }
+      return tools.assetTools.findByTag({ tag, value });
+    }
     case 'get_dependencies': {
       const res = await tools.assetTools.getDependencies({ assetPath: args.assetPath, recursive: args.recursive });
       return cleanObject(res);
@@ -287,7 +295,31 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       return cleanObject(res);
     }
     case 'analyze_graph': {
-      const res = await tools.assetTools.analyzeGraph({ assetPath: args.assetPath, maxDepth: args.maxDepth });
+      // Map 'analyze_graph' to 'get_asset_graph' which is the C++ handler
+      const res = await executeAutomationRequest(tools, 'get_asset_graph', {
+        assetPath: args.assetPath,
+        maxDepth: args.maxDepth
+      });
+      return cleanObject(res);
+    }
+    case 'create_render_target': {
+      // Route to manage_render command
+      const res = await executeAutomationRequest(tools, 'manage_render', {
+        subAction: 'create_render_target',
+        name: args.name,
+        packagePath: args.path, // C++ expects packagePath
+        width: args.width,
+        height: args.height,
+        format: args.format
+      });
+      return cleanObject(res);
+    }
+    case 'nanite_rebuild_mesh': {
+      // Route to manage_render command
+      const res = await executeAutomationRequest(tools, 'manage_render', {
+        subAction: 'nanite_rebuild_mesh',
+        assetPath: args.meshPath || args.assetPath
+      });
       return cleanObject(res);
     }
     case 'fixup_redirectors': {

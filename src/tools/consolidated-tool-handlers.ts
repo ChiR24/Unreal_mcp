@@ -17,6 +17,9 @@ import { handleInspectTools } from './handlers/inspect-handlers.js';
 import { handlePipelineTools } from './handlers/pipeline-handlers.js';
 import { handleGraphTools } from './handlers/graph-handlers.js';
 import { handleAudioTools } from './handlers/audio-handlers.js';
+import { handleLightingTools } from './handlers/lighting-handlers.js';
+import { handlePerformanceTools } from './handlers/performance-handlers.js';
+import { handleInputTools } from './handlers/input-handlers.js';
 import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -213,7 +216,7 @@ async function invokeNamedTool(
 
       // Bridge forwards
       if (action === 'run_tests') return cleanObject(await executeAutomationRequest(tools, 'manage_tests', { ...args, subAction: action }, 'Bridge unavailable'));
-      if (action === 'subscribe') return cleanObject(await executeAutomationRequest(tools, 'manage_logs', { ...args, subAction: action }, 'Bridge unavailable'));
+      if (action === 'subscribe' || action === 'unsubscribe') return cleanObject(await executeAutomationRequest(tools, 'manage_logs', { ...args, subAction: action }, 'Bridge unavailable'));
       if (action === 'spawn_category') return cleanObject(await executeAutomationRequest(tools, 'manage_debug', { ...args, subAction: action }, 'Bridge unavailable'));
       if (action === 'start_session') return cleanObject(await executeAutomationRequest(tools, 'manage_insights', { ...args, subAction: action }, 'Bridge unavailable'));
       if (action === 'lumen_update_scene') return cleanObject(await executeAutomationRequest(tools, 'manage_render', { ...args, subAction: action }, 'Bridge unavailable'));
@@ -248,6 +251,18 @@ async function invokeNamedTool(
     // 16. WORLD PARTITION
     case 'manage_world_partition':
       return cleanObject(await executeAutomationRequest(tools, 'manage_world_partition', { ...args, subAction: action }, 'Bridge unavailable'));
+
+    // 17. LIGHTING
+    case 'manage_lighting':
+      return await handleLightingTools(action, args, tools);
+
+    // 18. PERFORMANCE
+    case 'manage_performance':
+      return await handlePerformanceTools(action, args, tools);
+
+    // 19. INPUT
+    case 'manage_input':
+      return await handleInputTools(action, args, tools);
 
     default:
       return cleanObject({ success: false, error: 'UNKNOWN_TOOL', message: `Unknown consolidated tool: ${name}` });

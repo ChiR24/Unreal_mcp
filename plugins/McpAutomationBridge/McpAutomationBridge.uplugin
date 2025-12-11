@@ -55,6 +55,10 @@
     {
       "Name": "DataValidation",
       "Enabled": true
+    },
+    {
+      "Name": "EnhancedInput",
+      "Enabled": true
     }
   ]
 }

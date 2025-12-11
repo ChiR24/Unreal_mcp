@@ -240,6 +240,71 @@ export class NiagaraTools {
     };
   }
 
+  async addModule(params: {
+    systemPath: string;
+    modulePath: string;
+    emitterName?: string;
+    scriptType?: 'Spawn' | 'Update';
+    timeoutMs?: number;
+  }) {
+    if (!params.systemPath) return { success: false, error: 'INVALID_SYSTEM_PATH', message: 'System path is required' } as const;
+    if (!params.modulePath) return { success: false, error: 'INVALID_MODULE_PATH', message: 'Module path is required' } as const;
+
+    const res = await this.automationBridge?.sendAutomationRequest('manage_niagara_graph', {
+      subAction: 'add_module',
+      assetPath: params.systemPath,
+      modulePath: params.modulePath,
+      emitterName: params.emitterName,
+      scriptType: params.scriptType
+    });
+    return res;
+  }
+
+  async connectPins(params: {
+    systemPath: string;
+    fromNodeId: string;
+    fromPinName: string;
+    toNodeId: string;
+    toPinName: string;
+    emitterName?: string;
+    scriptType?: 'Spawn' | 'Update';
+    timeoutMs?: number;
+  }) {
+    if (!params.systemPath) return { success: false, error: 'INVALID_SYSTEM_PATH', message: 'System path is required' } as const;
+
+    const res = await this.automationBridge?.sendAutomationRequest('manage_niagara_graph', {
+      subAction: 'connect_pins',
+      assetPath: params.systemPath,
+      fromNode: params.fromNodeId,
+      fromPin: params.fromPinName,
+      toNode: params.toNodeId,
+      toPin: params.toPinName,
+      emitterName: params.emitterName,
+      scriptType: params.scriptType
+    });
+    return res;
+  }
+
+  async removeNode(params: {
+    systemPath: string;
+    nodeId: string;
+    emitterName?: string;
+    scriptType?: 'Spawn' | 'Update';
+    timeoutMs?: number;
+  }) {
+    if (!params.systemPath) return { success: false, error: 'INVALID_SYSTEM_PATH', message: 'System path is required' } as const;
+    if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
+
+    const res = await this.automationBridge?.sendAutomationRequest('manage_niagara_graph', {
+      subAction: 'remove_node',
+      assetPath: params.systemPath,
+      nodeId: params.nodeId,
+      emitterName: params.emitterName,
+      scriptType: params.scriptType
+    });
+    return res;
+  }
+
   async setParameter(params: {
     systemName: string;
     parameterName: string;
@@ -247,6 +312,15 @@ export class NiagaraTools {
     value: any;
     isUserParameter?: boolean;
   }) {
+    // Note: This uses 'set_niagara_parameter' top-level action, OR 'manage_niagara_graph' with subAction 'set_parameter'.
+    // The previous implementation used 'set_niagara_parameter'. 
+    // The C++ 'manage_niagara_graph' also has 'set_parameter'.
+    // I will keep existing logic if it works, or switch to manage_niagara_graph if preferred.
+    // Given the audit, 'manage_niagara_graph' is the graph-based one.
+    // The existing setParameter uses 'set_niagara_parameter' which might be instance-based?
+    // Let's stick to existing unless broken, but I'll add the graph-based one as setGraphParameter?
+    // User requested "implement all missing". I'll stick to adding missing graph methods I just verified.
+
     try {
       const automationBridge = (this.bridge as any).automationBridge;
       if (!automationBridge) {
@@ -362,7 +436,7 @@ export class NiagaraTools {
             attachToActor: params.attachToActor
           });
           if (resp && resp.success !== false) {
-            return { success: true, message: resp.message || 'Niagara effect spawned', actor: resp.actor || resp.result?.actor } as any;
+            return { success: true, message: resp.message || 'Niagara effect spawned', actor: resp.actor || resp.result?.actor || resp.result?.actorName } as any;
           }
           return { success: false, message: resp?.message ?? 'Spawn failed', error: resp?.error ?? 'SPAWN_FAILED' } as any;
         } catch (error) {

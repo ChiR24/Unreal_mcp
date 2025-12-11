@@ -42,7 +42,11 @@ export class AudioTools {
         return { success: false, error: response.error || response.message || 'Failed to create SoundCue' };
       }
 
-      return { success: true, message: response.message || 'Sound cue created' };
+      return {
+        success: true,
+        message: response.message || 'Sound cue created',
+        ...(response.result || {})
+      };
     } catch (error) {
       return { success: false, error: `Failed to create sound cue: ${error instanceof Error ? error.message : String(error)}` };
     }
@@ -81,7 +85,11 @@ export class AudioTools {
         return { success: false, error: response.error || response.message || 'Failed to play sound' };
       }
 
-      return { success: true, message: response.message || 'Sound played' };
+      return {
+        success: true,
+        message: response.message || 'Sound played',
+        ...(response.result || {})
+      };
     } catch (error) {
       return { success: false, error: `Failed to play sound: ${error instanceof Error ? error.message : String(error)}` };
     }
@@ -112,7 +120,11 @@ export class AudioTools {
         return { success: false, error: response.error || response.message || 'Failed to play 2D sound' };
       }
 
-      return { success: true, message: response.message || '2D sound played' };
+      return {
+        success: true,
+        message: response.message || '2D sound played',
+        ...(response.result || {})
+      };
     } catch (error) {
       return { success: false, error: `Failed to play 2D sound: ${error instanceof Error ? error.message : String(error)}` };
     }
@@ -149,7 +161,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Audio component created' }
+        ? { success: true, message: response.message || 'Audio component created', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to create audio component' };
     } catch (error) {
       return { success: false, error: `Failed to create audio component: ${error instanceof Error ? error.message : String(error)}` };
@@ -178,7 +190,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Sound attenuation set' }
+        ? { success: true, message: response.message || 'Sound attenuation set', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to set sound attenuation' };
     } catch (error) {
       return { success: false, error: `Failed to set sound attenuation: ${error instanceof Error ? error.message : String(error)}` };
@@ -208,7 +220,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Sound class created' }
+        ? { success: true, message: response.message || 'Sound class created', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to create sound class' };
     } catch (error) {
       return { success: false, error: `Failed to create sound class: ${error instanceof Error ? error.message : String(error)}` };
@@ -237,7 +249,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Sound mix created' }
+        ? { success: true, message: response.message || 'Sound mix created', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to create sound mix' };
     } catch (error) {
       return { success: false, error: `Failed to create sound mix: ${error instanceof Error ? error.message : String(error)}` };
@@ -258,7 +270,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Sound mix pushed' }
+        ? { success: true, message: response.message || 'Sound mix pushed', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to push sound mix' };
     } catch (error) {
       return { success: false, error: `Failed to push sound mix: ${error instanceof Error ? error.message : String(error)}` };
@@ -278,7 +290,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Sound mix popped' }
+        ? { success: true, message: response.message || 'Sound mix popped', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to pop sound mix' };
     } catch (error) {
       return { success: false, error: `Failed to pop sound mix: ${error instanceof Error ? error.message : String(error)}` };
@@ -330,7 +342,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Ambient sound created', componentName: (response.data as any)?.componentName }
+        ? { success: true, message: response.message || 'Ambient sound created', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to create ambient sound' };
     } catch (error) {
       return { success: false, error: `Failed to create ambient sound: ${error instanceof Error ? error.message : String(error)}` };
@@ -361,7 +373,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Reverb zone created' }
+        ? { success: true, message: response.message || 'Reverb zone created', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to create reverb zone' };
     } catch (error) {
       return { success: false, error: `Failed to create reverb zone: ${error instanceof Error ? error.message : String(error)}` };
@@ -386,7 +398,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || `Audio analysis ${_params.enabled ? 'enabled' : 'disabled'}` }
+        ? { success: true, message: response.message || `Audio analysis ${_params.enabled ? 'enabled' : 'disabled'}`, ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to enable audio analysis' };
     } catch (error) {
       return { success: false, error: `Failed to enable audio analysis: ${error instanceof Error ? error.message : String(error)}` };
@@ -418,7 +430,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || 'Sound faded' }
+        ? { success: true, message: response.message || 'Sound faded', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to fade sound' };
     } catch (error) {
       return { success: false, error: `Failed to fade sound: ${error instanceof Error ? error.message : String(error)}` };
@@ -441,7 +453,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || `Doppler effect ${_params.enabled ? 'enabled' : 'disabled'}` }
+        ? { success: true, message: response.message || `Doppler effect ${_params.enabled ? 'enabled' : 'disabled'}`, ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to set doppler effect' };
     } catch (error) {
       return { success: false, error: `Failed to set doppler effect: ${error instanceof Error ? error.message : String(error)}` };
@@ -466,7 +478,7 @@ export class AudioTools {
       });
 
       return response.success
-        ? { success: true, message: response.message || `Audio occlusion ${_params.enabled ? 'enabled' : 'disabled'}` }
+        ? { success: true, message: response.message || `Audio occlusion ${_params.enabled ? 'enabled' : 'disabled'}`, ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to set audio occlusion' };
     } catch (error) {
       return { success: false, error: `Failed to set audio occlusion: ${error instanceof Error ? error.message : String(error)}` };

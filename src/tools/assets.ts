@@ -28,6 +28,13 @@ export class AssetTools extends BaseTool implements IAssetTools {
     }, 'move', { timeoutMs: 60000 });
   }
 
+  async findByTag(params: { tag: string; value?: string }) {
+    return this.sendRequest('asset_query', {
+      ...params,
+      subAction: 'find_by_tag'
+    }, 'asset_query', { timeoutMs: 60000 });
+  }
+
   async deleteAssets(params: { paths: string[]; fixupRedirectors?: boolean; timeoutMs?: number }) {
     const assetPaths = Array.isArray(params.paths) ? params.paths : [];
     return this.sendRequest('bulk_delete', {
@@ -60,7 +67,8 @@ export class AssetTools extends BaseTool implements IAssetTools {
             return {
               success: true,
               saved: response.saved ?? true,
-              message: response.message || 'Asset saved'
+              message: response.message || 'Asset saved',
+              ...response
             };
           }
         } catch (_err) {
@@ -72,7 +80,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       const res = await this.bridge.executeEditorFunction('SAVE_ASSET', { path: assetPath });
       if (res && typeof res === 'object' && (res.success === true || (res.result && res.result.success === true))) {
         const saved = Boolean(res.saved ?? (res.result && res.result.saved));
-        return { success: true, saved };
+        return { success: true, saved, ...res, ...(res.result || {}) };
       }
 
       return { success: false, error: (res as any)?.error ?? 'Failed to save asset' };
@@ -216,8 +224,8 @@ export class AssetTools extends BaseTool implements IAssetTools {
     try {
       const automation = this.getAutomationBridge();
       const response: any = await automation.sendAutomationRequest('generate_lods', {
-        assetPath,
-        lodCount
+        assetPaths: [assetPath],
+        numLODs: lodCount
       }, { timeoutMs: 120000 });
 
       if (!response || response.success === false) {
@@ -234,7 +242,8 @@ export class AssetTools extends BaseTool implements IAssetTools {
         success: true,
         message: response.message || 'LODs generated successfully',
         assetPath: (result.assetPath as string) ?? assetPath,
-        lodCount: (result.lodCount as number) ?? lodCount
+        lodCount: (result.lodCount as number) ?? lodCount,
+        ...result
       };
     } catch (error) {
       return {

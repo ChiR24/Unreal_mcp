@@ -126,13 +126,31 @@ export async function handleAnimationTools(action: string, args: any, tools: ITo
         transmission: args.transmission,
         pluginDependencies: args.pluginDependencies ?? args.plugins
       }));
-    case 'setup_physics_simulation':
-      return cleanObject(await tools.physicsTools.setupPhysicsSimulation({
+    case 'setup_physics_simulation': {
+      // Support both meshPath/skeletonPath and actorName parameters
+      const payload: any = {
         meshPath: args.meshPath,
         skeletonPath: args.skeletonPath,
         physicsAssetName: args.physicsAssetName,
         savePath: args.savePath
-      }));
+      };
+
+      // If actorName is provided but no meshPath, resolve the skeletal mesh from the actor
+      if (args.actorName && !args.meshPath && !args.skeletonPath) {
+        payload.actorName = args.actorName;
+      }
+
+      // Ensure at least one source is provided
+      if (!payload.meshPath && !payload.skeletonPath && !payload.actorName) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'setup_physics_simulation requires meshPath, skeletonPath, or actorName parameter'
+        });
+      }
+
+      return cleanObject(await tools.physicsTools.setupPhysicsSimulation(payload));
+    }
     default:
       const res = await executeAutomationRequest(tools, 'animation_physics', args, 'Automation bridge not available for animation/physics operations');
       return cleanObject(res);

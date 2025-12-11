@@ -15,6 +15,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `delete` | `McpAutomationBridge_AssetWorkflowHandlers.cpp` | `HandleAssetAction` | |
 | `delete_assets` | `McpAutomationBridge_AssetWorkflowHandlers.cpp` | `HandleBulkDeleteAssets` | |
 | `create_folder` | `McpAutomationBridge_AssetWorkflowHandlers.cpp` | `HandleAssetAction` | |
+| `get_asset` | `McpAutomationBridge_AssetWorkflowHandlers.cpp` | `HandleGetAsset` | |
 | `get_dependencies` | `McpAutomationBridge_AssetQueryHandlers.cpp` | `HandleGetAssetDependencies` | |
 | `get_source_control_state` | `McpAutomationBridge_AssetWorkflowHandlers.cpp` | `HandleSourceControlCheckout` | |
 | `analyze_graph` | `McpAutomationBridge_AssetQueryHandlers.cpp` | `HandleGetAssetReferences` | |
@@ -49,8 +50,18 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `connect_pins` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | |
 | `break_pin_links` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | |
 | `set_node_property` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | |
+
+## 17. Input Manager (`manage_input`)
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| `create_input_action` | `McpAutomationBridge_InputHandlers.cpp` | `HandleInputAction` | |
+| `create_input_mapping_context` | `McpAutomationBridge_InputHandlers.cpp` | `HandleInputAction` | |
+| `add_mapping` | `McpAutomationBridge_InputHandlers.cpp` | `HandleInputAction` | |
+| `remove_mapping` | `McpAutomationBridge_InputHandlers.cpp` | `HandleInputAction` | |
 | `add_variable` | `McpAutomationBridge_BlueprintHandlers.cpp` | `HandleBlueprintAction` | |
 | `add_function` | `McpAutomationBridge_BlueprintHandlers.cpp` | `HandleBlueprintAction` | |
+| `add_event` | `McpAutomationBridge_BlueprintHandlers.cpp` | `HandleBlueprintAction` | Supports custom & standard events |
 
 ## 3. Actor Control (`control_actor`)
 
@@ -91,12 +102,46 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `load` | `McpAutomationBridge_EditorFunctionHandlers.cpp` | `HandleLevelAction` | |
 | `save` | `McpAutomationBridge_EditorFunctionHandlers.cpp` | `HandleLevelAction` | |
 | `create_level` | `McpAutomationBridge_EditorFunctionHandlers.cpp` | `HandleLevelAction` | |
-| `create_light` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
-| `build_lighting` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `export_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | |
+| `import_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | |
 | `load_cells` | `McpAutomationBridge_WorldPartitionHandlers.cpp` | `HandleWorldPartitionAction` | |
 | `set_datalayer` | `McpAutomationBridge_WorldPartitionHandlers.cpp` | `HandleWorldPartitionAction` | |
 
-## 6. Animation & Physics (`animation_physics`)
+## 6. Lighting Manager (`manage_lighting`)
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| `spawn_light` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `spawn_sky_light` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `build_lighting` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `ensure_single_sky_light` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `create_lightmass_volume` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `setup_volumetric_fog` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `create_lighting_enabled_level` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `setup_global_illumination` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `configure_shadows` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `set_exposure` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `set_ambient_occlusion` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+
+## 7. Performance Manager (`manage_performance`)
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| `generate_memory_report` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `configure_texture_streaming` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `merge_actors` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `start_profiling` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `stop_profiling` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `show_fps` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `show_stats` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `set_scalability` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `set_resolution_scale` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `set_vsync` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `set_frame_rate_limit` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `configure_nanite` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+| `configure_lod` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
+
+## 8. Animation & Physics (`animation_physics`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -105,7 +150,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `setup_ragdoll` | `McpAutomationBridge_AnimationHandlers.cpp` | `HandleSetupRagdoll` | |
 | `configure_vehicle` | `McpAutomationBridge_AnimationHandlers.cpp` | `HandleAnimationPhysicsAction` | |
 
-## 7. Effects Manager (`manage_effect`)
+## 9. Effects Manager (`manage_effect`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -116,7 +161,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `create_niagara_emitter` | `McpAutomationBridge_EffectHandlers.cpp` | `HandleCreateNiagaraEmitter` | |
 | `add_niagara_module` | `McpAutomationBridge_NiagaraGraphHandlers.cpp` | `HandleNiagaraGraphAction` | |
 
-## 8. Environment Builder (`build_environment`)
+## 10. Environment Builder (`build_environment`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -128,23 +173,27 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `remove_foliage` | `McpAutomationBridge_FoliageHandlers.cpp` | `HandleRemoveFoliage` | |
 | `create_procedural_terrain` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleCreateProceduralTerrain` | |
 
-## 9. System Control (`system_control`)
+## 11. System Control (`system_control`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
-| `profile` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
-| `show_fps` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
-| `set_quality` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
 | `execute_command` | `McpAutomationBridge_EditorFunctionHandlers.cpp` | `HandleExecuteEditorFunction` | |
 | `console_command` | `McpAutomationBridge_EditorFunctionHandlers.cpp` | `HandleConsoleCommandAction` | |
 | `run_ubt` | *None* | *None* | Handled in TypeScript (`child_process`) |
 | `run_tests` | `McpAutomationBridge_TestHandlers.cpp` | `HandleTestAction` | |
 | `subscribe` | `McpAutomationBridge_LogHandlers.cpp` | `HandleLogAction` | |
+| `unsubscribe` | `McpAutomationBridge_LogHandlers.cpp` | `HandleLogAction` | |
 | `spawn_category` | `McpAutomationBridge_DebugHandlers.cpp` | `HandleDebugAction` | |
 | `start_session` | `McpAutomationBridge_InsightsHandlers.cpp` | `HandleInsightsAction` | |
 | `lumen_update_scene` | `McpAutomationBridge_RenderHandlers.cpp` | `HandleRenderAction` | |
+| `set_project_setting` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleSystemControlAction` | |
+| `create_hud` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
+| `set_widget_text` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
+| `set_widget_image` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
+| `set_widget_visibility` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
+| `remove_widget_from_viewport` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
 
-## 10. Sequencer (`manage_sequence`)
+## 12. Sequencer (`manage_sequence`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -154,7 +203,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `add_keyframe` | `McpAutomationBridge_SequencerHandlers.cpp` | `HandleAddSequencerKeyframe` | |
 | `add_camera` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleAddCameraTrack` | |
 
-## 11. Introspection (`inspect`)
+## 13. Introspection (`inspect`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -164,7 +213,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `get_components` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
 | `list_objects` | `McpAutomationBridge_PropertyHandlers.cpp` | `HandleInspectAction` | |
 
-## 12. Audio Manager (`manage_audio`)
+## 14. Audio Manager (`manage_audio`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -172,7 +221,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `play_sound_at_location` | `McpAutomationBridge_AudioHandlers.cpp` | `HandleAudioAction` | |
 | `create_audio_component` | `McpAutomationBridge_AudioHandlers.cpp` | `HandleAudioAction` | |
 
-## 13. Behavior Tree Manager (`manage_behavior_tree`)
+## 15. Behavior Tree Manager (`manage_behavior_tree`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -181,3 +230,13 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `remove_node` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
 | `break_connections` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
 | `set_node_properties` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
+
+## 16. Blueprint Graph Manager (`manage_blueprint_graph`)
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| `create_node` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | |
+| `delete_node` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | |
+| `connect_pins` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | |
+| `break_pin_links` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | |
+| `set_node_property` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | |

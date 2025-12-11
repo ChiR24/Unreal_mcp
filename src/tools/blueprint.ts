@@ -54,12 +54,12 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     return candidates.filter(Boolean);
   }
 
-  async createBlueprint(params: { name: string; blueprintType?: string; savePath?: string; parentClass?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async createBlueprint(params: { name: string; blueprintType?: string; savePath?: string; parentClass?: string; properties?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
     try {
       const validation = validateAssetParams({ name: params.name, savePath: params.savePath || '/Game/Blueprints' });
       if (!validation.valid) return { success: false, message: `Failed to create blueprint: ${validation.error}`, error: validation.error };
       const sanitized = validation.sanitized;
-      const payload: Record<string, unknown> = { name: sanitized.name, blueprintType: params.blueprintType ?? 'Actor', savePath: sanitized.savePath ?? '/Game/Blueprints', parentClass: params.parentClass, waitForCompletion: !!params.waitForCompletion };
+      const payload: Record<string, unknown> = { name: sanitized.name, blueprintType: params.blueprintType ?? 'Actor', savePath: sanitized.savePath ?? '/Game/Blueprints', parentClass: params.parentClass, properties: params.properties, waitForCompletion: !!params.waitForCompletion };
       await concurrencyDelay();
 
       if (this.pluginBlueprintActionsAvailable === false) {
@@ -394,6 +394,8 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     componentClass: string;
     componentName: string;
     parentComponent?: string;
+    meshPath?: string;
+    materialPath?: string;
     timeoutMs?: number;
   }) {
     const blueprintPath = coerceString(params.blueprintPath);
@@ -420,6 +422,12 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
 
       if (params.parentComponent) {
         payload.parent_component = params.parentComponent;
+      }
+      if (params.meshPath) {
+        payload.mesh_path = params.meshPath;
+      }
+      if (params.materialPath) {
+        payload.material_path = params.materialPath;
       }
 
       const pluginResp = await this.sendAction('add_scs_component', payload, { timeoutMs: params.timeoutMs });
@@ -604,6 +612,40 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
+  async getNodes(params: {
+    blueprintPath: string;
+    graphName?: string;
+    timeoutMs?: number;
+  }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) {
+      return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    try {
+      const payload: Record<string, unknown> = {
+        subAction: 'get_nodes',
+        blueprintPath: blueprintPath,
+        graphName: params.graphName || 'EventGraph'
+      };
+      const pluginResp = await this.sendAction('manage_blueprint_graph', payload, { timeoutMs: params.timeoutMs });
+      if (pluginResp && pluginResp.success) {
+        return {
+          success: true,
+          nodes: (pluginResp.result as any).nodes,
+          graphName: (pluginResp.result as any).graphName
+        };
+      }
+      if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement get_nodes' } as const;
+      }
+      return { success: false, error: pluginResp?.error ?? 'GET_NODES_FAILED', message: pluginResp?.message ?? 'Failed to get blueprint nodes' } as const;
+    } catch (err: any) {
+      return { success: false, error: String(err), message: String(err) } as const;
+    }
+  }
+
+
   async addNode(params: {
     blueprintName: string;
     nodeType: string;
@@ -620,22 +662,144 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
+
+    // Fix: C++ expects 'manage_blueprint_graph' with 'subAction' = 'create_node'
     const payload: any = {
-      blueprintCandidates: candidates,
-      requestedPath: primary,
+      subAction: 'create_node',
+      assetPath: primary,    // C++ expects 'assetPath' or 'blueprintPath'
       nodeType: params.nodeType,
       graphName: params.graphName,
-      functionName: params.functionName,
+      memberName: params.functionName, // C++ maps 'memberName' to FunctionName
       variableName: params.variableName,
       nodeName: params.nodeName,
       eventName: params.eventName,
       memberClass: params.memberClass,
-      posX: params.posX,
-      posY: params.posY
+      x: params.posX,
+      y: params.posY
     };
-    const res = await this.sendAction('blueprint_add_node', payload, { timeoutMs: params.timeoutMs });
+    const res = await this.sendAction('manage_blueprint_graph', payload, { timeoutMs: params.timeoutMs });
     return res;
   }
+
+  async deleteNode(params: {
+    blueprintPath: string;
+    nodeId: string;
+    graphName?: string;
+    timeoutMs?: number;
+  }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
+
+    const res = await this.sendAction('manage_blueprint_graph', {
+      subAction: 'delete_node',
+      blueprintPath: blueprintPath,
+      graphName: params.graphName || 'EventGraph',
+      nodeId: params.nodeId
+    }, { timeoutMs: params.timeoutMs });
+    return res;
+  }
+
+  async createRerouteNode(params: {
+    blueprintPath: string;
+    graphName?: string;
+    x: number;
+    y: number;
+    timeoutMs?: number;
+  }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+
+    const res = await this.sendAction('manage_blueprint_graph', {
+      subAction: 'create_reroute_node',
+      blueprintPath: blueprintPath,
+      graphName: params.graphName || 'EventGraph',
+      x: params.x,
+      y: params.y
+    }, { timeoutMs: params.timeoutMs });
+    return res;
+  }
+
+  async setNodeProperty(params: {
+    blueprintPath: string;
+    nodeId: string;
+    propertyName: string;
+    value: string;
+    graphName?: string;
+    timeoutMs?: number;
+  }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
+    if (!params.propertyName) return { success: false, error: 'INVALID_PROPERTY', message: 'Property name is required' } as const;
+
+    const res = await this.sendAction('manage_blueprint_graph', {
+      subAction: 'set_node_property',
+      blueprintPath: blueprintPath,
+      graphName: params.graphName || 'EventGraph',
+      nodeId: params.nodeId,
+      propertyName: params.propertyName,
+      value: params.value
+    }, { timeoutMs: params.timeoutMs });
+    return res;
+  }
+
+  async getNodeDetails(params: {
+    blueprintPath: string;
+    nodeId: string;
+    graphName?: string;
+    timeoutMs?: number;
+  }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
+
+    const res = await this.sendAction('manage_blueprint_graph', {
+      subAction: 'get_node_details',
+      blueprintPath: blueprintPath,
+      graphName: params.graphName || 'EventGraph',
+      nodeId: params.nodeId
+    }, { timeoutMs: params.timeoutMs });
+    return res;
+  }
+
+  async getGraphDetails(params: {
+    blueprintPath: string;
+    graphName?: string;
+    timeoutMs?: number;
+  }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+
+    const res = await this.sendAction('manage_blueprint_graph', {
+      subAction: 'get_graph_details',
+      blueprintPath: blueprintPath,
+      graphName: params.graphName || 'EventGraph'
+    }, { timeoutMs: params.timeoutMs });
+    return res;
+  }
+
+  async getPinDetails(params: {
+    blueprintPath: string;
+    nodeId: string;
+    pinName?: string;
+    graphName?: string;
+    timeoutMs?: number;
+  }) {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
+
+    const res = await this.sendAction('manage_blueprint_graph', {
+      subAction: 'get_pin_details',
+      blueprintPath: blueprintPath,
+      graphName: params.graphName || 'EventGraph',
+      nodeId: params.nodeId,
+      pinName: params.pinName
+    }, { timeoutMs: params.timeoutMs });
+    return res;
+  }
+
 
   async connectPins(params: {
     blueprintName: string;
@@ -648,12 +812,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
-    const res = await this.sendAction('blueprint_connect_pins', {
-      requestedPath: primary,
-      sourceNodeGuid: params.sourceNodeGuid,
-      targetNodeGuid: params.targetNodeGuid,
-      sourcePinName: params.sourcePinName,
-      targetPinName: params.targetPinName
+
+    // Fix: C++ expects 'manage_blueprint_graph' with 'subAction' = 'connect_pins'
+    const res = await this.sendAction('manage_blueprint_graph', {
+      subAction: 'connect_pins',
+      assetPath: primary,
+      fromNodeId: params.sourceNodeGuid,
+      toNodeId: params.targetNodeGuid,
+      fromPinName: params.sourcePinName,
+      toPinName: params.targetPinName
     }, { timeoutMs: params.timeoutMs });
     return res;
   }

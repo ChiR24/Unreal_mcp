@@ -12,7 +12,6 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
-
 // Define the subsystem log category declared in the public header.
 DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
 
@@ -45,6 +44,7 @@ void UMcpAutomationBridgeSubsystem::Initialize(
          TEXT("McpAutomationBridgeSubsystem initializing."));
 
   // Create and initialize the connection manager
+  ConnectionManager = MakeShared<FMcpConnectionManager>();
   ConnectionManager->Initialize(GetDefault<UMcpAutomationBridgeSettings>());
 
   // Bind message received delegate
@@ -325,6 +325,83 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleRenderAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_input"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleInputAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("control_actor"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_level"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleLevelAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_sequence"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleSequenceAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_asset"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleAssetAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_behavior_tree"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleBehaviorTreeAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_audio"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleAudioAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_lighting"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleLightingAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_physics"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleAnimationPhysicsAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_effect"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleEffectAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_performance"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandlePerformanceAction(R, A, P, S);
                   });
 }
 

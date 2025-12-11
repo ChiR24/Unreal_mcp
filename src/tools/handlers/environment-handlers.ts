@@ -28,7 +28,7 @@ export async function handleEnvironmentTools(action: string, args: any, tools: I
         radius: args.radius,
         strength: args.strength
       }));
-    case 'add_foliage':
+    case 'add_foliage': {
       // Check if this is adding a foliage TYPE (has meshPath) or INSTANCES (has locations/position)
       if (args.meshPath) {
         return cleanObject(await tools.foliageTools.addFoliageType({
@@ -37,11 +37,52 @@ export async function handleEnvironmentTools(action: string, args: any, tools: I
           density: args.density
         }));
       } else {
+        // Validate foliageType is provided
+        const foliageType = args.foliageType || args.foliageTypePath;
+        if (!foliageType) {
+          return cleanObject({
+            success: false,
+            error: 'INVALID_ARGUMENT',
+            message: 'add_foliage requires either: (1) meshPath to create a new foliage type, or (2) foliageType/foliageTypePath to place instances of an existing type. Example foliage assets: /Game/StarterContent/Props/SM_Bush, /Engine/BasicShapes/Sphere'
+          });
+        }
+
+        // Support location+radius to generate locations if explicit array not provided
+        let locations = args.locations;
+        if (!locations && args.location && args.radius) {
+          // Generate locations around the center point within radius
+          const center = args.location;
+          const radius = args.radius || 500;
+          const count = args.density || args.count || 10;
+          locations = [];
+          for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * radius;
+            locations.push({
+              x: (center.x || 0) + Math.cos(angle) * dist,
+              y: (center.y || 0) + Math.sin(angle) * dist,
+              z: center.z || 0
+            });
+          }
+        } else if (!locations && args.position) {
+          locations = [args.position];
+        }
+
+        // Validate we have locations to place
+        if (!locations || locations.length === 0) {
+          return cleanObject({
+            success: false,
+            error: 'INVALID_ARGUMENT',
+            message: 'add_foliage requires locations to place foliage instances. Provide: locations array, or location+radius, or position'
+          });
+        }
+
         return cleanObject(await tools.foliageTools.addFoliage({
-          foliageType: args.foliageType || args.foliageTypePath,
-          locations: args.locations || (args.position ? [args.position] : [])
+          foliageType,
+          locations
         }));
       }
+    }
     case 'paint_foliage':
       return cleanObject(await tools.foliageTools.paintFoliage({
         foliageType: args.foliageType || args.foliageTypePath,
