@@ -92,13 +92,21 @@ FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
 
 #if WITH_EDITOR
   // Load blueprint
+  // Load blueprint
+  FString NormalizedPath;
+  FString ErrorMsg;
   UBlueprint *Blueprint =
-      Cast<UBlueprint>(UEditorAssetLibrary::LoadAsset(BlueprintPath));
+      LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
   if (!Blueprint) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
-        TEXT("Blueprint not found or not a valid Blueprint asset"));
+        ErrorMsg.IsEmpty()
+            ? FString::Printf(
+                  TEXT(
+                      "Blueprint not found or not a valid Blueprint asset: %s"),
+                  *BlueprintPath)
+            : ErrorMsg);
     return Result;
   }
 
@@ -190,14 +198,18 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   }
 
   // Load blueprint
+  FString NormalizedPath;
+  FString ErrorMsg;
   UBlueprint *Blueprint =
-      Cast<UBlueprint>(UEditorAssetLibrary::LoadAsset(BlueprintPath));
+      LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
   if (!Blueprint) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
-        FString::Printf(TEXT("Blueprint asset not found at path: %s"),
-                        *BlueprintPath));
+        ErrorMsg.IsEmpty()
+            ? FString::Printf(TEXT("Blueprint asset not found at path: %s"),
+                              *BlueprintPath)
+            : ErrorMsg);
     return Result;
   }
 
@@ -333,14 +345,18 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
   TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
 
 #if WITH_EDITOR
+  FString NormalizedPath;
+  FString ErrorMsg;
   UBlueprint *Blueprint =
-      Cast<UBlueprint>(UEditorAssetLibrary::LoadAsset(BlueprintPath));
+      LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
   if (!Blueprint) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
-        FString::Printf(TEXT("Blueprint asset not found at path: %s"),
-                        *BlueprintPath));
+        ErrorMsg.IsEmpty()
+            ? FString::Printf(TEXT("Blueprint asset not found at path: %s"),
+                              *BlueprintPath)
+            : ErrorMsg);
     Result->SetStringField(TEXT("errorCode"), TEXT("ASSET_NOT_FOUND"));
     return Result;
   }
@@ -404,14 +420,18 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
 
 #if WITH_EDITOR
+  FString NormalizedPath;
+  FString ErrorMsg;
   UBlueprint *Blueprint =
-      Cast<UBlueprint>(UEditorAssetLibrary::LoadAsset(BlueprintPath));
+      LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
   if (!Blueprint) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
-        FString::Printf(TEXT("Blueprint asset not found at path: %s"),
-                        *BlueprintPath));
+        ErrorMsg.IsEmpty()
+            ? FString::Printf(TEXT("Blueprint asset not found at path: %s"),
+                              *BlueprintPath)
+            : ErrorMsg);
     return Result;
   }
 
@@ -604,14 +624,18 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
   TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
 
 #if WITH_EDITOR
+  FString NormalizedPath;
+  FString ErrorMsg;
   UBlueprint *Blueprint =
-      Cast<UBlueprint>(UEditorAssetLibrary::LoadAsset(BlueprintPath));
+      LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
   if (!Blueprint) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
-        FString::Printf(TEXT("Blueprint asset not found at path: %s"),
-                        *BlueprintPath));
+        ErrorMsg.IsEmpty()
+            ? FString::Printf(TEXT("Blueprint asset not found at path: %s"),
+                              *BlueprintPath)
+            : ErrorMsg);
     Result->SetStringField(TEXT("errorCode"), TEXT("ASSET_NOT_FOUND"));
     return Result;
   }
@@ -721,14 +745,18 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
   TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
 
 #if WITH_EDITOR
+  FString NormalizedPath;
+  FString ErrorMsg;
   UBlueprint *Blueprint =
-      Cast<UBlueprint>(UEditorAssetLibrary::LoadAsset(BlueprintPath));
+      LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
   if (!Blueprint) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
-        FString::Printf(TEXT("Blueprint asset not found at path: %s"),
-                        *BlueprintPath));
+        ErrorMsg.IsEmpty()
+            ? FString::Printf(TEXT("Blueprint asset not found at path: %s"),
+                              *BlueprintPath)
+            : ErrorMsg);
     Result->SetStringField(TEXT("errorCode"), TEXT("ASSET_NOT_FOUND"));
     return Result;
   }
@@ -766,26 +794,27 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     return Result;
   }
 
-  // Find property
-  FProperty *Property =
-      ComponentNode->ComponentTemplate->GetClass()->FindPropertyByName(
-          FName(*PropertyName));
-  if (!Property) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        FString::Printf(TEXT("Property not found: %s"), *PropertyName));
-    Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PROPERTY_NOT_FOUND"));
-    return Result;
-  }
-
-  bool bAppliedValue = false;
-  FString FailureMessage;
-  FString FailureCode;
-
   if (PropertyValue.IsValid()) {
-    if (ApplyJsonValueToProperty(ComponentNode->ComponentTemplate, Property,
-                                 PropertyValue, FailureMessage)) {
+    // ResolveNestedPropertyPath now returns the container pointer
+    void *ContainerPtr = nullptr;
+    FString ResolveError;
+    FProperty *TargetProp =
+        ResolveNestedPropertyPath(ComponentNode->ComponentTemplate,
+                                  PropertyName, ContainerPtr, ResolveError);
+
+    if (!TargetProp || !ContainerPtr) {
+      Result->SetBoolField(TEXT("success"), false);
+      Result->SetStringField(
+          TEXT("error"),
+          ResolveError.IsEmpty()
+              ? FString::Printf(TEXT("Property not found: %s"), *PropertyName)
+              : ResolveError);
+      Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PROPERTY_NOT_FOUND"));
+      return Result;
+    }
+
+    if (ApplyJsonValueToProperty(ContainerPtr, TargetProp, PropertyValue,
+                                 FailureMessage)) {
       bAppliedValue = true;
     } else {
       FailureCode = TEXT("SCS_PROPERTY_APPLY_FAILED");
