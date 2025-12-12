@@ -358,29 +358,23 @@ export class AutomationBridge extends EventEmitter {
         payload: Record<string, unknown> = {},
         options: { timeoutMs?: number } = {}
     ): Promise<T> {
-        console.error(`[DEBUG] sendAutomationRequest called for action: ${action}`);
         if (!this.isConnected()) {
             if (this.enabled) {
-                console.error('[DEBUG] Automation bridge not connected, attempting lazy connection...');
                 this.log.info('Automation bridge not connected, attempting lazy connection...');
                 
                 // Avoid multiple simultaneous connection attempts
                 if (!this.connectionPromise) {
-                    console.error('[DEBUG] Creating new connection promise...');
                     this.connectionPromise = new Promise<void>((resolve, reject) => {
                         const onConnect = () => { 
-                            console.error('[DEBUG] Lazy connection success');
                             cleanup(); resolve(); 
                         };
                         // We map errors to rejects, but we should be careful about which errors.
                         // A socket error might happen during connection.
                         const onError = (err: any) => { 
-                            console.error('[DEBUG] Lazy connection error:', err);
                             cleanup(); reject(err); 
                         };
                         // Also listen for handshake failure
                         const onHandshakeFail = (err: any) => { 
-                            console.error('[DEBUG] Lazy connection handshake failed:', err);
                             cleanup(); reject(new Error(`Handshake failed: ${err.reason}`)); 
                         };
 
@@ -399,7 +393,6 @@ export class AutomationBridge extends EventEmitter {
                         try {
                             this.startClient();
                         } catch (e) {
-                            console.error('[DEBUG] startClient threw:', e);
                             onError(e);
                         }
                     });

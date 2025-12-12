@@ -6,7 +6,7 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
   switch (action) {
     case 'list': {
       // Route through C++ HandleListAssets for proper asset enumeration
-      const pathFilter = args.directory || args.path || '/Game';
+      const pathFilter = args.directory || args.path || args.assetPath || '/Game';
       const limit = typeof args.limit === 'number' ? args.limit : 50;
       // Default to non-recursive (current directory only) unless specified
       const recursive = args.recursive === true;
@@ -64,10 +64,14 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       };
     }
     case 'create_folder': {
-      if (typeof args.path !== 'string' || args.path.trim() === '') {
+      const rawPath =
+        (typeof args.path === 'string' && args.path.trim().length > 0)
+          ? args.path
+          : (typeof args.directoryPath === 'string' ? args.directoryPath : '');
+      if (typeof rawPath !== 'string' || rawPath.trim() === '') {
         throw new Error('Invalid path: must be a non-empty string');
       }
-      const normalizedPath = args.path.trim();
+      const normalizedPath = rawPath.trim();
       const res = await tools.assetTools.createFolder(normalizedPath);
       return cleanObject(res);
     }
@@ -92,32 +96,38 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       if (!sourcePath) throw new Error('Missing sourcePath or assetPath');
 
       let destinationPath = args.destinationPath;
-      if (args.newName && destinationPath) {
-        // If newName is provided, ensure destinationPath includes it
-        if (!destinationPath.endsWith(args.newName)) {
-          const cleanDest = destinationPath.replace(/\/$/, '');
-          destinationPath = `${cleanDest}/${args.newName}`;
+      if (args.newName) {
+        // If newName is provided, we can infer destinationPath if it's missing,
+        // or ensure the destination path ends with the new name.
+        if (!destinationPath) {
+          // Inferred from source path's parent
+          const lastSlash = sourcePath.lastIndexOf('/');
+          const parentDir = lastSlash > 0 ? sourcePath.substring(0, lastSlash) : '/Game';
+          destinationPath = `${parentDir}/${args.newName}`;
+        } else if (!destinationPath.endsWith(args.newName)) {
+          // If destination is a folder (heuristic), append name?
+          // Or if user gave a path not ending in name.
+          // Best practice: if they gave a path, assume they mean the full path unless it ends in /
+          if (destinationPath.endsWith('/')) {
+            destinationPath = `${destinationPath}${args.newName}`;
+          }
+          // Else we trust their destinationPath, or we could check if it looks like a folder?
+          // For safety, let's assume if they gave newName, they might want it enforced.
+          // But standard behavior is destinationPath overrides.
+          // Let's just stick to: if no destinationPath, use source parent + newName.
         }
       }
 
-      try {
-        const res = await tools.assetTools.duplicateAsset({
-          sourcePath,
-          destinationPath
-        });
-        return cleanObject(res);
-      } catch (err: any) {
-        const message = String(err?.message || err || '').toLowerCase();
-        if (message.includes('invalid_argument') || message.includes('invalid argument')) {
-          return cleanObject({
-            success: false,
-            error: 'NOT_MATERIAL',
-            message: 'error: not_material (asset is not a material)',
-            assetPath: sourcePath
-          });
-        }
-        throw err;
+      if (!destinationPath) {
+        throw new Error('destinationPath or newName is required for duplicate action');
       }
+
+      // Pass directly, letting C++ handle errors.
+      const res = await tools.assetTools.duplicateAsset({
+        sourcePath,
+        destinationPath
+      });
+      return cleanObject(res);
     }
     case 'rename': {
       const sourcePath = args.sourcePath || args.assetPath;
@@ -175,18 +185,8 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         throw new Error('No paths provided for delete action');
       }
 
-      try {
-        const res = await tools.assetTools.deleteAssets({
-          paths
-        });
-        return cleanObject(res);
-      } catch (_e) {
-        // Fallback to Python if bridge fails
-        for (const path of paths) {
-          await tools.editorTools.executeConsoleCommand(`py "unreal.EditorAssetLibrary.delete_asset('${path}')"`);
-        }
-        return { success: true, message: 'Deleted assets via Python', action: 'delete' };
-      }
+      const res = await tools.assetTools.deleteAssets({ paths });
+      return cleanObject(res);
     }
     case 'generate_lods': {
       return cleanObject(await tools.assetTools.generateLODs({
@@ -215,8 +215,9 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           message.includes('unknown subaction')
         ) {
           return cleanObject({
-            success: true,
-            message: 'Tags updated (best-effort; explicit tag write not performed by plugin).',
+            success: false,
+            error: 'NOT_IMPLEMENTED',
+            message: 'Asset tag writes are not implemented by the automation plugin.',
             action: 'set_tags',
             assetPath: args.assetPath,
             tags: args.tags
@@ -224,6 +225,24 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         }
         throw err;
       }
+    }
+    case 'get_metadata': {
+      const res: any = await tools.assetTools.getMetadata({ assetPath: args.assetPath });
+      const tags = res.tags || {};
+      const metadata = res.metadata || {};
+      const merged = { ...tags, ...metadata };
+      const tagCount = Object.keys(merged).length;
+
+      // Enhance the response message with the actual metadata
+      const cleanRes = cleanObject(res);
+      // DEBUG: Force output of raw response to verify C++ fields
+      cleanRes.message = `Metadata retrieved (${tagCount} items)`;
+      cleanRes.tags = tags;
+      if (Object.keys(metadata).length > 0) {
+        cleanRes.metadata = metadata;
+      }
+
+      return cleanRes;
     }
     case 'set_metadata': {
       // Delegate to Automation Bridge so metadata is written on the asset's package.
@@ -258,7 +277,7 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
 
       if (errorCode === 'PARENT_NOT_FOUND' || message.toLowerCase().includes('parent material not found')) {
         return cleanObject({
-          success: true,
+          success: false,
           error: 'PARENT_NOT_FOUND',
           message: message || 'Parent material not found',
           path: result.path,
@@ -344,7 +363,7 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       const res = await executeAutomationRequest(tools, 'add_material_parameter', {
         assetPath: args.assetPath,
         name: args.parameterName,
-        type: args.parameterType,
+        type: args.parameterType || args.type,
         value: args.defaultValue ?? args.value
       });
       return cleanObject(res);
@@ -377,6 +396,13 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       });
       return cleanObject(res);
     }
+    case 'rebuild_material': {
+      // Call rebuild_material handler directly
+      const res = await executeAutomationRequest(tools, 'rebuild_material', {
+        assetPath: args.assetPath
+      });
+      return cleanObject(res);
+    }
     default:
       // Fallback to direct bridge call for other asset actions if needed, or error
       // Pass the specific action from args instead of the generic tool name
@@ -387,8 +413,9 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
 
       if (errorCode === 'INVALID_SUBACTION' || message.toLowerCase().includes('unknown subaction')) {
         return cleanObject({
-          success: true,
-          message: 'Asset action not recognized; treating as asset not found/no-op.',
+          success: false,
+          error: 'INVALID_SUBACTION',
+          message: 'Asset action not recognized by the automation plugin.',
           action: action || 'manage_asset',
           assetPath: args.assetPath ?? args.path
         });

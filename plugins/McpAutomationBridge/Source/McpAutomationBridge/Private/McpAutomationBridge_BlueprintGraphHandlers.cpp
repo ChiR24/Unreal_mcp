@@ -141,6 +141,29 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
   const FString SubAction = Payload->GetStringField(TEXT("subAction"));
 
+  // Node identifier interoperability:
+  // - Prefer NodeGuid strings for stable references.
+  // - Accept node UObject names (e.g. "K2Node_Event_0") for clients that
+  //   mistakenly pass nodeName where nodeId is expected.
+  auto FindNodeByIdOrName = [&](const FString &Id) -> UEdGraphNode * {
+    if (Id.IsEmpty()) {
+      return nullptr;
+    }
+
+    for (UEdGraphNode *Node : TargetGraph->Nodes) {
+      if (!Node) {
+        continue;
+      }
+
+      if (Node->NodeGuid.ToString().Equals(Id, ESearchCase::IgnoreCase) ||
+          Node->GetName().Equals(Id, ESearchCase::IgnoreCase)) {
+        return Node;
+      }
+    }
+
+    return nullptr;
+  };
+
   if (SubAction == TEXT("create_node")) {
     const FScopedTransaction Transaction(
         FText::FromString(TEXT("Create Blueprint Node")));
@@ -612,15 +635,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     Payload->TryGetStringField(TEXT("toNodeId"), ToNodeId);
     Payload->TryGetStringField(TEXT("toPinName"), ToPinName);
 
-    UEdGraphNode *FromNode = nullptr;
-    UEdGraphNode *ToNode = nullptr;
-
-    for (UEdGraphNode *Node : TargetGraph->Nodes) {
-      if (Node->NodeGuid.ToString() == FromNodeId)
-        FromNode = Node;
-      if (Node->NodeGuid.ToString() == ToNodeId)
-        ToNode = Node;
-    }
+    UEdGraphNode *FromNode = FindNodeByIdOrName(FromNodeId);
+    UEdGraphNode *ToNode = FindNodeByIdOrName(ToNodeId);
 
     if (!FromNode || !ToNode) {
       SendAutomationError(RequestingSocket, RequestId,
@@ -721,7 +737,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Nodes retrieved."), Result);
     return true;
-
+  } else if (SubAction == TEXT("break_pin_links")) {
     const FScopedTransaction Transaction(
         FText::FromString(TEXT("Break Blueprint Pin Links")));
     Blueprint->Modify();
@@ -731,13 +747,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
     Payload->TryGetStringField(TEXT("pinName"), PinName);
 
-    UEdGraphNode *TargetNode = nullptr;
-    for (UEdGraphNode *Node : TargetGraph->Nodes) {
-      if (Node->NodeGuid.ToString() == NodeId) {
-        TargetNode = Node;
-        break;
-      }
-    }
+    UEdGraphNode *TargetNode = FindNodeByIdOrName(NodeId);
 
     if (!TargetNode) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."),
@@ -769,13 +779,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     FString NodeId;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
-    UEdGraphNode *TargetNode = nullptr;
-    for (UEdGraphNode *Node : TargetGraph->Nodes) {
-      if (Node->NodeGuid.ToString() == NodeId) {
-        TargetNode = Node;
-        break;
-      }
-    }
+    UEdGraphNode *TargetNode = FindNodeByIdOrName(NodeId);
 
     if (TargetNode) {
       FBlueprintEditorUtils::RemoveNode(Blueprint, TargetNode, true);
@@ -828,13 +832,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     FString Value;
     Payload->TryGetStringField(TEXT("value"), Value);
 
-    UEdGraphNode *TargetNode = nullptr;
-    for (UEdGraphNode *Node : TargetGraph->Nodes) {
-      if (Node->NodeGuid.ToString() == NodeId) {
-        TargetNode = Node;
-        break;
-      }
-    }
+    UEdGraphNode *TargetNode = FindNodeByIdOrName(NodeId);
 
     if (TargetNode) {
       TargetNode->Modify();
@@ -884,13 +882,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     FString NodeId;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
-    UEdGraphNode *TargetNode = nullptr;
-    for (UEdGraphNode *Node : TargetGraph->Nodes) {
-      if (Node->NodeGuid.ToString() == NodeId) {
-        TargetNode = Node;
-        break;
-      }
-    }
+    UEdGraphNode *TargetNode = FindNodeByIdOrName(NodeId);
 
     if (TargetNode) {
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
@@ -948,13 +940,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     FString PinName;
     Payload->TryGetStringField(TEXT("pinName"), PinName);
 
-    UEdGraphNode *TargetNode = nullptr;
-    for (UEdGraphNode *Node : TargetGraph->Nodes) {
-      if (Node->NodeGuid.ToString() == NodeId) {
-        TargetNode = Node;
-        break;
-      }
-    }
+    UEdGraphNode *TargetNode = FindNodeByIdOrName(NodeId);
 
     if (!TargetNode) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."),

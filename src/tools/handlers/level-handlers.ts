@@ -19,15 +19,51 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
       const res = await tools.levelTools.saveLevel({ levelName: args.levelName });
       return cleanObject(res);
     }
+    case 'save_as':
+    case 'save_level_as': {
+      // Accept savePath, destinationPath, or levelPath as the target
+      const targetPath = args.savePath || args.destinationPath || args.levelPath;
+      if (!targetPath) {
+        return {
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'savePath is required for save_as action',
+          action
+        };
+      }
+      const res = await tools.levelTools.saveLevelAs({ targetPath });
+      return cleanObject(res);
+    }
     case 'create_level': {
       const levelName = requireNonEmptyString(args.levelName || (args.levelPath ? args.levelPath.split('/').pop() : ''), 'levelName', 'Missing required parameter: levelName');
       const res = await tools.levelTools.createLevel({ levelName, savePath: args.savePath || args.levelPath });
       return cleanObject(res);
     }
     case 'stream': {
+      const levelPath = typeof args.levelPath === 'string' ? args.levelPath : undefined;
+      const levelName = typeof args.levelName === 'string' ? args.levelName : undefined;
+      if (!levelPath && !levelName) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: levelPath (or levelName)',
+          action
+        });
+      }
+      if (typeof args.shouldBeLoaded !== 'boolean') {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: shouldBeLoaded (boolean)',
+          action,
+          levelPath,
+          levelName
+        });
+      }
+
       const res = await tools.levelTools.streamLevel({
-        levelPath: args.levelPath,
-        levelName: args.levelName,
+        levelPath,
+        levelName,
         shouldBeLoaded: args.shouldBeLoaded,
         shouldBeVisible: args.shouldBeVisible
       });
@@ -73,14 +109,16 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
     case 'export_level': {
       const res = await tools.levelTools.exportLevel({
         levelPath: args.levelPath,
-        exportPath: args.exportPath || args.destinationPath
+        exportPath: args.exportPath || args.destinationPath,
+        timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
       });
       return cleanObject(res);
     }
     case 'import_level': {
       const res = await tools.levelTools.importLevel({
         packagePath: args.packagePath || args.sourcePath, // Allow sourcePath as fallback for backward compat
-        destinationPath: args.destinationPath
+        destinationPath: args.destinationPath,
+        timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
       });
       return cleanObject(res);
     }
@@ -107,32 +145,51 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
       // Calculate origin/extent if min/max provided for C++ handler compatibility
       let origin = args.origin;
       let extent = args.extent;
-      
+
       if (!origin && args.min && args.max) {
-          const min = args.min;
-          const max = args.max;
-          origin = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
-          extent = [(max[0] - min[0]) / 2, (max[1] - min[1]) / 2, (max[2] - min[2]) / 2];
+        const min = args.min;
+        const max = args.max;
+        origin = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
+        extent = [(max[0] - min[0]) / 2, (max[1] - min[1]) / 2, (max[2] - min[2]) / 2];
       }
-      
+
       const payload = {
-          subAction: 'load_cells',
-          origin: origin,
-          extent: extent,
-          ...args // Allow other args to override if explicit
+        subAction: 'load_cells',
+        origin: origin,
+        extent: extent,
+        ...args // Allow other args to override if explicit
       };
-      
+
       const res = await executeAutomationRequest(tools, 'manage_world_partition', payload);
       return cleanObject(res);
     }
     case 'set_datalayer': {
-        const res = await executeAutomationRequest(tools, 'manage_world_partition', {
-            subAction: 'set_datalayer',
-            actorPath: args.actorPath,
-            dataLayerName: args.dataLayerLabel, // Map label to name
-            ...args
+      const dataLayerName = args.dataLayerName || args.dataLayerLabel;
+      if (!dataLayerName || typeof dataLayerName !== 'string' || dataLayerName.trim().length === 0) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: dataLayerLabel (or dataLayerName)',
+          action
         });
-        return cleanObject(res);
+      }
+      if (!args.dataLayerState || typeof args.dataLayerState !== 'string') {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: dataLayerState',
+          action,
+          dataLayerName
+        });
+      }
+
+      const res = await executeAutomationRequest(tools, 'manage_world_partition', {
+        subAction: 'set_datalayer',
+        actorPath: args.actorPath,
+        dataLayerName, // Map label to name
+        ...args
+      });
+      return cleanObject(res);
     }
     case 'cleanup_invalid_datalayers': {
       // Route to manage_world_partition
@@ -146,44 +203,39 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
 
       // Prefer an editor-side existence check when the automation bridge is available.
       const automationBridge = tools.automationBridge;
-      if (automationBridge && typeof automationBridge.sendAutomationRequest === 'function' && automationBridge.isConnected()) {
-        try {
-          const resp: any = await automationBridge.sendAutomationRequest('execute_editor_function', {
-            functionName: 'ASSET_EXISTS_SIMPLE',
-            path: levelPath
-          });
-          const result = resp?.result ?? resp ?? {};
-          const exists = Boolean(result.exists);
-
-          return cleanObject({
-            success: true,
-            exists,
-            levelPath: result.path ?? levelPath,
-            classPath: result.class,
-            // Provide a NOT_FOUND-style code for callers that care about detailed status,
-            // but keep success=true so validation is non-destructive for tests.
-            error: exists ? undefined : 'NOT_FOUND',
-            message: exists ? 'Level asset exists' : 'Level asset not found'
-          });
-        } catch (err) {
-          // If validation fails (bridge error, timeout, etc.), report a best-effort
-          // result rather than converting this into a hard failure.
-          return cleanObject({
-            success: true,
-            exists: false,
-            levelPath,
-            message: `Level validation incomplete: ${err instanceof Error ? err.message : String(err)}`
-          });
-        }
+      if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function' || !automationBridge.isConnected()) {
+        return cleanObject({
+          success: false,
+          error: 'BRIDGE_UNAVAILABLE',
+          message: 'Automation bridge not available; cannot validate level asset',
+          levelPath
+        });
       }
 
-      // Fallback when the automation bridge is unavailable.
-      return cleanObject({
-        success: true,
-        exists: false,
-        levelPath,
-        message: 'Automation bridge not available; level validation is best-effort only'
-      });
+      try {
+        const resp: any = await automationBridge.sendAutomationRequest('execute_editor_function', {
+          functionName: 'ASSET_EXISTS_SIMPLE',
+          path: levelPath
+        });
+        const result = resp?.result ?? resp ?? {};
+        const exists = Boolean(result.exists);
+
+        return cleanObject({
+          success: true,
+          exists,
+          levelPath: result.path ?? levelPath,
+          classPath: result.class,
+          error: exists ? undefined : 'NOT_FOUND',
+          message: exists ? 'Level asset exists' : 'Level asset not found'
+        });
+      } catch (err) {
+        return cleanObject({
+          success: false,
+          error: 'VALIDATION_FAILED',
+          message: `Level validation failed: ${err instanceof Error ? err.message : String(err)}`,
+          levelPath
+        });
+      }
     }
     default:
       return await executeAutomationRequest(tools, 'manage_level', args);

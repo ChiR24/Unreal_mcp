@@ -9,12 +9,23 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
       let name = args.name;
       let savePath = args.savePath;
       const pathArg = args.path || args.blueprintPath;
-      if (!name && pathArg) {
+
+      if (pathArg) {
         const parts = pathArg.split('/');
-        name = parts.pop();
-        savePath = parts.join('/');
-        if (!savePath) savePath = '/Game';
+        const extractName = parts.pop(); // The last part is the name
+
+        // If name wasn't provided, use the extracted name
+        if (!name) {
+          name = extractName;
+        }
+
+        // If savePath wasn't provided, use the extracted path
+        if (!savePath) {
+          savePath = parts.join('/');
+        }
       }
+
+      if (!savePath) savePath = '/Game';
 
       const res = await tools.blueprintTools.createBlueprint({
         name: name,
@@ -102,10 +113,13 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
       return cleanObject(res);
     }
     case 'add_event': {
+      const blueprintName = args.blueprintPath || args.path || args.name;
+      const usedNameForBlueprint = !args.blueprintPath && !args.path && args.name;
+
       const res = await tools.blueprintTools.addEvent({
-        blueprintName: args.name || args.blueprintPath || args.path,
+        blueprintName: blueprintName,
         eventType: args.eventType,
-        customEventName: args.customEventName,
+        customEventName: args.customEventName || (!usedNameForBlueprint ? args.name : undefined),
         parameters: args.parameters,
         timeoutMs: args.timeoutMs,
         waitForCompletion: args.waitForCompletion,
@@ -124,9 +138,13 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
       return cleanObject(res);
     }
     case 'add_function': {
+      // Prioritize explicit path for blueprint, allowing 'name' to be function name
+      const blueprintName = args.blueprintPath || args.path || args.name;
+      const usedNameForBlueprint = !args.blueprintPath && !args.path && args.name;
+
       const res = await tools.blueprintTools.addFunction({
-        blueprintName: args.name || args.blueprintPath || args.path,
-        functionName: args.functionName || args.memberName,
+        blueprintName: blueprintName,
+        functionName: args.functionName || args.memberName || (!usedNameForBlueprint ? args.name : undefined),
         inputs: args.inputs,
         outputs: args.outputs,
         isPublic: args.isPublic,
@@ -187,6 +205,9 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
       return cleanObject(res);
     }
     case 'add_node': {
+      if (args.nodeType === 'CallFunction' && !args.functionName && !args.memberName) {
+        throw new Error('CallFunction node requires functionName parameter');
+      }
       const res = await tools.blueprintTools.addNode({
         blueprintName: args.name || args.blueprintPath || args.path,
         nodeType: args.nodeType,
@@ -275,6 +296,22 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
       });
       return cleanObject(res);
     }
+    case 'connect_pins':
+    case 'break_pin_links':
+    case 'delete_node':
+    case 'create_reroute_node':
+    case 'set_node_property':
+    case 'get_node_details':
+    case 'get_pin_details':
+    case 'get_graph_details': {
+      const processedArgs = {
+        ...args,
+        subAction: action,
+        blueprintPath: args.blueprintPath || args.path || args.name
+      };
+      const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs, 'Automation bridge not available for blueprint graph operations');
+      return cleanObject(res);
+    }
     default: {
       // Translate applyAndSave to compile/save flags for modify_scs action
       const processedArgs = { ...args };
@@ -290,5 +327,12 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
 
 export async function handleBlueprintGet(args: any, tools: ITools) {
   const res = await executeAutomationRequest(tools, 'blueprint_get', args, 'Automation bridge not available for blueprint operations');
+  if (res && res.success) {
+    return cleanObject({
+      ...res,
+      blueprint: args.blueprintPath || args.path || args.name || 'Unknown Blueprint',
+      message: res.message || 'Blueprint fetched'
+    });
+  }
   return cleanObject(res);
 }

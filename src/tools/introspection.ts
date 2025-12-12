@@ -525,14 +525,16 @@ export class IntrospectionTools {
     const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response = await automationBridge.sendAutomationRequest('inspect', {
-          subAction: 'inspect_class',
-          className
+        const response: any = await automationBridge.sendAutomationRequest('inspect', {
+          action: 'inspect_class',
+          // C++ plugin expects `classPath` for inspect_class, but accepts both
+          // short names and full paths (e.g. "Actor" or "/Script/Engine.Actor").
+          classPath: className
         }, {
           timeoutMs: 60000
         });
 
-        if (response.success === false) {
+        if (response?.success === false) {
           return {
             success: false,
             error: response.error || response.message || 'Failed to get CDO'
@@ -541,7 +543,8 @@ export class IntrospectionTools {
 
         return {
           success: true,
-          cdo: response.cdo
+          // Plugin returns class inspection data under data/result depending on bridge version.
+          cdo: response?.data ?? response?.result ?? response
         };
       } catch (error) {
         return {
@@ -563,25 +566,30 @@ export class IntrospectionTools {
     const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response = await automationBridge.sendAutomationRequest('inspect', {
-          subAction: 'find_by_class',
+        const response: any = await automationBridge.sendAutomationRequest('inspect', {
+          action: 'find_by_class',
           className,
           limit
         }, {
           timeoutMs: 60000
         });
 
-        if (response.success === false) {
+        if (response?.success === false) {
           return {
             success: false,
             error: response.error || response.message || 'Failed to find objects'
           };
         }
 
+        const data = response?.data ?? response?.result ?? response;
+        const validObjects = Array.isArray(data?.actors)
+          ? data.actors
+          : (Array.isArray(data?.objects) ? data.objects : (Array.isArray(data) ? data : []));
         return {
           success: true,
-          objects: response.objects || [],
-          count: response.count || 0
+          message: `Found ${validObjects.length} objects`,
+          objects: validObjects,
+          count: validObjects.length
         };
       } catch (error) {
         return {

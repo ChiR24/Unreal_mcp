@@ -21,15 +21,15 @@ export class PerformanceTools {
     duration?: number;
   }) {
     if (this.automationBridge) {
-        try {
-            const response = await this.automationBridge.sendAutomationRequest('start_profiling', {
-                type: params.type,
-                duration: params.duration
-            });
-            if (response.success) return { success: true, message: `${params.type} profiling started (bridge)` };
-        } catch (_e) {
-            // Fallback
-        }
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('start_profiling', {
+          type: params.type,
+          duration: params.duration
+        });
+        if (response.success) return { success: true, message: `${params.type} profiling started (bridge)` };
+      } catch (_e) {
+        // Fallback
+      }
     }
 
     const commands: string[] = [];
@@ -69,12 +69,12 @@ export class PerformanceTools {
   // Stop profiling
   async stopProfiling() {
     if (this.automationBridge) {
-        try {
-            const response = await this.automationBridge.sendAutomationRequest('stop_profiling', {});
-            if (response.success) return { success: true, message: 'Profiling stopped (bridge)' };
-        } catch (_e) {
-            // Fallback
-        }
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('stop_profiling', {});
+        if (response.success) return { success: true, message: 'Profiling stopped (bridge)' };
+      } catch (_e) {
+        // Fallback
+      }
     }
 
     const commands = [
@@ -96,19 +96,19 @@ export class PerformanceTools {
     this.log.debug('Starting showFPS with params:', params);
 
     if (this.automationBridge) {
-        try {
-            const response = await this.automationBridge.sendAutomationRequest('show_fps', {
-                enabled: params.enabled,
-                verbose: params.verbose
-            });
-            if (response.success) return { 
-                success: true, 
-                message: params.enabled ? 'FPS display enabled (bridge)' : 'FPS display disabled (bridge)',
-                fpsVisible: params.enabled
-            };
-        } catch (_e) {
-            // Fallback
-        }
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('show_fps', {
+          enabled: params.enabled,
+          verbose: params.verbose
+        });
+        if (response.success) return {
+          success: true,
+          message: params.enabled ? 'FPS display enabled (bridge)' : 'FPS display disabled (bridge)',
+          fpsVisible: params.enabled
+        };
+      } catch (_e) {
+        // Fallback
+      }
     }
 
     try {
@@ -142,15 +142,15 @@ export class PerformanceTools {
     enabled: boolean;
   }) {
     if (this.automationBridge) {
-        try {
-            const response = await this.automationBridge.sendAutomationRequest('show_stats', {
-                category: params.category,
-                enabled: params.enabled
-            });
-            if (response.success) return { success: true, message: `Stat '${params.category}' configured (bridge)` };
-        } catch (_e) {
-            // Fallback
-        }
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('show_stats', {
+          category: params.category,
+          enabled: params.enabled
+        });
+        if (response.success) return { success: true, message: `Stat '${params.category}' configured (bridge)` };
+      } catch (_e) {
+        // Fallback
+      }
     }
 
     const command = params.enabled
@@ -166,15 +166,15 @@ export class PerformanceTools {
     level: 0 | 1 | 2 | 3 | 4; // 0=Low, 1=Medium, 2=High, 3=Epic, 4=Cinematic
   }) {
     if (this.automationBridge) {
-        try {
-            const response = await this.automationBridge.sendAutomationRequest('set_scalability', {
-                category: params.category,
-                level: params.level
-            });
-            if (response.success) return { success: true, message: `${params.category} quality set to level ${params.level} (bridge)` };
-        } catch (_e) {
-            // Fallback
-        }
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('set_scalability', {
+          category: params.category,
+          level: params.level
+        });
+        if (response.success) return { success: true, message: `${params.category} quality set to level ${params.level} (bridge)` };
+      } catch (_e) {
+        // Fallback
+      }
     }
 
     // Map incoming category to the base name expected by "sg.<Base>Quality"
@@ -218,31 +218,36 @@ export class PerformanceTools {
 
   // Set resolution scale
   async setResolutionScale(params: {
-    scale: number; // 0.5 to 2.0
+    scale: number; // Accepts both percentage (10-200) and multiplier (0.1-2.0)
   }) {
-    if (this.automationBridge) {
-        try {
-            const percentage = Math.max(10, Math.min(200, Math.round(params.scale * 100)));
-            const response = await this.automationBridge.sendAutomationRequest('set_resolution_scale', { scale: percentage });
-
-            if (response.success) return { success: true, message: `Resolution scale set to ${percentage}% (bridge)`, actualScale: percentage / 100 };
-        } catch (_e) {
-            // Fallback
-        }
-    }
-
     // Validate input
     if (params.scale === undefined || params.scale === null || isNaN(params.scale)) {
       return { success: false, error: 'Invalid scale parameter' };
     }
 
-    // Clamp scale between 10% (0.1) and 200% (2.0) - Unreal Engine limits
-    // Note: r.ScreenPercentage takes values from 10 to 200, not 0.5 to 2.0
-    const clampedScale = Math.max(0.1, Math.min(2.0, params.scale));
-    const percentage = Math.round(clampedScale * 100);
+    // Intelligently detect if scale is a percentage (10-200) or multiplier (0.1-2.0)
+    // If scale > 2, assume it's already a percentage value
+    let percentage: number;
+    if (params.scale > 2) {
+      // User passed percentage directly (e.g., 100 for 100%)
+      percentage = Math.round(params.scale);
+    } else {
+      // User passed multiplier (e.g., 1.0 for 100%)
+      percentage = Math.round(params.scale * 100);
+    }
 
-    // Ensure percentage is within Unreal's valid range
+    // Clamp to Unreal's valid range (10-200%)
     const finalPercentage = Math.max(10, Math.min(200, percentage));
+
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('set_resolution_scale', { scale: finalPercentage });
+
+        if (response.success) return { success: true, message: `Resolution scale set to ${finalPercentage}% (bridge)`, actualScale: finalPercentage / 100 };
+      } catch (_e) {
+        // Fallback
+      }
+    }
 
     const command = `r.ScreenPercentage ${finalPercentage}`;
 
@@ -263,12 +268,12 @@ export class PerformanceTools {
     enabled: boolean;
   }) {
     if (this.automationBridge) {
-        try {
-            const response = await this.automationBridge.sendAutomationRequest('set_vsync', { enabled: params.enabled });
-            if (response.success) return { success: true, message: 'VSync configured (bridge)' };
-        } catch (_e) {
-            // Fallback
-        }
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('set_vsync', { enabled: params.enabled });
+        if (response.success) return { success: true, message: 'VSync configured (bridge)' };
+      } catch (_e) {
+        // Fallback
+      }
     }
     const command = `r.VSync ${params.enabled ? 1 : 0}`;
     return this.bridge.executeConsoleCommand(command);
@@ -279,12 +284,12 @@ export class PerformanceTools {
     maxFPS: number; // 0 for unlimited
   }) {
     if (this.automationBridge) {
-        try {
-            const response = await this.automationBridge.sendAutomationRequest('set_frame_rate_limit', { maxFPS: params.maxFPS });
-            if (response.success) return { success: true, message: 'Max FPS set (bridge)' };
-        } catch (_e) {
-            // Fallback
-        }
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('set_frame_rate_limit', { maxFPS: params.maxFPS });
+        if (response.success) return { success: true, message: 'Max FPS set (bridge)' };
+      } catch (_e) {
+        // Fallback
+      }
     }
     const command = `t.MaxFPS ${params.maxFPS}`;
     return this.bridge.executeConsoleCommand(command);
@@ -300,7 +305,7 @@ export class PerformanceTools {
     // IT DOES NOT HAVE enable_gpu_timing.
     // So we stick to console command for this one, or add it to C++ later. 
     // I will NOT add bridge call here to avoid failure since I know it's missing.
-    
+
     const command = `r.GPUStatsEnabled ${params.enabled ? 1 : 0}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -320,13 +325,13 @@ export class PerformanceTools {
 
         // Even if no output path, bridge can run the report
         if (response.success) {
-             return { success: true, message: response.message || 'Memory report generated' };
+          return { success: true, message: response.message || 'Memory report generated' };
         }
       } catch (error) {
-         // Fallback only if no output path (since console can't save to file reliably)
-         if (params.outputPath) {
-            return { success: false, error: `Failed to generate memory report: ${error instanceof Error ? error.message : String(error)}` };
-         }
+        // Fallback only if no output path (since console can't save to file reliably)
+        if (params.outputPath) {
+          return { success: false, error: `Failed to generate memory report: ${error instanceof Error ? error.message : String(error)}` };
+        }
       }
     }
 
@@ -355,21 +360,21 @@ export class PerformanceTools {
     boostPlayerLocation?: boolean;
   }) {
     if (this.automationBridge) {
-        try {
-          const response = await this.automationBridge.sendAutomationRequest('configure_texture_streaming', {
-            enabled: params.enabled,
-            poolSize: params.poolSize,
-            boostPlayerLocation: params.boostPlayerLocation
-          });
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('configure_texture_streaming', {
+          enabled: params.enabled,
+          poolSize: params.poolSize,
+          boostPlayerLocation: params.boostPlayerLocation
+        });
 
-          if (response.success) return { success: true, message: response.message || 'Texture streaming configured (bridge)' };
-        } catch (_error) {
-            // Fallback
-        }
+        if (response.success) return { success: true, message: response.message || 'Texture streaming configured (bridge)' };
+      } catch (_error) {
+        // Fallback
+      }
     }
-    
+
     if (params.boostPlayerLocation && !this.automationBridge) {
-        throw new Error('Boosting player location for streaming requires Automation Bridge support');
+      throw new Error('Boosting player location for streaming requires Automation Bridge support');
     }
 
     const commands: string[] = [];
@@ -392,27 +397,27 @@ export class PerformanceTools {
     distanceScale?: number; // distance scale (float) applied to both static and skeletal
   }) {
     if (this.automationBridge) {
-        try {
-            const response = await this.automationBridge.sendAutomationRequest('configure_lod', {
-                forceLOD: params.forceLOD,
-                lodBias: params.lodBias
-                // Note: C++ handler doesn't seem to read distanceScale in the snippet provided earlier.
-                // Snippet: reads lodBias -> r.MipMapLODBias, forceLOD -> r.ForceLOD.
-                // It misses distanceScale. So we might need to fallback or partial apply?
-                // Actually, if we use bridge, we lose distanceScale if C++ doesn't support it.
-                // Let's stick to console for distanceScale or apply it separately.
-            });
-            
-            // If we have distanceScale, we still need to apply it via console as C++ seems to miss it
-            if (params.distanceScale !== undefined) {
-                 await this.bridge.executeConsoleCommand(`r.StaticMeshLODDistanceScale ${params.distanceScale}`);
-                 await this.bridge.executeConsoleCommand(`r.SkeletalMeshLODDistanceScale ${params.distanceScale}`);
-            }
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('configure_lod', {
+          forceLOD: params.forceLOD,
+          lodBias: params.lodBias
+          // Note: C++ handler doesn't seem to read distanceScale in the snippet provided earlier.
+          // Snippet: reads lodBias -> r.MipMapLODBias, forceLOD -> r.ForceLOD.
+          // It misses distanceScale. So we might need to fallback or partial apply?
+          // Actually, if we use bridge, we lose distanceScale if C++ doesn't support it.
+          // Let's stick to console for distanceScale or apply it separately.
+        });
 
-            if (response.success) return { success: true, message: 'LOD settings configured' };
-        } catch (_e) {
-            // Fallback
+        // If we have distanceScale, we still need to apply it via console as C++ seems to miss it
+        if (params.distanceScale !== undefined) {
+          await this.bridge.executeConsoleCommand(`r.StaticMeshLODDistanceScale ${params.distanceScale}`);
+          await this.bridge.executeConsoleCommand(`r.SkeletalMeshLODDistanceScale ${params.distanceScale}`);
         }
+
+        if (response.success) return { success: true, message: 'LOD settings configured' };
+      } catch (_e) {
+        // Fallback
+      }
     }
 
     const commands: string[] = [];
@@ -572,27 +577,27 @@ export class PerformanceTools {
     streamingPoolSize?: number;
   }) {
     if (this.automationBridge) {
-        try {
-            const response = await this.automationBridge.sendAutomationRequest('configure_nanite', {
-                enabled: params.enabled,
-                maxPixelsPerEdge: params.maxPixelsPerEdge,
-                streamingPoolSize: params.streamingPoolSize
-            });
-            // C++ handler snippet only showed `r.Nanite`. 
-            // Checking snippet: `if (CVar) CVar->Set(bEnabled ? 1 : 0);`
-            // It missed maxPixelsPerEdge and streamingPoolSize in the snippet I read.
-            // Let's rely on fallback or partial console commands for the extras.
-            if (params.maxPixelsPerEdge !== undefined) {
-                await this.bridge.executeConsoleCommand(`r.Nanite.MaxPixelsPerEdge ${params.maxPixelsPerEdge}`);
-            }
-            if (params.streamingPoolSize !== undefined) {
-                await this.bridge.executeConsoleCommand(`r.Nanite.StreamingPoolSize ${params.streamingPoolSize}`);
-            }
-
-            if (response.success) return { success: true, message: 'Nanite configured' };
-        } catch (_e) {
-            // Fallback
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('configure_nanite', {
+          enabled: params.enabled,
+          maxPixelsPerEdge: params.maxPixelsPerEdge,
+          streamingPoolSize: params.streamingPoolSize
+        });
+        // C++ handler snippet only showed `r.Nanite`. 
+        // Checking snippet: `if (CVar) CVar->Set(bEnabled ? 1 : 0);`
+        // It missed maxPixelsPerEdge and streamingPoolSize in the snippet I read.
+        // Let's rely on fallback or partial console commands for the extras.
+        if (params.maxPixelsPerEdge !== undefined) {
+          await this.bridge.executeConsoleCommand(`r.Nanite.MaxPixelsPerEdge ${params.maxPixelsPerEdge}`);
         }
+        if (params.streamingPoolSize !== undefined) {
+          await this.bridge.executeConsoleCommand(`r.Nanite.StreamingPoolSize ${params.streamingPoolSize}`);
+        }
+
+        if (response.success) return { success: true, message: 'Nanite configured' };
+      } catch (_e) {
+        // Fallback
+      }
     }
 
     const commands: string[] = [];

@@ -25,12 +25,7 @@ function markSequenceDeleted(path: unknown) {
   deletedSequences.add(norm);
 }
 
-function isLogicalExistingSequence(path: unknown): boolean {
-  const norm = normalizeSequencePath(path);
-  if (!norm) return false;
-  if (deletedSequences.has(norm)) return false;
-  return managedSequences.has(norm);
-}
+
 
 export async function handleSequenceTools(action: string, args: any, tools: ITools) {
   const seqAction = String(action || '').trim();
@@ -46,7 +41,7 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
         const basePath = args.path.trim().replace(/\/$/, '');
         sequencePath = `${basePath}/${name}`;
       }
-      if (sequencePath) {
+      if (sequencePath && res && (res as any).success !== false) {
         markSequenceCreated(sequencePath);
       }
 
@@ -55,11 +50,13 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
       if (res && (res as any).success === false && (errorCode === 'FACTORY_NOT_AVAILABLE' || msgLower.includes('ulevelsequencefactorynew not available'))) {
         const path = sequencePath || (typeof args.path === 'string' ? args.path : undefined);
         return cleanObject({
-          success: true,
-          message: (res as any).message || 'Sequence created or already exists (factory unavailable)',
+          success: false,
+          error: 'FACTORY_NOT_AVAILABLE',
+          message: (res as any).message || 'Sequence creation failed: factory not available',
           action: 'create',
           name,
           path,
+          sequencePath,
           handled: true
         });
       }
@@ -69,33 +66,10 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
     case 'open': {
       const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const res = await tools.sequenceTools.open({ path });
-      const errorCode = String((res && (res as any).error) || '').toUpperCase();
-      const msgLower = String((res && (res as any).message) || '').toLowerCase();
-      if (res && (res as any).success === false && (errorCode === 'INVALID_SEQUENCE' || msgLower.includes('sequence not found') || msgLower.includes('requires a sequence path'))) {
-        if (isLogicalExistingSequence(path)) {
-          return cleanObject({
-            success: true,
-            message: (res as any).message || 'Sequence open request handled (best-effort)',
-            action: 'open',
-            path,
-            handled: true
-          });
-        }
-      }
       return cleanObject(res);
     }
     case 'add_camera': {
-      const res = await tools.sequenceTools.addCamera({ spawnable: args.spawnable });
-      const errorCode = String((res && (res as any).error) || '').toUpperCase();
-      const msgLower = String((res && (res as any).message) || '').toLowerCase();
-      if (res && (res as any).success === false && (errorCode === 'INVALID_SEQUENCE' || errorCode === 'NOT_AVAILABLE' || msgLower.includes('requires a sequence path'))) {
-        return cleanObject({
-          success: true,
-          message: (res as any).message || 'Camera add request handled (no active sequence)',
-          action: 'add_camera',
-          handled: true
-        });
-      }
+      const res = await tools.sequenceTools.addCamera({ spawnable: args.spawnable, path: args.path });
       return cleanObject(res);
     }
     case 'add_actor': {
@@ -116,16 +90,6 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
       if (res && (res as any).success === false && path) {
         const isInvalidSequence = errorCode === 'INVALID_SEQUENCE' || msgLower.includes('sequence_add_actor requires a sequence path') || msgLower.includes('sequence not found');
         if (isInvalidSequence) {
-          if (isLogicalExistingSequence(path)) {
-            return cleanObject({
-              success: true,
-              message: (res as any).message || 'Actor add request handled (sequence not available in this build)',
-              action: 'add_actor',
-              path,
-              actorName,
-              handled: true
-            });
-          }
           return cleanObject({
             success: false,
             error: 'NOT_FOUND',
@@ -161,7 +125,7 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
     }
     case 'add_actors': {
       const actorNames: string[] = Array.isArray(args.actorNames) ? args.actorNames : [];
-      const res = await tools.sequenceTools.addActors({ actorNames });
+      const res = await tools.sequenceTools.addActors({ actorNames, path: args.path });
       const errorCode = String((res && (res as any).error) || '').toUpperCase();
       const msgLower = String((res && (res as any).message) || '').toLowerCase();
       if (actorNames.length === 0 && res && (res as any).success === false && errorCode === 'INVALID_ARGUMENT') {
@@ -186,26 +150,12 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
     }
     case 'remove_actors': {
       const actorNames: string[] = Array.isArray(args.actorNames) ? args.actorNames : [];
-      const res = await tools.sequenceTools.removeActors({ actorNames });
+      const res = await tools.sequenceTools.removeActors({ actorNames, path: args.path });
       return cleanObject(res);
     }
     case 'get_bindings': {
       const path = typeof args.path === 'string' ? args.path : undefined;
       const res = await tools.sequenceTools.getBindings({ path });
-      const errorCode = String((res && (res as any).error) || '').toUpperCase();
-      const msgLower = String((res && (res as any).message) || '').toLowerCase();
-      if (res && (res as any).success === false && path) {
-        const isInvalidSequence = errorCode === 'INVALID_SEQUENCE' || msgLower.includes('sequence not found') || msgLower.includes('requires a sequence path');
-        if (isInvalidSequence && isLogicalExistingSequence(path)) {
-          return cleanObject({
-            success: true,
-            message: (res as any).message || 'bindings listed (best-effort)',
-            action: 'get_bindings',
-            path,
-            bindings: []
-          });
-        }
-      }
       return cleanObject(res);
     }
     case 'add_keyframe': {
@@ -237,17 +187,22 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
         const isUnsupported = errorCode === 'UNSUPPORTED_PROPERTY' || msgLower.includes('unsupported property') || msgLower.includes('invalid_sequence_type');
         const isInvalidSeq = errorCode === 'INVALID_SEQUENCE' || msgLower.includes('sequence not found') || msgLower.includes('requires a sequence path');
 
-        if (path && (isBindingIssue || isUnsupported || (isInvalidSeq && isLogicalExistingSequence(path)))) {
+        if (path && isInvalidSeq) {
           return cleanObject({
-            success: true,
-            message: (res as any).message || 'Keyframe request handled (best-effort)',
+            success: false,
+            error: 'NOT_FOUND',
+            message: (res as any).message || 'Sequence not found',
             action: 'add_keyframe',
             path,
             actorName,
             property,
-            frame,
-            handled: true
+            frame
           });
+        }
+
+        // Preserve plugin-provided failure for binding / unsupported-property cases
+        if (path && (isBindingIssue || isUnsupported)) {
+          return cleanObject(res);
         }
       }
 
@@ -259,15 +214,15 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
       return cleanObject(res);
     }
     case 'play': {
-      const res = await tools.sequenceTools.play({ startTime: args.startTime, loopMode: args.loopMode });
+      const res = await tools.sequenceTools.play({ path: args.path, startTime: args.startTime, loopMode: args.loopMode });
       return cleanObject(res);
     }
     case 'pause': {
-      const res = await tools.sequenceTools.pause();
+      const res = await tools.sequenceTools.pause({ path: args.path });
       return cleanObject(res);
     }
     case 'stop': {
-      const res = await tools.sequenceTools.stop();
+      const res = await tools.sequenceTools.stop({ path: args.path });
       return cleanObject(res);
     }
     case 'set_properties': {
@@ -283,20 +238,6 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
     case 'get_properties': {
       const path = typeof args.path === 'string' ? args.path : undefined;
       const res = await tools.sequenceTools.getSequenceProperties({ path });
-      const errorCode = String((res && (res as any).error) || '').toUpperCase();
-      const msgLower = String((res && (res as any).message) || '').toLowerCase();
-      if (res && (res as any).success === false && path) {
-        const isInvalidSequence = errorCode === 'INVALID_SEQUENCE' || msgLower.includes('sequence not found') || msgLower.includes('requires a sequence path');
-        if (isInvalidSequence && isLogicalExistingSequence(path)) {
-          return cleanObject({
-            success: true,
-            message: (res as any).message || 'properties retrieved (best-effort)',
-            action: 'get_properties',
-            path,
-            ...(res as any).result
-          });
-        }
-      }
       return cleanObject(res);
     }
     case 'set_playback_speed': {
@@ -304,18 +245,7 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
       if (!Number.isFinite(speed) || speed <= 0) {
         throw new Error('Invalid speed: must be a positive number');
       }
-      const res = await tools.sequenceTools.setPlaybackSpeed({ speed });
-      const errorCode = String((res && (res as any).error) || '').toUpperCase();
-      const msgLower = String((res && (res as any).message) || '').toLowerCase();
-      if (res && (res as any).success === false && (errorCode === 'INVALID_SEQUENCE' || errorCode === 'EDITOR_NOT_OPEN' || msgLower.includes('requires a sequence path') || msgLower.includes('sequence editor not open'))) {
-        return cleanObject({
-          success: true,
-          message: (res as any).message || `Playback speed set to ${speed} (best-effort)`,
-          action: 'set_playback_speed',
-          speed,
-          handled: true
-        });
-      }
+      const res = await tools.sequenceTools.setPlaybackSpeed({ speed, path: args.path });
       return cleanObject(res);
     }
     case 'list': {
@@ -329,19 +259,6 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
       const baseDir = destDir.replace(/\/$/, '');
       const destPath = `${baseDir}/${newName}`;
       const res = await tools.sequenceTools.duplicate({ path, destinationPath: destPath });
-      const errorCode = String((res && (res as any).error) || '').toUpperCase();
-      const msgLower = String((res && (res as any).message) || '').toLowerCase();
-      if (res && (res as any).success === false && (errorCode === 'INVALID_SEQUENCE' || errorCode === 'OPERATION_FAILED' || msgLower.includes('source sequence not found') || msgLower.includes('failed to duplicate sequence'))) {
-        return cleanObject({
-          success: true,
-          message: (res as any).message || 'Sequence duplicate request handled (best-effort)',
-          action: 'duplicate',
-          path,
-          destinationPath: destPath,
-          newName,
-          handled: true
-        });
-      }
       return cleanObject(res);
     }
     case 'rename': {
@@ -351,13 +268,14 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
       const errorCode = String((res && (res as any).error) || '').toUpperCase();
       const msgLower = String((res && (res as any).message) || '').toLowerCase();
       if (res && (res as any).success === false && (errorCode === 'OPERATION_FAILED' || msgLower.includes('failed to rename sequence'))) {
+        // Return actual failure, not best-effort success - rename is a destructive operation
         return cleanObject({
-          success: true,
-          message: (res as any).message || 'Sequence rename request handled (best-effort)',
+          success: false,
+          error: 'OPERATION_FAILED',
+          message: (res as any).message || 'Failed to rename sequence',
           action: 'rename',
           path,
-          newName,
-          handled: true
+          newName
         });
       }
       return cleanObject(res);
@@ -365,25 +283,10 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
     case 'delete': {
       const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const res = await tools.sequenceTools.deleteSequence({ path });
-      const errorCode = String((res && (res as any).error) || '').toUpperCase();
-      const msgLower = String((res && (res as any).message) || '').toLowerCase();
 
       if (res && (res as any).success !== false) {
         markSequenceDeleted(path);
-        return cleanObject(res);
       }
-
-      if (errorCode === 'OPERATION_FAILED' || msgLower.includes('failed to delete sequence')) {
-        markSequenceDeleted(path);
-        return cleanObject({
-          success: true,
-          message: (res as any).message || 'Sequence delete request handled (best-effort)',
-          action: 'delete',
-          path,
-          handled: true
-        });
-      }
-
       return cleanObject(res);
     }
     case 'get_metadata': {

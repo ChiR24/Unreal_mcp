@@ -261,8 +261,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     return true;
   }
 
-  if (!ActorName.IsEmpty())
+  if (!ActorName.IsEmpty()) {
     Spawned->SetActorLabel(ActorName);
+  } else {
+    // Auto-generate a friendly label from the mesh or class name
+    FString BaseName;
+    if (ResolvedStaticMesh) {
+      BaseName = ResolvedStaticMesh->GetName();
+    } else if (ResolvedClass) {
+      BaseName = ResolvedClass->GetName();
+      if (BaseName.EndsWith(TEXT("_C"))) {
+        BaseName.RemoveFromEnd(TEXT("_C"));
+      }
+    } else {
+      BaseName = TEXT("Actor");
+    }
+    Spawned->SetActorLabel(BaseName);
+  }
 
   TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
   Data->SetStringField(TEXT("id"), Spawned->GetActorLabel());
@@ -1976,6 +1991,81 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStop(
 #endif
 }
 
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor->PlayWorld) {
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetBoolField(TEXT("alreadyStopped"), true);
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Play session not active"), Resp, FString());
+    return true;
+  }
+
+  GEditor->RequestEndPlayMap();
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Play in Editor ejected"), Resp, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString ActorName;
+  Payload->TryGetStringField(TEXT("actorName"), ActorName);
+
+  // Also try "objectPath" as fallback since schema might use that
+  if (ActorName.IsEmpty())
+    Payload->TryGetStringField(TEXT("objectPath"), ActorName);
+
+  if (ActorName.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  AActor *Found = FindActorByName(ActorName);
+  if (!Found) {
+    SendAutomationResponse(
+        Socket, RequestId, false,
+        FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr,
+        TEXT("ACTOR_NOT_FOUND"));
+    return true;
+  }
+
+  if (GEditor) {
+    GEditor->SelectNone(true, true, false);
+    GEditor->SelectActor(Found, true, true, true);
+    // 'POSSESS' command works on selected actor in PIE
+    if (GEditor->PlayWorld) {
+      GEditor->Exec(GEditor->PlayWorld, TEXT("POSSESS"));
+      SendAutomationResponse(Socket, RequestId, true, TEXT("Possessed actor"),
+                             nullptr);
+    } else {
+      // If not in PIE, we can't possess
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("Cannot possess actor while not in PIE"),
+                             nullptr, TEXT("NOT_IN_PIE"));
+    }
+    return true;
+  }
+
+  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor not available"),
+                         nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+  return true;
+#else
+  return false;
+#endif
+}
+
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusActor(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -2145,6 +2235,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorPlay(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("stop"))
     return HandleControlEditorStop(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("eject"))
+    return HandleControlEditorEject(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("eject"))
+    return HandleControlEditorEject(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("possess"))
+    return HandleControlEditorPossess(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("focus_actor"))
     return HandleControlEditorFocusActor(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_camera") ||

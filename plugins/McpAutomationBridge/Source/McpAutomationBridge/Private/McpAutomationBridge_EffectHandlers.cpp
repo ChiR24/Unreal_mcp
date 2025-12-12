@@ -1,6 +1,8 @@
+#include "DrawDebugHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+
 
 #if WITH_EDITOR
 #include "EditorAssetLibrary.h"
@@ -72,6 +74,29 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   };
 
   // Handle create_effect tool with sub-actions
+  if (Lower.Equals(TEXT("clear_debug_shapes"))) {
+#if WITH_EDITOR
+    if (GEditor && GEditor->GetEditorWorldContext().World()) {
+      FlushPersistentDebugLines(GEditor->GetEditorWorldContext().World());
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Debug shapes cleared"), Resp);
+      return true;
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Editor world not available"), nullptr,
+                             TEXT("NO_WORLD"));
+      return true;
+    }
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Debug shape clearing requires editor build"),
+                           nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+  }
+
   if (bIsCreateEffect || Lower.Equals(TEXT("create_niagara_system"))) {
     FString SubAction;
     LocalPayload->TryGetStringField(TEXT("action"), SubAction);

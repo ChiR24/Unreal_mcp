@@ -71,7 +71,11 @@ export class ActorTools extends BaseTool implements IActorTools {
         requestedClass: className,
         location: { x: locX, y: locY, z: locZ },
         rotation: { pitch: rotPitch, yaw: rotYaw, roll: rotRoll },
-        data: data
+        data: data,
+        actor: {
+          name: data.name || (response as any).actorName,
+          path: data.objectPath || (response as any).actorPath || mappedClassPath
+        }
       };
 
       if ((response as any).warnings?.length) {
@@ -332,7 +336,23 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    return this.sendRequest('get_components', { actorName }, 'control_actor');
+    const response = await this.sendRequest('get_components', { actorName }, 'control_actor');
+    if (!response.success) {
+      return { success: false, error: response.error || `Failed to get components for actor ${actorName}` };
+    }
+
+    const data: any = response.data ?? response.result ?? response;
+    const components = Array.isArray(data)
+      ? data
+      : (Array.isArray(data?.components) ? data.components : []);
+    const count = typeof data?.count === 'number' ? data.count : components.length;
+
+    return {
+      success: true,
+      message: 'Actor components retrieved',
+      components,
+      count
+    };
   }
 
   async duplicate(params: { actorName: string; newName?: string; offset?: { x: number; y: number; z: number } }) {
@@ -441,7 +461,6 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (!snapshotName) throw new Error('Invalid snapshotName');
     return this.sendRequest('restore_snapshot', { actorName, snapshotName }, 'control_actor');
   }
-
   async exportActor(params: { actorName: string; destinationPath?: string }) {
     const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
     if (!actorName) throw new Error('Invalid actorName');
@@ -455,17 +474,47 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    return this.sendRequest('get_bounding_box', { actorName }, 'control_actor');
+    const response = await this.sendRequest('get_bounding_box', { actorName }, 'control_actor');
+    if (!response.success) {
+      return { success: false, error: response.error || `Failed to get bounding box for actor ${actorName}` };
+    }
+    return {
+      success: true,
+      message: 'Bounding box retrieved',
+      boundingBox: response.data || response.result || {}
+    };
   }
 
   async getMetadata(actorName: string) {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    return this.sendRequest('get_metadata', { actorName }, 'control_actor');
+    const response = await this.sendRequest('get_metadata', { actorName }, 'control_actor');
+    if (!response.success) {
+      return { success: false, error: response.error || `Failed to get metadata for actor ${actorName}` };
+    }
+    return {
+      success: true,
+      message: 'Actor metadata retrieved',
+      metadata: response.data || response.result || {}
+    };
   }
 
   async listActors() {
-    return this.sendRequest('list', {}, 'control_actor');
+    const response = await this.sendRequest('list_actors', {}, 'control_actor');
+    if (!response.success) {
+      return { success: false, error: response.error || 'Failed to list actors' };
+    }
+    // C++ returns actors in data.actors, or directly in actors field
+    // Handle both: response.data?.actors, response.actors, or response.data as array
+    const dataObj = response.data || response.result || {};
+    const actorsRaw = response.actors || (dataObj && dataObj.actors) || (Array.isArray(dataObj) ? dataObj : []);
+    const actors = Array.isArray(actorsRaw) ? actorsRaw : [];
+    return {
+      success: true,
+      message: `Found ${actors.length} actors`,
+      actors,
+      count: actors.length
+    };
   }
 }

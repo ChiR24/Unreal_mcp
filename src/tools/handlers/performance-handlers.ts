@@ -26,14 +26,16 @@ export async function handlePerformanceTools(action: string, args: any, tools: I
     }
     case 'show_stats': {
       return cleanObject(await tools.performanceTools.showStats({
-        category: args.category,
+        category: args.category || args.type || 'Unit',
         enabled: args.enabled !== false
       }));
     }
     case 'set_scalability': {
+      const category = args.category || 'ViewDistance';
+      const level = typeof args.level === 'number' ? args.level : 3;
       return cleanObject(await tools.performanceTools.setScalability({
-        category: args.category,
-        level: args.level
+        category,
+        level
       }));
     }
     case 'set_resolution_scale': {

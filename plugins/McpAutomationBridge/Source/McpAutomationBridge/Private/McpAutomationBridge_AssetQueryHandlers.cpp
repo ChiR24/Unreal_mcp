@@ -227,6 +227,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
       AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
     }
 
+    Result->SetBoolField(TEXT("success"), true);
     Result->SetArrayField(TEXT("assets"), AssetsArray);
     Result->SetNumberField(TEXT("count"), AssetsArray.Num());
 

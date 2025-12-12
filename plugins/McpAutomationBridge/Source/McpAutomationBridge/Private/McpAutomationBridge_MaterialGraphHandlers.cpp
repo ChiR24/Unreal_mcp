@@ -19,14 +19,14 @@
 bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
   if (Action != TEXT("manage_material_graph")) {
     return false;
   }
 
 #if WITH_EDITOR
   if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."),
+    SendAutomationError(Socket, RequestId, TEXT("Missing payload."),
                         TEXT("INVALID_PAYLOAD"));
     return true;
   }
@@ -34,20 +34,51 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
   FString AssetPath;
   if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
       AssetPath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
   UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
   if (!Material) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Could not load Material."),
+    SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
                         TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
-  FString SubAction = Payload->GetStringField(TEXT("subAction"));
+  FString SubAction;
+  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) ||
+      SubAction.IsEmpty()) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Missing 'subAction' for manage_material_graph"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  auto FindExpressionByIdOrName =
+      [&](const FString &IdOrName) -> UMaterialExpression * {
+    if (IdOrName.IsEmpty()) {
+      return nullptr;
+    }
+
+    const FString Needle = IdOrName.TrimStartAndEnd();
+    for (UMaterialExpression *Expr : Material->GetExpressions()) {
+      if (!Expr) {
+        continue;
+      }
+      if (Expr->MaterialExpressionGuid.ToString() == Needle) {
+        return Expr;
+      }
+      if (Expr->GetName() == Needle) {
+        return Expr;
+      }
+      // Some callers may pass a full object path.
+      if (Expr->GetPathName() == Needle) {
+        return Expr;
+      }
+    }
+    return nullptr;
+  };
 
   if (SubAction == TEXT("add_node")) {
     FString NodeType;
@@ -91,7 +122,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
           !ExpressionClass->IsChildOf(UMaterialExpression::StaticClass())) {
         // Provide helpful error with available types
         SendAutomationError(
-            RequestingSocket, RequestId,
+            Socket, RequestId,
             FString::Printf(
                 TEXT("Unknown node type: %s. Available types: TextureSample, "
                      "VectorParameter, ScalarParameter, Add, Multiply, "
@@ -131,10 +162,10 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
       Result->SetStringField(TEXT("nodeId"),
                              NewExpr->MaterialExpressionGuid.ToString());
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Node added."), Result);
+      SendAutomationResponse(Socket, RequestId, true, TEXT("Node added."),
+                             Result);
     } else {
-      SendAutomationError(RequestingSocket, RequestId,
+      SendAutomationError(Socket, RequestId,
                           TEXT("Failed to create expression."),
                           TEXT("CREATE_FAILED"));
     }
@@ -143,13 +174,13 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
     FString NodeId;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
-    UMaterialExpression *TargetExpr = nullptr;
-    for (UMaterialExpression *Expr : Material->GetExpressions()) {
-      if (Expr->MaterialExpressionGuid.ToString() == NodeId) {
-        TargetExpr = Expr;
-        break;
-      }
+    if (NodeId.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId'."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
     }
+
+    UMaterialExpression *TargetExpr = FindExpressionByIdOrName(NodeId);
 
     if (TargetExpr) {
 #if WITH_EDITORONLY_DATA
@@ -160,10 +191,9 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
 #endif
       Material->PostEditChange();
       Material->MarkPackageDirty();
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Node removed."));
+      SendAutomationResponse(Socket, RequestId, true, TEXT("Node removed."));
     } else {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."),
+      SendAutomationError(Socket, RequestId, TEXT("Node not found."),
                           TEXT("NODE_NOT_FOUND"));
     }
     return true;
@@ -177,17 +207,10 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
     Payload->TryGetStringField(TEXT("targetNodeId"), TargetNodeId);
     Payload->TryGetStringField(TEXT("inputName"), InputName);
 
-    UMaterialExpression *SourceExpr = nullptr;
-    for (UMaterialExpression *Expr : Material->GetExpressions()) {
-      if (Expr->MaterialExpressionGuid.ToString() == SourceNodeId) {
-        SourceExpr = Expr;
-        break;
-      }
-    }
+    UMaterialExpression *SourceExpr = FindExpressionByIdOrName(SourceNodeId);
 
     if (!SourceExpr) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Source node not found."),
+      SendAutomationError(Socket, RequestId, TEXT("Source node not found."),
                           TEXT("NODE_NOT_FOUND"));
       return true;
     }
@@ -233,23 +256,17 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       if (bFound) {
         Material->PostEditChange();
         Material->MarkPackageDirty();
-        SendAutomationResponse(RequestingSocket, RequestId, true,
+        SendAutomationResponse(Socket, RequestId, true,
                                TEXT("Connected to main material node."));
       } else {
         SendAutomationError(
-            RequestingSocket, RequestId,
+            Socket, RequestId,
             FString::Printf(TEXT("Unknown input on main node: %s"), *InputName),
             TEXT("INVALID_PIN"));
       }
       return true;
     } else {
-      UMaterialExpression *TargetExpr = nullptr;
-      for (UMaterialExpression *Expr : Material->GetExpressions()) {
-        if (Expr->MaterialExpressionGuid.ToString() == TargetNodeId) {
-          TargetExpr = Expr;
-          break;
-        }
-      }
+      UMaterialExpression *TargetExpr = FindExpressionByIdOrName(TargetNodeId);
 
       if (TargetExpr) {
         // We have to iterate properties to find the FExpressionInput
@@ -268,7 +285,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
                 InputPtr->Expression = SourceExpr;
                 Material->PostEditChange();
                 Material->MarkPackageDirty();
-                SendAutomationResponse(RequestingSocket, RequestId, true,
+                SendAutomationResponse(Socket, RequestId, true,
                                        TEXT("Nodes connected."));
                 return true;
               }
@@ -285,13 +302,12 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
         }
 
         SendAutomationError(
-            RequestingSocket, RequestId,
+            Socket, RequestId,
             FString::Printf(TEXT("Input pin '%s' not found or not compatible."),
                             *InputName),
             TEXT("PIN_NOT_FOUND"));
       } else {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Target node not found."),
+        SendAutomationError(Socket, RequestId, TEXT("Target node not found."),
                             TEXT("NODE_NOT_FOUND"));
       }
       return true;
@@ -345,12 +361,12 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
         if (bFound) {
           Material->PostEditChange();
           Material->MarkPackageDirty();
-          SendAutomationResponse(RequestingSocket, RequestId, true,
+          SendAutomationResponse(Socket, RequestId, true,
                                  TEXT("Disconnected from main material pin."));
           return true;
         } else {
           SendAutomationError(
-              RequestingSocket, RequestId,
+              Socket, RequestId,
               FString::Printf(TEXT("Unknown or unsupported pin: %s"), *PinName),
               TEXT("INVALID_PIN"));
           return true;
@@ -358,13 +374,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       }
     }
 
-    UMaterialExpression *TargetExpr = nullptr;
-    for (UMaterialExpression *Expr : Material->GetExpressions()) {
-      if (Expr->MaterialExpressionGuid.ToString() == NodeId) {
-        TargetExpr = Expr;
-        break;
-      }
-    }
+    UMaterialExpression *TargetExpr = FindExpressionByIdOrName(NodeId);
 
     if (TargetExpr) {
       // Disconnect all inputs of this node if no specific pin name
@@ -376,12 +386,12 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       Material->PostEditChange();
       Material->MarkPackageDirty();
       SendAutomationResponse(
-          RequestingSocket, RequestId, true,
+          Socket, RequestId, true,
           TEXT("Node disconnection partial (generic inputs not cleared)."));
       return true;
     }
 
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."),
+    SendAutomationError(Socket, RequestId, TEXT("Node not found."),
                         TEXT("NODE_NOT_FOUND"));
     return true;
   } else if (SubAction == TEXT("get_node_details")) {
@@ -393,12 +403,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
 
     // If nodeId provided, try to find that specific node
     if (!NodeId.IsEmpty()) {
-      for (UMaterialExpression *Expr : AllExpressions) {
-        if (Expr->MaterialExpressionGuid.ToString() == NodeId) {
-          TargetExpr = Expr;
-          break;
-        }
-      }
+      TargetExpr = FindExpressionByIdOrName(NodeId);
     }
 
     if (TargetExpr) {
@@ -409,7 +414,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       Result->SetNumberField(TEXT("x"), TargetExpr->MaterialExpressionEditorX);
       Result->SetNumberField(TEXT("y"), TargetExpr->MaterialExpressionEditorY);
 
-      SendAutomationResponse(RequestingSocket, RequestId, true,
+      SendAutomationResponse(Socket, RequestId, true,
                              TEXT("Node details retrieved."), Result);
     } else {
       // List all available nodes to help the user
@@ -441,19 +446,19 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
                     TEXT("Node '%s' not found. Material has %d nodes."),
                     *NodeId, AllExpressions.Num());
 
-      SendAutomationResponse(RequestingSocket, RequestId, false, Message,
-                             Result, TEXT("NODE_NOT_FOUND"));
+      SendAutomationResponse(Socket, RequestId, false, Message, Result,
+                             TEXT("NODE_NOT_FOUND"));
     }
     return true;
   }
 
   SendAutomationError(
-      RequestingSocket, RequestId,
+      Socket, RequestId,
       FString::Printf(TEXT("Unknown subAction: %s"), *SubAction),
       TEXT("INVALID_SUBACTION"));
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor only."),
+  SendAutomationError(Socket, RequestId, TEXT("Editor only."),
                       TEXT("EDITOR_ONLY"));
   return true;
 #endif
@@ -462,20 +467,20 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
 bool UMcpAutomationBridgeSubsystem::HandleAddMaterialTextureSample(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
   return false;
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleAddMaterialExpression(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
   return false;
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialNodes(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
   return false;
 }

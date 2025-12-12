@@ -63,6 +63,7 @@ export interface IAssetTools {
     saveAsset(assetPath: string): Promise<any>;
     findByTag(params: { tag: string; value?: string }): Promise<any>;
     getDependencies(params: { assetPath: string; recursive?: boolean }): Promise<any>;
+    getMetadata(params: { assetPath: string }): Promise<any>;
     getSourceControlState(params: { assetPath: string }): Promise<SourceControlState | any>;
     analyzeGraph(params: { assetPath: string; maxDepth?: number }): Promise<any>;
     createThumbnail(params: { assetPath: string; width?: number; height?: number }): Promise<any>;
@@ -75,18 +76,18 @@ export interface IAssetTools {
 export interface ISequenceTools {
     create(params: { name: string; path?: string; timeoutMs?: number }): Promise<any>;
     open(params: { path: string }): Promise<any>;
-    addCamera(params: { spawnable?: boolean }): Promise<any>;
-    addActor(params: { actorName: string; createBinding?: boolean }): Promise<any>;
-    addActors(params: { actorNames: string[] }): Promise<any>;
-    removeActors(params: { actorNames: string[] }): Promise<any>;
+    addCamera(params: { spawnable?: boolean; path?: string }): Promise<any>;
+    addActor(params: { actorName: string; createBinding?: boolean; path?: string }): Promise<any>;
+    addActors(params: { actorNames: string[]; path?: string }): Promise<any>;
+    removeActors(params: { actorNames: string[]; path?: string }): Promise<any>;
     getBindings(params: { path?: string }): Promise<any>;
     addSpawnableFromClass(params: { className: string; path?: string }): Promise<any>;
-    play(params: { startTime?: number; loopMode?: 'once' | 'loop' | 'pingpong' }): Promise<any>;
-    pause(): Promise<any>;
-    stop(): Promise<any>;
+    play(params: { path?: string; startTime?: number; loopMode?: 'once' | 'loop' | 'pingpong' }): Promise<any>;
+    pause(params?: { path?: string }): Promise<any>;
+    stop(params?: { path?: string }): Promise<any>;
     setSequenceProperties(params: { path?: string; frameRate?: number; lengthInFrames?: number; playbackStart?: number; playbackEnd?: number }): Promise<any>;
     getSequenceProperties(params: { path?: string }): Promise<any>;
-    setPlaybackSpeed(params: { speed: number }): Promise<any>;
+    setPlaybackSpeed(params: { speed: number; path?: string }): Promise<any>;
     list(params: { path?: string }): Promise<any>;
     duplicate(params: { path: string; destinationPath: string }): Promise<any>;
     rename(params: { path: string; newName: string }): Promise<any>;
@@ -133,8 +134,8 @@ export interface ILevelTools {
     listLevels(): Promise<any>;
     getLevelSummary(levelPath?: string): Promise<any>;
     registerLight(levelPath: string | undefined, info: { name: string; type: string; details?: Record<string, unknown> }): void;
-    exportLevel(params: { levelPath?: string; exportPath: string; note?: string }): Promise<any>;
-    importLevel(params: { packagePath: string; destinationPath?: string; streaming?: boolean }): Promise<any>;
+    exportLevel(params: { levelPath?: string; exportPath: string; note?: string; timeoutMs?: number }): Promise<any>;
+    importLevel(params: { packagePath: string; destinationPath?: string; streaming?: boolean; timeoutMs?: number }): Promise<any>;
     saveLevelAs(params: { sourcePath?: string; targetPath: string }): Promise<any>;
     deleteLevels(params: { levelPaths: string[] }): Promise<any>;
     loadLevel(params: { levelPath: string; streaming?: boolean; position?: [number, number, number] }): Promise<any>;

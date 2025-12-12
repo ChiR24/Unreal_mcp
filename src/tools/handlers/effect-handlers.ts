@@ -1,8 +1,31 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import { executeAutomationRequest } from './common-handlers.js';
+import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
+
+function ensureActionAndSubAction(action: string, args: any) {
+  if (!args || typeof args !== 'object') return;
+  // Many callers pass the tool action as the action name (e.g. "niagara") and
+  // omit args.action; the native handler requires subAction.
+  if (!args.action) {
+    args.action = action;
+  }
+  if (!args.subAction) {
+    args.subAction = args.action;
+  }
+}
+
+function isNonEmptyString(val: unknown): val is string {
+  return typeof val === 'string' && val.trim().length > 0;
+}
 
 export async function handleEffectTools(action: string, args: any, tools: ITools) {
+  if (!args || typeof args !== 'object') {
+    args = {};
+  }
+
+  // Always ensure action/subAction are present before any routing.
+  ensureActionAndSubAction(action, args);
+
   // Handle creation actions explicitly to use NiagaraTools helper
   if (action === 'create_niagara_system') {
     const res = await tools.niagaraTools.createSystem({
@@ -37,9 +60,50 @@ export async function handleEffectTools(action: string, args: any, tools: ITools
     }
   }
 
-  // Ensure subAction is set for compatibility with C++ handler expectations
-  if (args.action && !args.subAction) {
-    args.subAction = args.action;
+  // Handle debug shapes (must happen before any automation request)
+  if (action === 'debug_shape' || args.action === 'debug_shape') {
+    // Map 'shape' to 'shapeType' if provided (schema uses 'shape', C++ uses 'shapeType')
+    if (args.shape && !args.shapeType) {
+      args.shapeType = args.shape;
+    }
+    requireNonEmptyString(args.shapeType, 'shapeType', 'Missing required parameter: shapeType');
+    args.action = 'debug_shape';
+    args.subAction = 'debug_shape';
+    return cleanObject(await executeAutomationRequest(tools, 'create_effect', args));
+  }
+
+  // Validate Niagara-related required parameters (keep errors explicit and early)
+  const subAction = String(args.subAction || '').trim();
+  if (subAction === 'niagara' || subAction === 'spawn_niagara') {
+    requireNonEmptyString(args.systemPath, 'systemPath', 'Missing required parameter: systemPath');
+  }
+
+  if (subAction === 'activate_niagara' || subAction === 'deactivate_niagara' || subAction === 'advance_simulation') {
+    const systemName = args.systemName ?? args.actorName;
+    requireNonEmptyString(systemName, 'systemName', 'Missing required parameter: systemName (or actorName)');
+    args.systemName = systemName;
+  }
+
+  if (subAction === 'set_niagara_parameter') {
+    const systemName = args.systemName ?? args.actorName;
+    requireNonEmptyString(systemName, 'systemName', 'Missing required parameter: systemName (or actorName)');
+    requireNonEmptyString(args.parameterName, 'parameterName', 'Missing required parameter: parameterName');
+    // parameterType is required for unambiguous native conversion; accept common aliases.
+    if (!isNonEmptyString(args.parameterType) && isNonEmptyString(args.type)) {
+      args.parameterType = args.type.charAt(0).toUpperCase() + args.type.slice(1);
+    }
+    requireNonEmptyString(args.parameterType, 'parameterType', 'Missing required parameter: parameterType');
+    args.systemName = systemName;
+  }
+
+  // Handle debug cleanup actions
+  if (action === 'clear_debug_shapes') {
+    return executeAutomationRequest(tools, action, args);
+  }
+  if (action === 'cleanup') {
+    args.action = 'cleanup';
+    args.subAction = 'cleanup';
+    return executeAutomationRequest(tools, 'create_effect', args);
   }
 
   // Map high-level actions to create_effect with subAction
@@ -59,23 +123,27 @@ export async function handleEffectTools(action: string, args: any, tools: ITools
   if (action === 'activate' || action === 'activate_effect') {
     args.action = 'activate_niagara';
     args.systemName = args.actorName || args.systemName;
+    requireNonEmptyString(args.systemName, 'systemName', 'Missing required parameter: systemName (or actorName)');
     args.reset = true;
     return executeAutomationRequest(tools, 'create_effect', args);
   }
   if (action === 'deactivate') {
     args.action = 'deactivate_niagara';
     args.systemName = args.actorName || args.systemName;
+    requireNonEmptyString(args.systemName, 'systemName', 'Missing required parameter: systemName (or actorName)');
     return executeAutomationRequest(tools, 'create_effect', args);
   }
   if (action === 'reset') {
     args.action = 'activate_niagara';
     args.systemName = args.actorName || args.systemName;
+    requireNonEmptyString(args.systemName, 'systemName', 'Missing required parameter: systemName (or actorName)');
     args.reset = true;
     return executeAutomationRequest(tools, 'create_effect', args);
   }
   if (action === 'advance_simulation') {
     args.action = 'advance_simulation';
     args.systemName = args.actorName || args.systemName;
+    requireNonEmptyString(args.systemName, 'systemName', 'Missing required parameter: systemName (or actorName)');
     return executeAutomationRequest(tools, 'create_effect', args);
   }
 
@@ -90,6 +158,9 @@ export async function handleEffectTools(action: string, args: any, tools: ITools
     if (args.type && !args.parameterType) {
       args.parameterType = args.type.charAt(0).toUpperCase() + args.type.slice(1);
     }
+    requireNonEmptyString(args.systemName, 'systemName', 'Missing required parameter: systemName (or actorName)');
+    requireNonEmptyString(args.parameterName, 'parameterName', 'Missing required parameter: parameterName');
+    requireNonEmptyString(args.parameterType, 'parameterType', 'Missing required parameter: parameterType');
     return executeAutomationRequest(tools, 'create_effect', args);
   }
 
@@ -120,22 +191,12 @@ export async function handleEffectTools(action: string, args: any, tools: ITools
     )
   ) {
     return cleanObject({
-      success: true,
+      success: false,
       error: 'SYSTEM_NOT_FOUND',
       message: message || 'Niagara system not found',
       systemPath: args.systemPath,
       handled: true
     });
-  }
-
-  // Handle debug shapes
-  if (action === 'debug_shape') {
-    // Map 'shape' to 'shapeType' if provided (schema uses 'shape', C++ uses 'shapeType')
-    if (args.shape && !args.shapeType) {
-      args.shapeType = args.shape;
-    }
-    args.subAction = 'debug_shape';
-    return executeAutomationRequest(tools, 'create_effect', args);
   }
 
   return cleanObject(res);

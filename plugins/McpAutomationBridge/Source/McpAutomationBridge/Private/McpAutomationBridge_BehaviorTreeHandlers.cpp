@@ -38,7 +38,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     return true;
   }
 
-  FString SubAction = Payload->GetStringField(TEXT("subAction"));
+  FString SubAction;
+  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) ||
+      SubAction.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Missing 'subAction' for manage_behavior_tree"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
 
   // Handle 'create' subAction first - this doesn't need an existing asset
   if (SubAction == TEXT("create")) {
@@ -146,6 +153,28 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     return true;
   }
 
+  auto FindGraphNodeByIdOrName = [&](const FString &IdOrName) -> UEdGraphNode * {
+    if (IdOrName.IsEmpty()) {
+      return nullptr;
+    }
+    const FString Needle = IdOrName.TrimStartAndEnd();
+    for (UEdGraphNode *Node : BTGraph->Nodes) {
+      if (!Node) {
+        continue;
+      }
+      if (Node->NodeGuid.ToString() == Needle) {
+        return Node;
+      }
+      if (Node->GetName() == Needle) {
+        return Node;
+      }
+      if (Node->GetPathName() == Needle) {
+        return Node;
+      }
+    }
+    return nullptr;
+  };
+
   if (SubAction == TEXT("add_node")) {
     FString NodeType;
     Payload->TryGetStringField(TEXT("nodeType"), NodeType);
@@ -243,15 +272,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     Payload->TryGetStringField(TEXT("parentNodeId"), ParentNodeId);
     Payload->TryGetStringField(TEXT("childNodeId"), ChildNodeId);
 
-    UEdGraphNode *Parent = nullptr;
-    UEdGraphNode *Child = nullptr;
-
-    for (UEdGraphNode *Node : BTGraph->Nodes) {
-      if (Node->NodeGuid.ToString() == ParentNodeId)
-        Parent = Node;
-      if (Node->NodeGuid.ToString() == ChildNodeId)
-        Child = Node;
-    }
+    UEdGraphNode *Parent = FindGraphNodeByIdOrName(ParentNodeId);
+    UEdGraphNode *Child = FindGraphNodeByIdOrName(ChildNodeId);
 
     if (!Parent || !Child) {
       SendAutomationError(RequestingSocket, RequestId,
@@ -298,13 +320,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     FString NodeId;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
-    UEdGraphNode *TargetNode = nullptr;
-    for (UEdGraphNode *Node : BTGraph->Nodes) {
-      if (Node->NodeGuid.ToString() == NodeId) {
-        TargetNode = Node;
-        break;
-      }
-    }
+    UEdGraphNode *TargetNode = FindGraphNodeByIdOrName(NodeId);
 
     if (TargetNode) {
       BTGraph->RemoveNode(TargetNode);
@@ -319,13 +335,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     FString NodeId;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
-    UEdGraphNode *TargetNode = nullptr;
-    for (UEdGraphNode *Node : BTGraph->Nodes) {
-      if (Node->NodeGuid.ToString() == NodeId) {
-        TargetNode = Node;
-        break;
-      }
-    }
+    UEdGraphNode *TargetNode = FindGraphNodeByIdOrName(NodeId);
 
     if (TargetNode) {
       TargetNode->BreakAllNodeLinks();
@@ -340,13 +350,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     FString NodeId;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
-    UEdGraphNode *TargetNode = nullptr;
-    for (UEdGraphNode *Node : BTGraph->Nodes) {
-      if (Node->NodeGuid.ToString() == NodeId) {
-        TargetNode = Node;
-        break;
-      }
-    }
+    UEdGraphNode *TargetNode = FindGraphNodeByIdOrName(NodeId);
 
     if (TargetNode) {
       bool bModified = false;

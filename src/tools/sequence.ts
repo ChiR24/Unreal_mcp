@@ -24,6 +24,14 @@ export interface SequenceTrack {
 
 export class SequenceTools extends BaseTool implements ISequenceTools {
   private sequenceCache = new Map<string, LevelSequence>();
+  private activeSequencePath?: string;
+
+  private resolveSequencePath(explicitPath?: unknown): string | undefined {
+    if (typeof explicitPath === 'string' && explicitPath.trim().length > 0) {
+      return explicitPath.trim();
+    }
+    return this.activeSequencePath;
+  }
 
   private async sendAction(action: string, payload: Record<string, unknown> = {}, timeoutMs?: number) {
     const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
@@ -66,28 +74,35 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     if (resp.success && resp.result && resp.result.sequencePath) {
       const sequence: LevelSequence = { path: resp.result.sequencePath, name };
       this.sequenceCache.set(sequence.path, sequence);
+      return { ...resp, sequence: resp.result.sequencePath };
     }
     return resp;
   }
 
   async open(params: { path: string }) {
-    const resp = await this.sendAction('sequence_open', { path: params.path });
+    const path = params.path?.trim();
+    const resp = await this.sendAction('sequence_open', { path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_open' } as const;
+    }
+    if (resp && resp.success !== false && path) {
+      this.activeSequencePath = path;
     }
     return resp;
   }
 
-  async addCamera(params: { spawnable?: boolean }) {
-    const resp = await this.sendAction('sequence_add_camera', { spawnable: params.spawnable !== false });
+  async addCamera(params: { spawnable?: boolean; path?: string }) {
+    const path = this.resolveSequencePath(params.path);
+    const resp = await this.sendAction('sequence_add_camera', { path, spawnable: params.spawnable !== false });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_add_camera' } as const;
     }
     return resp;
   }
 
-  async addActor(params: { actorName: string; createBinding?: boolean }) {
-    const resp = await this.sendAction('sequence_add_actor', { actorName: params.actorName, createBinding: params.createBinding });
+  async addActor(params: { actorName: string; createBinding?: boolean; path?: string }) {
+    const path = this.resolveSequencePath(params.path);
+    const resp = await this.sendAction('sequence_add_actor', { path, actorName: params.actorName, createBinding: params.createBinding });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_add_actor' } as const;
     }
@@ -97,8 +112,9 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Play the current level sequence
    */
-  async play(params?: { startTime?: number; loopMode?: 'once' | 'loop' | 'pingpong' }) {
-    const resp = await this.sendAction('sequence_play', { startTime: params?.startTime, loopMode: params?.loopMode });
+  async play(params?: { path?: string; startTime?: number; loopMode?: 'once' | 'loop' | 'pingpong' }) {
+    const path = this.resolveSequencePath(params?.path);
+    const resp = await this.sendAction('sequence_play', { path, startTime: params?.startTime, loopMode: params?.loopMode });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_play' } as const;
     }
@@ -108,8 +124,9 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Pause the current level sequence
    */
-  async pause() {
-    const resp = await this.sendAction('sequence_pause');
+  async pause(params?: { path?: string }) {
+    const path = this.resolveSequencePath(params?.path);
+    const resp = await this.sendAction('sequence_pause', { path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_pause' } as const;
     }
@@ -119,8 +136,9 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Stop/close the current level sequence
    */
-  async stop() {
-    const resp = await this.sendAction('sequence_stop');
+  async stop(params?: { path?: string }) {
+    const path = this.resolveSequencePath(params?.path);
+    const resp = await this.sendAction('sequence_stop', { path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_stop' } as const;
     }
@@ -176,8 +194,9 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Set playback speed/rate
    */
-  async setPlaybackSpeed(params: { speed: number }) {
-    const resp = await this.sendAction('sequence_set_playback_speed', { speed: params.speed });
+  async setPlaybackSpeed(params: { speed: number; path?: string }) {
+    const path = this.resolveSequencePath(params.path);
+    const resp = await this.sendAction('sequence_set_playback_speed', { path, speed: params.speed });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_set_playback_speed' } as const;
     }
@@ -198,8 +217,9 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Add multiple actors to sequence at once
    */
-  async addActors(params: { actorNames: string[] }) {
-    const resp = await this.sendAction('sequence_add_actors', { actorNames: params.actorNames });
+  async addActors(params: { actorNames: string[]; path?: string }) {
+    const path = this.resolveSequencePath(params.path);
+    const resp = await this.sendAction('sequence_add_actors', { path, actorNames: params.actorNames });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_add_actors' } as const;
     }
@@ -209,8 +229,9 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Remove actors from binding
    */
-  async removeActors(params: { actorNames: string[] }) {
-    const resp = await this.sendAction('sequence_remove_actors', { actorNames: params.actorNames });
+  async removeActors(params: { actorNames: string[]; path?: string }) {
+    const path = this.resolveSequencePath(params.path);
+    const resp = await this.sendAction('sequence_remove_actors', { path, actorNames: params.actorNames });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_remove_actors' } as const;
     }
@@ -232,6 +253,14 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     const resp = await this.sendAction('sequence_list', { path: params?.path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_list' } as const;
+    }
+    if (resp.success) {
+      const sequences = resp.sequences || resp.data || resp.result || [];
+      return {
+        ...resp,
+        sequences,
+        count: Array.isArray(sequences) ? sequences.length : undefined
+      };
     }
     return resp;
   }
@@ -304,6 +333,14 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     const resp = await this.sendAction('sequence_list_tracks', { path: params.path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_list_tracks' } as const;
+    }
+    if (resp.success) {
+      const tracks = resp.tracks || resp.data || resp.result || [];
+      return {
+        ...resp,
+        tracks,
+        count: Array.isArray(tracks) ? tracks.length : undefined
+      };
     }
     return resp;
   }

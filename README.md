@@ -276,7 +276,7 @@ Note on configuration precedence
 - Environment variables (.env / system env) override the internal runtime defaults (for example, defaults in `src/index.ts`, `src/automation-bridge.ts`, and individual tool implementations). This lets you tune timeouts, logging, and WASM behavior without modifying source code. Keep secrets in `.env` or a secret manager — do not store secrets in source files.
 
 Mock mode
-- For offline development or CI without an Editor, set `UNREAL_MCP_MOCK_MODE=1` to run tests and tools against a local mock bridge. This is useful for unit tests and continuous integration where launching the Editor is impractical.
+
 
 ### Docker
 

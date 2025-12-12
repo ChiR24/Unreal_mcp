@@ -362,6 +362,13 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleAssetAction(R, A, P, S);
                   });
 
+  RegisterHandler(TEXT("rebuild_material"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleRebuildMaterial(R, P, S);
+                  });
+
   RegisterHandler(TEXT("manage_behavior_tree"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
@@ -391,6 +398,21 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   });
 
   RegisterHandler(TEXT("manage_effect"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleEffectAction(R, A, P, S);
+                  });
+
+  // Common effect aliases used by the Node server; registering them here keeps
+  // dispatch O(1) and avoids relying on the late handler chain.
+  RegisterHandler(TEXT("create_effect"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleEffectAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("clear_debug_shapes"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {

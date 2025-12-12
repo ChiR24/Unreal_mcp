@@ -3,6 +3,7 @@ import { ITools } from '../../types/tool-interfaces.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
 async function resolveObjectPathFromArgs(args: any, tools: ITools): Promise<string | undefined> {
+  // Priority 1: Direct objectPath
   const direct = typeof args.objectPath === 'string' && args.objectPath.trim().length > 0
     ? args.objectPath.trim()
     : undefined;
@@ -10,10 +11,12 @@ async function resolveObjectPathFromArgs(args: any, tools: ITools): Promise<stri
     return direct;
   }
 
-  if (typeof args.actorName === 'string' && args.actorName.trim().startsWith('/')) {
+  // Priority 2: actorName - pass directly, C++ plugin will resolve
+  if (typeof args.actorName === 'string' && args.actorName.trim().length > 0) {
     return args.actorName.trim();
   }
 
+  // Priority 3: Try to resolve from 'name' field using actor tools
   const name = typeof args.name === 'string' ? args.name.trim() : '';
   if (!name || !tools.actorTools || typeof (tools.actorTools as any).findByName !== 'function') {
     return undefined;
@@ -32,8 +35,10 @@ async function resolveObjectPathFromArgs(args: any, tools: ITools): Promise<stri
   } catch {
   }
 
-  return undefined;
+  // Fallback: return name directly for C++ plugin to resolve
+  return name.length > 0 ? name : undefined;
 }
+
 
 function getActorNameFromArgs(args: any): string | undefined {
   if (typeof args.actorName === 'string' && args.actorName.trim().length > 0) {
@@ -43,6 +48,44 @@ function getActorNameFromArgs(args: any): string | undefined {
     return args.name.trim();
   }
   return undefined;
+}
+
+function looksLikeUnrealObjectPath(value: string): boolean {
+  const v = value.trim();
+  if (!v) return false;
+  // Heuristics: object paths commonly contain ':' (subobject), '/Game', '/Script', or 'PersistentLevel'.
+  return v.includes(':') || v.startsWith('/Game') || v.startsWith('/Script') || v.includes('PersistentLevel');
+}
+
+async function resolveComponentObjectPathFromArgs(args: any, tools: ITools): Promise<string> {
+  const componentName = typeof args.componentName === 'string' ? args.componentName.trim() : '';
+  const componentPath = typeof args.componentPath === 'string' ? args.componentPath.trim() : '';
+
+  const direct = componentPath || (looksLikeUnrealObjectPath(componentName) ? componentName : '');
+  if (direct) return direct;
+
+  const actorName = getActorNameFromArgs(args);
+  if (!actorName) {
+    throw new Error('Invalid actorName: required to resolve componentName');
+  }
+  if (!componentName) {
+    throw new Error('Invalid componentName: must be a non-empty string');
+  }
+
+  const compsRes: any = await tools.actorTools.getComponents(actorName);
+  const components: any[] = Array.isArray(compsRes?.components) ? compsRes.components : [];
+  const needle = componentName.toLowerCase();
+
+  const match = components.find((c) => String(c?.name || '').toLowerCase() === needle)
+    ?? components.find((c) => String(c?.path || '').toLowerCase() === needle)
+    ?? components.find((c) => String(c?.path || '').toLowerCase().endsWith(`:${needle}`));
+
+  const path = typeof match?.path === 'string' ? match.path.trim() : '';
+  if (!path) {
+    throw new Error(`Component not found on actor '${actorName}': ${componentName}`);
+  }
+
+  return path;
 }
 
 export async function handleInspectTools(action: string, args: any, tools: ITools) {
@@ -72,7 +115,7 @@ export async function handleInspectTools(action: string, args: any, tools: ITool
         const msg = String(res.message || '');
         if (errorCode === 'OBJECT_NOT_FOUND' || msg.toLowerCase().includes('object not found')) {
           return cleanObject({
-            success: true,
+            success: false,
             handled: true,
             notFound: true,
             error: res.error,
@@ -144,52 +187,34 @@ export async function handleInspectTools(action: string, args: any, tools: ITool
       return cleanObject(await tools.actorTools.getComponents(actorName));
     }
     case 'get_component_property': {
-      const objectPath = await resolveObjectPathFromArgs(args, tools);
-      const componentName = typeof args.componentName === 'string' ? args.componentName.trim() : '';
+      const componentObjectPath = await resolveComponentObjectPathFromArgs(args, tools);
       const propertyPath =
         (typeof args.propertyName === 'string' && args.propertyName.trim().length > 0)
           ? args.propertyName.trim()
           : (typeof args.propertyPath === 'string' ? args.propertyPath.trim() : '');
-
-      if (!objectPath) {
-        throw new Error('Invalid objectPath: must be a non-empty string');
-      }
-      if (!componentName) {
-        throw new Error('Invalid componentName: must be a non-empty string');
-      }
       if (!propertyPath) {
         throw new Error('Invalid propertyName: must be a non-empty string');
       }
 
-      const nestedPropertyName = `${componentName}.${propertyPath}`;
       const res = await tools.introspectionTools.getProperty({
-        objectPath,
-        propertyName: nestedPropertyName
+        objectPath: componentObjectPath,
+        propertyName: propertyPath
       });
       return cleanObject(res);
     }
     case 'set_component_property': {
-      const objectPath = await resolveObjectPathFromArgs(args, tools);
-      const componentName = typeof args.componentName === 'string' ? args.componentName.trim() : '';
+      const componentObjectPath = await resolveComponentObjectPathFromArgs(args, tools);
       const propertyPath =
         (typeof args.propertyName === 'string' && args.propertyName.trim().length > 0)
           ? args.propertyName.trim()
           : (typeof args.propertyPath === 'string' ? args.propertyPath.trim() : '');
-
-      if (!objectPath) {
-        throw new Error('Invalid objectPath: must be a non-empty string');
-      }
-      if (!componentName) {
-        throw new Error('Invalid componentName: must be a non-empty string');
-      }
       if (!propertyPath) {
         throw new Error('Invalid propertyName: must be a non-empty string');
       }
 
-      const nestedPropertyName = `${componentName}.${propertyPath}`;
       const res = await tools.introspectionTools.setProperty({
-        objectPath,
-        propertyName: nestedPropertyName,
+        objectPath: componentObjectPath,
+        propertyName: propertyPath,
         value: args.value
       });
       return cleanObject(res);
@@ -203,9 +228,9 @@ export async function handleInspectTools(action: string, args: any, tools: ITool
       const rawTag = typeof args.tag === 'string' ? args.tag.trim() : '';
       if (!rawTag) {
         return cleanObject({
-          success: true,
-          handled: true,
-          message: 'Empty tag add; no-op',
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'tag is required',
           actorName,
           tag: rawTag
         });
@@ -253,7 +278,8 @@ export async function handleInspectTools(action: string, args: any, tools: ITool
         const lower = msg.toLowerCase();
         if (lower.includes('actor not found')) {
           return cleanObject({
-            success: true,
+            success: false,
+            error: 'NOT_FOUND',
             handled: true,
             message: msg,
             deleted: actorName,
@@ -272,10 +298,12 @@ export async function handleInspectTools(action: string, args: any, tools: ITool
           : (typeof args.classPath === 'string' ? args.classPath.trim() : '');
       const res: any = await tools.introspectionTools.findObjectsByClass(className);
       if (!res || res.success === false) {
+        // Return proper failure state
         return cleanObject({
-          success: true,
-          handled: true,
-          message: res?.error || res?.message || 'find_by_class not implemented or failed',
+          success: false,
+          error: res?.error || 'OPERATION_FAILED',
+          message: res?.message || 'find_by_class failed',
+          className,
           objects: [],
           count: 0
         });
@@ -292,7 +320,8 @@ export async function handleInspectTools(action: string, args: any, tools: ITool
         const lower = msg.toLowerCase();
         if (lower.includes('actor not found')) {
           return cleanObject({
-            success: true,
+            success: false,
+            error: 'NOT_FOUND',
             handled: true,
             message: msg,
             actorName,
@@ -309,10 +338,12 @@ export async function handleInspectTools(action: string, args: any, tools: ITool
           : (typeof args.classPath === 'string' ? args.classPath.trim() : '');
       const res: any = await tools.introspectionTools.getCDO(className);
       if (!res || res.success === false) {
+        // Return proper failure state
         return cleanObject({
-          success: true,
-          handled: true,
-          message: res?.error || res?.message || 'inspect_class not implemented or failed',
+          success: false,
+          error: res?.error || 'OPERATION_FAILED',
+          message: res?.message || 'inspect_class failed',
+          className,
           cdo: res?.cdo ?? null
         });
       }

@@ -35,7 +35,6 @@ const MATERIAL_GRAPH_ACTION_MAP: Record<string, string> = {
   remove_material_node: 'remove_node',
   break_material_connections: 'break_connections',
   get_material_node_details: 'get_node_details',
-  rebuild_material: 'rebuild'
 };
 
 const BEHAVIOR_TREE_ACTION_MAP: Record<string, string> = {
@@ -55,7 +54,6 @@ const NIAGARA_GRAPH_ACTION_MAP: Record<string, string> = {
 
 function isMaterialGraphAction(action: string): boolean {
   return (
-    action === 'rebuild_material' ||
     Object.prototype.hasOwnProperty.call(MATERIAL_GRAPH_ACTION_MAP, action) ||
     action.includes('material_node') ||
     action.includes('material_pins') ||

@@ -188,7 +188,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
         rotation: rotation as any
       }, { timeoutMs: 10000 });
       if (resp && resp.success === true) {
-        return { success: true, message: resp.message || 'Camera set' };
+        return { success: true, message: resp.message || 'Camera set', location, rotation };
       }
       return { success: false, error: resp?.error || resp?.message || 'Failed to set camera' };
     } catch (err) {

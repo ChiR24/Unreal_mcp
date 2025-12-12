@@ -72,7 +72,13 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
         const res = await this.sendAction('blueprint_create', payload, { timeoutMs: typeof params.timeoutMs === 'number' ? params.timeoutMs : pluginTimeout, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
         if (res && res.success) {
           this.pluginBlueprintActionsAvailable = true;
-          return res;
+          // Enrich response for Validator
+          return {
+            ...res,
+            blueprint: sanitized.name,
+            path: `${sanitized.savePath}/${sanitized.name}`.replace('//', '/'),
+            message: res.message || `Created blueprint ${sanitized.name}`
+          };
         }
         if (res && this.isUnknownActionResponse(res)) {
           this.pluginBlueprintActionsAvailable = false;
@@ -80,6 +86,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
         }
         return res as any;
       } catch (err: any) {
+        // ... (unchanged catch block)
         const errTxt = String(err ?? '');
         const isTimeout = errTxt.includes('Request timed out') || errTxt.includes('-32001') || errTxt.toLowerCase().includes('timeout');
         if (isTimeout) {
@@ -357,7 +364,13 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       const candidates = this.buildCandidates(params.blueprintName);
       const primary = candidates[0] ?? params.blueprintName;
       const pluginResp = await this.sendAction('blueprint_compile', { requestedPath: primary, saveAfterCompile: params.saveAfterCompile });
-      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && pluginResp.success) {
+        return {
+          ...pluginResp,
+          blueprint: primary,
+          message: pluginResp.message || `Compiled ${primary}`
+        };
+      }
       if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
         this.pluginBlueprintActionsAvailable = false;
         return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_compile' } as const;

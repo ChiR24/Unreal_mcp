@@ -138,35 +138,49 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
               handled: true
             };
           }
-        } catch {
-          // Fall through to handled best-effort response
+          return cleanObject({
+            success: false,
+            error: (res as any)?.error || 'NOTIFICATION_FAILED',
+            message: (res as any)?.message || 'Failed to show notification',
+            action: 'show_widget',
+            widgetId
+          });
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          return {
+            success: false,
+            error: 'NOTIFICATION_FAILED',
+            message: msg,
+            action: 'show_widget',
+            widgetId
+          };
         }
-
-        return {
-          success: true,
-          message: 'Notification request handled (best-effort)',
-          action: 'show_widget',
-          widgetId,
-          handled: true
-        };
       }
 
       const widgetPath = typeof args?.widgetPath === 'string' ? args.widgetPath.trim() : '';
       if (!widgetPath) {
         return {
-          success: true,
-          message: 'Widget show request handled (no widgetPath provided)',
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'widgetPath is required to show a widget',
           action: 'show_widget',
-          handled: true
+          widgetId
         };
       }
 
       return cleanObject(await tools.uiTools.showWidget(widgetPath));
     }
     case 'set_cvar': {
-      const rawName = typeof args?.name === 'string' && args.name.trim().length > 0
+      // Accept multiple parameter names: name, cvar, key
+      const rawInput = typeof args?.name === 'string' && args.name.trim().length > 0
         ? args.name.trim()
-        : (typeof args?.cvar === 'string' ? args.cvar.trim() : '');
+        : (typeof args?.cvar === 'string' ? args.cvar.trim()
+          : (typeof args?.key === 'string' ? args.key.trim()
+            : (typeof args?.command === 'string' ? args.command.trim() : '')));
+
+      // Some callers pass a full "cvar value" command string.
+      const tokens = rawInput.split(/\s+/).filter(Boolean);
+      const rawName = tokens[0] ?? '';
 
       if (!rawName) {
         return {
@@ -177,7 +191,9 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         };
       }
 
-      const value = args?.value ?? '';
+      const value = (args?.value !== undefined && args?.value !== null)
+        ? args.value
+        : (tokens.length > 1 ? tokens.slice(1).join(' ') : '');
       await tools.systemTools.executeConsoleCommand(`${rawName} ${value}`);
       return {
         success: true,
@@ -191,7 +207,16 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       const section = typeof args?.category === 'string' && args.category.trim().length > 0
         ? args.category
         : args?.section;
-      return cleanObject(await tools.systemTools.getProjectSettings(section));
+      const resp = await tools.systemTools.getProjectSettings(section);
+      if (resp && resp.success && (resp.settings || resp.data || resp.result)) {
+        return cleanObject({
+          success: true,
+          message: 'Project settings retrieved',
+          settings: resp.settings || resp.data || resp.result,
+          ...resp
+        });
+      }
+      return cleanObject(resp);
     }
     case 'validate_assets': {
       const paths: string[] = Array.isArray(args?.paths) ? args.paths : [];
@@ -252,13 +277,13 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
 
           if (isMissingAsset || !soundPath) {
             return {
-              success: true,
-              message: 'Sound asset missing or unavailable; request handled as no-op',
+              success: false,
+              error: 'ASSET_NOT_FOUND',
+              message: 'Sound asset not found',
               action: 'play_sound',
               soundPath,
               volume,
-              pitch,
-              handled: true
+              pitch
             };
           }
 
@@ -286,13 +311,13 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
 
         if (isMissingAsset || !soundPath) {
           return {
-            success: true,
-            message: 'Sound asset missing or unavailable; request handled as no-op',
+            success: false,
+            error: 'ASSET_NOT_FOUND',
+            message: 'Sound asset not found',
             action: 'play_sound',
             soundPath,
             volume,
-            pitch,
-            handled: true
+            pitch
           };
         }
 
@@ -315,11 +340,19 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
           ? filenameArg.trim()
           : `Screenshot_${Date.now()}`;
 
-        // Best-effort: attempt a normal screenshot, but do not fail the call if it errors.
         try {
           await tools.editorTools.takeScreenshot(baseName);
-        } catch {
-          // Ignore any errors for metadata screenshots
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          return {
+            success: false,
+            error: 'SCREENSHOT_FAILED',
+            message: msg,
+            filename: baseName,
+            includeMetadata: true,
+            metadata: args?.metadata,
+            action: 'screenshot'
+          };
         }
 
         return {
@@ -356,13 +389,40 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       };
     }
     case 'set_fullscreen': {
-      const width = Number(args.width);
-      const height = Number(args.height);
-      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-        throw new Error('Invalid resolution: width and height must be positive numbers');
-      }
+      const parseResolution = (value: unknown): { width?: number; height?: number } => {
+        if (typeof value !== 'string') return {};
+        const m = value.trim().match(/^(\d+)x(\d+)$/i);
+        if (!m) return {};
+        return { width: Number(m[1]), height: Number(m[2]) };
+      };
+
+      const parsed = parseResolution(args?.resolution);
+      const width = Number.isFinite(Number(args.width)) ? Number(args.width) : (parsed.width ?? NaN);
+      const height = Number.isFinite(Number(args.height)) ? Number(args.height) : (parsed.height ?? NaN);
+
       const windowed = args.windowed === true; // default to fullscreen when omitted
       const suffix = windowed ? 'w' : 'f';
+
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        // If only toggling mode and no resolution provided, attempt a mode toggle.
+        if (typeof args?.windowed === 'boolean') {
+          await tools.systemTools.executeConsoleCommand(`r.FullScreenMode ${windowed ? 1 : 0}`);
+          return {
+            success: true,
+            message: `Fullscreen mode toggled (${windowed ? 'windowed' : 'fullscreen'})`,
+            action: 'set_fullscreen',
+            handled: true
+          };
+        }
+
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Invalid resolution: provide width/height or resolution like "1920x1080"',
+          action: 'set_fullscreen'
+        };
+      }
+
       await tools.systemTools.executeConsoleCommand(`r.SetRes ${width}x${height}${suffix}`);
       return {
         success: true,

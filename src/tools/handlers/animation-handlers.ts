@@ -31,10 +31,21 @@ export async function handleAnimationTools(action: string, args: any, tools: ITo
     const result = resp?.result ?? resp ?? {};
     const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
     const message = typeof result.message === 'string' ? result.message : '';
+    const msgLower = message.toLowerCase();
+
+    // Check for actor not found - return proper failure state
+    if (msgLower.includes('actor not found') || msgLower.includes('no animation played') || errorCode === 'ACTOR_NOT_FOUND') {
+      return cleanObject({
+        success: false,
+        error: 'ACTOR_NOT_FOUND',
+        message: message || 'Actor not found; no animation played',
+        actorName: args.actorName
+      });
+    }
 
     if (
       errorCode === 'INVALID_ARGUMENT' &&
-      message.toLowerCase().includes('actorname required') &&
+      msgLower.includes('actorname required') &&
       typeof args.playRate === 'number' &&
       args.playRate === 0
     ) {
@@ -49,7 +60,22 @@ export async function handleAnimationTools(action: string, args: any, tools: ITo
   }
 
   if (animAction === 'setup_ragdoll' || animAction === 'activate_ragdoll') {
-    return await executeAutomationRequest(tools, 'setup_ragdoll', args, 'Automation bridge not available for ragdoll setup');
+    const resp: any = await executeAutomationRequest(tools, 'setup_ragdoll', args, 'Automation bridge not available for ragdoll setup');
+    const result = resp?.result ?? resp ?? {};
+    const message = typeof result.message === 'string' ? result.message : '';
+    const msgLower = message.toLowerCase();
+
+    // Check for actor not found - return proper failure state
+    if (msgLower.includes('actor not found') || msgLower.includes('no ragdoll applied')) {
+      return cleanObject({
+        success: false,
+        error: 'ACTOR_NOT_FOUND',
+        message: message || 'Actor not found; no ragdoll applied',
+        actorName: args.actorName
+      });
+    }
+
+    return cleanObject(resp);
   }
 
   // Flatten blend space axis parameters for C++ handler

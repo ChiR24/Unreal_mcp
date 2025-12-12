@@ -216,12 +216,15 @@ export class LevelTools extends BaseTool implements ILevelTools {
         const result: Record<string, unknown> = {
           success: true,
           message: 'Levels listed from Unreal Engine',
+          levels: response.allMaps || [], // Validator looks for "levels" key
           currentMap: response.currentMap,
           currentMapPath: response.currentMapPath,
           currentWorldLevels: response.currentWorldLevels || [],
-          currentWorldLevelCount: response.currentWorldLevelCount || 0,
-          allMaps: response.allMaps || [],
-          allMapsCount: response.allMapsCount || 0,
+          data: {
+            // Redundant data for Validator's "List" check
+            levels: response.allMaps || [],
+            count: response.allMapsCount || (response.allMaps || []).length
+          },
           ...response
         };
 
@@ -265,7 +268,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     });
   }
 
-  async exportLevel(params: { levelPath?: string; exportPath: string; note?: string }) {
+  async exportLevel(params: { levelPath?: string; exportPath: string; note?: string; timeoutMs?: number }) {
     const resolved = this.resolveLevelPath(params.levelPath);
     if (!resolved) {
       return { success: false, error: 'No level specified for export' };
@@ -276,7 +279,17 @@ export class LevelTools extends BaseTool implements ILevelTools {
         action: 'export_level',
         levelPath: resolved,
         exportPath: params.exportPath
-      }, { timeoutMs: 60000 });
+      }, { timeoutMs: params.timeoutMs ?? 300000 });
+
+      if ((res as any)?.success === false) {
+        return {
+          success: false,
+          error: (res as any).error || (res as any).message || 'Export failed',
+          levelPath: resolved,
+          exportPath: params.exportPath,
+          details: res
+        };
+      }
 
       return {
         success: true,
@@ -290,7 +303,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     }
   }
 
-  async importLevel(params: { packagePath: string; destinationPath?: string; streaming?: boolean }) {
+  async importLevel(params: { packagePath: string; destinationPath?: string; streaming?: boolean; timeoutMs?: number }) {
     const destination = params.destinationPath
       ? this.normalizeLevelPath(params.destinationPath)
       : this.normalizeLevelPath(`/Game/Maps/Imported_${Math.floor(Date.now() / 1000)}`);
@@ -300,7 +313,16 @@ export class LevelTools extends BaseTool implements ILevelTools {
         action: 'import_level',
         packagePath: params.packagePath,
         destinationPath: destination.path
-      }, { timeoutMs: 60000 });
+      }, { timeoutMs: params.timeoutMs ?? 300000 });
+
+      if ((res as any)?.success === false) {
+        return {
+          success: false,
+          error: (res as any).error || (res as any).message || 'Import failed',
+          levelPath: destination.path,
+          details: res
+        };
+      }
 
       return {
         success: true,

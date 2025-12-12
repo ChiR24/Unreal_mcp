@@ -41,3 +41,47 @@ export async function executeAutomationRequest(
 
   return await automationBridge.sendAutomationRequest(toolName, args, options);
 }
+
+/**
+ * Normalize location to [x, y, z] array format
+ * Accepts both {x,y,z} object and [x,y,z] array formats
+ */
+export function normalizeLocation(location: any): [number, number, number] | undefined {
+  if (!location) return undefined;
+
+  // Already array format
+  if (Array.isArray(location) && location.length >= 3) {
+    return [Number(location[0]) || 0, Number(location[1]) || 0, Number(location[2]) || 0];
+  }
+
+  // Object format {x, y, z}
+  if (typeof location === 'object' && ('x' in location || 'y' in location || 'z' in location)) {
+    return [Number(location.x) || 0, Number(location.y) || 0, Number(location.z) || 0];
+  }
+
+  return undefined;
+}
+
+/**
+ * Normalize rotation to {pitch, yaw, roll} object format
+ * Accepts both {pitch,yaw,roll} object and [pitch,yaw,roll] array formats
+ */
+export function normalizeRotation(rotation: any): { pitch: number; yaw: number; roll: number } | undefined {
+  if (!rotation) return undefined;
+
+  // Array format [pitch, yaw, roll]
+  if (Array.isArray(rotation) && rotation.length >= 3) {
+    return { pitch: Number(rotation[0]) || 0, yaw: Number(rotation[1]) || 0, roll: Number(rotation[2]) || 0 };
+  }
+
+  // Already object format
+  if (typeof rotation === 'object') {
+    return {
+      pitch: Number(rotation.pitch) || 0,
+      yaw: Number(rotation.yaw) || 0,
+      roll: Number(rotation.roll) || 0
+    };
+  }
+
+  return undefined;
+}

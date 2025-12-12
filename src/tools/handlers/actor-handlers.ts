@@ -147,15 +147,16 @@ const handlers: Record<string, ActorActionHandler> = {
     },
     find_by_name: async (args, tools) => {
         // Support both actorName and name parameters for consistency
-        const actorName = args.actorName || args.name || '';
-        if (!actorName) {
-            return { success: false, error: 'actorName or name is required' };
+        const query = typeof (args.name ?? args.actorName ?? args.query) === 'string'
+            ? String(args.name ?? args.actorName ?? args.query).trim()
+            : '';
+        if (!query) {
+            return { success: false, error: 'INVALID_ARGUMENT', message: 'name (or actorName) is required' };
         }
-        // Use automation bridge to find actor by name
-        return executeAutomationRequest(tools, 'control_actor', {
-            action: 'get_actor_by_name',
-            actorName
-        });
+
+        // Use the plugin's fuzzy query endpoint (contains-match) instead of the
+        // exact lookup endpoint. This improves "spawn then find" reliability.
+        return tools.actorTools.findByName(query);
     }
 };
 

@@ -10,7 +10,7 @@ This repo runs **two cooperating processes**: Node.js MCP server (`src/`) + nati
 - Verify: `npm run automation:verify -- --project "X:/MyProject/Plugins"`.
 - Editor: Build/start (plugin WS client → Node 8090/8091).
 - Server: `npm run dev` (on-demand `tryConnect()`).
-- Offline: `UNREAL_MCP_MOCK_MODE=1`.
+
 - WASM: `npm run build:wasm` (5-8x JSON perf).
 
 ## High-Value Files
@@ -77,4 +77,4 @@ Specify op (e.g., `scs_add_component`) for minimal PR/tests.
 ## Detailed Guide (Preserved)
 Node: `src/index.ts/unreal-bridge/automation-bridge`. Tools: `src/tools/consolidated-*/tools/*`. Plugin: `Plugins/.../Private/*`.
 
-**Tests**: `tests/run-unreal-tool-tests.mjs` (Markdown); `UNREAL_MCP_MOCK_MODE=1`.
+**Tests**: `tests/run-unreal-tool-tests.mjs` (Markdown).

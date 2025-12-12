@@ -2997,6 +2997,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       return true;
     }
 
+    // Capture the value before compilation invalidates the Property pointer
+    const TSharedPtr<FJsonValue> CurrentValue =
+        ExportPropertyToJsonValue(TargetContainer, Property);
+
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     FKismetEditorUtilities::CompileBlueprint(Blueprint);
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
@@ -3005,8 +3009,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     Result->SetStringField(TEXT("propertyName"), PropertyName);
     Result->SetStringField(TEXT("blueprintPath"), LocalNormalized);
 
-    const TSharedPtr<FJsonValue> CurrentValue =
-        ExportPropertyToJsonValue(TargetContainer, Property);
     if (CurrentValue.IsValid()) {
       Result->SetField(TEXT("value"), CurrentValue);
     }
@@ -3842,7 +3844,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     FKismetEditorUtilities::CompileBlueprint(Blueprint);
-    const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
+    const bool bSaved = UEditorAssetLibrary::SaveLoadedAsset(Blueprint);
 
     TSharedPtr<FJsonObject> Entry =
         FMcpAutomationBridge_EnsureBlueprintEntry(RegistryKey);

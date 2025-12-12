@@ -1135,11 +1135,15 @@ bool FMcpBridgeWebSocket::SendControlFrame(const uint8 ControlOpCode,
 
 void FMcpBridgeWebSocket::HandleTextPayload(const TArray<uint8> &Payload) {
   const FString Message = BytesToStringView(Payload);
-  // Process message directly without dispatching to game thread
-  // The MCP server should handle threading appropriately
-  if (TSharedPtr<FMcpBridgeWebSocket> Pinned = SelfWeakPtr.Pin()) {
-    Pinned->MessageDelegate.Broadcast(Pinned, Message);
-  }
+  // Dispatch message handling to the game thread.
+  // Many automation handlers touch editor/world state and must run on the
+  // game thread. Keeping the socket receive loop thread-free also prevents
+  // long-running actions (e.g. export_level) from stalling the connection.
+  DispatchOnGameThread([WeakThis = SelfWeakPtr, Message] {
+    if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
+      Pinned->MessageDelegate.Broadcast(Pinned, Message);
+    }
+  });
 }
 
 void FMcpBridgeWebSocket::ResetFragmentState() {

@@ -11,7 +11,18 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
+  FString Lower = Action.ToLower();
+
+  // If the action is the generic "manage_asset" tool, check for a subAction in
+  // the payload
+  if (Lower == TEXT("manage_asset") && Payload.IsValid()) {
+    FString SubAction;
+    if (Payload->TryGetStringField(TEXT("subAction"), SubAction) &&
+        !SubAction.IsEmpty()) {
+      Lower = SubAction.ToLower();
+    }
+  }
+
   if (Lower.IsEmpty())
     return false;
 
@@ -75,6 +86,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleBulkDeleteAssets(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("generate_lods"))
     return HandleGenerateLODs(RequestId, Action, Payload, RequestingSocket);
+  if (Lower == TEXT("rebuild_material"))
+    return HandleRebuildMaterial(RequestId, Payload, RequestingSocket);
 
   return false;
 }
@@ -1674,6 +1687,12 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     Payload->TryGetStringField(TEXT("path"), PathFilter);
   }
 
+  // Sanitize PathFilter to remove trailing slash which can break AssetRegistry
+  // lookups
+  if (PathFilter.Len() > 1 && PathFilter.EndsWith(TEXT("/"))) {
+    PathFilter.RemoveAt(PathFilter.Len() - 1);
+  }
+
   bool bRecursive = true;
   Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
 
@@ -1708,6 +1727,13 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     // Default to /Game to prevent empty results or massive scan
     Filter.PackagePaths.Add(FName(TEXT("/Game")));
   }
+
+  // Ensure registry is up to date for the requested paths
+  TArray<FString> ScanPaths;
+  for (const FName &Path : Filter.PackagePaths) {
+    ScanPaths.Add(Path.ToString());
+  }
+  AssetRegistry.ScanPathsSynchronous(ScanPaths, true);
 
   if (!ClassFilter.IsEmpty()) {
     // Support both short class names and full paths (best effort)
@@ -1890,39 +1916,48 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAsset(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!Payload.IsValid()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("get_asset payload missing"), nullptr, TEXT("INVALID_PAYLOAD"));
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("get_asset payload missing"), nullptr,
+                           TEXT("INVALID_PAYLOAD"));
     return true;
   }
 
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
   if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"), nullptr, TEXT("ASSET_NOT_FOUND"));
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
+                           nullptr, TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
   FAssetData AssetData = UEditorAssetLibrary::FindAssetData(AssetPath);
   if (!AssetData.IsValid()) {
-      SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to find asset data"), nullptr, TEXT("ASSET_DATA_INVALID"));
-      return true;
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Failed to find asset data"), nullptr,
+                           TEXT("ASSET_DATA_INVALID"));
+    return true;
   }
 
   TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
   AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
-  AssetObj->SetStringField(TEXT("path"), AssetData.GetSoftObjectPath().ToString());
+  AssetObj->SetStringField(TEXT("path"),
+                           AssetData.GetSoftObjectPath().ToString());
   AssetObj->SetStringField(TEXT("class"), AssetData.AssetClassPath.ToString());
-  AssetObj->SetStringField(TEXT("packagePath"), AssetData.PackagePath.ToString());
+  AssetObj->SetStringField(TEXT("packagePath"),
+                           AssetData.PackagePath.ToString());
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetObjectField(TEXT("result"), AssetObj);
 
-  SendAutomationResponse(Socket, RequestId, true, TEXT("Asset details retrieved"), Resp, FString());
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Asset details retrieved"), Resp, FString());
   return true;
 #else
   return false;
@@ -2637,6 +2672,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
 
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
   if (AssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
@@ -2670,9 +2706,22 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
   Resp->SetObjectField(TEXT("tags"), TagsObj);
 
   // 2. Package Metadata information
-  // Iterating UMetaData keys is not directly supported via public API in a
-  // simpler way. We return successful Registry Tags which covers most metadata
-  // use cases.
+  UPackage *Package = Asset->GetOutermost();
+  if (Package) {
+
+    FMetaData &Meta = Package->GetMetaData();
+    bool bHasMeta = Meta.GetMapForObject(Asset) != nullptr;
+    Resp->SetBoolField(TEXT("debug_has_meta"), bHasMeta);
+
+    const TMap<FName, FString> *ObjectMeta = Meta.GetMapForObject(Asset);
+    if (ObjectMeta) {
+      TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
+      for (const auto &Entry : *ObjectMeta) {
+        MetaObj->SetStringField(Entry.Key.ToString(), Entry.Value);
+      }
+      Resp->SetObjectField(TEXT("metadata"), MetaObj);
+    }
+  }
 
   SendAutomationResponse(Socket, RequestId, true, TEXT("Metadata retrieved"),
                          Resp, FString());
@@ -2682,5 +2731,53 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
                          TEXT("get_metadata requires editor build"), nullptr,
                          TEXT("NOT_IMPLEMENTED"));
   return true;
+#endif
+}
+
+// ============================================================================
+// 9. MATERIAL REBUILD
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString AssetPath;
+  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
+                           nullptr, TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+  UMaterial *Material = Cast<UMaterial>(Asset);
+
+  if (!Material) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Asset is not a UMaterial"), nullptr,
+                           TEXT("INVALID_ASSET_TYPE"));
+    return true;
+  }
+
+  // Force rebuild/recompile
+  Material->Modify();
+  Material->PreEditChange(nullptr);
+  Material->PostEditChange();
+
+  // Material->EnsureIsComplete();
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Material rebuild triggered"), nullptr,
+                         FString());
+  return true;
+#else
+  return false;
 #endif
 }

@@ -48,6 +48,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   }
 
   UObject *RootObject = FindObject<UObject>(nullptr, *ObjectPath);
+#if WITH_EDITOR
+  if (!RootObject) {
+    if (AActor *FoundActor = FindActorByName(ObjectPath)) {
+      RootObject = FoundActor;
+      // Normalize for downstream error messages / responses
+      ObjectPath = FoundActor->GetPathName();
+    }
+  }
+#endif
   if (!RootObject) {
     SendAutomationError(
         RequestingSocket, RequestId,
@@ -300,6 +309,15 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
   }
 
   UObject *RootObject = FindObject<UObject>(nullptr, *ObjectPath);
+#if WITH_EDITOR
+  if (!RootObject) {
+    if (AActor *FoundActor = FindActorByName(ObjectPath)) {
+      RootObject = FoundActor;
+      // Normalize for downstream error messages / responses
+      ObjectPath = FoundActor->GetPathName();
+    }
+  }
+#endif
   if (!RootObject) {
     SendAutomationError(
         RequestingSocket, RequestId,

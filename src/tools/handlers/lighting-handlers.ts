@@ -1,7 +1,11 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
+import { normalizeLocation } from './common-handlers.js';
 
 export async function handleLightingTools(action: string, args: any, tools: ITools) {
+  // Normalize location parameter to accept both {x,y,z} and [x,y,z] formats
+  const normalizedLocation = normalizeLocation(args.location);
+
   switch (action) {
     case 'spawn_light':
     case 'create_light': {
@@ -9,7 +13,7 @@ export async function handleLightingTools(action: string, args: any, tools: IToo
       const lightType = args.lightType ? args.lightType.toLowerCase() : 'point';
       const commonParams = {
         name: args.name,
-        location: args.location,
+        location: normalizedLocation || args.location,
         rotation: args.rotation,
         intensity: args.intensity,
         color: args.color,
@@ -25,7 +29,7 @@ export async function handleLightingTools(action: string, args: any, tools: IToo
       } else if (lightType === 'spot') {
         return cleanObject(await tools.lightingTools.createSpotLight({
           ...commonParams,
-          location: args.location || [0, 0, 0],
+          location: normalizedLocation || [0, 0, 0],
           rotation: args.rotation || [0, 0, 0],
           innerCone: args.innerCone,
           outerCone: args.outerCone,
@@ -34,7 +38,7 @@ export async function handleLightingTools(action: string, args: any, tools: IToo
       } else if (lightType === 'rect') {
         return cleanObject(await tools.lightingTools.createRectLight({
           ...commonParams,
-          location: args.location || [0, 0, 0],
+          location: normalizedLocation || [0, 0, 0],
           rotation: args.rotation || [0, 0, 0],
           width: args.width,
           height: args.height

@@ -21,13 +21,17 @@ export async function handleEnvironmentTools(action: string, args: any, tools: I
         dataLayers: args.dataLayers
       }));
     case 'sculpt':
+    case 'sculpt_landscape': {
+      // Default to 'Raise' tool if not specified
+      const tool = args.tool || 'Raise';
       return cleanObject(await tools.landscapeTools.sculptLandscape({
         landscapeName: args.landscapeName || args.name,
-        tool: args.tool,
+        tool,
         location: args.location,
-        radius: args.radius,
-        strength: args.strength
+        radius: args.radius || 500,
+        strength: args.strength || 0.5
       }));
+    }
     case 'add_foliage': {
       // Check if this is adding a foliage TYPE (has meshPath) or INSTANCES (has locations/position)
       if (args.meshPath) {

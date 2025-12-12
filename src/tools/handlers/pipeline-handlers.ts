@@ -28,9 +28,13 @@ export async function handlePipelineTools(action: string, args: any, tools: IToo
         }
       }
 
-      const projectPath = process.env.UE_PROJECT_PATH;
+      let projectPath = process.env.UE_PROJECT_PATH;
+      if (!projectPath && args.projectPath) {
+        projectPath = args.projectPath;
+      }
+
       if (!projectPath) {
-        return { success: false, error: 'MISSING_PROJECT_PATH', message: 'UE_PROJECT_PATH environment variable is not set.' };
+        return { success: false, error: 'MISSING_PROJECT_PATH', message: 'UE_PROJECT_PATH environment variable is not set and no projectPath argument was provided.' };
       }
 
       // If projectPath points to a .uproject file, use it. If it's a directory, look for a .uproject file.

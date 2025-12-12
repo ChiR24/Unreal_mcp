@@ -1970,19 +1970,17 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
   }
 
   if (!TargetPawn) {
-    // Treat missing pawn as a safe no-op so tests expecting "no-op safe"
-    // montage playback can still pass.
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("error"),
+                         FString::Printf(TEXT("Actor not found: %s"),
+                                         *ActorName));
     Resp->SetStringField(TEXT("actorName"), ActorName);
     Resp->SetStringField(TEXT("montagePath"), MontagePath);
     Resp->SetNumberField(TEXT("playRate"), PlayRate);
-    Resp->SetBoolField(TEXT("playing"), false);
 
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Montage play request completed (actor not "
-                                "found; no animation played)"),
-                           Resp, FString());
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Actor not found"), Resp,
+                           TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
 
@@ -2008,18 +2006,17 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
 
   UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *MontagePath);
   if (!Montage) {
-    // Treat missing montage as a safe no-op success as well.
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("error"),
+                         FString::Printf(TEXT("Failed to load montage: %s"),
+                                         *MontagePath));
     Resp->SetStringField(TEXT("actorName"), ActorName);
     Resp->SetStringField(TEXT("montagePath"), MontagePath);
     Resp->SetNumberField(TEXT("playRate"), PlayRate);
-    Resp->SetBoolField(TEXT("playing"), false);
 
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Montage play request completed (asset not "
-                                "found; no animation played)"),
-                           Resp, FString());
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Failed to load montage"), Resp,
+                           TEXT("ASSET_LOAD_FAILED"));
     return true;
   }
 
@@ -2123,16 +2120,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
 
   if (!TargetPawn) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("error"),
+                         FString::Printf(TEXT("Actor not found: %s"),
+                                         *ActorName));
     Resp->SetStringField(TEXT("actorName"), ActorName);
     Resp->SetNumberField(TEXT("blendWeight"), BlendWeight);
-    Resp->SetBoolField(TEXT("ragdollActive"), false);
-    Resp->SetBoolField(TEXT("hasPhysicsAsset"), false);
 
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Ragdoll setup request completed (actor not "
-                                "found; no ragdoll applied)"),
-                           Resp, FString());
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Actor not found"), Resp,
+                           TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
 

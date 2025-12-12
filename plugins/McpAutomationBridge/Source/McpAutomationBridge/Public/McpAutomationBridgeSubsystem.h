@@ -8,7 +8,6 @@
 #include "Templates/SharedPointer.h"
 #include "McpAutomationBridgeSubsystem.generated.h"
 
-
 UENUM(BlueprintType)
 enum class EMcpAutomationBridgeState : uint8 {
   Disconnected,
@@ -454,10 +453,10 @@ private:
   HandleNiagaraGraphAction(const FString &RequestId, const FString &Action,
                            const TSharedPtr<FJsonObject> &Payload,
                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-  bool
-  HandleMaterialGraphAction(const FString &RequestId, const FString &Action,
-                            const TSharedPtr<FJsonObject> &Payload,
-                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleMaterialGraphAction(const FString &RequestId,
+                                 const FString &Action,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TSharedPtr<FMcpBridgeWebSocket> Socket);
   bool
   HandleBehaviorTreeAction(const FString &RequestId, const FString &Action,
                            const TSharedPtr<FJsonObject> &Payload,
@@ -599,6 +598,28 @@ private:
   bool HandleControlActorAddComponent(const FString &RequestId,
                                       const TSharedPtr<FJsonObject> &Payload,
                                       TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleSequenceAddSection(const FString &RequestId,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleSequenceSetTickResolution(const FString &RequestId,
+                                       const TSharedPtr<FJsonObject> &Payload,
+                                       TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleSequenceSetViewRange(const FString &RequestId,
+                                  const TSharedPtr<FJsonObject> &Payload,
+                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleSequenceSetTrackMuted(const FString &RequestId,
+                                   const TSharedPtr<FJsonObject> &Payload,
+                                   TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleSequenceSetTrackSolo(const FString &RequestId,
+                                  const TSharedPtr<FJsonObject> &Payload,
+                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleSequenceSetTrackLocked(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleSequenceRemoveTrack(const FString &RequestId,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TSharedPtr<FMcpBridgeWebSocket> Socket);
+
   bool HandleControlActorSetComponentProperties(
       const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
       TSharedPtr<FMcpBridgeWebSocket> Socket);
@@ -662,6 +683,12 @@ private:
   bool HandleControlEditorStop(const FString &RequestId,
                                const TSharedPtr<FJsonObject> &Payload,
                                TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorEject(const FString &RequestId,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorPossess(const FString &RequestId,
+                                  const TSharedPtr<FJsonObject> &Payload,
+                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
   bool HandleControlEditorFocusActor(const FString &RequestId,
                                      const TSharedPtr<FJsonObject> &Payload,
                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
@@ -748,6 +775,9 @@ private:
   bool HandleGetMaterialStats(const FString &RequestId,
                               const TSharedPtr<FJsonObject> &Payload,
                               TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleRebuildMaterial(const FString &RequestId,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   // Lightweight snapshot cache for automation requests (e.g., create_snapshot)
   TMap<FString, FTransform> CachedActorSnapshots;

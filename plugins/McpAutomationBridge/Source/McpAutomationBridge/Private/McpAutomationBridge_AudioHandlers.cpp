@@ -62,6 +62,15 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
   if (Sound)
     return Sound;
 
+  // Optimization: If it looks like a path and wasn't found, fail immediately
+  // to avoid expensive recursive search which causes timeouts.
+  if (SoundPath.Contains(TEXT("/"))) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+           TEXT("Sound asset '%s' not found (skipping recursive search)."),
+           *SoundPath);
+    return nullptr;
+  }
+
   // Fallback: Try to find the asset by Name if the full path failed
   FString AssetName = FPaths::GetBaseFilename(SoundPath);
   FAssetRegistryModule &AssetRegistryModule =
@@ -96,7 +105,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   const FString Lower = Action.ToLower();
-  if (!Lower.StartsWith(TEXT("create_sound_")) &&
+  if (!Lower.StartsWith(TEXT("audio_")) &&
+      !Lower.StartsWith(TEXT("create_sound_")) &&
       !Lower.StartsWith(TEXT("play_sound_")) &&
       !Lower.StartsWith(TEXT("set_sound_")) &&
       !Lower.StartsWith(TEXT("push_sound_")) &&
@@ -107,7 +117,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       !Lower.StartsWith(TEXT("enable_audio_")) &&
       !Lower.StartsWith(TEXT("fade_sound")) &&
       !Lower.StartsWith(TEXT("set_doppler_")) &&
-      !Lower.StartsWith(TEXT("set_audio_"))) {
+      !Lower.StartsWith(TEXT("set_audio_")) &&
+      !Lower.StartsWith(TEXT("clear_sound_")) &&
+      !Lower.StartsWith(TEXT("set_base_sound_")) &&
+      !Lower.StartsWith(TEXT("prime_")) &&
+      !Lower.StartsWith(TEXT("spawn_sound_"))) {
     return false;
   }
 
@@ -118,7 +132,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     return true;
   }
 
-  if (Lower == TEXT("create_sound_cue")) {
+  if (Lower == TEXT("create_sound_cue") ||
+      Lower == TEXT("audio_create_sound_cue")) {
     FString Name;
     if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
@@ -211,7 +226,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("SoundCue created"), Resp);
     return true;
-  } else if (Lower == TEXT("play_sound_at_location")) {
+  } else if (Lower == TEXT("play_sound_at_location") ||
+             Lower == TEXT("audio_play_sound_at_location")) {
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
         SoundPath.IsEmpty()) {
@@ -289,7 +305,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Sound played at location"), Resp);
     return true;
-  } else if (Lower == TEXT("play_sound_2d")) {
+  } else if (Lower == TEXT("play_sound_2d") ||
+             Lower == TEXT("audio_play_sound_2d")) {
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
         SoundPath.IsEmpty()) {
@@ -334,7 +351,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Sound played 2D"), Resp);
     return true;
-  } else if (Lower == TEXT("create_sound_class")) {
+  } else if (Lower == TEXT("create_sound_class") ||
+             Lower == TEXT("audio_create_sound_class")) {
     FString Name;
     if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
@@ -388,7 +406,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("ASSET_CREATION_FAILED"));
     }
     return true;
-  } else if (Lower == TEXT("create_sound_mix")) {
+  } else if (Lower == TEXT("create_sound_mix") ||
+             Lower == TEXT("audio_create_sound_mix")) {
     FString Name;
     if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
@@ -442,7 +461,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("ASSET_CREATION_FAILED"));
     }
     return true;
-  } else if (Lower == TEXT("push_sound_mix")) {
+  } else if (Lower == TEXT("push_sound_mix") ||
+             Lower == TEXT("audio_push_sound_mix")) {
     FString MixName;
     if (!Payload->TryGetStringField(TEXT("mixName"), MixName) ||
         MixName.IsEmpty()) {
@@ -470,7 +490,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("SoundMix not found"), TEXT("ASSET_NOT_FOUND"));
     }
     return true;
-  } else if (Lower == TEXT("pop_sound_mix")) {
+  } else if (Lower == TEXT("pop_sound_mix") ||
+             Lower == TEXT("audio_pop_sound_mix")) {
     FString MixName;
     if (!Payload->TryGetStringField(TEXT("mixName"), MixName) ||
         MixName.IsEmpty()) {
@@ -498,7 +519,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("SoundMix not found"), TEXT("ASSET_NOT_FOUND"));
     }
     return true;
-  } else if (Lower == TEXT("set_sound_mix_class_override")) {
+  } else if (Lower == TEXT("set_sound_mix_class_override") ||
+             Lower == TEXT("audio_set_sound_mix_class_override")) {
     FString MixName, ClassName;
     Payload->TryGetStringField(TEXT("mixName"), MixName);
     Payload->TryGetStringField(TEXT("soundClassName"), ClassName);
@@ -537,7 +559,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("NO_WORLD"));
     }
     return true;
-  } else if (Lower == TEXT("play_sound_attached")) {
+  } else if (Lower == TEXT("play_sound_attached") ||
+             Lower == TEXT("audio_play_sound_attached")) {
     FString SoundPath, ActorName, AttachPoint;
     Payload->TryGetStringField(TEXT("soundPath"), SoundPath);
     Payload->TryGetStringField(TEXT("actorName"), ActorName);
@@ -599,13 +622,18 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     }
     return true;
   } else if (Lower == TEXT("fade_sound_out") ||
-             Lower == TEXT("fade_sound_in")) {
+             Lower == TEXT("fade_sound_in") ||
+             Lower == TEXT("audio_fade_sound_out") ||
+             Lower == TEXT("audio_fade_sound_in")) {
     FString ActorName;
     Payload->TryGetStringField(TEXT("actorName"), ActorName);
     double FadeTime = 1.0;
     Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
-    double TargetVol = (Lower == TEXT("fade_sound_in")) ? 1.0 : 0.0;
-    if (Lower == TEXT("fade_sound_in"))
+    double TargetVol =
+        (Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
+            ? 1.0
+            : 0.0;
+    if (Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
       Payload->TryGetNumberField(TEXT("targetVolume"), TargetVol);
 
     if (!GEditor)
@@ -622,7 +650,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       UAudioComponent *AudioComp =
           TargetActor->FindComponentByClass<UAudioComponent>();
       if (AudioComp) {
-        if (Lower == TEXT("fade_sound_in"))
+        if (Lower == TEXT("fade_sound_in") ||
+            Lower == TEXT("audio_fade_sound_in"))
           AudioComp->FadeIn((float)FadeTime, (float)TargetVol);
         else
           AudioComp->FadeOut((float)FadeTime, (float)TargetVol);
@@ -640,7 +669,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                         TEXT("Audio component not found on actor"),
                         TEXT("COMPONENT_NOT_FOUND"));
     return true;
-  } else if (Lower == TEXT("create_ambient_sound")) {
+  } else if (Lower == TEXT("create_ambient_sound") ||
+             Lower == TEXT("audio_create_ambient_sound")) {
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
         SoundPath.IsEmpty()) {
@@ -712,7 +742,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("SPAWN_FAILED"));
     }
     return true;
-  } else if (Lower == TEXT("spawn_sound_at_location")) {
+  } else if (Lower == TEXT("spawn_sound_at_location") ||
+             Lower == TEXT("audio_spawn_sound_at_location")) {
     // Similar to create_ambient_sound but explicit action name
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
@@ -777,7 +808,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("Failed to spawn sound"), TEXT("SPAWN_FAILED"));
     }
     return true;
-  } else if (Lower == TEXT("clear_sound_mix_class_override")) {
+  } else if (Lower == TEXT("clear_sound_mix_class_override") ||
+             Lower == TEXT("audio_clear_sound_mix_class_override")) {
     FString MixName, ClassName;
     Payload->TryGetStringField(TEXT("mixName"), MixName);
     Payload->TryGetStringField(TEXT("soundClassName"), ClassName);

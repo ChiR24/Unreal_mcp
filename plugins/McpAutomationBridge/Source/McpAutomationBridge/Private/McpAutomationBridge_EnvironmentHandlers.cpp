@@ -1102,6 +1102,15 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     }
 
     UObject *TargetObject = FindObject<UObject>(nullptr, *ObjectPath);
+
+    // Compatibility: allow passing actor label/name/path as objectPath.
+    // Many callers use simple names like "MyActor".
+    if (!TargetObject) {
+      if (AActor *FoundActor = FindActorByName(ObjectPath)) {
+        TargetObject = FoundActor;
+        ObjectPath = FoundActor->GetPathName();
+      }
+    }
     if (!TargetObject) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -1139,6 +1148,14 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     }
 
     UObject *TargetObject = FindObject<UObject>(nullptr, *ObjectPath);
+
+    // Compatibility: allow passing actor label/name/path as objectPath.
+    if (!TargetObject) {
+      if (AActor *FoundActor = FindActorByName(ObjectPath)) {
+        TargetObject = FoundActor;
+        ObjectPath = FoundActor->GetPathName();
+      }
+    }
     if (!TargetObject) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -1162,6 +1179,13 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     Result->SetStringField(TEXT("propertyName"), PropertyName);
     Result->SetStringField(TEXT("propertyType"),
                            Property->GetClass()->GetName());
+
+    // Return value as string for broad compatibility.
+    FString ValueText;
+    const void *ValuePtr = Property->ContainerPtrToValuePtr<void>(TargetObject);
+    Property->ExportTextItem_Direct(ValueText, ValuePtr, nullptr, TargetObject,
+                                    PPF_None);
+    Result->SetStringField(TEXT("value"), ValueText);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            FString::Printf(TEXT("Retrieved property: %s.%s"),
@@ -1199,6 +1223,14 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     }
 
     UObject *TargetObject = FindObject<UObject>(nullptr, *ObjectPath);
+
+    // Compatibility: allow passing actor label/name/path as objectPath.
+    if (!TargetObject) {
+      if (AActor *FoundActor = FindActorByName(ObjectPath)) {
+        TargetObject = FoundActor;
+        ObjectPath = FoundActor->GetPathName();
+      }
+    }
     if (!TargetObject) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,

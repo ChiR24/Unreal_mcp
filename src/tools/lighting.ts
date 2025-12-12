@@ -1,6 +1,7 @@
 // Lighting tools for Unreal Engine using Automation Bridge
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
+import { ensureVector3 } from '../utils/validation.js';
 
 export class LightingTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
@@ -23,7 +24,8 @@ export class LightingTools {
       }
     }
 
-    throw new Error('Invalid name: must be a non-empty string');
+    // Auto-generate if no name is provided
+    return `Light_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
   }
 
   /**
@@ -191,14 +193,13 @@ export class LightingTools {
     }
 
     // Validate location array
+    // Validate location array
     if (params.location !== undefined) {
-      if (!Array.isArray(params.location) || params.location.length !== 3) {
-        throw new Error('Invalid location: must be an array [x,y,z]');
-      }
-      for (const l of params.location) {
-        if (typeof l !== 'number' || !isFinite(l)) {
-          throw new Error('Invalid location component: must be finite numbers');
-        }
+      // Ensure location is valid array [x,y,z]
+      try {
+        params.location = ensureVector3(params.location, 'location');
+      } catch (e) {
+        throw new Error(`Invalid location: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
@@ -778,6 +779,7 @@ export class LightingTools {
     quality?: 'Preview' | 'Medium' | 'High' | 'Production';
     buildOnlySelected?: boolean;
     buildReflectionCaptures?: boolean;
+    levelPath?: string;
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge required for lighting build');
@@ -787,7 +789,8 @@ export class LightingTools {
       const response = await this.automationBridge.sendAutomationRequest('bake_lightmap', {
         quality: params.quality || 'High',
         buildOnlySelected: params.buildOnlySelected || false,
-        buildReflectionCaptures: params.buildReflectionCaptures !== false
+        buildReflectionCaptures: params.buildReflectionCaptures !== false,
+        levelPath: params.levelPath
       }, {
         timeoutMs: 300000 // 5 minutes for lighting builds
       });

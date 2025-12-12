@@ -198,46 +198,36 @@ export class NiagaraTools {
       mesh?: string;
     };
   }) {
-    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
-      try {
-        const resp: any = await this.automationBridge.sendAutomationRequest('manage_niagara_graph', {
-          subAction: 'add_emitter',
-          systemName: params.systemName,
-          emitterName: params.emitterName,
-          emitterType: params.emitterType,
-          properties: params.properties
-        });
-
-        if (resp && resp.success !== false) {
-          return {
-            success: true,
-            message: resp.message || `Emitter ${params.emitterName} added to ${params.systemName}`,
-            emitterId: resp.result?.emitterId
-          };
-        }
-
-        // If specific failure, check if it's NOT_IMPLEMENTED
-        if (resp?.error === 'NOT_IMPLEMENTED') {
-          // Graceful stub fallback
-          return {
-            success: true,
-            warning: 'Emitter addition simulated (backend support pending)',
-            message: `Simulated adding ${params.emitterName} to ${params.systemName}`
-          };
-        }
-
-        return { success: false, error: resp?.error || 'ADD_EMITTER_FAILED', message: resp?.message };
-      } catch (_e) {
-        // Fall through to stub on error
-      }
+    if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
+      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'addEmitter requires automation bridge' } as const;
     }
 
-    // Fallback graceful stub if bridge unavailable or failed
-    return {
-      success: true,
-      warning: 'Emitter addition simulated (bridge unavailable)',
-      message: `Simulated adding ${params.emitterName} to ${params.systemName}`
-    };
+    try {
+      const resp: any = await this.automationBridge.sendAutomationRequest('manage_niagara_graph', {
+        subAction: 'add_emitter',
+        systemName: params.systemName,
+        emitterName: params.emitterName,
+        emitterType: params.emitterType,
+        properties: params.properties
+      });
+
+      if (resp && resp.success !== false) {
+        return {
+          success: true,
+          message: resp.message || `Emitter ${params.emitterName} added to ${params.systemName}`,
+          emitterId: resp.result?.emitterId
+        };
+      }
+
+      return {
+        success: false,
+        error: resp?.error || 'ADD_EMITTER_FAILED',
+        message: resp?.message || 'Failed to add emitter'
+      };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return { success: false, error: 'ADD_EMITTER_FAILED', message };
+    }
   }
 
   async addModule(params: {

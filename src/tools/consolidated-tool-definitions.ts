@@ -287,7 +287,8 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
               relativeScale: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
             }
           }
-        }
+        },
+        data: { type: 'object' }
       }
     }
   },
@@ -401,7 +402,8 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
       type: 'object',
       properties: {
         success: { type: 'boolean' },
-        message: { type: 'string' }
+        message: { type: 'string' },
+        data: { type: 'object' }
       }
     }
   },
