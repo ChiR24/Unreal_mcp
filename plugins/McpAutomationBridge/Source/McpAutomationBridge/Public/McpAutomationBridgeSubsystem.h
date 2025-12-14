@@ -8,6 +8,7 @@
 #include "Templates/SharedPointer.h"
 #include "McpAutomationBridgeSubsystem.generated.h"
 
+
 UENUM(BlueprintType)
 enum class EMcpAutomationBridgeState : uint8 {
   Disconnected,
@@ -501,6 +502,9 @@ private:
                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
 private:
+  // Ticker handle for managing the subsystems tick function
+  FTSTicker::FDelegateHandle TickHandle;
+
   // Sequence helpers
   FString ResolveSequencePath(const TSharedPtr<FJsonObject> &Payload);
   TSharedPtr<FJsonObject> EnsureSequenceEntry(const FString &SeqPath);

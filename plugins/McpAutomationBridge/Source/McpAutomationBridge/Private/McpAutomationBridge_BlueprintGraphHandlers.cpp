@@ -12,6 +12,7 @@
 #include "K2Node_CallFunction.h"
 #include "K2Node_CommutativeAssociativeBinaryOperator.h"
 #include "K2Node_CustomEvent.h"
+#include "K2Node_DynamicCast.h"
 #include "K2Node_Event.h"
 #include "K2Node_ExecutionSequence.h"
 #include "K2Node_FunctionEntry.h"
@@ -271,7 +272,17 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         {TEXT("Divide_DoubleDouble"),
          MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Divide_DoubleDouble"))},
         {TEXT("FTrunc"), MakeTuple(TEXT("UKismetMathLibrary"), TEXT("FTrunc"))},
-    };
+        // Vector Ops
+        {TEXT("MakeVector"),
+         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("MakeVector"))},
+        {TEXT("BreakVector"),
+         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("BreakVector"))},
+        // Actor/Component Ops
+        {TEXT("GetComponentByClass"),
+         MakeTuple(TEXT("AActor"), TEXT("GetComponentByClass"))},
+        // Timer
+        {TEXT("GetWorldTimerManager"),
+         MakeTuple(TEXT("UKismetSystemLibrary"), TEXT("K2_GetTimerManager"))}};
 
     // Check if this is a common function node shortcut
     if (const auto *FuncInfo = CommonFunctionNodes.Find(NodeType)) {
@@ -334,7 +345,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       InputNode->InputAxisName = FName(*InputAxisName);
 
       FinalizeAndReport(NodeCreator, InputNode);
-    } else if (NodeType == TEXT("CallFunction")) {
+    } else if (NodeType == TEXT("CallFunction") ||
+               NodeType == TEXT("K2Node_CallFunction")) {
       FString MemberName;
       Payload->TryGetStringField(TEXT("memberName"), MemberName);
       FString MemberClass;
@@ -543,14 +555,42 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
                             *EventName, *SearchedClasses),
             TEXT("EVENT_NOT_FOUND"));
       }
-    } else if (NodeType == TEXT("Branch")) {
-      FGraphNodeCreator<UK2Node_IfThenElse> NodeCreator(*TargetGraph);
-      UK2Node_IfThenElse *NewNode = NodeCreator.CreateNode(false);
-      FinalizeAndReport(NodeCreator, NewNode);
+
+    } else if (NodeType == TEXT("Cast") ||
+               NodeType.StartsWith(TEXT("CastTo"))) {
+      FString TargetClassName;
+      Payload->TryGetStringField(TEXT("targetClass"), TargetClassName);
+
+      // If targetClass not specified, try to infer from nodeType
+      // "CastTo<ClassName>"
+      if (TargetClassName.IsEmpty() && NodeType.StartsWith(TEXT("CastTo"))) {
+        TargetClassName = NodeType.Mid(6); // Remove "CastTo" prefix
+      }
+
+      UClass *TargetClass = ResolveUClass(TargetClassName);
+      if (!TargetClass) {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(
+                TEXT("Could not resolve target class '%s' for Cast node"),
+                *TargetClassName),
+            TEXT("CLASS_NOT_FOUND"));
+        return true;
+      }
+
+      FGraphNodeCreator<UK2Node_DynamicCast> NodeCreator(*TargetGraph);
+      UK2Node_DynamicCast *CastNode = NodeCreator.CreateNode(false);
+      CastNode->TargetType = TargetClass;
+      FinalizeAndReport(NodeCreator, CastNode);
     } else if (NodeType == TEXT("Sequence")) {
       FGraphNodeCreator<UK2Node_ExecutionSequence> NodeCreator(*TargetGraph);
       UK2Node_ExecutionSequence *NewNode = NodeCreator.CreateNode(false);
       FinalizeAndReport(NodeCreator, NewNode);
+    } else if (NodeType == TEXT("Branch") || NodeType == TEXT("IfThenElse") ||
+               NodeType == TEXT("K2Node_IfThenElse")) {
+      FGraphNodeCreator<UK2Node_IfThenElse> NodeCreator(*TargetGraph);
+      UK2Node_IfThenElse *BranchNode = NodeCreator.CreateNode(false);
+      FinalizeAndReport(NodeCreator, BranchNode);
     } else if (NodeType == TEXT("Literal")) {
       // Create a literal node that can hold an object reference. This is a
       // fully functional K2 literal node that returns the referenced asset
@@ -645,8 +685,18 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       return true;
     }
 
-    UEdGraphPin *FromPin = FromNode->FindPin(*FromPinName);
-    UEdGraphPin *ToPin = ToNode->FindPin(*ToPinName);
+    // Handle PinName in format "NodeName.PinName"
+    FString FromPinClean = FromPinName;
+    if (FromPinName.Contains(TEXT("."))) {
+      FromPinName.Split(TEXT("."), nullptr, &FromPinClean);
+    }
+    FString ToPinClean = ToPinName;
+    if (ToPinName.Contains(TEXT("."))) {
+      ToPinName.Split(TEXT("."), nullptr, &ToPinClean);
+    }
+
+    UEdGraphPin *FromPin = FromNode->FindPin(*FromPinClean);
+    UEdGraphPin *ToPin = ToNode->FindPin(*ToPinClean);
 
     if (!FromPin || !ToPin) {
       SendAutomationError(RequestingSocket, RequestId,
@@ -838,7 +888,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       TargetNode->Modify();
       bool bHandled = false;
 
-      if (PropertyName.Equals(TEXT("Comment"), ESearchCase::IgnoreCase)) {
+      if (PropertyName.Equals(TEXT("Comment"), ESearchCase::IgnoreCase) ||
+          PropertyName.Equals(TEXT("NodeComment"), ESearchCase::IgnoreCase)) {
         TargetNode->NodeComment = Value;
         bHandled = true;
       } else if (PropertyName.Equals(TEXT("X"), ESearchCase::IgnoreCase) ||

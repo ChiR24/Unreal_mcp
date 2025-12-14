@@ -106,14 +106,35 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target) {
     return nullptr;
 
   TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
+  AActor *ExactMatch = nullptr;
+  TArray<AActor *> FuzzyMatches;
+
   for (AActor *A : AllActors) {
     if (!A)
       continue;
     if (A->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
         A->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
         A->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) {
-      return A;
+      ExactMatch = A;
+      break;
     }
+    // Collect fuzzy matches
+    if (A->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase)) {
+      FuzzyMatches.Add(A);
+    }
+  }
+
+  if (ExactMatch) {
+    return ExactMatch;
+  }
+
+  // If no exact match, check fuzzy matches
+  if (FuzzyMatches.Num() == 1) {
+    return FuzzyMatches[0];
+  } else if (FuzzyMatches.Num() > 1) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+           TEXT("FindActorByName: Ambiguous match for '%s'. Found %d matches."),
+           *Target, FuzzyMatches.Num());
   }
 
   // Fallback: try to load as asset if it looks like a path
@@ -537,8 +558,36 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
 
   if (Prim->Mobility == EComponentMobility::Static)
     Prim->SetMobility(EComponentMobility::Movable);
-  if (!Prim->IsSimulatingPhysics())
+
+  // Ensure collision is enabled for physics
+  if (Prim->GetCollisionEnabled() == ECollisionEnabled::NoCollision) {
+    Prim->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+  }
+
+  // Check if collision geometry exists (common failure for empty
+  // StaticMeshActors)
+  if (UStaticMeshComponent *SMC = Cast<UStaticMeshComponent>(Prim)) {
+    if (!SMC->GetStaticMesh()) {
+      SendStandardErrorResponse(
+          this, Socket, RequestId, TEXT("PHYSICS_FAILED"),
+          TEXT("StaticMeshComponent has no StaticMesh assigned."), nullptr);
+      return true;
+    }
+    if (!SMC->GetStaticMesh()->GetBodySetup()) {
+      SendStandardErrorResponse(
+          this, Socket, RequestId, TEXT("PHYSICS_FAILED"),
+          TEXT("StaticMesh has no collision geometry (BodySetup is null)."),
+          nullptr);
+      return true;
+    }
+  }
+
+  if (!Prim->IsSimulatingPhysics()) {
     Prim->SetSimulatePhysics(true);
+    // Must recreate physics state for the body to be properly initialized in
+    // Editor
+    Prim->RecreatePhysicsState();
+  }
 
   Prim->AddForce(ForceVector);
   Prim->WakeAllRigidBodies();
@@ -557,9 +606,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
 
   if (!bIsSimulating) {
+    FString FailureReason = TEXT("Failed to enable physics simulation.");
+    if (Prim->GetCollisionEnabled() == ECollisionEnabled::NoCollision) {
+      FailureReason += TEXT(" Collision is disabled.");
+    } else if (Prim->Mobility != EComponentMobility::Movable) {
+      FailureReason += TEXT(" Component is not Movable.");
+    }
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("PHYSICS_FAILED"),
-                              TEXT("Failed to enable physics simulation"),
-                              Data);
+                              FailureReason, Data);
     return true;
   }
 
@@ -965,7 +1019,68 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
   UClass *ComponentClass = TargetComponent->GetClass();
   TargetComponent->Modify();
 
+  // PRIORITY: Apply Mobility FIRST.
+  // Physics simulation fails if the component is generic "Static".
+  // Scan for Mobility key case-insensitively to ensure we find it regardless of
+  // JSON casing
+  const TSharedPtr<FJsonValue> *MobilityVal = nullptr;
+  FString MobilityKey;
   for (const auto &Pair : (*PropertiesPtr)->Values) {
+    if (Pair.Key.Equals(TEXT("Mobility"), ESearchCase::IgnoreCase)) {
+      MobilityVal = &Pair.Value;
+      MobilityKey = Pair.Key;
+      break;
+    }
+  }
+
+  if (MobilityVal) {
+    if (USceneComponent *SC = Cast<USceneComponent>(TargetComponent)) {
+      FString EnumVal;
+      if ((*MobilityVal)->TryGetString(EnumVal)) {
+        // Parse enum string
+        int64 Val =
+            StaticEnum<EComponentMobility::Type>()->GetValueByNameString(
+                EnumVal);
+        if (Val != INDEX_NONE) {
+          SC->SetMobility((EComponentMobility::Type)Val);
+          AppliedProperties.Add(MobilityKey);
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+                 TEXT("Explicitly set Mobility to %s"), *EnumVal);
+        }
+      } else {
+        double Val;
+        if ((*MobilityVal)->TryGetNumber(Val)) {
+          SC->SetMobility((EComponentMobility::Type)(int32)Val);
+          AppliedProperties.Add(MobilityKey);
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+                 TEXT("Explicitly set Mobility to %d"), (int32)Val);
+        }
+      }
+    }
+  }
+
+  for (const auto &Pair : (*PropertiesPtr)->Values) {
+    // Skip Mobility as we already handled it
+    if (Pair.Key.Equals(TEXT("Mobility"), ESearchCase::IgnoreCase))
+      continue;
+
+    // Special handling for SimulatePhysics
+    if (Pair.Key.Equals(TEXT("SimulatePhysics"), ESearchCase::IgnoreCase) ||
+        Pair.Key.Equals(TEXT("bSimulatePhysics"), ESearchCase::IgnoreCase)) {
+      if (UPrimitiveComponent *Prim =
+              Cast<UPrimitiveComponent>(TargetComponent)) {
+        bool bVal = false;
+        if (Pair.Value->TryGetBool(bVal)) {
+          Prim->SetSimulatePhysics(bVal);
+          AppliedProperties.Add(Pair.Key);
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+                 TEXT("Explicitly set SimulatePhysics to %s"),
+                 bVal ? TEXT("True") : TEXT("False"));
+          continue;
+        }
+      }
+    }
+
     FProperty *Property = ComponentClass->FindPropertyByName(*Pair.Key);
     if (!Property) {
       PropertyWarnings.Add(
@@ -1015,16 +1130,35 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
+
+  // Also accept "objectPath" as an alias, common in inspections
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    Payload->TryGetStringField(TEXT("objectPath"), TargetName);
+  }
+
+  if (TargetName.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("actorName or objectPath required"), nullptr,
+                           TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
+  // Fallback: Check if it's a Blueprint asset to inspect CDO components
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    if (UObject *Asset = UEditorAssetLibrary::LoadAsset(TargetName)) {
+      if (UBlueprint *BP = Cast<UBlueprint>(Asset)) {
+        if (BP->GeneratedClass) {
+          Found = Cast<AActor>(BP->GeneratedClass->GetDefaultObject());
+        }
+      }
+    }
+  }
+
+  if (!Found) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Actor or Blueprint not found"), nullptr,
+                           TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
 

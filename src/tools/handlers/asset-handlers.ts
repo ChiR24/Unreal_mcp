@@ -143,10 +143,23 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
 
       if (!destinationPath) throw new Error('Missing destinationPath or newName');
 
-      const res = await tools.assetTools.renameAsset({
+      const res: any = await tools.assetTools.renameAsset({
         sourcePath,
         destinationPath
       });
+
+      if (res && res.success === false) {
+        const msg = (res.message || '').toLowerCase();
+        if (msg.includes('already exists') || msg.includes('exists')) {
+          return cleanObject({
+            success: false,
+            error: 'ASSET_ALREADY_EXISTS',
+            message: res.message || 'Asset already exists at destination',
+            sourcePath,
+            destinationPath
+          });
+        }
+      }
       return cleanObject(res);
     }
     case 'move': {
@@ -326,10 +339,11 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       const res = await executeAutomationRequest(tools, 'manage_render', {
         subAction: 'create_render_target',
         name: args.name,
-        packagePath: args.path, // C++ expects packagePath
+        packagePath: args.path || args.packagePath || '/Game', // C++ expects packagePath
         width: args.width,
         height: args.height,
-        format: args.format
+        format: args.format,
+        save: true // Force save explicitly if supported by bridge
       });
       return cleanObject(res);
     }
@@ -400,6 +414,48 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       // Call rebuild_material handler directly
       const res = await executeAutomationRequest(tools, 'rebuild_material', {
         assetPath: args.assetPath
+      });
+      return cleanObject(res);
+    }
+    case 'add_material_node': {
+      // Map common node names to their full class names
+      const materialNodeAliases: Record<string, string> = {
+        'Multiply': 'MaterialExpressionMultiply',
+        'Add': 'MaterialExpressionAdd',
+        'Subtract': 'MaterialExpressionSubtract',
+        'Divide': 'MaterialExpressionDivide',
+        'Power': 'MaterialExpressionPower',
+        'Clamp': 'MaterialExpressionClamp',
+        'Constant': 'MaterialExpressionConstant',
+        'Constant2Vector': 'MaterialExpressionConstant2Vector',
+        'Constant3Vector': 'MaterialExpressionConstant3Vector',
+        'Constant4Vector': 'MaterialExpressionConstant4Vector',
+        'TextureSample': 'MaterialExpressionTextureSample',
+        'TextureCoordinate': 'MaterialExpressionTextureCoordinate',
+        'Panner': 'MaterialExpressionPanner',
+        'Rotator': 'MaterialExpressionRotator',
+        'Lerp': 'MaterialExpressionLinearInterpolate',
+        'LinearInterpolate': 'MaterialExpressionLinearInterpolate',
+        'Sine': 'MaterialExpressionSine',
+        'Cosine': 'MaterialExpressionCosine',
+        'Append': 'MaterialExpressionAppendVector',
+        'AppendVector': 'MaterialExpressionAppendVector',
+        'ComponentMask': 'MaterialExpressionComponentMask',
+        'Fresnel': 'MaterialExpressionFresnel',
+        'Time': 'MaterialExpressionTime',
+        'ScalarParameter': 'MaterialExpressionScalarParameter',
+        'VectorParameter': 'MaterialExpressionVectorParameter',
+        'StaticSwitchParameter': 'MaterialExpressionStaticSwitchParameter'
+      };
+
+      const rawType = args.nodeType || args.type;
+      const type = materialNodeAliases[rawType] || rawType;
+
+      const res = await executeAutomationRequest(tools, 'add_material_node', {
+        assetPath: args.assetPath,
+        nodeType: type,
+        posX: args.posX,
+        posY: args.posY
       });
       return cleanObject(res);
     }

@@ -55,7 +55,7 @@ export interface SourceControlState {
 export interface IAssetTools {
     importAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean; save?: boolean }): Promise<any>;
     createFolder(path: string): Promise<any>;
-    duplicateAsset(params: { sourcePath: string; destinationPath: string }): Promise<any>;
+    duplicateAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean }): Promise<any>;
     renameAsset(params: { sourcePath: string; destinationPath: string }): Promise<any>;
     moveAsset(params: { sourcePath: string; destinationPath: string }): Promise<any>;
     deleteAssets(params: { paths: string[]; fixupRedirectors?: boolean; timeoutMs?: number }): Promise<any>;
@@ -114,7 +114,7 @@ export interface IBlueprintTools {
     removeVariable(params: { blueprintName: string; variableName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     addEvent(params: { blueprintName: string; eventType: string; customEventName?: string; parameters?: Array<{ name: string; type: string }>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    removeEvent(params: { blueprintName: string; eventName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
+    removeEvent(params: { blueprintName: string; eventName: string; customEventName?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     addFunction(params: { blueprintName: string; functionName: string; inputs?: Array<{ name: string; type: string }>; outputs?: Array<{ name: string; type: string }>; isPublic?: boolean; category?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
     setVariableMetadata(params: { blueprintName: string; variableName: string; metadata: Record<string, unknown>; timeoutMs?: number }): Promise<any>;
     renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;

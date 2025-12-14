@@ -153,7 +153,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     return true;
   }
 
-  auto FindGraphNodeByIdOrName = [&](const FString &IdOrName) -> UEdGraphNode * {
+  auto FindGraphNodeByIdOrName =
+      [&](const FString &IdOrName) -> UEdGraphNode * {
     if (IdOrName.IsEmpty()) {
       return nullptr;
     }
@@ -162,13 +163,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
       if (!Node) {
         continue;
       }
-      if (Node->NodeGuid.ToString() == Needle) {
+      if (Node->NodeGuid.ToString().Equals(Needle, ESearchCase::IgnoreCase)) {
         return Node;
       }
-      if (Node->GetName() == Needle) {
+      if (Node->GetName().Equals(Needle, ESearchCase::IgnoreCase)) {
         return Node;
       }
-      if (Node->GetPathName() == Needle) {
+      if (Node->GetPathName().Equals(Needle, ESearchCase::IgnoreCase)) {
         return Node;
       }
     }

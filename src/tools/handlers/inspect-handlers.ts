@@ -27,9 +27,13 @@ async function resolveObjectPathFromArgs(args: any, tools: ITools): Promise<stri
     const container: any = res && (res.result || res);
     const actors = container && Array.isArray(container.actors) ? container.actors : [];
     if (actors.length > 0) {
-      const first = actors[0];
-      if (first && typeof first.path === 'string' && first.path.trim().length > 0) {
-        return first.path.trim();
+      if (actors.length > 0) {
+        const first = actors[0];
+        // Check for path, objectPath, or levelPath
+        const resolvedPath = first.path || first.objectPath || first.levelPath;
+        if (typeof resolvedPath === 'string' && resolvedPath.trim().length > 0) {
+          return resolvedPath.trim();
+        }
       }
     }
   } catch {
@@ -46,6 +50,9 @@ function getActorNameFromArgs(args: any): string | undefined {
   }
   if (typeof args.name === 'string' && args.name.trim().length > 0) {
     return args.name.trim();
+  }
+  if (typeof args.objectPath === 'string' && args.objectPath.trim().length > 0) {
+    return args.objectPath.trim();
   }
   return undefined;
 }
@@ -184,7 +191,19 @@ export async function handleInspectTools(action: string, args: any, tools: ITool
       if (!actorName) {
         throw new Error('Invalid actorName');
       }
-      return cleanObject(await tools.actorTools.getComponents(actorName));
+
+      const res: any = await executeAutomationRequest(
+        tools,
+        'inspect',
+        {
+          action: 'get_components',
+          actorName: actorName,
+          objectPath: actorName
+        },
+        'Failed to get components'
+      );
+
+      return cleanObject(res);
     }
     case 'get_component_property': {
       const componentObjectPath = await resolveComponentObjectPathFromArgs(args, tools);

@@ -25,6 +25,7 @@
 #include "Components/SkyLightComponent.h"
 #include "Developer/AssetTools/Public/AssetToolsModule.h"
 #include "EditorValidatorSubsystem.h"
+#include "Engine/Blueprint.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/SkyLight.h"
 #include "EngineUtils.h"
@@ -1418,6 +1419,74 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     return true;
   }
 
+  // Get components (get_components)
+  if (LowerSub == TEXT("get_components")) {
+    FString ObjectPath;
+    if (!Payload->TryGetStringField(TEXT("objectPath"), ObjectPath)) {
+      Payload->TryGetStringField(TEXT("actorName"), ObjectPath);
+    }
+
+    if (ObjectPath.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("get_components requires objectPath or actorName"), nullptr,
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    AActor *FoundActor = FindActorByName(ObjectPath);
+    if (!FoundActor) {
+      if (UObject *Asset = UEditorAssetLibrary::LoadAsset(ObjectPath)) {
+        if (UBlueprint *BP = Cast<UBlueprint>(Asset)) {
+          if (BP->GeneratedClass) {
+            FoundActor = Cast<AActor>(BP->GeneratedClass->GetDefaultObject());
+          }
+        }
+      }
+    }
+
+    if (!FoundActor) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Actor or Blueprint not found: %s"),
+                          *ObjectPath),
+          nullptr, TEXT("OBJECT_NOT_FOUND"));
+      return true;
+    }
+
+    TSharedPtr<FJsonObject> ComponentsObj = MakeShared<FJsonObject>();
+    TArray<TSharedPtr<FJsonValue>> ComponentList;
+
+    for (UActorComponent *Comp : FoundActor->GetComponents()) {
+      if (!Comp)
+        continue;
+      TSharedPtr<FJsonObject> CompData = MakeShared<FJsonObject>();
+      CompData->SetStringField(TEXT("name"), Comp->GetName());
+      CompData->SetStringField(TEXT("class"), Comp->GetClass()->GetName());
+
+      if (USceneComponent *SceneComp = Cast<USceneComponent>(Comp)) {
+        CompData->SetBoolField(TEXT("isSceneComponent"), true);
+        TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+        FVector Loc = SceneComp->GetRelativeLocation();
+        LocObj->SetNumberField("x", Loc.X);
+        LocObj->SetNumberField("y", Loc.Y);
+        LocObj->SetNumberField("z", Loc.Z);
+        CompData->SetObjectField("relativeLocation", LocObj);
+      }
+
+      ComponentList.Add(MakeShared<FJsonValueObject>(CompData));
+    }
+
+    TSharedPtr<FJsonObject> ComponentsResult = MakeShared<FJsonObject>();
+    ComponentsResult->SetArrayField(TEXT("components"), ComponentList);
+    ComponentsResult->SetNumberField(TEXT("count"), ComponentList.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Actor components retrieved"), ComponentsResult,
+                           FString());
+    return true;
+  }
+
   // Find by class (find_by_class)
   if (LowerSub == TEXT("find_by_class")) {
 #if WITH_EDITOR
@@ -1554,6 +1623,328 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
                            TEXT("Class not found"), nullptr,
                            TEXT("CLASS_NOT_FOUND"));
     return true;
+  }
+
+  // Get components (get_components) - enumerate all components on an actor
+  if (LowerSub == TEXT("get_components")) {
+#if WITH_EDITOR
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    FString ObjectPath;
+    Payload->TryGetStringField(TEXT("objectPath"), ObjectPath);
+
+    if (ActorName.IsEmpty() && ObjectPath.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("get_components requires actorName or objectPath"), nullptr,
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    AActor *TargetActor = nullptr;
+    if (!ActorName.IsEmpty()) {
+      TargetActor = FindActorByName(ActorName);
+    }
+    if (!TargetActor && !ObjectPath.IsEmpty()) {
+      TargetActor = FindActorByName(ObjectPath);
+    }
+
+    if (!TargetActor) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Failed to get components for actor %s"),
+                          ActorName.IsEmpty() ? *ObjectPath : *ActorName),
+          nullptr, TEXT("ACTOR_NOT_FOUND"));
+      return true;
+    }
+
+    TArray<TSharedPtr<FJsonValue>> ComponentsArray;
+    for (UActorComponent *Comp : TargetActor->GetComponents()) {
+      if (!Comp)
+        continue;
+      TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+      Entry->SetStringField(TEXT("name"), Comp->GetName());
+      Entry->SetStringField(TEXT("readableName"), Comp->GetReadableName());
+      Entry->SetStringField(TEXT("class"), Comp->GetClass()
+                                               ? Comp->GetClass()->GetPathName()
+                                               : TEXT(""));
+      Entry->SetStringField(TEXT("path"), Comp->GetPathName());
+      if (USceneComponent *SceneComp = Cast<USceneComponent>(Comp)) {
+        FVector Loc = SceneComp->GetRelativeLocation();
+        FRotator Rot = SceneComp->GetRelativeRotation();
+        FVector Scale = SceneComp->GetRelativeScale3D();
+
+        TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+        LocObj->SetNumberField(TEXT("x"), Loc.X);
+        LocObj->SetNumberField(TEXT("y"), Loc.Y);
+        LocObj->SetNumberField(TEXT("z"), Loc.Z);
+        Entry->SetObjectField(TEXT("relativeLocation"), LocObj);
+
+        TSharedPtr<FJsonObject> RotObj = MakeShared<FJsonObject>();
+        RotObj->SetNumberField(TEXT("pitch"), Rot.Pitch);
+        RotObj->SetNumberField(TEXT("yaw"), Rot.Yaw);
+        RotObj->SetNumberField(TEXT("roll"), Rot.Roll);
+        Entry->SetObjectField(TEXT("relativeRotation"), RotObj);
+
+        TSharedPtr<FJsonObject> ScaleObj = MakeShared<FJsonObject>();
+        ScaleObj->SetNumberField(TEXT("x"), Scale.X);
+        ScaleObj->SetNumberField(TEXT("y"), Scale.Y);
+        ScaleObj->SetNumberField(TEXT("z"), Scale.Z);
+        Entry->SetObjectField(TEXT("relativeScale"), ScaleObj);
+      }
+      ComponentsArray.Add(MakeShared<FJsonValueObject>(Entry));
+    }
+
+    Result->SetArrayField(TEXT("components"), ComponentsArray);
+    Result->SetNumberField(TEXT("count"), ComponentsArray.Num());
+    Result->SetStringField(TEXT("actorName"), TargetActor->GetActorLabel());
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Actor components retrieved"), Result,
+                           FString());
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("get_components requires editor build"),
+                           nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+  }
+
+  // Get component property (get_component_property)
+  if (LowerSub == TEXT("get_component_property")) {
+#if WITH_EDITOR
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    FString ObjectPath;
+    Payload->TryGetStringField(TEXT("objectPath"), ObjectPath);
+    FString ComponentName;
+    Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+    FString PropertyName;
+    Payload->TryGetStringField(TEXT("propertyName"), PropertyName);
+
+    if ((ActorName.IsEmpty() && ObjectPath.IsEmpty()) ||
+        ComponentName.IsEmpty() || PropertyName.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("get_component_property requires "
+                                  "actorName/objectPath, componentName, and "
+                                  "propertyName"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    AActor *TargetActor = nullptr;
+    if (!ActorName.IsEmpty()) {
+      TargetActor = FindActorByName(ActorName);
+    }
+    if (!TargetActor && !ObjectPath.IsEmpty()) {
+      TargetActor = FindActorByName(ObjectPath);
+    }
+
+    if (!TargetActor) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Actor not found"), nullptr,
+                             TEXT("ACTOR_NOT_FOUND"));
+      return true;
+    }
+
+    // Find component by name (fuzzy matching)
+    UActorComponent *TargetComponent = nullptr;
+    for (UActorComponent *Comp : TargetActor->GetComponents()) {
+      if (!Comp)
+        continue;
+      if (Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase) ||
+          Comp->GetReadableName().Equals(ComponentName,
+                                         ESearchCase::IgnoreCase) ||
+          Comp->GetName().Contains(ComponentName, ESearchCase::IgnoreCase)) {
+        TargetComponent = Comp;
+        break;
+      }
+    }
+
+    if (!TargetComponent) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Component not found on actor '%s': %s"),
+                          *TargetActor->GetActorLabel(), *ComponentName),
+          nullptr, TEXT("COMPONENT_NOT_FOUND"));
+      return true;
+    }
+
+    FProperty *Property =
+        TargetComponent->GetClass()->FindPropertyByName(*PropertyName);
+    if (!Property) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Property not found: %s"), *PropertyName),
+          nullptr, TEXT("PROPERTY_NOT_FOUND"));
+      return true;
+    }
+
+    FString ValueText;
+    const void *ValuePtr =
+        Property->ContainerPtrToValuePtr<void>(TargetComponent);
+    Property->ExportTextItem_Direct(ValueText, ValuePtr, nullptr,
+                                    TargetComponent, PPF_None);
+
+    Result->SetStringField(TEXT("componentName"), TargetComponent->GetName());
+    Result->SetStringField(TEXT("propertyName"), PropertyName);
+    Result->SetStringField(TEXT("value"), ValueText);
+    Result->SetStringField(TEXT("propertyType"),
+                           Property->GetClass()->GetName());
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Component property retrieved"), Result,
+                           FString());
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("get_component_property requires editor build"),
+                           nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+  }
+
+  // Set component property (set_component_property)
+  if (LowerSub == TEXT("set_component_property")) {
+#if WITH_EDITOR
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    FString ObjectPath;
+    Payload->TryGetStringField(TEXT("objectPath"), ObjectPath);
+    FString ComponentName;
+    Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+    FString PropertyName;
+    Payload->TryGetStringField(TEXT("propertyName"), PropertyName);
+
+    if ((ActorName.IsEmpty() && ObjectPath.IsEmpty()) ||
+        ComponentName.IsEmpty() || PropertyName.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("set_component_property requires "
+                                  "actorName/objectPath, componentName, and "
+                                  "propertyName"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    AActor *TargetActor = nullptr;
+    if (!ActorName.IsEmpty()) {
+      TargetActor = FindActorByName(ActorName);
+    }
+    if (!TargetActor && !ObjectPath.IsEmpty()) {
+      TargetActor = FindActorByName(ObjectPath);
+    }
+
+    if (!TargetActor) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Actor not found"), nullptr,
+                             TEXT("ACTOR_NOT_FOUND"));
+      return true;
+    }
+
+    // Find component by name (fuzzy matching)
+    UActorComponent *TargetComponent = nullptr;
+    for (UActorComponent *Comp : TargetActor->GetComponents()) {
+      if (!Comp)
+        continue;
+      if (Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase) ||
+          Comp->GetReadableName().Equals(ComponentName,
+                                         ESearchCase::IgnoreCase) ||
+          Comp->GetName().Contains(ComponentName, ESearchCase::IgnoreCase)) {
+        TargetComponent = Comp;
+        break;
+      }
+    }
+
+    if (!TargetComponent) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Component not found on actor '%s': %s"),
+                          *TargetActor->GetActorLabel(), *ComponentName),
+          nullptr, TEXT("COMPONENT_NOT_FOUND"));
+      return true;
+    }
+
+    FString PropertyValue;
+    if (!Payload->TryGetStringField(TEXT("value"), PropertyValue)) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("set_component_property requires 'value'"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FProperty *FoundProperty =
+        TargetComponent->GetClass()->FindPropertyByName(FName(*PropertyName));
+    if (!FoundProperty) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Property '%s' not found on component"),
+                          *PropertyName),
+          nullptr, TEXT("PROPERTY_NOT_FOUND"));
+      return true;
+    }
+
+    bool bSuccess = false;
+    FString ErrorMessage;
+
+    if (FStrProperty *StrProp = CastField<FStrProperty>(FoundProperty)) {
+      void *PropAddr = StrProp->ContainerPtrToValuePtr<void>(TargetComponent);
+      StrProp->SetPropertyValue(PropAddr, PropertyValue);
+      bSuccess = true;
+    } else if (FFloatProperty *FloatProp =
+                   CastField<FFloatProperty>(FoundProperty)) {
+      void *PropAddr = FloatProp->ContainerPtrToValuePtr<void>(TargetComponent);
+      float Value = FCString::Atof(*PropertyValue);
+      FloatProp->SetPropertyValue(PropAddr, Value);
+      bSuccess = true;
+    } else if (FDoubleProperty *DoubleProp =
+                   CastField<FDoubleProperty>(FoundProperty)) {
+      void *PropAddr =
+          DoubleProp->ContainerPtrToValuePtr<void>(TargetComponent);
+      double Value = FCString::Atod(*PropertyValue);
+      DoubleProp->SetPropertyValue(PropAddr, Value);
+      bSuccess = true;
+    } else if (FIntProperty *IntProp = CastField<FIntProperty>(FoundProperty)) {
+      void *PropAddr = IntProp->ContainerPtrToValuePtr<void>(TargetComponent);
+      int32 Value = FCString::Atoi(*PropertyValue);
+      IntProp->SetPropertyValue(PropAddr, Value);
+      bSuccess = true;
+    } else if (FBoolProperty *BoolProp =
+                   CastField<FBoolProperty>(FoundProperty)) {
+      void *PropAddr = BoolProp->ContainerPtrToValuePtr<void>(TargetComponent);
+      bool Value = PropertyValue.ToBool();
+      BoolProp->SetPropertyValue(PropAddr, Value);
+      bSuccess = true;
+    } else {
+      ErrorMessage =
+          FString::Printf(TEXT("Property type '%s' not supported for setting"),
+                          *FoundProperty->GetClass()->GetName());
+    }
+
+    if (bSuccess) {
+      if (USceneComponent *SceneComponent =
+              Cast<USceneComponent>(TargetComponent)) {
+        SceneComponent->MarkRenderStateDirty();
+        SceneComponent->UpdateComponentToWorld();
+      }
+      TargetComponent->MarkPackageDirty();
+
+      Result->SetStringField(TEXT("componentName"), TargetComponent->GetName());
+      Result->SetStringField(TEXT("propertyName"), PropertyName);
+      Result->SetStringField(TEXT("value"), PropertyValue);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Component property set"), Result, FString());
+    } else {
+      Result->SetStringField(TEXT("error"), ErrorMessage);
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to set component property"), Result,
+                             TEXT("PROPERTY_SET_FAILED"));
+    }
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("set_component_property requires editor build"),
+                           nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
   }
 
   return true;

@@ -369,8 +369,16 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       return cleanObject(await tools.editorTools.takeScreenshot(filenameArg));
     }
     case 'set_resolution': {
-      const width = Number(args.width);
-      const height = Number(args.height);
+      const parseResolution = (value: unknown): { width?: number; height?: number } => {
+        if (typeof value !== 'string') return {};
+        const m = value.trim().match(/^(\d+)x(\d+)$/i);
+        if (!m) return {};
+        return { width: Number(m[1]), height: Number(m[2]) };
+      };
+
+      const parsed = parseResolution(args?.resolution);
+      const width = Number.isFinite(Number(args.width)) ? Number(args.width) : (parsed.width ?? NaN);
+      const height = Number.isFinite(Number(args.height)) ? Number(args.height) : (parsed.height ?? NaN);
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
         return {
           success: false,

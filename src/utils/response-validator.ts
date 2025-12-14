@@ -67,7 +67,7 @@ function buildSummaryText(toolName: string, payload: unknown): string {
 
   if (typeof effectivePayload.blueprint === 'string' || isRecord(effectivePayload.blueprint)) {
     const bp = effectivePayload.blueprint;
-    const name = isRecord(bp) ? (bp.name || bp.path) : bp;
+    const name = isRecord(bp) ? (bp.name || bp.path || effectivePayload.blueprintPath) : bp;
     parts.push(`Blueprint: ${name}`);
   }
 

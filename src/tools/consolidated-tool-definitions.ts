@@ -248,6 +248,8 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
           description: 'Action to perform'
         },
         actorName: { type: 'string' },
+        childActor: { type: 'string', description: 'Name of the child actor (alias for actorName in detach, or specific child for attach).' },
+        parentActor: { type: 'string' },
         classPath: { type: 'string' },
         meshPath: { type: 'string' },
         blueprintPath: { type: 'string' },
@@ -262,9 +264,7 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
         newName: { type: 'string' },
         tag: { type: 'string' },
         variables: { type: 'object' },
-        snapshotName: { type: 'string' },
-        parentActor: { type: 'string' },
-        childActor: { type: 'string' }
+        snapshotName: { type: 'string' }
       },
       required: ['action']
     },
@@ -323,6 +323,7 @@ Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, p
         location: commonSchemas.location,
         rotation: commonSchemas.rotation,
         viewMode: { type: 'string' },
+        enabled: { type: 'boolean', description: 'For set_viewport_realtime.' },
         speed: { type: 'number' },
         filename: { type: 'string' },
         fov: { type: 'number' },
@@ -372,7 +373,7 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
           ],
           description: 'Action'
         },
-        levelPath: { type: 'string' },
+        levelPath: { type: 'string', description: 'Required for load/save actions and get_summary.' },
         levelName: { type: 'string' },
         streaming: { type: 'boolean' },
         shouldBeLoaded: { type: 'boolean' },
@@ -487,7 +488,8 @@ Supported actions:
           description: 'Action'
         },
         name: { type: 'string' },
-        systemPath: { type: 'string' },
+        systemName: { type: 'string' },
+        systemPath: { type: 'string', description: 'Required for spawning Niagara effects (spawn_niagara, create_volumetric_fog, etc) and most graph operations.' },
         location: commonSchemas.location,
         scale: { type: 'number' },
         shape: { type: 'string' },
@@ -559,11 +561,11 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
         strength: { type: 'number' },
         falloff: { type: 'number' },
         brushSize: { type: 'number' },
-        layerName: { type: 'string' },
+        layerName: { type: 'string', description: 'Required for paint_landscape.' },
         eraseMode: { type: 'boolean' },
 
         // Foliage
-        foliageType: { type: 'string' },
+        foliageType: { type: 'string', description: 'Required for add_foliage_instances, paint_foliage.' },
         foliageTypePath: { type: 'string' },
         meshPath: { type: 'string' },
         density: { type: 'number' },
@@ -639,6 +641,7 @@ Supported actions:
         category: { type: 'string' },
         level: { type: 'number' },
         enabled: { type: 'boolean' },
+        resolution: { type: 'string', description: 'Resolution string (e.g. "1920x1080").' },
 
         // Commands
         command: { type: 'string' },
@@ -898,7 +901,7 @@ Supported actions: create_sound_cue, play_sound_at_location, play_sound_2d, crea
           description: 'Action'
         },
         name: { type: 'string' },
-        soundPath: { type: 'string' },
+        soundPath: { type: 'string', description: 'Required for create_sound_cue, play_sound_*, create_audio_component, create_ambient_sound.' },
         location: commonSchemas.location,
         rotation: commonSchemas.rotation,
         volume: { type: 'number' },
@@ -913,7 +916,8 @@ Supported actions: create_sound_cue, play_sound_at_location, play_sound_2d, crea
         fadeTime: { type: 'number' },
         targetVolume: { type: 'number' },
         attachPointName: { type: 'string' },
-        actorName: { type: 'string' }
+        actorName: { type: 'string' },
+        componentName: { type: 'string' }
       },
       required: ['action']
     },

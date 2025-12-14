@@ -25,8 +25,29 @@ export async function handleGraphTools(toolName: string, action: string, args: a
 }
 
 async function handleBlueprintGraph(action: string, args: any, tools: ITools) {
-    const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', { ...args, subAction: action }, 'Automation bridge not available');
-    return cleanObject(res);
+    const processedArgs = { ...args, subAction: action };
+
+    // Default graphName
+    if (!processedArgs.graphName) {
+        processedArgs.graphName = 'EventGraph';
+    }
+
+    // Support Node.Pin format for connect_pins
+    if (action === 'connect_pins') {
+        if (processedArgs.fromNodeId && processedArgs.fromNodeId.includes('.') && !processedArgs.fromPinName) {
+            const parts = processedArgs.fromNodeId.split('.');
+            processedArgs.fromNodeId = parts[0];
+            processedArgs.fromPinName = parts.slice(1).join('.');
+        }
+        if (processedArgs.toNodeId && processedArgs.toNodeId.includes('.') && !processedArgs.toPinName) {
+            const parts = processedArgs.toNodeId.split('.');
+            processedArgs.toNodeId = parts[0];
+            processedArgs.toPinName = parts.slice(1).join('.');
+        }
+    }
+
+    const res: any = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs, 'Automation bridge not available');
+    return cleanObject({ ...res, ...(res.result || {}) });
 }
 
 async function handleNiagaraGraph(action: string, args: any, tools: ITools) {
@@ -35,16 +56,16 @@ async function handleNiagaraGraph(action: string, args: any, tools: ITools) {
     if (payload.systemPath && !payload.assetPath) {
         payload.assetPath = payload.systemPath;
     }
-    const res = await executeAutomationRequest(tools, 'manage_niagara_graph', payload, 'Automation bridge not available');
-    return cleanObject(res);
+    const res: any = await executeAutomationRequest(tools, 'manage_niagara_graph', payload, 'Automation bridge not available');
+    return cleanObject({ ...res, ...(res.result || {}) });
 }
 
 async function handleMaterialGraph(action: string, args: any, tools: ITools) {
-    const res = await executeAutomationRequest(tools, 'manage_material_graph', { ...args, subAction: action }, 'Automation bridge not available');
-    return cleanObject(res);
+    const res: any = await executeAutomationRequest(tools, 'manage_material_graph', { ...args, subAction: action }, 'Automation bridge not available');
+    return cleanObject({ ...res, ...(res.result || {}) });
 }
 
 async function handleBehaviorTree(action: string, args: any, tools: ITools) {
-    const res = await executeAutomationRequest(tools, 'manage_behavior_tree', { ...args, subAction: action }, 'Automation bridge not available');
-    return cleanObject(res);
+    const res: any = await executeAutomationRequest(tools, 'manage_behavior_tree', { ...args, subAction: action }, 'Automation bridge not available');
+    return cleanObject({ ...res, ...(res.result || {}) });
 }

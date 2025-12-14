@@ -7,7 +7,6 @@
 #include "Misc/ScopeExit.h"
 #include "Misc/ScopeLock.h"
 
-
 void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -48,6 +47,28 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                                                    RequestingSocket);
                 }
               });
+    return;
+  }
+
+  // Guard against unsafe engine states (Saving, GC, Async Loading)
+  // Calling StaticFindObject (via ResolveClassByName) during these states can
+  // cause crashes.
+  if (GIsSavingPackage || IsGarbageCollecting() || IsAsyncLoading()) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Deferring ProcessAutomationRequest due to active "
+                "Serialization/GC/Loading: RequestId=%s Action=%s"),
+           *RequestId, *Action);
+
+    FPendingAutomationRequest P;
+    P.RequestId = RequestId;
+    P.Action = Action;
+    P.Payload = Payload;
+    P.RequestingSocket = RequestingSocket;
+    {
+      FScopeLock Lock(&PendingAutomationRequestsMutex);
+      PendingAutomationRequests.Add(MoveTemp(P));
+      bPendingRequestsScheduled = true;
+    }
     return;
   }
 

@@ -1,4 +1,5 @@
 #include "Async/Async.h"
+#include "EditorAssetLibrary.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -515,7 +516,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
 
   TArray<FAssetRenameData> RenameData;
 
-  for (const FString &AssetPath : AssetPaths) {
+  for (const FString &InputPath : AssetPaths) {
+    FString AssetPath = ResolveAssetPath(InputPath);
+    if (AssetPath.IsEmpty()) {
+      AssetPath = InputPath;
+    }
+
     if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
       continue;
     }
@@ -1239,7 +1245,14 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
         *DestinationPath);
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(SourcePath)) {
+  // Resolve source path to ensure it matches a real asset
+  FString ResolvedSourcePath = ResolveAssetPath(SourcePath);
+  if (ResolvedSourcePath.IsEmpty()) {
+    // If resolution failed, fall back to original for strict check
+    ResolvedSourcePath = SourcePath;
+  }
+
+  if (!UEditorAssetLibrary::DoesAssetExist(ResolvedSourcePath)) {
     SendAutomationResponse(
         Socket, RequestId, false,
         FString::Printf(TEXT("Source asset not found: %s"), *SourcePath),
@@ -1247,7 +1260,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     return true;
   }
 
-  if (UEditorAssetLibrary::RenameAsset(SourcePath, DestinationPath)) {
+  // Use the resolved path for the rename operation
+  if (UEditorAssetLibrary::RenameAsset(ResolvedSourcePath, DestinationPath)) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);
@@ -1584,14 +1598,24 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
       return;
     }
 
-    // "Tags" on generic assets are not a standard engine concept (unlike Actor
-    // tags). Metadata is supported via set_metadata. We return NOT_IMPLEMENTED
-    // to clarify this ambiguity.
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("set_tags is not implemented for generic assets. Use set_metadata "
-             "for package metadata or control_actor:add_tag for actors."),
-        nullptr, TEXT("NOT_IMPLEMENTED"));
+    // Implement set_tags by mapping them to Package Metadata (Tag=true)
+    int32 AppliedCount = 0;
+    for (const FString &Tag : Tags) {
+      UEditorAssetLibrary::SetMetadataTag(Asset, FName(*Tag), TEXT("true"));
+      AppliedCount++;
+    }
+
+    // Also mark dirty and save to persist the metadata
+    Asset->MarkPackageDirty();
+    bool bSaved = UEditorAssetLibrary::SaveAsset(AssetPath, false);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetBoolField(TEXT("saved"), bSaved);
+    Resp->SetStringField(TEXT("assetPath"), AssetPath);
+    Resp->SetNumberField(TEXT("appliedTags"), AppliedCount);
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Tags applied as metadata"), Resp, FString());
   });
 
   return true;

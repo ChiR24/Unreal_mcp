@@ -3424,11 +3424,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
         EventNode->NodePosY = EventPosY;
         NodeCreator.Finalize();
       } else {
-        SendAutomationError(
-            RequestingSocket, RequestId,
-            FString::Printf(TEXT("Event %s already exists"), *TargetEventName),
-            TEXT("EVENT_ALREADY_EXISTS"));
-        return true;
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+               TEXT("Event %s already exists, skipping creation (idempotent "
+                    "success)"),
+               *TargetEventName);
+        bExists = true;
       }
     }
 
@@ -4238,12 +4238,30 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
           TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
-    FString Normalized;
+    FString Normalized = Path;
     bool bFound = false;
-    FString LoadErr;
 #if WITH_EDITOR
-    UBlueprint *BP = LoadBlueprintAsset(Path, Normalized, LoadErr);
-    bFound = (BP != nullptr);
+    // Use lightweight existence check instead of LoadBlueprintAsset
+    // to avoid Editor hangs on heavy/corrupted assets
+    FString CheckPath = Path;
+    // Ensure path starts with /Game if it doesn't have a valid root
+    if (!CheckPath.StartsWith(TEXT("/Game")) &&
+        !CheckPath.StartsWith(TEXT("/Engine")) &&
+        !CheckPath.StartsWith(TEXT("/Script"))) {
+      if (CheckPath.StartsWith(TEXT("/"))) {
+        CheckPath = TEXT("/Game") + CheckPath;
+      } else {
+        CheckPath = TEXT("/Game/") + CheckPath;
+      }
+    }
+    // Remove .uasset extension if present
+    if (CheckPath.EndsWith(TEXT(".uasset"))) {
+      CheckPath = CheckPath.LeftChop(7);
+    }
+    bFound = UEditorAssetLibrary::DoesAssetExist(CheckPath);
+    if (bFound) {
+      Normalized = CheckPath;
+    }
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("blueprint_exists requires editor build"),
@@ -4252,13 +4270,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 #endif
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("exists"), bFound);
-    Resp->SetStringField(TEXT("blueprintPath"),
-                         bFound ? (Normalized.IsEmpty() ? Path : Normalized)
-                                : Path);
-    SendAutomationResponse(RequestingSocket, RequestId, bFound,
+    Resp->SetStringField(TEXT("blueprintPath"), bFound ? Normalized : Path);
+    // Always return true (action succeeded), let propert "exists" convey state
+    SendAutomationResponse(RequestingSocket, RequestId, true,
                            bFound ? TEXT("Blueprint exists")
                                   : TEXT("Blueprint not found"),
-                           Resp, bFound ? FString() : TEXT("NOT_FOUND"));
+                           Resp, FString());
     return true;
   }
 
@@ -5632,4 +5649,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
 #endif
 }
 
-#endif // WITH_EDITOR from line 8
+#endif // WITH_EDITOR from line 11

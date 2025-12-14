@@ -416,6 +416,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     }
 
     FString PackagePath = TEXT("/Game/Audio/Mixes");
+    if (Payload->HasField(TEXT("packagePath"))) {
+      PackagePath = Payload->GetStringField(TEXT("packagePath"));
+    } else if (Payload->HasField(TEXT("savePath"))) {
+      PackagePath = Payload->GetStringField(TEXT("savePath"));
+    }
 
     USoundMixFactory *Factory = NewObject<USoundMixFactory>();
     FAssetToolsModule &AssetToolsModule =

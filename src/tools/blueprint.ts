@@ -103,7 +103,16 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, message: 'Blueprint path is required', error: 'INVALID_BLUEPRINT_PATH' };
     if (!Array.isArray(params.operations) || params.operations.length === 0) return { success: false, message: 'At least one SCS operation is required', error: 'MISSING_OPERATIONS' };
-    const payload: any = { blueprintPath, operations: params.operations };
+
+    // Fix: Map 'op' to 'type' if missing, for backward compatibility or user convenience
+    const operations = params.operations.map(op => {
+      if (op && typeof op === 'object' && op.op && !op.type) {
+        return { ...op, type: op.op };
+      }
+      return op;
+    });
+
+    const payload: any = { blueprintPath, operations };
     if (typeof params.compile === 'boolean') payload.compile = params.compile;
     if (typeof params.save === 'boolean') payload.save = params.save;
     const res = await this.sendAction('blueprint_modify_scs', payload, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
@@ -155,7 +164,10 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
 
     const start = Date.now();
-    const tot = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : Number(process.env.MCP_AUTOMATION_SCS_TIMEOUT_MS ?? process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? 120000);
+    const envDefault = Number(process.env.MCP_AUTOMATION_SCS_TIMEOUT_MS ?? process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '15000');
+    // Default to 15s (15000ms) instead of 120s to avoid long hangs on non-existent assets
+    const defaultTimeout = Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 15000;
+    const tot = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : defaultTimeout;
     const perCheck = Math.min(5000, Math.max(1000, Math.floor(tot / 6)));
     while (Date.now() - start < tot) {
       for (const candidate of candidates) {
@@ -189,7 +201,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       const pluginResp = await this.sendAction('blueprint_get', { blueprintCandidates: candidates, requestedPath: primary }, { timeoutMs: params.timeoutMs });
       if (pluginResp && pluginResp.success) {
         if (pluginResp && typeof pluginResp === 'object') {
-          return { ...pluginResp, blueprint: pluginResp.result } as any;
+          return { ...pluginResp, blueprint: pluginResp.result, blueprintPath: primary } as any;
         }
         return pluginResp;
       }
@@ -301,12 +313,17 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_ADD_EVENT_FAILED', message: pluginResp?.message ?? 'Failed to add event via automation bridge' } as const;
   }
 
-  async removeEvent(params: { blueprintName: string; eventName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async removeEvent(params: { blueprintName: string; eventName: string; customEventName?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
+
+    // Fix: Allow customEventName as alias for eventName
+    const finalEventName = params.eventName || params.customEventName;
+    if (!finalEventName) return { success: false, error: 'INVALID_ARGUMENT', message: 'eventName is required' } as const;
+
     try {
-      const pluginResp = await this.sendAction('blueprint_remove_event', { blueprintCandidates: candidates, requestedPath: primary, eventName: params.eventName }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
+      const pluginResp = await this.sendAction('blueprint_remove_event', { blueprintCandidates: candidates, requestedPath: primary, eventName: finalEventName }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
       if (pluginResp && pluginResp.success) {
         return pluginResp;
       }
@@ -827,13 +844,30 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
 
     // Fix: C++ expects 'manage_blueprint_graph' with 'subAction' = 'connect_pins'
+    let fromNodeId = params.sourceNodeGuid;
+    let fromPinName = params.sourcePinName;
+    if (fromNodeId && fromNodeId.includes('.') && !fromPinName) {
+      const parts = fromNodeId.split('.');
+      fromNodeId = parts[0];
+      fromPinName = parts.slice(1).join('.');
+    }
+
+    let toNodeId = params.targetNodeGuid;
+    let toPinName = params.targetPinName;
+    if (toNodeId && toNodeId.includes('.') && !toPinName) {
+      const parts = toNodeId.split('.');
+      toNodeId = parts[0];
+      toPinName = parts.slice(1).join('.');
+    }
+
     const res = await this.sendAction('manage_blueprint_graph', {
       subAction: 'connect_pins',
       assetPath: primary,
-      fromNodeId: params.sourceNodeGuid,
-      toNodeId: params.targetNodeGuid,
-      fromPinName: params.sourcePinName,
-      toPinName: params.targetPinName
+      graphName: 'EventGraph',
+      fromNodeId: fromNodeId,
+      toNodeId: toNodeId,
+      fromPinName: fromPinName,
+      toPinName: toPinName
     }, { timeoutMs: params.timeoutMs });
     return res;
   }

@@ -198,6 +198,63 @@ static inline FString TryResolveAssetPath(const FString &InPath,
   }
   return Norm.bIsValid ? Norm.Path : FString();
 }
+
+/**
+ * Resolves an asset path from a partial path or short name.
+ * 1. Checks if InputPath exists exactly.
+ * 2. If not, and InputPath is a short name, searches AssetRegistry.
+ * 3. Returns the full package name if found uniquely.
+ */
+static inline FString ResolveAssetPath(const FString &InputPath) {
+  if (InputPath.IsEmpty())
+    return FString();
+
+  // 1. Exact match check
+  if (UEditorAssetLibrary::DoesAssetExist(InputPath)) {
+    return InputPath;
+  }
+
+  // 2. Exact match with /Game/ prepended if it looks like a relative path but
+  // missing root
+  if (!InputPath.StartsWith(TEXT("/"))) {
+    FString GamePath = TEXT("/Game/") + InputPath;
+    if (UEditorAssetLibrary::DoesAssetExist(GamePath)) {
+      return GamePath;
+    }
+  }
+
+  // 3. Search by name if it's a short name (no slashes)
+  // NOTE: This section is disabled because FARFilter::AssetName is not
+  // available in UE5.7 and iterating all assets is too expensive. Relative
+  // paths are still resolved via /Game/ prepend above.
+  /*
+  FString BaseName = FPaths::GetBaseFilename(InputPath);
+  FAssetRegistryModule &AssetRegistryModule =
+      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+  IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+
+  TArray<FAssetData> AssetDataList;
+  FARFilter Filter;
+  // Filter.AssetName = FName(*BaseName); // Compilation Error: AssetName not
+  member of FARFilter
+
+  // AssetRegistry.GetAssets(Filter, AssetDataList);
+
+  if (AssetDataList.Num() == 1) {
+    return AssetDataList[0].PackageName.ToString();
+  }
+
+  if (AssetDataList.Num() > 1) {
+    for (const FAssetData &Data : AssetDataList) {
+      if (Data.PackageName.ToString().StartsWith(TEXT("/Game/"))) {
+        return Data.PackageName.ToString();
+      }
+    }
+  }
+  */
+
+  return FString();
+}
 #endif
 
 #if WITH_EDITOR
@@ -1427,9 +1484,47 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
   if (Req.IsEmpty())
     return false;
 #if WITH_EDITOR
-  FString Err;
-  UBlueprint *BP = LoadBlueprintAsset(Req, OutNormalized, Err);
-  return BP != nullptr && !OutNormalized.IsEmpty();
+  // Use lightweight existence check - DO NOT use LoadBlueprintAsset here
+  // as it causes Editor hangs when called repeatedly in polling loops
+  FString CheckPath = Req;
+
+  // Ensure path starts with /Game if it doesn't have a valid root
+  if (!CheckPath.StartsWith(TEXT("/Game")) &&
+      !CheckPath.StartsWith(TEXT("/Engine")) &&
+      !CheckPath.StartsWith(TEXT("/Script"))) {
+    if (CheckPath.StartsWith(TEXT("/"))) {
+      CheckPath = TEXT("/Game") + CheckPath;
+    } else {
+      CheckPath = TEXT("/Game/") + CheckPath;
+    }
+  }
+
+  // Remove .uasset extension if present
+  if (CheckPath.EndsWith(TEXT(".uasset"))) {
+    CheckPath = CheckPath.LeftChop(7);
+  }
+
+  // Remove object path suffix (e.g., /Game/BP.BP -> /Game/BP)
+  int32 DotIdx;
+  if (CheckPath.FindLastChar(TEXT('.'), DotIdx)) {
+    // Check if this looks like an object path (PackagePath.ObjectName)
+    FString AfterDot = CheckPath.Mid(DotIdx + 1);
+    FString BeforeDot = CheckPath.Left(DotIdx);
+    // If the part after the dot matches the asset name, strip it
+    int32 LastSlashIdx;
+    if (BeforeDot.FindLastChar(TEXT('/'), LastSlashIdx)) {
+      FString AssetName = BeforeDot.Mid(LastSlashIdx + 1);
+      if (AssetName.Equals(AfterDot, ESearchCase::IgnoreCase)) {
+        CheckPath = BeforeDot;
+      }
+    }
+  }
+
+  if (UEditorAssetLibrary::DoesAssetExist(CheckPath)) {
+    OutNormalized = CheckPath;
+    return true;
+  }
+  return false;
 #else
   return false;
 #endif

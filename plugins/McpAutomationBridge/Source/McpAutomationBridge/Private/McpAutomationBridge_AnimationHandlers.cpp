@@ -1957,19 +1957,35 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
   }
 
   TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-  APawn *TargetPawn = nullptr;
+  AActor *TargetActor = nullptr;
 
-  for (AActor *Actor : AllActors) {
-    if (Actor &&
-        Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase)) {
-      TargetPawn = Cast<APawn>(Actor);
-      if (TargetPawn) {
-        break;
+  if (GEditor && GEditor->GetEditorWorldContext().World()) {
+    UWorld *World = GEditor->GetEditorWorldContext().World();
+    for (TActorIterator<AActor> It(World); It; ++It) {
+      AActor *Actor = *It;
+      if (Actor) {
+        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
+            Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase)) {
+          TargetActor = Actor;
+          break;
+        }
       }
     }
   }
 
-  if (!TargetPawn) {
+  // Fallback to ActorSS search if iterator didn't find it (rare but redundant safety)
+  if (!TargetActor) {
+      for (AActor *Actor : AllActors) {
+        if (Actor &&
+            (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
+             Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase))) {
+          TargetActor = Actor;
+          break;
+        }
+      }
+  }
+
+  if (!TargetActor) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetStringField(TEXT("error"),
                          FString::Printf(TEXT("Actor not found: %s"),
@@ -1985,7 +2001,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
   }
 
   USkeletalMeshComponent *SkelMeshComp =
-      TargetPawn->FindComponentByClass<USkeletalMeshComponent>();
+      TargetActor->FindComponentByClass<USkeletalMeshComponent>();
   if (!SkelMeshComp) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Skeletal mesh component not found"),
@@ -2106,19 +2122,34 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
   }
 
   TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-  APawn *TargetPawn = nullptr;
+  AActor *TargetActor = nullptr;
 
-  for (AActor *Actor : AllActors) {
-    if (Actor &&
-        Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase)) {
-      TargetPawn = Cast<APawn>(Actor);
-      if (TargetPawn) {
-        break;
+  if (GEditor && GEditor->GetEditorWorldContext().World()) {
+    UWorld *World = GEditor->GetEditorWorldContext().World();
+    for (TActorIterator<AActor> It(World); It; ++It) {
+      AActor *Actor = *It;
+      if (Actor) {
+        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
+            Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase)) {
+          TargetActor = Actor;
+          break;
+        }
       }
     }
   }
+  
+  if (!TargetActor) {
+      for (AActor *Actor : AllActors) {
+        if (Actor &&
+            (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
+             Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase))) {
+          TargetActor = Actor;
+          break;
+        }
+      }
+  }
 
-  if (!TargetPawn) {
+  if (!TargetActor) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetStringField(TEXT("error"),
                          FString::Printf(TEXT("Actor not found: %s"),
@@ -2133,7 +2164,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
   }
 
   USkeletalMeshComponent *SkelMeshComp =
-      TargetPawn->FindComponentByClass<USkeletalMeshComponent>();
+      TargetActor->FindComponentByClass<USkeletalMeshComponent>();
   if (!SkelMeshComp) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Skeletal mesh component not found"),

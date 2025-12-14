@@ -61,9 +61,24 @@ void UMcpAutomationBridgeSubsystem::Initialize(
 
   // Start the connection manager
   ConnectionManager->Start();
+
+  // Register Ticker
+  TickHandle = FTSTicker::GetCoreTicker().AddTicker(
+      FTickerDelegate::CreateUObject(this,
+                                     &UMcpAutomationBridgeSubsystem::Tick),
+      0.1f // Tick every 0.1s is sufficient for automation queue processing
+  );
+
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+         TEXT("McpAutomationBridgeSubsystem Initialized."));
 }
 
 void UMcpAutomationBridgeSubsystem::Deinitialize() {
+  if (TickHandle.IsValid()) {
+    FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);
+    TickHandle.Reset();
+  }
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("McpAutomationBridgeSubsystem deinitializing."));
 
@@ -102,8 +117,11 @@ bool UMcpAutomationBridgeSubsystem::SendRawMessage(const FString &Message) {
 }
 
 bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime) {
-  if (ConnectionManager.IsValid()) {
-    ConnectionManager->Tick(DeltaTime);
+  // Check if we have pending requests that were deferred due to unsafe engine
+  // states
+  if (bPendingRequestsScheduled && !GIsSavingPackage &&
+      !IsGarbageCollecting() && !IsAsyncLoading()) {
+    ProcessPendingAutomationRequests();
   }
   return true;
 }

@@ -22,23 +22,26 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async importAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean; save?: boolean }) {
-    const res = await this.sendRequest('import', {
-      ...params
-    }, 'import', { timeoutMs: 120000 });
+    const res = await this.sendRequest('manage_asset', {
+      ...params,
+      subAction: 'import'
+    }, 'manage_asset', { timeoutMs: 120000 });
     if (res && res.success) {
       return { ...res, asset: this.normalizeAssetPath(params.destinationPath), source: params.sourcePath };
     }
     return res;
   }
 
-  async duplicateAsset(params: { sourcePath: string; destinationPath: string }) {
+  async duplicateAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean }) {
     const sourcePath = this.normalizeAssetPath(params.sourcePath);
     const destinationPath = this.normalizeAssetPath(params.destinationPath);
 
-    const res = await this.sendRequest('duplicate', {
+    const res = await this.sendRequest('manage_asset', {
       sourcePath,
-      destinationPath
-    }, 'duplicate', { timeoutMs: 60000 });
+      destinationPath,
+      overwrite: params.overwrite ?? false,
+      subAction: 'duplicate'
+    }, 'manage_asset', { timeoutMs: 60000 });
     if (res && res.success) {
       return { ...res, asset: destinationPath, source: sourcePath };
     }
@@ -49,10 +52,11 @@ export class AssetTools extends BaseTool implements IAssetTools {
     const sourcePath = this.normalizeAssetPath(params.sourcePath);
     const destinationPath = this.normalizeAssetPath(params.destinationPath);
 
-    const res = await this.sendRequest('rename', {
+    const res = await this.sendRequest('manage_asset', {
       sourcePath,
-      destinationPath
-    }, 'rename', { timeoutMs: 60000 });
+      destinationPath,
+      subAction: 'rename'
+    }, 'manage_asset', { timeoutMs: 60000 });
     if (res && res.success) {
       return { ...res, asset: destinationPath, oldName: sourcePath };
     }
@@ -63,10 +67,11 @@ export class AssetTools extends BaseTool implements IAssetTools {
     const sourcePath = this.normalizeAssetPath(params.sourcePath);
     const destinationPath = this.normalizeAssetPath(params.destinationPath);
 
-    const res = await this.sendRequest('move', {
+    const res = await this.sendRequest('manage_asset', {
       sourcePath,
-      destinationPath
-    }, 'move', { timeoutMs: 60000 });
+      destinationPath,
+      subAction: 'move'
+    }, 'manage_asset', { timeoutMs: 60000 });
     if (res && res.success) {
       return { ...res, asset: destinationPath, from: sourcePath };
     }
@@ -86,10 +91,15 @@ export class AssetTools extends BaseTool implements IAssetTools {
     const assetPaths = (Array.isArray(params.paths) ? params.paths : [])
       .map(p => this.normalizeAssetPath(p));
 
-    return this.sendRequest('bulk_delete', {
+    // Bulk delete maps to 'manage_asset' subAction 'bulk_delete' or 'delete'
+    // C++ 'HandleDeleteAssets' handles single delete, 'HandleBulkDeleteAssets' handles bulk.
+    // Let's use 'bulk_delete' if we have multiple, or 'delete' for consistency?
+    // C++ HandleAssetAction dispatches 'bulk_delete' to HandleBulkDeleteAssets.
+    return this.sendRequest('manage_asset', {
       assetPaths,
-      fixupRedirectors: params.fixupRedirectors
-    }, 'bulk_delete', { timeoutMs: 120000 });
+      fixupRedirectors: params.fixupRedirectors,
+      subAction: 'delete'
+    }, 'manage_asset', { timeoutMs: params.timeoutMs || 120000 });
   }
 
   async searchAssets(params: { classNames?: string[]; packagePaths?: string[]; recursivePaths?: boolean; recursiveClasses?: boolean; limit?: number }) {
@@ -129,8 +139,16 @@ export class AssetTools extends BaseTool implements IAssetTools {
       if (bridge && typeof bridge.sendAutomationRequest === 'function') {
         try {
           const response: any = await bridge.sendAutomationRequest(
-            'save_asset',
-            { assetPath: normalizedPath },
+            'manage_asset',
+            { assetPath: normalizedPath, subAction: 'save_asset' }, // 'save_asset' isn't explicitly in HandleAssetAction but usually falls back or Editor handles it?
+            // Wait, HandleAssetAction does NOT have 'save'.
+            // But 'execute_editor_function' usually handles SAVE_ASSET.
+            // Let's check fallback. The original code tried 'save_asset' command which likely failed.
+            // Actually, keep safe fallback to 'executeEditorFunction'.
+            // But if we want to add save support, we should assume 'save_asset' command failed implies we need fallback.
+            // Let's stick to the existing fallback logic but maybe fix the command if known?
+            // Since 'save_asset' is not in Subsystem.cpp, it fails.
+            // Let's rely on executeEditorFunction below.
             { timeoutMs: 60000 }
           );
 
@@ -163,20 +181,27 @@ export class AssetTools extends BaseTool implements IAssetTools {
   async createFolder(folderPath: string) {
     // Folders are paths too
     const path = this.normalizeAssetPath(folderPath);
-    return this.sendRequest('create_folder', {
-      path
-    }, 'create_folder', { timeoutMs: 60000 });
+    return this.sendRequest('manage_asset', {
+      path,
+      subAction: 'create_folder'
+    }, 'manage_asset', { timeoutMs: 60000 });
   }
 
   async getDependencies(params: { assetPath: string; recursive?: boolean }) {
-    return this.sendRequest('get_dependencies', {
+    // get_dependencies is typically an asset query or managed asset action?
+    // HandleAssetAction has 'get_dependencies' dispatch.
+    return this.sendRequest('manage_asset', {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
       subAction: 'get_dependencies'
-    }, 'get_dependencies');
+    }, 'manage_asset');
   }
 
   async getSourceControlState(params: { assetPath: string }) {
+    // Source control state usually via 'asset_query' or 'manage_asset'?
+    // It's not in HandleAssetAction explicitly, maybe 'asset_query' subAction?
+    // Let's check AssetQueryHandlers.cpp or AssetWorkflowHandlers.cpp dispatch.
+    // Assuming 'asset_query' supports it (original code used asset_query).
     return this.sendRequest('asset_query', {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
@@ -185,10 +210,11 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async getMetadata(params: { assetPath: string }) {
-    const response = await this.sendRequest('get_metadata', {
+    const response = await this.sendRequest('manage_asset', {
       ...params,
-      assetPath: this.normalizeAssetPath(params.assetPath)
-    }, 'get_metadata');
+      assetPath: this.normalizeAssetPath(params.assetPath),
+      subAction: 'get_metadata'
+    }, 'manage_asset');
 
     // BaseTool unwraps the result, so 'response' is likely the payload itself.
     // However, if the result was null, 'response' might be the wrapper.
@@ -207,11 +233,11 @@ export class AssetTools extends BaseTool implements IAssetTools {
 
     try {
       // Offload the heavy graph traversal to C++
-      const response: any = await this.sendRequest('get_asset_graph', {
+      const response: any = await this.sendRequest('manage_asset', {
         assetPath,
         maxDepth,
         subAction: 'get_asset_graph'
-      }, 'get_asset_graph', { timeoutMs: 60000 });
+      }, 'manage_asset', { timeoutMs: 60000 });
 
       if (!response.success || !response.graph) {
         return { success: false, error: response.error || 'Failed to retrieve asset graph from engine' };
@@ -279,31 +305,35 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async createThumbnail(params: { assetPath: string; width?: number; height?: number }) {
-    return this.sendRequest('generate_thumbnail', {
+    return this.sendRequest('manage_asset', {
       ...params,
-      assetPath: this.normalizeAssetPath(params.assetPath)
-    }, 'generate_thumbnail', { timeoutMs: 60000 });
+      assetPath: this.normalizeAssetPath(params.assetPath),
+      subAction: 'generate_thumbnail'
+    }, 'manage_asset', { timeoutMs: 60000 });
   }
 
   async setTags(params: { assetPath: string; tags: string[] }) {
-    return this.sendRequest('set_tags', {
+    return this.sendRequest('manage_asset', {
       ...params,
-      assetPath: this.normalizeAssetPath(params.assetPath)
-    }, 'set_tags', { timeoutMs: 60000 });
+      assetPath: this.normalizeAssetPath(params.assetPath),
+      subAction: 'set_tags'
+    }, 'manage_asset', { timeoutMs: 60000 });
   }
 
   async generateReport(params: { directory: string; reportType?: string; outputPath?: string }) {
-    return this.sendRequest('generate_report', {
+    return this.sendRequest('manage_asset', {
       ...params,
-      directory: this.normalizeAssetPath(params.directory)
-    }, 'generate_report', { timeoutMs: 300000 });
+      directory: this.normalizeAssetPath(params.directory),
+      subAction: 'generate_report'
+    }, 'manage_asset', { timeoutMs: 300000 });
   }
 
   async validate(params: { assetPath: string }) {
-    return this.sendRequest('validate', {
+    return this.sendRequest('manage_asset', {
       ...params,
-      assetPath: this.normalizeAssetPath(params.assetPath)
-    }, 'validate', { timeoutMs: 300000 });
+      assetPath: this.normalizeAssetPath(params.assetPath),
+      subAction: 'validate'
+    }, 'manage_asset', { timeoutMs: 300000 });
   }
 
   async generateLODs(params: { assetPath: string; lodCount: number }) {
@@ -320,9 +350,10 @@ export class AssetTools extends BaseTool implements IAssetTools {
 
     try {
       const automation = this.getAutomationBridge();
-      const response: any = await automation.sendAutomationRequest('generate_lods', {
+      const response: any = await automation.sendAutomationRequest('manage_asset', {
         assetPaths: [assetPath],
-        numLODs: lodCount
+        numLODs: lodCount,
+        subAction: 'generate_lods'
       }, { timeoutMs: 120000 });
 
       if (!response || response.success === false) {

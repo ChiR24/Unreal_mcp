@@ -199,5 +199,22 @@ export async function handleEffectTools(action: string, args: any, tools: ITools
     });
   }
 
+  // If we got here and it was a spawn_niagara failure, maybe try to be helpful about paths
+  if (action === 'spawn_niagara' && errorCode === 'SYSTEM_NOT_FOUND' && args.systemPath) {
+    // Check if path ends in .Name
+    const path = args.systemPath;
+    const name = path.split('/').pop();
+    if (name && !path.endsWith(`.${name}`)) {
+      // Retry with corrected path?
+      // We can't easily retry here without recursion, but we can hint in the message.
+      return cleanObject({
+        success: false,
+        error: 'SYSTEM_NOT_FOUND',
+        message: `Niagara System not found at ${path}. Did you mean ${path}.${name}?`,
+        systemPath: path
+      });
+    }
+  }
+
   return cleanObject(res);
 }

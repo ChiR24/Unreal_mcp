@@ -52,7 +52,7 @@ const handlers: Record<string, ActorActionHandler> = {
             ? 'SplineComponent'
             : undefined;
 
-        return tools.actorTools.spawn({
+        const result = await tools.actorTools.spawn({
             classPath,
             actorName: args.actorName,
             location: args.location,
@@ -61,6 +61,17 @@ const handlers: Record<string, ActorActionHandler> = {
             timeoutMs,
             ...(componentToAdd ? { componentToAdd } : {})
         });
+
+        // Ensure successful spawn returns the actual actor name
+        if (result && result.success && result.actorName) {
+            return {
+                ...result,
+                message: `Spawned actor: ${result.actorName}`,
+                // Explicitly return the actual name so the client can use it
+                name: result.actorName
+            };
+        }
+        return result;
     },
     delete: async (args, tools) => {
         if (args.actorNames && Array.isArray(args.actorNames)) {
@@ -71,10 +82,62 @@ const handlers: Record<string, ActorActionHandler> = {
     },
     apply_force: async (args, tools) => {
         const actorName = requireNonEmptyString(args.actorName, 'actorName');
-        return tools.actorTools.applyForce({
-            actorName,
-            force: args.force
-        });
+        const force = args.force;
+
+        // Function to attempt applying force, returning the result or throwing
+        const tryApplyForce = async () => {
+            return await tools.actorTools.applyForce({
+                actorName,
+                force
+            });
+        };
+
+        try {
+            // Initial attempt
+            return await tryApplyForce();
+        } catch (error: any) {
+            // Check if error is due to physics
+            const errorMsg = error.message || String(error);
+
+            if (errorMsg.toUpperCase().includes('PHYSICS')) {
+                try {
+                    // Auto-enable physics logic
+                    const compsResult = await tools.actorTools.getComponents(actorName);
+                    if (compsResult && compsResult.success && Array.isArray(compsResult.components)) {
+                        console.log('DEBUG: Components found:', JSON.stringify(compsResult.components));
+                        const meshComp = compsResult.components.find((c: any) => {
+                            const name = c.name || c;
+                            const match = typeof name === 'string' && (
+                                name.toLowerCase().includes('staticmesh') ||
+                                name.toLowerCase().includes('mesh') ||
+                                name.toLowerCase().includes('primitive')
+                            );
+                            console.log(`DEBUG: Checking component '${name}' matches? ${match}`);
+                            return match;
+                        });
+
+                        if (meshComp) {
+                            const compName = meshComp.name || meshComp;
+                            console.log(`Auto-enabling physics for component: ${compName}`); // Debug log
+                            await tools.actorTools.setComponentProperties({
+                                actorName,
+                                componentName: compName,
+                                properties: { SimulatePhysics: true, bSimulatePhysics: true, Mobility: 2 }
+                            });
+
+                            // Retry
+                            return await tryApplyForce();
+                        }
+                    }
+                } catch (retryError: any) {
+                    // If retry fails, append debug info to original error and rethrow
+                    throw new Error(`${errorMsg} (Auto-enable physics failed: ${retryError.message})`);
+                }
+            }
+
+            // Re-throw if not a physics error or if auto-enable logic matched nothing
+            throw error;
+        }
     },
     set_transform: async (args, tools) => {
         const actorName = requireNonEmptyString(args.actorName, 'actorName');
@@ -98,12 +161,13 @@ const handlers: Record<string, ActorActionHandler> = {
         });
     },
     attach: async (args, tools) => {
-        const childActor = requireNonEmptyString(args.childActor, 'childActor');
+        // Allow actorName as alias for childActor for consistency with other tools
+        const childActor = requireNonEmptyString(args.childActor || args.actorName, 'childActor (or actorName)');
         const parentActor = requireNonEmptyString(args.parentActor, 'parentActor');
         return tools.actorTools.attach({ childActor, parentActor });
     },
     detach: async (args, tools) => {
-        const actorName = requireNonEmptyString(args.actorName, 'actorName');
+        const actorName = requireNonEmptyString(args.actorName || args.childActor, 'actorName', 'detach requires actorName (or childActor)');
         return tools.actorTools.detach(actorName);
     },
     add_tag: async (args, tools) => {
@@ -126,12 +190,21 @@ const handlers: Record<string, ActorActionHandler> = {
     },
     spawn_blueprint: async (args, tools) => {
         const blueprintPath = requireNonEmptyString(args.blueprintPath, 'blueprintPath', 'Invalid blueprintPath: must be a non-empty string');
-        return tools.actorTools.spawnBlueprint({
+        const result = await tools.actorTools.spawnBlueprint({
             blueprintPath,
             actorName: args.actorName,
             location: args.location,
             rotation: args.rotation
         });
+
+        if (result && result.success && result.actorName) {
+            return {
+                ...result,
+                message: `Spawned blueprint: ${result.actorName}`,
+                name: result.actorName
+            };
+        }
+        return result;
     },
     list: async (args, tools) => {
         const result = await tools.actorTools.listActors();

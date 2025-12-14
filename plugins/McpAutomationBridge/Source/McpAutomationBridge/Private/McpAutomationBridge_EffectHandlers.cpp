@@ -3,7 +3,6 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 
-
 #if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 #if __has_include("Subsystems/EditorActorSubsystem.h")
@@ -305,6 +304,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       if (NewSystem) {
         FAssetRegistryModule::AssetCreated(NewSystem);
         Package->MarkPackageDirty();
+        UEditorAssetLibrary::SaveAsset(NewSystem->GetPathName());
 
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);
@@ -481,6 +481,78 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         }
         DrawDebugCoordinateSystem(World, Loc, Rot, Size, false, Duration, 0,
                                   Thickness);
+      } else if (LowerShapeType == TEXT("cylinder")) {
+        FVector EndLoc = Loc + FVector(0, 0, 100);
+        if (LocalPayload->HasField(TEXT("endLocation"))) {
+          const TSharedPtr<FJsonValue> EndVal =
+              LocalPayload->TryGetField(TEXT("endLocation"));
+          if (EndVal.IsValid()) {
+            // Reuse parsing logic if possible, or duplicate safely
+            if (EndVal->Type == EJson::Array) {
+              const TArray<TSharedPtr<FJsonValue>> &Arr = EndVal->AsArray();
+              if (Arr.Num() >= 3)
+                EndLoc = FVector((float)Arr[0]->AsNumber(),
+                                 (float)Arr[1]->AsNumber(),
+                                 (float)Arr[2]->AsNumber());
+            } else if (EndVal->Type == EJson::Object) {
+              const TSharedPtr<FJsonObject> O = EndVal->AsObject();
+              if (O.IsValid())
+                EndLoc = FVector((float)(O->HasField(TEXT("x"))
+                                             ? O->GetNumberField(TEXT("x"))
+                                             : 0.0),
+                                 (float)(O->HasField(TEXT("y"))
+                                             ? O->GetNumberField(TEXT("y"))
+                                             : 0.0),
+                                 (float)(O->HasField(TEXT("z"))
+                                             ? O->GetNumberField(TEXT("z"))
+                                             : 0.0));
+            }
+          }
+        }
+        DrawDebugCylinder(World, Loc, EndLoc, Size, 16, DebugColor, false,
+                          Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("cone")) {
+        FVector Direction = FVector::UpVector;
+        if (LocalPayload->HasField(TEXT("direction"))) {
+          const TSharedPtr<FJsonValue> DirVal =
+              LocalPayload->TryGetField(TEXT("direction"));
+          if (DirVal.IsValid()) {
+            if (DirVal->Type == EJson::Array) {
+              const TArray<TSharedPtr<FJsonValue>> &Arr = DirVal->AsArray();
+              if (Arr.Num() >= 3)
+                Direction = FVector((float)Arr[0]->AsNumber(),
+                                    (float)Arr[1]->AsNumber(),
+                                    (float)Arr[2]->AsNumber());
+            } else if (DirVal->Type == EJson::Object) {
+              const TSharedPtr<FJsonObject> O = DirVal->AsObject();
+              if (O.IsValid())
+                Direction = FVector((float)(O->HasField(TEXT("x"))
+                                                ? O->GetNumberField(TEXT("x"))
+                                                : 0.0),
+                                    (float)(O->HasField(TEXT("y"))
+                                                ? O->GetNumberField(TEXT("y"))
+                                                : 0.0),
+                                    (float)(O->HasField(TEXT("z"))
+                                                ? O->GetNumberField(TEXT("z"))
+                                                : 0.0));
+            }
+          }
+        }
+        float Length = 100.0f;
+        if (LocalPayload->HasField(TEXT("length"))) {
+          Length = (float)LocalPayload->GetNumberField(TEXT("length"));
+        }
+        // Default to a 45 degree cone if not specified
+        float AngleWidth = FMath::DegreesToRadians(45.0f);
+        float AngleHeight = FMath::DegreesToRadians(45.0f);
+
+        if (LocalPayload->HasField(TEXT("angle"))) {
+          float AngleDeg = (float)LocalPayload->GetNumberField(TEXT("angle"));
+          AngleWidth = AngleHeight = FMath::DegreesToRadians(AngleDeg);
+        }
+
+        DrawDebugCone(World, Loc, Direction, Length, AngleWidth, AngleHeight,
+                      16, DebugColor, false, Duration, 0, Thickness);
       } else {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), false);

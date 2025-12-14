@@ -720,14 +720,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
     for (const FString &Name : Names) {
       TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
       Item->SetStringField(TEXT("name"), Name);
-      AActor *Found = nullptr;
-      TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-      for (AActor *A : AllActors) {
-        if (A && A->GetActorLabel().Equals(Name, ESearchCase::IgnoreCase)) {
-          Found = A;
-          break;
-        }
-      }
+      // Use robust actor lookup that checks label, name, and UAID
+      AActor *Found = Subsystem->FindActorByName(Name);
 
       if (!Found) {
         Item->SetBoolField(TEXT("success"), false);

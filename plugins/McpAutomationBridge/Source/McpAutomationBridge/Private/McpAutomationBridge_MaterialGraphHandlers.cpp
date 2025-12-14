@@ -76,6 +76,14 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       if (Expr->GetPathName() == Needle) {
         return Expr;
       }
+
+      // Also check ParameterName if it's a parameter node
+      if (UMaterialExpressionParameter *ParamExpr =
+              Cast<UMaterialExpressionParameter>(Expr)) {
+        if (ParamExpr->ParameterName.ToString() == Needle) {
+          return Expr;
+        }
+      }
     }
     return nullptr;
   };

@@ -59,6 +59,7 @@ export class AutomationBridge extends EventEmitter {
     private lastDisconnect?: { code: number; reason: string; at: Date };
     private lastError?: { message: string; at: Date };
     private requestQueue: Array<() => void> = [];
+    private queuedRequestItems: Array<{ resolve: (v: any) => void; reject: (e: any) => void; action: string; payload: any; options: any }> = [];
     private connectionPromise?: Promise<void>;
 
     constructor(options: AutomationBridgeOptions = {}) {
@@ -183,7 +184,7 @@ export class AutomationBridge extends EventEmitter {
             this.log.info(`Connecting to Unreal Engine automation server at ${url}`);
 
             this.log.debug(`Negotiated protocols: ${JSON.stringify(this.negotiatedProtocols)}`);
-            
+
             // Compatibility fix: If only one protocol, pass as string to ensure ws/plugin compatibility
             const protocols = 'mcp-automation';
 
@@ -361,21 +362,21 @@ export class AutomationBridge extends EventEmitter {
         if (!this.isConnected()) {
             if (this.enabled) {
                 this.log.info('Automation bridge not connected, attempting lazy connection...');
-                
+
                 // Avoid multiple simultaneous connection attempts
                 if (!this.connectionPromise) {
                     this.connectionPromise = new Promise<void>((resolve, reject) => {
-                        const onConnect = () => { 
-                            cleanup(); resolve(); 
+                        const onConnect = () => {
+                            cleanup(); resolve();
                         };
                         // We map errors to rejects, but we should be careful about which errors.
                         // A socket error might happen during connection.
-                        const onError = (err: any) => { 
-                            cleanup(); reject(err); 
+                        const onError = (err: any) => {
+                            cleanup(); reject(err);
                         };
                         // Also listen for handshake failure
-                        const onHandshakeFail = (err: any) => { 
-                            cleanup(); reject(new Error(`Handshake failed: ${err.reason}`)); 
+                        const onHandshakeFail = (err: any) => {
+                            cleanup(); reject(new Error(`Handshake failed: ${err.reason}`));
                         };
 
                         const cleanup = () => {
@@ -400,7 +401,7 @@ export class AutomationBridge extends EventEmitter {
 
                 try {
                     // Wait for connection with a short timeout for the connection itself
-                    const connectTimeout = 5000; 
+                    const connectTimeout = 5000;
                     await Promise.race([
                         this.connectionPromise,
                         new Promise((_, reject) => setTimeout(() => reject(new Error('Lazy connection timeout')), connectTimeout))
@@ -418,10 +419,34 @@ export class AutomationBridge extends EventEmitter {
         }
 
         if (!this.isConnected()) {
-             throw new Error('Automation bridge not connected');
+            throw new Error('Automation bridge not connected');
         }
 
-        const timeoutMs = options.timeoutMs ?? 30000;
+        // Check if we need to queue (unless it's a priority request which standard ones are not)
+        // We use requestTracker directly to check limit as it's the source of truth
+        // Note: requestTracker exposes maxPendingRequests via constructor but generic check logic isn't public
+        // We assumed getPendingCount() is available
+        if (this.requestTracker.getPendingCount() >= (this as any).requestTracker.maxPendingRequests) {
+            return new Promise<T>((resolve, reject) => {
+                this.queuedRequestItems.push({
+                    resolve,
+                    reject,
+                    action,
+                    payload,
+                    options
+                });
+            });
+        }
+
+        return this.sendRequestInternal<T>(action, payload, options);
+    }
+
+    private async sendRequestInternal<T>(
+        action: string,
+        payload: Record<string, unknown>,
+        options: { timeoutMs?: number }
+    ): Promise<T> {
+        const timeoutMs = options.timeoutMs ?? 60000; // Increased default timeout to 60s
 
         // Check for coalescing
         const coalesceKey = this.requestTracker.createCoalesceKey(action, payload);
@@ -445,11 +470,35 @@ export class AutomationBridge extends EventEmitter {
             payload
         };
 
+        const resultPromise = promise as unknown as Promise<T>;
+
+        // Ensure we process the queue when this request finishes
+        resultPromise.finally(() => {
+            this.processRequestQueue();
+        }).catch(() => { }); // catch to prevent unhandled rejection during finally chain? no, finally returns new promise
+
         if (this.send(message)) {
-            return promise as unknown as T;
+            return resultPromise;
         } else {
             this.requestTracker.rejectRequest(requestId, new Error('Failed to send request'));
             throw new Error('Failed to send request');
+        }
+    }
+
+    private processRequestQueue() {
+        if (this.queuedRequestItems.length === 0) return;
+
+        // while we have capacity and items
+        while (
+            this.queuedRequestItems.length > 0 &&
+            this.requestTracker.getPendingCount() < (this as any).requestTracker.maxPendingRequests
+        ) {
+            const item = this.queuedRequestItems.shift();
+            if (item) {
+                this.sendRequestInternal(item.action, item.payload, item.options)
+                    .then(item.resolve)
+                    .catch(item.reject);
+            }
         }
     }
 

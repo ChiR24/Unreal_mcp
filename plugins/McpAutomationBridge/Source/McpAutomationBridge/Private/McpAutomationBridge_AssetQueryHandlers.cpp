@@ -5,6 +5,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 
 #if WITH_EDITOR
+#include "EditorAssetLibrary.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "SourceControlOperations.h"
@@ -57,8 +58,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
   } else if (SubAction == TEXT("find_by_tag")) {
     FString Tag;
     Payload->TryGetStringField(TEXT("tag"), Tag);
-    FString Value;
-    Payload->TryGetStringField(TEXT("value"), Value);
+    FString ExpectedValue;
+    Payload->TryGetStringField(TEXT("value"), ExpectedValue);
 
     if (Tag.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("tag required"),
@@ -66,45 +67,54 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
       return true;
     }
 
-    FARFilter Filter;
-    // We want to find assets that have this tag.
-    // Specifying TagsAndValues with just key checks for existence,
-    // key+value checks for specific value.
-    if (!Value.IsEmpty()) {
-      Filter.TagsAndValues.Add(FName(*Tag), Value);
-    } else {
-      // Searching by tag existence only is slightly more complex if the API
-      // insists on a value, but normally adding key with empty string might not
-      // work as intended for "exists". However, for now we assume exact match
-      // or simple key check. Unreal's API usually requires a value for strict
-      // matching. If user provided no value, we might iterate all assets? No,
-      // that's slow. We will assume empty value means "any value" isn't
-      // supported easily by FARFilter without iterating. But let's try adding
-      // it with * wildcard or similar if supported? No, let's just add it.
-      Filter.TagsAndValues.Add(FName(*Tag), FString());
+    // Optional path filter to narrow search scope
+    FString Path;
+    Payload->TryGetStringField(TEXT("path"), Path);
+    if (Path.IsEmpty()) {
+      Path = TEXT("/Game"); // Default search path
     }
 
-    // Also likely want to filter by class if provided? Code doesn't use it yet.
-    // For now broad search.
-
+    // Get all assets in the specified path
     FAssetRegistryModule &AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
             "AssetRegistry");
+    FARFilter Filter;
+    Filter.PackagePaths.Add(FName(*Path));
+    Filter.bRecursivePaths = true;
+
     TArray<FAssetData> AssetDataList;
     AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
 
-    // Build Response
+    // Filter assets by checking their package metadata
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     TArray<TSharedPtr<FJsonValue>> AssetsArray;
 
     for (const FAssetData &Data : AssetDataList) {
-      TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
-      AssetObj->SetStringField(TEXT("assetName"), Data.AssetName.ToString());
-      AssetObj->SetStringField(TEXT("assetPath"),
-                               Data.GetSoftObjectPath().ToString());
-      AssetObj->SetStringField(TEXT("classPath"),
-                               Data.AssetClassPath.ToString());
-      AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+      const FString AssetPath = Data.GetSoftObjectPath().ToString();
+      UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+      if (!Asset)
+        continue;
+
+      // Check if the asset has the metadata tag
+      FString MetadataValue =
+          UEditorAssetLibrary::GetMetadataTag(Asset, FName(*Tag));
+
+      // If we found metadata, check if it matches expected value (or just
+      // existence)
+      bool bMatches = !MetadataValue.IsEmpty();
+      if (bMatches && !ExpectedValue.IsEmpty()) {
+        bMatches = MetadataValue.Equals(ExpectedValue, ESearchCase::IgnoreCase);
+      }
+
+      if (bMatches) {
+        TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+        AssetObj->SetStringField(TEXT("assetName"), Data.AssetName.ToString());
+        AssetObj->SetStringField(TEXT("assetPath"), AssetPath);
+        AssetObj->SetStringField(TEXT("classPath"),
+                                 Data.AssetClassPath.ToString());
+        AssetObj->SetStringField(TEXT("tagValue"), MetadataValue);
+        AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+      }
     }
 
     Result->SetArrayField(TEXT("assets"), AssetsArray);

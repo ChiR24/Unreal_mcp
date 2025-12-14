@@ -13,6 +13,20 @@ export async function handleEditorTools(action: string, args: any, tools: ITools
       const res = await tools.editorTools.stopPlayInEditor();
       return cleanObject(res);
     }
+    case 'eject': {
+      const inPie = await tools.editorTools.isInPIE();
+      if (!inPie) {
+        return { success: false, error: 'NOT_IN_PIE', message: 'Cannot eject while not in PIE' };
+      }
+      return await executeAutomationRequest(tools, 'control_editor', { action: 'eject' });
+    }
+    case 'possess': {
+      const inPie = await tools.editorTools.isInPIE();
+      if (!inPie) {
+        return { success: false, error: 'NOT_IN_PIE', message: 'Cannot possess actor while not in PIE' };
+      }
+      return await executeAutomationRequest(tools, 'control_editor', args);
+    }
     case 'pause': {
       const res = await tools.editorTools.pausePlayInEditor();
       return cleanObject(res);
@@ -82,7 +96,11 @@ export async function handleEditorTools(action: string, args: any, tools: ITools
     }
     case 'set_view_mode': {
       const viewMode = requireNonEmptyString(args.viewMode, 'viewMode');
-      const validModes = ['Lit', 'Unlit', 'Wireframe', 'DetailLighting', 'LightingOnly', 'Reflections', 'OptimizationViewmodes', 'ShaderComplexity', 'LightmapDensity', 'StationaryLightOverlap', 'LightComplexity'];
+      const validModes = [
+        'Lit', 'Unlit', 'Wireframe', 'DetailLighting', 'LightingOnly', 'Reflections',
+        'OptimizationViewmodes', 'ShaderComplexity', 'LightmapDensity', 'StationaryLightOverlap', 'LightComplexity',
+        'PathTracing', 'Visualizer', 'LODColoration', 'CollisionPawn', 'CollisionVisibility'
+      ];
       if (!validModes.includes(viewMode)) {
         throw new Error(`unknown_viewmode: ${viewMode}. Must be one of: ${validModes.join(', ')}`);
       }
@@ -94,7 +112,7 @@ export async function handleEditorTools(action: string, args: any, tools: ITools
       return { success: true, message: `Set viewport resolution to ${args.width}x${args.height}`, action: 'set_viewport_resolution' };
     }
     case 'set_viewport_realtime': {
-      const enabled = args.realtime !== false;
+      const enabled = args.enabled !== undefined ? args.enabled : (args.realtime !== false);
       // Use console command since interface doesn't have setViewportRealtime
       await tools.editorTools.executeConsoleCommand(`r.ViewportRealtime ${enabled ? 1 : 0}`);
       return { success: true, message: `Set viewport realtime to ${enabled}`, action: 'set_viewport_realtime' };

@@ -116,7 +116,7 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
       const blueprintName = args.blueprintPath || args.path || args.name;
       const usedNameForBlueprint = !args.blueprintPath && !args.path && args.name;
 
-      const res = await tools.blueprintTools.addEvent({
+      const res: any = await tools.blueprintTools.addEvent({
         blueprintName: blueprintName,
         eventType: args.eventType,
         customEventName: args.customEventName || (!usedNameForBlueprint ? args.name : undefined),
@@ -125,12 +125,25 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
         waitForCompletion: args.waitForCompletion,
         waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
       });
+
+      if (res && res.success === false) {
+        const msg = (res.message || '').toLowerCase();
+        if (msg.includes('already exists') || msg.includes('duplicate')) {
+          return cleanObject({
+            success: false,
+            error: 'EVENT_ALREADY_EXISTS',
+            message: res.message || 'Event already exists',
+            blueprintName
+          });
+        }
+      }
       return cleanObject(res);
     }
     case 'remove_event': {
       const res = await tools.blueprintTools.removeEvent({
         blueprintName: args.name || args.blueprintPath || args.path,
         eventName: args.eventName,
+        customEventName: args.customEventName,
         timeoutMs: args.timeoutMs,
         waitForCompletion: args.waitForCompletion,
         waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
@@ -205,17 +218,46 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
       return cleanObject(res);
     }
     case 'add_node': {
-      if (args.nodeType === 'CallFunction' && !args.functionName && !args.memberName) {
+      if ((args.nodeType === 'CallFunction' || args.nodeType === 'K2Node_CallFunction') && !args.functionName && !args.memberName) {
         throw new Error('CallFunction node requires functionName parameter');
       }
+
+      // Map common node aliases to K2Node types
+      const nodeAliases: Record<string, string> = {
+        'CallFunction': 'K2Node_CallFunction',
+        'VariableGet': 'K2Node_VariableGet',
+        'VariableSet': 'K2Node_VariableSet',
+        'If': 'K2Node_IfThenElse',
+        'Branch': 'K2Node_IfThenElse',
+        'Switch': 'K2Node_Switch',
+        'Select': 'K2Node_Select',
+        'Cast': 'K2Node_DynamicCast',
+        'CustomEvent': 'K2Node_CustomEvent',
+        'Event': 'K2Node_Event',
+        'MakeArray': 'K2Node_MakeArray',
+        'ForEach': 'K2Node_ForEachElementInEnum' // Note: ForEachLoop is a macro, this is different
+      };
+
+      const resolvedNodeType = nodeAliases[args.nodeType] || args.nodeType;
+
+      // Validation for Event nodes
+      if ((resolvedNodeType === 'K2Node_Event' || resolvedNodeType === 'K2Node_CustomEvent') && !args.eventName && !args.customEventName && !args.name) {
+        // Allow 'name' as fallback for customEventName/eventName
+        if (!args.eventName) args.eventName = args.name;
+
+        if (!args.eventName) {
+          throw new Error(`${resolvedNodeType} requires eventName (or customEventName) parameter`);
+        }
+      }
+
       const res = await tools.blueprintTools.addNode({
         blueprintName: args.name || args.blueprintPath || args.path,
-        nodeType: args.nodeType,
+        nodeType: resolvedNodeType,
         graphName: args.graphName,
         functionName: args.functionName,
         variableName: args.variableName,
         nodeName: args.nodeName,
-        eventName: args.eventName,
+        eventName: args.eventName || args.customEventName,
         memberClass: args.memberClass,
         posX: args.posX,
         posY: args.posY,

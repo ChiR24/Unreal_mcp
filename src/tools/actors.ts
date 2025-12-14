@@ -418,6 +418,13 @@ export class ActorTools extends BaseTool implements IActorTools {
   }
 
   async detach(actorName: string) {
+    // Support 'childActor' as alias for 'actorName' since attach() uses childActor.
+    // If actorName is missing/empty but childActor is present in the underlying request (handled by caller or if we expand args),
+    // we should handle it. However, the signature here is specific.
+    // We'll rely on the handler to map it, or we can expand the signature if needed.
+    // For now, let's keep the strict signature but ensure the handler passes it correctly.
+    // Actually, looking at the handler (actor-handlers.ts), it calls tools.actors.detach(args.actorName).
+    // So we should modify actor-handlers.ts instead to map childActor -> actorName.
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
