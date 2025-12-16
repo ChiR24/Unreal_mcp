@@ -1,51 +1,148 @@
-name-template: 'v$NEXT_PATCH_VERSION'
-tag-template: 'v$NEXT_PATCH_VERSION'
-categories:
-  - title: '🚀 Features'
-    labels:
-      - 'type/enhancement'
-      - 'feature'
-      - 'enhancement'
-  - title: '🐛 Bug Fixes'
-    labels:
-      - 'type/bug'
-      - 'bug'
-      - 'fix'
-  - title: '📚 Documentation'
-    labels:
-      - 'area/docs'
-      - 'documentation'
-  - title: '🧰 Tools'
-    labels:
-      - 'area/tools'
-      - 'tooling'
-  - title: '🔌 Plugin'
-    labels:
-      - 'area/plugin'
-  - title: '🧪 Testing'
-    labels:
-      - 'area/testing'
-      - 'test'
-  - title: '📦 Maintenance'
-    labels:
-      - 'chore'
-      - 'maintenance'
-change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
-change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
-version-resolver:
-  major:
-    labels:
-      - 'major'
-  minor:
-    labels:
-      - 'minor'
-  patch:
-    labels:
-      - 'patch'
-      - 'type/bug'
-      - 'bug'
-  default: patch
-template: |
-  ## What's Changed
+name: Release Drafter
 
-  $CHANGES
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update_release_draft:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Release Drafter
+        id: release_drafter
+        uses: release-drafter/release-drafter@v6
+        with:
+          config-name: release-drafter.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get commits not in PRs
+        id: orphan_commits
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { execSync } = require('child_process');
+            
+            // Get the last release tag
+            let lastTag;
+            try {
+              const { data: releases } = await github.rest.repos.listReleases({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 1
+              });
+              lastTag = releases[0]?.tag_name;
+            } catch (e) {
+              lastTag = null;
+            }
+            
+            // Get all commits since last release
+            const range = lastTag ? `${lastTag}..HEAD` : 'HEAD~50..HEAD';
+            let commits;
+            try {
+              commits = execSync(`git log ${range} --pretty=format:"%H|%s|%an" --no-merges`, { encoding: 'utf-8' })
+                .split('\n')
+                .filter(Boolean)
+                .map(line => {
+                  const [sha, message, author] = line.split('|');
+                  return { sha, message, author };
+                });
+            } catch (e) {
+              commits = [];
+            }
+            
+            if (commits.length === 0) {
+              core.setOutput('orphan_commits', '');
+              return;
+            }
+            
+            // Get all PRs merged since last release to filter out PR commits
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              sort: 'updated',
+              direction: 'desc',
+              per_page: 100
+            });
+            
+            // Get commit SHAs that are part of PRs
+            const prCommitShas = new Set();
+            for (const pr of prs.filter(p => p.merged_at)) {
+              try {
+                const { data: prCommits } = await github.rest.pulls.listCommits({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number
+                });
+                prCommits.forEach(c => prCommitShas.add(c.sha));
+              } catch (e) {
+                // Skip if error
+              }
+            }
+            
+            // Filter to only orphan commits (not in any PR)
+            const orphanCommits = commits.filter(c => !prCommitShas.has(c.sha));
+            
+            if (orphanCommits.length === 0) {
+              core.setOutput('orphan_commits', '');
+              return;
+            }
+            
+            // Format orphan commits
+            const formatted = orphanCommits
+              .map(c => `- ${c.message} (${c.sha.substring(0, 7)}) @${c.author}`)
+              .join('\n');
+            
+            core.setOutput('orphan_commits', formatted);
+            core.info(`Found ${orphanCommits.length} commits not in PRs`);
+
+      - name: Update release body with commits
+        if: steps.orphan_commits.outputs.orphan_commits != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const releaseId = '${{ steps.release_drafter.outputs.id }}';
+            const orphanCommits = `${{ steps.orphan_commits.outputs.orphan_commits }}`;
+            
+            if (!releaseId || !orphanCommits) return;
+            
+            // Get current release body
+            const { data: release } = await github.rest.repos.getRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: parseInt(releaseId)
+            });
+            
+            // Check if commits section already exists
+            if (release.body && release.body.includes('## Direct Commits')) {
+              core.info('Commits section already exists, skipping');
+              return;
+            }
+            
+            // Append commits section
+            const newBody = `${release.body || ''}\n\n## Direct Commits\n\n${orphanCommits}`;
+            
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: parseInt(releaseId),
+              body: newBody
+            });
+            
+            core.info('Added orphan commits to release draft');
