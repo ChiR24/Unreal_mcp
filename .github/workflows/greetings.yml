@@ -9,8 +9,14 @@ permissions:
 jobs:
   greeting:
     runs-on: ubuntu-latest
+    # Skip for bots and repository owner
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      github.actor != 'renovate[bot]' &&
+      github.actor != 'github-actions[bot]' &&
+      github.actor != github.repository_owner
     steps:
-    - uses: actions/first-interaction@34f15f655d4e670f5ed0042e3f6f1d58e3a4e0e5 # v1.3.0
+    - uses: actions/first-interaction@v3
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         issue-message: '👋 Thanks for opening this issue! We appreciate your feedback and report. A maintainer will check this out soon.'
