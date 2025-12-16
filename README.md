@@ -64,14 +64,13 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 ### MCP Automation Bridge plugin
 - Location: `plugins/McpAutomationBridge`
 - Installation: copy the folder into your project's `Plugins/` directory and regenerate project files.
-- Sync helper: run `npm run automation:sync -- --engine "X:/Unreal_Engine/UE_5.6/Engine/Plugins" --project "X:/Newfolder(2)/Game/Unreal/Trial/Plugins" --clean-engine --clean-project` after repo updates to copy the latest bridge build into both plugin folders and strip legacy entries (such as `SupportedTargetPlatforms: ["Editor"]`) that trigger startup warnings.
-- Verification: run `node scripts/verify-automation-bridge.js --project "C:/Path/To/YourProject/Plugins" --config "C:/Path/To/YourProject/Config/DefaultEngine.ini"` to confirm the plugin files and automation bridge environment variables are in place before launching Unreal.
 - Configuration: enable **MCP Automation Bridge** in **Edit ▸ Plugins**, restart the editor, then set the endpoint/token under **Edit ▸ Project Settings ▸ Plugins ▸ MCP Automation Bridge**. The bridge ships with its own lightweight WebSocket client, so you no longer need the engine's WebSockets plugin enabled.
-- Startup: after configuration, the Output Log should show a successful connection and the `bridge_started` broadcast; `SendRawMessage` becomes available to Blueprint and C++ callers for manual testing.
-- Current scope: manages a WebSocket session to the Node MCP server (`ws://127.0.0.1:8091` by default), performs optional capability-token handshakes, dispatches inbound JSON to native C++ handlers, implements reconnect backoff, and responds to editor functions, property operations, blueprint actions, and more through native implementations.
-- Usage: all consolidated tools use the automation bridge for native C++ execution. Keep the plugin enabled for all workflows.
+- Current scope: manages a WebSocket session to the Node MCP server (`ws://127.0.0.1:8091` by default), implements reconnect backoff, and responds to editor functions, property operations, blueprint actions, and more through native implementations.
 - Diagnostics: the `ue://automation-bridge` MCP resource surfaces handshake timestamps, recent disconnects, pending automation requests, and whether the Node listener is running—handy when validating editor connectivity from a client.
 - Roadmap: expand the bridge with elevated actions (SCS authoring, typed property marshaling, modal mediation, asset workflows).
+
+### Plugin Setup Video Guide
+<video src="./Public/Plugin_setup_guide.mp4" controls="controls" style="max-width: 100%;"></video>
 
 ### WebAssembly Performance (Optional)
 
