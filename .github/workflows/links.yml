@@ -44,6 +44,8 @@ jobs:
             --exclude 'file://'
             --exclude 'npmjs.com'
             --exclude 'unrealengine.com'
+            --exclude 'rustwasm.github.io'
+            --exclude 'github.com/modelcontextprotocol/sdk'
 
             '**/*.md'
             'docs/**'
