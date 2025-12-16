@@ -16,7 +16,7 @@
     "build:watch": "tsc -p tsconfig.json --watch",
     "start": "node dist/cli.js",
     "dev": "ts-node-esm src/cli.ts",
-    "lint": "echo \"Lint: typescript/javascript, C, C++, C#\" && eslint . --ext .ts || exit 0",
+    "lint": "echo \"Lint: typescript/javascript, C, C++, C#\" && eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "lint:cpp": "echo \"Running C/C++ lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C/C++ lint')",
     "lint:c": "echo \"Running C lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C lint')",
