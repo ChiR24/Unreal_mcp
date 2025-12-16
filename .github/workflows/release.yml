@@ -1,0 +1,112 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4 # v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "Releasing version: $VERSION"
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          
+          CHANGELOG=$(awk -v ver="## \\[$VERSION\\]" '
+            $0 ~ ver { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md)
+          
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="Release ${{ steps.version.outputs.tag }}"
+          fi
+          
+          echo "$CHANGELOG" > release_notes.md
+          echo "Generated release notes:"
+          cat release_notes.md
+
+      - name: Create dist archive
+        run: |
+          mkdir -p release-artifacts
+          
+          tar -czvf release-artifacts/unreal-engine-mcp-server-${{ steps.version.outputs.version }}.tar.gz \
+            dist/ \
+            package.json \
+            README.md \
+            CHANGELOG.md \
+            LICENSE
+          
+          zip -r release-artifacts/unreal-engine-mcp-server-${{ steps.version.outputs.version }}.zip \
+            dist/ \
+            package.json \
+            README.md \
+            CHANGELOG.md \
+            LICENSE
+
+      - name: Create Plugin archive
+        run: |
+          if [ -d "Plugins/McpAutomationBridge" ]; then
+            tar -czvf release-artifacts/McpAutomationBridge-plugin-${{ steps.version.outputs.version }}.tar.gz \
+              Plugins/McpAutomationBridge/
+            
+            zip -r release-artifacts/McpAutomationBridge-plugin-${{ steps.version.outputs.version }}.zip \
+              Plugins/McpAutomationBridge/
+            
+            echo "Plugin archive created"
+          else
+            echo "Plugin directory not found, skipping plugin archive"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191 # v2.0.8
+        with:
+          name: Release ${{ steps.version.outputs.tag }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          files: |
+            release-artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release Summary
+        run: |
+          echo "## Release Created Successfully! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts:" >> $GITHUB_STEP_SUMMARY
+          ls -la release-artifacts/ >> $GITHUB_STEP_SUMMARY

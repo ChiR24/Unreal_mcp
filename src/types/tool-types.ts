@@ -23,6 +23,7 @@ export interface ManageAssetResponse extends BaseToolResponse {
   assets?: AssetInfo[];
   paths?: string[];
   materialPath?: string;
+  materialInstancePath?: string;
 }
 
 // Actor Control Types
@@ -40,8 +41,21 @@ export interface Rotation3D {
 
 export interface ControlActorResponse extends BaseToolResponse {
   actor?: string;
-  deleted?: string;
+  actorName?: string;
+  actorPath?: string;
+  componentName?: string;
+  componentPath?: string;
+  componentClass?: string;
+  componentPaths?: Array<{ name: string; path: string; class?: string }>;
+  components?: Array<Record<string, unknown>>;
+  actors?: Array<Record<string, unknown>>;
+  deleted?: string | string[];
+  deletedCount?: number;
+  missing?: string[];
   physicsEnabled?: boolean;
+  visible?: boolean;
+  tag?: string;
+  snapshotName?: string;
 }
 
 // Editor Control Types
@@ -67,6 +81,13 @@ export interface AnimationPhysicsResponse extends BaseToolResponse {
   playing?: boolean;
   playRate?: number;
   ragdollActive?: boolean;
+  path?: string;
+  blendSpacePath?: string;
+  skeletonPath?: string;
+  controlRigPath?: string;
+  twoDimensional?: boolean;
+  warnings?: string[];
+  details?: unknown;
 }
 
 // Effects System Types
@@ -128,12 +149,12 @@ export interface ToolParameters {
     directory: string;
     recursive?: boolean;
   };
-  
+
   ImportAssetParams: {
     sourcePath: string;
     destinationPath: string;
   };
-  
+
   CreateMaterialParams: {
     name: string;
     path: string;
@@ -145,14 +166,79 @@ export interface ToolParameters {
     location?: Vector3D;
     rotation?: Rotation3D;
   };
-  
+
   DeleteActorParams: {
     actorName: string;
   };
-  
+
   ApplyForceParams: {
     actorName: string;
     force: Vector3D;
+  };
+
+  SpawnBlueprintParams: {
+    blueprintPath: string;
+    actorName?: string;
+    location?: Vector3D;
+    rotation?: Rotation3D;
+  };
+
+  SetTransformParams: {
+    actorName: string;
+    location?: Vector3D;
+    rotation?: Rotation3D;
+    scale?: Vector3D;
+  };
+
+  SetVisibilityParams: {
+    actorName: string;
+    visible: boolean;
+  };
+
+  ComponentParams: {
+    actorName: string;
+    componentType?: string;
+    componentName?: string;
+    properties?: Record<string, unknown>;
+  };
+
+  DuplicateActorParams: {
+    actorName: string;
+    newName?: string;
+    offset?: Vector3D;
+  };
+
+  AttachActorParams: {
+    childActor: string;
+    parentActor: string;
+  };
+
+  DetachActorParams: {
+    actorName: string;
+  };
+
+  TagActorParams: {
+    actorName: string;
+    tag: string;
+  };
+
+  FindByTagParams: {
+    tag: string;
+    matchType?: string;
+  };
+
+  FindByNameParams: {
+    name: string;
+  };
+
+  BlueprintVariablesParams: {
+    actorName: string;
+    variables: Record<string, unknown>;
+  };
+
+  SnapshotActorParams: {
+    actorName: string;
+    snapshotName: string;
   };
 
   // Editor Control
@@ -160,7 +246,7 @@ export interface ToolParameters {
     location?: Vector3D;
     rotation?: Rotation3D;
   };
-  
+
   SetViewModeParams: {
     mode: string;
   };
@@ -172,12 +258,56 @@ export interface ToolParameters {
 }
 
 // Consolidated tool action types
-export type AssetAction = 'list' | 'import' | 'create_material';
-export type ActorAction = 'spawn' | 'delete' | 'apply_force';
+export type AssetAction = 'list' | 'import' | 'create_material' | 'create_material_instance';
+export type ActorAction =
+  | 'spawn'
+  | 'spawn_blueprint'
+  | 'delete'
+  | 'delete_by_tag'
+  | 'duplicate'
+  | 'apply_force'
+  | 'set_transform'
+  | 'get_transform'
+  | 'set_visibility'
+  | 'add_component'
+  | 'set_component_properties'
+  | 'get_components'
+  | 'add_tag'
+  | 'find_by_tag'
+  | 'find_by_name'
+  | 'set_blueprint_variables'
+  | 'create_snapshot'
+  | 'attach'
+  | 'detach';
 export type EditorAction = 'play' | 'stop' | 'set_camera' | 'set_view_mode';
 export type LevelAction = 'load' | 'save' | 'stream' | 'create_light' | 'build_lighting';
-export type AnimationAction = 'create_animation_bp' | 'play_montage' | 'setup_ragdoll';
-export type EffectAction = 'particle' | 'niagara' | 'debug_shape';
+export type AnimationAction =
+  | 'create_animation_bp'
+  | 'create_anim_blueprint'
+  | 'create_animation_blueprint'
+  | 'play_montage'
+  | 'play_anim_montage'
+  | 'setup_ragdoll'
+  | 'activate_ragdoll'
+  | 'configure_vehicle'
+  | 'create_blend_space'
+  | 'create_state_machine'
+  | 'setup_ik'
+  | 'create_procedural_anim'
+  | 'create_blend_tree'
+  | 'setup_retargeting'
+  | 'setup_physics_simulation'
+  | 'create_animation_asset'
+  | 'cleanup';
+export type EffectAction =
+  | 'particle'
+  | 'niagara'
+  | 'debug_shape'
+  | 'spawn_niagara'
+  | 'set_niagara_parameter'
+  | 'clear_debug_shapes'
+  | 'create_dynamic_light'
+  | 'cleanup';
 export type BlueprintAction = 'create' | 'add_component';
 export type EnvironmentAction = 'create_landscape' | 'sculpt' | 'add_foliage' | 'paint_foliage';
 export type SystemAction = 'profile' | 'show_fps' | 'set_quality' | 'play_sound' | 'create_widget' | 'show_widget' | 'screenshot' | 'engine_start' | 'engine_quit' | 'read_log';
@@ -193,6 +323,8 @@ export interface ConsolidatedToolParams {
     destinationPath?: string;
     name?: string;
     path?: string;
+    parentMaterial?: string;
+    parameters?: Record<string, any>;
   };
 
   control_actor: {
@@ -201,7 +333,22 @@ export interface ConsolidatedToolParams {
     classPath?: string;
     location?: Vector3D;
     rotation?: Rotation3D;
+    scale?: Vector3D;
     force?: Vector3D;
+    blueprintPath?: string;
+    componentType?: string;
+    componentName?: string;
+    properties?: Record<string, unknown>;
+    visible?: boolean;
+    newName?: string;
+    offset?: Vector3D;
+    tag?: string;
+    matchType?: string;
+    variables?: Record<string, unknown>;
+    snapshotName?: string;
+    childActor?: string;
+    parentActor?: string;
+    actorNames?: string[];
   };
 
   control_editor: {
@@ -209,6 +356,18 @@ export interface ConsolidatedToolParams {
     location?: Vector3D;
     rotation?: Rotation3D;
     viewMode?: string;
+    speed?: number;
+    filename?: string;
+    fov?: number;
+    width?: number;
+    height?: number;
+    command?: string;
+    steps?: number;
+    frameRate?: number;
+    durationSeconds?: number;
+    bookmarkName?: string;
+    category?: string;
+    preferences?: Record<string, unknown>;
   };
 
   manage_level: {
@@ -227,15 +386,63 @@ export interface ConsolidatedToolParams {
 
   animation_physics: {
     action: AnimationAction;
+    // Common
     name?: string;
     actorName?: string;
+    savePath?: string;
+    path?: string;
+
+    // Animation blueprint
     skeletonPath?: string;
+    blueprintName?: string;
+    blueprintPath?: string;
+
+    // Playback
     montagePath?: string;
     animationPath?: string;
     playRate?: number;
+
+    // Ragdoll/physics
     physicsAssetName?: string;
     blendWeight?: number;
-    savePath?: string;
+
+    meshPath?: string;
+    assignToMesh?: boolean;
+    previewSkeleton?: string;
+    generateConstraints?: boolean;
+
+    // Vehicle config
+    vehicleName?: string;
+    vehicleType?: 'Car' | 'Bike' | 'Tank' | 'Aircraft' | string;
+    wheels?: Array<{ name: string; radius: number; width: number; mass: number; isSteering?: boolean; isDriving?: boolean }>;
+    engine?: { maxRPM: number; torqueCurve: Array<[number, number]> };
+    transmission?: { gears: number[]; finalDriveRatio: number };
+    pluginDependencies?: string[];
+
+    // Blend space / tree
+    dimensions?: number | [number, number];
+    horizontalAxis?: { name?: string; minValue?: number; maxValue?: number };
+    verticalAxis?: { name?: string; minValue?: number; maxValue?: number };
+    samples?: any[];
+
+    // State machine
+    states?: any[];
+    transitions?: any[];
+
+    // IK / Retargeting / Procedural
+    chain?: any;
+    effector?: any;
+    // Retargeting
+    sourceSkeleton?: string;
+    targetSkeleton?: string;
+    assets?: string[];
+    retargetAssets?: string[];
+    suffix?: string;
+    overwrite?: boolean;
+
+    // Cleanup
+    artifacts?: string[];
+    assetType?: string;
   };
 
   create_effect: {
@@ -248,6 +455,20 @@ export interface ConsolidatedToolParams {
     shape?: string;
     size?: number;
     color?: [number, number, number, number];
+    // Dynamic light support
+    lightName?: string;
+    lightType?: 'Point' | 'Spot' | 'Directional' | 'Rect' | string;
+    intensity?: number;
+    rotation?: Rotation3D;
+    pulse?: { enabled?: boolean; frequency?: number };
+    // Cleanup filter for actor cleanup
+    filter?: string;
+    // Niagara parameter helpers
+    systemName?: string;
+    parameterName?: string;
+    parameterType?: string;
+    value?: any;
+    isUserParameter?: boolean;
     duration?: number;
   };
 
@@ -258,6 +479,12 @@ export interface ConsolidatedToolParams {
     componentType?: string;
     componentName?: string;
     savePath?: string;
+    // Optional: wait until the plugin's background completion event before returning
+    waitForCompletion?: boolean;
+    // Convenience: apply changes and force save, then wait for completion
+    applyAndSave?: boolean;
+    // Optional override for event wait timeout in milliseconds
+    waitForCompletionTimeoutMs?: number;
   };
 
   build_environment: {
@@ -288,15 +515,10 @@ export interface ConsolidatedToolParams {
     widgetName?: string;
     widgetType?: string;
     visible?: boolean;
-    resolution?: string;
-    projectPath?: string;
-    editorExe?: string;
-    filter_category?: string | string[];
-    filter_level?: 'Error' | 'Warning' | 'Log' | 'Verbose' | 'VeryVerbose' | 'All';
-    lines?: number;
-    log_path?: string;
-    include_prefixes?: string[];
-    exclude_categories?: string[];
+    // Resolution / fullscreen helpers
+    width?: number;
+    height?: number;
+    windowed?: boolean;
   };
 
   console_command: {
@@ -326,7 +548,7 @@ export interface ToolResponseMap {
   system_control: SystemControlResponse;
   console_command: ConsoleCommandResponse;
   verify_environment: VerifyEnvironmentResponse;
-  
+
   // Individual tools (subset for brevity)
   list_assets: ManageAssetResponse;
   import_asset: ManageAssetResponse;

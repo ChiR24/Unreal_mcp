@@ -238,7 +238,10 @@ export function resolveSkeletalMeshPath(input: string): string | null {
  * Concurrency delay to prevent race conditions
  * @param ms Milliseconds to delay
  */
-export async function concurrencyDelay(ms: number = 100): Promise<void> {
+export async function concurrencyDelay(ms: number = 20): Promise<void> {
+  // Reduce the default per-operation delay to speed up test runs while
+  // allowing a small pause for the editor to process changes. Tests
+  // previously used 100ms which accumulates across 100+ test cases.
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 

@@ -1,0 +1,64 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "MCP Automation Bridge",
+  "Description": "Editor-side bridge that accepts elevated automation requests from the Unreal MCP server.",
+  "Category": "Automation",
+  "CreatedBy": "unreal-engine-mcp-server",
+  "CreatedByURL": "https://github.com/ChiR24/Unreal_mcp",
+  "DocsURL": "",
+  "MarketplaceURL": "",
+  "SupportURL": "",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "IsExperimentalVersion": true,
+  "EnabledByDefault": true,
+  "SupportsUEBuildSystem": true,
+  "Modules": [
+    {
+      "Name": "McpAutomationBridge",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "BlacklistPlatforms": [],
+  "Plugins": [
+    {
+      "Name": "EditorScriptingUtilities",
+      "Enabled": true
+    },
+    {
+      "Name": "LevelSequenceEditor",
+      "Enabled": true
+    },
+    {
+      "Name": "Niagara",
+      "Enabled": true
+    },
+    {
+      "Name": "ControlRig",
+      "Enabled": true
+    },
+    {
+      "Name": "ProceduralMeshComponent",
+      "Enabled": true
+    },
+    {
+      "Name": "Interchange",
+      "Enabled": true
+    },
+    {
+      "Name": "InterchangeOpenUSD",
+      "Enabled": true
+    },
+    {
+      "Name": "DataValidation",
+      "Enabled": true
+    },
+    {
+      "Name": "EnhancedInput",
+      "Enabled": true
+    }
+  ]
+}

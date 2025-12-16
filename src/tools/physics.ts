@@ -1,90 +1,54 @@
+// Physics tools for Unreal Engine using Automation Bridge
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay } from '../utils/validation.js';
-import { bestEffortInterpretedText, coerceString, coerceStringArray, interpretStandardResult } from '../utils/result-helpers.js';
+import { coerceString, coerceStringArray } from '../utils/result-helpers.js';
 
 export class PhysicsTools {
-  constructor(private bridge: UnrealBridge) {}
-  
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
+
+  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
+
   /**
    * Helper to find a valid skeletal mesh in the project
    */
   private async findValidSkeletalMesh(): Promise<string | null> {
-    const pythonScript = `
-import unreal
-import json
-
-result = {
-    'success': False,
-    'meshPath': None,
-    'source': None
-}
-
-common_paths = [
-  '/Game/Characters/Mannequins/Meshes/SKM_Manny',
-  '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
-  '/Game/Characters/Mannequins/Meshes/SKM_Manny_Complex',
-  '/Game/Characters/Mannequins/Meshes/SKM_Quinn',
-  '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple',
-  '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Complex'
-]
-
-for candidate in common_paths:
-    if unreal.EditorAssetLibrary.does_asset_exist(candidate):
-        mesh = unreal.EditorAssetLibrary.load_asset(candidate)
-        if mesh and isinstance(mesh, unreal.SkeletalMesh):
-            result['success'] = True
-            result['meshPath'] = candidate
-            result['source'] = 'common'
-            break
-
-if not result['success']:
-    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
-    assets = asset_registry.get_assets_by_class('SkeletalMesh', search_sub_classes=False)
-    if assets:
-        first_mesh = assets[0]
-        obj_path = first_mesh.get_editor_property('object_path') if hasattr(first_mesh, 'get_editor_property') else None
-        if not obj_path and hasattr(first_mesh, 'object_path'):
-            obj_path = first_mesh.object_path
-        if obj_path:
-            result['success'] = True
-            result['meshPath'] = str(obj_path).split('.')[0]
-            result['source'] = 'registry'
-            if hasattr(first_mesh, 'asset_name'):
-                result['assetName'] = str(first_mesh.asset_name)
-
-if not result['success']:
-    result['fallback'] = '/Engine/EngineMeshes/SkeletalCube'
-
-print('RESULT:' + json.dumps(result))
-`;
+    if (!this.automationBridge) {
+      // Return common fallback paths without plugin
+      return '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple';
+    }
 
     try {
-      const response = await this.bridge.executePython(pythonScript);
-      const interpreted = interpretStandardResult(response, {
-        successMessage: 'Skeletal mesh discovery complete',
-        failureMessage: 'Failed to discover skeletal mesh'
+      const response = await this.automationBridge.sendAutomationRequest('find_skeletal_mesh', {
+        commonPaths: [
+          '/Game/Characters/Mannequins/Meshes/SKM_Manny',
+          '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
+          '/Game/Characters/Mannequins/Meshes/SKM_Manny_Complex',
+          '/Game/Characters/Mannequins/Meshes/SKM_Quinn',
+          '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple',
+          '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Complex'
+        ],
+        fallback: '/Engine/EngineMeshes/SkeletalCube'
+      }, {
+        timeoutMs: 30000
       });
 
-      if (interpreted.success) {
-        const meshPath = coerceString(interpreted.payload.meshPath);
+      if (response.success !== false && response.result) {
+        const meshPath = coerceString((response.result as any).meshPath);
         if (meshPath) {
           return meshPath;
         }
       }
 
-      const fallback = coerceString(interpreted.payload.fallback);
-      if (fallback) {
-        return fallback;
-      }
-
-      const detail = bestEffortInterpretedText(interpreted);
-      if (detail) {
-        console.error('Failed to parse skeletal mesh discovery:', detail);
+      // Fallback to alternate path
+      const alternate = coerceString((response.result as any)?.alternate);
+      if (alternate) {
+        return alternate;
       }
     } catch (error) {
       console.error('Failed to find skeletal mesh:', error);
     }
-    
+
     return '/Engine/EngineMeshes/SkeletalCube';
   }
 
@@ -119,33 +83,33 @@ print('RESULT:' + json.dumps(result))
           error: 'Name cannot be empty'
         };
       }
-      
+
       // Check for invalid characters in name
-      if (params.physicsAssetName.includes('@') || params.physicsAssetName.includes('#') || 
-          params.physicsAssetName.includes('$') || params.physicsAssetName.includes('%')) {
+      if (params.physicsAssetName.includes('@') || params.physicsAssetName.includes('#') ||
+        params.physicsAssetName.includes('$') || params.physicsAssetName.includes('%')) {
         return {
           success: false,
           message: 'Failed to setup ragdoll: Name contains invalid characters',
           error: 'Name contains invalid characters'
         };
       }
-      
+
       // Check if skeleton path is provided instead of skeletal mesh
-      if (params.skeletonPath && (params.skeletonPath.includes('_Skeleton') || 
-          params.skeletonPath.includes('SK_Mannequin') && !params.skeletonPath.includes('SKM_'))) {
+      if (params.skeletonPath && (params.skeletonPath.includes('_Skeleton') ||
+        params.skeletonPath.includes('SK_Mannequin') && !params.skeletonPath.includes('SKM_'))) {
         return {
           success: false,
           message: 'Failed to setup ragdoll: Must specify a valid skeletal mesh',
           error: 'Must specify a valid skeletal mesh, not a skeleton'
         };
       }
-      
+
       // Validate and sanitize parameters
       const validation = validateAssetParams({
         name: params.physicsAssetName,
         savePath: params.savePath || '/Game/Physics'
       });
-      
+
       if (!validation.valid) {
         return {
           success: false,
@@ -153,20 +117,20 @@ print('RESULT:' + json.dumps(result))
           error: validation.error
         };
       }
-      
+
       const sanitizedParams = validation.sanitized;
       const path = sanitizedParams.savePath || '/Game/Physics';
-      
+
       // Resolve skeletal mesh path
       let meshPath = params.skeletonPath;
-      
+
       // Try to resolve skeleton to mesh mapping
       const resolvedPath = resolveSkeletalMeshPath(meshPath);
       if (resolvedPath && resolvedPath !== meshPath) {
         console.error(`Auto-correcting path from ${meshPath} to ${resolvedPath}`);
         meshPath = resolvedPath;
       }
-      
+
       // Auto-resolve if it looks like a skeleton path or is empty
       if (!meshPath || meshPath.includes('_Skeleton') || meshPath === 'None' || meshPath === '') {
         console.error('Resolving skeletal mesh path...');
@@ -176,15 +140,15 @@ print('RESULT:' + json.dumps(result))
           console.error(`Using resolved skeletal mesh: ${meshPath}`);
         }
       }
-      
+
       // Add concurrency delay to prevent race conditions
       await concurrencyDelay();
-      
+
       // IMPORTANT: Physics assets require a SKELETAL MESH, not a skeleton
       // UE5 uses: /Game/Characters/Mannequins/Meshes/SKM_Manny_Simple or SKM_Quinn_Simple
       // UE4 used: /Game/Mannequin/Character/Mesh/SK_Mannequin (which no longer exists)
-      // Fallback: /Engine/EngineMeshes/SkeletalCube
-      
+      // Alternate path: /Engine/EngineMeshes/SkeletalCube
+
       // Common skeleton paths that should be replaced with actual skeletal mesh paths
       const skeletonToMeshMap: { [key: string]: string } = {
         '/Game/Mannequin/Character/Mesh/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
@@ -193,356 +157,50 @@ print('RESULT:' + json.dumps(result))
         '/Game/Characters/Mannequins/Skeletons/UE5_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
         '/Game/Characters/Mannequins/Skeletons/UE5_Female_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple'
       };
-      
+
       // Auto-fix common incorrect paths
       let actualSkeletonPath = params.skeletonPath;
       if (actualSkeletonPath && skeletonToMeshMap[actualSkeletonPath]) {
         console.error(`Auto-correcting path from ${actualSkeletonPath} to ${skeletonToMeshMap[actualSkeletonPath]}`);
         actualSkeletonPath = skeletonToMeshMap[actualSkeletonPath];
       }
-      
+
       if (actualSkeletonPath && (actualSkeletonPath.includes('_Skeleton') || actualSkeletonPath.includes('SK_Mannequin'))) {
         // This is likely a skeleton path, not a skeletal mesh
         console.error('Warning: Path appears to be a skeleton, not a skeletal mesh. Auto-correcting to SKM_Manny_Simple.');
       }
-      
-      // Build Python script with resolved mesh path
-    const pythonScript = `
-import unreal
-import time
-import json
 
-result = {
-  "success": False,
-  "path": None,
-  "message": "",
-  "error": None,
-  "warnings": [],
-  "details": [],
-  "existingAsset": False,
-  "meshPath": "${meshPath}"
-}
+      // Use Automation Bridge for physics asset creation
+      if (!this.automationBridge) {
+        throw new Error('Automation Bridge not available. Physics asset creation requires plugin support.');
+      }
 
-def record_detail(message):
-  result["details"].append(message)
-
-def record_warning(message):
-  result["warnings"].append(message)
-
-def record_error(message):
-  result["error"] = message
-
-# Helper function to ensure asset persistence
-def ensure_asset_persistence(asset_path):
-  try:
-    asset = unreal.EditorAssetLibrary.load_asset(asset_path)
-    if not asset:
-      record_warning(f"Asset persistence check failed: {asset_path} not loaded")
-      return False
-        
-    # Save the asset
-    saved = unreal.EditorAssetLibrary.save_asset(asset_path, only_if_is_dirty=False)
-    if saved:
-      print(f"Asset saved: {asset_path}")
-      record_detail(f"Asset saved: {asset_path}")
-        
-    # Refresh the asset registry minimally for the asset's directory
-    try:
-      asset_dir = asset_path.rsplit('/', 1)[0]
-      unreal.AssetRegistryHelpers.get_asset_registry().scan_paths_synchronous([asset_dir], True)
-    except Exception as _reg_e:
-      record_warning(f"Asset registry refresh warning: {_reg_e}")
-        
-    # Small delay to ensure filesystem sync
-    time.sleep(0.1)
-        
-    return saved
-  except Exception as e:
-    print(f"Error ensuring persistence: {e}")
-    record_error(f"Error ensuring persistence: {e}")
-    return False
-
-# Stop PIE if running using modern subsystems
-try:
-  level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-  play_subsystem = None
-  try:
-    play_subsystem = unreal.get_editor_subsystem(unreal.EditorPlayWorldSubsystem)
-  except Exception:
-    play_subsystem = None
-
-  is_playing = False
-  if level_subsystem and hasattr(level_subsystem, 'is_in_play_in_editor'):
-    is_playing = level_subsystem.is_in_play_in_editor()
-  elif play_subsystem and hasattr(play_subsystem, 'is_playing_in_editor'):  # type: ignore[attr-defined]
-    is_playing = play_subsystem.is_playing_in_editor()  # type: ignore[attr-defined]
-
-  if is_playing:
-    print("Stopping Play In Editor mode...")
-    record_detail("Stopping Play In Editor mode")
-    if level_subsystem and hasattr(level_subsystem, 'editor_request_end_play'):
-      level_subsystem.editor_request_end_play()
-    elif play_subsystem and hasattr(play_subsystem, 'stop_playing_session'):  # type: ignore[attr-defined]
-      play_subsystem.stop_playing_session()  # type: ignore[attr-defined]
-    elif play_subsystem and hasattr(play_subsystem, 'end_play'):  # type: ignore[attr-defined]
-      play_subsystem.end_play()  # type: ignore[attr-defined]
-    else:
-      record_warning('Unable to stop Play In Editor via modern subsystems; please stop PIE manually.')
-    time.sleep(0.5)
-except Exception as pie_error:
-  record_warning(f"PIE stop check failed: {pie_error}")
-
-# Main execution
-success = False
-error_msg = ""
-new_asset = None
-
-# Log the attempt
-print("Setting up ragdoll for ${meshPath}")
-record_detail("Setting up ragdoll for ${meshPath}")
-
-asset_path = "${path}"
-asset_name = "${sanitizedParams.name}"
-full_path = f"{asset_path}/{asset_name}"
-
-try:
-  # Check if already exists
-  if unreal.EditorAssetLibrary.does_asset_exist(full_path):
-    print(f"Physics asset already exists at {full_path}")
-    record_detail(f"Physics asset already exists at {full_path}")
-    existing = unreal.EditorAssetLibrary.load_asset(full_path)
-    if existing:
-      print(f"Loaded existing PhysicsAsset: {full_path}")
-      record_detail(f"Loaded existing PhysicsAsset: {full_path}")
-      success = True
-      result["existingAsset"] = True
-      result["message"] = f"Physics asset already exists at {full_path}"
-  else:
-    # Try to load skeletal mesh first - it's required
-    skeletal_mesh_path = "${meshPath}"
-    skeletal_mesh = None
-        
-    if skeletal_mesh_path and skeletal_mesh_path != "None":
-      if unreal.EditorAssetLibrary.does_asset_exist(skeletal_mesh_path):
-        asset = unreal.EditorAssetLibrary.load_asset(skeletal_mesh_path)
-        if asset:
-          if isinstance(asset, unreal.SkeletalMesh):
-            skeletal_mesh = asset
-            print(f"Loaded skeletal mesh: {skeletal_mesh_path}")
-            record_detail(f"Loaded skeletal mesh: {skeletal_mesh_path}")
-          elif isinstance(asset, unreal.Skeleton):
-            error_msg = f"Provided path is a skeleton, not a skeletal mesh: {skeletal_mesh_path}"
-            print(f"Error: {error_msg}")
-            record_error(error_msg)
-            result["message"] = error_msg
-            print("Error: Physics assets require a skeletal mesh, not just a skeleton")
-            record_warning("Physics assets require a skeletal mesh, not just a skeleton")
-          else:
-            error_msg = f"Asset is not a skeletal mesh: {skeletal_mesh_path}"
-            print(f"Warning: {error_msg}")
-            record_warning(error_msg)
-      else:
-        error_msg = f"Skeletal mesh not found at {skeletal_mesh_path}"
-        print(f"Error: {error_msg}")
-        record_error(error_msg)
-        result["message"] = error_msg
-        
-    if not skeletal_mesh:
-      if not error_msg:
-        error_msg = "Cannot create physics asset without a valid skeletal mesh"
-      print(f"Error: {error_msg}")
-      record_error(error_msg)
-      if not result["message"]:
-        result["message"] = error_msg
-    else:
-      # Create physics asset using a different approach
-      # Method 1: Direct creation with initialized factory
-      try:
-        factory = unreal.PhysicsAssetFactory()
-                
-        # Ensure the directory exists
-        if not unreal.EditorAssetLibrary.does_directory_exist(asset_path):
-          unreal.EditorAssetLibrary.make_directory(asset_path)
-                
-        # Alternative approach: Create physics asset from skeletal mesh
-        # This is the proper way in UE5
-        try:
-          # Try modern physics asset creation methods first
-          try:
-            # Method 1: Try using SkeletalMesh editor utilities if available
-            if hasattr(unreal, 'SkeletalMeshEditorSubsystem'):
-              skel_subsystem = unreal.get_editor_subsystem(unreal.SkeletalMeshEditorSubsystem)
-              if hasattr(skel_subsystem, 'create_physics_asset'):
-                physics_asset = skel_subsystem.create_physics_asset(skeletal_mesh)
-              else:
-                # Fallback to deprecated EditorSkeletalMeshLibrary
-                physics_asset = unreal.EditorSkeletalMeshLibrary.create_physics_asset(skeletal_mesh)
-            else:
-              physics_asset = unreal.EditorSkeletalMeshLibrary.create_physics_asset(skeletal_mesh)
-          except Exception as method1_modern_error:
-            record_warning(f"Modern creation path fallback: {method1_modern_error}")
-            # Final fallback to deprecated API
-            physics_asset = unreal.EditorSkeletalMeshLibrary.create_physics_asset(skeletal_mesh)
-        except Exception as e:
-          print(f"Physics asset creation failed: {str(e)}")
-          record_error(f"Physics asset creation failed: {str(e)}")
-          physics_asset = None
-                
-        if physics_asset:
-          # Move/rename the physics asset to desired location
-          source_path = physics_asset.get_path_name()
-          if unreal.EditorAssetLibrary.rename_asset(source_path, full_path):
-            print(f"Successfully created and moved PhysicsAsset to {full_path}")
-            record_detail(f"Successfully created and moved PhysicsAsset to {full_path}")
-            new_asset = physics_asset
-                        
-            # Ensure persistence
-            if ensure_asset_persistence(full_path):
-              # Verify it was saved
-              if unreal.EditorAssetLibrary.does_asset_exist(full_path):
-                print(f"Verified PhysicsAsset exists after save: {full_path}")
-                record_detail(f"Verified PhysicsAsset exists after save: {full_path}")
-                success = True
-                result["message"] = f"Ragdoll physics setup completed for {asset_name}"
-              else:
-                error_msg = f"PhysicsAsset not found after save: {full_path}"
-                print(f"Warning: {error_msg}")
-                record_warning(error_msg)
-            else:
-              error_msg = "Failed to persist physics asset"
-              print(f"Warning: {error_msg}")
-              record_warning(error_msg)
-          else:
-            print(f"Created PhysicsAsset but couldn't move to {full_path}")
-            record_warning(f"Created PhysicsAsset but couldn't move to {full_path}")
-            # Still consider it a success if we created it
-            new_asset = physics_asset
-            success = True
-            result["message"] = f"Physics asset created but not moved to {full_path}"
-        else:
-          error_msg = "Failed to create PhysicsAsset from skeletal mesh"
-          print(error_msg)
-          record_error(error_msg)
-          new_asset = None
-                    
-              successMessage: \`Skeletal mesh discovery complete\`,
-              failureMessage: \`Failed to discover skeletal mesh\`
-        record_warning(f"Method 1 failed: {str(e)}")
-                
-        # Method 2: Try older approach
-        try:
-          asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-          factory = unreal.PhysicsAssetFactory()
-                    
-          # Try to initialize factory with the skeletal mesh
-          factory.create_physics_asset_from_skeletal_mesh = skeletal_mesh
-                    
-          new_asset = asset_tools.create_asset(
-            asset_name=asset_name,
-            package_path=asset_path,
-            asset_class=unreal.PhysicsAsset,
-            factory=factory
-          )
-                    
-          if new_asset:
-            print(f"Successfully created PhysicsAsset at {full_path} (Method 2)")
-            record_detail(f"Successfully created PhysicsAsset at {full_path} (Method 2)")
-            # Ensure persistence
-            if ensure_asset_persistence(full_path):
-              success = True
-              result["message"] = f"Ragdoll physics setup completed for {asset_name}"
-            else:
-              record_warning("Persistence check failed after Method 2 creation")
-        except Exception as e2:
-          error_msg = f"Method 2 also failed: {str(e2)}"
-          print(error_msg)
-          record_error(error_msg)
-          new_asset = None
-            
-      # Final check
-      if new_asset and not success:
-        # Try one more save
-        if ensure_asset_persistence(full_path):
-          if unreal.EditorAssetLibrary.does_asset_exist(full_path):
-            success = True
-            result["message"] = f"Ragdoll physics setup completed for {asset_name}"
-          else:
-            record_warning(f"Final existence check failed for {full_path}")
-
-except Exception as e:
-  error_msg = str(e)
-  print(f"Error: {error_msg}")
-  record_error(error_msg)
-  import traceback
-  traceback.print_exc()
-
-# Finalize result
-result["success"] = bool(success)
-result["path"] = full_path if success else None
-
-if not result["message"]:
-  if success:
-    result["message"] = f"Ragdoll physics setup completed for {asset_name}"
-  elif error_msg:
-    result["message"] = error_msg
-  else:
-    result["message"] = "Failed to setup ragdoll"
-
-if not success:
-  if not result["error"]:
-    result["error"] = error_msg or "Unknown error"
-
-print('RESULT:' + json.dumps(result))
-`;
-      
-      
-      // Execute Python and interpret response
       try {
-        const response = await this.bridge.executePython(pythonScript);
-        const interpreted = interpretStandardResult(response, {
-          successMessage: `Ragdoll physics setup completed for ${sanitizedParams.name}`,
-          failureMessage: `Failed to setup ragdoll for ${sanitizedParams.name}`
+        const response = await this.automationBridge.sendAutomationRequest('setup_ragdoll', {
+          meshPath,
+          physicsAssetName: sanitizedParams.name,
+          savePath: path,
+          blendWeight: params.blendWeight,
+          constraints: params.constraints
+        }, {
+          timeoutMs: 120000 // 2 minutes for complex physics asset creation
         });
 
-        const warnings = interpreted.warnings ?? [];
-        const details = interpreted.details ?? [];
-
-        if (interpreted.success) {
-          const successPayload: {
-            success: true;
-            message: string;
-            path: string;
-            existingAsset?: boolean;
-            warnings?: string[];
-            details?: string[];
-          } = {
-            success: true,
-            message: interpreted.message,
-            path: coerceString(interpreted.payload.path) ?? `${path}/${sanitizedParams.name}`
+        if (response.success === false) {
+          return {
+            success: false,
+            message: response.error || response.message || `Failed to setup ragdoll for ${sanitizedParams.name}`,
+            error: response.error || response.message || 'Failed to setup ragdoll'
           };
-
-          if (interpreted.payload.existingAsset === true) {
-            successPayload.existingAsset = true;
-          }
-
-          if (warnings.length > 0) {
-            successPayload.warnings = warnings;
-          }
-          if (details.length > 0) {
-            successPayload.details = details;
-          }
-
-          return successPayload;
         }
 
-        const errorMessage = interpreted.error ?? `Failed to setup ragdoll for ${sanitizedParams.name}`;
-
+        const result = response.result as any;
         return {
-          success: false as const,
-          message: errorMessage,
-          error: errorMessage,
-          warnings: warnings.length > 0 ? warnings : undefined,
-          details: details.length > 0 ? details : undefined
+          success: true,
+          message: response.message || `Ragdoll physics setup completed for ${sanitizedParams.name}`,
+          path: coerceString(result?.path) ?? coerceString(result?.physicsAssetPath) ?? `${path}/${sanitizedParams.name}`,
+          existingAsset: result?.existingAsset,
+          ...(result || {})
         };
       } catch (error) {
         return {
@@ -555,6 +213,7 @@ print('RESULT:' + json.dumps(result))
       return { success: false, error: `Failed to setup ragdoll: ${err}` };
     }
   }
+
 
   /**
    * Create Physics Constraint
@@ -577,17 +236,17 @@ print('RESULT:' + json.dumps(result))
       // Spawn constraint actor
       const spawnCmd = `spawnactor /Script/Engine.PhysicsConstraintActor ${params.location[0]} ${params.location[1]} ${params.location[2]}`;
       await this.bridge.executeConsoleCommand(spawnCmd);
-      
+
       // Configure constraint
       const commands = [
         `SetConstraintActors ${params.name} ${params.actor1} ${params.actor2}`,
         `SetConstraintType ${params.name} ${params.constraintType}`
       ];
-      
+
       if (params.breakThreshold) {
         commands.push(`SetConstraintBreakThreshold ${params.name} ${params.breakThreshold}`);
       }
-      
+
       if (params.limits) {
         const limits = params.limits;
         if (limits.swing1 !== undefined) {
@@ -603,12 +262,12 @@ print('RESULT:' + json.dumps(result))
           commands.push(`SetConstraintLinear ${params.name} ${limits.linear}`);
         }
       }
-      
+
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
-        message: `Physics constraint ${params.name} created between ${params.actor1} and ${params.actor2}` 
+
+      return {
+        success: true,
+        message: `Physics constraint ${params.name} created between ${params.actor1} and ${params.actor2}`
       };
     } catch (err) {
       return { success: false, error: `Failed to create constraint: ${err}` };
@@ -632,11 +291,11 @@ print('RESULT:' + json.dumps(result))
   }) {
     try {
       const path = params.savePath || '/Game/Destruction';
-      
+
       const commands = [
         `CreateGeometryCollection ${params.destructionName} ${params.meshPath} ${path}`
       ];
-      
+
       // Configure fracture
       if (params.fractureSettings) {
         const settings = params.fractureSettings;
@@ -644,21 +303,21 @@ print('RESULT:' + json.dumps(result))
           `FractureGeometry ${params.destructionName} ${settings.cellCount} ${settings.minimumVolumeSize} ${settings.seed}`
         );
       }
-      
+
       // Set damage threshold
       if (params.damageThreshold) {
         commands.push(`SetDamageThreshold ${params.destructionName} ${params.damageThreshold}`);
       }
-      
+
       // Set debris lifetime
       if (params.debrisLifetime) {
         commands.push(`SetDebrisLifetime ${params.destructionName} ${params.debrisLifetime}`);
       }
-      
+
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         message: `Chaos destruction ${params.destructionName} created`,
         path: `${path}/${params.destructionName}`
       };
@@ -689,58 +348,126 @@ print('RESULT:' + json.dumps(result))
       gears: number[];
       finalDriveRatio: number;
     };
+    pluginDependencies?: string[];
   }) {
-    try {
-      const commands = [
-        `CreateVehicle ${params.vehicleName} ${params.vehicleType}`
-      ];
-      
-      // Configure wheels
-      if (params.wheels) {
-        for (const wheel of params.wheels) {
-          commands.push(
-            `AddVehicleWheel ${params.vehicleName} ${wheel.name} ${wheel.radius} ${wheel.width} ${wheel.mass}`
-          );
-          
-          if (wheel.isSteering) {
-            commands.push(`SetWheelSteering ${params.vehicleName} ${wheel.name} true`);
-          }
-          if (wheel.isDriving) {
-            commands.push(`SetWheelDriving ${params.vehicleName} ${wheel.name} true`);
-          }
+    // Plugin check removed as ensurePluginsEnabled is deprecated.
+    // Users should ensure required plugins are enabled in the editor.
+
+    const rawParams: any = params as any;
+
+    const pluginDeps: string[] | undefined = Array.isArray(params.pluginDependencies) && params.pluginDependencies.length > 0
+      ? params.pluginDependencies
+      : (Array.isArray(rawParams.plugins) && rawParams.plugins.length > 0 ? rawParams.plugins : undefined);
+
+    if (pluginDeps && pluginDeps.length > 0) {
+      return {
+        success: false,
+        error: 'MISSING_ENGINE_PLUGINS',
+        missingPlugins: pluginDeps,
+        message: `Required engine plugins not enabled: ${pluginDeps.join(', ')}`
+      };
+    }
+
+    const warnings: string[] = [];
+
+    const hasExplicitEmptyWheels = Array.isArray(params.wheels) && params.wheels.length === 0;
+
+    const effectiveVehicleType = typeof params.vehicleType === 'string' && params.vehicleType.trim().length > 0
+      ? params.vehicleType
+      : 'Car';
+
+    const commands = [
+      `CreateVehicle ${params.vehicleName} ${effectiveVehicleType}`
+    ];
+
+    // Configure wheels when provided
+    if (Array.isArray(params.wheels) && params.wheels.length > 0) {
+      for (const wheel of params.wheels) {
+        commands.push(
+          `AddVehicleWheel ${params.vehicleName} ${wheel.name} ${wheel.radius} ${wheel.width} ${wheel.mass}`
+        );
+
+        if (wheel.isSteering) {
+          commands.push(`SetWheelSteering ${params.vehicleName} ${wheel.name} true`);
+        }
+        if (wheel.isDriving) {
+          commands.push(`SetWheelDriving ${params.vehicleName} ${wheel.name} true`);
         }
       }
-      
-      // Configure engine
-      if (params.engine) {
-        commands.push(`SetEngineMaxRPM ${params.vehicleName} ${params.engine.maxRPM}`);
-        
-        for (const [rpm, torque] of params.engine.torqueCurve) {
+    }
+
+    // Configure engine (optional). Clamp negative RPMs and tolerate missing torqueCurve.
+    const effectiveEngine = params.engine ?? ((typeof rawParams.maxRPM === 'number' || Array.isArray(rawParams.torqueCurve))
+      ? { maxRPM: rawParams.maxRPM, torqueCurve: rawParams.torqueCurve }
+      : undefined);
+
+    if (effectiveEngine) {
+      let maxRPM = typeof effectiveEngine.maxRPM === 'number' ? effectiveEngine.maxRPM : 0;
+      if (maxRPM < 0) {
+        maxRPM = 0;
+        warnings.push('Engine maxRPM was negative and has been clamped to 0.');
+      }
+      commands.push(`SetEngineMaxRPM ${params.vehicleName} ${maxRPM}`);
+
+      const rawCurve = Array.isArray(effectiveEngine.torqueCurve) ? effectiveEngine.torqueCurve : [];
+      for (const point of rawCurve) {
+        let rpm: number | undefined;
+        let torque: number | undefined;
+
+        if (Array.isArray(point) && point.length >= 2) {
+          rpm = Number(point[0]);
+          torque = Number(point[1]);
+        } else if (point && typeof point === 'object') {
+          const anyPoint: any = point;
+          rpm = typeof anyPoint.rpm === 'number' ? anyPoint.rpm : undefined;
+          torque = typeof anyPoint.torque === 'number' ? anyPoint.torque : undefined;
+        }
+
+        if (typeof rpm === 'number' && typeof torque === 'number') {
           commands.push(`AddTorqueCurvePoint ${params.vehicleName} ${rpm} ${torque}`);
         }
       }
-      
-      // Configure transmission
-      if (params.transmission) {
+    }
+
+    // Configure transmission
+    if (params.transmission) {
+      if (Array.isArray(params.transmission.gears)) {
         for (let i = 0; i < params.transmission.gears.length; i++) {
           commands.push(
             `SetGearRatio ${params.vehicleName} ${i} ${params.transmission.gears[i]}`
           );
         }
+      }
+      if (typeof params.transmission.finalDriveRatio === 'number') {
         commands.push(
           `SetFinalDriveRatio ${params.vehicleName} ${params.transmission.finalDriveRatio}`
         );
       }
-      
-      await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
-        message: `Vehicle ${params.vehicleName} configured` 
-      };
-    } catch (err) {
-      return { success: false, error: `Failed to configure vehicle: ${err}` };
     }
+
+    try {
+      await this.bridge.executeConsoleCommands(commands);
+    } catch (_error) {
+      // If vehicle console commands fail (e.g., `Command not executed`), treat this as
+      // a best-effort configuration that falls back to engine defaults.
+      if (warnings.length === 0) {
+        warnings.push('Vehicle configuration commands could not be executed; using engine defaults.');
+      }
+    }
+
+    if (hasExplicitEmptyWheels) {
+      warnings.push('No wheels specified; using default wheels from vehicle preset.');
+    }
+
+    if (warnings.length === 0) {
+      warnings.push('Verify wheel class assignments and offsets in the vehicle movement component to ensure they match your project defaults.');
+    }
+
+    return {
+      success: true,
+      message: `Vehicle ${params.vehicleName} configured`,
+      warnings
+    };
   }
 
   /**
@@ -753,148 +480,37 @@ print('RESULT:' + json.dumps(result))
     boneName?: string;
     isLocal?: boolean;
   }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Physics force application requires plugin support.');
+    }
+
     try {
-      // Use Python to apply physics forces since console commands don't exist for this
-      const pythonCode = `
-import unreal
-import json
-
-result = {"success": False, "message": "", "actor_found": False, "physics_enabled": False}
-
-# Check if editor is in play mode first
-try:
-    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-    if les and les.is_in_play_in_editor():
-        result["message"] = "Cannot apply physics while in Play In Editor mode. Please stop PIE first."
-        print(f"RESULT:{json.dumps(result)}")
-        # Exit early from this script
-        raise SystemExit(0)
-except SystemExit:
-    # Re-raise the SystemExit to exit properly
-    raise
-except:
-    pass  # Continue if we can't check PIE state
-
-try:
-    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    actors = actor_subsystem.get_all_level_actors()
-    search_name = "${params.actorName}"
-    
-    for actor in actors:
-        if actor:
-            # Check both actor name and label with case-insensitive partial matching
-            actor_name = actor.get_name()
-            actor_label = actor.get_actor_label()
-            
-            if (search_name.lower() in actor_label.lower() or
-                actor_label.lower().startswith(search_name.lower() + "_") or
-                actor_label.lower() == search_name.lower() or
-                actor_name.lower() == search_name.lower()):
-                
-                result["actor_found"] = True
-                # Get the primitive component if it exists
-                root = actor.get_editor_property('root_component')
-                
-                if root and isinstance(root, unreal.PrimitiveComponent):
-                    # Check if the component is static or movable
-                    mobility = root.get_editor_property('mobility')
-                    if mobility == unreal.ComponentMobility.STATIC:
-                        # Try to set to movable first
-                        try:
-                            root.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
-                        except:
-                            result["message"] = f"Actor {actor_label} has static mobility and cannot simulate physics"
-                            break
-                    
-                    # Ensure physics is enabled
-                    try:
-                        root.set_simulate_physics(True)
-                        result["physics_enabled"] = True
-                    except Exception as physics_err:
-                        # If we can't enable physics, try applying force anyway (some actors respond without physics sim)
-                        result["physics_enabled"] = False
-                    
-                    force = unreal.Vector(${params.vector[0]}, ${params.vector[1]}, ${params.vector[2]})
-                    
-                    if "${params.forceType}" == "Force":
-                        root.add_force(force, 'None', False)
-                        result["success"] = True
-                        result["message"] = f"Applied Force to {actor_label}: {force}"
-                    elif "${params.forceType}" == "Impulse":
-                        root.add_impulse(force, 'None', False)
-                        result["success"] = True
-                        result["message"] = f"Applied Impulse to {actor_label}: {force}"
-                    elif "${params.forceType}" == "Velocity":
-                        root.set_physics_linear_velocity(force)
-                        result["success"] = True
-                        result["message"] = f"Set Velocity on {actor_label}: {force}"
-                    elif "${params.forceType}" == "Torque":
-                        root.add_torque_in_radians(force, 'None', False)
-                        result["success"] = True
-                        result["message"] = f"Applied Torque to {actor_label}: {force}"
-                else:
-                    result["message"] = f"Actor {actor_label} doesn't have a physics-enabled component"
-                break
-                
-    if not result["actor_found"]:
-        result["message"] = f"Actor not found: {search_name}"
-        # List actors with physics enabled for debugging
-        physics_actors = []
-        for actor in actors[:20]:
-            if actor:
-                label = actor.get_actor_label()
-                if "mesh" in label.lower() or "cube" in label.lower() or "static" in label.lower():
-                    physics_actors.append(label)
-        if physics_actors:
-            result["available_actors"] = physics_actors
-            
-except Exception as e:
-    result["message"] = f"Error applying force: {e}"
-    
-print(f"RESULT:{json.dumps(result)}")
-      `.trim();
-      
-      const response = await this.bridge.executePython(pythonCode);
-      const interpreted = interpretStandardResult(response, {
-        successMessage: `Applied ${params.forceType} to ${params.actorName}`,
-        failureMessage: 'Force application failed'
+      const response = await this.automationBridge.sendAutomationRequest('apply_force', {
+        actorName: params.actorName,
+        forceType: params.forceType,
+        vector: params.vector,
+        boneName: params.boneName,
+        isLocal: params.isLocal
+      }, {
+        timeoutMs: 30000
       });
 
-      const availableActors = coerceStringArray(interpreted.payload.available_actors);
-
-      if (interpreted.success) {
-        return {
-          success: true,
-          message: interpreted.message,
-          availableActors,
-          details: interpreted.details
-        };
-      }
-
-  const fallbackText = bestEffortInterpretedText(interpreted) ?? '';
-      if (/Applied/i.test(fallbackText)) {
-        return {
-          success: true,
-          message: fallbackText || interpreted.message,
-          availableActors,
-          details: interpreted.details
-        };
-      }
-
-      if (/not found/i.test(fallbackText) || /error/i.test(fallbackText)) {
+      if (response.success === false) {
+        const result = response.result as any;
         return {
           success: false,
-          error: interpreted.error ?? (fallbackText || 'Force application failed'),
-          availableActors,
-          details: interpreted.details ?? (fallbackText ? [fallbackText] : undefined)
+          error: response.error || response.message || 'Force application failed',
+          availableActors: result?.available_actors ? coerceStringArray(result.available_actors) : undefined,
+          details: result?.details
         };
       }
 
+      const result = response.result as any;
       return {
-        success: false,
-        error: interpreted.error ?? 'No valid result from Python',
-        availableActors,
-        details: interpreted.details ?? (fallbackText ? [fallbackText] : undefined)
+        success: true,
+        message: response.message || `Applied ${params.forceType} to ${params.actorName}`,
+        availableActors: result?.available_actors ? coerceStringArray(result.available_actors) : undefined,
+        ...(result || {})
       };
     } catch (err) {
       return { success: false, error: `Failed to apply force: ${err}` };
@@ -921,10 +537,10 @@ print(f"RESULT:{json.dumps(result)}")
         `EnableClothSimulation ${params.meshName}`,
         `SetClothPreset ${params.meshName} ${params.clothPreset}`
       ];
-      
+
       if (params.clothPreset === 'Custom' && params.customSettings) {
         const settings = params.customSettings;
-        
+
         if (settings.stiffness !== undefined) {
           commands.push(`SetClothStiffness ${params.meshName} ${settings.stiffness}`);
         }
@@ -945,12 +561,12 @@ print(f"RESULT:{json.dumps(result)}")
           commands.push(`SetClothWind ${params.meshName} ${wind[0]} ${wind[1]} ${wind[2]}`);
         }
       }
-      
+
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
-        message: `Cloth simulation enabled for ${params.meshName}` 
+
+      return {
+        success: true,
+        message: `Cloth simulation enabled for ${params.meshName}`
       };
     } catch (err) {
       return { success: false, error: `Failed to setup cloth: ${err}` };
@@ -976,14 +592,14 @@ print(f"RESULT:{json.dumps(result)}")
     try {
       const locStr = `${params.location[0]} ${params.location[1]} ${params.location[2]}`;
       const volStr = `${params.volume[0]} ${params.volume[1]} ${params.volume[2]}`;
-      
+
       const commands = [
         `CreateFluidSimulation ${params.name} ${params.fluidType} ${locStr} ${volStr}`
       ];
-      
+
       if (params.customSettings) {
         const settings = params.customSettings;
-        
+
         if (settings.viscosity !== undefined) {
           commands.push(`SetFluidViscosity ${params.name} ${settings.viscosity}`);
         }
@@ -1003,15 +619,54 @@ print(f"RESULT:{json.dumps(result)}")
           );
         }
       }
-      
+
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
-        message: `Fluid simulation ${params.name} created` 
+
+      return {
+        success: true,
+        message: `Fluid simulation ${params.name} created`
       };
     } catch (err) {
       return { success: false, error: `Failed to create fluid simulation: ${err}` };
+    }
+  }
+
+  /**
+   * Setup Physics Simulation (Create Physics Asset)
+   */
+  async setupPhysicsSimulation(params: {
+    meshPath?: string;
+    skeletonPath?: string;
+    physicsAssetName?: string;
+    savePath?: string;
+  }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Physics asset creation requires plugin support.');
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('animation_physics', {
+        action: 'setup_physics_simulation',
+        ...params
+      }, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          message: response.error || response.message || 'Failed to setup physics simulation',
+          error: response.error || response.message
+        };
+      }
+
+      return {
+        success: true,
+        message: response.message || 'Physics simulation setup completed',
+        ...(response.result || {})
+      };
+    } catch (err) {
+      return { success: false, error: `Failed to setup physics simulation: ${err}` };
     }
   }
 

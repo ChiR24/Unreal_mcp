@@ -22,11 +22,12 @@ type Entry = {
 
 export class LogTools {
   private env = loadEnv();
-  private log = new Logger('LogTools');
+  private _log = new Logger('LogTools');
   private cachedLogPath?: string;
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private _bridge: UnrealBridge) { }
 
   async readOutputLog(params: ReadParams) {
+    this._log.debug('Reading output log', { params, connected: this._bridge.isConnected });
     const target = await this.resolveLogPath(params.logPath);
     if (!target) {
       return { success: false, error: 'Log file not found' };
@@ -76,7 +77,7 @@ export class LogTools {
         if (st.isFile()) {
           return this.cacheLogPath(path.resolve(override));
         }
-      } catch {}
+      } catch { }
     }
 
     if (this.cachedLogPath && (await this.fileExists(this.cachedLogPath))) {
@@ -88,57 +89,8 @@ export class LogTools {
       return envLog;
     }
 
-    if (this.bridge.isConnected) {
-      try {
-        const script = `
-import unreal, json, os
-paths = []
-try:
-    d = unreal.Paths.project_log_dir()
-    if d:
-        paths.append(os.path.abspath(d))
-except Exception:
-    pass
-try:
-    sd = unreal.Paths.project_saved_dir()
-    if sd:
-        p = os.path.join(sd, 'Logs')
-        paths.append(os.path.abspath(p))
-except Exception:
-    pass
-try:
-    pf = unreal.Paths.get_project_file_path()
-    if pf:
-        pd = os.path.dirname(pf)
-        p = os.path.join(pd, 'Saved', 'Logs')
-        paths.append(os.path.abspath(p))
-except Exception:
-    pass
-all_logs = []
-for base in paths:
-    try:
-        if os.path.isdir(base):
-            for name in os.listdir(base):
-                if name.lower().endswith('.log'):
-                    fp = os.path.join(base, name)
-                    try:
-                        m = os.path.getmtime(fp)
-                        all_logs.append({'p': fp, 'm': m})
-                    except Exception:
-                        pass
-    except Exception:
-        pass
-all_logs.sort(key=lambda x: x['m'], reverse=True)
-print('RESULT:' + json.dumps({'dirs': paths, 'logs': all_logs}))
-`.trim();
-        const res = await this.bridge.executePythonWithResult(script);
-        const logs = Array.isArray(res?.logs) ? res.logs : [];
-        for (const entry of logs) {
-          const p = typeof entry?.p === 'string' ? entry.p : undefined;
-          if (p && p.trim()) return this.cacheLogPath(p);
-        }
-      } catch {}
-    }
+    // TODO: Restore Python path resolution once executePythonWithResult is available in UnrealBridge
+    // Currently relying on UE_PROJECT_PATH or cwd fallback
     const fallback = await this.findLatestLogInDir(path.join(process.cwd(), 'Saved', 'Logs'));
     if (fallback) {
       return fallback;
@@ -170,13 +122,13 @@ print('RESULT:' + json.dumps({'dirs': paths, 'logs': all_logs}))
         try {
           const st = await fs.stat(fp);
           candidates.push({ p: fp, m: st.mtimeMs });
-        } catch {}
+        } catch { }
       }
       if (candidates.length) {
         candidates.sort((a, b) => b.m - a.m);
         return this.cacheLogPath(candidates[0].p);
       }
-    } catch {}
+    } catch { }
     return undefined;
   }
 
@@ -223,7 +175,7 @@ print('RESULT:' + json.dumps({'dirs': paths, 'logs': all_logs}))
       }
       return lines.slice(0, maxLines).join('\n');
     } finally {
-      try { await handle.close(); } catch {}
+      try { await handle.close(); } catch { }
     }
   }
 

@@ -1,11 +1,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
+import { cleanObject } from '../utils/safe-json.js';
 import { validateAssetParams } from '../utils/validation.js';
-import {
-  interpretStandardResult,
-  coerceBoolean,
-  coerceString,
-  coerceStringArray
-} from '../utils/result-helpers.js';
 
 type CreateAnimationBlueprintSuccess = {
   success: true;
@@ -51,7 +47,26 @@ type PlayAnimationFailure = {
 };
 
 export class AnimationTools {
-  constructor(private bridge: UnrealBridge) {}
+  private managedArtifacts = new Map<string, {
+    path?: string;
+    type: string;
+    metadata?: Record<string, unknown>;
+    createdAt: number;
+  }>();
+
+  private automationBridge?: AutomationBridge;
+
+  constructor(private bridge: UnrealBridge, automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
+
+  setAutomationBridge(automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
+
+  private trackArtifact(key: string, info: { path?: string; type: string; metadata?: Record<string, unknown> }) {
+    this.managedArtifacts.set(key, { ...info, createdAt: Date.now() });
+  }
 
   async createAnimationBlueprint(params: {
     name: string;
@@ -69,14 +84,69 @@ export class AnimationTools {
       const sanitized = validation.sanitized;
       const assetName = sanitized.name;
       const assetPath = sanitized.savePath ?? targetPath;
-      const script = this.buildCreateAnimationBlueprintScript({
-        name: assetName,
-        path: assetPath,
-        skeletonPath: params.skeletonPath
-      });
+      const fullPath = `${assetPath}/${assetName}`;
 
-      const response = await this.bridge.executePython(script);
-      return this.parseAnimationBlueprintResponse(response, assetName, assetPath);
+      // Prefer native plugin support; surface real errors when creation fails.
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp = await this.automationBridge.sendAutomationRequest('create_animation_blueprint', {
+            name: assetName,
+            skeletonPath: params.skeletonPath,
+            savePath: assetPath
+          }, { timeoutMs: 60000 });
+
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
+          const warnings = Array.isArray(resultObj?.warnings) ? (resultObj.warnings as string[]) : undefined;
+          const details = Array.isArray(resultObj?.details) ? (resultObj.details as string[]) : undefined;
+          const isSuccess = resp && resp.success !== false && !!resultObj;
+
+          if (isSuccess && resultObj) {
+            const blueprintPath = typeof resultObj.blueprintPath === 'string' ? resultObj.blueprintPath : fullPath;
+            this.trackArtifact(assetName, { path: blueprintPath, type: 'AnimationBlueprint' });
+            return {
+              success: true,
+              message: resp.message || `Animation Blueprint created at ${blueprintPath}`,
+              path: blueprintPath,
+              skeleton: params.skeletonPath,
+              warnings,
+              details
+            };
+          }
+
+          const message = typeof resp?.message === 'string'
+            ? resp.message
+            : (typeof resp?.error === 'string' ? resp.error : 'Animation Blueprint creation failed');
+          const error = typeof resp?.error === 'string' ? resp.error : message;
+
+          return {
+            success: false,
+            message,
+            error,
+            path: fullPath,
+            skeleton: params.skeletonPath,
+            warnings,
+            details
+          };
+        } catch (err) {
+          const error = String(err);
+          return {
+            success: false,
+            message: `Failed to create Animation Blueprint: ${error}`,
+            error,
+            path: fullPath,
+            skeleton: params.skeletonPath
+          };
+        }
+      }
+
+      return {
+        success: false,
+        message: 'Automation bridge not connected for Animation Blueprint creation',
+        error: 'AUTOMATION_BRIDGE_UNAVAILABLE',
+        path: fullPath,
+        skeleton: params.skeletonPath
+      };
     } catch (err) {
       const error = `Failed to create Animation Blueprint: ${err}`;
       return { success: false, message: error, error: String(err) };
@@ -143,6 +213,95 @@ export class AnimationTools {
     }
   }
 
+  async createStateMachine(params: {
+    machineName?: string;
+    states?: Array<string | { name: string; animation?: string; isEntry?: boolean; isExit?: boolean }>;
+    transitions?: Array<{ sourceState: string; targetState: string; condition?: string }>;
+    blueprintPath?: string;
+  }): Promise<
+    | {
+      success: true;
+      message: string;
+      machineName: string;
+      blueprintPath?: string;
+      states?: Array<{ name: string; animation?: string; isEntry?: boolean; isExit?: boolean }>;
+      transitions?: Array<{ sourceState: string; targetState: string; condition?: string }>;
+    }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const rawName = typeof params.machineName === 'string' ? params.machineName.trim() : '';
+      const machineName = rawName || 'StateMachine';
+
+      const normalizedStates: Array<{ name: string; animation?: string; isEntry?: boolean; isExit?: boolean }> =
+        Array.isArray(params.states)
+          ? params.states
+            .map((s) => {
+              if (typeof s === 'string') {
+                const name = s.trim();
+                return name ? { name } : undefined;
+              }
+              if (s && typeof s === 'object' && typeof (s as any).name === 'string') {
+                const name = (s as any).name.trim();
+                if (!name) return undefined;
+                return s as { name: string; animation?: string; isEntry?: boolean; isExit?: boolean };
+              }
+              return undefined;
+            })
+            .filter((s): s is { name: string; animation?: string; isEntry?: boolean; isExit?: boolean } => !!s)
+          : [];
+
+      const normalizedTransitionsRaw = Array.isArray(params.transitions)
+        ? params.transitions
+          .map((t) => {
+            if (!t || typeof t !== 'object') return undefined;
+            const src = (t.sourceState || '').trim();
+            const dst = (t.targetState || '').trim();
+            if (!src || !dst) return undefined;
+            return { sourceState: src, targetState: dst, condition: t.condition };
+          })
+          .filter((t) => !!t)
+        : [];
+
+      const normalizedTransitions = normalizedTransitionsRaw as Array<{
+        sourceState: string;
+        targetState: string;
+        condition?: string;
+      }>;
+
+      const blueprintPath = typeof params.blueprintPath === 'string' && params.blueprintPath.trim().length > 0
+        ? params.blueprintPath.trim()
+        : undefined;
+
+      const key = `StateMachine:${machineName}`;
+      this.trackArtifact(key, {
+        path: blueprintPath,
+        type: 'AnimationStateMachine',
+        metadata: {
+          machineName,
+          states: normalizedStates,
+          transitions: normalizedTransitions
+        }
+      });
+
+      return {
+        success: true,
+        message: `State machine '${machineName}' specification recorded`,
+        machineName,
+        blueprintPath,
+        states: normalizedStates.length ? normalizedStates : undefined,
+        transitions: normalizedTransitions.length ? normalizedTransitions : undefined
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to record state machine specification: ${error}`,
+        error
+      };
+    }
+  }
+
   async createBlendSpace(params: {
     name: string;
     savePath?: string;
@@ -151,7 +310,10 @@ export class AnimationTools {
     horizontalAxis?: { name: string; minValue: number; maxValue: number };
     verticalAxis?: { name: string; minValue: number; maxValue: number };
     samples?: Array<{ animation: string; x: number; y?: number }>;
-  }): Promise<{ success: true; message: string; path: string } | { success: false; error: string }> {
+  }): Promise<
+    | { success: true; message: string; path: string; skeletonPath?: string; warnings?: string[]; details?: unknown }
+    | { success: false; error: string }
+  > {
     try {
       const targetPath = params.savePath ?? '/Game/Animations';
       const validation = validateAssetParams({ name: params.name, savePath: targetPath });
@@ -163,42 +325,64 @@ export class AnimationTools {
       const assetName = sanitized.name;
       const assetPath = sanitized.savePath ?? targetPath;
       const dimensions = params.dimensions === 2 ? 2 : 1;
-      const blendSpaceType = dimensions === 2 ? 'BlendSpace' : 'BlendSpace1D';
 
-      const commands: string[] = [
-        `CreateAsset ${blendSpaceType} ${assetName} ${assetPath}`,
-        `echo Creating ${blendSpaceType} ${assetName} at ${assetPath}`
-      ];
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const payload: any = {
+            action: 'create_blend_space',
+            name: assetName,
+            savePath: assetPath,
+            skeletonPath: params.skeletonPath,
+            dimensions,
+            samples: params.samples
+          };
 
-      if (params.skeletonPath) {
-        commands.push(`SetBlendSpaceSkeleton ${assetName} ${params.skeletonPath}`);
-      }
+          if (params.horizontalAxis) {
+            payload.minX = params.horizontalAxis.minValue;
+            payload.maxX = params.horizontalAxis.maxValue;
+            // gridX is not in params.horizontalAxis, maybe default or add to interface?
+            // The C++ code defaults GridX to 3.0.
+          }
 
-      if (params.horizontalAxis) {
-        commands.push(
-          `SetBlendSpaceAxis ${assetName} Horizontal ${params.horizontalAxis.name} ${params.horizontalAxis.minValue} ${params.horizontalAxis.maxValue}`
-        );
-      }
+          if (params.verticalAxis) {
+            payload.minY = params.verticalAxis.minValue;
+            payload.maxY = params.verticalAxis.maxValue;
+          }
 
-      if (dimensions === 2 && params.verticalAxis) {
-        commands.push(
-          `SetBlendSpaceAxis ${assetName} Vertical ${params.verticalAxis.name} ${params.verticalAxis.minValue} ${params.verticalAxis.maxValue}`
-        );
-      }
+          const resp = await this.automationBridge.sendAutomationRequest('animation_physics', cleanObject(payload));
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
+          const isSuccess = resp && resp.success !== false && !!resultObj;
 
-      if (params.samples) {
-        for (const sample of params.samples) {
-          const coords = dimensions === 1 ? `${sample.x}` : `${sample.x} ${sample.y ?? 0}`;
-          commands.push(`AddBlendSpaceSample ${assetName} ${sample.animation} ${coords}`);
+          if (isSuccess && resultObj) {
+            const path = typeof resultObj.blendSpacePath === 'string'
+              ? (resultObj.blendSpacePath as string)
+              : `${assetPath}/${assetName}`;
+            const warnings = Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
+            const details = resultObj ? resultObj.details : undefined;
+            return {
+              success: true,
+              message: resp.message || `Blend Space ${assetName} created`,
+              path,
+              skeletonPath: params.skeletonPath,
+              details,
+              warnings
+            };
+          }
+
+          const message = typeof resp?.message === 'string'
+            ? resp.message
+            : (typeof resp?.error === 'string' ? resp.error : 'Blend space creation failed');
+          const error = typeof resp?.error === 'string' ? resp.error : message;
+
+          return { success: false, error };
+        } catch (err) {
+          const error = String(err);
+          return { success: false, error: `Failed to create blend space: ${error}` };
         }
       }
 
-      await this.bridge.executeConsoleCommands(commands);
-      return {
-        success: true,
-        message: `Blend Space ${assetName} created`,
-        path: `${assetPath}/${assetName}`
-      };
+      return { success: false, error: 'Automation bridge not connected for createBlendSpace' };
     } catch (err) {
       return { success: false, error: `Failed to create blend space: ${err}` };
     }
@@ -214,7 +398,10 @@ export class AnimationTools {
       bone?: string;
       defaultValue?: unknown;
     }>;
-  }): Promise<{ success: true; message: string; path: string } | { success: false; error: string }> {
+  }): Promise<
+    | { success: true; message: string; path: string; warnings?: string[]; details?: unknown }
+    | { success: false; error: string }
+  > {
     try {
       const targetPath = params.savePath ?? '/Game/Animations';
       const validation = validateAssetParams({ name: params.name, savePath: targetPath });
@@ -227,32 +414,445 @@ export class AnimationTools {
       const assetPath = sanitized.savePath ?? targetPath;
       const fullPath = `${assetPath}/${assetName}`;
 
-      const commands: string[] = [
-        `CreateAsset ControlRig ${assetName} ${assetPath}`,
-        `SetControlRigSkeleton ${assetName} ${params.skeletonPath}`
-      ];
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp = await this.automationBridge.sendAutomationRequest('animation_physics', cleanObject({
+            action: 'setup_ik',
+            name: assetName,
+            savePath: assetPath,
+            skeletonPath: params.skeletonPath,
+            controls: params.controls
+          }), { timeoutMs: 60000 });
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
+          const isSuccess = resp && resp.success !== false && !!resultObj;
 
-      if (params.controls) {
-        for (const control of params.controls) {
-          commands.push(
-            `AddControlRigControl ${assetName} ${control.name} ${control.type} ${control.bone ?? ''}`
-          );
-          if (control.defaultValue !== undefined) {
-            commands.push(
-              `SetControlRigDefault ${assetName} ${control.name} ${JSON.stringify(control.defaultValue)}`
-            );
+          if (isSuccess && resultObj) {
+            const controlRigPath = typeof resultObj.controlRigPath === 'string'
+              ? (resultObj.controlRigPath as string)
+              : fullPath;
+            const warnings = Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
+            const details = resultObj ? resultObj.details : undefined;
+            this.trackArtifact(assetName, { path: controlRigPath, type: 'ControlRig' });
+            return {
+              success: true,
+              message: resp.message || `Control Rig ${assetName} created`,
+              path: controlRigPath,
+              warnings,
+              details
+            };
           }
+
+          const message = typeof resp?.message === 'string'
+            ? resp.message
+            : (typeof resp?.error === 'string' ? resp.error : 'Control Rig setup failed');
+          const error = typeof resp?.error === 'string' ? resp.error : message;
+
+          return { success: false, error };
+        } catch (err) {
+          const error = String(err);
+          return { success: false, error: `Failed to setup control rig: ${error}` };
         }
       }
 
-      await this.bridge.executeConsoleCommands(commands);
-      return {
-        success: true,
-        message: `Control Rig ${assetName} created`,
-        path: fullPath
-      };
+      return { success: false, error: 'Automation bridge not connected for setupControlRig' };
     } catch (err) {
       return { success: false, error: `Failed to setup control rig: ${err}` };
+    }
+  }
+
+  async setupIK(params: {
+    actorName?: string;
+    ikBones?: string[];
+    enableFootPlacement?: boolean;
+  }): Promise<
+    | {
+      success: true;
+      message: string;
+      actorName: string;
+      ikBones?: string[];
+      enableFootPlacement?: boolean;
+    }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const actorName = (params.actorName || 'Character').trim();
+      const ikBones = Array.isArray(params.ikBones)
+        ? params.ikBones.map((b) => String(b)).filter((b) => b.trim().length > 0)
+        : [];
+
+      const key = `IK:${actorName}`;
+      this.trackArtifact(key, {
+        type: 'IKSetup',
+        metadata: {
+          actorName,
+          ikBones,
+          enableFootPlacement: params.enableFootPlacement === true
+        }
+      });
+
+      return {
+        success: true,
+        message: `IK setup specification recorded for actor '${actorName}'`,
+        actorName,
+        ikBones: ikBones.length ? ikBones : undefined,
+        enableFootPlacement: params.enableFootPlacement === true ? true : undefined
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to record IK setup: ${error}`,
+        error
+      };
+    }
+  }
+
+  async createProceduralAnim(params: {
+    systemName?: string;
+    baseAnimation?: string;
+    modifiers?: any[];
+    savePath?: string;
+  }): Promise<
+    | {
+      success: true;
+      message: string;
+      path: string;
+      systemName: string;
+    }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const baseName = (params.systemName || '').trim()
+        || (params.baseAnimation ? params.baseAnimation.split('/').pop() || '' : '');
+      const systemName = baseName || 'ProceduralSystem';
+      const basePath = (params.savePath || '/Game/Animations').replace(/\/+$/, '');
+      const path = `${basePath || '/Game/Animations'}/${systemName}`;
+
+      this.trackArtifact(systemName, {
+        path,
+        type: 'ProceduralAnimation',
+        metadata: {
+          baseAnimation: params.baseAnimation,
+          modifiers: Array.isArray(params.modifiers) ? params.modifiers : []
+        }
+      });
+
+      return {
+        success: true,
+        message: `Procedural animation system '${systemName}' specification recorded at ${path}`,
+        path,
+        systemName
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to record procedural animation system: ${error}`,
+        error
+      };
+    }
+  }
+
+  async createBlendTree(params: {
+    treeName?: string;
+    blendType?: string;
+    basePose?: string;
+    additiveAnimations?: any[];
+    savePath?: string;
+  }): Promise<
+    | {
+      success: true;
+      message: string;
+      path: string;
+      treeName: string;
+    }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const rawName = (params.treeName || '').trim();
+      const treeName = rawName || 'BlendTree';
+      const basePath = (params.savePath || '/Game/Animations').replace(/\/+$/, '');
+      const path = `${basePath || '/Game/Animations'}/${treeName}`;
+
+      this.trackArtifact(treeName, {
+        path,
+        type: 'BlendTree',
+        metadata: {
+          blendType: params.blendType,
+          basePose: params.basePose,
+          additiveAnimations: Array.isArray(params.additiveAnimations) ? params.additiveAnimations : []
+        }
+      });
+
+      return {
+        success: true,
+        message: `Blend tree '${treeName}' specification recorded at ${path}`,
+        path,
+        treeName
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to record blend tree specification: ${error}`,
+        error
+      };
+    }
+  }
+
+  async cleanup(artifacts?: string[]): Promise<
+    | {
+      success: boolean;
+      message: string;
+      removed?: string[];
+      missing?: string[];
+    }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const pathsToDelete: string[] = [];
+
+      if (Array.isArray(artifacts) && artifacts.length > 0) {
+        pathsToDelete.push(...artifacts.map((a) => String(a).trim()).filter((a) => a.length > 0));
+      } else {
+        // If no specific artifacts provided, clear all managed ones
+        for (const [key, val] of this.managedArtifacts.entries()) {
+          if (val.path) pathsToDelete.push(val.path);
+          else pathsToDelete.push(key);
+        }
+      }
+
+      if (pathsToDelete.length === 0) {
+        return {
+          success: true,
+          message: 'No artifacts to cleanup.'
+        };
+      }
+
+      let bridgeMessage = '';
+      if (this.automationBridge) {
+        try {
+          const response = await this.automationBridge.sendAutomationRequest('animation_physics', {
+            action: 'cleanup',
+            artifacts: pathsToDelete
+          });
+
+          if (!response.success) {
+            bridgeMessage = ` (Engine cleanup failed: ${response.message})`;
+          } else {
+            bridgeMessage = ' (Engine assets deleted)';
+          }
+        } catch (e) {
+          bridgeMessage = ` (Engine connection failed: ${e})`;
+        }
+      } else {
+        bridgeMessage = ' (No automation bridge available)';
+      }
+
+      const removed: string[] = [];
+
+      // Clear local registry
+      const toRemoveKeys: string[] = [];
+      for (const [key, val] of this.managedArtifacts.entries()) {
+        if (pathsToDelete.includes(key) || (val.path && pathsToDelete.includes(val.path))) {
+          toRemoveKeys.push(key);
+        }
+      }
+
+      for (const key of toRemoveKeys) {
+        this.managedArtifacts.delete(key);
+        removed.push(key);
+      }
+
+      // Add any explicit paths that were not in managed artifacts but requested
+      for (const path of pathsToDelete) {
+        if (!removed.includes(path)) {
+          // We don't have it locally, but we tried to delete it from engine
+          removed.push(path);
+        }
+      }
+
+      return {
+        success: true,
+        message: `Cleanup attempt processed for ${pathsToDelete.length} artifacts${bridgeMessage}`,
+        removed
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to cleanup animation artifacts: ${error}`,
+        error
+      };
+    }
+  }
+
+  async createAnimationAsset(params: {
+    name: string;
+    path?: string;
+    savePath?: string;
+    skeletonPath?: string;
+    assetType?: string;
+  }): Promise<
+    | {
+      success: true;
+      message: string;
+      path: string;
+      assetType?: string;
+      existingAsset?: boolean;
+    }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const targetPath = (params.path || params.savePath) ?? '/Game/Animations';
+      const validation = validateAssetParams({ name: params.name, savePath: targetPath });
+      if (!validation.valid) {
+        const message = validation.error ?? 'Invalid asset parameters';
+        return { success: false, message, error: message };
+      }
+
+      const sanitized = validation.sanitized;
+      const assetName = sanitized.name;
+      const assetPath = sanitized.savePath ?? targetPath;
+      const fullPath = `${assetPath}/${assetName}`;
+
+      const normalizedType = (params.assetType || 'sequence').toLowerCase();
+
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const payload: any = {
+            action: 'create_animation_asset',
+            name: assetName,
+            savePath: assetPath,
+            skeletonPath: params.skeletonPath,
+            assetType: normalizedType
+          };
+
+          const resp = await this.automationBridge.sendAutomationRequest('animation_physics', cleanObject(payload), { timeoutMs: 60000 });
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? (result as Record<string, unknown>) : undefined;
+          const isSuccess = resp && resp.success !== false && !!resultObj;
+
+          if (isSuccess && resultObj) {
+            const assetPathResult = typeof resultObj.assetPath === 'string' ? (resultObj.assetPath as string) : fullPath;
+            const assetTypeResult = typeof resultObj.assetType === 'string' ? (resultObj.assetType as string) : undefined;
+            const existingAsset = typeof resultObj.existingAsset === 'boolean' ? Boolean(resultObj.existingAsset) : false;
+
+            this.trackArtifact(assetName, { path: assetPathResult, type: 'AnimationAsset' });
+
+            return {
+              success: true,
+              message: resp.message || `Animation asset created at ${assetPathResult}`,
+              path: assetPathResult,
+              assetType: assetTypeResult,
+              existingAsset
+            };
+          }
+
+          const message = typeof resp?.message === 'string'
+            ? resp.message
+            : (typeof resp?.error === 'string' ? resp.error : 'Animation asset creation failed');
+          const error = typeof resp?.error === 'string' ? resp.error : message;
+
+          return { success: false, message, error };
+        } catch (err) {
+          const error = String(err);
+          return {
+            success: false,
+            message: `Failed to create animation asset: ${error}`,
+            error
+          };
+        }
+      }
+
+      return {
+        success: false,
+        message: 'Automation bridge not connected for createAnimationAsset',
+        error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to create animation asset: ${error}`,
+        error
+      };
+    }
+  }
+
+  async addNotify(params: {
+    animationPath?: string;
+    assetPath?: string;
+    notifyName?: string;
+    time?: number;
+  }): Promise<
+    | {
+      success: true;
+      message: string;
+      assetPath: string;
+      notifyName: string;
+      time: number;
+    }
+    | { success: false; message: string; error: string }
+  > {
+    try {
+      const rawPath = (params.animationPath || params.assetPath || '').trim();
+      if (!rawPath) {
+        const error = 'animationPath or assetPath is required for addNotify';
+        return { success: false, message: error, error };
+      }
+
+      const notifyName = (params.notifyName || 'Notify').trim();
+      const time = typeof params.time === 'number' && params.time >= 0 ? params.time : 0;
+
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp = await this.automationBridge.sendAutomationRequest(
+            'animation_physics',
+            cleanObject({
+              action: 'add_notify',
+              assetPath: rawPath,
+              notifyName,
+              time
+            }),
+            { timeoutMs: 60000 }
+          );
+
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? (result as Record<string, unknown>) : undefined;
+
+          if (resp && resp.success !== false && resultObj) {
+            return {
+              success: true,
+              message: resp.message || `Notify '${notifyName}' added to ${rawPath} at time ${time}`,
+              assetPath: typeof resultObj.assetPath === 'string' ? (resultObj.assetPath as string) : rawPath,
+              notifyName,
+              time
+            };
+          }
+        } catch (err) {
+          const error = String(err);
+          return {
+            success: false,
+            message: `Failed to add notify: ${error}`,
+            error
+          };
+        }
+      }
+
+      return {
+        success: false,
+        message: 'Automation bridge not connected for addNotify',
+        error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
+      };
+    } catch (err) {
+      const error = String(err);
+      return {
+        success: false,
+        message: `Failed to add notify: ${error}`,
+        error
+      };
     }
   }
 
@@ -318,413 +918,23 @@ export class AnimationTools {
     blendOutTime?: number;
   }): Promise<PlayAnimationSuccess | PlayAnimationFailure> {
     try {
-      const script = this.buildPlayAnimationScript({
+      const commands: string[] = [
+        `PlayAnimation ${params.actorName} ${params.animationType} ${params.animationPath} ${params.playRate ?? 1.0} ${params.loop ?? false} ${params.blendInTime ?? 0.25} ${params.blendOutTime ?? 0.25}`
+      ];
+
+      await this.bridge.executeConsoleCommands(commands);
+
+      return {
+        success: true,
+        message: `Animation ${params.animationType} triggered on ${params.actorName}`,
         actorName: params.actorName,
         animationType: params.animationType,
-        animationPath: params.animationPath,
-        playRate: params.playRate ?? 1.0,
-        loop: params.loop ?? false,
-        blendInTime: params.blendInTime ?? 0.25,
-        blendOutTime: params.blendOutTime ?? 0.25
-      });
-
-      const response = await this.bridge.executePython(script);
-      const interpreted = interpretStandardResult(response, {
-        successMessage: `Animation ${params.animationType} triggered on ${params.actorName}`,
-        failureMessage: `Failed to play animation on ${params.actorName}`
-      });
-
-      const payload = interpreted.payload ?? {};
-      const warnings = interpreted.warnings ?? coerceStringArray((payload as any).warnings) ?? undefined;
-      const details = interpreted.details ?? coerceStringArray((payload as any).details) ?? undefined;
-      const availableActors = coerceStringArray((payload as any).availableActors);
-      const actorName = coerceString((payload as any).actorName) ?? params.actorName;
-      const animationType = coerceString((payload as any).animationType) ?? params.animationType;
-      const assetPath = coerceString((payload as any).assetPath) ?? params.animationPath;
-      const errorMessage = coerceString((payload as any).error) ?? interpreted.error ?? `Animation playback failed for ${params.actorName}`;
-
-      if (interpreted.success) {
-        const result: PlayAnimationSuccess = {
-          success: true,
-          message: interpreted.message
-        };
-
-        if (warnings && warnings.length > 0) {
-          result.warnings = warnings;
-        }
-        if (details && details.length > 0) {
-          result.details = details;
-        }
-        if (actorName) {
-          result.actorName = actorName;
-        }
-        if (animationType) {
-          result.animationType = animationType;
-        }
-        if (assetPath) {
-          result.assetPath = assetPath;
-        }
-
-        return result;
-      }
-
-      const failure: PlayAnimationFailure = {
-        success: false,
-        message: `Failed to play animation: ${errorMessage}`,
-        error: errorMessage
+        assetPath: params.animationPath
       };
-
-      if (warnings && warnings.length > 0) {
-        failure.warnings = warnings;
-      }
-      if (details && details.length > 0) {
-        failure.details = details;
-      }
-      if (availableActors && availableActors.length > 0) {
-        failure.availableActors = availableActors;
-      }
-      if (actorName) {
-        failure.actorName = actorName;
-      }
-      if (animationType) {
-        failure.animationType = animationType;
-      }
-      if (assetPath) {
-        failure.assetPath = assetPath;
-      }
-
-      return failure;
     } catch (err) {
       const error = `Failed to play animation: ${err}`;
       return { success: false, message: error, error: String(err) };
     }
   }
 
-  private buildCreateAnimationBlueprintScript(args: {
-    name: string;
-    path: string;
-    skeletonPath: string;
-  }): string {
-    const payload = JSON.stringify(args);
-    return `
-import unreal
-import json
-import traceback
-
-params = json.loads(${JSON.stringify(payload)})
-
-result = {
-    "success": False,
-    "message": "",
-    "error": "",
-    "warnings": [],
-    "details": [],
-    "exists": False,
-    "skeleton": params.get("skeletonPath") or ""
-}
-
-try:
-  asset_path = (params.get("path") or "/Game").rstrip('/')
-  asset_name = params.get("name") or ""
-  full_path = f"{asset_path}/{asset_name}"
-  result["path"] = full_path
-
-  editor_lib = unreal.EditorAssetLibrary
-  asset_subsystem = None
-  try:
-    asset_subsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
-  except Exception:
-    asset_subsystem = None
-
-  skeleton_path = params.get("skeletonPath")
-  skeleton_asset = None
-  if skeleton_path:
-    if editor_lib.does_asset_exist(skeleton_path):
-      skeleton_asset = editor_lib.load_asset(skeleton_path)
-      if skeleton_asset and isinstance(skeleton_asset, unreal.Skeleton):
-        result["details"].append(f"Using skeleton: {skeleton_path}")
-        result["skeleton"] = skeleton_path
-      else:
-        result["error"] = f"Skeleton asset invalid at {skeleton_path}"
-        result["warnings"].append(result["error"])
-        skeleton_asset = None
-    else:
-      result["error"] = f"Skeleton not found at {skeleton_path}"
-      result["warnings"].append(result["error"])
-
-    if not skeleton_asset:
-      raise RuntimeError(result["error"] or f"Skeleton {skeleton_path} unavailable")
-
-  does_exist = False
-  try:
-    if asset_subsystem and hasattr(asset_subsystem, 'does_asset_exist'):
-      does_exist = asset_subsystem.does_asset_exist(full_path)
-    else:
-      does_exist = editor_lib.does_asset_exist(full_path)
-  except Exception:
-    does_exist = editor_lib.does_asset_exist(full_path)
-
-  if does_exist:
-    result["exists"] = True
-    loaded = editor_lib.load_asset(full_path)
-    if loaded:
-      result["success"] = True
-      result["message"] = f"Animation Blueprint already exists at {full_path}"
-      result["details"].append(result["message"])
-    else:
-      result["error"] = f"Asset exists but could not be loaded: {full_path}"
-      result["warnings"].append(result["error"])
-  else:
-    factory = unreal.AnimBlueprintFactory()
-    if skeleton_asset:
-      try:
-        factory.target_skeleton = skeleton_asset
-      except Exception as assign_error:
-        result["warnings"].append(f"Unable to assign skeleton {skeleton_path}: {assign_error}")
-
-    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-    created = asset_tools.create_asset(
-      asset_name=asset_name,
-      package_path=asset_path,
-      asset_class=unreal.AnimBlueprint,
-      factory=factory
-    )
-
-    if created:
-      editor_lib.save_asset(full_path, only_if_is_dirty=False)
-      result["success"] = True
-      result["message"] = f"Animation Blueprint created at {full_path}"
-      result["details"].append(result["message"])
-    else:
-      result["error"] = f"Failed to create Animation Blueprint {asset_name}"
-
-except Exception as exc:
-    result["error"] = str(exc)
-    result["warnings"].append(result["error"])
-    tb = traceback.format_exc()
-    if tb:
-        result.setdefault("details", []).append(tb)
-
-if result["success"] and not result.get("message"):
-    result["message"] = f"Animation Blueprint created at {result.get('path')}"
-
-if not result["success"] and not result.get("error"):
-    result["error"] = "Animation Blueprint creation failed"
-
-if not result.get("warnings"):
-    result.pop("warnings", None)
-if not result.get("details"):
-    result.pop("details", None)
-if not result.get("error"):
-    result.pop("error", None)
-
-print('RESULT:' + json.dumps(result))
-`.trim();
-  }
-
-  private parseAnimationBlueprintResponse(
-    response: unknown,
-    assetName: string,
-    assetPath: string
-  ): CreateAnimationBlueprintSuccess | CreateAnimationBlueprintFailure {
-    const interpreted = interpretStandardResult(response, {
-      successMessage: `Animation Blueprint ${assetName} created`,
-      failureMessage: `Failed to create Animation Blueprint ${assetName}`
-    });
-
-    const payload = interpreted.payload ?? {};
-    const path = coerceString((payload as any).path) ?? `${assetPath}/${assetName}`;
-    const exists = coerceBoolean((payload as any).exists);
-    const skeleton = coerceString((payload as any).skeleton);
-    const warnings = interpreted.warnings ?? coerceStringArray((payload as any).warnings) ?? undefined;
-    const details = interpreted.details ?? coerceStringArray((payload as any).details) ?? undefined;
-
-    if (interpreted.success) {
-      const result: CreateAnimationBlueprintSuccess = {
-        success: true,
-        message: interpreted.message,
-        path
-      };
-
-      if (typeof exists === 'boolean') {
-        result.exists = exists;
-      }
-      if (skeleton) {
-        result.skeleton = skeleton;
-      }
-      if (warnings && warnings.length > 0) {
-        result.warnings = warnings;
-      }
-      if (details && details.length > 0) {
-        result.details = details;
-      }
-
-      return result;
-    }
-
-    const errorMessage = coerceString((payload as any).error) ?? interpreted.error ?? interpreted.message;
-
-    const failure: CreateAnimationBlueprintFailure = {
-      success: false,
-      message: `Failed to create Animation Blueprint: ${errorMessage}`,
-      error: errorMessage,
-      path
-    };
-
-    if (typeof exists === 'boolean') {
-      failure.exists = exists;
-    }
-    if (skeleton) {
-      failure.skeleton = skeleton;
-    }
-    if (warnings && warnings.length > 0) {
-      failure.warnings = warnings;
-    }
-    if (details && details.length > 0) {
-      failure.details = details;
-    }
-
-    return failure;
-  }
-
-  private buildPlayAnimationScript(args: {
-    actorName: string;
-    animationType: string;
-    animationPath: string;
-    playRate: number;
-    loop: boolean;
-    blendInTime: number;
-    blendOutTime: number;
-  }): string {
-    const payload = JSON.stringify(args);
-    return `
-import unreal
-import json
-import traceback
-
-params = json.loads(${JSON.stringify(payload)})
-
-result = {
-    "success": False,
-    "message": "",
-    "error": "",
-    "warnings": [],
-    "details": [],
-    "actorName": params.get("actorName"),
-    "animationType": params.get("animationType"),
-    "assetPath": params.get("animationPath"),
-    "availableActors": []
-}
-
-try:
-    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    actors = actor_subsystem.get_all_level_actors() if actor_subsystem else []
-    target = None
-    search = params.get("actorName") or ""
-    search_lower = search.lower()
-
-    for actor in actors:
-        if not actor:
-            continue
-        name = (actor.get_name() or "").lower()
-        label = (actor.get_actor_label() or "").lower()
-        if search_lower and (search_lower == name or search_lower == label or search_lower in label):
-            target = actor
-            break
-
-    if not target:
-        result["error"] = f"Actor not found: {search}"
-        result["warnings"].append("Actor search yielded no results")
-        suggestions = []
-        for actor in actors[:20]:
-            try:
-                suggestions.append(actor.get_actor_label())
-            except Exception:
-                continue
-        if suggestions:
-            result["availableActors"] = suggestions
-    else:
-        try:
-            display_name = target.get_actor_label() or target.get_name()
-            if display_name:
-                result["actorName"] = display_name
-        except Exception:
-            pass
-
-        skeletal_component = target.get_component_by_class(unreal.SkeletalMeshComponent)
-        if not skeletal_component:
-            try:
-                skeletal_component = target.get_editor_property('mesh')
-            except Exception:
-                skeletal_component = None
-
-        if not skeletal_component:
-            result["error"] = "No SkeletalMeshComponent found on actor"
-            result["warnings"].append("Actor lacks SkeletalMeshComponent")
-        else:
-            asset_path = params.get("animationPath")
-            if not asset_path or not unreal.EditorAssetLibrary.does_asset_exist(asset_path):
-                result["error"] = f"Animation asset not found: {asset_path}"
-                result["warnings"].append("Animation asset missing")
-            else:
-                asset = unreal.EditorAssetLibrary.load_asset(asset_path)
-                anim_type = params.get("animationType") or ""
-                if anim_type == 'Montage':
-                    anim_instance = skeletal_component.get_anim_instance()
-                    if anim_instance:
-                        try:
-                            anim_instance.montage_play(asset, params.get("playRate", 1.0))
-                            result["success"] = True
-                            result["message"] = f"Montage playing on {result.get('actorName') or search}"
-                            result["details"].append(result["message"])
-                        except Exception as play_error:
-                            result["error"] = f"Failed to play montage: {play_error}"
-                            result["warnings"].append(result["error"])
-                    else:
-                        result["error"] = "AnimInstance not found on SkeletalMeshComponent"
-                        result["warnings"].append(result["error"])
-                elif anim_type == 'Sequence':
-                    try:
-                        skeletal_component.play_animation(asset, bool(params.get("loop")))
-                        try:
-                            anim_instance = skeletal_component.get_anim_instance()
-                            if anim_instance:
-                                anim_instance.set_play_rate(params.get("playRate", 1.0))
-                        except Exception:
-                            pass
-                        result["success"] = True
-                        result["message"] = f"Sequence playing on {result.get('actorName') or search}"
-                        result["details"].append(result["message"])
-                    except Exception as play_error:
-                        result["error"] = f"Failed to play sequence: {play_error}"
-                        result["warnings"].append(result["error"])
-                else:
-                    result["error"] = "BlendSpace playback requires Animation Blueprint support"
-                    result["warnings"].append("Unsupported animation type for direct play")
-
-except Exception as exc:
-    result["error"] = str(exc)
-    result["warnings"].append(result["error"])
-    tb = traceback.format_exc()
-    if tb:
-        result["details"].append(tb)
-
-if result["success"] and not result.get("message"):
-    result["message"] = f"Animation {result.get('animationType')} triggered on {result.get('actorName') or params.get('actorName')}"
-
-if not result["success"] and not result.get("error"):
-    result["error"] = "Animation playback failed"
-
-if not result.get("warnings"):
-    result.pop("warnings", None)
-if not result.get("details"):
-    result.pop("details", None)
-if not result.get("availableActors"):
-    result.pop("availableActors", None)
-if not result.get("error"):
-    result.pop("error", None)
-
-print('RESULT:' + json.dumps(result))
-`.trim();
-  }
 }

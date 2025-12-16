@@ -37,13 +37,15 @@ const defaultDocPath = path.resolve(repoRoot, 'docs', 'unreal-tool-test-cases.md
 const docPath = path.resolve(repoRoot, process.env.UNREAL_MCP_TEST_DOC ?? defaultDocPath);
 const reportsDir = path.resolve(repoRoot, 'tests', 'reports');
 const resultsPath = path.join(reportsDir, `unreal-tool-test-results-${new Date().toISOString().replace(/[:]/g, '-')}.json`);
-const defaultFbxDir = normalizeWindowsPath(process.env.UNREAL_MCP_FBX_DIR ?? 'C:\\Users\\micro\\Downloads\\Compressed\\fbx');
+const defaultFbxDir = normalizeWindowsPath(process.env.UNREAL_MCP_FBX_DIR ?? path.join(repoRoot, 'tests', 'assets', 'fbx'));
 const defaultFbxFile = normalizeWindowsPath(process.env.UNREAL_MCP_FBX_FILE ?? path.join(defaultFbxDir, 'test_model.fbx'));
 
 const cliOptions = parseCliOptions(process.argv.slice(2));
 const serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? 'node';
 const serverArgs = parseArgsList(process.env.UNREAL_MCP_SERVER_ARGS) ?? [path.join(repoRoot, 'dist', 'cli.js')];
 const serverCwd = process.env.UNREAL_MCP_SERVER_CWD ?? repoRoot;
+const stressTestMode = process.env.STRESS_TEST_MODE === '1';
+const benchmarkMode = process.env.BENCHMARK_MODE === '1';
 
 async function main() {
   await ensureFbxDirectory();
@@ -70,6 +72,8 @@ async function main() {
 
   let transport; let client;
   const runResults = [];
+  let automationBridgeStatus = { connected: false, summary: null };
+  let automationBridgeTestsEnabled = process.env.UNREAL_MCP_AUTOMATION_BRIDGE === '1';
 
   if (!cliOptions.dryRun) {
     try {
@@ -87,6 +91,25 @@ async function main() {
 
       await client.connect(transport);
       await client.listTools({});
+
+      try {
+        const bridgeResource = await client.readResource({ uri: 'ue://automation-bridge' });
+        const text = bridgeResource.contents?.[0]?.text;
+        if (text) {
+          const parsed = JSON.parse(text);
+          if (parsed && typeof parsed === 'object') {
+            const summary = parsed.summary ?? parsed;
+            const connected = Boolean(summary?.connected);
+            automationBridgeStatus = { connected, summary };
+            if (connected) {
+              automationBridgeTestsEnabled = true;
+            }
+          }
+        }
+      } catch (err) {
+        // Resource may not exist on older servers; treat as unavailable without failing run
+        console.warn('[warn] Unable to query ue://automation-bridge resource:', err?.message ?? String(err));
+      }
     } catch (err) {
       console.error('Failed to start or initialize MCP server:', err);
       if (transport) {
@@ -98,6 +121,22 @@ async function main() {
   }
 
   for (const testCase of filteredCases) {
+    let skipReason = testCase.skipReason;
+
+    if (!skipReason && testCase.groupName === 'Automation Bridge') {
+      if (!automationBridgeTestsEnabled) {
+        skipReason = 'Automation bridge tests disabled (set UNREAL_MCP_AUTOMATION_BRIDGE=1 or connect the plugin).';
+      } else {
+        const requestedTransport = typeof testCase.arguments?.transport === 'string'
+          ? testCase.arguments.transport.trim().toLowerCase()
+          : '';
+        const wantsBridge = ['automation_bridge', 'automation', 'bridge'].includes(requestedTransport);
+        if (wantsBridge && !automationBridgeStatus.connected) {
+          skipReason = 'Automation bridge transport requested but plugin is not connected.';
+        }
+      }
+    }
+
     if (testCase.skipReason) {
       runResults.push({
         ...testCase,
@@ -105,6 +144,16 @@ async function main() {
         detail: testCase.skipReason
       });
       console.log(formatResultLine(testCase, 'skipped', testCase.skipReason));
+      continue;
+    }
+
+    if (skipReason) {
+      runResults.push({
+        ...testCase,
+        status: 'skipped',
+        detail: skipReason
+      });
+      console.log(formatResultLine(testCase, 'skipped', skipReason));
       continue;
     }
 
@@ -161,6 +210,11 @@ async function main() {
 
   await persistResults(runResults);
   summarize(runResults);
+
+  // Performance statistics if benchmarking
+  if (benchmarkMode) {
+    generateBenchmarkReport(runResults);
+  }
 
   if (runResults.some((result) => result.status === 'failed')) {
     process.exitCode = 1;
@@ -581,12 +635,6 @@ function enrichTestCase(rawCase) {
     case 'System Control Tools': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
       if (!payloadValue.action) return { ...base, skipReason: 'Missing action in payload' };
-      if (payloadValue.action === 'engine_quit' || payloadValue.action === 'engine_start') {
-        return {
-          ...base,
-          skipReason: 'Skipping engine process management during automated run'
-        };
-      }
       return {
         ...base,
         toolName: 'system_control',
@@ -604,14 +652,109 @@ function enrichTestCase(rawCase) {
         arguments: payloadValue
       };
     }
-    case 'Remote Control Preset Tools': {
+    case 'Asset Boundary Tests': {
       if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
-      if (!payloadValue.action) return { ...base, skipReason: 'Missing action in payload' };
-      return {
-        ...base,
-        toolName: 'manage_rc',
-        arguments: payloadValue
-      };
+      return { ...base, toolName: 'manage_asset', arguments: payloadValue };
+    }
+    case 'Actor Boundary Tests': {
+      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      const args = { ...payloadValue };
+      if (Array.isArray(args.location) && args.location.length === 3) {
+        args.location = { x: args.location[0], y: args.location[1], z: args.location[2] };
+      }
+      if (Array.isArray(args.rotation) && args.rotation.length === 3) {
+        args.rotation = { pitch: args.rotation[0], yaw: args.rotation[1], roll: args.rotation[2] };
+      }
+      if (Array.isArray(args.scale) && args.scale.length === 3) {
+        args.scale = { x: args.scale[0], y: args.scale[1], z: args.scale[2] };
+      }
+      if (Array.isArray(args.force) && args.force.length === 3) {
+        args.force = { x: args.force[0], y: args.force[1], z: args.force[2] };
+      }
+      return { ...base, toolName: 'control_actor', arguments: args };
+    }
+    case 'Editor Boundary Tests':
+    case 'Editor Control Boundary Tests': {
+      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      return { ...base, toolName: 'control_editor', arguments: payloadValue };
+    }
+    case 'Level Boundary Tests':
+    case 'Level Management Boundary Tests': {
+      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      return { ...base, toolName: 'manage_level', arguments: payloadValue };
+    }
+    case 'Animation Boundary Tests': {
+      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      return { ...base, toolName: 'animation_physics', arguments: payloadValue };
+    }
+    case 'Blueprint Boundary Tests':
+    case 'Blueprint Control Boundary Tests': {
+      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      return { ...base, toolName: 'manage_blueprint', arguments: payloadValue };
+    }
+    case 'Effects Boundary Tests':
+    case 'Effects Control Boundary Tests': {
+      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      const args = { ...payloadValue };
+      if (Array.isArray(args.location) && args.location.length === 3) {
+        args.location = { x: args.location[0], y: args.location[1], z: args.location[2] };
+      }
+      if (Array.isArray(args.start) && args.start.length === 3) {
+        args.start = { x: args.start[0], y: args.start[1], z: args.start[2] };
+      }
+      if (Array.isArray(args.end) && args.end.length === 3) {
+        args.end = { x: args.end[0], y: args.end[1], z: args.end[2] };
+      }
+      return { ...base, toolName: 'create_effect', arguments: args };
+    }
+    case 'Environment Boundary Tests':
+    case 'Environment Building Boundary Tests': {
+      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      const args = { ...payloadValue };
+      if (Array.isArray(args.location) && args.location.length === 3) {
+        args.location = { x: args.location[0], y: args.location[1], z: args.location[2] };
+      }
+      if (args.bounds) {
+        const bounds = { ...args.bounds };
+        if (Array.isArray(bounds.location) && bounds.location.length === 3) {
+          bounds.location = { x: bounds.location[0], y: bounds.location[1], z: bounds.location[2] };
+        }
+        if (Array.isArray(bounds.size) && bounds.size.length === 3) {
+          bounds.size = { x: bounds.size[0], y: bounds.size[1], z: bounds.size[2] };
+        }
+        args.bounds = bounds;
+      }
+      return { ...base, toolName: 'build_environment', arguments: args };
+    }
+    case 'System Boundary Tests':
+    case 'System Control Boundary Tests': {
+      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      return { ...base, toolName: 'system_control', arguments: payloadValue };
+    }
+    case 'Sequence Boundary Tests':
+    case 'Sequence Control Boundary Tests': {
+      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      return { ...base, toolName: 'manage_sequence', arguments: payloadValue };
+    }
+    case 'Remote Control Boundary Tests':
+    case 'Remote Control Preset Boundary Tests': {
+      // No consolidated remote control tool mapping; treated as unsupported group
+      return { ...base, skipReason: `Unknown tool group '${rawCase.groupName}'` };
+    }
+    case 'Python Execution Boundary Tests': {
+      // No consolidated Python execution tool; treated as unsupported group
+      return { ...base, skipReason: `Unknown tool group '${rawCase.groupName}'` };
+    }
+    case 'Inspection Boundary Tests': {
+      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      return { ...base, toolName: 'inspect', arguments: payloadValue };
+    }
+    case 'Cross-Tool Integration Tests':
+    case 'Stress Test Scenarios':
+    case 'Error Recovery Tests': {
+      if (!payloadValue) return { ...base, skipReason: 'No JSON payload provided' };
+      // These require multi-step execution or special handling
+      return { ...base, skipReason: 'Multi-step test scenario - requires custom test implementation' };
     }
     default:
       return { ...base, skipReason: `Unknown tool group '${rawCase.groupName}'` };
@@ -628,7 +771,51 @@ function evaluateExpectation(testCase, response) {
     : undefined;
   const actualSuccess = structuredSuccess ?? !response.isError;
 
+  // Extract actual error/message from response
+  let actualError = null;
+  let actualMessage = null;
+  if (response.structuredContent) {
+    actualError = response.structuredContent.error;
+    actualMessage = response.structuredContent.message;
+  }
+
+  // CRITICAL FIX: UE_NOT_CONNECTED errors should ALWAYS fail tests unless explicitly expected
+  if (actualError === 'UE_NOT_CONNECTED') {
+    const explicitlyExpectsDisconnection = lowerExpected.includes('not connected') ||
+      lowerExpected.includes('ue_not_connected') ||
+      lowerExpected.includes('disconnected');
+    if (!explicitlyExpectsDisconnection) {
+      return {
+        passed: false,
+        reason: `Test requires Unreal Engine connection, but got: ${actualError} - ${actualMessage}`
+      };
+    }
+  }
+
+  // For tests that expect specific error types, validate the actual error matches
   const expectedFailure = containsFailure && !containsSuccess;
+  if (expectedFailure && !actualSuccess) {
+    // Test expects failure and got failure - but verify it's the RIGHT kind of failure
+    const lowerReason = actualMessage?.toLowerCase() || actualError?.toLowerCase() || '';
+    const errorTypeMatch = failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
+
+    // If expected outcome specifies an error type, actual error should match it
+    if (lowerExpected.includes('not found') || lowerExpected.includes('invalid') ||
+      lowerExpected.includes('missing') || lowerExpected.includes('already exists')) {
+      const passed = errorTypeMatch;
+      let reason;
+      if (response.isError) {
+        reason = response.content?.map((entry) => ('text' in entry ? entry.text : JSON.stringify(entry))).join('\n');
+      } else if (response.structuredContent) {
+        reason = JSON.stringify(response.structuredContent);
+      } else {
+        reason = 'No structured response returned';
+      }
+      return { passed, reason };
+    }
+  }
+
+  // Default evaluation logic
   const passed = expectedFailure ? !actualSuccess : !!actualSuccess;
   let reason;
   if (response.isError) {
@@ -683,6 +870,47 @@ function summarize(results) {
   console.log(`Failed: ${totals.failed}`);
   console.log(`Skipped: ${totals.skipped}`);
   console.log(`Results written to: ${resultsPath}`);
+}
+
+function generateBenchmarkReport(results) {
+  const passedResults = results.filter(r => r.status === 'passed' && r.durationMs);
+
+  if (passedResults.length === 0) {
+    console.log('\nNo performance data available for benchmarking.');
+    return;
+  }
+
+  const durations = passedResults.map(r => r.durationMs).sort((a, b) => a - b);
+  const sum = durations.reduce((a, b) => a + b, 0);
+  const avg = sum / durations.length;
+  const median = durations[Math.floor(durations.length / 2)];
+  const min = durations[0];
+  const max = durations[durations.length - 1];
+  const p95 = durations[Math.floor(durations.length * 0.95)];
+  const p99 = durations[Math.floor(durations.length * 0.99)];
+
+  console.log('\nPerformance Benchmark');
+  console.log('====================');
+  console.log(`Total operations: ${passedResults.length}`);
+  console.log(`Average: ${avg.toFixed(2)} ms`);
+  console.log(`Median: ${median.toFixed(2)} ms`);
+  console.log(`Min: ${min.toFixed(2)} ms`);
+  console.log(`Max: ${max.toFixed(2)} ms`);
+  console.log(`95th percentile: ${p95.toFixed(2)} ms`);
+  console.log(`99th percentile: ${p99.toFixed(2)} ms`);
+
+  // Group by tool
+  const byTool = {};
+  passedResults.forEach(r => {
+    if (!byTool[r.toolName]) byTool[r.toolName] = [];
+    byTool[r.toolName].push(r.durationMs);
+  });
+
+  console.log('\nBy Tool:');
+  Object.entries(byTool).forEach(([tool, times]) => {
+    const toolAvg = times.reduce((a, b) => a + b, 0) / times.length;
+    console.log(`  ${tool}: ${toolAvg.toFixed(2)} ms avg (${times.length} ops)`);
+  });
 }
 
 function normalizeWindowsPath(value) {

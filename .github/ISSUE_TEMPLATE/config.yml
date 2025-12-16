@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 'Documentation'
+    url: 'https://github.com/ChiR24/Unreal_mcp/tree/main/docs'
+    about: 'Check the documentation for usage guides and API reference.'
+  - name: 'Discussions'
+    url: 'https://github.com/ChiR24/Unreal_mcp/discussions'
+    about: 'Ask questions and share ideas with the community.'

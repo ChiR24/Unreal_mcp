@@ -1,9 +1,18 @@
 // UI tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
 
 export class UITools {
-  constructor(private bridge: UnrealBridge) {}
+  private automationBridge?: AutomationBridge;
+
+  constructor(private bridge: UnrealBridge, automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
+
+  setAutomationBridge(automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
 
   // Create widget blueprint
   async createWidget(params: {
@@ -12,60 +21,73 @@ export class UITools {
     savePath?: string;
   }) {
     const path = params.savePath || '/Game/UI/Widgets';
-    const py = `
-import unreal
-import json
-name = r"${params.name}"
-path = r"${path}"
-try:
-    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-    try:
-        factory = unreal.WidgetBlueprintFactory()
-    except Exception:
-        factory = None
-    if not factory:
-        print('RESULT:' + json.dumps({'success': False, 'error': 'WidgetBlueprintFactory unavailable'}))
-    else:
-        # Try setting parent_class in a version-tolerant way
-        try:
-            factory.parent_class = unreal.UserWidget
-        except Exception:
-            try:
-                factory.set_editor_property('parent_class', unreal.UserWidget)
-            except Exception:
-                pass
-        asset = asset_tools.create_asset(asset_name=name, package_path=path, asset_class=unreal.WidgetBlueprint, factory=factory)
-        if asset:
-            unreal.EditorAssetLibrary.save_asset(f"{path}/{name}")
-            print('RESULT:' + json.dumps({'success': True}))
-        else:
-            print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to create WidgetBlueprint'}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
-    try {
-      const resp = await this.bridge.executePython(py);
-      const interpreted = interpretStandardResult(resp, {
-        successMessage: 'Widget blueprint created',
-        failureMessage: 'Failed to create WidgetBlueprint'
-      });
 
-      if (interpreted.success) {
-        return { success: true, message: interpreted.message };
+    // Plugin-first: attempt to create the widget asset via the Automation Bridge.
+    if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+      try {
+        const resp = await this.automationBridge.sendAutomationRequest('system_control', {
+          action: 'create_widget',
+          name: params.name,
+          widgetType: params.type,
+          savePath: path
+        });
+        if (resp && resp.success !== false) {
+          const result = resp.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? (result as Record<string, unknown>) : undefined;
+          const widgetPath = typeof resultObj?.widgetPath === 'string' ? (resultObj.widgetPath as string) : `${path}/${params.name}`;
+          const message = resp.message || `Widget created at ${widgetPath}`;
+          return {
+            success: true,
+            message,
+            widgetPath,
+            exists: Boolean(resultObj?.exists),
+            ...(resultObj || {})
+          };
+        }
+      } catch (error) {
+        console.warn('UITools.createWidget automation bridge request failed, falling back to editor function:', error);
+      }
+    }
+
+    // Fallback: attempt to create the widget asset via the Automation
+    // Bridge plugin using the generic CREATE_ASSET function. If the plugin
+    // does not implement the action the bridge will fall back to executing
+    // the Python template (deprecated and gated by server opt-in).
+    try {
+      const payload = {
+        asset_name: params.name,
+        package_path: path,
+        factory_class: 'WidgetBlueprintFactory',
+        asset_class: 'unreal.WidgetBlueprint'
+      } as Record<string, any>;
+
+      const resp = await this.bridge.executeEditorFunction('CREATE_ASSET', payload as any);
+      const result = resp && typeof resp === 'object' ? (resp.result ?? resp) : resp;
+
+      // Interpret common success shapes returned by plugin or Python template
+      if (result && (result.success === true || result.created === true || Boolean(result.path))) {
+        return { success: true, message: result.message ?? `Widget created at ${result.path ?? `${path}/${params.name}`}` };
       }
 
-      return {
-        success: false,
-        error: interpreted.error ?? 'Failed to create widget blueprint',
-        details: bestEffortInterpretedText(interpreted)
-      };
+      // If plugin/template returned a structured failure, surface it
+      if (result && result.success === false) {
+        return { success: false, error: result.error ?? result.message ?? 'Failed to create widget blueprint', details: result };
+      }
+
+      // Fallback: if no structured response, return generic failure
+      return { success: false, error: 'Failed to create widget blueprint' };
     } catch (e) {
       return { success: false, error: `Failed to create widget blueprint: ${e}` };
     }
   }
 
+  // Show widget (convenience wrapper)
+  async showWidget(widgetPath: string) {
+    return this.addWidgetToViewport({ widgetClass: widgetPath });
+  }
+
   // Add widget component
-  async addWidgetComponent(params: {
+  async addWidgetComponent(_params: {
     widgetName: string;
     componentType: 'Button' | 'Text' | 'Image' | 'ProgressBar' | 'Slider' | 'CheckBox' | 'ComboBox' | 'TextBox' | 'ScrollBox' | 'Canvas' | 'VerticalBox' | 'HorizontalBox' | 'Grid' | 'Overlay';
     componentName: string;
@@ -76,161 +98,134 @@ except Exception as e:
       alignment?: [number, number];
     };
   }) {
-  const commands: string[] = [];
-    
-    commands.push(`AddWidgetComponent ${params.widgetName} ${params.componentType} ${params.componentName}`);
-    
-    if (params.slot) {
-      if (params.slot.position) {
-        commands.push(`SetWidgetPosition ${params.widgetName}.${params.componentName} ${params.slot.position.join(' ')}`);
-      }
-      if (params.slot.size) {
-        commands.push(`SetWidgetSize ${params.widgetName}.${params.componentName} ${params.slot.size.join(' ')}`);
-      }
-      if (params.slot.anchor) {
-        commands.push(`SetWidgetAnchor ${params.widgetName}.${params.componentName} ${params.slot.anchor.join(' ')}`);
-      }
-      if (params.slot.alignment) {
-        commands.push(`SetWidgetAlignment ${params.widgetName}.${params.componentName} ${params.slot.alignment.join(' ')}`);
-      }
+    if (!this.automationBridge) {
+      throw new Error('Automation bridge required for widget component operations');
     }
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: `Component ${params.componentName} added to widget` };
+
+    try {
+      // Map correctly to McpAutomationBridge_UiHandlers.cpp: add_widget_child
+      const response = await this.automationBridge.sendAutomationRequest('manage_ui', {
+        action: 'add_widget_child', // Use 'action' inside payload for subAction
+        widgetPath: _params.widgetName, // C++ expects 'widgetPath'
+        childClass: _params.componentType, // C++ expects 'childClass'
+        parentName: _params.slot ? 'Root' : undefined, // Rudimentary mapping
+      });
+
+      return response.success
+        ? { success: true, message: response.message || 'Widget component added', ...(response.result || {}) }
+        : { success: false, error: response.error || response.message || 'Failed to add widget component' };
+    } catch (error) {
+      return { success: false, error: `Failed to add widget component: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
-  // Set text
-  async setWidgetText(params: {
-    widgetName: string;
-    componentName: string;
-    text: string;
-    fontSize?: number;
-    color?: [number, number, number, number];
-    fontFamily?: string;
+  // Set text (requires C++ plugin)
+  async setWidgetText(_params: {
+    key: string; // The widget name to find
+    value: string; // The text to set
+    componentName?: string; // Legacy/Unused in new impl
   }) {
-  const commands: string[] = [];
-    
-    commands.push(`SetWidgetText ${params.widgetName}.${params.componentName} "${params.text}"`);
-    
-    if (params.fontSize !== undefined) {
-      commands.push(`SetWidgetFontSize ${params.widgetName}.${params.componentName} ${params.fontSize}`);
+    if (!this.automationBridge) {
+      throw new Error('Automation bridge required for setting widget text');
     }
-    
-    if (params.color) {
-      commands.push(`SetWidgetTextColor ${params.widgetName}.${params.componentName} ${params.color.join(' ')}`);
+
+    try {
+      // Changed to 'system_control' with subAction
+      const response = await this.automationBridge.sendAutomationRequest('system_control', {
+        subAction: 'set_widget_text',
+        key: _params.key,
+        value: _params.value
+      });
+
+      return response.success
+        ? { success: true, message: response.message || 'Widget text set', ...(response.result || {}) }
+        : { success: false, error: response.error || response.message || 'Failed to set widget text' };
+    } catch (error) {
+      return { success: false, error: `Failed to set widget text: ${error instanceof Error ? error.message : String(error)}` };
     }
-    
-    if (params.fontFamily) {
-      commands.push(`SetWidgetFont ${params.widgetName}.${params.componentName} ${params.fontFamily}`);
-    }
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: 'Widget text updated' };
   }
 
-  // Set image
-  async setWidgetImage(params: {
-    widgetName: string;
-    componentName: string;
-    imagePath: string;
-    tint?: [number, number, number, number];
-    sizeToContent?: boolean;
+  // Set image (requires C++ plugin)
+  async setWidgetImage(_params: {
+    key: string;
+    texturePath: string;
+    componentName?: string; // Unused
   }) {
-  const commands: string[] = [];
-    
-    commands.push(`SetWidgetImage ${params.widgetName}.${params.componentName} ${params.imagePath}`);
-    
-    if (params.tint) {
-      commands.push(`SetWidgetImageTint ${params.widgetName}.${params.componentName} ${params.tint.join(' ')}`);
+    if (!this.automationBridge) {
+      throw new Error('Automation bridge required for setting widget images');
     }
-    
-    if (params.sizeToContent !== undefined) {
-      commands.push(`SetWidgetSizeToContent ${params.widgetName}.${params.componentName} ${params.sizeToContent}`);
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('system_control', {
+        subAction: 'set_widget_image',
+        key: _params.key,
+        texturePath: _params.texturePath
+      });
+
+      return response.success
+        ? { success: true, message: response.message || 'Widget image set', ...(response.result || {}) }
+        : { success: false, error: response.error || response.message || 'Failed to set widget image' };
+    } catch (error) {
+      return { success: false, error: `Failed to set widget image: ${error instanceof Error ? error.message : String(error)}` };
     }
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: 'Widget image updated' };
   }
 
-  // Create HUD
-  async createHUD(params: {
+  // Create HUD (requires C++ plugin)
+  async createHUD(_params: {
     name: string;
-    elements?: Array<{
-      type: 'HealthBar' | 'AmmoCounter' | 'Score' | 'Timer' | 'Minimap' | 'Crosshair';
-      position: [number, number];
-      size?: [number, number];
-    }>;
+    elements?: Array<any>;
   }) {
-  const commands: string[] = [];
-    
-    commands.push(`CreateHUDClass ${params.name}`);
-    
-    if (params.elements) {
-      for (const element of params.elements) {
-        const size = element.size || [100, 50];
-        commands.push(`AddHUDElement ${params.name} ${element.type} ${element.position.join(' ')} ${size.join(' ')}`);
-      }
+    if (!this.automationBridge) {
+      throw new Error('Automation bridge required for creating HUDs');
     }
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: `HUD ${params.name} created` };
+
+    // Default path assumption or require full path?
+    // C++ expects 'widgetPath'. If name is just "MyHUD", we might need to resolve it.
+    // For now, assume name is the path or user provides path.
+    const widgetPath = _params.name.startsWith('/Game') ? _params.name : `/Game/UI/${_params.name}`;
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('system_control', {
+        subAction: 'create_hud',
+        widgetPath: widgetPath
+      });
+
+      return response.success
+        ? { success: true, message: response.message || 'HUD created', widgetName: (response.result as any)?.widgetName, ...(response.result || {}) }
+        : { success: false, error: response.error || response.message || 'Failed to create HUD' };
+    } catch (error) {
+      return { success: false, error: `Failed to create HUD: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
-  // Show/Hide widget
   async setWidgetVisibility(params: {
-    widgetName: string;
+    key: string;
     visible: boolean;
-    playerIndex?: number;
   }) {
-    const playerIndex = params.playerIndex ?? 0;
-    const widgetName = params.widgetName?.trim();
-    if (!widgetName) {
-      return { success: false, error: 'widgetName is required' };
-    }
-
-    const verifyScript = `
-import unreal, json
-name = r"${widgetName}"
-candidates = []
-if name.startswith('/Game/'):
-    candidates.append(name)
-else:
-    candidates.append(f"/Game/UI/Widgets/{name}")
-    candidates.append(f"/Game/{name}")
-
-found_path = ''
-for path in candidates:
-    if unreal.EditorAssetLibrary.does_asset_exist(path):
-        found_path = path
-        break
-
-print('RESULT:' + json.dumps({'success': bool(found_path), 'path': found_path, 'candidates': candidates}))
-`.trim();
-
-    const verify = await this.bridge.executePythonWithResult(verifyScript);
-    if (!verify?.success) {
-      return { success: false, error: `Widget asset not found for ${widgetName}` };
-    }
-
-    const command = params.visible 
-      ? `ShowWidget ${widgetName} ${playerIndex}`
-      : `HideWidget ${widgetName} ${playerIndex}`;
-
-    const raw = await this.bridge.executeConsoleCommand(command);
-    const summary = this.bridge.summarizeConsoleCommand(command, raw);
-
-    return {
-      success: true,
-      message: params.visible ? `Widget ${widgetName} show command issued` : `Widget ${widgetName} hide command issued`,
-      command: summary.command,
-      output: summary.output || undefined,
-      logLines: summary.logLines?.length ? summary.logLines : undefined
-    };
+    if (!this.automationBridge) return { success: false, error: 'NO_BRIDGE' };
+    const response = await this.automationBridge.sendAutomationRequest('system_control', {
+      subAction: 'set_widget_visibility',
+      key: params.key,
+      visible: params.visible
+    });
+    return response.success
+      ? { success: true, message: response.message || 'Widget visibility set', ...(response.result || {}) }
+      : { success: false, error: response.error || response.message || 'Failed to set widget visibility' };
   }
+
+  async removeWidgetFromViewport(params: {
+    key?: string;
+  }) {
+    if (!this.automationBridge) return { success: false, error: 'NO_BRIDGE' };
+    const response = await this.automationBridge.sendAutomationRequest('system_control', {
+      subAction: 'remove_widget_from_viewport',
+      key: params.key
+    });
+    return response.success
+      ? { success: true, message: response.message || 'Widget removed from viewport', ...(response.result || {}) }
+      : { success: false, error: response.error || response.message || 'Failed to remove widget from viewport' };
+  }
+
 
   // Add widget to viewport
   async addWidgetToViewport(params: {
@@ -240,93 +235,22 @@ print('RESULT:' + json.dumps({'success': bool(found_path), 'path': found_path, '
   }) {
     const zOrder = params.zOrder ?? 0;
     const playerIndex = params.playerIndex ?? 0;
-    
-    // Use Python API to create and add widget to viewport
-    const py = `
-import unreal
-import json
-widget_path = r"${params.widgetClass}"
-z_order = ${zOrder}
-player_index = ${playerIndex}
-try:
-    # Load the widget blueprint class
-    if not unreal.EditorAssetLibrary.does_asset_exist(widget_path):
-        print('RESULT:' + json.dumps({'success': False, 'error': f'Widget class not found: {widget_path}'}))
-    else:
-        widget_bp = unreal.EditorAssetLibrary.load_asset(widget_path)
-        if not widget_bp:
-            print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to load widget blueprint'}))
-        else:
-            # Get the generated class from the widget blueprint
-            widget_class = widget_bp.generated_class() if hasattr(widget_bp, 'generated_class') else widget_bp
-            
-      # Get the world and player controller via modern subsystems
-      world = None
-      try:
-        world = unreal.EditorUtilityLibrary.get_editor_world()
-      except Exception:
-        pass
 
-      if not world:
-        editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-        if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
-          world = editor_subsystem.get_editor_world()
-
-      if not world:
-        print('RESULT:' + json.dumps({'success': False, 'error': 'No editor world available. Start a PIE session or enable Editor Scripting Utilities.'}))
-            else:
-                # Try to get player controller
-                try:
-                    player_controller = unreal.GameplayStatics.get_player_controller(world, player_index)
-                except Exception:
-                    player_controller = None
-                
-                if not player_controller:
-                    # If no player controller in PIE, try to get the first one or create a dummy
-                    print('RESULT:' + json.dumps({'success': False, 'error': 'No player controller available. Run in PIE mode first.'}))
-                else:
-                    # Create the widget
-                    widget = unreal.WidgetBlueprintLibrary.create(world, widget_class, player_controller)
-                    if widget:
-                        # Add to viewport
-                        widget.add_to_viewport(z_order)
-                        print('RESULT:' + json.dumps({'success': True}))
-                    else:
-                        print('RESULT:' + json.dumps({'success': False, 'error': 'Failed to create widget instance'}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
-    
     try {
-      const resp = await this.bridge.executePython(py);
+      const resp = await this.bridge.executeEditorFunction('ADD_WIDGET_TO_VIEWPORT', { widget_path: params.widgetClass, z_order: zOrder, player_index: playerIndex } as any);
       const interpreted = interpretStandardResult(resp, {
         successMessage: `Widget added to viewport with z-order ${zOrder}`,
         failureMessage: 'Failed to add widget to viewport'
       });
-
       if (interpreted.success) {
         return { success: true, message: interpreted.message };
       }
-
-      return {
-        success: false,
-        error: interpreted.error ?? 'Failed to add widget to viewport',
-        details: bestEffortInterpretedText(interpreted)
-      };
+      return { success: false, error: interpreted.error ?? 'Failed to add widget to viewport', details: bestEffortInterpretedText(interpreted) };
     } catch (e) {
       return { success: false, error: `Failed to add widget to viewport: ${e}` };
     }
   }
 
-  // Remove widget from viewport
-  async removeWidgetFromViewport(params: {
-    widgetName: string;
-    playerIndex?: number;
-  }) {
-    const playerIndex = params.playerIndex ?? 0;
-    const command = `RemoveWidgetFromViewport ${params.widgetName} ${playerIndex}`;
-    return this.bridge.executeConsoleCommand(command);
-  }
 
   // Create menu
   async createMenu(params: {
@@ -338,19 +262,19 @@ except Exception as e:
       position?: [number, number];
     }>;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`CreateMenuWidget ${params.name} ${params.menuType}`);
-    
+
     if (params.buttons) {
       for (const button of params.buttons) {
         const pos = button.position || [0, 0];
         commands.push(`AddMenuButton ${params.name} "${button.text}" ${button.action} ${pos.join(' ')}`);
       }
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Menu ${params.name} created` };
   }
 
@@ -368,23 +292,23 @@ except Exception as e:
       }>;
     }>;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`CreateWidgetAnimation ${params.widgetName} ${params.animationName} ${params.duration}`);
-    
+
     if (params.tracks) {
       for (const track of params.tracks) {
         commands.push(`AddAnimationTrack ${params.widgetName}.${params.animationName} ${track.componentName} ${track.property}`);
-        
+
         for (const keyframe of track.keyframes) {
           const value = Array.isArray(keyframe.value) ? keyframe.value.join(' ') : keyframe.value;
           commands.push(`AddAnimationKeyframe ${params.widgetName}.${params.animationName} ${track.componentName} ${keyframe.time} ${value}`);
         }
       }
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Animation ${params.animationName} created` };
   }
 
@@ -397,7 +321,7 @@ except Exception as e:
   }) {
     const playMode = params.playMode || 'Forward';
     const loops = params.loops ?? 1;
-    
+
     const command = `PlayWidgetAnimation ${params.widgetName} ${params.animationName} ${playMode} ${loops}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -414,30 +338,30 @@ except Exception as e:
       margin?: [number, number, number, number];
     };
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.style.backgroundColor) {
       commands.push(`SetWidgetBackgroundColor ${params.widgetName}.${params.componentName} ${params.style.backgroundColor.join(' ')}`);
     }
-    
+
     if (params.style.borderColor) {
       commands.push(`SetWidgetBorderColor ${params.widgetName}.${params.componentName} ${params.style.borderColor.join(' ')}`);
     }
-    
+
     if (params.style.borderWidth !== undefined) {
       commands.push(`SetWidgetBorderWidth ${params.widgetName}.${params.componentName} ${params.style.borderWidth}`);
     }
-    
+
     if (params.style.padding) {
       commands.push(`SetWidgetPadding ${params.widgetName}.${params.componentName} ${params.style.padding.join(' ')}`);
     }
-    
+
     if (params.style.margin) {
       commands.push(`SetWidgetMargin ${params.widgetName}.${params.componentName} ${params.style.margin.join(' ')}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Widget style updated' };
   }
 
@@ -458,20 +382,20 @@ except Exception as e:
     showCursor?: boolean;
     lockCursor?: boolean;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`SetInputMode ${params.mode}`);
-    
+
     if (params.showCursor !== undefined) {
       commands.push(`ShowMouseCursor ${params.showCursor}`);
     }
-    
+
     if (params.lockCursor !== undefined) {
       commands.push(`SetMouseLockMode ${params.lockCursor}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Input mode set to ${params.mode}` };
   }
 
@@ -495,21 +419,21 @@ except Exception as e:
     dropTargets?: string[];
   }) {
     const commands = [];
-    
+
     commands.push(`EnableDragDrop ${params.widgetName}.${params.componentName}`);
-    
+
     if (params.dragVisual) {
       commands.push(`SetDragVisual ${params.widgetName}.${params.componentName} ${params.dragVisual}`);
     }
-    
+
     if (params.dropTargets) {
       for (const target of params.dropTargets) {
         commands.push(`AddDropTarget ${params.widgetName}.${params.componentName} ${target}`);
       }
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Drag and drop configured' };
   }
 
@@ -523,7 +447,7 @@ except Exception as e:
     const duration = params.duration ?? 3.0;
     const type = params.type || 'Info';
     const position = params.position || 'TopRight';
-    
+
     const command = `ShowNotification "${params.text}" ${duration} ${type} ${position}`;
     return this.bridge.executeConsoleCommand(command);
   }

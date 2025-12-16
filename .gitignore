@@ -10,37 +10,31 @@ build/
 *.js.map
 *.d.ts.map
 .tsbuildinfo
-Warp.md
-.smithery/
 
-# Environment files
+# WASM build outputs (Rust/wasm-pack)
+wasm/target/
+src/wasm/pkg/
+
+# Unreal Plugin build artifacts
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+
+# Environment files (keep .env.production as reference)
 .env
 .env.local
 .env.development
 .env.test
 
 # IDE files
-.vscode/
 .idea/
 *.swp
 *.swo
 *~
-.DS_Store
 
 # Test artifacts
-test*.js
-test*.json
-*.test.js
-*.spec.js
 coverage/
 .nyc_output/
 tests/reports/
-
-# Debug/utility scripts
-debug-*.js
-show-*.js
-hide-*.js
-verify-*.js
 
 # Temporary files
 *.tmp
@@ -51,12 +45,24 @@ verify-*.js
 *.backup
 *_backup.*
 *_old.*
+tmp/
 
 # Cache
 .cache/
 .eslintcache
+
+# Publishing/registry tokens (secrets)
 .mcpregistry_registry_token
 .mcpregistry_github_token
 mcp-publisher.exe
-PUBLISH.md
-validate-server.js
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.gemini/settings.json
+.vscode/c_cpp_properties.json
+.vscode/settings.json
+GEMINI.md
+.agent/

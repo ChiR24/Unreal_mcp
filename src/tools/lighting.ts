@@ -1,36 +1,15 @@
-// Lighting tools for Unreal Engine
+// Lighting tools for Unreal Engine using Automation Bridge
 import { UnrealBridge } from '../unreal-bridge.js';
-import { parseStandardResult } from '../utils/python-output.js';
-import { escapePythonString } from '../utils/python.js';
+import { AutomationBridge } from '../automation/index.js';
+import { ensureVector3 } from '../utils/validation.js';
 
 export class LightingTools {
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
-  private ensurePythonSpawnSucceeded(label: string, result: any) {
-    let logs = '';
-    if (Array.isArray(result?.LogOutput)) {
-      logs = result.LogOutput.map((l: any) => String(l.Output || '')).join('');
-    } else if (typeof result === 'string') {
-      logs = result;
-    }
+  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
-    // If Python reported a traceback or explicit failure, propagate as error
-    if (/Traceback|Error:|Failed to spawn/i.test(logs)) {
-      throw new Error(`Unreal reported error spawning '${label}': ${logs}`);
-    }
 
-    // If script executed (ReturnValue true) and no error patterns, treat as success
-    const executed = result?.ReturnValue === true || result?.ReturnValue === 'true';
-    if (executed) return;
-
-    // Fallback: if no ReturnValue but success-like logs exist, accept
-    if (/spawned/i.test(logs)) return;
-
-    // Otherwise, uncertain
-    throw new Error(`Uncertain spawn result for '${label}'. Engine logs:\n${logs}`);
-  }
-
-  private normalizeName(value: unknown, fallback?: string): string {
+  private normalizeName(value: unknown, defaultName?: string): string {
     if (typeof value === 'string') {
       const trimmed = value.trim();
       if (trimmed.length > 0) {
@@ -38,14 +17,71 @@ export class LightingTools {
       }
     }
 
-    if (typeof fallback === 'string') {
-      const trimmedFallback = fallback.trim();
-      if (trimmedFallback.length > 0) {
-        return trimmedFallback;
+    if (typeof defaultName === 'string') {
+      const trimmedDefault = defaultName.trim();
+      if (trimmedDefault.length > 0) {
+        return trimmedDefault;
       }
     }
 
-    throw new Error('Invalid name: must be a non-empty string');
+    // Auto-generate if no name is provided
+    return `Light_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  }
+
+  /**
+   * Spawn a light actor using the Automation Bridge.
+   * @param lightClass The Unreal light class name (e.g. 'DirectionalLight', 'PointLight')
+   * @param params Light spawn parameters
+   */
+  private async spawnLightViaAutomation(
+    lightClass: string,
+    params: {
+      name: string;
+      location?: [number, number, number];
+      rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
+      properties?: Record<string, any>;
+    }
+  ) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Cannot spawn lights without plugin support.');
+    }
+
+    try {
+      const payload: Record<string, any> = {
+        lightClass,
+        name: params.name,
+      };
+
+      if (params.location) {
+        payload.location = { x: params.location[0], y: params.location[1], z: params.location[2] };
+      }
+
+      if (params.rotation) {
+        if (Array.isArray(params.rotation)) {
+          payload.rotation = { pitch: params.rotation[0], yaw: params.rotation[1], roll: params.rotation[2] };
+        } else {
+          payload.rotation = params.rotation;
+        }
+      }
+
+      if (params.properties) {
+        payload.properties = params.properties;
+      }
+
+      const response = await this.automationBridge.sendAutomationRequest('spawn_light', payload, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        throw new Error(response.error || response.message || 'Failed to spawn light');
+      }
+
+      return response;
+    } catch (error) {
+      throw new Error(
+        `Failed to spawn ${lightClass}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   // Create directional light
@@ -53,13 +89,17 @@ export class LightingTools {
     name: string;
     intensity?: number;
     color?: [number, number, number];
-    rotation?: [number, number, number];
+    rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
     castShadows?: boolean;
     temperature?: number;
+    useAsAtmosphereSunLight?: boolean;
+    properties?: Record<string, any>;
   }) {
     const name = this.normalizeName(params.name);
-    const escapedName = escapePythonString(name);
-    
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge required for light spawning');
+    }
+
     // Validate numeric parameters
     if (params.intensity !== undefined) {
       if (typeof params.intensity !== 'number' || !isFinite(params.intensity)) {
@@ -69,13 +109,13 @@ export class LightingTools {
         throw new Error('Invalid intensity: must be non-negative');
       }
     }
-    
+
     if (params.temperature !== undefined) {
       if (typeof params.temperature !== 'number' || !isFinite(params.temperature)) {
         throw new Error(`Invalid temperature value: ${params.temperature}`);
       }
     }
-    
+
     // Validate arrays
     if (params.color !== undefined) {
       if (!Array.isArray(params.color) || params.color.length !== 3) {
@@ -87,77 +127,53 @@ export class LightingTools {
         }
       }
     }
-    
+
     if (params.rotation !== undefined) {
-      if (!Array.isArray(params.rotation) || params.rotation.length !== 3) {
-        throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
-      }
-      for (const r of params.rotation) {
-        if (typeof r !== 'number' || !isFinite(r)) {
-          throw new Error('Invalid rotation component: must be finite numbers');
+      if (Array.isArray(params.rotation)) {
+        if (params.rotation.length !== 3) {
+          throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
+        }
+        for (const r of params.rotation) {
+          if (typeof r !== 'number' || !isFinite(r)) {
+            throw new Error('Invalid rotation component: must be finite numbers');
+          }
         }
       }
     }
-    
+
     const rot = params.rotation || [0, 0, 0];
-    
-    // Build property setters
-    const propSetters: string[] = [];
+
+    // Build properties for the light
+    const properties: Record<string, any> = params.properties || {};
     if (params.intensity !== undefined) {
-      propSetters.push(`        light_component.set_intensity(${params.intensity})`);
+      properties.intensity = params.intensity;
     }
     if (params.color) {
-      propSetters.push(`        light_component.set_light_color(unreal.LinearColor(${params.color[0]}, ${params.color[1]}, ${params.color[2]}, 1.0))`);
+      properties.color = { r: params.color[0], g: params.color[1], b: params.color[2], a: 1.0 };
     }
     if (params.castShadows !== undefined) {
-      propSetters.push(`        light_component.set_cast_shadows(${params.castShadows ? 'True' : 'False'})`);
+      properties.castShadows = params.castShadows;
     }
     if (params.temperature !== undefined) {
-      propSetters.push(`        light_component.set_temperature(${params.temperature})`);
+      properties.temperature = params.temperature;
     }
-    
-    const propertiesCode = propSetters.length > 0 
-      ? propSetters.join('\n') 
-      : '        pass  # No additional properties';
+    if (params.useAsAtmosphereSunLight !== undefined) {
+      properties.useAsAtmosphereSunLight = params.useAsAtmosphereSunLight;
+    }
 
-    const pythonScript = `
-import unreal
+    try {
+      await this.spawnLightViaAutomation('DirectionalLight', {
+        name,
+        location: [0, 0, 500],
+        rotation: rot,
+        properties
+      });
 
-# Get editor subsystem
-editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-
-# Spawn the directional light
-directional_light_class = unreal.DirectionalLight
-spawn_location = unreal.Vector(0, 0, 500)
-spawn_rotation = unreal.Rotator(${rot[0]}, ${rot[1]}, ${rot[2]})
-
-# Spawn the actor
-spawned_light = editor_actor_subsystem.spawn_actor_from_class(
-  directional_light_class, 
-  spawn_location, 
-  spawn_rotation
-)
-
-if spawned_light:
-  # Set the label/name
-  spawned_light.set_actor_label("${escapedName}")
-    
-  # Get the light component
-  light_component = spawned_light.get_component_by_class(unreal.DirectionalLightComponent)
-    
-  if light_component:
-${propertiesCode}
-    
-  print("Directional light '${escapedName}' spawned")
-else:
-  print("Failed to spawn directional light '${escapedName}'")
-`;
-
-    // Execute the Python script via bridge (UE 5.6-compatible)
-    const result = await this.bridge.executePython(pythonScript);
-
-    this.ensurePythonSpawnSucceeded(name, result);
-    return { success: true, message: `Directional light '${name}' spawned` };
+      return { success: true, message: `Directional light '${name}' spawned` };
+    } catch (e: any) {
+      // Don't mask errors as "not implemented" - report the actual error from the bridge
+      return { success: false, error: `Failed to create directional light: ${e?.message ?? e}` } as any;
+    }
   }
 
   // Create point light
@@ -169,25 +185,27 @@ else:
     color?: [number, number, number];
     falloffExponent?: number;
     castShadows?: boolean;
+    rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
   }) {
     const name = this.normalizeName(params.name);
-    const escapedName = escapePythonString(name);
-    
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge required for light spawning');
+    }
+
+    // Validate location array
     // Validate location array
     if (params.location !== undefined) {
-      if (!Array.isArray(params.location) || params.location.length !== 3) {
-        throw new Error('Invalid location: must be an array [x,y,z]');
-      }
-      for (const l of params.location) {
-        if (typeof l !== 'number' || !isFinite(l)) {
-          throw new Error('Invalid location component: must be finite numbers');
-        }
+      // Ensure location is valid array [x,y,z]
+      try {
+        params.location = ensureVector3(params.location, 'location');
+      } catch (e) {
+        throw new Error(`Invalid location: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
-    
+
     // Default location if not provided
     const location = params.location || [0, 0, 0];
-    
+
     // Validate numeric parameters
     if (params.intensity !== undefined) {
       if (typeof params.intensity !== 'number' || !isFinite(params.intensity)) {
@@ -210,7 +228,7 @@ else:
         throw new Error(`Invalid falloffExponent value: ${params.falloffExponent}`);
       }
     }
-    
+
     // Validate color array
     if (params.color !== undefined) {
       if (!Array.isArray(params.color) || params.color.length !== 3) {
@@ -222,74 +240,45 @@ else:
         }
       }
     }
-    
-    // Build property setters
-    const propSetters: string[] = [];
+
+    // Build properties for the light
+    const properties: Record<string, any> = {};
     if (params.intensity !== undefined) {
-      propSetters.push(`        light_component.set_intensity(${params.intensity})`);
+      properties.intensity = params.intensity;
     }
     if (params.radius !== undefined) {
-      propSetters.push(`        light_component.set_attenuation_radius(${params.radius})`);
+      properties.attenuationRadius = params.radius;
     }
     if (params.color) {
-      propSetters.push(`        light_component.set_light_color(unreal.LinearColor(${params.color[0]}, ${params.color[1]}, ${params.color[2]}, 1.0))`);
+      properties.color = { r: params.color[0], g: params.color[1], b: params.color[2], a: 1.0 };
     }
     if (params.castShadows !== undefined) {
-      propSetters.push(`        light_component.set_cast_shadows(${params.castShadows ? 'True' : 'False'})`);
+      properties.castShadows = params.castShadows;
     }
     if (params.falloffExponent !== undefined) {
-      propSetters.push(`        light_component.set_light_falloff_exponent(${params.falloffExponent})`);
+      properties.lightFalloffExponent = params.falloffExponent;
     }
-    
-    const propertiesCode = propSetters.length > 0 
-      ? propSetters.join('\n') 
-      : '        pass  # No additional properties';
 
-    const pythonScript = `
-import unreal
+    try {
+      await this.spawnLightViaAutomation('PointLight', {
+        name,
+        location,
+        rotation: params.rotation,
+        properties
+      });
 
-# Get editor subsystem
-editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-
-# Spawn the point light
-point_light_class = unreal.PointLight
-spawn_location = unreal.Vector(${location[0]}, ${location[1]}, ${location[2]})
-spawn_rotation = unreal.Rotator(0, 0, 0)
-
-# Spawn the actor
-spawned_light = editor_actor_subsystem.spawn_actor_from_class(
-  point_light_class, 
-  spawn_location, 
-  spawn_rotation
-)
-
-if spawned_light:
-  # Set the label/name
-  spawned_light.set_actor_label("${escapedName}")
-    
-  # Get the light component
-  light_component = spawned_light.get_component_by_class(unreal.PointLightComponent)
-    
-  if light_component:
-${propertiesCode}
-    
-  print(f"Point light '${escapedName}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
-else:
-  print("Failed to spawn point light '${escapedName}'")
-`;
-
-    // Execute the Python script via bridge (UE 5.6-compatible)
-    const result = await this.bridge.executePython(pythonScript);
-
-    this.ensurePythonSpawnSucceeded(name, result);
-    return { success: true, message: `Point light '${name}' spawned at ${location.join(', ')}` };
+      return { success: true, message: `Point light '${name}' spawned at ${location.join(', ')}` };
+    } catch (e: any) {
+      // Don't mask errors as "not implemented" - report the actual error from the bridge
+      return { success: false, error: `Failed to create point light: ${e?.message ?? e}` } as any;
+    }
   }
 
   // Create spot light
   async createSpotLight(params: {
     name: string;
     location: [number, number, number];
-    rotation: [number, number, number];
+    rotation: [number, number, number] | { pitch: number, yaw: number, roll: number };
     intensity?: number;
     innerCone?: number;
     outerCone?: number;
@@ -298,8 +287,10 @@ else:
     castShadows?: boolean;
   }) {
     const name = this.normalizeName(params.name);
-    const escapedName = escapePythonString(name);
-    
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge required for light spawning');
+    }
+
     // Validate required location and rotation arrays
     if (!params.location || !Array.isArray(params.location) || params.location.length !== 3) {
       throw new Error('Invalid location: must be an array [x,y,z]');
@@ -309,16 +300,21 @@ else:
         throw new Error('Invalid location component: must be finite numbers');
       }
     }
-    
-    if (!params.rotation || !Array.isArray(params.rotation) || params.rotation.length !== 3) {
-      throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
+
+    if (!params.rotation) {
+      throw new Error('Rotation is required');
     }
-    for (const r of params.rotation) {
-      if (typeof r !== 'number' || !isFinite(r)) {
-        throw new Error('Invalid rotation component: must be finite numbers');
+    if (Array.isArray(params.rotation)) {
+      if (params.rotation.length !== 3) {
+        throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
+      }
+      for (const r of params.rotation) {
+        if (typeof r !== 'number' || !isFinite(r)) {
+          throw new Error('Invalid rotation component: must be finite numbers');
+        }
       }
     }
-    
+
     // Validate optional numeric parameters
     if (params.intensity !== undefined) {
       if (typeof params.intensity !== 'number' || !isFinite(params.intensity)) {
@@ -328,7 +324,7 @@ else:
         throw new Error('Invalid intensity: must be non-negative');
       }
     }
-    
+
     if (params.innerCone !== undefined) {
       if (typeof params.innerCone !== 'number' || !isFinite(params.innerCone)) {
         throw new Error(`Invalid innerCone value: ${params.innerCone}`);
@@ -337,7 +333,7 @@ else:
         throw new Error('Invalid innerCone: must be between 0 and 180 degrees');
       }
     }
-    
+
     if (params.outerCone !== undefined) {
       if (typeof params.outerCone !== 'number' || !isFinite(params.outerCone)) {
         throw new Error(`Invalid outerCone value: ${params.outerCone}`);
@@ -346,7 +342,7 @@ else:
         throw new Error('Invalid outerCone: must be between 0 and 180 degrees');
       }
     }
-    
+
     if (params.radius !== undefined) {
       if (typeof params.radius !== 'number' || !isFinite(params.radius)) {
         throw new Error(`Invalid radius value: ${params.radius}`);
@@ -355,7 +351,7 @@ else:
         throw new Error('Invalid radius: must be non-negative');
       }
     }
-    
+
     // Validate color array
     if (params.color !== undefined) {
       if (!Array.isArray(params.color) || params.color.length !== 3) {
@@ -367,83 +363,58 @@ else:
         }
       }
     }
-    // Build property setters
-    const propSetters: string[] = [];
+    // Build properties for the light
+    const properties: Record<string, any> = {};
     if (params.intensity !== undefined) {
-      propSetters.push(`        light_component.set_intensity(${params.intensity})`);
+      properties.intensity = params.intensity;
     }
     if (params.innerCone !== undefined) {
-      propSetters.push(`        light_component.set_inner_cone_angle(${params.innerCone})`);
+      properties.innerConeAngle = params.innerCone;
     }
     if (params.outerCone !== undefined) {
-      propSetters.push(`        light_component.set_outer_cone_angle(${params.outerCone})`);
+      properties.outerConeAngle = params.outerCone;
     }
     if (params.radius !== undefined) {
-      propSetters.push(`        light_component.set_attenuation_radius(${params.radius})`);
+      properties.attenuationRadius = params.radius;
     }
     if (params.color) {
-      propSetters.push(`        light_component.set_light_color(unreal.LinearColor(${params.color[0]}, ${params.color[1]}, ${params.color[2]}, 1.0))`);
+      properties.color = { r: params.color[0], g: params.color[1], b: params.color[2], a: 1.0 };
     }
     if (params.castShadows !== undefined) {
-      propSetters.push(`        light_component.set_cast_shadows(${params.castShadows ? 'True' : 'False'})`);
+      properties.castShadows = params.castShadows;
     }
-    
-    const propertiesCode = propSetters.length > 0 
-      ? propSetters.join('\n') 
-      : '        pass  # No additional properties';
 
-    const pythonScript = `
-import unreal
+    try {
+      await this.spawnLightViaAutomation('SpotLight', {
+        name,
+        location: params.location,
+        rotation: params.rotation,
+        properties
+      });
 
-# Get editor subsystem
-editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-
-# Spawn the spot light
-spot_light_class = unreal.SpotLight
-spawn_location = unreal.Vector(${params.location[0]}, ${params.location[1]}, ${params.location[2]})
-spawn_rotation = unreal.Rotator(${params.rotation[0]}, ${params.rotation[1]}, ${params.rotation[2]})
-
-# Spawn the actor
-spawned_light = editor_actor_subsystem.spawn_actor_from_class(
-    spot_light_class, 
-    spawn_location, 
-    spawn_rotation
-)
-
-if spawned_light:
-    # Set the label/name
-    spawned_light.set_actor_label("${escapedName}")
-    
-    # Get the light component
-    light_component = spawned_light.get_component_by_class(unreal.SpotLightComponent)
-    
-    if light_component:
-${propertiesCode}
-    
-    print(f"Spot light '${escapedName}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
-else:
-    print("Failed to spawn spot light '${escapedName}'")
-`;
-
-    // Execute the Python script via bridge (UE 5.6-compatible)
-  const result = await this.bridge.executePython(pythonScript);
-
-  this.ensurePythonSpawnSucceeded(name, result);
-  return { success: true, message: `Spot light '${name}' spawned at ${params.location.join(', ')}` };
+      return { success: true, message: `Spot light '${name}' spawned at ${params.location.join(', ')}` };
+    } catch (e: any) {
+      // Don't mask errors as "not implemented" - report the actual error from the bridge
+      return { success: false, error: `Failed to create spot light: ${e?.message ?? e}` } as any;
+    }
   }
 
   // Create rect light
   async createRectLight(params: {
     name: string;
     location: [number, number, number];
-    rotation: [number, number, number];
+    rotation: [number, number, number] | { pitch: number, yaw: number, roll: number };
     width?: number;
     height?: number;
     intensity?: number;
     color?: [number, number, number];
+    castShadows?: boolean;
   }) {
+
     const name = this.normalizeName(params.name);
-    const escapedName = escapePythonString(name);
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge required for light spawning');
+    }
 
     // Validate required location and rotation arrays
     if (!params.location || !Array.isArray(params.location) || params.location.length !== 3) {
@@ -454,16 +425,21 @@ else:
         throw new Error('Invalid location component: must be finite numbers');
       }
     }
-    
-    if (!params.rotation || !Array.isArray(params.rotation) || params.rotation.length !== 3) {
-      throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
+
+    if (!params.rotation) {
+      throw new Error('Rotation is required');
     }
-    for (const r of params.rotation) {
-      if (typeof r !== 'number' || !isFinite(r)) {
-        throw new Error('Invalid rotation component: must be finite numbers');
+    if (Array.isArray(params.rotation)) {
+      if (params.rotation.length !== 3) {
+        throw new Error('Invalid rotation: must be an array [pitch,yaw,roll]');
+      }
+      for (const r of params.rotation) {
+        if (typeof r !== 'number' || !isFinite(r)) {
+          throw new Error('Invalid rotation component: must be finite numbers');
+        }
       }
     }
-    
+
     // Validate optional numeric parameters
     if (params.width !== undefined) {
       if (typeof params.width !== 'number' || !isFinite(params.width)) {
@@ -473,7 +449,7 @@ else:
         throw new Error('Invalid width: must be positive');
       }
     }
-    
+
     if (params.height !== undefined) {
       if (typeof params.height !== 'number' || !isFinite(params.height)) {
         throw new Error(`Invalid height value: ${params.height}`);
@@ -482,7 +458,7 @@ else:
         throw new Error('Invalid height: must be positive');
       }
     }
-    
+
     if (params.intensity !== undefined) {
       if (typeof params.intensity !== 'number' || !isFinite(params.intensity)) {
         throw new Error(`Invalid intensity value: ${params.intensity}`);
@@ -491,7 +467,7 @@ else:
         throw new Error('Invalid intensity: must be non-negative');
       }
     }
-    
+
     // Validate color array
     if (params.color !== undefined) {
       if (!Array.isArray(params.color) || params.color.length !== 3) {
@@ -503,63 +479,77 @@ else:
         }
       }
     }
-    // Build property setters
-    const propSetters: string[] = [];
+    // Build properties for the light
+    const properties: Record<string, any> = {};
     if (params.intensity !== undefined) {
-      propSetters.push(`        light_component.set_intensity(${params.intensity})`);
+      properties.intensity = params.intensity;
     }
     if (params.color) {
-      propSetters.push(`        light_component.set_light_color(unreal.LinearColor(${params.color[0]}, ${params.color[1]}, ${params.color[2]}, 1.0))`);
+      properties.color = { r: params.color[0], g: params.color[1], b: params.color[2], a: 1.0 };
     }
     if (params.width !== undefined) {
-      propSetters.push(`        light_component.set_source_width(${params.width})`);
+      properties.sourceWidth = params.width;
     }
     if (params.height !== undefined) {
-      propSetters.push(`        light_component.set_source_height(${params.height})`);
+      properties.sourceHeight = params.height;
     }
-    
-    const propertiesCode = propSetters.length > 0 
-      ? propSetters.join('\n') 
-      : '        pass  # No additional properties';
 
-    const pythonScript = `
-import unreal
+    try {
+      await this.spawnLightViaAutomation('RectLight', {
+        name,
+        location: params.location,
+        rotation: params.rotation,
+        properties
+      });
 
-# Get editor subsystem
-editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+      return { success: true, message: `Rect light '${name}' spawned at ${params.location.join(', ')}` };
+    } catch (e: any) {
+      // Don't mask errors as "not implemented" - report the actual error from the bridge
+      return { success: false, error: `Failed to create rect light: ${e?.message ?? e}` } as any;
+    }
+  }
 
-# Spawn the rect light
-rect_light_class = unreal.RectLight
-spawn_location = unreal.Vector(${params.location[0]}, ${params.location[1]}, ${params.location[2]})
-spawn_rotation = unreal.Rotator(${params.rotation[0]}, ${params.rotation[1]}, ${params.rotation[2]})
+  /**
+   * Create dynamic light
+   */
+  async createDynamicLight(params: {
+    name?: string;
+    lightType?: 'Point' | 'Spot' | 'Directional' | 'Rect' | string;
+    location?: [number, number, number] | { x: number; y: number; z: number };
+    rotation?: [number, number, number];
+    intensity?: number;
+    color?: [number, number, number, number] | { r: number; g: number; b: number; a?: number };
+    pulse?: { enabled?: boolean; frequency?: number };
+  }) {
+    try {
+      const name = typeof params.name === 'string' && params.name.trim().length > 0 ? params.name.trim() : `DynamicLight_${Date.now() % 10000}`;
+      const lightTypeRaw = typeof params.lightType === 'string' && params.lightType.trim().length > 0 ? params.lightType.trim() : 'Point';
+      const location = Array.isArray(params.location) ? { x: params.location[0], y: params.location[1], z: params.location[2] } : (params.location || { x: 0, y: 0, z: 100 });
 
-# Spawn the actor
-spawned_light = editor_actor_subsystem.spawn_actor_from_class(
-    rect_light_class, 
-    spawn_location, 
-    spawn_rotation
-)
+      // C++ plugin does not strictly implement 'create_dynamic_light' action; it supports 'spawn_light'.
+      // However, we rely on the specific helper methods below which correctly map to 'spawn_light'
+      // with the appropriate class and properties.
 
-if spawned_light:
-  # Set the label/name
-  spawned_light.set_actor_label("${escapedName}")
-    
-  # Get the light component
-  light_component = spawned_light.get_component_by_class(unreal.RectLightComponent)
-    
-  if light_component:
-${propertiesCode}
-    
-  print(f"Rect light '${escapedName}' spawned at {spawn_location.x}, {spawn_location.y}, {spawn_location.z}")
-else:
-  print("Failed to spawn rect light '${escapedName}'")
-`;
+      const toArray3 = (loc: any): [number, number, number] => Array.isArray(loc)
+        ? [Number(loc[0]) || 0, Number(loc[1]) || 0, Number(loc[2]) || 0]
+        : [Number(loc?.x) || 0, Number(loc?.y) || 0, Number(loc?.z) || 0];
+      const locArr = toArray3(location);
+      const typeNorm = (lightTypeRaw || 'Point').toLowerCase();
 
-    // Execute the Python script via bridge (UE 5.6-compatible)
-    const result = await this.bridge.executePython(pythonScript);
+      switch (typeNorm) {
+        case 'directional': case 'directionallight':
+          return await this.createDirectionalLight({ name, intensity: params.intensity, color: Array.isArray(params.color) ? [params.color[0], params.color[1], params.color[2]] as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined), rotation: params.rotation as any });
+        case 'spot': case 'spotlight':
+          return await this.createSpotLight({ name, location: locArr, rotation: params.rotation as any, intensity: params.intensity, innerCone: undefined, outerCone: undefined, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined) });
+        case 'rect': case 'rectlight':
+          return await this.createRectLight({ name, location: locArr, rotation: params.rotation as any, width: undefined, height: undefined, intensity: params.intensity, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined) });
+        case 'point': default:
+          return await this.createPointLight({ name, location: locArr, intensity: params.intensity, radius: undefined, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined), castShadows: undefined });
+      }
 
-    this.ensurePythonSpawnSucceeded(name, result);
-    return { success: true, message: `Rect light '${name}' spawned at ${params.location.join(', ')}` };
+    } catch (err) {
+      return { success: false, error: `Failed to create dynamic light: ${err}` };
+    }
   }
 
   // Create sky light
@@ -569,210 +559,107 @@ else:
     cubemapPath?: string;
     intensity?: number;
     recapture?: boolean;
+    location?: [number, number, number];
+    rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
+    realTimeCapture?: boolean;
+    castShadows?: boolean;
+    color?: [number, number, number];
   }) {
     const name = this.normalizeName(params.name);
-    const escapedName = escapePythonString(name);
-    const sourceTypeRaw = typeof params.sourceType === 'string' ? params.sourceType.trim() : undefined;
-    const normalizedSourceType = sourceTypeRaw
-      ? sourceTypeRaw.toLowerCase() === 'specifiedcubemap'
-        ? 'SpecifiedCubemap'
-        : sourceTypeRaw.toLowerCase() === 'capturedscene'
-          ? 'CapturedScene'
-          : undefined
-      : undefined;
-    const cubemapPath = typeof params.cubemapPath === 'string' ? params.cubemapPath.trim() : undefined;
-
-    if (normalizedSourceType === 'SpecifiedCubemap' && (!cubemapPath || cubemapPath.length === 0)) {
+    if (params.sourceType === 'SpecifiedCubemap' && (!params.cubemapPath || params.cubemapPath.trim().length === 0)) {
       const message = 'cubemapPath is required when sourceType is SpecifiedCubemap';
       return { success: false, error: message, message };
     }
-    const escapedCubemapPath = cubemapPath ? escapePythonString(cubemapPath) : '';
-    const python = `
-import unreal
-import json
 
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "warnings": []
-}
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge required for sky light creation');
+    }
 
-def add_warning(text):
-  if text:
-    result["warnings"].append(str(text))
+    try {
+      const properties: Record<string, any> = {};
+      if (params.intensity !== undefined) properties.Intensity = params.intensity;
+      if (params.castShadows !== undefined) properties.CastShadows = params.castShadows;
+      if (params.realTimeCapture !== undefined) properties.RealTimeCapture = params.realTimeCapture;
+      if (params.color) properties.LightColor = { r: params.color[0], g: params.color[1], b: params.color[2], a: 1.0 };
 
-def finish():
-  if result["success"]:
-    if not result["message"]:
-      result["message"] = "Sky light ensured"
-    result.pop("error", None)
-  else:
-    if not result["error"]:
-      result["error"] = result["message"] or "Failed to ensure sky light"
-    if not result["message"]:
-      result["message"] = result["error"]
-  if not result["warnings"]:
-    result.pop("warnings", None)
-  print('RESULT:' + json.dumps(result))
+      const payload: Record<string, any> = {
+        name,
+        sourceType: params.sourceType || 'CapturedScene',
+        location: params.location,
+        rotation: params.rotation,
+        properties
+      };
 
-try:
-  actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-  if not actor_sub:
-    result["error"] = "EditorActorSubsystem unavailable"
-    finish()
-    raise SystemExit(0)
+      if (params.cubemapPath) {
+        payload.cubemapPath = params.cubemapPath;
+      }
+      if (params.intensity !== undefined) {
+        payload.intensity = params.intensity;
+      }
+      if (params.recapture) {
+        payload.recapture = params.recapture;
+      }
 
-  spawn_location = unreal.Vector(0.0, 0.0, 500.0)
-  spawn_rotation = unreal.Rotator(0.0, 0.0, 0.0)
+      const response = await this.automationBridge.sendAutomationRequest('spawn_sky_light', payload, {
+        timeoutMs: 60000
+      });
 
-  actor = None
-  try:
-    for candidate in actor_sub.get_all_level_actors():
-      try:
-        if candidate.get_class().get_name() == 'SkyLight':
-          actor = candidate
-          break
-      except Exception:
-        continue
-  except Exception:
-    pass
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to create sky light'
+        };
+      }
 
-  if actor is None:
-    actor = actor_sub.spawn_actor_from_class(unreal.SkyLight, spawn_location, spawn_rotation)
-
-  if not actor:
-    result["error"] = "Failed to spawn SkyLight actor"
-    finish()
-    raise SystemExit(0)
-
-  try:
-    actor.set_actor_label("${escapedName}")
-  except Exception:
-    pass
-
-  comp = actor.get_component_by_class(unreal.SkyLightComponent)
-  if not comp:
-    result["error"] = "SkyLight component missing"
-    finish()
-    raise SystemExit(0)
-
-  ${params.intensity !== undefined ? `
-  try:
-    comp.set_intensity(${params.intensity})
-  except Exception:
-    try:
-      comp.set_editor_property('intensity', ${params.intensity})
-    except Exception:
-      add_warning('Unable to set intensity property')
-  ` : ''}
-
-  source_type = ${normalizedSourceType ? `'${normalizedSourceType}'` : 'None'}
-  if source_type:
-    try:
-      comp.set_editor_property('source_type', getattr(unreal.SkyLightSourceType, source_type))
-    except Exception:
-      try:
-        comp.source_type = getattr(unreal.SkyLightSourceType, source_type)
-      except Exception:
-        add_warning(f"Unable to set source type {source_type}")
-
-  if source_type == 'SpecifiedCubemap':
-    path = "${escapedCubemapPath}"
-    if not path:
-      result["error"] = "cubemapPath is required when sourceType is SpecifiedCubemap"
-      finish()
-      raise SystemExit(0)
-    try:
-      exists = unreal.EditorAssetLibrary.does_asset_exist(path)
-    except Exception:
-      exists = False
-    if not exists:
-      result["error"] = f"Cubemap asset not found: {path}"
-      finish()
-      raise SystemExit(0)
-    try:
-      cube = unreal.EditorAssetLibrary.load_asset(path)
-    except Exception as load_err:
-      result["error"] = f"Failed to load cubemap asset: {load_err}"
-      finish()
-      raise SystemExit(0)
-    if not cube:
-      result["error"] = f"Cubemap asset could not be loaded: {path}"
-      finish()
-      raise SystemExit(0)
-    try:
-      if hasattr(comp, 'set_cubemap'):
-        comp.set_cubemap(cube)
-      else:
-        comp.set_editor_property('cubemap', cube)
-    except Exception as assign_err:
-      result["error"] = f"Failed to assign cubemap: {assign_err}"
-      finish()
-      raise SystemExit(0)
-
-  if ${params.recapture ? 'True' : 'False'}:
-    try:
-      comp.recapture_sky()
-    except Exception as recapture_err:
-      add_warning(f"Recapture failed: {recapture_err}")
-
-  result["success"] = True
-  result["message"] = "Sky light ensured"
-  finish()
-
-except SystemExit:
-  pass
-except Exception as run_err:
-  result["error"] = str(run_err)
-  finish()
-`.trim();
-  const resp = await this.bridge.executePython(python);
-  const parsed = parseStandardResult(resp).data;
-  if (parsed) {
-    if (parsed.success) {
       return {
         success: true,
-        message: parsed.message ?? 'Sky light ensured',
-        warnings: Array.isArray(parsed.warnings) && parsed.warnings.length > 0 ? parsed.warnings : undefined
+        message: response.message || 'Sky light created',
+        ...(response.result || {})
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to create sky light: ${error instanceof Error ? error.message : String(error)}`
       };
     }
-    return {
-      success: false,
-      error: parsed.error ?? parsed.message ?? 'Failed to ensure sky light',
-      warnings: Array.isArray(parsed.warnings) && parsed.warnings.length > 0 ? parsed.warnings : undefined
-    };
-  }
-  return { success: true, message: 'Sky light ensured' };
   }
 
   // Remove duplicate SkyLights and keep only one (named target label)
   async ensureSingleSkyLight(params?: { name?: string; recapture?: boolean }) {
-  const fallbackName = 'MCP_Test_Sky';
-  const name = this.normalizeName(params?.name, fallbackName);
-    const escapedName = escapePythonString(name);
+    const defaultName = 'MCP_Test_Sky';
+    const name = this.normalizeName(params?.name, defaultName);
     const recapture = !!params?.recapture;
-    const py = `\nimport unreal, json\nactor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nactors = actor_sub.get_all_level_actors() if actor_sub else []\nskies = []\nfor a in actors:\n    try:\n        if a.get_class().get_name() == 'SkyLight':\n            skies.append(a)\n    except Exception: pass\nkeep = None\n# Prefer one with matching label; otherwise keep the first\nfor a in skies:\n    try:\n        label = a.get_actor_label()\n        if label == "${escapedName}":\n            keep = a\n            break\n    except Exception: pass\nif keep is None and len(skies) > 0:\n    keep = skies[0]\n# Rename the kept one if needed\nif keep is not None:\n    try: keep.set_actor_label("${escapedName}")\n    except Exception: pass\n# Destroy all others using the correct non-deprecated API\nremoved = 0\nfor a in skies:\n    if keep is not None and a == keep:\n        continue\n    try:\n        # Use EditorActorSubsystem.destroy_actor instead of deprecated EditorLevelLibrary\n        actor_sub.destroy_actor(a)\n        removed += 1\n    except Exception: pass\n# Optionally recapture\nif keep is not None and ${recapture ? 'True' : 'False'}:\n    try:\n        comp = keep.get_component_by_class(unreal.SkyLightComponent)\n        if comp: comp.recapture_sky()\n    except Exception: pass\nprint('RESULT:' + json.dumps({'success': True, 'removed': removed, 'kept': True if keep else False}))\n`.trim();
 
-    const resp = await this.bridge.executePython(py);
-    let out = '';
-    if (resp?.LogOutput && Array.isArray((resp as any).LogOutput)) {
-      out = (resp as any).LogOutput.map((l: any) => l.Output || '').join('');
-    } else if (typeof resp === 'string') {
-      out = resp;
-    } else {
-      out = JSON.stringify(resp);
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge required for sky light management');
     }
-    const m = out.match(/RESULT:({.*})/);
-    if (m) {
-      try {
-        const parsed = JSON.parse(m[1]);
-        if (parsed.success) {
-          return { success: true, removed: parsed.removed, message: `Ensured single SkyLight (removed ${parsed.removed})` };
-        }
-      } catch {}
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('ensure_single_sky_light', {
+        name,
+        recapture
+      }, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to ensure single sky light'
+        };
+      }
+
+      return {
+        success: true,
+        message: response.message || `Ensured single SkyLight (removed ${(response.result as any)?.removed || 0})`,
+        ...(response.result || {})
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to ensure single sky light: ${error instanceof Error ? error.message : String(error)}`
+      };
     }
-    return { success: true, message: 'Ensured single SkyLight' };
   }
 
   // Setup global illumination
@@ -782,8 +669,22 @@ except Exception as run_err:
     indirectLightingIntensity?: number;
     bounces?: number;
   }) {
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('setup_global_illumination', {
+          method: params.method,
+          quality: params.quality,
+          indirectLightingIntensity: params.indirectLightingIntensity,
+          bounces: params.bounces
+        });
+        if (response.success) return { success: true, message: 'Global illumination configured via bridge', ...(response.result || {}) };
+      } catch (_e) {
+        // Fallback to console commands
+      }
+    }
+
     const commands = [];
-    
+
     switch (params.method) {
       case 'Lightmass':
         commands.push('r.DynamicGlobalIlluminationMethod 0');
@@ -798,25 +699,25 @@ except Exception as run_err:
         commands.push('r.DynamicGlobalIlluminationMethod 3');
         break;
     }
-    
+
     if (params.quality) {
       const qualityMap = { 'Low': 0, 'Medium': 1, 'High': 2, 'Epic': 3 };
       commands.push(`r.Lumen.Quality ${qualityMap[params.quality]}`);
     }
-    
+
     if (params.indirectLightingIntensity !== undefined) {
       commands.push(`r.IndirectLightingIntensity ${params.indirectLightingIntensity}`);
     }
-    
+
     if (params.bounces !== undefined) {
       commands.push(`r.Lumen.MaxReflectionBounces ${params.bounces}`);
     }
-    
+
     for (const cmd of commands) {
       await this.bridge.executeConsoleCommand(cmd);
     }
-    
-    return { success: true, message: 'Global illumination configured' };
+
+    return { success: true, message: 'Global illumination configured (console)' };
   }
 
   // Configure shadows
@@ -827,529 +728,174 @@ except Exception as run_err:
     contactShadows?: boolean;
     rayTracedShadows?: boolean;
   }) {
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('configure_shadows', {
+          shadowQuality: params.shadowQuality,
+          cascadedShadows: params.cascadedShadows,
+          shadowDistance: params.shadowDistance,
+          contactShadows: params.contactShadows,
+          rayTracedShadows: params.rayTracedShadows,
+          virtualShadowMaps: params.rayTracedShadows // Map to VSM for C++ handler
+        });
+        if (response.success) return { success: true, message: 'Shadow settings configured via bridge', ...(response.result || {}) };
+      } catch (_e) {
+        // Fallback
+      }
+    }
+
     const commands = [];
-    
+
     if (params.shadowQuality) {
       const qualityMap = { 'Low': 0, 'Medium': 1, 'High': 2, 'Epic': 3 };
       commands.push(`r.ShadowQuality ${qualityMap[params.shadowQuality]}`);
     }
-    
+
     if (params.cascadedShadows !== undefined) {
       commands.push(`r.Shadow.CSM.MaxCascades ${params.cascadedShadows ? 4 : 1}`);
     }
-    
+
     if (params.shadowDistance !== undefined) {
       commands.push(`r.Shadow.DistanceScale ${params.shadowDistance}`);
     }
-    
+
     if (params.contactShadows !== undefined) {
       commands.push(`r.ContactShadows ${params.contactShadows ? 1 : 0}`);
     }
-    
+
     if (params.rayTracedShadows !== undefined) {
       commands.push(`r.RayTracing.Shadows ${params.rayTracedShadows ? 1 : 0}`);
     }
-    
+
     for (const cmd of commands) {
       await this.bridge.executeConsoleCommand(cmd);
     }
-    
-    return { success: true, message: 'Shadow settings configured' };
+
+    return { success: true, message: 'Shadow settings configured (console)' };
   }
 
-  // Build lighting (Python-based)
+  // Build lighting
   async buildLighting(params: {
     quality?: 'Preview' | 'Medium' | 'High' | 'Production';
-    buildOnlySelected?: boolean; // ignored in Python path
+    buildOnlySelected?: boolean;
     buildReflectionCaptures?: boolean;
+    levelPath?: string;
   }) {
-    const q = params.quality || 'High';
-    const qualityMap: Record<string, string> = {
-      'Preview': 'QUALITY_PREVIEW',
-      'Medium': 'QUALITY_MEDIUM', 
-      'High': 'QUALITY_HIGH',
-      'Production': 'QUALITY_PRODUCTION'
-    };
-    const qualityEnum = qualityMap[q] || 'QUALITY_HIGH';
-    
-    // First try to ensure precomputed lighting is allowed and force-no-precomputed is disabled, then save changes
-const disablePrecomputedPy = `
-import unreal, json
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge required for lighting build');
+    }
 
-messages = []
-
-# Precheck: verify project supports static lighting (Support Static Lighting)
-try:
-    rs = unreal.get_default_object(unreal.RendererSettings)
-    support_static = False
-    try:
-        support_static = bool(rs.get_editor_property('bSupportStaticLighting'))
-    except Exception:
-        try:
-            support_static = bool(rs.get_editor_property('support_static_lighting'))
-        except Exception:
-            support_static = False
-    if not support_static:
-        print('RESULT:' + json.dumps({
-            'success': False,
-            'status': 'staticDisabled',
-            'error': 'Project has Support Static Lighting disabled (r.AllowStaticLighting=0). Enable Project Settings -> Rendering -> Support Static Lighting and restart the editor.'
-        }))
-        raise SystemExit(0)
-    else:
-        messages.append('Support Static Lighting is enabled')
-except Exception as e:
-    messages.append(f'Precheck failed: {e}')
-
-# Ensure runtime CVar does not force disable precomputed lighting
-try:
-    unreal.SystemLibrary.execute_console_command(None, 'r.ForceNoPrecomputedLighting 0')
-    messages.append('Set r.ForceNoPrecomputedLighting 0')
-except Exception as e:
-    messages.append(f'r.ForceNoPrecomputedLighting failed: {e}')
-
-# Temporarily disable source control prompts to avoid checkout dialogs during automated saves
-try:
-    prefs = unreal.SourceControlPreferences()
-    try:
-        prefs.set_enable_source_control(False)
-    except Exception:
-        try:
-            prefs.enable_source_control = False
-        except Exception:
-            pass
-    messages.append('Disabled Source Control for this session')
-except Exception as e:
-    messages.append(f'SourceControlPreferences modify failed: {e}')
-
-try:
-    ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-    world = ues.get_editor_world() if ues else None
-    
-    if world:
-        world_settings = world.get_world_settings()
-        if world_settings:
-            # Mark for modification
-            try:
-                world_settings.modify()
-            except Exception:
-                pass
-
-            # Try all known variants of the property name
-            for prop in ['force_no_precomputed_lighting', 'bForceNoPrecomputedLighting']:
-                try:
-                    world_settings.set_editor_property(prop, False)
-                    messages.append(f"Set WorldSettings.{prop}=False")
-                except Exception as e:
-                    messages.append(f"Failed setting {prop}: {e}")
-            
-            # Also update the Class Default Object (CDO) to help persistence in some versions
-            try:
-                ws_class = world_settings.get_class()
-                ws_cdo = unreal.get_default_object(ws_class)
-                if ws_cdo:
-                    try:
-                        ws_cdo.set_editor_property('bForceNoPrecomputedLighting', False)
-                        messages.append('Set CDO bForceNoPrecomputedLighting=False')
-                    except Exception:
-                        pass
-                    try:
-                        ws_cdo.set_editor_property('force_no_precomputed_lighting', False)
-                        messages.append('Set CDO force_no_precomputed_lighting=False')
-                    except Exception:
-                        pass
-            except Exception as e:
-                messages.append(f'CDO update failed: {e}')
-
-            # Apply and save level to persist change
-            try:
-                if hasattr(world_settings, 'post_edit_change'):
-                    world_settings.post_edit_change()
-            except Exception:
-                pass
-            
-            # Save current level/package
-            try:
-                wp = world.get_path_name()
-                pkg_path = wp.split('.')[0] if '.' in wp else wp
-                unreal.EditorAssetLibrary.save_asset(pkg_path)
-                messages.append(f'Saved world asset: {pkg_path}')
-            except Exception as e:
-                messages.append(f'Failed to save world asset: {e}')
-            
-            # Secondary save method
-            try:
-                if les:
-                    les.save_current_level()
-                    messages.append('LevelEditorSubsystem.save_current_level called')
-            except Exception as e:
-                messages.append(f'save_current_level failed: {e}')
-
-            # Verify final value(s)
-            try:
-                force_val = None
-                bforce_val = None
-                try:
-                    force_val = bool(world_settings.get_editor_property('force_no_precomputed_lighting'))
-                except Exception:
-                    pass
-                try:
-                    bforce_val = bool(world_settings.get_editor_property('bForceNoPrecomputedLighting'))
-                except Exception:
-                    pass
-                messages.append(f'Verify WorldSettings.force_no_precomputed_lighting={force_val}')
-                messages.append(f'Verify WorldSettings.bForceNoPrecomputedLighting={bforce_val}')
-            except Exception as e:
-                messages.append(f'Verify failed: {e}')
-except Exception as e:
-    messages.append(f'World modification failed: {e}')
-
-print('RESULT:' + json.dumps({'success': True, 'messages': messages, 'flags': {
-    'force_no_precomputed_lighting': force_val if 'force_val' in locals() else None,
-    'bForceNoPrecomputedLighting': bforce_val if 'bforce_val' in locals() else None
-}}))
-`.trim();
-
-    // Execute the disable script first and parse messages for diagnostics
-    const preResp = await this.bridge.executePython(disablePrecomputedPy);
     try {
-      const preOut = typeof preResp === 'string' ? preResp : JSON.stringify(preResp);
-      const pm = preOut.match(/RESULT:({.*})/);
-      if (pm) {
-        try {
-          const preJson = JSON.parse(pm[1]);
-          if (preJson && preJson.success === false && preJson.status === 'staticDisabled') {
-            return { success: false, error: preJson.error } as any;
-          }
-          if (preJson && preJson.flags) {
-            const f = preJson.flags as any;
-            if (f.bForceNoPrecomputedLighting === true || f.force_no_precomputed_lighting === true) {
-              return {
-                success: false,
-                error: 'WorldSettings.bForceNoPrecomputedLighting is true. Unreal will skip static lighting builds. Please uncheck "Force No Precomputed Lighting" in this level\'s World Settings (or enable Support Static Lighting in Project Settings) and retry. If using source control, check out the map asset first.'
-              } as any;
-            }
-          }
-        } catch {}
+      const response = await this.automationBridge.sendAutomationRequest('bake_lightmap', {
+        quality: params.quality || 'High',
+        buildOnlySelected: params.buildOnlySelected || false,
+        buildReflectionCaptures: params.buildReflectionCaptures !== false,
+        levelPath: params.levelPath
+      }, {
+        timeoutMs: 300000 // 5 minutes for lighting builds
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to build lighting'
+        };
       }
-    } catch {}
 
-    // Small delay to ensure settings are applied
-    await new Promise(resolve => setTimeout(resolve, 150));
-
-    // Now execute the lighting build
-    const py = `
-import unreal
-import json
-
-try:
-    les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-    if les:
-        # Build light maps with specified quality and reflection captures option
-        les.build_light_maps(unreal.LightingBuildQuality.${qualityEnum}, ${params.buildReflectionCaptures !== false ? 'True' : 'False'})
-        print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via LevelEditorSubsystem'}))
-    else:
-        # Fallback: Try using console command if subsystem not available
-        try:
-            unreal.SystemLibrary.execute_console_command(None, 'BuildLighting Quality=${q}')
-            ${params.buildReflectionCaptures ? "unreal.SystemLibrary.execute_console_command(None, 'BuildReflectionCaptures')" : ''}
-            print('RESULT:' + json.dumps({'success': True, 'message': 'Lighting build started via console command (fallback)'}))
-        except Exception as e2:
-            print('RESULT:' + json.dumps({'success': False, 'error': f'Build failed: {str(e2)}'}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
-    const resp = await this.bridge.executePython(py);
-    const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-    const m = out.match(/RESULT:({.*})/);
-    if (m) { try { const parsed = JSON.parse(m[1]); return parsed.success ? { success: true, message: parsed.message } : { success: false, error: parsed.error }; } catch {} }
-    return { success: true, message: 'Lighting build started' };
+      return {
+        success: true,
+        message: response.message || 'Lighting build started',
+        ...(response.result || {})
+      } as any;
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to build lighting: ${error instanceof Error ? error.message : String(error)}`
+      } as any;
+    }
   }
 
-  // Create a new level with proper lighting settings as workaround
+  // Create a new level with proper lighting settings
   async createLightingEnabledLevel(params?: {
     levelName?: string;
     copyActors?: boolean;
     useTemplate?: boolean;
   }) {
     const levelName = params?.levelName || 'LightingEnabledLevel';
-    const py = `
-import unreal
-import json
 
-def create_lighting_enabled_level():
-    """Create a new level with lighting enabled"""
-    try:
-        les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-        ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-        actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-        editor_asset = unreal.EditorAssetLibrary
-        
-        if not les or not ues:
-            return {'success': False, 'error': 'Required subsystems not available'}
-        
-        # Store current actors if we need to copy them
-        actors_to_copy = []
-        if ${params?.copyActors ? 'True' : 'False'}:
-            current_world = ues.get_editor_world()
-            if current_world:
-                all_actors = actor_sub.get_all_level_actors()
-                # Filter out unnecessary actors - only copy static meshes and important gameplay actors
-                for actor in all_actors:
-                    if actor:
-                        class_name = actor.get_class().get_name()
-                        # Only copy specific actor types
-                        if class_name in ['StaticMeshActor', 'SkeletalMeshActor', 'Blueprint', 'Actor']:
-                            try:
-                                actor_data = {
-                                    'class': actor.get_class(),
-                                    'location': actor.get_actor_location(),
-                                    'rotation': actor.get_actor_rotation(),
-                                    'scale': actor.get_actor_scale3d(),
-                                    'label': actor.get_actor_label()
-                                }
-                                # Check if actor has a static mesh component
-                                mesh_comp = actor.get_component_by_class(unreal.StaticMeshComponent)
-                                if mesh_comp:
-                                    mesh = mesh_comp.get_editor_property('static_mesh')
-                                    if mesh:
-                                        actor_data['mesh'] = mesh
-                                        actors_to_copy.append(actor_data)
-                            except:
-                                pass
-                print(f'Stored {len(actors_to_copy)} actors to copy')
-        
-        # Create new level with proper template or blank
-        level_name_str = "${levelName}"
-        level_path = f'/Game/Maps/{level_name_str}'
-        
-        # Try different approaches to create a level with lighting enabled
-        level_created = False
-        
-        # Method 1: Try using the Default template (not Blank)
-        try:
-            # The Default template should have lighting enabled
-            template_path = '/Engine/Maps/Templates/Template_Default'
-            if editor_asset.does_asset_exist(template_path):
-                les.new_level_from_template(level_path, template_path)
-                print(f'Created level from Default template: {level_path}')
-                level_created = True
-        except:
-            pass
-        
-        # Method 2: Try TimeOfDay template
-        if not level_created:
-            try:
-                template_path = '/Engine/Maps/Templates/TimeOfDay'
-                if editor_asset.does_asset_exist(template_path):
-                    les.new_level_from_template(level_path, template_path)
-                    print(f'Created level from TimeOfDay template: {level_path}')
-                    level_created = True
-            except:
-                pass
-        
-        # Method 3: Create blank and manually configure
-        if not level_created:
-            les.new_level(level_path, False)
-            print(f'Created new blank level: {level_path}')
-            level_created = True
-        
-        # CRITICAL: Force disable ForceNoPrecomputedLighting using all possible methods
-        new_world = ues.get_editor_world()
-        if new_world:
-            new_ws = new_world.get_world_settings()
-            if new_ws:
-                # Method 1: Direct property modification
-                for prop in ['force_no_precomputed_lighting', 'bForceNoPrecomputedLighting', 
-                            'ForceNoPrecomputedLighting', 'bforce_no_precomputed_lighting']:
-                    try:
-                        new_ws.set_editor_property(prop, False)
-                    except:
-                        pass
-                
-                # Method 2: Modify via reflection
-                try:
-                    # Access the property through the class default object
-                    ws_class = new_ws.get_class()
-                    ws_cdo = unreal.get_default_object(ws_class)
-                    if ws_cdo:
-                        ws_cdo.set_editor_property('force_no_precomputed_lighting', False)
-                        ws_cdo.set_editor_property('bForceNoPrecomputedLighting', False)
-                except:
-                    pass
-                
-                # Method 3: Override with Lightmass settings
-                try:
-                    # Create proper Lightmass settings
-                    lightmass_settings = unreal.LightmassWorldInfoSettings()
-                    lightmass_settings.static_lighting_level_scale = 1.0
-                    lightmass_settings.num_indirect_lighting_bounces = 3
-                    lightmass_settings.use_ambient_occlusion = True
-                    lightmass_settings.generate_ambient_occlusion_material_mask = False
-                    
-                    new_ws.set_editor_property('lightmass_settings', lightmass_settings)
-                except:
-                    pass
-                
-                # Method 4: Force save and reload to apply changes
-                try:
-                    # Mark the world settings as dirty
-                    new_ws.modify()
-                    # Save immediately
-                    les.save_current_level()
-                    # Force update
-                    new_world.force_update_level_bounds()
-                except:
-                    pass
-                
-                # Verify the setting
-                try:
-                    val = new_ws.get_editor_property('force_no_precomputed_lighting')
-                    print(f'New level force_no_precomputed_lighting: {val}')
-                    if val:
-                        print('WARNING: ForceNoPrecomputedLighting is persistent - project setting override detected')
-                        print('WORKAROUND: Will use dynamic lighting only')
-                except:
-                    pass
-        
-        # Copy actors if requested
-        if actors_to_copy and actor_sub:
-            print('Copying actors to new level...')
-            copied = 0
-            for actor_data in actors_to_copy:
-                try:
-                    # Spawn a static mesh actor if we have mesh data
-                    if 'mesh' in actor_data:
-                        # Create a proper static mesh actor
-                        spawned = actor_sub.spawn_actor_from_class(
-                            unreal.StaticMeshActor,
-                            actor_data['location'],
-                            actor_data['rotation']
-                        )
-                        if spawned:
-                            spawned.set_actor_scale3d(actor_data['scale'])
-                            spawned.set_actor_label(actor_data['label'])
-                            # Set the static mesh
-                            mesh_comp = spawned.get_component_by_class(unreal.StaticMeshComponent)
-                            if mesh_comp:
-                                mesh_comp.set_static_mesh(actor_data['mesh'])
-                            copied += 1
-                    else:
-                        # Spawn regular actor
-                        spawned = actor_sub.spawn_actor_from_class(
-                            actor_data['class'],
-                            actor_data['location'],
-                            actor_data['rotation']
-                        )
-                        if spawned:
-                            spawned.set_actor_scale3d(actor_data['scale'])
-                            spawned.set_actor_label(actor_data['label'])
-                            copied += 1
-                except Exception as e:
-                    pass  # Silently skip failed copies
-            print(f'Successfully copied {copied} actors')
-        
-        # Add essential lighting actors if not using template
-        if not use_template:
-            # Add a directional light for sun
-            light = actor_sub.spawn_actor_from_class(
-                unreal.DirectionalLight,
-                unreal.Vector(0, 0, 500),
-                unreal.Rotator(-45, 45, 0)
-            )
-            if light:
-                light.set_actor_label('Sun_Light')
-                light_comp = light.get_component_by_class(unreal.DirectionalLightComponent)
-                if light_comp:
-                    light_comp.set_intensity(3.14159)  # Pi lux for realistic sun
-                    light_comp.set_light_color(unreal.LinearColor(1, 0.95, 0.8, 1))
-                print('Added directional light')
-            
-            # Add sky light for ambient
-            sky = actor_sub.spawn_actor_from_class(
-                unreal.SkyLight,
-                unreal.Vector(0, 0, 300),
-                unreal.Rotator(0, 0, 0)
-            )
-            if sky:
-                sky.set_actor_label('Sky_Light')
-                sky_comp = sky.get_component_by_class(unreal.SkyLightComponent)
-                if sky_comp:
-                    sky_comp.set_intensity(1.0)
-                print('Added sky light')
-            
-            # Add sky atmosphere for realistic sky
-            atmosphere = actor_sub.spawn_actor_from_class(
-                unreal.SkyAtmosphere,
-                unreal.Vector(0, 0, 0),
-                unreal.Rotator(0, 0, 0)
-            )
-            if atmosphere:
-                atmosphere.set_actor_label('Sky_Atmosphere')
-                print('Added sky atmosphere')
-        
-        # Save the new level
-        les.save_current_level()
-        print('New level saved')
-        
-        return {
-            'success': True, 
-            'message': f'Created new level "{level_name_str}" with lighting enabled',
-            'path': level_path
-        }
-        
-    except Exception as e:
-        return {'success': False, 'error': str(e)}
-
-result = create_lighting_enabled_level()
-print('RESULT:' + json.dumps(result))
-`.trim();
-    
-    const resp = await this.bridge.executePython(py);
-    const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-    const m = out.match(/RESULT:({.*})/);
-    if (m) { 
-      try { 
-        const parsed = JSON.parse(m[1]); 
-        return parsed;
-      } catch {} 
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Level creation requires plugin support.');
     }
-    return { success: true, message: 'New level creation attempted' };
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('create_lighting_enabled_level', {
+        levelName,
+        copyActors: params?.copyActors === true,
+        useTemplate: params?.useTemplate === true,
+        path: params?.levelName ? `/Game/Maps/${params.levelName}` : undefined // Ensure path is sent
+      }, {
+        timeoutMs: 120000 // 2 minutes for level creation
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to create level'
+        };
+      }
+
+      return {
+        success: true,
+        message: response.message || `Created new level "${levelName}" with lighting enabled`,
+        ...(response.result || {})
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to create lighting-enabled level: ${error}`
+      };
+    }
   }
 
-  // Create lightmass importance volume via Python
+  // Create lightmass importance volume
   async createLightmassVolume(params: {
     name: string;
     location: [number, number, number];
     size: [number, number, number];
   }) {
     const name = this.normalizeName(params.name);
-    const escapedName = escapePythonString(name);
-    const [lx, ly, lz] = params.location;
-    const [sx, sy, sz] = params.size;
-    const py = `
-import unreal
-editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-loc = unreal.Vector(${lx}, ${ly}, ${lz})
-rot = unreal.Rotator(0,0,0)
-actor = editor_actor_subsystem.spawn_actor_from_class(unreal.LightmassImportanceVolume, loc, rot)
-if actor:
-  try: actor.set_actor_label("${escapedName}")
-    except Exception: pass
-    # Best-effort: set actor scale to approximate size
-    try:
-        actor.set_actor_scale3d(unreal.Vector(max(${sx}/100.0, 0.1), max(${sy}/100.0, 0.1), max(${sz}/100.0, 0.1)))
-    except Exception: pass
-    print("RESULT:{'success': True}")
-else:
-    print("RESULT:{'success': False, 'error': 'Failed to spawn LightmassImportanceVolume'}")
-`.trim();
-    const resp = await this.bridge.executePython(py);
-    const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-    const m = out.match(/RESULT:({.*})/);
-  if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: `LightmassImportanceVolume '${name}' created` } : { success: false, error: parsed.error }; } catch {} }
-    return { success: true, message: 'LightmassImportanceVolume creation attempted' };
+
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Lightmass volume creation requires plugin support.');
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('create_lightmass_volume', {
+        name,
+        location: { x: params.location[0], y: params.location[1], z: params.location[2] },
+        size: { x: params.size[0], y: params.size[1], z: params.size[2] }
+      }, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to create lightmass volume'
+        };
+      }
+
+      return {
+        success: true,
+        message: `LightmassImportanceVolume '${name}' created`,
+        ...(response.result || {})
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to create lightmass volume: ${error}`
+      };
+    }
   }
 
   // Set exposure
@@ -1359,27 +905,41 @@ else:
     minBrightness?: number;
     maxBrightness?: number;
   }) {
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('set_exposure', {
+          method: params.method,
+          compensationValue: params.compensationValue,
+          minBrightness: params.minBrightness,
+          maxBrightness: params.maxBrightness
+        });
+        if (response.success) return { success: true, message: 'Exposure settings updated via bridge', ...(response.result || {}) };
+      } catch (_e) {
+        // Fallback
+      }
+    }
+
     const commands = [];
-    
+
     commands.push(`r.EyeAdaptation.ExposureMethod ${params.method === 'Manual' ? 0 : 1}`);
-    
+
     if (params.compensationValue !== undefined) {
       commands.push(`r.EyeAdaptation.ExposureCompensation ${params.compensationValue}`);
     }
-    
+
     if (params.minBrightness !== undefined) {
       commands.push(`r.EyeAdaptation.MinBrightness ${params.minBrightness}`);
     }
-    
+
     if (params.maxBrightness !== undefined) {
       commands.push(`r.EyeAdaptation.MaxBrightness ${params.maxBrightness}`);
     }
-    
+
     for (const cmd of commands) {
       await this.bridge.executeConsoleCommand(cmd);
     }
-    
-    return { success: true, message: 'Exposure settings updated' };
+
+    return { success: true, message: 'Exposure settings updated (console)' };
   }
 
   // Set ambient occlusion
@@ -1389,31 +949,45 @@ else:
     radius?: number;
     quality?: 'Low' | 'Medium' | 'High';
   }) {
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('set_ambient_occlusion', {
+          enabled: params.enabled,
+          intensity: params.intensity,
+          radius: params.radius,
+          quality: params.quality
+        });
+        if (response.success) return { success: true, message: 'Ambient occlusion configured via bridge', ...(response.result || {}) };
+      } catch (_e) {
+        // Fallback
+      }
+    }
+
     const commands = [];
-    
+
     commands.push(`r.AmbientOcclusion.Enabled ${params.enabled ? 1 : 0}`);
-    
+
     if (params.intensity !== undefined) {
       commands.push(`r.AmbientOcclusion.Intensity ${params.intensity}`);
     }
-    
+
     if (params.radius !== undefined) {
       commands.push(`r.AmbientOcclusion.Radius ${params.radius}`);
     }
-    
+
     if (params.quality) {
       const qualityMap = { 'Low': 0, 'Medium': 1, 'High': 2 };
       commands.push(`r.AmbientOcclusion.Quality ${qualityMap[params.quality]}`);
     }
-    
+
     for (const cmd of commands) {
       await this.bridge.executeConsoleCommand(cmd);
     }
-    
-    return { success: true, message: 'Ambient occlusion configured' };
+
+    return { success: true, message: 'Ambient occlusion configured (console)' };
   }
 
-  // Setup volumetric fog (prefer Python to adjust fog actor/component)
+  // Setup volumetric fog
   async setupVolumetricFog(params: {
     enabled: boolean;
     density?: number;
@@ -1423,15 +997,40 @@ else:
     // Enable/disable global volumetric fog via CVar
     await this.bridge.executeConsoleCommand(`r.VolumetricFog ${params.enabled ? 1 : 0}`);
 
-    const py = `\nimport unreal\ntry:\n    actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\n    actors = actor_sub.get_all_level_actors() if actor_sub else []\n    fog = None\n    for a in actors:\n        try:\n            if a.get_class().get_name() == 'ExponentialHeightFog':\n                fog = a\n                break\n        except Exception: pass\n    if fog:\n        comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)\n        if comp:\n            ${params.density !== undefined ? `\n            try: comp.set_fog_density(${params.density})\n            except Exception: comp.set_editor_property('fog_density', ${params.density})\n            ` : ''}
-            ${params.scatteringIntensity !== undefined ? `\n            try: comp.set_fog_max_opacity(${Math.min(Math.max(params.scatteringIntensity,0),1)})\n            except Exception: pass\n            ` : ''}
-        ${params.fogHeight !== undefined ? `\n        try:\n            L = fog.get_actor_location()\n            fog.set_actor_location(unreal.Vector(L.x, L.y, ${params.fogHeight}))\n        except Exception: pass\n        ` : ''}
-    print("RESULT:{'success': True}")\nexcept Exception as e:\n    print("RESULT:{'success': False, 'error': '%s'}" % str(e))\n`.trim();
+    if (!this.automationBridge) {
+      return {
+        success: true,
+        message: 'Volumetric fog console setting applied (plugin required for fog actor adjustment)'
+      };
+    }
 
-    const resp = await this.bridge.executePython(py);
-    const out = typeof resp === 'string' ? resp : JSON.stringify(resp);
-    const m = out.match(/RESULT:({.*})/);
-    if (m) { try { const parsed = JSON.parse(m[1].replace(/'/g, '"')); return parsed.success ? { success: true, message: 'Volumetric fog configured' } : { success: false, error: parsed.error }; } catch {} }
-    return { success: true, message: 'Volumetric fog configured' };
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('setup_volumetric_fog', {
+        enabled: params.enabled,
+        density: params.density,
+        scatteringIntensity: params.scatteringIntensity,
+        fogHeight: params.fogHeight
+      }, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to configure volumetric fog'
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Volumetric fog configured',
+        ...(response.result || {})
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to setup volumetric fog: ${error}`
+      };
+    }
   }
 }

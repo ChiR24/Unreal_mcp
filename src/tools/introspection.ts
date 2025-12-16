@@ -1,16 +1,33 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
-import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
+import { lookupPropertyMetadata, normalizeDictionaryKey, PropertyDictionaryEntry } from './property-dictionary.js';
+
+export interface ObjectSummary {
+  name?: string;
+  class?: string;
+  path?: string;
+  parent?: string;
+  tags?: string[];
+  propertyCount: number;
+  curatedPropertyCount: number;
+  filteredPropertyCount: number;
+  categories?: Record<string, number>;
+}
 
 export interface ObjectInfo {
-  class: string;
-  name: string;
-  path: string;
+  class?: string;
+  name?: string;
+  path?: string;
   properties: PropertyInfo[];
   functions?: FunctionInfo[];
   parent?: string;
   interfaces?: string[];
   flags?: string[];
+  summary?: ObjectSummary;
+  filteredProperties?: string[];
+  tags?: string[];
+  original?: any;
 }
 
 export interface PropertyInfo {
@@ -21,6 +38,10 @@ export interface PropertyInfo {
   metadata?: Record<string, any>;
   category?: string;
   tooltip?: string;
+  description?: string;
+  displayValue?: string;
+  dictionaryEntry?: PropertyDictionaryEntry;
+  isReadOnly?: boolean;
 }
 
 export interface FunctionInfo {
@@ -43,8 +64,28 @@ export class IntrospectionTools {
   private objectCache = new Map<string, ObjectInfo>();
   private retryAttempts = 3;
   private retryDelay = 1000;
-  
-  constructor(private bridge: UnrealBridge) {}
+
+  private readonly propertyFilterPatterns: RegExp[] = [
+    /internal/i,
+    /transient/i,
+    /^temp/i,
+    /^bhidden/i,
+    /renderstate/i,
+    /previewonly/i,
+    /deprecated/i
+  ];
+
+  private readonly ignoredPropertyKeys = new Set<string>([
+    'assetimportdata',
+    'blueprintcreatedcomponents',
+    'componentreplicator',
+    'componentoverrides',
+    'actorcomponenttags'
+  ]);
+
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
+
+  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
   /**
    * Execute with retry logic for transient failures
@@ -54,57 +95,23 @@ export class IntrospectionTools {
     operationName: string
   ): Promise<T> {
     let lastError: any;
-    
+
     for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
       try {
         return await operation();
       } catch (error: any) {
         lastError = error;
         this.log.warn(`${operationName} attempt ${attempt} failed: ${error.message || error}`);
-        
+
         if (attempt < this.retryAttempts) {
-          await new Promise(resolve => 
+          await new Promise(resolve =>
             setTimeout(resolve, this.retryDelay * attempt)
           );
         }
       }
     }
-    
+
     throw lastError;
-  }
-
-  /**
-   * Parse Python execution result with better error handling
-   */
-  private parsePythonResult(resp: any, operationName: string): any {
-        const interpreted = interpretStandardResult(resp, {
-            successMessage: `${operationName} succeeded`,
-            failureMessage: `${operationName} failed`
-        });
-
-        if (interpreted.success) {
-            return {
-                ...interpreted.payload,
-                success: true
-            };
-        }
-
-    const output = bestEffortInterpretedText(interpreted) ?? '';
-    if (output) {
-      this.log.error(`Failed to parse ${operationName} result: ${output}`);
-    }
-
-    if (output.includes('ModuleNotFoundError')) {
-      return { success: false, error: 'Reflection module not available.' };
-    }
-    if (output.includes('AttributeError')) {
-      return { success: false, error: 'Reflection API method not found. Check Unreal Engine version compatibility.' };
-    }
-
-    return {
-      success: false,
-            error: `${interpreted.error ?? `${operationName} did not return a valid result`}: ${output.substring(0, 200)}`
-    };
   }
 
   /**
@@ -134,6 +141,197 @@ export class IntrospectionTools {
     return value;
   }
 
+  private isPlainObject(value: any): value is Record<string, any> {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  private isLikelyPropertyDescriptor(value: any): boolean {
+    if (!this.isPlainObject(value)) return false;
+    if (typeof value.name === 'string' && ('value' in value || 'type' in value)) return true;
+    if ('propertyName' in value && ('currentValue' in value || 'defaultValue' in value)) return true;
+    return false;
+  }
+
+  private shouldFilterProperty(name: string, value: any, flags?: string[], detailed = false): boolean {
+    if (detailed) return false;
+    if (!name) return true;
+    const normalized = normalizeDictionaryKey(name);
+    if (this.ignoredPropertyKeys.has(normalized)) return true;
+    for (const pattern of this.propertyFilterPatterns) {
+      if (pattern.test(name)) return true;
+    }
+    if (Array.isArray(value) && value.length === 0) return true;
+    if (this.isPlainObject(value) && Object.keys(value).length === 0) return true;
+    if (flags?.some((f) => /deprecated/i.test(f))) return true;
+    return false;
+  }
+
+  private formatDisplayValue(value: any, type: string): string {
+    if (value === null || value === undefined) return 'None';
+    if (typeof value === 'string') return value.length > 120 ? `${value.slice(0, 117)}...` : value;
+    if (typeof value === 'number' || typeof value === 'boolean') return `${value}`;
+    if (Array.isArray(value)) {
+      const preview = value.slice(0, 5).map((entry) => this.formatDisplayValue(entry, typeof entry));
+      const suffix = value.length > 5 ? `, … (+${value.length - 5})` : '';
+      return `[${preview.join(', ')}${suffix}]`;
+    }
+    if (this.isPlainObject(value)) {
+      const keys = Object.keys(value);
+      if (['vector', 'rotator', 'transform'].some((token) => type.toLowerCase().includes(token))) {
+        const printable = Object.entries(value)
+          .map(([k, v]) => `${k}: ${this.formatDisplayValue(v, typeof v)}`)
+          .join(', ');
+        return `{ ${printable} }`;
+      }
+      const preview = keys.slice(0, 5).map((k) => `${k}: ${this.formatDisplayValue(value[k], typeof value[k])}`);
+      const suffix = keys.length > 5 ? `, … (+${keys.length - 5} keys)` : '';
+      return `{ ${preview.join(', ')}${suffix} }`;
+    }
+    return String(value);
+  }
+
+  private normalizePropertyEntry(entry: any, detailed = false): PropertyInfo | null {
+    if (!entry) return null;
+    const name: string = entry.name ?? entry.propertyName ?? entry.key ?? '';
+    if (!name) return null;
+
+    const candidateType = entry.type ?? entry.propertyType ?? (entry.value !== undefined ? typeof entry.value : undefined);
+    const type = typeof candidateType === 'string' && candidateType.length > 0 ? candidateType : 'unknown';
+    const rawValue = entry.value ?? entry.currentValue ?? entry.defaultValue ?? entry.data ?? entry;
+    const value = this.convertPropertyValue(rawValue, type);
+    const flags: string[] | undefined = entry.flags ?? entry.attributes;
+    const metadata: Record<string, any> | undefined = entry.metadata ?? entry.annotations;
+    const filtered = this.shouldFilterProperty(name, value, flags, detailed);
+    const dictionaryEntry = lookupPropertyMetadata(name);
+    const propertyInfo: PropertyInfo = {
+      name,
+      type,
+      value,
+      flags,
+      metadata,
+      category: dictionaryEntry?.category ?? entry.category,
+      tooltip: entry.tooltip ?? entry.helpText,
+      description: dictionaryEntry?.description ?? entry.description,
+      displayValue: this.formatDisplayValue(value, type),
+      dictionaryEntry,
+      isReadOnly: Boolean(entry.isReadOnly || entry.readOnly || flags?.some((f) => f.toLowerCase().includes('readonly')))
+    };
+    (propertyInfo as any).__filtered = filtered;
+    return propertyInfo;
+  }
+
+  private flattenPropertyMap(source: Record<string, any>, prefix = '', detailed = false): PropertyInfo[] {
+    const properties: PropertyInfo[] = [];
+    for (const [rawKey, rawValue] of Object.entries(source)) {
+      const name = prefix ? `${prefix}.${rawKey}` : rawKey;
+      if (this.isLikelyPropertyDescriptor(rawValue)) {
+        const normalized = this.normalizePropertyEntry({ ...rawValue, name }, detailed);
+        if (normalized) properties.push(normalized);
+        continue;
+      }
+
+      if (this.isPlainObject(rawValue)) {
+        const nestedKeys = Object.keys(rawValue);
+        const hasPrimitiveChildren = nestedKeys.some((key) => {
+          const child = rawValue[key];
+          return child === null || typeof child !== 'object' || Array.isArray(child) || this.isLikelyPropertyDescriptor(child);
+        });
+
+        if (hasPrimitiveChildren) {
+          const normalized = this.normalizePropertyEntry({ name, value: rawValue }, detailed);
+          if (normalized) properties.push(normalized);
+        } else {
+          properties.push(...this.flattenPropertyMap(rawValue, name, detailed));
+        }
+        continue;
+      }
+
+      const normalized = this.normalizePropertyEntry({ name, value: rawValue }, detailed);
+      if (normalized) properties.push(normalized);
+    }
+    return properties;
+  }
+
+  private extractRawProperties(rawInfo: any, detailed = false): PropertyInfo[] {
+    if (!rawInfo) return [];
+    if (Array.isArray(rawInfo.properties)) {
+      const entries = rawInfo.properties as Array<Record<string, unknown>>;
+      return entries
+        .map((entry) => this.normalizePropertyEntry(entry, detailed))
+        .filter((entry): entry is PropertyInfo => Boolean(entry));
+    }
+
+    if (this.isPlainObject(rawInfo.properties)) {
+      return this.flattenPropertyMap(rawInfo.properties, '', detailed);
+    }
+
+    if (Array.isArray(rawInfo)) {
+      const entries = rawInfo as Array<Record<string, unknown>>;
+      return entries
+        .map((entry) => this.normalizePropertyEntry(entry, detailed))
+        .filter((entry): entry is PropertyInfo => Boolean(entry));
+    }
+
+    if (this.isPlainObject(rawInfo)) {
+      const shallow = { ...rawInfo };
+      delete shallow.properties;
+      delete shallow.functions;
+      delete shallow.summary;
+      return this.flattenPropertyMap(shallow, '', detailed);
+    }
+
+    return [];
+  }
+
+  curateObjectInfo(rawInfo: any, objectPath: string, detailed = false): ObjectInfo {
+    const properties = this.extractRawProperties(rawInfo, detailed);
+    const filteredProperties: string[] = [];
+    const curatedProperties = properties.filter((prop) => {
+      const shouldFilter = (prop as any).__filtered;
+      delete (prop as any).__filtered;
+      if (shouldFilter) {
+        filteredProperties.push(prop.name);
+      }
+      return !shouldFilter;
+    });
+
+    const categories: Record<string, number> = {};
+    const finalList = (detailed ? properties : curatedProperties).map((prop) => {
+      const category = (prop.category ?? prop.dictionaryEntry?.category ?? 'General');
+      categories[category] = (categories[category] ?? 0) + 1;
+      return prop;
+    });
+
+    const summary: ObjectSummary = {
+      name: rawInfo?.name ?? rawInfo?.objectName ?? rawInfo?.displayName,
+      class: rawInfo?.class ?? rawInfo?.className ?? rawInfo?.type ?? rawInfo?.objectClass,
+      path: rawInfo?.path ?? rawInfo?.objectPath ?? objectPath,
+      parent: rawInfo?.outer ?? rawInfo?.parent,
+      tags: Array.isArray(rawInfo?.tags) ? rawInfo.tags : undefined,
+      propertyCount: properties.length,
+      curatedPropertyCount: curatedProperties.length,
+      filteredPropertyCount: filteredProperties.length,
+      categories
+    };
+
+    const info: ObjectInfo = {
+      class: summary.class,
+      name: summary.name,
+      path: summary.path,
+      parent: summary.parent,
+      tags: summary.tags,
+      properties: finalList,
+      functions: Array.isArray(rawInfo?.functions) ? rawInfo.functions : undefined,
+      interfaces: Array.isArray(rawInfo?.interfaces) ? rawInfo.interfaces : undefined,
+      flags: Array.isArray(rawInfo?.flags) ? rawInfo.flags : undefined,
+      summary,
+      filteredProperties: filteredProperties.length ? filteredProperties : undefined,
+      original: rawInfo
+    };
+
+    return info;
+  }
+
   async inspectObject(params: { objectPath: string; detailed?: boolean }) {
     // Check cache first if not requesting detailed info
     if (!params.detailed && this.objectCache.has(params.objectPath)) {
@@ -142,256 +340,60 @@ export class IntrospectionTools {
         return { success: true, info: cached };
       }
     }
-    
-    const py = `
-import unreal, json, inspect
-path = r"${params.objectPath}"
-detailed = ${params.detailed ? 'True' : 'False'}
 
-def get_property_info(prop, obj=None):
-    """Extract detailed property information"""
-    try:
-        info = {
-            'name': prop.get_name(),
-            'type': prop.get_property_class_name() if hasattr(prop, 'get_property_class_name') else 'Unknown'
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Introspection operations require plugin support.');
+    }
+
+    const automationBridge = this.automationBridge;
+    return this.executeWithRetry(async () => {
+      try {
+        const response = await automationBridge.sendAutomationRequest('inspect_object', {
+          objectPath: params.objectPath,
+          detailed: params.detailed ?? false
+        }, {
+          timeoutMs: 60000
+        });
+
+        if (response.success === false) {
+          return {
+            success: false,
+            error: response.error || response.message || 'Failed to inspect object'
+          };
         }
-        
-        # Try to get property flags
-        flags = []
-        if hasattr(prop, 'has_any_property_flags'):
-            if prop.has_any_property_flags(unreal.PropertyFlags.CPF_EDIT_CONST):
-                flags.append('ReadOnly')
-            if prop.has_any_property_flags(unreal.PropertyFlags.CPF_BLUEPRINT_READ_ONLY):
-                flags.append('BlueprintReadOnly')
-            if prop.has_any_property_flags(unreal.PropertyFlags.CPF_TRANSIENT):
-                flags.append('Transient')
-        info['flags'] = flags
-        
-        # Try to get metadata
-        if hasattr(prop, 'get_metadata'):
-            try:
-                info['category'] = prop.get_metadata('Category')
-                info['tooltip'] = prop.get_metadata('ToolTip')
-            except Exception:
-                pass
-        
-        # Try to get current value if object provided
-        if obj and detailed:
-            try:
-                value = getattr(obj, prop.get_name())
-                # Convert complex types to serializable format
-                if hasattr(value, '__dict__'):
-                    value = str(value)
-                info['value'] = value
-            except Exception:
-                pass
-        
-        return info
-    except Exception as e:
-        return {'name': str(prop) if prop else 'Unknown', 'type': 'Unknown', 'error': str(e)}
 
-try:
-    obj = unreal.load_object(None, path)
-    if not obj:
-        # Try as class if object load fails
-        try:
-            obj = unreal.load_class(None, path)
-            if not obj:
-                print('RESULT:' + json.dumps({'success': False, 'error': 'Object or class not found'}))
-                raise SystemExit(0)
-        except Exception:
-            print('RESULT:' + json.dumps({'success': False, 'error': 'Object not found'}))
-            raise SystemExit(0)
-    
-    info = {
-        'class': obj.get_class().get_name() if hasattr(obj, 'get_class') else str(type(obj)),
-        'name': obj.get_name() if hasattr(obj, 'get_name') else '',
-        'path': path,
-        'properties': [],
-        'functions': [],
-        'flags': []
-    }
-    
-    # Get parent class
-    try:
-        if hasattr(obj, 'get_class'):
-            cls = obj.get_class()
-            if hasattr(cls, 'get_super_class'):
-                super_cls = cls.get_super_class()
-                if super_cls:
-                    info['parent'] = super_cls.get_name()
-    except Exception:
-        pass
-    
-    # Get object flags
-    try:
-        if hasattr(obj, 'has_any_flags'):
-            flags = []
-            if obj.has_any_flags(unreal.ObjectFlags.RF_PUBLIC):
-                flags.append('Public')
-            if obj.has_any_flags(unreal.ObjectFlags.RF_TRANSIENT):
-                flags.append('Transient')
-            if obj.has_any_flags(unreal.ObjectFlags.RF_DEFAULT_SUB_OBJECT):
-                flags.append('DefaultSubObject')
-            info['flags'] = flags
-    except Exception:
-        pass
-    
-    # Get properties - AVOID deprecated properties completely
-    props = []
-    
-    # List of deprecated properties to completely skip
-    deprecated_props = [
-        'life_span', 'on_actor_touch', 'on_actor_un_touch',
-        'get_touching_actors', 'get_touching_components',
-        'controller_class', 'look_up_scale', 'sound_wave_param',
-        'material_substitute', 'texture_object'
-    ]
-    
-    try:
-        cls = obj.get_class() if hasattr(obj, 'get_class') else obj
-        
-        # Try UE5 reflection API with safe property access
-        if hasattr(cls, 'get_properties'):
-            for prop in cls.get_properties():
-                prop_name = None
-                try:
-                    # Safe property name extraction
-                    if hasattr(prop, 'get_name'):
-                        prop_name = prop.get_name()
-                    elif hasattr(prop, 'name'):
-                        prop_name = prop.name
-                    
-                    # Skip if deprecated
-                    if prop_name and prop_name not in deprecated_props:
-                        prop_info = get_property_info(prop, obj if detailed else None)
-                        if prop_info.get('name') not in deprecated_props:
-                            props.append(prop_info)
-                except Exception:
-                    pass
-        
-        # If reflection API didn't work, use a safe property list
-        if not props:
-            # Only access known safe properties
-            safe_properties = [
-                'actor_guid', 'actor_instance_guid', 'always_relevant',
-                'auto_destroy_when_finished', 'can_be_damaged',
-                'content_bundle_guid', 'custom_time_dilation',
-                'enable_auto_lod_generation', 'find_camera_component_when_view_target',
-                'generate_overlap_events_during_level_streaming', 'hidden',
-                'initial_life_span',  # Use new name instead of life_span
-                'instigator', 'is_spatially_loaded', 'min_net_update_frequency',
-                'net_cull_distance_squared', 'net_dormancy', 'net_priority',
-                'net_update_frequency', 'net_use_owner_relevancy',
-                'only_relevant_to_owner', 'pivot_offset',
-                'replicate_using_registered_sub_object_list', 'replicates',
-                'root_component', 'runtime_grid', 'spawn_collision_handling_method',
-                'sprite_scale', 'tags', 'location', 'rotation', 'scale'
-            ]
-            
-            for prop_name in safe_properties:
-                try:
-                    # Use get_editor_property for safer access
-                    if hasattr(obj, 'get_editor_property'):
-                        val = obj.get_editor_property(prop_name)
-                        props.append({
-                            'name': prop_name,
-                            'type': type(val).__name__ if val is not None else 'None',
-                            'value': str(val)[:100] if detailed and val is not None else None
-                        })
-                    elif hasattr(obj, prop_name):
-                        # Direct access only for safe properties
-                        val = getattr(obj, prop_name)
-                        if not callable(val):
-                            props.append({
-                                'name': prop_name,
-                                'type': type(val).__name__,
-                                'value': str(val)[:100] if detailed else None
-                            })
-                except Exception:
-                    pass
-    except Exception as e:
-        # Minimal fallback with only essential safe properties
-        pass
-    
-    info['properties'] = props
-    
-    # Get functions/methods if detailed
-    if detailed:
-        funcs = []
-        try:
-            cls = obj.get_class() if hasattr(obj, 'get_class') else obj
-            
-            # Try to get UFunctions
-            if hasattr(cls, 'get_functions'):
-                for func in cls.get_functions():
-                    func_info = {
-                        'name': func.get_name(),
-                        'parameters': [],
-                        'flags': []
-                    }
-                    # Get parameters if possible
-                    if hasattr(func, 'get_params'):
-                        for param in func.get_params():
-                            func_info['parameters'].append({
-                                'name': param.get_name() if hasattr(param, 'get_name') else str(param),
-                                'type': 'Unknown'
-                            })
-                    funcs.append(func_info)
-            else:
-                # Fallback: use known safe function names
-                safe_functions = [
-                    'get_actor_location', 'set_actor_location',
-                    'get_actor_rotation', 'set_actor_rotation',
-                    'get_actor_scale', 'set_actor_scale',
-                    'destroy_actor', 'destroy_component',
-                    'get_components', 'get_component_by_class',
-                    'add_actor_component', 'add_component',
-                    'get_world', 'get_name', 'get_path_name',
-                    'is_valid', 'is_a', 'has_authority'
-                ]
-                for func_name in safe_functions:
-                    if hasattr(obj, func_name):
-                        try:
-                            attr_value = getattr(obj, func_name)
-                            if callable(attr_value):
-                                funcs.append({
-                                    'name': func_name,
-                                    'parameters': [],
-                                    'flags': []
-                                })
-                        except Exception:
-                            pass
-        except Exception:
-            pass
-        
-        info['functions'] = funcs
-    
-    print('RESULT:' + json.dumps({'success': True, 'info': info}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
-    const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(py),
-      'inspectObject'
-    );
-    
-    const result = this.parsePythonResult(resp, 'inspectObject');
-    
-    // Cache the result if successful and not detailed
-    if (result.success && result.info && !params.detailed) {
-      this.objectCache.set(params.objectPath, result.info);
-    }
-    
-    return result;
+        const rawInfo = response.info ?? response.result ?? response.data ?? response;
+        const curatedInfo = this.curateObjectInfo(rawInfo, params.objectPath, params.detailed ?? false);
+
+        const result = {
+          success: true,
+          info: curatedInfo
+        };
+
+        // Cache the result if successful and not detailed
+        if (result.success && result.info && !params.detailed) {
+          this.objectCache.set(params.objectPath, result.info as ObjectInfo);
+        }
+
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: `Failed to inspect object: ${error instanceof Error ? error.message : String(error)}`
+        };
+      }
+    }, 'inspectObject');
   }
 
+  /**
+   * Set property value on an object
+   */
   async setProperty(params: { objectPath: string; propertyName: string; value: any }) {
     return this.executeWithRetry(async () => {
       try {
         // Validate and convert value type if needed
         let processedValue = params.value;
-        
+
         // Handle special Unreal types
         if (typeof params.value === 'object' && params.value !== null) {
           // Vector conversion
@@ -422,23 +424,23 @@ except Exception as e:
                 'Rotator'
               ),
               Scale3D: this.convertPropertyValue(
-                params.value.scale || params.value.Scale || {x: 1, y: 1, z: 1},
+                params.value.scale || params.value.Scale || { x: 1, y: 1, z: 1 },
                 'Vector'
               )
             };
           }
         }
-        
-        const res = await this.bridge.httpCall('/remote/object/property', 'PUT', {
+        const res = await this.bridge.setObjectProperty({
           objectPath: params.objectPath,
           propertyName: params.propertyName,
-          propertyValue: processedValue
+          value: processedValue
         });
-        
-        // Clear cache for this object
-        this.objectCache.delete(params.objectPath);
-        
-        return { success: true, result: res };
+
+        if (res.success) {
+          this.objectCache.delete(params.objectPath);
+        }
+
+        return res;
       } catch (err: any) {
         const errorMsg = err?.message || String(err);
         if (errorMsg.includes('404')) {
@@ -456,77 +458,17 @@ except Exception as e:
    * Get property value of an object
    */
   async getProperty(params: { objectPath: string; propertyName: string }) {
-    const py = `
-import unreal, json
-path = r"${params.objectPath}"
-prop_name = r"${params.propertyName}"
-try:
-    obj = unreal.load_object(None, path)
-    if not obj:
-        print('RESULT:' + json.dumps({'success': False, 'error': 'Object not found'}))
-    else:
-        # Try different methods to get property
-        value = None
-        found = False
-        
-        # Method 1: Direct attribute access
-        if hasattr(obj, prop_name):
-            try:
-                value = getattr(obj, prop_name)
-                found = True
-            except Exception:
-                pass
-        
-        # Method 2: get_editor_property (UE4/5)
-        if not found and hasattr(obj, 'get_editor_property'):
-            try:
-                value = obj.get_editor_property(prop_name)
-                found = True
-            except Exception:
-                pass
-        
-        # Method 3: Try with common property name variations
-        if not found:
-            # Try common property name variations
-            variations = [
-                prop_name,
-                prop_name.lower(),
-                prop_name.upper(),
-                prop_name.capitalize(),
-                # Convert snake_case to CamelCase
-                ''.join(word.capitalize() for word in prop_name.split('_')),
-                # Convert CamelCase to snake_case
-                ''.join(['_' + c.lower() if c.isupper() else c for c in prop_name]).lstrip('_')
-            ]
-            for variant in variations:
-                if hasattr(obj, variant):
-                    try:
-                        value = getattr(obj, variant)
-                        found = True
-                        break
-                    except Exception:
-                        pass
-        
-        if found:
-            # Convert complex types to string
-            if hasattr(value, '__dict__'):
-                value = str(value)
-            elif isinstance(value, (list, tuple, dict)):
-                value = json.dumps(value)
-            
-            print('RESULT:' + json.dumps({'success': True, 'value': value}))
-        else:
-            print('RESULT:' + json.dumps({'success': False, 'error': f'Property {prop_name} not found'}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
+    return this.executeWithRetry(
+      async () => {
+        const result = await this.bridge.getObjectProperty({
+          objectPath: params.objectPath,
+          propertyName: params.propertyName
+        });
 
-    const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(py),
+        return result;
+      },
       'getProperty'
     );
-    
-    return this.parsePythonResult(resp, 'getProperty');
   }
 
   /**
@@ -537,238 +479,205 @@ except Exception as e:
     functionName: string;
     parameters?: any[];
   }) {
-    const py = `
-import unreal, json
-path = r"${params.objectPath}"
-func_name = r"${params.functionName}"
-params = ${JSON.stringify(params.parameters || [])}
-try:
-    obj = unreal.load_object(None, path)
-    if not obj:
-        # Try loading as class if object fails
-        try:
-            obj = unreal.load_class(None, path)
-        except:
-            pass
-    
-    if not obj:
-        print('RESULT:' + json.dumps({'success': False, 'error': 'Object not found'}))
-    else:
-        # For KismetMathLibrary or similar utility classes, use static method call
-        if 'KismetMathLibrary' in path or 'MathLibrary' in path or 'GameplayStatics' in path:
-            try:
-                # Use Unreal's MathLibrary (KismetMathLibrary is exposed as MathLibrary in Python)
-                if func_name.lower() == 'abs':
-                    # Use Unreal's MathLibrary.abs function
-                    result = unreal.MathLibrary.abs(float(params[0])) if params else 0
-                    print('RESULT:' + json.dumps({'success': True, 'result': result}))
-                elif func_name.lower() == 'sqrt':
-                    # Use Unreal's MathLibrary.sqrt function
-                    result = unreal.MathLibrary.sqrt(float(params[0])) if params else 0
-                    print('RESULT:' + json.dumps({'success': True, 'result': result}))
-                else:
-                    # Try to call as static method
-                    if hasattr(obj, func_name):
-                        func = getattr(obj, func_name)
-                        if callable(func):
-                            result = func(*params) if params else func()
-                            if hasattr(result, '__dict__'):
-                                result = str(result)
-                            print('RESULT:' + json.dumps({'success': True, 'result': result}))
-                        else:
-                            print('RESULT:' + json.dumps({'success': False, 'error': f'{func_name} is not callable'}))
-                    else:
-                        # Try snake_case version
-                        snake_case_name = ''.join(['_' + c.lower() if c.isupper() else c for c in func_name]).lstrip('_')
-                        if hasattr(obj, snake_case_name):
-                            func = getattr(obj, snake_case_name)
-                            result = func(*params) if params else func()
-                            print('RESULT:' + json.dumps({'success': True, 'result': result}))
-                        else:
-                            print('RESULT:' + json.dumps({'success': False, 'error': f'Function {func_name} not found'}))
-            except Exception as e:
-                print('RESULT:' + json.dumps({'success': False, 'error': f'Function call failed: {str(e)}'}))
-        else:
-            # Regular object method call
-            if hasattr(obj, func_name):
-                func = getattr(obj, func_name)
-                if callable(func):
-                    try:
-                        result = func(*params) if params else func()
-                        # Convert result to serializable format
-                        if hasattr(result, '__dict__'):
-                            result = str(result)
-                        print('RESULT:' + json.dumps({'success': True, 'result': result}))
-                    except Exception as e:
-                        print('RESULT:' + json.dumps({'success': False, 'error': f'Function call failed: {str(e)}'}))
-                else:
-                    print('RESULT:' + json.dumps({'success': False, 'error': f'{func_name} is not callable'}))
-            else:
-                print('RESULT:' + json.dumps({'success': False, 'error': f'Function {func_name} not found'}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Function call operations require plugin support.');
+    }
 
-    const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(py),
-      'callFunction'
-    );
-    
-    return this.parsePythonResult(resp, 'callFunction');
+    const automationBridge = this.automationBridge;
+    return this.executeWithRetry(async () => {
+      try {
+        const response = await automationBridge.sendAutomationRequest('call_object_function', {
+          objectPath: params.objectPath,
+          functionName: params.functionName,
+          parameters: params.parameters || []
+        }, {
+          timeoutMs: 60000
+        });
+
+        if (response.success === false) {
+          return {
+            success: false,
+            error: response.error || response.message || 'Failed to call function'
+          };
+        }
+
+        return {
+          success: true,
+          result: response.result
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: `Failed to call function: ${error instanceof Error ? error.message : String(error)}`
+        };
+      }
+    }, 'callFunction');
   }
 
   /**
    * Get Class Default Object (CDO) for a class
    */
   async getCDO(className: string) {
-    const py = `
-import unreal, json
-class_name = r"${className}"
-try:
-    # Try to find the class
-    cls = None
-    
-    # Method 1: Direct class load
-    try:
-        cls = unreal.load_class(None, class_name)
-    except Exception:
-        pass
-    
-    # Method 2: Find class by name
-    if not cls:
-        try:
-            cls = unreal.find_class(class_name)
-        except Exception:
-            pass
-    
-    # Method 3: Search in loaded classes
-    if not cls:
-        for obj in unreal.ObjectLibrary.get_all_objects():
-            if hasattr(obj, 'get_class'):
-                obj_cls = obj.get_class()
-                if obj_cls.get_name() == class_name:
-                    cls = obj_cls
-                    break
-    
-    if not cls:
-        print('RESULT:' + json.dumps({'success': False, 'error': 'Class not found'}))
-    else:
-        # Get CDO
-        cdo = cls.get_default_object() if hasattr(cls, 'get_default_object') else None
-        
-        if cdo:
-            info = {
-                'className': cls.get_name(),
-                'cdoPath': cdo.get_path_name() if hasattr(cdo, 'get_path_name') else '',
-                'properties': []
-            }
-            
-            # Get default property values using safe property list
-            safe_cdo_properties = [
-                'initial_life_span', 'hidden', 'can_be_damaged', 'replicates',
-                'always_relevant', 'net_dormancy', 'net_priority',
-                'net_update_frequency', 'replicate_movement',
-                'actor_guid', 'tags', 'root_component',
-                'auto_destroy_when_finished', 'enable_auto_lod_generation'
-            ]
-            for prop_name in safe_cdo_properties:
-                try:
-                    if hasattr(cdo, 'get_editor_property'):
-                        value = cdo.get_editor_property(prop_name)
-                        info['properties'].append({
-                            'name': prop_name,
-                            'defaultValue': str(value)[:100]
-                        })
-                    elif hasattr(cdo, prop_name):
-                        value = getattr(cdo, prop_name)
-                        if not callable(value):
-                            info['properties'].append({
-                                'name': prop_name,
-                                'defaultValue': str(value)[:100]
-                            })
-                except Exception:
-                    pass
-            
-            print('RESULT:' + json.dumps({'success': True, 'cdo': info}))
-        else:
-            print('RESULT:' + json.dumps({'success': False, 'error': 'Could not get CDO'}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. CDO operations require plugin support.');
+    }
 
-    const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(py),
-      'getCDO'
-    );
-    
-    return this.parsePythonResult(resp, 'getCDO');
+    const automationBridge = this.automationBridge;
+    return this.executeWithRetry(async () => {
+      try {
+        const response: any = await automationBridge.sendAutomationRequest('inspect', {
+          action: 'inspect_class',
+          // C++ plugin expects `classPath` for inspect_class, but accepts both
+          // short names and full paths (e.g. "Actor" or "/Script/Engine.Actor").
+          classPath: className
+        }, {
+          timeoutMs: 60000
+        });
+
+        if (response?.success === false) {
+          return {
+            success: false,
+            error: response.error || response.message || 'Failed to get CDO'
+          };
+        }
+
+        return {
+          success: true,
+          // Plugin returns class inspection data under data/result depending on bridge version.
+          cdo: response?.data ?? response?.result ?? response
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: `Failed to get CDO: ${error instanceof Error ? error.message : String(error)}`
+        };
+      }
+    }, 'getCDO');
   }
 
   /**
    * Search for objects by class
    */
   async findObjectsByClass(className: string, limit: number = 100) {
-    const py = `
-import unreal, json
-class_name = r"${className}"
-limit = ${limit}
-try:
-    objects = []
-    count = 0
-    
-    # Use EditorAssetLibrary to find assets
-    try:
-        all_assets = unreal.EditorAssetLibrary.list_assets("/Game", recursive=True)
-        for asset_path in all_assets:
-            if count >= limit:
-                break
-            try:
-                asset = unreal.EditorAssetLibrary.load_asset(asset_path)
-                if asset:
-                    asset_class = asset.get_class() if hasattr(asset, 'get_class') else None
-                    if asset_class and class_name in asset_class.get_name():
-                        objects.append({
-                            'path': asset_path,
-                            'name': asset.get_name() if hasattr(asset, 'get_name') else '',
-                            'class': asset_class.get_name()
-                        })
-                        count += 1
-            except Exception:
-                pass
-    except Exception as e:
-        print('RESULT:' + json.dumps({'success': False, 'error': f'Asset search failed: {str(e)}'}))
-        raise SystemExit(0)
-    
-    # Also search in level actors
-    try:
-        actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-        if actor_sub:
-            for actor in actor_sub.get_all_level_actors():
-                if count >= limit:
-                    break
-                if actor:
-                    actor_class = actor.get_class() if hasattr(actor, 'get_class') else None
-                    if actor_class and class_name in actor_class.get_name():
-                        objects.append({
-                            'path': actor.get_path_name() if hasattr(actor, 'get_path_name') else '',
-                            'name': actor.get_actor_label() if hasattr(actor, 'get_actor_label') else '',
-                            'class': actor_class.get_name()
-                        })
-                        count += 1
-    except Exception:
-        pass
-    
-    print('RESULT:' + json.dumps({'success': True, 'objects': objects, 'count': len(objects)}))
-except Exception as e:
-    print('RESULT:' + json.dumps({'success': False, 'error': str(e)}))
-`.trim();
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Object search operations require plugin support.');
+    }
 
-    const resp = await this.executeWithRetry(
-      () => this.bridge.executePython(py),
-      'findObjectsByClass'
-    );
-    
-    return this.parsePythonResult(resp, 'findObjectsByClass');
+    const automationBridge = this.automationBridge;
+    return this.executeWithRetry(async () => {
+      try {
+        const response: any = await automationBridge.sendAutomationRequest('inspect', {
+          action: 'find_by_class',
+          className,
+          limit
+        }, {
+          timeoutMs: 60000
+        });
+
+        if (response?.success === false) {
+          return {
+            success: false,
+            error: response.error || response.message || 'Failed to find objects'
+          };
+        }
+
+        const data = response?.data ?? response?.result ?? response;
+        const validObjects = Array.isArray(data?.actors)
+          ? data.actors
+          : (Array.isArray(data?.objects) ? data.objects : (Array.isArray(data) ? data : []));
+        return {
+          success: true,
+          message: `Found ${validObjects.length} objects`,
+          objects: validObjects,
+          count: validObjects.length
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: `Failed to find objects: ${error instanceof Error ? error.message : String(error)}`
+        };
+      }
+    }, 'findObjectsByClass');
+  }
+
+  /**
+   * Get property value of a component
+   */
+  async getComponentProperty(params: { objectPath: string; componentName: string; propertyName: string }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Component property operations require plugin support.');
+    }
+
+    const automationBridge = this.automationBridge;
+    return this.executeWithRetry(async () => {
+      try {
+        const response = await automationBridge.sendAutomationRequest('get_component_property', {
+          objectPath: params.objectPath,
+          componentName: params.componentName,
+          propertyName: params.propertyName
+        }, {
+          timeoutMs: 15000
+        });
+
+        if (response.success === false) {
+          return {
+            success: false,
+            error: response.error || response.message || 'Failed to get component property'
+          };
+        }
+
+        return {
+          success: true,
+          value: response.value,
+          type: response.type
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: `Failed to get component property: ${error instanceof Error ? error.message : String(error)}`
+        };
+      }
+    }, 'getComponentProperty');
+  }
+
+  /**
+   * Set property value of a component
+   */
+  async setComponentProperty(params: { objectPath: string; componentName: string; propertyName: string; value: any }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Component property operations require plugin support.');
+    }
+
+    const automationBridge = this.automationBridge;
+    return this.executeWithRetry(async () => {
+      try {
+        const response = await automationBridge.sendAutomationRequest('set_component_property', {
+          objectPath: params.objectPath,
+          componentName: params.componentName,
+          propertyName: params.propertyName,
+          value: params.value
+        }, {
+          timeoutMs: 15000
+        });
+
+        if (response.success === false) {
+          return {
+            success: false,
+            error: response.error || response.message || 'Failed to set component property'
+          };
+        }
+
+        return {
+          success: true,
+          message: response.message || 'Property set successfully'
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: `Failed to set component property: ${error instanceof Error ? error.message : String(error)}`
+        };
+      }
+    }, 'setComponentProperty');
   }
 
   /**

@@ -2,25 +2,26 @@ name: Publish to MCP Registry
 
 on:
   push:
-    tags: ["v*"]  # Triggers on version tags like v1.2.0
-  workflow_dispatch:  # Allow manual triggering
+    tags: ["v*"]
+  workflow_dispatch:
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Required for OIDC authentication
+      id-token: write
       contents: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -59,17 +60,17 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install MCP Publisher
-        if: ${{ always() }}
+        if: ${{ success() }}
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.1.0/mcp-publisher_1.1.0_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
           chmod +x mcp-publisher
 
       - name: Login to MCP Registry
-        if: ${{ always() }}
+        if: ${{ success() }}
         run: ./mcp-publisher login github-oidc
 
       - name: Publish to MCP Registry
-        if: ${{ always() }}
+        if: ${{ success() }}
         run: ./mcp-publisher publish
 
       - name: Verify publication

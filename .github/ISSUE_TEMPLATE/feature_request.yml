@@ -1,0 +1,56 @@
+name: 'Feature Request'
+description: 'Suggest a new feature or improvement for Unreal Engine MCP Server'
+labels:
+  - 'enhancement'
+body:
+  - type: 'markdown'
+    attributes:
+      value: |-
+        > [!IMPORTANT]
+        > Thanks for taking the time to suggest an enhancement!
+        >
+        > Please search **[existing issues](https://github.com/ChiR24/Unreal_mcp/issues)** to see if a similar feature has already been requested.
+
+  - type: 'textarea'
+    id: 'feature'
+    attributes:
+      label: 'What would you like to be added?'
+      description: 'A clear and concise description of the enhancement.'
+    validations:
+      required: true
+
+  - type: 'dropdown'
+    id: 'category'
+    attributes:
+      label: 'Feature Category'
+      options:
+        - 'New Tool'
+        - 'Existing Tool Enhancement'
+        - 'Plugin (C++)'
+        - 'Performance'
+        - 'Documentation'
+        - 'Testing'
+        - 'Developer Experience'
+        - 'Other'
+    validations:
+      required: true
+
+  - type: 'textarea'
+    id: 'rationale'
+    attributes:
+      label: 'Why is this needed?'
+      description: 'A clear and concise description of why this enhancement is needed.'
+    validations:
+      required: true
+
+  - type: 'textarea'
+    id: 'alternatives'
+    attributes:
+      label: 'Alternatives Considered'
+      description: 'Any alternative solutions or features you have considered.'
+
+  - type: 'textarea'
+    id: 'additional-context'
+    attributes:
+      label: 'Additional Context'
+      description: 'Add any other context, mockups, or screenshots about the feature request here.'

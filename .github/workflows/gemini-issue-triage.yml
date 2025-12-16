@@ -1,0 +1,172 @@
+name: '🏷️ Gemini Issue Triage'
+
+on:
+  issues:
+    types:
+      - 'opened'
+      - 'reopened'
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to triage'
+        required: true
+        type: 'number'
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.event.issue.number || github.event.inputs.issue_number }}'
+  cancel-in-progress: true
+
+permissions:
+  contents: 'read'
+  issues: 'write'
+
+jobs:
+  triage-issue:
+    if: |-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'issues' &&
+        contains(github.event.issue.labels.*.name, 'needs-triage')
+      )
+    timeout-minutes: 5
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Get issue data for manual trigger'
+        id: 'get_issue_data'
+        if: github.event_name == 'workflow_dispatch'
+        uses: 'actions/github-script@v7'
+        with:
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
+          script: |
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ github.event.inputs.issue_number }},
+            });
+            core.setOutput('title', issue.title);
+            core.setOutput('body', issue.body);
+            core.setOutput('labels', issue.labels.map(label => label.name).join(','));
+            return issue;
+
+      - name: 'Checkout'
+        uses: 'actions/checkout@v4'
+
+      - name: 'Get Repository Labels'
+        id: 'get_labels'
+        uses: 'actions/github-script@v7'
+        with:
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
+          script: |
+            const { data: labels } = await github.rest.issues.listLabelsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            // Filter to area labels
+            const areaLabels = labels.map(l => l.name).filter(n => 
+              n.startsWith('area/') || n.startsWith('tool/') || n.startsWith('type/')
+            );
+            core.setOutput('available_labels', areaLabels.join(','));
+            core.info(`Found ${areaLabels.length} area labels: ${areaLabels.join(', ')}`);
+
+      - name: Analyze Issue with Gemini
+        id: gemini_analysis
+        uses: google-github-actions/run-gemini-cli@v0 # v0
+        env:
+          GITHUB_TOKEN: ''  # No auth token for untrusted input analysis
+          ISSUE_TITLE: '${{ github.event_name == ''workflow_dispatch'' && steps.get_issue_data.outputs.title || github.event.issue.title }}'
+          ISSUE_BODY: '${{ github.event_name == ''workflow_dispatch'' && steps.get_issue_data.outputs.body || github.event.issue.body }}'
+          AVAILABLE_LABELS: '${{ steps.get_labels.outputs.available_labels }}'
+        with:
+          # Use Gemini API key only (free tier) - no Vertex AI
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          settings: |
+            {
+              "maxSessionTurns": 10
+            }
+          prompt: |
+            ## Role
+            You are an issue triage assistant for Unreal Engine MCP Server.
+
+            ## Task
+            Analyze this GitHub issue and select the most appropriate label.
+
+            Issue Title: ${{ env.ISSUE_TITLE }}
+            Issue Body: ${{ env.ISSUE_BODY }}
+            
+            Available Labels: ${{ env.AVAILABLE_LABELS }}
+
+            ## Area Definitions
+            - area/plugin: Issues with the C++ McpAutomationBridge plugin
+            - area/server: Issues with the Node.js MCP server
+            - area/tools: Issues with specific tool implementations
+            - area/testing: Issues with tests or test infrastructure
+            - area/docs: Documentation issues
+            - type/bug: Bug reports
+            - type/enhancement: Feature requests
+            - type/question: Questions or support requests
+
+            ## Output
+            Select exactly ONE label. Output only valid JSON:
+            {"label": "area/server"}
+
+      - name: 'Apply Label'
+        if: steps.gemini_analysis.outputs.summary != ''
+        uses: 'actions/github-script@v7'
+        env:
+          ISSUE_NUMBER: '${{ github.event.issue.number || github.event.inputs.issue_number }}'
+          GEMINI_OUTPUT: '${{ steps.gemini_analysis.outputs.summary }}'
+          AVAILABLE_LABELS: '${{ steps.get_labels.outputs.available_labels }}'
+        with:
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
+          script: |
+            const fs = require('fs');
+            const summary = process.env.GEMINI_OUTPUT;
+            
+            // Parse Gemini output for labels
+            let parsed = {};
+            try {
+              // Try to find JSON block
+              const match = summary.match(/```json\n([\s\S]*?)\n```/);
+              if (match) {
+                parsed = JSON.parse(match[1]);
+              } else {
+                 parsed = JSON.parse(summary);
+              }
+            } catch (e) {
+              core.warning('Failed to parse Gemini output as JSON');
+              return;
+            }
+            
+            const label = parsed.label;
+            if (!label) {
+               core.warning('No label returned from Gemini');
+               return;
+            }
+
+            const availableLabels = (process.env.AVAILABLE_LABELS || '').split(',');
+            if (!availableLabels.includes(label)) {
+              core.warning(`Label '${label}' not in available labels; skipping`);
+              return;
+            }
+            
+            const issueNumber = parseInt(process.env.ISSUE_NUMBER);
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: [label]
+            });
+            core.info(`Added label '${label}' to issue #${issueNumber}`);
+            
+            // Remove needs-triage label
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                name: 'needs-triage'
+              });
+            } catch (e) {
+              if (e.status !== 404) throw e;
+            }

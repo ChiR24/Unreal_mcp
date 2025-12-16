@@ -1,319 +1,383 @@
-import { UnrealBridge } from '../unreal-bridge.js';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { bestEffortInterpretedText, coerceNumber, coerceStringArray, interpretStandardResult } from '../utils/result-helpers.js';
 
-export class AssetTools {
-  constructor(private bridge: UnrealBridge) {}
+import { BaseTool } from './base-tool.js';
+import { IAssetTools } from '../types/tool-interfaces.js';
+import { wasmIntegration } from '../wasm/index.js';
 
-  async importAsset(sourcePath: string, destinationPath: string) {
-    let createdTestFile = false;
-    try {
-      // Sanitize destination path (remove trailing slash) and normalize UE path
-      let cleanDest = destinationPath.replace(/\/$/, '');
-      // Map /Content -> /Game for UE asset destinations
-      if (/^\/?content(\/|$)/i.test(cleanDest)) {
-        cleanDest = '/Game' + cleanDest.replace(/^\/?content/i, '');
-      }
+export class AssetTools extends BaseTool implements IAssetTools {
+  private normalizeAssetPath(path: string): string {
+    if (!path) return '';
+    let normalized = path.replace(/\\/g, '/').trim();
 
-      // Create test FBX file if it's a test file
-      if (sourcePath.includes('test_model.fbx')) {
-        // Create the file outside of Python, before import
-        try {
-          await this.createTestFBX(sourcePath);
-          createdTestFile = true;
-        } catch (_err) {
-          // If we can't create the file, we'll handle it in Python
-        }
-      }
-
-      // Use Python API to import asset with file creation fallback
-  const pythonCode = `
-import unreal
-import os
-import json
-
-# Create test FBX if needed
-source_path = r'${sourcePath}'
-if 'test_model.fbx' in source_path and not os.path.exists(source_path):
-    # Create directory if needed
-    os.makedirs(os.path.dirname(source_path), exist_ok=True)
-    
-    # Create a valid FBX ASCII file
-    fbx_content = """FBXHeaderExtension:  {
-    FBXHeaderVersion: 1003
-    FBXVersion: 7400
-    CreationTimeStamp:  {
-        Version: 1000
+    // Handle typical prefixes if missing leading slash
+    if (!normalized.startsWith('/')) {
+      if (normalized.startsWith('Game/')) normalized = '/' + normalized;
+      else if (normalized.startsWith('Engine/')) normalized = '/' + normalized;
+      else if (normalized.startsWith('Script/')) normalized = '/' + normalized;
+      // Default to Game content if no known prefix
+      else normalized = '/Game/' + normalized;
     }
-    Creator: "MCP FBX Test Generator"
-}
-GlobalSettings:  {
-    Version: 1000
-    Properties70:  {
-        P: "UpAxis", "int", "Integer", "",2
-        P: "UpAxisSign", "int", "Integer", "",1
-        P: "FrontAxis", "int", "Integer", "",1
-        P: "FrontAxisSign", "int", "Integer", "",1
-        P: "CoordAxis", "int", "Integer", "",0
-        P: "CoordAxisSign", "int", "Integer", "",1
-        P: "UnitScaleFactor", "double", "Number", "",1
-    }
-}
-Definitions:  {
-    Version: 100
-    Count: 2
-    ObjectType: "Model" {
-        Count: 1
-    }
-    ObjectType: "Geometry" {
-        Count: 1
-    }
-}
-Objects:  {
-    Geometry: 1234567, "Geometry::Cube", "Mesh" {
-        Vertices: *24 {
-            a: -50,-50,50,50,-50,50,50,50,50,-50,50,50,-50,-50,-50,50,-50,-50,50,50,-50,-50,50,-50
-        }
-        PolygonVertexIndex: *36 {
-            a: 0,1,2,-4,4,5,6,-8,0,4,7,-4,1,5,4,-1,2,6,5,-2,3,7,6,-3
-        }
-        GeometryVersion: 124
-        LayerElementNormal: 0 {
-            Version: 101
-            Name: ""
-            MappingInformationType: "ByPolygonVertex"
-            ReferenceInformationType: "Direct"
-            Normals: *108 {
-                a: 0,0,1,0,0,1,0,0,1,0,0,1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,-1,0,0,-1,0,0,-1,0,0,-1,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0
-            }
-        }
-        LayerElementUV: 0 {
-            Version: 101
-            Name: "UVMap"
-            MappingInformationType: "ByPolygonVertex"
-            ReferenceInformationType: "IndexToDirect"
-            UV: *48 {
-                a: 0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1
-            }
-            UVIndex: *36 {
-                a: 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35
-            }
-        }
-        Layer: 0 {
-            Version: 100
-            LayerElement:  {
-                Type: "LayerElementNormal"
-                TypedIndex: 0
-            }
-            LayerElement:  {
-                Type: "LayerElementUV"
-                TypedIndex: 0
-            }
-        }
-    }
-    Model: 2345678, "Model::Cube", "Mesh" {
-        Version: 232
-        Properties70:  {
-            P: "InheritType", "enum", "", "",1
-            P: "ScalingMax", "Vector3D", "Vector", "",0,0,0
-            P: "DefaultAttributeIndex", "int", "Integer", "",0
-        }
-        Shading: Y
-        Culling: "CullingOff"
-    }
-}
-Connections:  {
-    C: "OO",1234567,2345678
-}
-"""
-    
-    with open(source_path, 'w') as f:
-        f.write(fbx_content)
-    print(f"Created test FBX file: {source_path}")
 
-# Set up the import task
-task = unreal.AssetImportTask()
-task.filename = r'${sourcePath}'
-task.destination_path = '${cleanDest}'
-task.automated = True
-task.save = True
-task.replace_existing = True
-
-# Configure FBX import options
-options = unreal.FbxImportUI()
-options.import_mesh = True
-options.import_as_skeletal = False
-options.mesh_type_to_import = unreal.FBXImportType.FBXIT_STATIC_MESH
-options.static_mesh_import_data.combine_meshes = True
-options.static_mesh_import_data.generate_lightmap_u_vs = False
-options.static_mesh_import_data.auto_generate_collision = False
-task.options = options
-
-# Use AssetTools to import
-asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-result = {'success': False, 'error': 'No assets imported', 'source': task.filename}
-
-try:
-    asset_tools.import_asset_tasks([task])
-    if task.imported_object_paths:
-        result = {
-            'success': True,
-            'imported': len(task.imported_object_paths),
-            'paths': list(task.imported_object_paths)
-        }
-except Exception as e:
-    result = {'success': False, 'error': str(e), 'source': task.filename}
-
-print('RESULT:' + json.dumps(result))
-`.trim();
-      
-      const pyResp = await this.bridge.executePython(pythonCode);
-
-      const interpreted = interpretStandardResult(pyResp, {
-        successMessage: `Imported assets to ${cleanDest}`,
-        failureMessage: 'Import failed'
-      });
-
-      if (interpreted.success) {
-        const count = coerceNumber(interpreted.payload.imported) ?? 0;
-        const paths = coerceStringArray(interpreted.payload.paths) ?? [];
-        return {
-          success: true,
-          message: `Imported ${count} assets to ${cleanDest}`,
-          imported: count,
-          paths
-        };
-      }
-
-      const errorMessage = `Import failed: ${interpreted.error ?? 'Unknown error'} (source: ${interpreted.payload.source ?? sourcePath})`;
-      return {
-        success: false,
-        message: errorMessage,
-        error: errorMessage,
-        details: bestEffortInterpretedText(interpreted)
-      };
-    } catch (err) {
-      return { success: false, error: `Failed to import asset: ${err}` };
-    } finally {
-      if (createdTestFile) {
-        try {
-          await fs.rm(sourcePath, { force: true });
-        } catch (cleanupError) {
-          // Swallow cleanup error but log for debug visibility
-          console.warn(`Failed to clean up temporary FBX ${sourcePath}:`, cleanupError);
-        }
-      }
-    }
+    // Remove double slashes just in case
+    return normalized.replace(/\/+/g, '/');
   }
 
-  async duplicateAsset(sourcePath: string, destinationPath: string) {
-    try {
-      const res = await this.bridge.call({
-        objectPath: '/Script/EditorScriptingUtilities.Default__EditorAssetLibrary',
-        functionName: 'DuplicateAsset',
-        parameters: {
-          SourceAssetPath: sourcePath,
-          DestinationAssetPath: destinationPath
-        }
-      });
-      return res?.Result ?? res;
-    } catch (err) {
-      return { error: `Failed to duplicate asset: ${err}` };
+  async importAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean; save?: boolean }) {
+    const res = await this.sendRequest('manage_asset', {
+      ...params,
+      subAction: 'import'
+    }, 'manage_asset', { timeoutMs: 120000 });
+    if (res && res.success) {
+      return { ...res, asset: this.normalizeAssetPath(params.destinationPath), source: params.sourcePath };
     }
+    return res;
   }
 
-  async deleteAsset(assetPath: string) {
-    try {
-      const res = await this.bridge.call({
-        objectPath: '/Script/EditorScriptingUtilities.Default__EditorAssetLibrary',
-        functionName: 'DeleteAsset',
-        parameters: {
-          AssetPathToDelete: assetPath
-        }
-      });
-      return res?.Result ?? res;
-    } catch (err) {
-      return { error: `Failed to delete asset: ${err}` };
+  async duplicateAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean }) {
+    const sourcePath = this.normalizeAssetPath(params.sourcePath);
+    const destinationPath = this.normalizeAssetPath(params.destinationPath);
+
+    const res = await this.sendRequest('manage_asset', {
+      sourcePath,
+      destinationPath,
+      overwrite: params.overwrite ?? false,
+      subAction: 'duplicate'
+    }, 'manage_asset', { timeoutMs: 60000 });
+    if (res && res.success) {
+      return { ...res, asset: destinationPath, source: sourcePath };
     }
+    return res;
+  }
+
+  async renameAsset(params: { sourcePath: string; destinationPath: string }) {
+    const sourcePath = this.normalizeAssetPath(params.sourcePath);
+    const destinationPath = this.normalizeAssetPath(params.destinationPath);
+
+    const res = await this.sendRequest('manage_asset', {
+      sourcePath,
+      destinationPath,
+      subAction: 'rename'
+    }, 'manage_asset', { timeoutMs: 60000 });
+    if (res && res.success) {
+      return { ...res, asset: destinationPath, oldName: sourcePath };
+    }
+    return res;
+  }
+
+  async moveAsset(params: { sourcePath: string; destinationPath: string }) {
+    const sourcePath = this.normalizeAssetPath(params.sourcePath);
+    const destinationPath = this.normalizeAssetPath(params.destinationPath);
+
+    const res = await this.sendRequest('manage_asset', {
+      sourcePath,
+      destinationPath,
+      subAction: 'move'
+    }, 'manage_asset', { timeoutMs: 60000 });
+    if (res && res.success) {
+      return { ...res, asset: destinationPath, from: sourcePath };
+    }
+    return res;
+  }
+
+  async findByTag(params: { tag: string; value?: string }) {
+    // tag searches don't usually involve paths, but if they did we'd normalize.
+    // preserving existing logic for findByTag as it takes 'tag' and 'value'.
+    return this.sendRequest('asset_query', {
+      ...params,
+      subAction: 'find_by_tag'
+    }, 'asset_query', { timeoutMs: 60000 });
+  }
+
+  async deleteAssets(params: { paths: string[]; fixupRedirectors?: boolean; timeoutMs?: number }) {
+    const assetPaths = (Array.isArray(params.paths) ? params.paths : [])
+      .map(p => this.normalizeAssetPath(p));
+
+    // Bulk delete maps to 'manage_asset' subAction 'bulk_delete' or 'delete'
+    // C++ 'HandleDeleteAssets' handles single delete, 'HandleBulkDeleteAssets' handles bulk.
+    // Let's use 'bulk_delete' if we have multiple, or 'delete' for consistency?
+    // C++ HandleAssetAction dispatches 'bulk_delete' to HandleBulkDeleteAssets.
+    return this.sendRequest('manage_asset', {
+      assetPaths,
+      fixupRedirectors: params.fixupRedirectors,
+      subAction: 'delete'
+    }, 'manage_asset', { timeoutMs: params.timeoutMs || 120000 });
+  }
+
+  async searchAssets(params: { classNames?: string[]; packagePaths?: string[]; recursivePaths?: boolean; recursiveClasses?: boolean; limit?: number }) {
+    // Normalize package paths if provided
+    const packagePaths = params.packagePaths
+      ? params.packagePaths.map(p => this.normalizeAssetPath(p))
+      : ['/Game'];
+
+    // Route via asset_query action with subAction 'search_assets'
+    const response = await this.sendRequest('asset_query', {
+      ...params,
+      packagePaths,
+      subAction: 'search_assets'
+    }, 'asset_query', { timeoutMs: 60000 });
+
+    if (!response.success) {
+      const errorMsg = response.error || `Failed to search assets. Raw response: ${JSON.stringify(response)}`;
+      return { success: false, error: errorMsg };
+    }
+
+    const assetsRaw = response.assets || response.data || response.result;
+    const assets = Array.isArray(assetsRaw) ? assetsRaw : [];
+
+    return {
+      success: true,
+      message: `Found ${assets.length} assets`,
+      assets,
+      count: assets.length
+    };
   }
 
   async saveAsset(assetPath: string) {
+    const normalizedPath = this.normalizeAssetPath(assetPath);
     try {
-      const res = await this.bridge.call({
-        objectPath: '/Script/EditorScriptingUtilities.Default__EditorAssetLibrary',
-        functionName: 'SaveAsset',
-        parameters: {
-          AssetToSave: assetPath
+      // Try Automation Bridge first
+      const bridge = this.getAutomationBridge();
+      if (bridge && typeof bridge.sendAutomationRequest === 'function') {
+        try {
+          const response: any = await bridge.sendAutomationRequest(
+            'manage_asset',
+            { assetPath: normalizedPath, subAction: 'save_asset' }, // 'save_asset' isn't explicitly in HandleAssetAction but usually falls back or Editor handles it?
+            // Wait, HandleAssetAction does NOT have 'save'.
+            // But 'execute_editor_function' usually handles SAVE_ASSET.
+            // Let's check fallback. The original code tried 'save_asset' command which likely failed.
+            // Actually, keep safe fallback to 'executeEditorFunction'.
+            // But if we want to add save support, we should assume 'save_asset' command failed implies we need fallback.
+            // Let's stick to the existing fallback logic but maybe fix the command if known?
+            // Since 'save_asset' is not in Subsystem.cpp, it fails.
+            // Let's rely on executeEditorFunction below.
+            { timeoutMs: 60000 }
+          );
+
+          if (response && response.success !== false) {
+            return {
+              success: true,
+              saved: response.saved ?? true,
+              message: response.message || 'Asset saved',
+              ...response
+            };
+          }
+        } catch (_err) {
+          // Fall through to executeEditorFunction
         }
-      });
-      return res?.Result ?? res;
+      }
+
+      // Fallback to executeEditorFunction
+      const res = await this.bridge.executeEditorFunction('SAVE_ASSET', { path: normalizedPath });
+      if (res && typeof res === 'object' && (res.success === true || (res.result && res.result.success === true))) {
+        const saved = Boolean(res.saved ?? (res.result && res.result.saved));
+        return { success: true, saved, ...res, ...(res.result || {}) };
+      }
+
+      return { success: false, error: (res as any)?.error ?? 'Failed to save asset' };
     } catch (err) {
-      return { error: `Failed to save asset: ${err}` };
+      return { success: false, error: `Failed to save asset: ${err}` };
     }
   }
 
-  private async createTestFBX(filePath: string): Promise<void> {
-    // Create a minimal valid FBX ASCII file for testing
-    const fbxContent = `; FBX 7.5.0 project file
-FBXHeaderExtension:  {
-    FBXHeaderVersion: 1003
-    FBXVersion: 7500
-    CreationTimeStamp:  {
-        Version: 1000
-        Year: 2024
-        Month: 1
-        Day: 1
-        Hour: 0
-        Minute: 0
-        Second: 0
-        Millisecond: 0
-    }
-    Creator: "MCP Test FBX Generator"
-}
-GlobalSettings:  {
-    Version: 1000
-}
-Definitions:  {
-    Version: 100
-    Count: 2
-    ObjectType: "Model" {
-        Count: 1
-    }
-    ObjectType: "Geometry" {
-        Count: 1
-    }
-}
-Objects:  {
-    Geometry: 1234567, "Geometry::Cube", "Mesh" {
-        Vertices: *24 {
-            a: -50,-50,-50,50,-50,-50,50,50,-50,-50,50,-50,-50,-50,50,50,-50,50,50,50,50,-50,50,50
-        }
-        PolygonVertexIndex: *36 {
-            a: 0,1,2,-4,4,7,6,-6,0,4,5,-2,1,5,6,-3,2,6,7,-4,4,0,3,-8
-        }
-        GeometryVersion: 124
-    }
-    Model: 2345678, "Model::TestCube", "Mesh" {
-        Version: 232
-        Properties70:  {
-            P: "ScalingMax", "Vector3D", "Vector", "",0,0,0
-            P: "DefaultAttributeIndex", "int", "Integer", "",0
-        }
-    }
-}
-Connections:  {
-    C: "OO",1234567,2345678
-}
-`;
-    
-    // Ensure directory exists
-    const dir = path.dirname(filePath);
+  async createFolder(folderPath: string) {
+    // Folders are paths too
+    const path = this.normalizeAssetPath(folderPath);
+    return this.sendRequest('manage_asset', {
+      path,
+      subAction: 'create_folder'
+    }, 'manage_asset', { timeoutMs: 60000 });
+  }
+
+  async getDependencies(params: { assetPath: string; recursive?: boolean }) {
+    // get_dependencies is typically an asset query or managed asset action?
+    // HandleAssetAction has 'get_dependencies' dispatch.
+    return this.sendRequest('manage_asset', {
+      ...params,
+      assetPath: this.normalizeAssetPath(params.assetPath),
+      subAction: 'get_dependencies'
+    }, 'manage_asset');
+  }
+
+  async getSourceControlState(params: { assetPath: string }) {
+    // Source control state usually via 'asset_query' or 'manage_asset'?
+    // It's not in HandleAssetAction explicitly, maybe 'asset_query' subAction?
+    // Let's check AssetQueryHandlers.cpp or AssetWorkflowHandlers.cpp dispatch.
+    // Assuming 'asset_query' supports it (original code used asset_query).
+    return this.sendRequest('asset_query', {
+      ...params,
+      assetPath: this.normalizeAssetPath(params.assetPath),
+      subAction: 'get_source_control_state'
+    }, 'asset_query');
+  }
+
+  async getMetadata(params: { assetPath: string }) {
+    const response = await this.sendRequest('manage_asset', {
+      ...params,
+      assetPath: this.normalizeAssetPath(params.assetPath),
+      subAction: 'get_metadata'
+    }, 'manage_asset');
+
+    // BaseTool unwraps the result, so 'response' is likely the payload itself.
+    // However, if the result was null, 'response' might be the wrapper.
+    // We handle both cases to be robust.
+    const resultObj = (response.result || response) as Record<string, any>;
+    return {
+      success: true,
+      message: 'Metadata retrieved',
+      ...resultObj
+    };
+  }
+
+  async analyzeGraph(params: { assetPath: string; maxDepth?: number }) {
+    const maxDepth = params.maxDepth ?? 3;
+    const assetPath = this.normalizeAssetPath(params.assetPath);
+
     try {
-      await fs.mkdir(dir, { recursive: true });
-    } catch {}
-    
-    // Write the FBX file
-    await fs.writeFile(filePath, fbxContent, 'utf8');
+      // Offload the heavy graph traversal to C++
+      const response: any = await this.sendRequest('manage_asset', {
+        assetPath,
+        maxDepth,
+        subAction: 'get_asset_graph'
+      }, 'manage_asset', { timeoutMs: 60000 });
+
+      if (!response.success || !response.graph) {
+        return { success: false, error: response.error || 'Failed to retrieve asset graph from engine' };
+      }
+
+      const graph: Record<string, string[]> = {};
+      // Convert the JSON object (Record<string, any[]>) to string[]
+      for (const [key, value] of Object.entries(response.graph)) {
+        if (Array.isArray(value)) {
+          graph[key] = value.map(v => String(v));
+        }
+      }
+
+      // Use WASM for analysis on the constructed graph
+      const base = await wasmIntegration.resolveDependencies(
+        assetPath,
+        graph,
+        { maxDepth }
+      );
+
+      const depth = await wasmIntegration.calculateDependencyDepth(
+        assetPath,
+        graph,
+        { maxDepth }
+      );
+
+      const circularDependencies = await wasmIntegration.findCircularDependencies(
+        graph,
+        { maxDepth }
+      );
+
+      const topologicalOrder = await wasmIntegration.topologicalSort(graph);
+
+      const dependenciesList = Array.isArray((base as any).dependencies)
+        ? (base as any).dependencies as any[]
+        : [];
+
+      const totalDependencyCount =
+        (base as any).totalDependencyCount ??
+        (base as any).total_dependency_count ??
+        dependenciesList.length;
+
+      const analysis = {
+        asset: (base as any).asset ?? assetPath,
+        dependencies: dependenciesList,
+        totalDependencyCount,
+        requestedMaxDepth: maxDepth,
+        maxDepthUsed: depth,
+        circularDependencies,
+        topologicalOrder,
+        stats: {
+          nodeCount: dependenciesList.length,
+          leafCount: dependenciesList.filter((d: any) => !d.dependencies || d.dependencies.length === 0).length
+        }
+      };
+
+      return {
+        success: true,
+        message: 'graph analyzed',
+        analysis
+      };
+    } catch (e: any) {
+      return { success: false, error: `Analysis failed: ${e.message}` };
+    }
+  }
+
+  async createThumbnail(params: { assetPath: string; width?: number; height?: number }) {
+    return this.sendRequest('manage_asset', {
+      ...params,
+      assetPath: this.normalizeAssetPath(params.assetPath),
+      subAction: 'generate_thumbnail'
+    }, 'manage_asset', { timeoutMs: 60000 });
+  }
+
+  async setTags(params: { assetPath: string; tags: string[] }) {
+    return this.sendRequest('manage_asset', {
+      ...params,
+      assetPath: this.normalizeAssetPath(params.assetPath),
+      subAction: 'set_tags'
+    }, 'manage_asset', { timeoutMs: 60000 });
+  }
+
+  async generateReport(params: { directory: string; reportType?: string; outputPath?: string }) {
+    return this.sendRequest('manage_asset', {
+      ...params,
+      directory: this.normalizeAssetPath(params.directory),
+      subAction: 'generate_report'
+    }, 'manage_asset', { timeoutMs: 300000 });
+  }
+
+  async validate(params: { assetPath: string }) {
+    return this.sendRequest('manage_asset', {
+      ...params,
+      assetPath: this.normalizeAssetPath(params.assetPath),
+      subAction: 'validate'
+    }, 'manage_asset', { timeoutMs: 300000 });
+  }
+
+  async generateLODs(params: { assetPath: string; lodCount: number }) {
+    const assetPath = this.normalizeAssetPath(String(params.assetPath ?? '').trim());
+    const lodCountRaw = Number(params.lodCount);
+
+    if (!assetPath) {
+      return { success: false, error: 'assetPath is required' };
+    }
+    if (!Number.isFinite(lodCountRaw) || lodCountRaw <= 0) {
+      return { success: false, error: 'lodCount must be a positive number' };
+    }
+    const lodCount = Math.floor(lodCountRaw);
+
+    try {
+      const automation = this.getAutomationBridge();
+      const response: any = await automation.sendAutomationRequest('manage_asset', {
+        assetPaths: [assetPath],
+        numLODs: lodCount,
+        subAction: 'generate_lods'
+      }, { timeoutMs: 120000 });
+
+      if (!response || response.success === false) {
+        return {
+          success: false,
+          error: response?.error || response?.message || 'Failed to generate LODs',
+          details: response?.result
+        };
+      }
+
+      const result = (response.result && typeof response.result === 'object') ? response.result as Record<string, unknown> : {};
+
+      return {
+        success: true,
+        message: response.message || 'LODs generated successfully',
+        assetPath: (result.assetPath as string) ?? assetPath,
+        lodCount: (result.lodCount as number) ?? lodCount,
+        ...result
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to generate LODs: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
   }
 }

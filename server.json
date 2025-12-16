@@ -1,35 +1,17 @@
 {
   "name": "io.github.ChiR24/unreal-engine-mcp",
-  "description": "MCP server for Unreal Engine 5 with 13 tools for game development automation.",
-  "version": "0.4.7",
+  "description": "MCP server for Unreal Engine 5 with 17 tools for game development automation.",
+  "version": "0.5.0",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "unreal-engine-mcp-server",
-      "version": "0.4.7",
+      "version": "0.5.0",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
-        {
-          "name": "UE_HOST",
-          "description": "Unreal Engine host address (default: 127.0.0.1)",
-          "isRequired": false,
-          "value": "127.0.0.1"
-        },
-        {
-          "name": "UE_RC_HTTP_PORT",
-          "description": "Remote Control HTTP port (default: 30010)",
-          "isRequired": false,
-          "value": "30010"
-        },
-        {
-          "name": "UE_RC_WS_PORT",
-          "description": "Remote Control WebSocket port (default: 30020)",
-          "isRequired": false,
-          "value": "30020"
-        },
         {
           "name": "LOG_LEVEL",
           "description": "Logging level: debug, info, warn, error (default: info)",
@@ -37,10 +19,58 @@
           "value": "info"
         },
         {
+          "name": "MCP_ROUTE_STDOUT_LOGS",
+          "description": "Route standard output to standard error to avoid protocol corruption (default: true)",
+          "isRequired": false,
+          "value": "true"
+        },
+        {
           "name": "UE_PROJECT_PATH",
           "description": "Absolute path to your Unreal .uproject file",
           "isRequired": false,
           "value": "C:/Users/YourName/Documents/Unreal Projects/YourProject"
+        },
+        {
+          "name": "UE_EDITOR_EXE",
+          "description": "Path to UnrealEditor-Cmd.exe (optional)",
+          "isRequired": false,
+          "value": ""
+        },
+        {
+          "name": "UE_SCREENSHOT_DIR",
+          "description": "Directory to save screenshots (optional)",
+          "isRequired": false,
+          "value": ""
+        },
+        {
+          "name": "MCP_AUTOMATION_PORT",
+          "description": "Automation bridge WebSocket port (default: 8091)",
+          "isRequired": false,
+          "value": "8091"
+        },
+        {
+          "name": "MCP_AUTOMATION_HOST",
+          "description": "Automation bridge WebSocket host (default: 127.0.0.1)",
+          "isRequired": false,
+          "value": "127.0.0.1"
+        },
+        {
+          "name": "MCP_AUTOMATION_CLIENT_MODE",
+          "description": "Run as client connecting to UE (false) or server listening for UE (true) (default: false)",
+          "isRequired": false,
+          "value": "false"
+        },
+        {
+          "name": "MCP_CONNECTION_TIMEOUT_MS",
+          "description": "Connection timeout in milliseconds (default: 5000)",
+          "isRequired": false,
+          "value": "5000"
+        },
+        {
+          "name": "MCP_REQUEST_TIMEOUT_MS",
+          "description": "Request timeout in milliseconds (default: 30000)",
+          "isRequired": false,
+          "value": "30000"
         }
       ]
     }
@@ -53,7 +83,6 @@
     "ue5",
     "ue6",
     "game-development",
-    "remote-control",
     "automation",
     "3d",
     "gamedev",
@@ -70,7 +99,15 @@
     "asset-management",
     "actor-control",
     "sequencer",
-    "production"
+    "production",
+    "audio",
+    "behavior-tree",
+    "input",
+    "performance",
+    "landscape",
+    "foliage",
+    "profiling",
+    "world-partition"
   ],
   "author": "ChiR24",
   "homepage": "https://github.com/ChiR24/Unreal_mcp",

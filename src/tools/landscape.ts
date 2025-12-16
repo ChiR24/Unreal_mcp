@@ -1,11 +1,12 @@
 // Landscape tools for Unreal Engine with UE 5.6 World Partition support
 import { UnrealBridge } from '../unreal-bridge.js';
-import { bestEffortInterpretedText, coerceBoolean, coerceString, interpretStandardResult } from '../utils/result-helpers.js';
+import { AutomationBridge } from '../automation/index.js';
 import { ensureVector3 } from '../utils/validation.js';
-import { escapePythonString } from '../utils/python.js';
 
 export class LandscapeTools {
-  constructor(private bridge: UnrealBridge) {}
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
+
+  setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
   // Create landscape with World Partition support (UE 5.6)
   async createLandscape(params: {
@@ -40,281 +41,59 @@ export class LandscapeTools {
       };
     }
 
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
+    }
+
     const [locX, locY, locZ] = ensureVector3(params.location ?? [0, 0, 0], 'landscape location');
     const sectionsPerComponent = Math.max(1, Math.floor(params.sectionsPerComponent ?? 1));
     const quadsPerSection = Math.max(1, Math.floor(params.quadsPerSection ?? 63));
-    const componentCount = Math.max(1, Math.floor(params.componentCount ?? 1));
-
-    const defaultSize = 1000;
-    const scaleX = params.sizeX ? Math.max(0.1, params.sizeX / defaultSize) : 1;
-    const scaleY = params.sizeY ? Math.max(0.1, params.sizeY / defaultSize) : 1;
-
-    const escapedName = escapePythonString(name);
-  const escapedMaterial =
-    params.materialPath && params.materialPath.trim().length > 0
-    ? escapePythonString(params.materialPath.trim())
-    : '';
-
-    const runtimeGridFlag = params.runtimeGrid ? 'True' : 'False';
-    const spatiallyLoadedFlag = params.isSpatiallyLoaded ? 'True' : 'False';
-    const runtimeGridValue = params.runtimeGrid ? escapePythonString(params.runtimeGrid.trim()) : '';
-    const dataLayerNames = Array.isArray(params.dataLayers)
-      ? params.dataLayers
-          .map(layer => layer?.trim())
-          .filter((layer): layer is string => Boolean(layer))
-          .map(layer => escapePythonString(layer))
-      : [];
-
-    const pythonScript = `
-import unreal
-import json
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "warnings": [],
-  "details": [],
-  "landscapeName": "",
-  "landscapeActor": "",
-  "worldPartition": False,
-  "runtimeGridRequested": ${runtimeGridFlag},
-  "spatiallyLoaded": ${spatiallyLoadedFlag}
-}
-
-try:
-  editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-  world = editor_subsystem.get_editor_world() if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world') else None
-  data_layer_manager = None
-  world_partition = None
-  if world:
-    # Try multiple methods to access World Partition (UE 5.6+)
-    try:
-      # Method 1: Try get_world_partition() if it exists
-      if hasattr(world, 'get_world_partition'):
-        world_partition = world.get_world_partition()
-    except (AttributeError, Exception):
-      pass
-    
-    if not world_partition:
-      try:
-        # Method 2: Try WorldPartitionSubsystem
-        wp_subsystem = unreal.get_editor_subsystem(unreal.WorldPartitionSubsystem)
-        if wp_subsystem:
-          world_partition = wp_subsystem.get_world_partition(world)
-      except (AttributeError, Exception):
-        pass
-    
-    if not world_partition:
-      try:
-        # Method 3: Check if world has world_partition property
-        if hasattr(world, 'world_partition'):
-          world_partition = world.world_partition
-      except (AttributeError, Exception):
-        pass
-    
-    result["worldPartition"] = world_partition is not None
-    
-    if result["worldPartition"] and hasattr(unreal, "WorldPartitionBlueprintLibrary"):
-      try:
-        data_layer_manager = unreal.WorldPartitionBlueprintLibrary.get_data_layer_manager(world)
-      except Exception as dlm_error:
-        result["warnings"].append(f"Data layer manager unavailable: {dlm_error}")
-
-  actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-  if not actor_subsystem:
-    result["error"] = "EditorActorSubsystem unavailable"
-  else:
-    existing = None
-    try:
-      for actor in actor_subsystem.get_all_level_actors():
-        if actor and actor.get_actor_label() == "${escapedName}":
-          existing = actor
-          break
-    except Exception as scan_error:
-      result["warnings"].append(f"Actor scan failed: {scan_error}")
-
-    if existing:
-      result["success"] = True
-      result["message"] = "Landscape already exists"
-      result["landscapeName"] = existing.get_actor_label()
-      try:
-        result["landscapeActor"] = existing.get_path_name()
-      except Exception:
-        pass
-    else:
-      landscape_class = getattr(unreal, "Landscape", None)
-      if not landscape_class:
-        result["error"] = "Landscape class unavailable"
-      else:
-        location = unreal.Vector(${locX}, ${locY}, ${locZ})
-        rotation = unreal.Rotator(0.0, 0.0, 0.0)
-        landscape_actor = actor_subsystem.spawn_actor_from_class(landscape_class, location, rotation)
-        if not landscape_actor:
-          result["error"] = "Failed to spawn landscape actor"
-        else:
-          # Set label first
-          try:
-            landscape_actor.set_actor_label("${escapedName}", True)
-          except TypeError:
-            landscape_actor.set_actor_label("${escapedName}")
-          except Exception as label_error:
-            result["warnings"].append(f"Failed to set landscape label: {label_error}")
-          
-          # Fix component registration by forcing re-registration
-          # This addresses the "RegisterComponentWithWorld: Trying to register component with IsValid() == false" warning
-          try:
-            # Get landscape components and re-register them
-            landscape_components = landscape_actor.get_components_by_class(unreal.LandscapeComponent)
-            if landscape_components:
-              for component in landscape_components:
-                if hasattr(component, 'register_component'):
-                  try:
-                    component.register_component()
-                  except Exception:
-                    pass
-            else:
-              # If no components yet, this is expected for LandscapePlaceholder
-              # The landscape needs to be "finalized" via editor tools or console commands
-              result["details"].append("Landscape placeholder created - finalize via editor for full functionality")
-          except Exception as comp_error:
-            # Component registration is best-effort; not critical
-            result["details"].append(f"Component registration attempted (editor finalization may be needed)")
-
-          try:
-            landscape_actor.set_actor_scale3d(unreal.Vector(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)}, 1.0))
-            result["details"].append(f"Actor scale set to (${scaleX.toFixed(2)}, ${scaleY.toFixed(2)}, 1.0)")
-          except Exception as scale_error:
-            result["warnings"].append(f"Failed to set landscape scale: {scale_error}")
-
-          # Workaround for LandscapeEditorSubsystem Python API limitation
-          # Use direct property manipulation instead
-          landscape_configured = False
-          try:
-            # Try LandscapeEditorSubsystem if available (may not be in Python API)
-            landscape_editor = unreal.get_editor_subsystem(unreal.LandscapeEditorSubsystem)
-            if landscape_editor:
-              try:
-                landscape_editor.set_component_size(${sectionsPerComponent}, ${quadsPerSection})
-                landscape_editor.set_component_count(${componentCount}, ${componentCount})
-                result["details"].append(f"Component size ${sectionsPerComponent}x${quadsPerSection}, count ${componentCount}x${componentCount}")
-                landscape_configured = True
-              except Exception as config_error:
-                result["details"].append(f"LandscapeEditorSubsystem method limited: {config_error}")
-          except (AttributeError, Exception):
-            # Expected - LandscapeEditorSubsystem not available in Python API
-            pass
-          
-          # Fallback: Configure via properties if subsystem not available
-          if not landscape_configured:
-            try:
-              # Set component properties directly
-              if hasattr(landscape_actor, 'set_editor_property'):
-                # Note: These properties may not be directly editable post-spawn
-                # This is documented UE limitation - landscape config is best done via editor tools
-                result["details"].append(f"Landscape spawned (config via editor tools recommended for ${sectionsPerComponent}x${quadsPerSection} components)")
-            except Exception:
-              pass
-
-          ${escapedMaterial ? `try:
-            material = unreal.EditorAssetLibrary.load_asset("${escapedMaterial}")
-            if material:
-              try:
-                landscape_actor.set_landscape_material(material)
-              except Exception:
-                landscape_actor.editor_set_landscape_material(material)
-              result["details"].append("Landscape material applied")
-            else:
-              result["warnings"].append("Landscape material asset not found: ${escapedMaterial}")
-          except Exception as material_error:
-            result["warnings"].append(f"Failed to apply landscape material: {material_error}")
-          ` : ''}
-          ${runtimeGridValue ? `if result["worldPartition"] and hasattr(unreal, "WorldPartitionBlueprintLibrary"):
-            try:
-              unreal.WorldPartitionBlueprintLibrary.set_actor_runtime_grid(landscape_actor, "${runtimeGridValue}")
-              result["details"].append("Runtime grid assigned: ${runtimeGridValue}")
-            except Exception as grid_error:
-              result["warnings"].append(f"Failed to assign runtime grid: {grid_error}")
-          ` : ''}
-          ${params.isSpatiallyLoaded ? `if result["worldPartition"] and hasattr(unreal, "WorldPartitionBlueprintLibrary"):
-            try:
-              unreal.WorldPartitionBlueprintLibrary.set_actor_spatially_loaded(landscape_actor, True)
-              result["details"].append("Actor marked as spatially loaded")
-            except Exception as spatial_error:
-              result["warnings"].append(f"Failed to mark as spatially loaded: {spatial_error}")
-          ` : ''}
-          ${dataLayerNames.length ? `if result["worldPartition"] and data_layer_manager:
-            for layer_name in ${JSON.stringify(dataLayerNames)}:
-              try:
-                data_layer = data_layer_manager.get_data_layer(layer_name)
-                if data_layer:
-                  unreal.WorldPartitionBlueprintLibrary.add_actor_to_data_layer(landscape_actor, data_layer)
-                  result["details"].append(f"Added to data layer {layer_name}")
-                else:
-                  result["warnings"].append(f"Data layer not found: {layer_name}")
-              except Exception as data_layer_error:
-                result["warnings"].append(f"Failed to assign data layer {layer_name}: {data_layer_error}")
-          ` : ''}
-
-          try:
-            result["landscapeName"] = landscape_actor.get_actor_label()
-            result["landscapeActor"] = landscape_actor.get_path_name()
-          except Exception:
-            pass
-
-          result["success"] = True
-          result["message"] = "Landscape actor created"
-except Exception as e:
-  result["error"] = str(e)
-
-if result.get("success"):
-  result.pop("error", None)
-else:
-  if not result.get("error"):
-    result["error"] = "Failed to create landscape actor"
-  if not result.get("message"):
-    result["message"] = result["error"]
-
-if not result.get("warnings"):
-  result.pop("warnings", None)
-if not result.get("details"):
-  result.pop("details", None)
-
-print("RESULT:" + json.dumps(result))
-`.trim();
 
     try {
-      const response = await this.bridge.executePython(pythonScript);
-      const interpreted = interpretStandardResult(response, {
-        successMessage: 'Landscape actor created',
-        failureMessage: 'Failed to create landscape actor'
+      // Map to plugin-native payload shape
+      const componentsX = Math.max(1, Math.floor((params.componentCount ?? Math.max(1, Math.floor((params.sizeX ?? 1000) / 1000)))));
+      const componentsY = Math.max(1, Math.floor((params.componentCount ?? Math.max(1, Math.floor((params.sizeY ?? 1000) / 1000)))));
+      const quadsPerComponent = quadsPerSection; // Plugin uses quadsPerComponent
+
+      const payload: Record<string, unknown> = {
+        name,
+        x: locX,
+        y: locY,
+        z: locZ,
+        componentsX,
+        componentsY,
+        quadsPerComponent,
+        sectionsPerComponent,
+        materialPath: params.materialPath || ''
+      };
+
+      const response = await this.automationBridge.sendAutomationRequest('create_landscape', payload, {
+        timeoutMs: 60000
       });
 
-      if (!interpreted.success) {
+      if (response.success === false) {
         return {
           success: false,
-          error: interpreted.error || interpreted.message
+          error: response.error || response.message || 'Failed to create landscape actor'
         };
       }
 
       const result: Record<string, unknown> = {
         success: true,
-        message: interpreted.message,
-        landscapeName: coerceString(interpreted.payload.landscapeName) ?? name,
-        worldPartition: coerceBoolean(interpreted.payload.worldPartition)
+        message: response.message || 'Landscape actor created',
+        landscapeName: response.landscapeName || name,
+        worldPartition: response.worldPartition ?? params.enableWorldPartition ?? false
       };
 
-      const actorPath = coerceString(interpreted.payload.landscapeActor);
-      if (actorPath) {
-        result.landscapeActor = actorPath;
+      if (response.landscapeActor) {
+        result.landscapeActor = response.landscapeActor;
       }
-      if (interpreted.warnings?.length) {
-        result.warnings = interpreted.warnings;
+      if (response.warnings) {
+        result.warnings = response.warnings;
       }
-      if (interpreted.details?.length) {
-        result.details = interpreted.details;
+      if (response.details) {
+        result.details = response.details;
       }
-
       if (params.runtimeGrid) {
         result.runtimeGrid = params.runtimeGrid;
       }
@@ -326,141 +105,274 @@ print("RESULT:" + json.dumps(result))
     } catch (error) {
       return {
         success: false,
-        error: `Failed to create landscape actor: ${error}`
+        error: `Failed to create landscape actor: ${error instanceof Error ? error.message : String(error)}`
       };
     }
   }
 
+
   // Sculpt landscape
-  async sculptLandscape(_params: {
+  async sculptLandscape(params: {
     landscapeName: string;
-    tool: 'Sculpt' | 'Smooth' | 'Flatten' | 'Ramp' | 'Erosion' | 'Hydro' | 'Noise' | 'Retopologize';
+    tool: string;
     brushSize?: number;
     brushFalloff?: number;
     strength?: number;
-    position?: [number, number, number];
+    location?: [number, number, number];
+    radius?: number;
   }) {
-    return { success: false, error: 'sculptLandscape not implemented via Remote Control. Requires Landscape editor tools.' };
+    const [x, y, z] = ensureVector3(params.location ?? [0, 0, 0], 'sculpt location');
+
+    const tool = (params.tool || '').trim();
+    const lowerTool = tool.toLowerCase();
+    const validTools = new Set(['sculpt', 'smooth', 'flatten', 'ramp', 'erosion', 'hydro', 'noise', 'raise', 'lower']);
+    const isValidTool = lowerTool.length > 0 && validTools.has(lowerTool);
+
+    if (!isValidTool) {
+      return {
+        success: false,
+        error: `Invalid sculpt tool: ${params.tool}`
+      };
+    }
+
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
+    }
+
+    const payload = {
+      landscapeName: params.landscapeName?.trim(),
+      toolMode: tool, // Map 'tool' to 'toolMode'
+      brushRadius: params.brushSize ?? params.radius ?? 1000,
+      brushFalloff: params.brushFalloff ?? 0.5,
+      strength: params.strength ?? 0.1,
+      location: { x, y, z }
+    };
+
+    const response = await this.automationBridge.sendAutomationRequest('sculpt_landscape', payload);
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error || 'Failed to sculpt landscape'
+      };
+    }
+
+    return {
+      success: true,
+      message: `Sculpting applied to ${params.landscapeName}`,
+      details: response
+    };
   }
 
   // Paint landscape
-  async paintLandscape(_params: {
+  async paintLandscape(params: {
     landscapeName: string;
     layerName: string;
     position: [number, number, number];
     brushSize?: number;
     strength?: number;
     targetValue?: number;
+    radius?: number;
+    density?: number;
   }) {
-    return { success: false, error: 'paintLandscape not implemented via Remote Control. Requires Landscape editor tools.' };
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available.');
+    }
+
+    const [x, y] = ensureVector3(params.position, 'paint position');
+    const radius = params.brushSize ?? params.radius ?? 1000;
+
+    // Map brush to a square region for now as C++ only supports region fill
+    const minX = Math.floor(x - radius);
+    const maxX = Math.floor(x + radius);
+    const minY = Math.floor(y - radius);
+    const maxY = Math.floor(y + radius);
+
+    const payload = {
+      landscapeName: params.landscapeName?.trim(),
+      layerName: params.layerName?.trim(),
+      region: { minX, minY, maxX, maxY },
+      strength: params.strength ?? 1.0
+    };
+
+    const response = await this.automationBridge.sendAutomationRequest('paint_landscape_layer', payload);
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error || 'Failed to paint landscape layer'
+      };
+    }
+
+    return {
+      success: true,
+      message: `Painted layer ${params.layerName}`,
+      details: response
+    };
   }
 
-  // Add landscape layer
-  async addLandscapeLayer(params: {
-    landscapeName: string;
-    layerName: string;
-    weightMapPath?: string;
-    blendMode?: 'Weight' | 'Alpha';
+  // Create procedural terrain using ProceduralMeshComponent
+  async createProceduralTerrain(params: {
+    name: string;
+    location?: [number, number, number];
+    sizeX?: number;
+    sizeY?: number;
+    subdivisions?: number;
+    heightFunction?: string; // Expression for height calculation
+    material?: string;
+    settings?: Record<string, unknown>;
   }) {
-  const commands: string[] = [];
-    
-    commands.push(`AddLandscapeLayer ${params.landscapeName} ${params.layerName}`);
-    
-    if (params.weightMapPath) {
-      commands.push(`SetLayerWeightMap ${params.layerName} ${params.weightMapPath}`);
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Procedural terrain creation requires plugin support.');
     }
-    
-    if (params.blendMode) {
-      commands.push(`SetLayerBlendMode ${params.layerName} ${params.blendMode}`);
+
+    try {
+      // Combine specific params with generic settings
+      const payload = {
+        name: params.name,
+        location: params.location || [0, 0, 0],
+        sizeX: params.sizeX || 2000,
+        sizeY: params.sizeY || 2000,
+        subdivisions: params.subdivisions || 50,
+        heightFunction: params.heightFunction || 'math.sin(x/100) * 50 + math.cos(y/100) * 30',
+        material: params.material,
+        ...params.settings
+      };
+
+      const response = await this.automationBridge.sendAutomationRequest('create_procedural_terrain', payload, {
+        timeoutMs: 120000 // 2 minutes for mesh generation
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to create procedural terrain',
+          message: response.message || 'Failed to create procedural terrain'
+        };
+      }
+
+      const result = response.result as any;
+      return {
+        success: true,
+        message: response.message || `Created procedural terrain '${params.name}'`,
+        actorName: result?.actor_name,
+        vertices: result?.vertices,
+        triangles: result?.triangles,
+        size: result?.size,
+        subdivisions: result?.subdivisions,
+        details: result
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to create procedural terrain: ${error instanceof Error ? error.message : String(error)}`
+      };
     }
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: `Layer ${params.layerName} added to landscape` };
   }
 
-  // Create landscape spline
-  async createLandscapeSpline(params: {
-    landscapeName: string;
-    splineName: string;
-    points: Array<[number, number, number]>;
-    width?: number;
-    falloffWidth?: number;
-    meshPath?: string;
-  }) {
-  const commands: string[] = [];
-    
-    commands.push(`CreateLandscapeSpline ${params.landscapeName} ${params.splineName}`);
-    
-    for (const point of params.points) {
-      commands.push(`AddSplinePoint ${params.splineName} ${point.join(' ')}`);
+  // Create a LandscapeGrassType asset via AutomationBridge
+  async createLandscapeGrassType(params: {
+    name: string;
+    meshPath: string; // Normalized parameter name (was path/staticMesh/meshPath)
+    density?: number;
+    minScale?: number;
+    maxScale?: number;
+    path?: string; // Legacy support
+    staticMesh?: string; // Legacy support
+  }): Promise<any> {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
     }
-    
-    if (params.width !== undefined) {
-      commands.push(`SetSplineWidth ${params.splineName} ${params.width}`);
+
+    const name = typeof params.name === 'string' ? params.name.trim() : '';
+    if (!name) {
+      return { success: false, error: 'Grass type name is required' };
     }
-    
-    if (params.falloffWidth !== undefined) {
-      commands.push(`SetSplineFalloffWidth ${params.splineName} ${params.falloffWidth}`);
+
+    // Accept mesh path from multiple fields for compatibility
+    const meshPathRaw = typeof params.meshPath === 'string' && params.meshPath.trim().length > 0
+      ? params.meshPath.trim()
+      : (typeof params.path === 'string' && params.path.trim().length > 0
+        ? params.path.trim()
+        : (typeof params.staticMesh === 'string' && params.staticMesh.trim().length > 0
+          ? params.staticMesh.trim()
+          : ''));
+
+    if (!meshPathRaw) {
+      return { success: false, error: 'meshPath is required to create a landscape grass type' };
     }
-    
-    if (params.meshPath) {
-      commands.push(`SetSplineMesh ${params.splineName} ${params.meshPath}`);
+
+    try {
+      const response: any = await this.automationBridge.sendAutomationRequest('create_landscape_grass_type', {
+        name,
+        meshPath: meshPathRaw,
+        density: params.density || 1.0,
+        minScale: params.minScale || 0.8,
+        maxScale: params.maxScale || 1.2
+      }, { timeoutMs: 90000 });
+
+      if (response && response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to create landscape grass type'
+        };
+      }
+
+      const result = response.result as any;
+      return {
+        success: true,
+        message: response?.message || `Landscape grass type '${name}' created`,
+        assetPath: result?.asset_path || response?.assetPath || response?.asset_path
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to create landscape grass type: ${error instanceof Error ? error.message : String(error)}`
+      };
     }
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: `Landscape spline ${params.splineName} created` };
   }
 
-  // Import heightmap
-  async importHeightmap(params: {
-    landscapeName: string;
-    heightmapPath: string;
-    scale?: [number, number, number];
-  }) {
-    const scale = params.scale || [100, 100, 100];
-    const command = `ImportLandscapeHeightmap ${params.landscapeName} ${params.heightmapPath} ${scale.join(' ')}`;
-    
-    return this.bridge.executeConsoleCommand(command);
-  }
+  // Set the material used by an existing landscape actor
+  async setLandscapeMaterial(params: { landscapeName: string; materialPath: string }): Promise<any> {
+    const landscapeName = typeof params.landscapeName === 'string' ? params.landscapeName.trim() : '';
+    const materialPath = typeof params.materialPath === 'string' ? params.materialPath.trim() : '';
 
-  // Export heightmap
-  async exportHeightmap(params: {
-    landscapeName: string;
-    exportPath: string;
-    format?: 'PNG' | 'RAW';
-  }) {
-    const format = params.format || 'PNG';
-    const command = `ExportLandscapeHeightmap ${params.landscapeName} ${params.exportPath} ${format}`;
-    
-    return this.bridge.executeConsoleCommand(command);
-  }
+    if (!landscapeName) {
+      return { success: false, error: 'Landscape name is required' };
+    }
+    if (!materialPath) {
+      return { success: false, error: 'materialPath is required' };
+    }
 
-  // Set landscape LOD
-  async setLandscapeLOD(params: {
-    landscapeName: string;
-    lodBias?: number;
-    forcedLOD?: number;
-    lodDistribution?: number;
-  }) {
-  const commands: string[] = [];
-    
-    if (params.lodBias !== undefined) {
-      commands.push(`SetLandscapeLODBias ${params.landscapeName} ${params.lodBias}`);
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
     }
-    
-    if (params.forcedLOD !== undefined) {
-      commands.push(`SetLandscapeForcedLOD ${params.landscapeName} ${params.forcedLOD}`);
+
+    try {
+      const response: any = await this.automationBridge.sendAutomationRequest('set_landscape_material', {
+        landscapeName,
+        materialPath
+      }, { timeoutMs: 60000 });
+
+      if (response && response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to set landscape material'
+        };
+      }
+
+      return {
+        success: true,
+        message: response?.message || `Landscape material set on '${landscapeName}'`,
+        landscapeName: response?.landscapeName || landscapeName,
+        materialPath: response?.materialPath || materialPath
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to set landscape material: ${error instanceof Error ? error.message : String(error)}`
+      };
     }
-    
-    if (params.lodDistribution !== undefined) {
-      commands.push(`SetLandscapeLODDistribution ${params.landscapeName} ${params.lodDistribution}`);
-    }
-    
-    await this.bridge.executeConsoleCommands(commands);
-    
-    return { success: true, message: 'Landscape LOD settings updated' };
   }
 
   // Create landscape grass
@@ -472,24 +384,24 @@ print("RESULT:" + json.dumps(result))
     maxScale?: number;
     randomRotation?: boolean;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     commands.push(`CreateLandscapeGrass ${params.landscapeName} ${params.grassType}`);
-    
+
     if (params.density !== undefined) {
       commands.push(`SetGrassDensity ${params.grassType} ${params.density}`);
     }
-    
+
     if (params.minScale !== undefined && params.maxScale !== undefined) {
       commands.push(`SetGrassScale ${params.grassType} ${params.minScale} ${params.maxScale}`);
     }
-    
+
     if (params.randomRotation !== undefined) {
       commands.push(`SetGrassRandomRotation ${params.grassType} ${params.randomRotation}`);
     }
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: `Grass type ${params.grassType} created on landscape` };
   }
 
@@ -499,20 +411,20 @@ print("RESULT:" + json.dumps(result))
     collisionMipLevel?: number;
     simpleCollision?: boolean;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.collisionMipLevel !== undefined) {
       commands.push(`SetLandscapeCollisionMipLevel ${params.landscapeName} ${params.collisionMipLevel}`);
     }
-    
+
     if (params.simpleCollision !== undefined) {
       commands.push(`SetLandscapeSimpleCollision ${params.landscapeName} ${params.simpleCollision}`);
     }
-    
+
     commands.push(`UpdateLandscapeCollision ${params.landscapeName}`);
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Landscape collision updated' };
   }
 
@@ -522,20 +434,20 @@ print("RESULT:" + json.dumps(result))
     targetTriangleCount?: number;
     preserveDetails?: boolean;
   }) {
-  const commands: string[] = [];
-    
+    const commands: string[] = [];
+
     if (params.targetTriangleCount !== undefined) {
       commands.push(`SetRetopologizeTarget ${params.targetTriangleCount}`);
     }
-    
+
     if (params.preserveDetails !== undefined) {
       commands.push(`SetRetopologizePreserveDetails ${params.preserveDetails}`);
     }
-    
+
     commands.push(`RetopologizeLandscape ${params.landscapeName}`);
-    
+
     await this.bridge.executeConsoleCommands(commands);
-    
+
     return { success: true, message: 'Landscape retopologized' };
   }
 
@@ -550,9 +462,9 @@ print("RESULT:" + json.dumps(result))
     const loc = params.location || [0, 0, 0];
     const size = params.size || [1000, 1000];
     const depth = params.depth || 100;
-    
+
     const command = `CreateWaterBody ${params.type} ${params.name} ${loc.join(' ')} ${size.join(' ')} ${depth}`;
-    
+
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -564,104 +476,35 @@ print("RESULT:" + json.dumps(result))
     dataLayers?: string[];
     streamingDistance?: number;
   }) {
-    try {
-    const pythonScript = `
-import unreal
-import json
-
-result = {'success': False, 'error': 'Landscape not found'}
-
-try:
-  # Get the landscape actor using modern EditorActorSubsystem
-  actors = []
-  try:
-    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    if actor_subsystem and hasattr(actor_subsystem, 'get_all_level_actors'):
-      actors = actor_subsystem.get_all_level_actors()
-  except Exception:
-    actors = []
-  landscape = None
-
-  for actor in actors:
-    if actor.get_name() == "${params.landscapeName}" or actor.get_actor_label() == "${params.landscapeName}":
-      if isinstance(actor, unreal.LandscapeProxy) or isinstance(actor, unreal.Landscape):
-        landscape = actor
-        break
-
-  if landscape:
-    changes_made = []
-
-    # Configure spatial loading (UE 5.6)
-    if ${params.enableSpatialLoading !== undefined ? 'True' : 'False'}:
-      try:
-        landscape.set_editor_property('is_spatially_loaded', ${params.enableSpatialLoading || false})
-        changes_made.append("Spatial loading: ${params.enableSpatialLoading}")
-      except:
-        pass
-
-    # Set runtime grid (UE 5.6 World Partition)
-    if "${params.runtimeGrid || ''}":
-      try:
-        landscape.set_editor_property('runtime_grid', unreal.Name("${params.runtimeGrid}"))
-        changes_made.append("Runtime grid: ${params.runtimeGrid}")
-      except:
-        pass
-
-    # Configure data layers (UE 5.6)
-    if ${params.dataLayers ? 'True' : 'False'}:
-      try:
-        # Try modern subsystem first
-        try:
-          world = None
-          editor_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-          if editor_subsystem and hasattr(editor_subsystem, 'get_editor_world'):
-            world = editor_subsystem.get_editor_world()
-          if world is None:
-            world = unreal.EditorSubsystemLibrary.get_editor_world()
-        except Exception:
-          world = unreal.EditorSubsystemLibrary.get_editor_world()
-        data_layer_manager = unreal.WorldPartitionBlueprintLibrary.get_data_layer_manager(world)
-        if data_layer_manager:
-          # Note: Full data layer API requires additional setup
-          changes_made.append("Data layers: Requires manual configuration")
-      except:
-        pass
-
-    if changes_made:
-      result = {
-        'success': True,
-        'message': 'World Partition configured',
-        'changes': changes_made
-      }
-    else:
-      result = {
-        'success': False,
-        'error': 'No World Partition changes applied'
-      }
-
-except Exception as e:
-  result = {'success': False, 'error': str(e)}
-
-print('RESULT:' + json.dumps(result))
-`.trim();
-
-    const response = await this.bridge.executePython(pythonScript);
-    const interpreted = interpretStandardResult(response, {
-      successMessage: 'World Partition configuration attempted',
-      failureMessage: 'World Partition configuration failed'
-    });
-
-    if (interpreted.success) {
-      return interpreted.payload as any;
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. World Partition operations require plugin support.');
     }
 
-    return {
-      success: false,
-      error: interpreted.error ?? 'World Partition configuration failed',
-      details: bestEffortInterpretedText(interpreted)
-    };
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('configure_landscape_world_partition', {
+        landscapeName: params.landscapeName,
+        enableSpatialLoading: params.enableSpatialLoading,
+        runtimeGrid: params.runtimeGrid || '',
+        dataLayers: params.dataLayers || [],
+        streamingDistance: params.streamingDistance
+      }, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'World Partition configuration failed'
+        };
+      }
+
+      return {
+        success: true,
+        message: response.message || 'World Partition configured',
+        changes: response.changes
+      };
     } catch (err) {
-      return { success: false, error: `Failed to configure World Partition: ${err}` };
+      return { success: false, error: `Failed to configure World Partition: ${err instanceof Error ? err.message : String(err)}` };
     }
   }
 
@@ -673,7 +516,7 @@ print('RESULT:' + json.dumps(result))
   }) {
     try {
       const commands = [];
-      
+
       // Use console commands for data layer management
       if (params.operation === 'set' || params.operation === 'add') {
         for (const layerName of params.dataLayerNames) {
@@ -684,12 +527,12 @@ print('RESULT:' + json.dumps(result))
           commands.push(`wp.Runtime.SetDataLayerRuntimeState Unloaded ${layerName}`);
         }
       }
-      
+
       // Execute commands
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         message: `Data layers ${params.operation === 'add' ? 'added' : params.operation === 'remove' ? 'removed' : 'set'} for landscape`,
         layers: params.dataLayerNames
       };
@@ -706,24 +549,24 @@ print('RESULT:' + json.dumps(result))
     enableHLOD?: boolean;
   }) {
     const commands = [];
-    
+
     // World Partition runtime commands
     if (params.loadingRange !== undefined) {
       commands.push(`wp.Runtime.OverrideRuntimeSpatialHashLoadingRange -grid=0 -range=${params.loadingRange}`);
     }
-    
+
     if (params.enableHLOD !== undefined) {
       commands.push(`wp.Runtime.HLOD ${params.enableHLOD ? '1' : '0'}`);
     }
-    
+
     // Debug visualization commands
     commands.push('wp.Runtime.ToggleDrawRuntimeHash2D'); // Show 2D grid
-    
+
     try {
       await this.bridge.executeConsoleCommands(commands);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         message: 'Streaming cells configured for World Partition',
         settings: {
           cellSize: params.cellSize,
@@ -735,4 +578,66 @@ print('RESULT:' + json.dumps(result))
       return { success: false, error: `Failed to configure streaming cells: ${err}` };
     }
   }
+
+  // Modify landscape heightmap
+  async modifyHeightmap(params: {
+    landscapeName: string;
+    heightData: number[];
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+    updateNormals?: boolean;
+  }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
+    }
+
+    const { landscapeName, heightData, minX, minY, maxX, maxY } = params;
+
+    if (!landscapeName) {
+      return { success: false, error: 'Landscape name is required' };
+    }
+    if (!heightData || !Array.isArray(heightData) || heightData.length === 0) {
+      return { success: false, error: 'heightData array is required' };
+    }
+
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
+    if (heightData.length !== width * height) {
+      return {
+        success: false,
+        error: `Height data length (${heightData.length}) does not match region dimensions (${width}x${height} = ${width * height})`
+      };
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('modify_heightmap', {
+        landscapeName,
+        heightData,
+        minX,
+        minY,
+        maxX,
+        maxY,
+        updateNormals: params.updateNormals ?? true
+      }, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to modify heightmap'
+        };
+      }
+
+      return {
+        success: true,
+        message: response.message || 'Heightmap modified successfully'
+      };
+    } catch (err) {
+      return { success: false, error: `Failed to modify heightmap: ${err instanceof Error ? err.message : String(err)}` };
+    }
+  }
 }
+

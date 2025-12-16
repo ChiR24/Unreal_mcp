@@ -1,0 +1,94 @@
+name: 'Bug Report'
+description: 'Report a bug to help us improve Unreal Engine MCP Server'
+labels:
+  - 'bug'
+body:
+  - type: 'markdown'
+    attributes:
+      value: |-
+        > [!IMPORTANT]
+        > Thanks for taking the time to fill out this bug report!
+        >
+        > Please search **[existing issues](https://github.com/ChiR24/Unreal_mcp/issues)** to see if an issue already exists for the bug you encountered.
+
+  - type: 'textarea'
+    id: 'problem'
+    attributes:
+      label: 'What happened?'
+      description: 'A clear and concise description of what the bug is.'
+    validations:
+      required: true
+
+  - type: 'textarea'
+    id: 'expected'
+    attributes:
+      label: 'What did you expect to happen?'
+    validations:
+      required: true
+
+  - type: 'dropdown'
+    id: 'ue-version'
+    attributes:
+      label: 'Unreal Engine Version'
+      options:
+        - 'UE 5.0'
+        - 'UE 5.1'
+        - 'UE 5.2'
+        - 'UE 5.3'
+        - 'UE 5.4'
+        - 'UE 5.5'
+        - 'UE 5.6'
+        - 'UE 5.7'
+        - 'Other'
+    validations:
+      required: true
+
+  - type: 'dropdown'
+    id: 'mcp-client'
+    attributes:
+      label: 'MCP Client'
+      options:
+        - 'Claude Desktop'
+        - 'Cursor'
+        - 'VS Code (Copilot)'
+        - 'Custom MCP Client'
+        - 'Other'
+    validations:
+      required: true
+
+  - type: 'textarea'
+    id: 'environment'
+    attributes:
+      label: 'Environment Information'
+      description: 'Please include OS, Node.js version, and any relevant environment details.'
+      value: |-
+        - **OS**: [e.g., Windows 11, macOS Sonoma, Ubuntu 22.04]
+        - **Node.js Version**: [e.g., 18.x, 20.x]
+        - **MCP Server Version**: [e.g., 0.5.0]
+    validations:
+      required: true
+
+  - type: 'textarea'
+    id: 'reproduction'
+    attributes:
+      label: 'Steps to Reproduce'
+      description: 'How can we reproduce the issue?'
+      value: |-
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+
+  - type: 'textarea'
+    id: 'logs'
+    attributes:
+      label: 'Relevant Logs'
+      description: 'Paste any relevant error logs or console output.'
+      render: 'shell'
+
+  - type: 'textarea'
+    id: 'additional-context'
+    attributes:
+      label: 'Additional Context'
+      description: 'Add any other context or screenshots about the problem here.'

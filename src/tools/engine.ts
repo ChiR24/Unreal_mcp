@@ -1,10 +1,15 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { loadEnv } from '../types/env.js';
 import { spawn } from 'child_process';
 
 export class EngineTools {
   private env = loadEnv();
-  constructor(private bridge: UnrealBridge) {}
+  constructor(_bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
+
+  setAutomationBridge(automationBridge?: AutomationBridge) {
+    this.automationBridge = automationBridge;
+  }
 
   async launchEditor(params?: { editorExe?: string; projectPath?: string }) {
     const exe = params?.editorExe || this.env.UE_EDITOR_EXE;
@@ -21,9 +26,15 @@ export class EngineTools {
   }
 
   async quitEditor() {
+    if (!this.automationBridge) {
+      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge is not available for quit_editor' };
+    }
+
     try {
-      // Use Python SystemLibrary.quit_editor if available
-      await this.bridge.executePython('import unreal; unreal.SystemLibrary.quit_editor()');
+      const resp: any = await this.automationBridge.sendAutomationRequest('quit_editor', {});
+      if (resp && resp.success === false) {
+        return { success: false, error: resp.error || resp.message || 'Quit request failed' };
+      }
       return { success: true, message: 'Quit command sent' };
     } catch (err: any) {
       return { success: false, error: String(err?.message || err) };

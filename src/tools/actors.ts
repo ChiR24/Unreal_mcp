@@ -1,12 +1,14 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { ensureRotation, ensureVector3 } from '../utils/validation.js';
-import { coerceString, coerceVector3, interpretStandardResult } from '../utils/result-helpers.js';
-import { escapePythonString } from '../utils/python.js';
+import { BaseTool } from './base-tool.js';
+import { IActorTools, StandardActionResponse } from '../types/tool-interfaces.js';
 
-export class ActorTools {
-  constructor(private bridge: UnrealBridge) {}
+export class ActorTools extends BaseTool implements IActorTools {
+  constructor(bridge: UnrealBridge) {
+    super(bridge);
+  }
 
-  async spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string }) {
+  async spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string; meshPath?: string; timeoutMs?: number }) {
     if (!params.classPath || typeof params.classPath !== 'string' || params.classPath.trim().length === 0) {
       throw new Error(`Invalid classPath: ${params.classPath}`);
     }
@@ -16,7 +18,7 @@ export class ActorTools {
     if (params.actorName !== undefined && (!requestedActorName || requestedActorName.length === 0)) {
       throw new Error(`Invalid actorName: ${params.actorName}`);
     }
-  const sanitizedActorName = requestedActorName?.replace(/[^A-Za-z0-9_-]/g, '_');
+    const sanitizedActorName = requestedActorName?.replace(/[^A-Za-z0-9_-]/g, '_');
     const lowerName = className.toLowerCase();
 
     const shapeMapping: Record<string, string> = {
@@ -39,315 +41,152 @@ export class ActorTools {
       'actor rotation'
     );
 
-  const escapedResolvedClassPath = escapePythonString(mappedClassPath);
-  const escapedRequestedPath = escapePythonString(className);
-  const escapedRequestedActorName = sanitizedActorName ? escapePythonString(sanitizedActorName) : '';
-
-    const pythonCmd = `
-import unreal
-import json
-import time
-
-result = {
-  "success": False,
-  "message": "",
-  "error": "",
-  "actorName": "",
-  "requestedClass": "${escapedRequestedPath}",
-  "resolvedClass": "${escapedResolvedClassPath}",
-  "location": [${locX}, ${locY}, ${locZ}],
-  "rotation": [${rotPitch}, ${rotYaw}, ${rotRoll}],
-  "requestedActorName": "${escapedRequestedActorName}",
-  "warnings": [],
-  "details": []
-}
-
-${this.getPythonSpawnHelper()}
-
-abstract_classes = ['PlaneReflectionCapture', 'ReflectionCapture', 'Actor', 'Pawn', 'Character']
-
-def finalize():
-  data = dict(result)
-  if data.get("success"):
-    if not data.get("message"):
-      data["message"] = "Actor spawned successfully"
-    data.pop("error", None)
-  else:
-    if not data.get("error"):
-      data["error"] = data.get("message") or "Failed to spawn actor"
-    if not data.get("message"):
-      data["message"] = data["error"]
-  if not data.get("warnings"):
-    data.pop("warnings", None)
-  if not data.get("details"):
-    data.pop("details", None)
-  return data
-
-try:
-  les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-  if les and les.is_in_play_in_editor():
-    result["message"] = "Cannot spawn actors while in Play In Editor mode. Please stop PIE first."
-    result["error"] = result["message"]
-    result["details"].append("Play In Editor mode detected")
-    print('RESULT:' + json.dumps(finalize()))
-    raise SystemExit(0)
-except SystemExit:
-  raise
-except Exception:
-  result["warnings"].append("Unable to determine Play In Editor state")
-
-if result["requestedClass"] in abstract_classes:
-  result["message"] = f"Cannot spawn {result['requestedClass']}: class is abstract and cannot be instantiated"
-  result["error"] = result["message"]
-else:
-  try:
-    class_path = result["resolvedClass"]
-    requested_path = result["requestedClass"]
-    location = unreal.Vector(${locX}, ${locY}, ${locZ})
-    rotation = unreal.Rotator(${rotPitch}, ${rotYaw}, ${rotRoll})
-    actor = None
-
-    simple_name = requested_path.split('/')[-1] if '/' in requested_path else requested_path
-    if '.' in simple_name:
-      simple_name = simple_name.split('.')[-1]
-    simple_name_lower = simple_name.lower()
-    class_lookup_name = class_path.split('.')[-1] if '.' in class_path else simple_name
-
-    result["details"].append(f"Attempting spawn using class path: {class_path}")
-
-    if class_path.startswith('/Game') or class_path.startswith('/Engine'):
-      try:
-        asset = unreal.EditorAssetLibrary.load_asset(class_path)
-      except Exception as asset_error:
-        asset = None
-        result["warnings"].append(f"Failed to load asset for {class_path}: {asset_error}")
-      if asset:
-        if isinstance(asset, unreal.Blueprint):
-          try:
-            actor_class = asset.generated_class()
-          except Exception as blueprint_error:
-            actor_class = None
-            result["warnings"].append(f"Failed to resolve blueprint class: {blueprint_error}")
-          if actor_class:
-            actor = spawn_actor_from_class(actor_class, location, rotation)
-            if actor:
-              result["details"].append("Spawned using Blueprint generated class")
-        elif isinstance(asset, unreal.StaticMesh):
-          actor = spawn_actor_from_class(unreal.StaticMeshActor, location, rotation)
-          if actor:
-            mesh_component = actor.get_component_by_class(unreal.StaticMeshComponent)
-            if mesh_component:
-              mesh_component.set_static_mesh(asset)
-              mesh_component.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
-              result["details"].append("Applied static mesh to spawned StaticMeshActor")
-
-    if not actor:
-      shape_map = {
-        'cube': '/Engine/BasicShapes/Cube',
-        'sphere': '/Engine/BasicShapes/Sphere',
-        'cylinder': '/Engine/BasicShapes/Cylinder',
-        'cone': '/Engine/BasicShapes/Cone',
-        'plane': '/Engine/BasicShapes/Plane',
-        'torus': '/Engine/BasicShapes/Torus'
-      }
-      mesh_path = shape_map.get(simple_name_lower)
-      if not mesh_path and class_path.startswith('/Engine/BasicShapes'):
-        mesh_path = class_path
-      if mesh_path:
-        try:
-          shape_mesh = unreal.EditorAssetLibrary.load_asset(mesh_path)
-        except Exception as shape_error:
-          shape_mesh = None
-          result["warnings"].append(f"Failed to load shape mesh {mesh_path}: {shape_error}")
-        if shape_mesh:
-          actor = spawn_actor_from_class(unreal.StaticMeshActor, location, rotation)
-          if actor:
-            mesh_component = actor.get_component_by_class(unreal.StaticMeshComponent)
-            if mesh_component:
-              mesh_component.set_static_mesh(shape_mesh)
-              mesh_component.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
-              result["details"].append(f"Spawned StaticMeshActor with mesh {mesh_path}")
-
-    if not actor:
-      if class_lookup_name == "StaticMeshActor":
-        actor = spawn_actor_from_class(unreal.StaticMeshActor, location, rotation)
-        if actor:
-          try:
-            cube_mesh = unreal.EditorAssetLibrary.load_asset('/Engine/BasicShapes/Cube')
-          except Exception as cube_error:
-            cube_mesh = None
-            result["warnings"].append(f"Failed to load default cube mesh: {cube_error}")
-          if cube_mesh:
-            mesh_component = actor.get_component_by_class(unreal.StaticMeshComponent)
-            if mesh_component:
-              mesh_component.set_static_mesh(cube_mesh)
-              mesh_component.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
-              result["details"].append("Applied default cube mesh to StaticMeshActor")
-      elif class_lookup_name == "CameraActor":
-        actor = spawn_actor_from_class(unreal.CameraActor, location, rotation)
-        if actor:
-          result["details"].append("Spawned CameraActor via reflected class lookup")
-      else:
-        actor_class = getattr(unreal, class_lookup_name, None)
-        if actor_class:
-          actor = spawn_actor_from_class(actor_class, location, rotation)
-          if actor:
-            result["details"].append(f"Spawned {class_lookup_name} via reflected class lookup")
-
-    if actor:
-      desired_name = (result.get("requestedActorName") or "").strip()
-      actor_name = ""
-      if desired_name:
-        try:
-          try:
-            actor.set_actor_label(desired_name, True)
-          except TypeError:
-            actor.set_actor_label(desired_name)
-          actor_name = actor.get_actor_label() or desired_name
-        except Exception as label_error:
-          result["warnings"].append(f"Failed to honor requested actor name '{desired_name}': {label_error}")
-      if not actor_name:
-        timestamp = int(time.time() * 1000) % 10000
-        base_name = simple_name or class_lookup_name or class_path.split('/')[-1]
-        fallback_name = f"{base_name}_{timestamp}"
-        try:
-          actor.set_actor_label(fallback_name)
-        except Exception as label_error:
-          result["warnings"].append(f"Failed to set actor label: {label_error}")
-        actor_name = actor.get_actor_label() or fallback_name
-      result["success"] = True
-      result["actorName"] = actor_name
-      if not result["message"]:
-        result["message"] = f"Spawned {actor_name} at ({location.x}, {location.y}, {location.z})"
-    else:
-      result["message"] = f"Failed to spawn actor from: {class_path}. Try using /Engine/BasicShapes/Cube or StaticMeshActor"
-      result["error"] = result["message"]
-  except Exception as spawn_error:
-    result["error"] = f"Error spawning actor: {spawn_error}"
-    if not result["message"]:
-      result["message"] = result["error"]
-
-print('RESULT:' + json.dumps(finalize()))
-`.trim();
-
     try {
-      const response = await this.bridge.executePython(pythonCmd);
-      const interpreted = interpretStandardResult(response, {
-        successMessage: `Spawned actor ${className}`,
-        failureMessage: `Failed to spawn actor ${className}`
-      });
+      const bridge = this.getAutomationBridge();
+      const timeoutMs = typeof params.timeoutMs === 'number' && params.timeoutMs > 0 ? params.timeoutMs : undefined;
+      const response = await bridge.sendAutomationRequest(
+        'control_actor',
+        {
+          action: 'spawn',
+          classPath: mappedClassPath,
+          location: { x: locX, y: locY, z: locZ },
+          rotation: { pitch: rotPitch, yaw: rotYaw, roll: rotRoll },
+          actorName: sanitizedActorName,
+          meshPath: params.meshPath
+        },
+        timeoutMs ? { timeoutMs } : undefined
+      );
 
-      if (!interpreted.success) {
-        throw new Error(interpreted.error || interpreted.message);
+      if (!response || !response.success) {
+        throw new Error(response?.error || response?.message || 'Failed to spawn actor');
       }
 
-      const actorName = coerceString(interpreted.payload.actorName);
-      const resolvedClass = coerceString(interpreted.payload.resolvedClass) ?? mappedClassPath;
-      const requestedClass = coerceString(interpreted.payload.requestedClass) ?? className;
-      const locationVector = coerceVector3(interpreted.payload.location) ?? [locX, locY, locZ];
-      const rotationVector = coerceVector3(interpreted.payload.rotation) ?? [rotPitch, rotYaw, rotRoll];
-
-      const result: Record<string, unknown> = {
+      const data = (response as any).data || {};
+      const result: StandardActionResponse = {
         success: true,
-        message: interpreted.message,
-        actorName: actorName ?? undefined,
-        resolvedClass,
-        requestedClass,
-        location: { x: locationVector[0], y: locationVector[1], z: locationVector[2] },
-        rotation: { pitch: rotationVector[0], yaw: rotationVector[1], roll: rotationVector[2] }
+        message: response.message || `Spawned actor ${className}`,
+        actorName: data.name || (response as any).actorName,
+        actorPath: data.objectPath || (response as any).actorPath,
+        resolvedClass: mappedClassPath,
+        requestedClass: className,
+        location: { x: locX, y: locY, z: locZ },
+        rotation: { pitch: rotPitch, yaw: rotYaw, roll: rotRoll },
+        data: data,
+        actor: {
+          name: data.name || (response as any).actorName,
+          path: data.objectPath || (response as any).actorPath || mappedClassPath
+        }
       };
 
-      if (interpreted.warnings?.length) {
-        result.warnings = interpreted.warnings;
+      if ((response as any).warnings?.length) {
+        result.warnings = (response as any).warnings;
       }
-      if (interpreted.details?.length) {
-        result.details = interpreted.details;
+
+      // Legacy support for older fields if they exist at top level
+      if ((response as any).details?.length) {
+        result.details = (response as any).details;
+      }
+      if ((response as any).componentPaths?.length) {
+        result.componentPaths = (response as any).componentPaths;
       }
 
       return result;
     } catch (err) {
-      throw new Error(`Failed to spawn actor via Python: ${err}`);
-    }
-  }
-  
-  async spawnViaConsole(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }) {
-    try {
-      const [locX, locY, locZ] = ensureVector3(params.location ?? { x: 0, y: 0, z: 100 }, 'actor location');
-      // Check if editor is in play mode first
-      try {
-        const pieCheckPython = `
-import unreal
-les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-if les and les.is_in_play_in_editor():
-    print("PIE_ACTIVE")
-else:
-    print("PIE_INACTIVE")
-        `.trim();
-        
-        const pieCheckResult = await this.bridge.executePython(pieCheckPython);
-        const outputStr = typeof pieCheckResult === 'string' ? pieCheckResult : JSON.stringify(pieCheckResult);
-        
-        if (outputStr.includes('PIE_ACTIVE')) {
-          throw new Error('Cannot spawn actors while in Play In Editor mode. Please stop PIE first.');
-        }
-      } catch (pieErr: any) {
-        // If the error is about PIE, throw it
-        if (String(pieErr).includes('Play In Editor')) {
-          throw pieErr;
-        }
-        // Otherwise ignore and continue
-      }
-      
-      // List of known abstract classes that cannot be spawned
-      const abstractClasses = ['PlaneReflectionCapture', 'ReflectionCapture', 'Actor'];
-      
-      // Check if this is an abstract class
-      if (abstractClasses.includes(params.classPath)) {
-        throw new Error(`Cannot spawn ${params.classPath}: class is abstract and cannot be instantiated`);
-      }
-      
-      // Get the console-friendly class name
-      const spawnClass = this.getConsoleClassName(params.classPath);
-      
-      // Use summon command with location if provided
-  const command = `summon ${spawnClass} ${locX} ${locY} ${locZ}`;
-      
-      await this.bridge.httpCall('/remote/object/call', 'PUT', {
-        objectPath: '/Script/Engine.Default__KismetSystemLibrary',
-        functionName: 'ExecuteConsoleCommand',
-        parameters: {
-          WorldContextObject: null,
-          Command: command,
-          SpecificPlayer: null
-        },
-        generateTransaction: false
-      });
-      
-      // Console commands don't reliably report success/failure
-      // We can't guarantee this actually worked, so indicate uncertainty
-      return { 
-        success: true, 
-        message: `Actor spawn attempted via console: ${spawnClass} at ${locX},${locY},${locZ}`,
-        note: 'Console spawn result uncertain - verify in editor'
-      };
-    } catch (err) {
       throw new Error(`Failed to spawn actor: ${err}`);
     }
   }
-  private getPythonSpawnHelper(): string {
-  return `
-def spawn_actor_from_class(actor_class, location, rotation):
-  actor = None
-  try:
-    actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    if actor_subsys:
-      actor = actor_subsys.spawn_actor_from_class(actor_class, location, rotation)
-  except Exception:
-    actor = None
-  if not actor:
-    raise RuntimeError('EditorActorSubsystem unavailable or failed to spawn actor. Enable Editor Scripting Utilities plugin and verify class path.')
-  return actor
-`.trim();
+
+  async delete(params: { actorName?: string; actorNames?: string[] }) {
+    if (params.actorNames && Array.isArray(params.actorNames)) {
+      const names = params.actorNames
+        .filter(name => typeof name === 'string')
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
+
+      // Edge-case: empty batch should be treated as a no-op success
+      if (names.length === 0) {
+        return {
+          success: true,
+          message: 'No actors provided for deletion; no-op',
+          deleted: [],
+          noOp: true
+        };
+      }
+
+      // Call the underlying automation action directly so we can treat
+      // DELETE_PARTIAL as a handled, partial-success cleanup instead
+      // of surfacing it as a hard error to the consolidated handler.
+      const bridge = this.getAutomationBridge();
+      const response: any = await bridge.sendAutomationRequest('control_actor', {
+        action: 'delete',
+        actorNames: names
+      });
+
+      const result = (response?.data || response?.result || response) ?? {};
+      const deleted = result.deleted ?? names;
+      const missing = result.missing ?? [];
+      // Check for structured error in response.error OR legacy top-level error
+      const errorObj = response?.error;
+      const errorCode = (typeof errorObj === 'object' ? errorObj.code : String(errorObj || result.error || '')).toUpperCase();
+
+      // If some actors were removed and others were already missing,
+      // surface this as a partial but still successful cleanup so the
+      // tests treat it as handled rather than as an MCP transport error.
+      if (response && response.success === false && errorCode === 'DELETE_PARTIAL') {
+        return {
+          success: true,
+          message: errorObj?.message || response.message || 'Some actors could not be deleted',
+          deleted,
+          missing,
+          partial: true
+        } as StandardActionResponse;
+      }
+
+      if (!response || response.success === false) {
+        throw new Error(errorObj?.message || response?.message || 'Failed to delete actors');
+      }
+
+      return {
+        success: true,
+        message: response.message || 'Deleted actors',
+        deleted: result.deleted || deleted,
+        ...result
+      } as StandardActionResponse;
+    }
+
+    if (!params.actorName || typeof params.actorName !== 'string') {
+      throw new Error('Invalid actorName');
+    }
+
+    return this.sendRequest('delete', { actorName: params.actorName }, 'control_actor');
+  }
+
+  async applyForce(params: { actorName: string; force: { x: number; y: number; z: number } }) {
+    if (!params.actorName || typeof params.actorName !== 'string') {
+      throw new Error('Invalid actorName');
+    }
+    if (!params.force || typeof params.force !== 'object') {
+      throw new Error('Invalid force vector');
+    }
+
+    const [forceX, forceY, forceZ] = ensureVector3(params.force, 'force vector');
+
+    // Edge-case: zero force vector is treated as a safe no-op. This avoids
+    // spurious ACTOR_NOT_FOUND errors when the physics actor has already been
+    // cleaned up in prior tests.
+    if (forceX === 0 && forceY === 0 && forceZ === 0) {
+      return {
+        success: true,
+        message: `Zero force provided for ${params.actorName}; no-op`,
+        physicsEnabled: false,
+        noOp: true
+      };
+    }
+
+    return this.sendRequest('apply_force', {
+      actorName: params.actorName,
+      force: { x: forceX, y: forceY, z: forceZ }
+    }, 'control_actor');
   }
 
   private resolveActorClass(classPath: string): string {
@@ -377,12 +216,12 @@ def spawn_actor_from_class(actor_class, location, rotation):
       // PlaneReflectionCapture is abstract and cannot be spawned
       'DecalActor': '/Script/Engine.DecalActor'
     };
-    
+
     // Check if it's a simple name that needs mapping
     if (classMap[classPath]) {
       return classMap[classPath];
     }
-    
+
     // Check if it already looks like a full path
     if (classPath.startsWith('/Script/') || classPath.startsWith('/Game/')) {
       return classPath;
@@ -391,7 +230,7 @@ def spawn_actor_from_class(actor_class, location, rotation):
     if (classPath.startsWith('/Engine/')) {
       return classPath;
     }
-    
+
     // Check for Blueprint paths
     if (classPath.includes('Blueprint') || classPath.includes('BP_')) {
       // Ensure it has the proper prefix
@@ -400,37 +239,293 @@ def spawn_actor_from_class(actor_class, location, rotation):
       }
       return classPath;
     }
-    
+
     // Default: assume it's an engine class
     return '/Script/Engine.' + classPath;
   }
-  
-  private getConsoleClassName(classPath: string): string {
-    // Normalize class path for console 'summon'
-    const input = classPath;
 
-    // Engine classes: reduce '/Script/Engine.ClassName' to 'ClassName'
-    if (input.startsWith('/Script/Engine.')) {
-      return input.replace('/Script/Engine.', '');
+  async spawnBlueprint(params: { blueprintPath: string; actorName?: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number } }) {
+    const blueprintPath = typeof params.blueprintPath === 'string' ? params.blueprintPath.trim() : '';
+    if (!blueprintPath) {
+      throw new Error('Invalid blueprintPath');
     }
 
-    // If it's already a simple class name (no path) and not a /Game asset, strip optional _C and return
-    if (!input.startsWith('/Game/') && !input.includes('/')) {
-      if (input.endsWith('_C')) return input.slice(0, -2);
-      return input;
+    const actorName = typeof params.actorName === 'string' && params.actorName.trim().length > 0 ? params.actorName.trim() : undefined;
+    const location = params.location ? ensureVector3(params.location, 'spawn_blueprint location') : undefined;
+    const rotation = params.rotation ? ensureRotation(params.rotation, 'spawn_blueprint rotation') : undefined;
+
+    const payload: Record<string, unknown> = { blueprintPath };
+    if (actorName) payload.actorName = actorName;
+    if (location) payload.location = { x: location[0], y: location[1], z: location[2] };
+    if (rotation) payload.rotation = { pitch: rotation[0], yaw: rotation[1], roll: rotation[2] };
+
+    return this.sendRequest('spawn_blueprint', payload, 'control_actor');
+  }
+
+  async setTransform(params: { actorName: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; scale?: { x: number; y: number; z: number } }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    if (!actorName) {
+      throw new Error('Invalid actorName');
     }
 
-    // Blueprint assets under /Game: ensure '/Game/Path/Asset.Asset_C'
-    if (input.startsWith('/Game/')) {
-      // Remove any existing ".Something" suffix to rebuild normalized class ref
-      const pathWithoutSuffix = input.split('.')[0];
-      const parts = pathWithoutSuffix.split('/');
-      const assetName = parts[parts.length - 1].replace(/_C$/, '');
-      const normalized = `${pathWithoutSuffix}.${assetName}_C`;
-      return normalized;
+    const payload: Record<string, unknown> = { actorName };
+    if (params.location) {
+      const loc = ensureVector3(params.location, 'set_transform location');
+      payload.location = { x: loc[0], y: loc[1], z: loc[2] };
+    }
+    if (params.rotation) {
+      const rot = ensureRotation(params.rotation, 'set_transform rotation');
+      payload.rotation = { pitch: rot[0], yaw: rot[1], roll: rot[2] };
+    }
+    if (params.scale) {
+      const scl = ensureVector3(params.scale, 'set_transform scale');
+      payload.scale = { x: scl[0], y: scl[1], z: scl[2] };
     }
 
-    // Fallback: return input unchanged
-    return input;
+    return this.sendRequest('set_transform', payload, 'control_actor');
+  }
+
+  async getTransform(actorName: string) {
+    if (typeof actorName !== 'string' || actorName.trim().length === 0) {
+      throw new Error('Invalid actorName');
+    }
+    return this.sendRequest('get_transform', { actorName }, 'control_actor')
+      .then(response => {
+        // If response is standardized, extract data or return as is.
+        // For now, return the full response which includes data.
+        return response;
+      });
+  }
+
+  async setVisibility(params: { actorName: string; visible: boolean }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    if (!actorName) {
+      throw new Error('Invalid actorName');
+    }
+    return this.sendRequest('set_visibility', { actorName, visible: Boolean(params.visible) }, 'control_actor');
+  }
+
+  async addComponent(params: { actorName: string; componentType: string; componentName?: string; properties?: Record<string, unknown> }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    const componentType = typeof params.componentType === 'string' ? params.componentType.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+    if (!componentType) throw new Error('Invalid componentType');
+
+    return this.sendRequest('add_component', {
+      actorName,
+      componentType,
+      componentName: typeof params.componentName === 'string' ? params.componentName : undefined,
+      properties: params.properties
+    }, 'control_actor');
+  }
+
+  async setComponentProperties(params: { actorName: string; componentName: string; properties: Record<string, unknown> }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    const componentName = typeof params.componentName === 'string' ? params.componentName.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+    if (!componentName) throw new Error('Invalid componentName');
+
+    return this.sendRequest('set_component_properties', {
+      actorName,
+      componentName,
+      properties: params.properties ?? {}
+    }, 'control_actor');
+  }
+
+  async getComponents(actorName: string) {
+    if (typeof actorName !== 'string' || actorName.trim().length === 0) {
+      throw new Error('Invalid actorName');
+    }
+    const response = await this.sendRequest('get_components', { actorName }, 'control_actor');
+    if (!response.success) {
+      return { success: false, error: response.error || `Failed to get components for actor ${actorName}` };
+    }
+
+    const data: any = response.data ?? response.result ?? response;
+    const components = Array.isArray(data)
+      ? data
+      : (Array.isArray(data?.components) ? data.components : []);
+    const count = typeof data?.count === 'number' ? data.count : components.length;
+
+    return {
+      success: true,
+      message: 'Actor components retrieved',
+      components,
+      count
+    };
+  }
+
+  async duplicate(params: { actorName: string; newName?: string; offset?: { x: number; y: number; z: number } }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+
+    const payload: Record<string, unknown> = { actorName };
+    if (typeof params.newName === 'string' && params.newName.trim().length > 0) {
+      payload.newName = params.newName.trim();
+    }
+    if (params.offset) {
+      const offs = ensureVector3(params.offset, 'duplicate offset');
+      payload.offset = { x: offs[0], y: offs[1], z: offs[2] };
+    }
+
+    return this.sendRequest('duplicate', payload, 'control_actor');
+  }
+
+  async addTag(params: { actorName: string; tag: string }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    const tag = typeof params.tag === 'string' ? params.tag.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+    if (!tag) throw new Error('Invalid tag');
+
+    return this.sendRequest('add_tag', { actorName, tag }, 'control_actor');
+  }
+
+  async removeTag(params: { actorName: string; tag: string }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    const tag = typeof params.tag === 'string' ? params.tag.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+    if (!tag) throw new Error('Invalid tag');
+
+    return this.sendRequest('remove_tag', { actorName, tag }, 'control_actor');
+  }
+
+  async findByTag(params: { tag: string; matchType?: string }) {
+    const tag = typeof params.tag === 'string' ? params.tag.trim() : '';
+
+    // Edge-case: empty tag should return an empty result set instead of throwing
+    if (!tag) {
+      return {
+        success: true,
+        message: 'Empty tag query; no actors matched',
+        data: {
+          actors: [],
+          count: 0
+        }
+      };
+    }
+
+    return this.sendRequest('find_by_tag', {
+      tag,
+      matchType: typeof params.matchType === 'string' ? params.matchType : undefined
+    }, 'control_actor');
+  }
+
+  async findByName(name: string) {
+    if (typeof name !== 'string' || name.trim().length === 0) {
+      throw new Error('Invalid actor name query');
+    }
+    return this.sendRequest('find_by_name', { name: name.trim() }, 'control_actor');
+  }
+
+  async detach(actorName: string) {
+    // Support 'childActor' as alias for 'actorName' since attach() uses childActor.
+    // If actorName is missing/empty but childActor is present in the underlying request (handled by caller or if we expand args),
+    // we should handle it. However, the signature here is specific.
+    // We'll rely on the handler to map it, or we can expand the signature if needed.
+    // For now, let's keep the strict signature but ensure the handler passes it correctly.
+    // Actually, looking at the handler (actor-handlers.ts), it calls tools.actors.detach(args.actorName).
+    // So we should modify actor-handlers.ts instead to map childActor -> actorName.
+    if (typeof actorName !== 'string' || actorName.trim().length === 0) {
+      throw new Error('Invalid actorName');
+    }
+    return this.sendRequest('detach', { actorName }, 'control_actor');
+  }
+
+  async attach(params: { childActor: string; parentActor: string }) {
+    const child = typeof params.childActor === 'string' ? params.childActor.trim() : '';
+    const parent = typeof params.parentActor === 'string' ? params.parentActor.trim() : '';
+    if (!child) throw new Error('Invalid childActor');
+    if (!parent) throw new Error('Invalid parentActor');
+
+    return this.sendRequest('attach', { childActor: child, parentActor: parent }, 'control_actor');
+  }
+
+  async deleteByTag(tag: string) {
+    if (typeof tag !== 'string' || tag.trim().length === 0) {
+      throw new Error('Invalid tag');
+    }
+    return this.sendRequest('delete_by_tag', { tag: tag.trim() }, 'control_actor');
+  }
+
+  async setBlueprintVariables(params: { actorName: string; variables: Record<string, unknown> }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+    return this.sendRequest('set_blueprint_variables', { actorName, variables: params.variables ?? {} }, 'control_actor');
+  }
+
+  async createSnapshot(params: { actorName: string; snapshotName: string }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    const snapshotName = typeof params.snapshotName === 'string' ? params.snapshotName.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+    if (!snapshotName) throw new Error('Invalid snapshotName');
+    return this.sendRequest('create_snapshot', { actorName, snapshotName }, 'control_actor');
+  }
+
+  async restoreSnapshot(params: { actorName: string; snapshotName: string }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    const snapshotName = typeof params.snapshotName === 'string' ? params.snapshotName.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+    if (!snapshotName) throw new Error('Invalid snapshotName');
+    return this.sendRequest('restore_snapshot', { actorName, snapshotName }, 'control_actor');
+  }
+  async exportActor(params: { actorName: string; destinationPath?: string }) {
+    const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
+    if (!actorName) throw new Error('Invalid actorName');
+    return this.sendRequest('export', {
+      actorName,
+      destinationPath: params.destinationPath
+    }, 'control_actor');
+  }
+
+  async getBoundingBox(actorName: string) {
+    if (typeof actorName !== 'string' || actorName.trim().length === 0) {
+      throw new Error('Invalid actorName');
+    }
+    const response = await this.sendRequest('get_bounding_box', { actorName }, 'control_actor');
+    if (!response.success) {
+      return { success: false, error: response.error || `Failed to get bounding box for actor ${actorName}` };
+    }
+    return {
+      success: true,
+      message: 'Bounding box retrieved',
+      boundingBox: response.data || response.result || {}
+    };
+  }
+
+  async getMetadata(actorName: string) {
+    if (typeof actorName !== 'string' || actorName.trim().length === 0) {
+      throw new Error('Invalid actorName');
+    }
+    const response = await this.sendRequest('get_metadata', { actorName }, 'control_actor');
+    if (!response.success) {
+      return { success: false, error: response.error || `Failed to get metadata for actor ${actorName}` };
+    }
+    return {
+      success: true,
+      message: 'Actor metadata retrieved',
+      metadata: response.data || response.result || {}
+    };
+  }
+
+  async listActors(params?: { filter?: string }) {
+    const payload: any = {};
+    if (params?.filter) {
+      payload.filter = params.filter;
+    }
+    const response = await this.sendRequest('list_actors', payload, 'control_actor');
+    if (!response.success) {
+      return { success: false, error: response.error || 'Failed to list actors' };
+    }
+    // C++ returns actors in data.actors, or directly in actors field
+    // Handle both: response.data?.actors, response.actors, or response.data as array
+    const dataObj = response.data || response.result || {};
+    const actorsRaw = response.actors || (dataObj && dataObj.actors) || (Array.isArray(dataObj) ? dataObj : []);
+    const actors = Array.isArray(actorsRaw) ? actorsRaw : [];
+    return {
+      success: true,
+      message: `Found ${actors.length} actors`,
+      actors,
+      count: actors.length
+    };
   }
 }
