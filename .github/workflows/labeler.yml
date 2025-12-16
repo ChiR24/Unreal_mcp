@@ -10,7 +10,7 @@ jobs:
   triage:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/labeler@ac9175f8a1f3625fd0d4f2f8c44f240ee7816de9 # v5.0.0
+    - uses: actions/labeler@v5
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         sync-labels: true
