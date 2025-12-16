@@ -1,4 +1,6 @@
 name: Smoke Test (Mock Mode)
+permissions:
+  contents: read
 
 on:
   push:
