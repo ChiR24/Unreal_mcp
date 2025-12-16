@@ -26,7 +26,7 @@ Please be respectful and constructive in all interactions. We're building someth
 
 1. Fork and clone the repository:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/unreal-engine-mcp-server.git
+   git clone https://github.com/ChiR24/Unreal_mcp.git
    cd unreal-engine-mcp-server
    ```
 
