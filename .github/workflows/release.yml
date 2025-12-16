@@ -15,12 +15,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6 # v4
+        uses: actions/checkout@v4 # v4
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6 # v4
+        uses: actions/setup-node@v4 # v4
         with:
           node-version: '20'
           cache: 'npm'
@@ -44,9 +44,9 @@ jobs:
         run: |
           VERSION=${{ steps.version.outputs.version }}
           
-          CHANGELOG=$(awk -v ver="## \\[$VERSION\\]" '
-            $0 ~ ver { found=1; next }
-            found && /^## \[/ { exit }
+          CHANGELOG=$(awk -v ver="$VERSION" '
+            $0 ~ "## .*\\[" ver "\\]" { found=1; next }
+            found && /^## .*\[/ { exit }
             found { print }
           ' CHANGELOG.md)
           
@@ -78,12 +78,12 @@ jobs:
 
       - name: Create Plugin archive
         run: |
-          if [ -d "Plugins/McpAutomationBridge" ]; then
+          if [ -d "plugins/McpAutomationBridge" ]; then
             tar -czvf release-artifacts/McpAutomationBridge-plugin-${{ steps.version.outputs.version }}.tar.gz \
-              Plugins/McpAutomationBridge/
+              plugins/McpAutomationBridge/
             
             zip -r release-artifacts/McpAutomationBridge-plugin-${{ steps.version.outputs.version }}.zip \
-              Plugins/McpAutomationBridge/
+              plugins/McpAutomationBridge/
             
             echo "Plugin archive created"
           else
@@ -91,7 +91,7 @@ jobs:
           fi
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2 # v2.5.0
+        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191 # v2.0.8
         with:
           name: Release ${{ steps.version.outputs.tag }}
           body_path: release_notes.md
