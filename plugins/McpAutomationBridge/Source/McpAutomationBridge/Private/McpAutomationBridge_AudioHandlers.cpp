@@ -707,7 +707,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
     if (!GEditor)
       return true;
-    UWorld *World = GEditor->GetEditorWorldContext().World(); // Fixed world
+    UWorld *World = GEditor->GetEditorWorldContext().World();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
                           TEXT("NO_WORLD"));
