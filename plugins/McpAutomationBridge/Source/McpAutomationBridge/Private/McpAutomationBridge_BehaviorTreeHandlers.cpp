@@ -28,6 +28,21 @@
 
 #endif
 
+/**
+ * @brief Handles requests to create and manipulate Behavior Tree assets and their graphs.
+ *
+ * Processes the "manage_behavior_tree" action and performs editor-only subActions
+ * such as "create", "add_node", "connect_nodes", "remove_node",
+ * "break_connections", and "set_node_properties". Results and errors are sent
+ * back over the provided websocket; when compiled without editor support an
+ * appropriate error response is sent.
+ *
+ * @param RequestId Identifier for the incoming request; used when sending the response.
+ * @param Action Action name to handle (this function acts on "manage_behavior_tree").
+ * @param Payload JSON object containing a required "subAction" field and subAction-specific parameters.
+ * @param RequestingSocket WebSocket to which success or error responses are written.
+ * @return bool True if the request was handled (including cases where an error response was sent); false if Action does not equal "manage_behavior_tree".
+ */
 bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,

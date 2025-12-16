@@ -5,6 +5,10 @@ using System.Collections.Generic;
 
 public class McpAutomationBridge : ModuleRules
 {
+    /// <summary>
+    /// Configures build rules, dependencies, and compile-time feature definitions for the McpAutomationBridge module based on the provided build target.
+    /// </summary>
+    /// <param name="Target">Build target settings used to determine platform, configuration, and whether editor-only dependencies and feature flags should be enabled.</param>
     public McpAutomationBridge(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
@@ -113,6 +117,11 @@ public class McpAutomationBridge : ModuleRules
         }
     }
 
+    /// <summary>
+    /// Determines whether a SubobjectData module or plugin exists under the given engine directory.
+    /// </summary>
+    /// <param name="EngineDir">Absolute path to the engine root directory to inspect.</param>
+    /// <returns>`true` if a SubobjectData directory is found in EngineDir/Source/Runtime/SubobjectData or anywhere under EngineDir/Plugins/Runtime; `false` if not found or if an error occurs.</returns>
     private bool IsSubobjectDataAvailable(string EngineDir)
     {
         try
@@ -142,6 +151,11 @@ public class McpAutomationBridge : ModuleRules
         return false;
     }
 
+    /// <summary>
+    /// Determines whether the current project contains a "SubobjectData" directory inside its Plugins folder by searching upward from the provided module directory for the project root (.uproject).
+    /// </summary>
+    /// <param name="ModuleDir">Path to the module directory used as the starting point to locate the project root.</param>
+    /// <returns>`true` if a "SubobjectData" directory is found under the project's Plugins directory, `false` otherwise.</returns>
     private bool IsSubobjectDataInProject(string ModuleDir)
     {
         try

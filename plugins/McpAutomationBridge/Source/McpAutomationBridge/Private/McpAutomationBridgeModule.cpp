@@ -11,6 +11,12 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpAutomationBridge, Log, All);
 class FMcpAutomationBridgeModule final : public IModuleInterface
 {
 public:
+    /**
+     * @brief Initializes the MCP Automation Bridge module.
+     *
+     * Performs module startup tasks required by the plugin. In editor builds, it records that
+     * UMcpAutomationBridgeSettings are exposed via the Project Settings UI.
+     */
     virtual void StartupModule() override
     {
         UE_LOG(LogMcpAutomationBridge, Log, TEXT("MCP Automation Bridge module initialized."));
@@ -24,6 +30,12 @@ public:
 #endif
     }
 
+    /**
+     * @brief Shuts down the MCP Automation Bridge module.
+     *
+     * Logs a shutdown message. In editor builds the function does not attempt to unregister project
+     * settings because UDeveloperSettings instances are managed by the engine.
+     */
     virtual void ShutdownModule() override
     {
         UE_LOG(LogMcpAutomationBridge, Log, TEXT("MCP Automation Bridge module shut down."));
@@ -34,7 +46,13 @@ public:
 #endif
     }
 
-    // Called when project settings are modified via Project Settings UI
+    /**
+     * @brief Persists UMcpAutomationBridgeSettings to DefaultGame.ini when project settings are modified.
+     *
+     * Saves the mutable default UMcpAutomationBridgeSettings to disk and logs the save action if the settings object is available.
+     *
+     * @return `true` if the settings object was found and saved, `false` otherwise.
+     */
     bool HandleSettingsModified()
     {
         if (UMcpAutomationBridgeSettings* Settings = GetMutableDefault<UMcpAutomationBridgeSettings>())

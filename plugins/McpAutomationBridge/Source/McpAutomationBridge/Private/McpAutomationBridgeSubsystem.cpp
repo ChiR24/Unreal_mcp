@@ -18,7 +18,16 @@ DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
 // Sanitize incoming text for logging: replace control characters with
 // '?' and truncate long messages so logs remain readable and do not
 // attempt to render unprintable glyphs in the editor which can spam
-// Slate font warnings.
+/**
+ * @brief Produces a log-safe copy of a string by replacing control characters and truncating long input.
+ *
+ * Creates a sanitized version of the input string where characters with code points less than 32 or equal to 127
+ * are replaced with '?' and the result is truncated to 512 characters with "[TRUNCATED]" appended if the input
+ * is longer.
+ *
+ * @param In Input string to sanitize.
+ * @return FString Sanitized string suitable for logging.
+ */
 static inline FString SanitizeForLog(const FString &In) {
   if (In.IsEmpty())
     return FString();
@@ -36,6 +45,13 @@ static inline FString SanitizeForLog(const FString &In) {
   return Out;
 }
 
+/**
+ * @brief Initialize the automation bridge subsystem, preparing networking, handlers, and periodic processing.
+ *
+ * Creates and initializes the connection manager, registers automation action handlers and a message-received callback, starts the connection manager, and registers a recurring ticker to process pending automation requests.
+ *
+ * @param Collection Subsystem collection provided by the engine during initialization.
+ */
 void UMcpAutomationBridgeSubsystem::Initialize(
     FSubsystemCollectionBase &Collection) {
   Super::Initialize(Collection);
@@ -73,6 +89,11 @@ void UMcpAutomationBridgeSubsystem::Initialize(
          TEXT("McpAutomationBridgeSubsystem Initialized."));
 }
 
+/**
+ * @brief Shuts down the MCP Automation Bridge subsystem and releases its resources.
+ *
+ * Removes the registered ticker, stops and clears the connection manager, detaches and clears the log capture device, and calls the superclass deinitialization.
+ */
 void UMcpAutomationBridgeSubsystem::Deinitialize() {
   if (TickHandle.IsValid()) {
     FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);
@@ -96,11 +117,21 @@ void UMcpAutomationBridgeSubsystem::Deinitialize() {
   Super::Deinitialize();
 }
 
+/**
+ * @brief Reports whether the automation bridge currently has any active connections.
+ *
+ * @return `true` if the connection manager exists and has one or more active sockets, `false` otherwise.
+ */
 bool UMcpAutomationBridgeSubsystem::IsBridgeActive() const {
   return ConnectionManager.IsValid() &&
          ConnectionManager->GetActiveSocketCount() > 0;
 }
 
+/**
+ * @brief Determine the bridge's connection state from active sockets.
+ *
+ * @return EMcpAutomationBridgeState `EMcpAutomationBridgeState::Connected` if one or more active sockets are present, `EMcpAutomationBridgeState::Disconnected` otherwise.
+ */
 EMcpAutomationBridgeState
 UMcpAutomationBridgeSubsystem::GetBridgeState() const {
   // Map connection manager state if needed, for now just check if we have
@@ -109,6 +140,12 @@ UMcpAutomationBridgeSubsystem::GetBridgeState() const {
                           : EMcpAutomationBridgeState::Disconnected;
 }
 
+/**
+ * @brief Forward a raw text message to the connection manager for transmission.
+ *
+ * @param Message The raw message string to send.
+ * @return `true` if the connection manager accepted the message for sending, `false` otherwise.
+ */
 bool UMcpAutomationBridgeSubsystem::SendRawMessage(const FString &Message) {
   if (ConnectionManager.IsValid()) {
     return ConnectionManager->SendRawMessage(Message);
@@ -116,6 +153,14 @@ bool UMcpAutomationBridgeSubsystem::SendRawMessage(const FString &Message) {
   return false;
 }
 
+/**
+ * @brief Per-frame tick that processes deferred automation requests when it is safe to do so.
+ *
+ * Invokes processing of any pending automation requests that were previously deferred due to unsafe engine states (saving, garbage collection, or async loading).
+ *
+ * @param DeltaTime Time elapsed since the last tick, in seconds.
+ * @return true to remain registered and continue receiving ticks.
+ */
 bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime) {
   // Check if we have pending requests that were deferred due to unsafe engine
   // states
@@ -130,7 +175,18 @@ bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime) {
 // removed from this translation unit. The function is now implemented in
 // McpAutomationBridge_ProcessRequest.cpp to avoid duplicate definitions and
 // to keep this file focused. See that file for the full request dispatcher
-// and per-action handlers.
+/**
+ * @brief Sends an automation response for a specific request to the given socket.
+ *
+ * If the connection manager is not available this call is a no-op.
+ *
+ * @param TargetSocket WebSocket to which the response will be sent.
+ * @param RequestId Identifier of the automation request being responded to.
+ * @param bSuccess `true` if the request succeeded, `false` otherwise.
+ * @param Message Human-readable message or description associated with the response.
+ * @param Result Optional JSON object containing result data; may be null.
+ * @param ErrorCode Error code string to include when `bSuccess` is `false`.
+ */
 
 void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
@@ -142,6 +198,18 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
   }
 }
 
+/**
+ * @brief Log a failure and send a standardized automation error response.
+ *
+ * Resolves an empty ErrorCode to "AUTOMATION_ERROR", logs a sanitized warning
+ * with the resolved error and message, and sends a failure response for the
+ * specified request.
+ *
+ * @param TargetSocket Optional socket to target the response; may be null to broadcast or use a default.
+ * @param RequestId Identifier of the automation request that failed.
+ * @param Message Human-readable failure message.
+ * @param ErrorCode Error code to include with the response; "AUTOMATION_ERROR" is used if empty.
+ */
 void UMcpAutomationBridgeSubsystem::SendAutomationError(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
     const FString &Message, const FString &ErrorCode) {
@@ -154,6 +222,17 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
                          ResolvedError);
 }
 
+/**
+ * @brief Records telemetry for an automation request with outcome details.
+ *
+ * Forwards the request identifier, success flag, human-readable message, and
+ * error code to the connection manager for telemetry/logging.
+ *
+ * @param RequestId Unique identifier of the automation request.
+ * @param bSuccess `true` if the request completed successfully, `false` otherwise.
+ * @param Message Human-readable message describing the outcome or context.
+ * @param ErrorCode Short error identifier (empty if none).
+ */
 void UMcpAutomationBridgeSubsystem::RecordAutomationTelemetry(
     const FString &RequestId, const bool bSuccess, const FString &Message,
     const FString &ErrorCode) {
@@ -163,6 +242,15 @@ void UMcpAutomationBridgeSubsystem::RecordAutomationTelemetry(
   }
 }
 
+/**
+ * @brief Registers an automation action handler for the given action string.
+ *
+ * If a non-empty handler is provided, stores it under Action (replacing any existing handler for the same key).
+ * If Handler is null/invalid, the call is a no-op.
+ *
+ * @param Action The action identifier string used to look up the handler.
+ * @param Handler Callable invoked when the specified action is requested.
+ */
 void UMcpAutomationBridgeSubsystem::RegisterHandler(
     const FString &Action, FAutomationHandler Handler) {
   if (Handler) {
@@ -170,6 +258,18 @@ void UMcpAutomationBridgeSubsystem::RegisterHandler(
   }
 }
 
+/**
+ * @brief Registers all automation action handlers used by the MCP Automation Bridge.
+ *
+ * Populates the subsystem's handler registry with mappings from action name strings
+ * (for example: core/property actions, array/map/set container ops, asset dependency queries,
+ * console/system and editor tooling actions, blueprint/world/asset management, rendering/materials,
+ * input/control, audio/lighting/physics/effects, and performance actions) to the functions that
+ * handle those actions so incoming automation requests can be dispatched by action name.
+ *
+ * This also registers a few common alias actions (e.g., "create_effect", "clear_debug_shapes")
+ * so those actions dispatch directly to the intended handler.
+ */
 void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
   // Core & Properties
   RegisterHandler(TEXT("execute_editor_function"),
@@ -448,7 +548,13 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
 // Drain and process any automation requests that were enqueued while the
 // subsystem was busy. This implementation lives in the primary subsystem
 // translation unit to ensure the symbol is available at link time for
-// any callsites that reference it (including scope-exit lambdas).
+/**
+ * @brief Processes all queued automation requests on the game thread.
+ *
+ * Ensures execution on the game thread (re-dispatches if called from another thread),
+ * moves the shared pending-request queue into a local list under a lock, clears the shared queue
+ * and the scheduled flag, then dispatches each request to ProcessAutomationRequest.
+ */
 void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests() {
   if (!IsInGameThread()) {
     AsyncTask(ENamedThreads::GameThread,

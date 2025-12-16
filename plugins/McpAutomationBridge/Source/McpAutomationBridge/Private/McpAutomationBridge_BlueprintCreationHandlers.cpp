@@ -63,6 +63,17 @@
 
 #endif // WITH_EDITOR
 
+/**
+ * @brief Probes subobject handles for a temporary blueprint and returns gathered handles to the requester.
+ *
+ * Creates a temporary probe Blueprint, attempts to gather subobject handles via the SubobjectDataSubsystem when available, and falls back to enumerating SimpleConstructionScript nodes when the subsystem is not available. In non-editor builds, sends a NOT_IMPLEMENTED response.
+ *
+ * @param Self Pointer to the MCP Automation Bridge subsystem handling the request.
+ * @param RequestId Identifier for the incoming request; used when sending the response.
+ * @param LocalPayload JSON payload for the probe request (may include "componentClass").
+ * @param RequestingSocket WebSocket of the requesting client; may be null for non-socket invocations.
+ * @return true if the request was handled (a response was sent). 
+ */
 bool FBlueprintCreationHandlers::HandleBlueprintProbeSubobjectHandle(
     UMcpAutomationBridgeSubsystem *Self, const FString &RequestId,
     const TSharedPtr<FJsonObject> &LocalPayload,
@@ -217,6 +228,17 @@ bool FBlueprintCreationHandlers::HandleBlueprintProbeSubobjectHandle(
 #endif // WITH_EDITOR
 }
 
+/**
+ * @brief Applies JSON-defined property values to a UObject, recursively handling nested object properties.
+ *
+ * For each entry in Properties, this function looks up a property on TargetObj by name and sets it:
+ * - If the property is an object property and the JSON value is an object, the function recurses into that child object.
+ * - Otherwise JSON primitives (string, number, boolean) are converted to text and applied using ImportText_Direct.
+ * Unknown property names are silently ignored and no errors are thrown.
+ *
+ * @param TargetObj The UObject to modify. No action is performed if null.
+ * @param Properties JSON object mapping property names to values; nested JSON objects map to subobjects/components.
+ */
 static void ApplyPropertiesToObject(UObject *TargetObj,
                                     const TSharedPtr<FJsonObject> &Properties) {
   if (!TargetObj || !Properties.IsValid()) {
@@ -270,6 +292,28 @@ static void ApplyPropertiesToObject(UObject *TargetObj,
   }
 }
 
+/**
+ * @brief Create a new Blueprint asset from the provided payload and send a completion response to the requester (coalesces concurrent requests for the same path).
+ *
+ * Expected payload fields:
+ * - "name" (string, required): asset name.
+ * - "savePath" (string, optional, default "/Game"): destination folder.
+ * - "parentClass" (string, optional): class path or name used as the Blueprint parent.
+ * - "blueprintType" (string, optional): hint like "actor", "pawn", or "character" used when parent class is not resolved.
+ * - "properties" (object, optional): JSON object of CDO properties to apply to the generated class default object.
+ * - "waitForCompletion" (bool, optional): whether the caller intends to wait for completion (affects coalescing behavior).
+ *
+ * Behavior notes:
+ * - Multiple concurrent requests that target the same SavePath/Name are coalesced so all waiters receive the same completion result.
+ * - In editor builds, attempts to create the Blueprint (or returns an existing asset if present), applies optional CDO properties, registers the asset with the Asset Registry, and attempts to ensure asset availability (save/scan).
+ * - In non-editor builds, responds with NOT_IMPLEMENTED indicating blueprint creation requires an editor build.
+ *
+ * @param Self Subsystem instance used to send responses and perform subsystem operations.
+ * @param RequestId Identifier for the request; included in the completion response.
+ * @param LocalPayload JSON payload describing the blueprint to create (see Expected payload fields above).
+ * @param RequestingSocket Optional socket to which the immediate response should be sent; coalesced waiters will also be notified.
+ * @return true if the request was handled and a response was sent to the requester (or coalesced waiters). 
+ */
 bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     UMcpAutomationBridgeSubsystem *Self, const FString &RequestId,
     const TSharedPtr<FJsonObject> &LocalPayload,

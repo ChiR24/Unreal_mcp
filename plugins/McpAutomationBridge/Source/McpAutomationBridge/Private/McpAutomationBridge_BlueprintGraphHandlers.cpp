@@ -40,15 +40,19 @@
 #endif
 
 /**
- * Handles automation requests for Blueprint graph editing (node creation,
- * connection, etc.).
+ * Process a "manage_blueprint_graph" automation request to inspect or modify a Blueprint graph.
  *
- * @param RequestId Unique request identifier.
- * @param Action Action name (must be 'manage_blueprint_graph').
- * @param Payload JSON payload containing 'blueprintPath', 'graphName',
- * 'subAction', etc.
- * @param RequestingSocket WebSocket connection.
- * @return True if handled.
+ * The Payload JSON controls the specific operation via the "subAction" field (examples: create_node,
+ * connect_pins, get_nodes, break_pin_links, delete_node, create_reroute_node, set_node_property,
+ * get_node_details, get_graph_details, get_pin_details). In editor builds this function performs
+ * graph/blueprint lookups and edits; in non-editor builds it reports an editor-only error.
+ *
+ * @param RequestId Unique identifier for the automation request (used in responses).
+ * @param Action The requested action name; this handler only processes "manage_blueprint_graph".
+ * @param Payload JSON object containing action options such as "assetPath"/"blueprintPath", "graphName",
+ *        "subAction" and subaction-specific fields (nodeType, nodeId, pin names, positions, etc.).
+ * @param RequestingSocket WebSocket used to send responses and errors back to the requester.
+ * @return `true` if the request was handled by this function (Action == "manage_blueprint_graph"), `false` otherwise.
  */
 bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     const FString &RequestId, const FString &Action,
