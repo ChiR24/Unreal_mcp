@@ -114,7 +114,7 @@ jobs:
             });
             
             const botComment = comments.find(c => 
-              c.user.type === 'Bot' && 
+              c.user && c.user.login && c.user.login.includes('[bot]') && 
               c.body.includes('This pull request is quite large')
             );
             
