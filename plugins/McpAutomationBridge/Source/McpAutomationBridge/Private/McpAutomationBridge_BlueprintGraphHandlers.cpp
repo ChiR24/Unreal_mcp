@@ -950,8 +950,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     NodeCreator.Finalize();
 
-    RerouteNode->AllocateDefaultPins();
-
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
