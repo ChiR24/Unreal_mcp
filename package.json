@@ -74,7 +74,7 @@
   "dependencies": {
     "@graphql-tools/schema": "^10.0.30",
     "@graphql-tools/utils": "^10.11.0",
-    "@modelcontextprotocol/sdk": "^1.24.3",
+    "@modelcontextprotocol/sdk": "^1.25.0",
     "ajv": "^8.17.1",
     "axios": "^1.13.2",
     "dotenv": "^17.2.3",
@@ -83,15 +83,15 @@
     "json5": "^2.2.3",
     "ws": "^8.18.3",
     "yargs": "^18.0.0",
-    "zod": "^4.1.13"
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@types/json5": "^2.2.0",
-    "@types/node": "^24.10.2",
+    "@types/node": "^25.0.2",
     "@types/ws": "^8.18.1",
-    "@typescript-eslint/eslint-plugin": "^8.49.0",
+    "@typescript-eslint/eslint-plugin": "^8.50.0",
     "@typescript-eslint/parser": "^8.49.0",
-    "eslint": "^9.39.1",
+    "eslint": "^9.39.2",
     "rimraf": "^6.1.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
