@@ -52,7 +52,7 @@
     "test:wasm": "node tests/test-wasm.mjs",
     "build:wasm": "echo 'Building WebAssembly module...' && cd wasm && wasm-pack build --target web --out-dir ../src/wasm/pkg && cd .. && node scripts/patch-wasm.js",
     "test:wasm:all": "npm run build:core && npm run build:wasm && node tests/test-wasm.mjs",
-    "test:smoke": "ts-node scripts/smoke-test.ts",
+    "test:smoke": "node --loader ts-node/esm scripts/smoke-test.ts",
     "type-check": "tsc --noEmit",
     "prebuild": "npm run lint && npm run clean"
   },
