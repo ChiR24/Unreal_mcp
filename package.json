@@ -1,6 +1,6 @@
 {
   "name": "unreal-engine-mcp-server",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "mcpName": "io.github.ChiR24/unreal-engine-mcp",
   "description": "A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via native automation bridge. Built with TypeScript and designed for game development automation.",
   "type": "module",
@@ -52,6 +52,7 @@
     "test:wasm": "node tests/test-wasm.mjs",
     "build:wasm": "echo 'Building WebAssembly module...' && cd wasm && wasm-pack build --target web --out-dir ../src/wasm/pkg && cd .. && node scripts/patch-wasm.js",
     "test:wasm:all": "npm run build:core && npm run build:wasm && node tests/test-wasm.mjs",
+    "test:smoke": "ts-node scripts/smoke-test.ts",
     "type-check": "tsc --noEmit",
     "prebuild": "npm run lint && npm run clean"
   },

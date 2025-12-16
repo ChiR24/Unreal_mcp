@@ -85,6 +85,12 @@ export class UnrealBridge {
   private connectPromise?: Promise<void>;
 
   async tryConnect(maxAttempts: number = 3, timeoutMs: number = 15000, retryDelayMs: number = 3000): Promise<boolean> {
+    if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
+      this.log.info('🔌 MOCK MODE: Simulating active connection');
+      this.connected = true;
+      return true;
+    }
+
     if (this.connected && this.automationBridge?.isConnected()) {
       return true;
     }
@@ -239,6 +245,19 @@ export class UnrealBridge {
     }
 
     const bridge = this.automationBridge;
+
+    if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
+      return {
+        success: true,
+        objectPath,
+        propertyName,
+        value: 'MockValue',
+        propertyValue: 'MockValue',
+        transport: 'mock_bridge',
+        message: 'Mock property read successful'
+      };
+    }
+
     if (!bridge || typeof bridge.sendAutomationRequest !== 'function') {
       return {
         success: false,
@@ -332,6 +351,17 @@ export class UnrealBridge {
     }
 
     const bridge = this.automationBridge;
+
+    if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
+      return {
+        success: true,
+        objectPath,
+        propertyName,
+        message: 'Mock property set successful',
+        transport: 'mock_bridge'
+      };
+    }
+
     if (!bridge || typeof bridge.sendAutomationRequest !== 'function') {
       return {
         success: false,
@@ -430,6 +460,11 @@ export class UnrealBridge {
     const priority = CommandValidator.getPriority(cmdTrimmed);
 
     const executeCommand = async (): Promise<any> => {
+      if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
+        this.log.info(`[MOCK] Executing console command: ${cmdTrimmed}`);
+        return { success: true, message: `Mock execution of '${cmdTrimmed}' successful`, transport: 'mock_bridge' };
+      }
+
       if (!this.automationBridge || !this.automationBridge.isConnected()) {
         throw new Error('Automation bridge not connected');
       }
@@ -494,6 +529,10 @@ export class UnrealBridge {
     params?: Record<string, any>,
     _options?: { timeoutMs?: number }
   ): Promise<any> {
+    if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
+      return { success: true, result: { status: 'mock_success', function: functionName } };
+    }
+
     if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
       return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE' };
     }
@@ -508,6 +547,10 @@ export class UnrealBridge {
 
   /** Get Unreal Engine version */
   async getEngineVersion(): Promise<{ version: string; major: number; minor: number; patch: number; isUE56OrAbove: boolean; }> {
+    if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
+      return { version: '5.6.0-Mock', major: 5, minor: 6, patch: 0, isUE56OrAbove: true };
+    }
+
     const bridge = this.getAutomationBridge();
     try {
       const resp: any = await bridge.sendAutomationRequest(
@@ -541,6 +584,16 @@ export class UnrealBridge {
 
   /** Query feature flags */
   async getFeatureFlags(): Promise<{ subsystems: { unrealEditor: boolean; levelEditor: boolean; editorActor: boolean; } }> {
+    if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
+      return {
+        subsystems: {
+          unrealEditor: true,
+          levelEditor: true,
+          editorActor: true
+        }
+      };
+    }
+
     const bridge = this.getAutomationBridge();
     try {
       const resp: any = await bridge.sendAutomationRequest(

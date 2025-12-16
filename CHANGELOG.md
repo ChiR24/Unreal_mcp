@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## 🚧 [Unreleased]
+## 🏷️ [0.5.0] - 2025-12-16
 
 > [!IMPORTANT]
 > ### 🔄 Major Architecture Migration
@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > - ⚡ Better performance
 > - 🔗 Tighter editor integration  
 > - 🚫 No dependency on Unreal's Remote API
+>
+> **BREAKING CHANGE:** Response format has been standardized across all automation tools. Clients should expect responses to follow the new `StandardActionResponse` format with `success`, `data`, `warnings`, and `error` fields.
 
 ### 🏗️ Architecture
 
@@ -24,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 🔌 **Direct Editor Integration** | Commands execute directly in the editor context via automation bridge subsystem |
 | 🌐 **WebSocket Communication** | Implemented `McpBridgeWebSocket` for real-time bidirectional communication |
 | 🎯 **Bridge-First Architecture** | All operations route through the native C++ bridge (`fe65968`) |
+| 📐 **Standardized Responses** | All tools now return `StandardActionResponse` format (`0a8999b`) |
 
 ### ✨ Added
 
@@ -55,17 +58,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>🛠️ New Handlers & Tools</b></summary>
+<summary><b>🎛️ New Tool Systems (0a8999b, 0ac82ac)</b></summary>
+
+| Tool | Description |
+|------|-------------|
+| 🎮 **Input Management** | New `manage_input` tool with EnhancedInput support for Input Actions and Mapping Contexts |
+| 💡 **Lighting Manager** | Full lighting configuration via `manage_lighting` including spawn, GI setup, shadow config, build lighting |
+| 📊 **Performance Manager** | `manage_performance` with profiling (CPU/GPU/Memory), optimization, scalability, Nanite/Lumen config |
+| 🌳 **Behavior Tree Editing** | Full behavior tree creation and node editing via `manage_behavior_tree` |
+| 🎬 **Enhanced Sequencer** | Track operations (add/remove tracks, set muted/solo/locked), display rate, tick resolution |
+| 🌍 **World Partition** | Cell management, data layer toggling via `manage_level` |
+| 🖼️ **Widget Management** | UI widget creation, visibility controls, child widget adding |
+
+</details>
+
+<details>
+<summary><b>📊 Graph Editing Capabilities (0a8999b)</b></summary>
+
+- **Blueprint Graph** - Direct node manipulation with `manage_blueprint_graph` (create_node, delete_node, connect_pins, etc.)
+- **Material Graph** - Node operations via `manage_asset` (add_material_node, connect_material_pins, etc.)
+- **Niagara Graph** - Module and parameter editing (add_niagara_module, set_niagara_parameter, etc.)
+
+</details>
+
+<details>
+<summary><b>🛠️ New Handlers & Actions</b></summary>
 
 - Blueprint graph management and Niagara functionalities (`aff4d55`)
 - Physics simulation setup in AnimationTools (`83a6f5d`)
 - **New Asset Actions:**
-  - `generate_lods`
-  - `add_material_parameter`
-  - `list_instances`
-  - `reset_instance_parameters`
-  - `get_material_stats`
+  - `generate_lods`, `add_material_parameter`, `list_instances`
+  - `reset_instance_parameters`, `get_material_stats`, `exists`
+  - `nanite_rebuild_mesh`
 - World partition and rendering tool handlers (`83a6f5d`)
+- Screenshot with base64 image encoding (`bb4f6a8`)
 
 </details>
 
@@ -75,8 +101,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **50+ new test cases** covering:
 - Animation, Assets, Materials
 - Sequences, World Partition
-- Blueprints, Niagara
-- And more! (`31c6db9`, `85817c9`, `fc47839`)
+- Blueprints, Niagara, Behavior Trees
+- Audio, Input Actions
+- And more! (`31c6db9`, `85817c9`, `fc47839`, `02fd2af`)
 
 </details>
 
@@ -89,22 +116,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | `UnrealBridge` | Refactored for bridge connection | `7bd48d8` |
 | Automation Dispatch | Editor-native handlers modernization | `c9db1a4` |
 | Test Runner | Timeout expectations & content extraction | `c9766b0` |
+| UI Handlers | Improved readability and organization | `bb4f6a8` |
+| Connection Manager | Streamlined connection handling | `0ac82ac` |
 
 #### Tool Improvements
 - 🚗 **PhysicsTools** - Vehicle config logic updated, deprecated checks removed (`6dba9f7`)
 - 🎬 **AnimationTools** - Logging and response normalization (`7666c31`)
 - ⚠️ **Error Handling** - Utilities refactored, INI file reader added (`f5444e4`)
 - 📐 **Blueprint Actions** - Timeout handling enhancements (`65d2738`)
+- 🎨 **Materials** - Enhanced material graph editing capabilities (`0a8999b`)
+- 🔊 **Audio** - Improved sound component management (`0a8999b`)
 
 #### Other Changes
 - 📡 **Connection & Logging** - Improved error messages for clarity (`41350b3`)
-- 📚 **Documentation** - README updated with UE 5.7, WASM docs, architecture overview (`8d72f28`, `4d77b7e`)
+- 📚 **Documentation** - README updated with UE 5.7, WASM docs, architecture overview, 17 tools (`8d72f28`, `4d77b7e`)
+- 🔄 **Dependencies** - Updated to latest versions (`08eede5`)
+- 📝 **Type Definitions** - Enhanced tool interfaces and type coverage (`0a8999b`)
 
 ### 🐛 Fixed
 
 - `McpAutomationBridgeSubsystem` - Header removal, logging category, heartbeat methods (`498f644`)
 - `McpBridgeWebSocket` - Reliable WebSocket communication (`861ad91`)
 - **AutomationBridge** - Heartbeat handling and server metadata retrieval (`0da54f7`)
+- **UI Handlers** - Missing payload and invalid widget path error handling (`bb4f6a8`)
+- **Screenshot** - Clearer error messages and flow (`bb4f6a8`)
 
 ### 🗑️ Removed
 

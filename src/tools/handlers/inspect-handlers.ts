@@ -156,7 +156,7 @@ export async function handleInspectTools(action: string, args: any, tools: ITool
                 });
               }
             }
-          } catch (e) { /* Ignore RootComponent lookup errors */ }
+          } catch (_e) { /* Ignore RootComponent lookup errors */ }
 
           try {
             // Strategy 2: Iterate all components

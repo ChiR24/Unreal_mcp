@@ -1,0 +1,70 @@
+# Repository Labels
+# Run: gh label create "label-name" --description "desc" --color "hex"
+
+# Area labels (for issue triage)
+- name: "area/plugin"
+  description: "C++ McpAutomationBridge plugin issues"
+  color: "1d76db"
+
+- name: "area/server"
+  description: "Node.js MCP server issues"
+  color: "0e8a16"
+
+- name: "area/tools"
+  description: "Tool implementation issues"
+  color: "5319e7"
+
+- name: "area/testing"
+  description: "Test infrastructure issues"
+  color: "fbca04"
+
+- name: "area/docs"
+  description: "Documentation issues"
+  color: "0075ca"
+
+# Type labels
+- name: "type/bug"
+  description: "Bug reports"
+  color: "d73a4a"
+
+- name: "type/enhancement"
+  description: "Feature requests"
+  color: "a2eeef"
+
+- name: "type/question"
+  description: "Questions or support"
+  color: "d876e3"
+
+# Size labels (for PRs)
+- name: "size/xs"
+  description: "Extra small PR (<10 lines)"
+  color: "3CBF00"
+
+- name: "size/s"
+  description: "Small PR (10-50 lines)"
+  color: "5D9801"
+
+- name: "size/m"
+  description: "Medium PR (51-200 lines)"
+  color: "7F7203"
+
+- name: "size/l"
+  description: "Large PR (201-1000 lines)"
+  color: "A14C05"
+
+- name: "size/xl"
+  description: "Extra large PR (1000+ lines)"
+  color: "C32607"
+
+# Status labels
+- name: "needs-triage"
+  description: "Needs triage by maintainers"
+  color: "ededed"
+
+- name: "stale"
+  description: "Inactive issue/PR"
+  color: "fef2c0"
+
+- name: "pinned"
+  description: "Exempt from stale bot"
+  color: "006b75"

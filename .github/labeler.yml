@@ -1,0 +1,24 @@
+area/plugin:
+  - changed-files:
+    - any-glob-to-any-file: 'Plugins/**/*'
+
+area/server:
+  - changed-files:
+    - any-glob-to-any-file: 'src/**/*'
+    - any-glob-to-any-file: 'package.json'
+    - any-glob-to-any-file: 'tsconfig.json'
+
+area/docs:
+  - changed-files:
+    - any-glob-to-any-file: '**/*.md'
+    - any-glob-to-any-file: 'docs/**/*'
+
+area/tools:
+  - changed-files:
+    - any-glob-to-any-file: '.github/**/*'
+    - any-glob-to-any-file: 'scripts/**/*'
+
+area/testing:
+  - changed-files:
+    - any-glob-to-any-file: 'tests/**/*'
+    - any-glob-to-any-file: 'test/**/*'

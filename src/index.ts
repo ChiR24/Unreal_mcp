@@ -148,13 +148,13 @@ export function createServer() {
   return { server, bridge, automationBridge };
 }
 
-// Export configuration schema for Smithery session UI and validation
+// Export configuration schema for session UI and runtime validation
 export const configSchema = z.object({
   logLevel: z.enum(['debug', 'info', 'warn', 'error']).optional().default('info').describe('Runtime log level'),
   projectPath: z.string().optional().default('C:/Users/YourName/Documents/Unreal Projects/YourProject').describe('Absolute path to your Unreal .uproject file')
 });
 
-// Default export expected by Smithery TypeScript runtime.
+// Default export for runtime configuration support.
 export default function createServerDefault({ config }: { config?: any } = {}) {
   try {
     if (config) {
