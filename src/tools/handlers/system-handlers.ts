@@ -533,6 +533,8 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         action: 'set_fullscreen'
       };
     }
+    case 'read_log':
+      return cleanObject(await tools.logTools.readOutputLog(args));
     default:
       const res = await executeAutomationRequest(tools, 'system_control', args, 'Automation bridge not available for system control operations');
       return cleanObject(res);

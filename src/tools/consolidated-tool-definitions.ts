@@ -1,4 +1,4 @@
-﻿import { commonSchemas } from './tool-definition-utils.js';
+import { commonSchemas } from './tool-definition-utils.js';
 // Force rebuild timestamp update
 
 export const consolidatedToolDefinitions = [

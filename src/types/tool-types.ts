@@ -119,6 +119,12 @@ export interface SystemControlResponse extends BaseToolResponse {
   soundPlaying?: boolean;
   widgetPath?: string;
   widgetVisible?: boolean;
+  imagePath?: string;
+  imageBase64?: string;
+  pid?: number;
+  logPath?: string;
+  entries?: Array<{ timestamp?: string; category?: string; level?: string; message: string }>;
+  filteredCount?: number;
 }
 
 // Console Command Types
@@ -143,12 +149,12 @@ export interface ToolParameters {
     directory: string;
     recursive?: boolean;
   };
-  
+
   ImportAssetParams: {
     sourcePath: string;
     destinationPath: string;
   };
-  
+
   CreateMaterialParams: {
     name: string;
     path: string;
@@ -160,11 +166,11 @@ export interface ToolParameters {
     location?: Vector3D;
     rotation?: Rotation3D;
   };
-  
+
   DeleteActorParams: {
     actorName: string;
   };
-  
+
   ApplyForceParams: {
     actorName: string;
     force: Vector3D;
@@ -240,7 +246,7 @@ export interface ToolParameters {
     location?: Vector3D;
     rotation?: Rotation3D;
   };
-  
+
   SetViewModeParams: {
     mode: string;
   };
@@ -304,7 +310,7 @@ export type EffectAction =
   | 'cleanup';
 export type BlueprintAction = 'create' | 'add_component';
 export type EnvironmentAction = 'create_landscape' | 'sculpt' | 'add_foliage' | 'paint_foliage';
-export type SystemAction = 'profile' | 'show_fps' | 'set_quality' | 'play_sound' | 'create_widget' | 'show_widget';
+export type SystemAction = 'profile' | 'show_fps' | 'set_quality' | 'play_sound' | 'create_widget' | 'show_widget' | 'screenshot' | 'engine_start' | 'engine_quit' | 'read_log';
 export type VerificationAction = 'foliage_type_exists' | 'foliage_instances_near' | 'landscape_exists' | 'quality_level';
 
 // Consolidated tool parameter types
@@ -542,7 +548,7 @@ export interface ToolResponseMap {
   system_control: SystemControlResponse;
   console_command: ConsoleCommandResponse;
   verify_environment: VerifyEnvironmentResponse;
-  
+
   // Individual tools (subset for brevity)
   list_assets: ManageAssetResponse;
   import_asset: ManageAssetResponse;

@@ -243,6 +243,7 @@ export interface ITools {
     engineTools: any;
     systemTools: any;
     behaviorTreeTools: any;
+    logTools: any;
 
     automationBridge?: AutomationBridge;
     [key: string]: any;

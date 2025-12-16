@@ -154,8 +154,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 🏷️ [0.4.7] - 2025-11-16
 
 ### ✨ Added
+- Output Log reading via `system_control` tool with `read_log` action. filtering by category, level, line count.
+- New `src/tools/logs.ts` implementing robust log tailing.
 - 🆕 Initial `McpAutomationBridge` plugin with foundational implementation (`30e62f9`)
 - 🧪 Comprehensive test suites for various Unreal Engine tools (`31c6db9`)
+
+### 🔄 Changed
+- `system_control` tool schema: Added `read_log` action.
+- Updated tool handlers to route `read_log` to LogTools.
+- Version bumped to 0.4.7.
 
 ### 📚 Documentation
 - Updated README.md with initial bridge documentation (`a24dafd`)
@@ -216,8 +223,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Quality & Maintenance
 
-- Cleaned up deprecated environment variable definitions
-- Updated tool count display from 13 to correct consolidated count
+- ⚡ Reduced resource usage by optimizing tool handlers
+- 🧹 Cleanup of deprecated environment variables
 
 ---
 

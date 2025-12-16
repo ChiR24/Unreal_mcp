@@ -297,7 +297,6 @@ export async function handleConsolidatedToolCall(
         });
       }
     }
-
     const defaultHandler = async () => invokeNamedTool(normalizedName, action, normalizedArgs, tools);
 
     if (dynamicHandler) {
