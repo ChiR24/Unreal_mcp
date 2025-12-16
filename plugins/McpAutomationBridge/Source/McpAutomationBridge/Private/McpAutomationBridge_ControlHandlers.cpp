@@ -27,7 +27,6 @@
 #elif __has_include("LevelEditorSubsystem.h")
 #include "LevelEditorSubsystem.h"
 #define MCP_HAS_LEVELEDITOR_SUBSYSTEM 1
-#define MCP_HAS_LEVELEDITOR_SUBSYSTEM 1
 #endif
 #if __has_include("Subsystems/AssetEditorSubsystem.h")
 #include "Subsystems/AssetEditorSubsystem.h"
