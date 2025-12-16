@@ -87,11 +87,14 @@ namespace {
  * asset using the appropriate factory and places it at the given package path.
  *
  * @param AssetName Name to assign to the new asset.
- * @param PackagePath Package path where the asset will be created (e.g. "/Game/Animations").
+ * @param PackagePath Package path where the asset will be created (e.g.
+ * "/Game/Animations").
  * @param TargetSkeleton Skeleton to bind the created Blend Space to.
- * @param bTwoDimensional If true, creates a 2D UBlendSpace; if false, creates a 1D UBlendSpace1D.
+ * @param bTwoDimensional If true, creates a 2D UBlendSpace; if false, creates a
+ * 1D UBlendSpace1D.
  * @param OutError Receives a human-readable error message on failure.
- * @return UObject* Pointer to the created blend space asset on success, or `nullptr` on failure.
+ * @return UObject* Pointer to the created blend space asset on success, or
+ * `nullptr` on failure.
  */
 static UObject *CreateBlendSpaceAsset(const FString &AssetName,
                                       const FString &PackagePath,
@@ -144,8 +147,10 @@ static UObject *CreateBlendSpaceAsset(const FString &AssetName,
  * @param BlendSpaceAsset Blend space or blend space base object to configure.
  *                       If null, the function is a no-op.
  * @param Payload JSON object containing axis configuration fields:
- *                - "minX", "maxX", "gridX" for axis 0 (required defaults: 0,1,3)
- *                - "minY", "maxY", "gridY" for axis 1 when bTwoDimensional is true
+ *                - "minX", "maxX", "gridX" for axis 0 (required defaults:
+ * 0,1,3)
+ *                - "minY", "maxY", "gridY" for axis 1 when bTwoDimensional is
+ * true
  * @param bTwoDimensional If true, the second axis is also configured.
  *
  * Notes:
@@ -208,16 +213,20 @@ static void ApplyBlendSpaceConfiguration(UObject *BlendSpaceAsset,
   }
 #endif
 }
-#endif /**
- * @brief Executes a list of editor console commands against the current editor world.
- *
- * Skips empty or whitespace-only commands. If any command fails or the editor/world is
- * unavailable, an explanatory message is written to OutErrorMessage.
- *
- * @param Commands Array of editor command strings to execute.
- * @param OutErrorMessage Populated with an error description when execution fails.
- * @return true if all non-empty commands executed successfully, false otherwise.
- */
+#endif /**                                                                     \
+        * @brief Executes a list of editor console commands against the        \
+        * current editor world.                                                \
+        *                                                                      \
+        * Skips empty or whitespace-only commands. If any command fails or the \
+        * editor/world is unavailable, an explanatory message is written to                             \
+        * OutErrorMessage.                                                     \
+        *                                                                      \
+        * @param Commands Array of editor command strings to execute.          \
+        * @param OutErrorMessage Populated with an error description when      \
+        * execution fails.                                                     \
+        * @return true if all non-empty commands executed successfully, false  \
+        * otherwise.                                                           \
+        */
 
 static bool ExecuteEditorCommandsInternal(const TArray<FString> &Commands,
                                           FString &OutErrorMessage) {
@@ -253,20 +262,29 @@ static bool ExecuteEditorCommandsInternal(const TArray<FString> &Commands,
 #endif // WITH_EDITOR
 
 /**
- * @brief Process an "animation_physics" automation request and send a structured response.
+ * @brief Process an "animation_physics" automation request and send a
+ * structured response.
  *
- * Handles sub-actions encoded in the JSON payload (for example: cleanup, create_animation_bp,
- * create_blend_space, create_state_machine, setup_ik, configure_vehicle, setup_physics_simulation,
- * create_animation_asset, setup_retargeting, play_anim_montage, add_notify, etc.). In editor builds
- * this may create/modify assets, execute editor commands, or perform actor/component operations;
- * in non-editor builds it will return a not-implemented response.
+ * Handles sub-actions encoded in the JSON payload (for example: cleanup,
+ * create_animation_bp, create_blend_space, create_state_machine, setup_ik,
+ * configure_vehicle, setup_physics_simulation, create_animation_asset,
+ * setup_retargeting, play_anim_montage, add_notify, etc.). In editor builds
+ * this may create/modify assets, execute editor commands, or perform
+ * actor/component operations; in non-editor builds it will return a
+ * not-implemented response.
  *
- * @param RequestId Unique identifier for the incoming request; included in the response.
- * @param Action Top-level action string (expected to be "animation_physics" or start with it).
- * @param Payload JSON object containing the sub-action and parameters required to perform it.
- * @param RequestingSocket Optional websocket that will receive the automation response/error.
- * @return true if the request was handled (a response was sent, even on error); false if the
- *         action did not match "animation_physics" and the handler did not process it.
+ * @param RequestId Unique identifier for the incoming request; included in the
+ * response.
+ * @param Action Top-level action string (expected to be "animation_physics" or
+ * start with it).
+ * @param Payload JSON object containing the sub-action and parameters required
+ * to perform it.
+ * @param RequestingSocket Optional websocket that will receive the automation
+ * response/error.
+ * @return true if the request was handled (a response was sent, even on error);
+ * false if the action did not match "animation_physics" and the handler did not
+ * process it.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -1774,14 +1792,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 /**
  * @brief Executes a sequence of editor console/automation commands.
  *
- * Executes the provided list of editor commands in order and reports any failure reason.
+ * Executes the provided list of editor commands in order and reports any
+ * failure reason.
  *
- * @param Commands Array of command strings to execute; empty or whitespace-only commands are ignored.
- * @param OutErrorMessage On failure, populated with a human-readable description of the error.
+ * @param Commands Array of command strings to execute; empty or whitespace-only
+ * commands are ignored.
+ * @param OutErrorMessage On failure, populated with a human-readable
+ * description of the error.
  * @return bool `true` if all commands executed successfully, `false` otherwise.
  *
- * @note This function is only available in editor builds; in non-editor builds it returns `false`
- *       and sets `OutErrorMessage` to indicate the limitation.
+ * @note This function is only available in editor builds; in non-editor builds
+ * it returns `false` and sets `OutErrorMessage` to indicate the limitation.
  */
 bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
     const TArray<FString> &Commands, FString &OutErrorMessage) {
@@ -1799,10 +1820,14 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
  * @brief Creates a Control Rig Blueprint asset bound to the specified skeleton.
  *
  * @param AssetName Desired name for the new asset (base name, no package path).
- * @param PackagePath Destination package path where the asset will be created (e.g., /Game/Folder).
- * @param TargetSkeleton Skeleton to bind the created Control Rig to; may be nullptr to create an unbound blueprint.
- * @param OutError Receives a human-readable error message when creation fails; cleared on entry.
- * @return UBlueprint* Pointer to the created Control Rig blueprint on success, `nullptr` on failure (see `OutError` for details).
+ * @param PackagePath Destination package path where the asset will be created
+ * (e.g., /Game/Folder).
+ * @param TargetSkeleton Skeleton to bind the created Control Rig to; may be
+ * nullptr to create an unbound blueprint.
+ * @param OutError Receives a human-readable error message when creation fails;
+ * cleared on entry.
+ * @return UBlueprint* Pointer to the created Control Rig blueprint on success,
+ * `nullptr` on failure (see `OutError` for details).
  */
 UBlueprint *UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
     const FString &AssetName, const FString &PackagePath,
@@ -1868,17 +1893,24 @@ UBlueprint *UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
 #endif
 
 /**
- * @brief Handles a "create_animation_blueprint" automation request and creates an AnimBlueprint asset.
+ * @brief Handles a "create_animation_blueprint" automation request and creates
+ * an AnimBlueprint asset.
  *
- * Processes the provided JSON payload to create and save an animation blueprint bound to a target skeleton.
- * Expected payload fields: `name` (required), `savePath` (required), and either `skeletonPath` or `meshPath` (one required).
- * On success or on any handled error condition an automation response is sent back to the requesting socket.
+ * Processes the provided JSON payload to create and save an animation blueprint
+ * bound to a target skeleton. Expected payload fields: `name` (required),
+ * `savePath` (required), and either `skeletonPath` or `meshPath` (one
+ * required). On success or on any handled error condition an automation
+ * response is sent back to the requesting socket.
  *
- * @param RequestId Identifier for the incoming automation request (returned in responses).
- * @param Action The action string; this handler responds when Action equals "create_animation_blueprint".
- * @param Payload JSON payload containing creation parameters (see summary for expected fields).
+ * @param RequestId Identifier for the incoming automation request (returned in
+ * responses).
+ * @param Action The action string; this handler responds when Action equals
+ * "create_animation_blueprint".
+ * @param Payload JSON payload containing creation parameters (see summary for
+ * expected fields).
  * @param RequestingSocket Optional socket used to send the automation response.
- * @return bool `true` if the Action was handled (a response was sent, whether success or error), `false` if the Action did not match.
+ * @return bool `true` if the Action was handled (a response was sent, whether
+ * success or error), `false` if the Action did not match.
  */
 bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
     const FString &RequestId, const FString &Action,
@@ -2006,19 +2038,30 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
 }
 
 /**
- * @brief Handles a "play_anim_montage" automation request by locating an actor and playing the specified animation montage in the editor.
+ * @brief Handles a "play_anim_montage" automation request by locating an actor
+ * and playing the specified animation montage in the editor.
  *
- * Processes the payload to resolve an actor by name and a montage asset path, loads the montage, and initiates playback on the actor's skeletal mesh component (using the actor's AnimInstance when available or single-node playback otherwise). Sends a structured automation response reporting success, playback length, and error details when applicable.
+ * Processes the payload to resolve an actor by name and a montage asset path,
+ * loads the montage, and initiates playback on the actor's skeletal mesh
+ * component (using the actor's AnimInstance when available or single-node
+ * playback otherwise). Sends a structured automation response reporting
+ * success, playback length, and error details when applicable.
  *
- * @param RequestId Unique identifier for the incoming automation request; included in responses.
- * @param Action The action string provided by the request; this handler responds when the action equals "play_anim_montage".
+ * @param RequestId Unique identifier for the incoming automation request;
+ * included in responses.
+ * @param Action The action string provided by the request; this handler
+ * responds when the action equals "play_anim_montage".
  * @param Payload JSON payload containing fields:
- *   - "actorName" (string, required): name or label of the target actor in the editor.
- *   - "montagePath" or "assetPath" (string, required): asset path to the UAnimMontage.
+ *   - "actorName" (string, required): name or label of the target actor in the
+ * editor.
+ *   - "montagePath" or "assetPath" (string, required): asset path to the
+ * UAnimMontage.
  *   - "playRate" (number, optional): playback speed (default 1.0).
- * @param RequestingSocket Optional websocket that originated the request; used to send the response.
+ * @param RequestingSocket Optional websocket that originated the request; used
+ * to send the response.
  *
- * @return true if the request was handled (a response was sent), false if the handler did not claim the action.
+ * @return true if the request was handled (a response was sent), false if the
+ * handler did not claim the action.
  */
 bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     const FString &RequestId, const FString &Action,
@@ -2190,19 +2233,24 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
 }
 
 /**
- * @brief Enables ragdoll physics on a named actor's skeletal mesh in the editor.
+ * @brief Enables ragdoll physics on a named actor's skeletal mesh in the
+ * editor.
  *
- * Applies physics simulation and collision to the actor's SkeletalMeshComponent,
- * optionally respects a provided blend weight and verifies an optional skeleton asset.
+ * Applies physics simulation and collision to the actor's
+ * SkeletalMeshComponent, optionally respects a provided blend weight and
+ * verifies an optional skeleton asset.
  *
  * @param RequestId The automation request identifier returned to the caller.
  * @param Action The original action string (expected "setup_ragdoll").
  * @param Payload JSON payload; must contain "actorName" and may include:
- *                - "blendWeight" (number): blend factor for animation/physics update.
- *                - "skeletonPath" (string): optional path to a skeleton asset to validate.
- * @param RequestingSocket The websocket that initiated the request (may be null).
- * @return true if this handler processed the action (either completed or sent an error response);
- *         false if the action did not match "setup_ragdoll".
+ *                - "blendWeight" (number): blend factor for animation/physics
+ * update.
+ *                - "skeletonPath" (string): optional path to a skeleton asset
+ * to validate.
+ * @param RequestingSocket The websocket that initiated the request (may be
+ * null).
+ * @return true if this handler processed the action (either completed or sent
+ * an error response); false if the action did not match "setup_ragdoll".
  */
 bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
     const FString &RequestId, const FString &Action,
