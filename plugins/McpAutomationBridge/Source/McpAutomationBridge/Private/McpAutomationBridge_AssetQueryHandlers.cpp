@@ -11,6 +11,19 @@
 #include "SourceControlOperations.h"
 #endif
 
+/**
+ * @brief Handles "asset_query" actions from a websocket request and sends a JSON response or error back.
+ *
+ * Processes subActions such as "get_dependencies", "find_by_tag", "search_assets", and (editor-only)
+ * "get_source_control_state", and sends the corresponding success or error response over the provided websocket.
+ *
+ * @param RequestId Identifier for the incoming request; echoed in responses.
+ * @param Action Top-level action name (function only handles when this equals "asset_query").
+ * @param Payload JSON payload containing the subAction and its parameters.
+ * @param RequestingSocket Websocket to which the response or error will be sent.
+ * @return true if the function handled the request (either processed a subAction or sent an error response),
+ *         false if the Action did not match "asset_query" and the request was not handled.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,

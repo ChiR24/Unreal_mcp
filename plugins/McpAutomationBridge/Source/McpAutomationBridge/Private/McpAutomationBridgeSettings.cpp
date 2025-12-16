@@ -2,6 +2,12 @@
 
 #include "Internationalization/Text.h"
 
+/**
+ * @brief Initializes MCP Automation Bridge settings with practical defaults for editor use.
+ *
+ * Sets sensible out-of-the-box values for connectivity, listening behavior, runtime timing, and logging
+ * so the plugin runs in server/listen mode by default and presents a usable configuration in Project Settings.
+ */
 UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
 {
     // Provide practical defaults so the Project Settings UI shows a usable out-of-the-box configuration.
@@ -29,6 +35,11 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     bEnableSocketTelemetry = false;
 }
 
+/**
+ * @brief Returns the localized text used as the settings section header for the MCP Automation Bridge.
+ *
+ * @return FText The localized label "MCP Automation Bridge" for display in the settings UI.
+ */
 FText UMcpAutomationBridgeSettings::GetSectionText() const
 {
     return NSLOCTEXT("McpAutomationBridge", "SettingsSection", "MCP Automation Bridge");
