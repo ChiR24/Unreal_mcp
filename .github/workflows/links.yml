@@ -36,7 +36,6 @@ jobs:
           args: >-
             --verbose
             --no-progress
-            --exclude-mail
             --exclude '^https://github.com/.*/issues/new'
             --exclude '^https://github.com/.*/compare/'
             --exclude 'localhost'
