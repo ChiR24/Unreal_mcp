@@ -8,7 +8,9 @@
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
 #include "EdGraph/EdGraphSchema.h"
+#include "EdGraphNode_Comment.h"
 #include "Engine/Blueprint.h"
+#include "K2Node_BreakStruct.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_CommutativeAssociativeBinaryOperator.h"
 #include "K2Node_CustomEvent.h"
@@ -21,7 +23,12 @@
 #include "K2Node_InputAxisEvent.h"
 #include "K2Node_Knot.h"
 #include "K2Node_Literal.h"
+#include "K2Node_MakeArray.h"
+#include "K2Node_MakeStruct.h"
 #include "K2Node_PromotableOperator.h"
+#include "K2Node_Select.h"
+#include "K2Node_Self.h"
+#include "K2Node_Timeline.h"
 #include "K2Node_VariableGet.h"
 #include "K2Node_VariableSet.h"
 #include "Kismet/GameplayStatics.h"
@@ -346,7 +353,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
       FinalizeAndReport(NodeCreator, InputNode);
     } else if (NodeType == TEXT("CallFunction") ||
-               NodeType == TEXT("K2Node_CallFunction")) {
+               NodeType == TEXT("K2Node_CallFunction") ||
+               NodeType == TEXT("FunctionCall")) {
       FString MemberName;
       Payload->TryGetStringField(TEXT("memberName"), MemberName);
       FString MemberClass;
@@ -656,6 +664,89 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
             TEXT("UNSUPPORTED_LITERAL_TYPE"));
         return true;
       }
+    } else if (NodeType == TEXT("Comment")) {
+      FGraphNodeCreator<UEdGraphNode_Comment> NodeCreator(*TargetGraph);
+      UEdGraphNode_Comment *CommentNode = NodeCreator.CreateNode(false);
+
+      FString CommentText;
+      if (Payload->TryGetStringField(TEXT("comment"), CommentText) &&
+          !CommentText.IsEmpty()) {
+        CommentNode->NodeComment = CommentText;
+      } else {
+        CommentNode->NodeComment = TEXT("Comment");
+      }
+
+      CommentNode->NodeWidth = 400;
+      CommentNode->NodeHeight = 100;
+
+      FinalizeAndReport(NodeCreator, CommentNode);
+    } else if (NodeType == TEXT("MakeArray")) {
+      FGraphNodeCreator<UK2Node_MakeArray> NodeCreator(*TargetGraph);
+      UK2Node_MakeArray *MakeArrayNode = NodeCreator.CreateNode(false);
+      FinalizeAndReport(NodeCreator, MakeArrayNode);
+    } else if (NodeType == TEXT("Return")) {
+      FGraphNodeCreator<UK2Node_FunctionResult> NodeCreator(*TargetGraph);
+      UK2Node_FunctionResult *ReturnNode = NodeCreator.CreateNode(false);
+      FinalizeAndReport(NodeCreator, ReturnNode);
+    } else if (NodeType == TEXT("Self")) {
+      FGraphNodeCreator<UK2Node_Self> NodeCreator(*TargetGraph);
+      UK2Node_Self *SelfNode = NodeCreator.CreateNode(false);
+      FinalizeAndReport(NodeCreator, SelfNode);
+    } else if (NodeType == TEXT("Select")) {
+      FGraphNodeCreator<UK2Node_Select> NodeCreator(*TargetGraph);
+      UK2Node_Select *SelectNode = NodeCreator.CreateNode(false);
+      FinalizeAndReport(NodeCreator, SelectNode);
+    } else if (NodeType == TEXT("Timeline")) {
+      FGraphNodeCreator<UK2Node_Timeline> NodeCreator(*TargetGraph);
+      UK2Node_Timeline *TimelineNode = NodeCreator.CreateNode(false);
+
+      FString TimelineName;
+      if (Payload->TryGetStringField(TEXT("timelineName"), TimelineName) &&
+          !TimelineName.IsEmpty()) {
+        TimelineNode->TimelineName = FName(*TimelineName);
+      }
+
+      FinalizeAndReport(NodeCreator, TimelineNode);
+    } else if (NodeType == TEXT("MakeStruct")) {
+      FString StructName;
+      Payload->TryGetStringField(TEXT("structName"), StructName);
+      if (StructName.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("structName required for MakeStruct"),
+                            TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
+      UScriptStruct *Struct = FindObject<UScriptStruct>(nullptr, *StructName);
+      if (!Struct) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Struct not found"), TEXT("STRUCT_NOT_FOUND"));
+        return true;
+      }
+
+      FGraphNodeCreator<UK2Node_MakeStruct> NodeCreator(*TargetGraph);
+      UK2Node_MakeStruct *MakeStructNode = NodeCreator.CreateNode(false);
+      MakeStructNode->StructType = Struct;
+      FinalizeAndReport(NodeCreator, MakeStructNode);
+    } else if (NodeType == TEXT("BreakStruct")) {
+      FString StructName;
+      Payload->TryGetStringField(TEXT("structName"), StructName);
+      if (StructName.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("structName required for BreakStruct"),
+                            TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
+      UScriptStruct *Struct = FindObject<UScriptStruct>(nullptr, *StructName);
+      if (!Struct) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Struct not found"), TEXT("STRUCT_NOT_FOUND"));
+        return true;
+      }
+
+      FGraphNodeCreator<UK2Node_BreakStruct> NodeCreator(*TargetGraph);
+      UK2Node_BreakStruct *BreakStructNode = NodeCreator.CreateNode(false);
+      BreakStructNode->StructType = Struct;
+      FinalizeAndReport(NodeCreator, BreakStructNode);
     } else {
       SendAutomationError(
           RequestingSocket, RequestId,
@@ -909,6 +1000,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
           NumValue = FCString::Atod(*Value);
         }
         TargetNode->NodePosY = static_cast<float>(NumValue);
+        bHandled = true;
+      } else if (PropertyName.Equals(TEXT("bCommentBubbleVisible"),
+                                     ESearchCase::IgnoreCase)) {
+        TargetNode->bCommentBubbleVisible = Value.ToBool();
+        bHandled = true;
+      } else if (PropertyName.Equals(TEXT("bCommentBubblePinned"),
+                                     ESearchCase::IgnoreCase)) {
+        TargetNode->bCommentBubblePinned = Value.ToBool();
         bHandled = true;
       }
 

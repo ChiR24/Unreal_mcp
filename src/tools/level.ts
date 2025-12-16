@@ -213,25 +213,29 @@ export class LevelTools extends BaseTool implements ILevelTools {
       });
 
       if (response && response.success !== false) {
+        // Also include managed levels for backwards compatibility and immediate visibility
+        const managed = this.listManagedLevels();
+
+        // Merge managed levels into the main list if not already present
+        const ueLevels = (response.allMaps || []) as any[];
+        const managedOnly = managed.levels.filter(m => !ueLevels.some(u => u.path === m.path));
+        const finalLevels = [...ueLevels, ...managedOnly];
+
         const result: Record<string, unknown> = {
           success: true,
           message: 'Levels listed from Unreal Engine',
-          levels: response.allMaps || [], // Validator looks for "levels" key
+          levels: finalLevels,
           currentMap: response.currentMap,
           currentMapPath: response.currentMapPath,
           currentWorldLevels: response.currentWorldLevels || [],
           data: {
-            // Redundant data for Validator's "List" check
-            levels: response.allMaps || [],
-            count: response.allMapsCount || (response.allMaps || []).length
+            levels: finalLevels,
+            count: finalLevels.length
           },
-          ...response
+          ...response,
+          managedLevels: managed.levels,
+          managedLevelCount: managed.count
         };
-
-        // Also include managed levels for backwards compatibility
-        const managed = this.listManagedLevels();
-        result.managedLevels = managed.levels;
-        result.managedLevelCount = managed.count;
 
         return result;
       }
@@ -609,6 +613,14 @@ export class LevelTools extends BaseTool implements ILevelTools {
         result.details = response.details;
       }
 
+      this.ensureRecord(fullPath, {
+        name: params.levelName,
+        partitioned: isPartitioned,
+        loaded: true,
+        visible: true,
+        createdAt: Date.now()
+      });
+
       return result;
     } catch (error) {
       return {
@@ -618,6 +630,84 @@ export class LevelTools extends BaseTool implements ILevelTools {
         partitioned: isPartitioned
       };
     }
+  }
+
+  async addSubLevel(params: {
+    parentLevel?: string;
+    subLevelPath: string;
+    streamingMethod?: 'Blueprint' | 'AlwaysLoaded';
+  }) {
+    const parent = params.parentLevel ? this.resolveLevelPath(params.parentLevel) : this.currentLevelPath;
+    const sub = this.normalizeLevelPath(params.subLevelPath).path;
+
+    // Use console command as primary method for adding sublevels
+    // "WorldComposition" commands or generic "AddLevelToWorld"
+    // Since stream_level handles existing sublevels, we just need to ADD it.
+    // Console command: 'LevelEditor.AddLevel <Path>' works in editor context mostly, but might be tricky.
+    // Falling back to automation request if we have      const sub = this.normalizeLevelPath(params.subLevelPath).path;
+
+    // Ensure path corresponds to what automation expects (Package path usually, but C++ might check file)
+    // If C++ FPackageName::DoesPackageExist expects pure package path (e.g. /Game/Map), we are good.
+    // But if it's recently created, it might need to receive the full path as verified in createLevel.
+
+    // Attempt automation first (cleaner)
+    try {
+      let response = await this.sendAutomationRequest('manage_level', {
+        action: 'add_sublevel',
+        levelPath: sub, // Backwards compat
+        subLevelPath: sub,
+        parentPath: parent,
+        streamingMethod: params.streamingMethod
+      }, { timeoutMs: 30000 });
+
+      // Retry with .umap if package not found (Workaround for C++ strictness)
+      // Also retry if ADD_FAILED, as UEditorLevelUtils might have failed due to path resolution internally
+      if (response && (response.error === 'PACKAGE_NOT_FOUND' || response.error === 'ADD_FAILED') && !sub.endsWith('.umap')) {
+        const subWithExt = sub + '.umap';
+        response = await this.sendAutomationRequest('manage_level', {
+          action: 'add_sublevel',
+          levelPath: subWithExt,
+          subLevelPath: subWithExt,
+          parentPath: parent,
+          streamingMethod: params.streamingMethod
+        }, { timeoutMs: 30000 });
+      }
+
+      if (response.success) {
+        this.ensureRecord(sub, { loaded: true, visible: true, streaming: true });
+        return response;
+      } else if (response.error === 'UNKNOWN_ACTION') {
+        // Fallthrough to console fallback if action not implemented
+      } else {
+        // Return actual error if it's something else (e.g. execution failed)
+        return response;
+      }
+    } catch (_e: any) {
+      // If connection failed, might fallback. But if we got a response, respect it.
+    }
+
+    // Console fallback
+    // Try using LevelEditor.AddLevel command which is available in Editor context
+    const consoleResponse = await this.sendAutomationRequest('console_command', {
+      command: `LevelEditor.AddLevel ${sub}`
+    });
+
+    if (consoleResponse.success) {
+      this.ensureRecord(sub, { loaded: true, visible: true, streaming: true });
+      return {
+        success: true,
+        message: `Sublevel added via console: ${sub}`,
+        data: { method: 'console' }
+      };
+    }
+
+    return {
+      success: false,
+      error: 'Fallbacks failed',
+      // Return the last relevant error + console error
+      message: 'Failed to add sublevel via automation or console.',
+      details: { consoleError: consoleResponse }
+    };
   }
 
   async streamLevel(params: {

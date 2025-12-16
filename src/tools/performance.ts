@@ -226,9 +226,9 @@ export class PerformanceTools {
     }
 
     // Intelligently detect if scale is a percentage (10-200) or multiplier (0.1-2.0)
-    // If scale > 2, assume it's already a percentage value
+    // If scale >= 10, assume it's already a percentage value
     let percentage: number;
-    if (params.scale > 2) {
+    if (params.scale >= 10) {
       // User passed percentage directly (e.g., 100 for 100%)
       percentage = Math.round(params.scale);
     } else {
@@ -401,11 +401,8 @@ export class PerformanceTools {
         const response = await this.automationBridge.sendAutomationRequest('configure_lod', {
           forceLOD: params.forceLOD,
           lodBias: params.lodBias
-          // Note: C++ handler doesn't seem to read distanceScale in the snippet provided earlier.
-          // Snippet: reads lodBias -> r.MipMapLODBias, forceLOD -> r.ForceLOD.
-          // It misses distanceScale. So we might need to fallback or partial apply?
-          // Actually, if we use bridge, we lose distanceScale if C++ doesn't support it.
-          // Let's stick to console for distanceScale or apply it separately.
+          // Note: C++ handler doesn't seem to have explicit 'distanceScale'.
+          // We will stick to console for proper implementation of distanceScale
         });
 
         // If we have distanceScale, we still need to apply it via console as C++ seems to miss it
@@ -481,7 +478,7 @@ export class PerformanceTools {
     mergeActors?: boolean;
     actors?: string[];
   }) {
-    // If merging actors, bridge is required
+    // If merging actors, bridge is required and actors must be provided
     if (params.mergeActors) {
       if (this.automationBridge) {
         try {
@@ -489,21 +486,25 @@ export class PerformanceTools {
             ? params.actors.filter((name): name is string => typeof name === 'string' && name.length > 0)
             : undefined;
 
+          if (!actors || actors.length < 2) {
+            return {
+              success: false,
+              error: 'Merge actors requires an "actors" array with at least 2 valid actor names.'
+            };
+          }
+
           const payload: any = {
             enableInstancing: params.enableInstancing,
             enableBatching: params.enableBatching,
-            mergeActors: params.mergeActors
+            mergeActors: params.mergeActors,
+            actors: actors
           };
-
-          if (actors && actors.length > 0) {
-            payload.actors = actors;
-          }
 
           const response = await this.automationBridge.sendAutomationRequest('merge_actors', payload);
 
           return response.success
             ? { success: true, message: response.message || 'Actors merged for optimization' }
-            : { success: false, error: response.error || response.message || 'Failed to merge actors' };
+            : { success: false, error: response.message || response.error || 'Failed to merge actors' };
         } catch (error) {
           return { success: false, error: `Failed to merge actors: ${error instanceof Error ? error.message : String(error)}` };
         }

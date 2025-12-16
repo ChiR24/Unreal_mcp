@@ -20,6 +20,16 @@ export async function handleEnvironmentTools(action: string, args: any, tools: I
         isSpatiallyLoaded: args.isSpatiallyLoaded,
         dataLayers: args.dataLayers
       }));
+    case 'modify_heightmap':
+      return cleanObject(await tools.landscapeTools.modifyHeightmap({
+        landscapeName: args.landscapeName || args.name,
+        heightData: args.heightData,
+        minX: args.minX,
+        minY: args.minY,
+        maxX: args.maxX,
+        maxY: args.maxY,
+        updateNormals: args.updateNormals
+      }));
     case 'sculpt':
     case 'sculpt_landscape': {
       // Default to 'Raise' tool if not specified
@@ -35,8 +45,10 @@ export async function handleEnvironmentTools(action: string, args: any, tools: I
     case 'add_foliage': {
       // Check if this is adding a foliage TYPE (has meshPath) or INSTANCES (has locations/position)
       if (args.meshPath) {
+        // Derive a better default name from mesh path if not provided
+        const defaultName = args.meshPath.split('/').pop()?.split('.')[0] + '_Foliage_Type';
         return cleanObject(await tools.foliageTools.addFoliageType({
-          name: args.foliageType || args.name || 'TC_Tree',
+          name: args.foliageType || args.name || defaultName,
           meshPath: args.meshPath,
           density: args.density
         }));
@@ -87,6 +99,12 @@ export async function handleEnvironmentTools(action: string, args: any, tools: I
         }));
       }
     }
+
+    case 'add_foliage_instances':
+      return cleanObject(await tools.foliageTools.addFoliageInstances({
+        foliageType: args.foliageType || args.foliageTypePath || args.meshPath,
+        transforms: args.transforms || (args.locations ? args.locations.map((l: any) => ({ location: [l.x, l.y, l.z] })) : [])
+      }));
     case 'paint_foliage':
       return cleanObject(await tools.foliageTools.paintFoliage({
         foliageType: args.foliageType || args.foliageTypePath,
@@ -152,6 +170,9 @@ export async function handleEnvironmentTools(action: string, args: any, tools: I
       const names = Array.isArray(args.names)
         ? args.names
         : (Array.isArray(args.actors) ? args.actors : []);
+      if (args.name) {
+        names.push(args.name);
+      }
       const res = await tools.environmentTools.cleanup({ names });
       return cleanObject(res);
     }

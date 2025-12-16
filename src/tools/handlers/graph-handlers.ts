@@ -32,7 +32,52 @@ async function handleBlueprintGraph(action: string, args: any, tools: ITools) {
         processedArgs.graphName = 'EventGraph';
     }
 
-    // Support Node.Pin format for connect_pins
+    // Fix Issue 1: Map FunctionCall to CallFunction
+    if (processedArgs.nodeType === 'FunctionCall') {
+        processedArgs.nodeType = 'CallFunction';
+    }
+
+    // Fix Issue 2 & 3: Map memberName to specific names based on nodeType
+    if (processedArgs.memberName) {
+        if (processedArgs.nodeType === 'VariableGet' || processedArgs.nodeType === 'VariableSet') {
+            if (!processedArgs.variableName) processedArgs.variableName = processedArgs.memberName;
+        } else if (processedArgs.nodeType === 'Event' || processedArgs.nodeType === 'CustomEvent' || (processedArgs.nodeType && processedArgs.nodeType.startsWith('K2Node_Event'))) {
+            if (!processedArgs.eventName) processedArgs.eventName = processedArgs.memberName;
+            // CustomEvent uses eventName (mapped to CustomFunctionName) or customEventName in some contexts, 
+            // but C++ CustomEvent handler uses 'eventName' payload field.
+        } else if (processedArgs.nodeType === 'CallFunction' || processedArgs.nodeType === 'K2Node_CallFunction') {
+            // C++ uses 'memberName' for CallFunction, so this is fine.
+        }
+    }
+
+    // Fix Issue 5: Map memberClass/componentClass to targetClass for Cast nodes
+    if ((processedArgs.memberClass || processedArgs.componentClass) &&
+        (processedArgs.nodeType === 'Cast' || (processedArgs.nodeType && processedArgs.nodeType.startsWith('CastTo')))) {
+        if (!processedArgs.targetClass) processedArgs.targetClass = processedArgs.memberClass || processedArgs.componentClass;
+    }
+
+    // Fix Issue 6: Support connect_pins parameter mapping
+    // Input: nodeId, pinName, linkedTo (TargetNode.Pin)
+    if (action === 'connect_pins') {
+        // Map source
+        if (!processedArgs.fromNodeId && processedArgs.nodeId) {
+            processedArgs.fromNodeId = processedArgs.nodeId;
+        }
+        if (!processedArgs.fromPinName && processedArgs.pinName) {
+            processedArgs.fromPinName = processedArgs.pinName;
+        }
+
+        // Map target from linkedTo
+        if (!processedArgs.toNodeId && processedArgs.linkedTo) {
+            if (processedArgs.linkedTo.includes('.')) {
+                const parts = processedArgs.linkedTo.split('.');
+                processedArgs.toNodeId = parts[0];
+                processedArgs.toPinName = parts.slice(1).join('.');
+            }
+        }
+    }
+
+    // Support Node.Pin format for connect_pins (existing logic preserved/enhanced)
     if (action === 'connect_pins') {
         if (processedArgs.fromNodeId && processedArgs.fromNodeId.includes('.') && !processedArgs.fromPinName) {
             const parts = processedArgs.fromNodeId.split('.');

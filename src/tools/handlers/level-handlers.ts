@@ -39,6 +39,15 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
       const res = await tools.levelTools.createLevel({ levelName, savePath: args.savePath || args.levelPath });
       return cleanObject(res);
     }
+    case 'add_sublevel': {
+      const subLevelPath = requireNonEmptyString(args.subLevelPath || args.levelPath, 'subLevelPath', 'Missing required parameter: subLevelPath');
+      const res = await tools.levelTools.addSubLevel({
+        subLevelPath,
+        parentLevel: args.parentLevel || args.parentPath,
+        streamingMethod: args.streamingMethod
+      });
+      return cleanObject(res);
+    }
     case 'stream': {
       const levelPath = typeof args.levelPath === 'string' ? args.levelPath : undefined;
       const levelName = typeof args.levelName === 'string' ? args.levelName : undefined;

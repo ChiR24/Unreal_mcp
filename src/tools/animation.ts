@@ -611,34 +611,72 @@ export class AnimationTools {
     | { success: false; message: string; error: string }
   > {
     try {
-      const names = Array.isArray(artifacts)
-        ? artifacts.map((a) => String(a).trim()).filter((a) => a.length > 0)
-        : [];
+      const pathsToDelete: string[] = [];
 
-      const removed: string[] = [];
-      const missing: string[] = [];
-
-      for (const key of names) {
-        if (this.managedArtifacts.delete(key)) {
-          removed.push(key);
-        } else {
-          missing.push(key);
+      if (Array.isArray(artifacts) && artifacts.length > 0) {
+        pathsToDelete.push(...artifacts.map((a) => String(a).trim()).filter((a) => a.length > 0));
+      } else {
+        // If no specific artifacts provided, clear all managed ones
+        for (const [key, val] of this.managedArtifacts.entries()) {
+          if (val.path) pathsToDelete.push(val.path);
+          else pathsToDelete.push(key);
         }
       }
 
-      const anyRemoved = removed.length > 0;
-      const anyMissing = missing.length > 0;
+      if (pathsToDelete.length === 0) {
+        return {
+          success: true,
+          message: 'No artifacts to cleanup.'
+        };
+      }
 
-      const success = anyRemoved || !anyMissing;
-      const message = anyRemoved
-        ? 'Animation artifacts removed from local registry'
-        : 'No matching animation artifacts found in local registry';
+      let bridgeMessage = '';
+      if (this.automationBridge) {
+        try {
+          const response = await this.automationBridge.sendAutomationRequest('animation_physics', {
+            action: 'cleanup',
+            artifacts: pathsToDelete
+          });
+
+          if (!response.success) {
+            bridgeMessage = ` (Engine cleanup failed: ${response.message})`;
+          } else {
+            bridgeMessage = ' (Engine assets deleted)';
+          }
+        } catch (e) {
+          bridgeMessage = ` (Engine connection failed: ${e})`;
+        }
+      } else {
+        bridgeMessage = ' (No automation bridge available)';
+      }
+
+      const removed: string[] = [];
+
+      // Clear local registry
+      const toRemoveKeys: string[] = [];
+      for (const [key, val] of this.managedArtifacts.entries()) {
+        if (pathsToDelete.includes(key) || (val.path && pathsToDelete.includes(val.path))) {
+          toRemoveKeys.push(key);
+        }
+      }
+
+      for (const key of toRemoveKeys) {
+        this.managedArtifacts.delete(key);
+        removed.push(key);
+      }
+
+      // Add any explicit paths that were not in managed artifacts but requested
+      for (const path of pathsToDelete) {
+        if (!removed.includes(path)) {
+          // We don't have it locally, but we tried to delete it from engine
+          removed.push(path);
+        }
+      }
 
       return {
-        success,
-        message,
-        removed: removed.length ? removed : undefined,
-        missing: missing.length ? missing : undefined
+        success: true,
+        message: `Cleanup attempt processed for ${pathsToDelete.length} artifacts${bridgeMessage}`,
+        removed
       };
     } catch (err) {
       const error = String(err);

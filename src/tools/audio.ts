@@ -7,6 +7,15 @@ export class AudioTools {
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
 
+  private validateAudioParams(volume?: number, pitch?: number) {
+    const v = volume ?? 1.0;
+    const p = pitch ?? 1.0;
+    return {
+      volume: Math.max(0.0, Math.min(v, 4.0)), // Clamp volume 0-4 (standard UE range support)
+      pitch: Math.max(0.01, Math.min(p, 4.0))   // Clamp pitch 0.01-4
+    };
+  }
+
   // Create sound cue
   async createSoundCue(params: {
     name: string;
@@ -24,6 +33,7 @@ export class AudioTools {
     }
 
     const path = params.savePath || '/Game/Audio/Cues';
+    const { volume, pitch } = this.validateAudioParams(params.settings?.volume, params.settings?.pitch);
 
     try {
       const response = await this.automationBridge.sendAutomationRequest('create_sound_cue', {
@@ -31,8 +41,8 @@ export class AudioTools {
         packagePath: path,
         wavePath: params.wavePath,
         attenuationPath: params.settings?.attenuationSettings,
-        volume: params.settings?.volume,
-        pitch: params.settings?.pitch,
+        volume,
+        pitch,
         looping: params.settings?.looping
       }, {
         timeoutMs: 60000
@@ -67,13 +77,15 @@ export class AudioTools {
       throw new Error('Automation Bridge not available. Audio operations require plugin support.');
     }
 
+    const { volume, pitch } = this.validateAudioParams(params.volume, params.pitch);
+
     try {
       const response = await this.automationBridge.sendAutomationRequest('play_sound_at_location', {
         soundPath: params.soundPath,
         location: params.location,
         rotation: params.rotation ?? [0, 0, 0],
-        volume: params.volume ?? 1.0,
-        pitch: params.pitch ?? 1.0,
+        volume,
+        pitch,
         startTime: params.startTime ?? 0.0,
         attenuationPath: params.attenuationPath,
         concurrencyPath: params.concurrencyPath

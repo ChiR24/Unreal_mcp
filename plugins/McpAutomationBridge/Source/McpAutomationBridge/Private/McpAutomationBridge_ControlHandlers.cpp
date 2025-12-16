@@ -58,10 +58,12 @@
 #if __has_include("FileHelpers.h")
 #include "FileHelpers.h"
 #endif
+#include "Animation/SkeletalMeshActor.h"
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/EngineTypes.h"
+#include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
@@ -164,6 +166,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   FString MeshPath;
   Payload->TryGetStringField(TEXT("meshPath"), MeshPath);
   UStaticMesh *ResolvedStaticMesh = nullptr;
+  USkeletalMesh *ResolvedSkeletalMesh = nullptr;
 
   // Skip LoadAsset for script classes (e.g. /Script/Engine.CameraActor) to
   // avoid LogEditorAssetSubsystem errors
@@ -176,33 +179,44 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
         ResolvedClass = C;
       else if (UStaticMesh *Mesh = Cast<UStaticMesh>(Loaded))
         ResolvedStaticMesh = Mesh;
+      else if (USkeletalMesh *SkelMesh = Cast<USkeletalMesh>(Loaded))
+        ResolvedSkeletalMesh = SkelMesh;
     }
   }
-  if (!ResolvedClass && !ResolvedStaticMesh)
+  if (!ResolvedClass && !ResolvedStaticMesh && !ResolvedSkeletalMesh)
     ResolvedClass = ResolveClassByName(ClassPath);
 
   // If explicit mesh path provided for a general spawn request
-  if (!ResolvedStaticMesh && !MeshPath.IsEmpty()) {
+  if (!ResolvedStaticMesh && !ResolvedSkeletalMesh && !MeshPath.IsEmpty()) {
     if (UObject *MeshObj = UEditorAssetLibrary::LoadAsset(MeshPath)) {
       ResolvedStaticMesh = Cast<UStaticMesh>(MeshObj);
+      if (!ResolvedStaticMesh)
+        ResolvedSkeletalMesh = Cast<USkeletalMesh>(MeshObj);
     }
   }
 
   // Force StaticMeshActor if we have a resolved mesh, regardless of class input
   // (unless it's a specific subclass)
   bool bSpawnStaticMeshActor = (ResolvedStaticMesh != nullptr);
-  if (!bSpawnStaticMeshActor && ResolvedClass) {
+  bool bSpawnSkeletalMeshActor = (ResolvedSkeletalMesh != nullptr);
+
+  if (!bSpawnStaticMeshActor && !bSpawnSkeletalMeshActor && ResolvedClass) {
     bSpawnStaticMeshActor =
         ResolvedClass->IsChildOf(AStaticMeshActor::StaticClass());
+    if (!bSpawnStaticMeshActor)
+      bSpawnSkeletalMeshActor =
+          ResolvedClass->IsChildOf(ASkeletalMeshActor::StaticClass());
   }
 
   // Explicitly use StaticMeshActor class if we have a mesh but no class, or if
   // we decided to spawn a static mesh actor
   if (bSpawnStaticMeshActor && !ResolvedClass) {
     ResolvedClass = AStaticMeshActor::StaticClass();
+  } else if (bSpawnSkeletalMeshActor && !ResolvedClass) {
+    ResolvedClass = ASkeletalMeshActor::StaticClass();
   }
 
-  if (!ResolvedClass && !bSpawnStaticMeshActor) {
+  if (!ResolvedClass && !bSpawnStaticMeshActor && !bSpawnSkeletalMeshActor) {
     const FString ErrorMsg =
         FString::Printf(TEXT("Class not found: %s. Verify plugin is enabled if "
                              "using a plugin class."),
@@ -226,22 +240,38 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
         ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
     UClass *ClassToSpawn =
-        ResolvedClass ? ResolvedClass
-                      : (bSpawnStaticMeshActor ? AStaticMeshActor::StaticClass()
-                                               : AActor::StaticClass());
+        ResolvedClass
+            ? ResolvedClass
+            : (bSpawnStaticMeshActor ? AStaticMeshActor::StaticClass()
+                                     : (bSpawnSkeletalMeshActor
+                                            ? ASkeletalMeshActor::StaticClass()
+                                            : AActor::StaticClass()));
     Spawned = TargetWorld->SpawnActor(ClassToSpawn, &Location, &Rotation,
                                       SpawnParams);
 
-    if (Spawned && bSpawnStaticMeshActor) {
-      if (AStaticMeshActor *StaticMeshActor = Cast<AStaticMeshActor>(Spawned)) {
-        if (UStaticMeshComponent *MeshComponent =
-                StaticMeshActor->GetStaticMeshComponent()) {
-          if (ResolvedStaticMesh) {
-            MeshComponent->SetStaticMesh(ResolvedStaticMesh);
+    if (Spawned) {
+      if (bSpawnStaticMeshActor) {
+        if (AStaticMeshActor *StaticMeshActor =
+                Cast<AStaticMeshActor>(Spawned)) {
+          if (UStaticMeshComponent *MeshComponent =
+                  StaticMeshActor->GetStaticMeshComponent()) {
+            if (ResolvedStaticMesh) {
+              MeshComponent->SetStaticMesh(ResolvedStaticMesh);
+            }
+            MeshComponent->SetMobility(EComponentMobility::Movable);
+            // PIE actors don't need MarkRenderStateDirty in the same way, but
+            // it doesn't hurt
           }
-          MeshComponent->SetMobility(EComponentMobility::Movable);
-          // PIE actors don't need MarkRenderStateDirty in the same way, but it
-          // doesn't hurt
+        }
+      } else if (bSpawnSkeletalMeshActor) {
+        if (ASkeletalMeshActor *SkelActor = Cast<ASkeletalMeshActor>(Spawned)) {
+          if (USkeletalMeshComponent *SkelComp =
+                  SkelActor->GetSkeletalMeshComponent()) {
+            if (ResolvedSkeletalMesh) {
+              SkelComp->SetSkeletalMesh(ResolvedSkeletalMesh);
+            }
+            SkelComp->SetMobility(EComponentMobility::Movable);
+          }
         }
       }
     }
@@ -263,6 +293,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
             }
             MeshComponent->SetMobility(EComponentMobility::Movable);
             MeshComponent->MarkRenderStateDirty();
+          }
+        }
+      }
+    } else if (bSpawnSkeletalMeshActor) {
+      Spawned = ActorSS->SpawnActorFromClass(
+          ResolvedClass ? ResolvedClass : ASkeletalMeshActor::StaticClass(),
+          Location, Rotation);
+      if (Spawned) {
+        Spawned->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
+                                             ETeleportType::TeleportPhysics);
+        if (ASkeletalMeshActor *SkelActor = Cast<ASkeletalMeshActor>(Spawned)) {
+          if (USkeletalMeshComponent *SkelComp =
+                  SkelActor->GetSkeletalMeshComponent()) {
+            if (ResolvedSkeletalMesh) {
+              SkelComp->SetSkeletalMesh(ResolvedSkeletalMesh);
+            }
+            SkelComp->SetMobility(EComponentMobility::Movable);
+            SkelComp->MarkRenderStateDirty();
           }
         }
       }
@@ -289,6 +337,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     FString BaseName;
     if (ResolvedStaticMesh) {
       BaseName = ResolvedStaticMesh->GetName();
+    } else if (ResolvedSkeletalMesh) {
+      BaseName = ResolvedSkeletalMesh->GetName();
     } else if (ResolvedClass) {
       BaseName = ResolvedClass->GetName();
       if (BaseName.EndsWith(TEXT("_C"))) {
@@ -312,12 +362,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
 
   if (ResolvedStaticMesh)
     Data->SetStringField(TEXT("meshPath"), ResolvedStaticMesh->GetPathName());
+  else if (ResolvedSkeletalMesh)
+    Data->SetStringField(TEXT("meshPath"), ResolvedSkeletalMesh->GetPathName());
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Spawned actor '%s'"), *Spawned->GetActorLabel());
 
   SendAutomationResponse(Socket, RequestId, true, TEXT("Actor spawned"), Data);
   return true;
+
 #else
   return false;
 #endif

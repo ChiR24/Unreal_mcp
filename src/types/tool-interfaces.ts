@@ -38,7 +38,7 @@ export interface IActorTools {
     setBlueprintVariables(params: { actorName: string; variables: Record<string, unknown> }): Promise<StandardActionResponse>;
     createSnapshot(params: { actorName: string; snapshotName: string }): Promise<StandardActionResponse>;
     restoreSnapshot(params: { actorName: string; snapshotName: string }): Promise<StandardActionResponse>;
-    listActors(): Promise<StandardActionResponse>;
+    listActors(params?: { filter?: string }): Promise<StandardActionResponse>;
     getMetadata(actorName: string): Promise<StandardActionResponse>;
     exportActor(params: { actorName: string; destinationPath?: string }): Promise<StandardActionResponse>;
     getBoundingBox(actorName: string): Promise<StandardActionResponse>;
@@ -141,6 +141,7 @@ export interface ILevelTools {
     loadLevel(params: { levelPath: string; streaming?: boolean; position?: [number, number, number] }): Promise<any>;
     saveLevel(params: { levelName?: string; savePath?: string }): Promise<any>;
     createLevel(params: { levelName: string; template?: 'Empty' | 'Default' | 'VR' | 'TimeOfDay'; savePath?: string }): Promise<any>;
+    addSubLevel(params: { parentLevel?: string; subLevelPath: string; streamingMethod?: 'Blueprint' | 'AlwaysLoaded' }): Promise<any>;
     streamLevel(params: { levelPath?: string; levelName?: string; shouldBeLoaded: boolean; shouldBeVisible?: boolean; position?: [number, number, number] }): Promise<any>;
     setupWorldComposition(params: { enableComposition: boolean; tileSize?: number; distanceStreaming?: boolean; streamingDistance?: number }): Promise<any>;
     editLevelBlueprint(params: { eventType: 'BeginPlay' | 'EndPlay' | 'Tick' | 'Custom'; customEventName?: string; nodes?: Array<{ nodeType: string; position: [number, number]; connections?: string[] }> }): Promise<any>;
@@ -193,6 +194,7 @@ export interface ILandscapeTools {
     createProceduralTerrain(params: { name: string; location?: [number, number, number]; subdivisions?: number; heightFunction?: string; material?: string; settings?: Record<string, unknown> }): Promise<any>;
     createLandscapeGrassType(params: { name: string; meshPath: string; density?: number; minScale?: number; maxScale?: number; path?: string; staticMesh?: string }): Promise<any>;
     setLandscapeMaterial(params: { landscapeName: string; materialPath: string }): Promise<any>;
+    modifyHeightmap(params: { landscapeName: string; heightData: number[]; minX: number; minY: number; maxX: number; maxY: number; updateNormals?: boolean }): Promise<any>;
 }
 
 export interface IFoliageTools {

@@ -229,9 +229,12 @@ export class EnvironmentTools {
     }
   }
 
-  async cleanup(params?: { names?: unknown }): Promise<EnvironmentResult> {
+  async cleanup(params?: { names?: unknown; name?: unknown }): Promise<EnvironmentResult> {
     try {
       const rawNames = Array.isArray(params?.names) ? params.names : [];
+      if (typeof params?.name === 'string' && params.name.trim().length > 0) {
+        rawNames.push(params.name);
+      }
       const cleaned = rawNames
         .filter((name): name is string => typeof name === 'string')
         .map((name) => name.trim())

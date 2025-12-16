@@ -62,6 +62,10 @@
 #if __has_include("Tracks/MovieScene3DTransformTrack.h")
 #include "Tracks/MovieScene3DTransformTrack.h"
 #endif
+
+#include "Tracks/MovieSceneAudioTrack.h"
+#include "Tracks/MovieSceneEventTrack.h"
+
 #if __has_include("Sections/MovieScene3DTransformSection.h")
 #include "Sections/MovieScene3DTransformSection.h"
 #endif
@@ -2458,6 +2462,24 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
       }
     }
 #endif
+
+    if (TrackTypeLower == TEXT("audio")) {
+      if (BindingGuid.IsValid()) {
+        NewTrack = MovieScene->AddTrack(UMovieSceneAudioTrack::StaticClass(),
+                                        BindingGuid);
+      } else {
+        NewTrack = MovieScene->AddTrack(UMovieSceneAudioTrack::StaticClass());
+      }
+    }
+
+    if (TrackTypeLower == TEXT("event")) {
+      if (BindingGuid.IsValid()) {
+        NewTrack = MovieScene->AddTrack(UMovieSceneEventTrack::StaticClass(),
+                                        BindingGuid);
+      } else {
+        NewTrack = MovieScene->AddTrack(UMovieSceneEventTrack::StaticClass());
+      }
+    }
 
     // For master tracks or other track types, would need additional
     // implementation based on available track classes

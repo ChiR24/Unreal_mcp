@@ -898,28 +898,44 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 
     // If actorName provided, try to find the actor and get its skeletal mesh
     if (!bMeshProvided && !bSkeletonProvided && bActorProvided) {
-      UWorld *World =
-          GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-      if (World) {
-        for (TActorIterator<AActor> It(World); It; ++It) {
-          AActor *Actor = *It;
-          if (Actor && Actor->GetName().Contains(ActorName)) {
-            // Try to get skeletal mesh component
-            if (USkeletalMeshComponent *SkelComp =
-                    Actor->FindComponentByClass<USkeletalMeshComponent>()) {
-              TargetMesh = SkelComp->GetSkeletalMeshAsset();
-              if (TargetMesh) {
-                break;
-              }
-            }
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+             TEXT("Attempting to find actor by name: '%s'"), *ActorName);
+      AActor *FoundActor = FindActorByName(ActorName);
+      if (FoundActor) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+               TEXT("Found actor: '%s' (Label: '%s')"), *FoundActor->GetName(),
+               *FoundActor->GetActorLabel());
+        // Try to get skeletal mesh component
+        if (USkeletalMeshComponent *SkelComp =
+                FoundActor->FindComponentByClass<USkeletalMeshComponent>()) {
+          TargetMesh = SkelComp->GetSkeletalMeshAsset();
+          if (TargetMesh) {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+                   TEXT("Found skeletal mesh asset: '%s'"),
+                   *TargetMesh->GetName());
+          } else {
+            Message =
+                FString::Printf(TEXT("Actor '%s' has a SkeletalMeshComponent "
+                                     "but no SkeletalMesh asset assigned."),
+                                *FoundActor->GetName());
+            ErrorCode = TEXT("ACTOR_SKELETAL_MESH_ASSET_NULL");
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"),
+                   *Message);
           }
+        } else {
+          Message = FString::Printf(
+              TEXT("Actor '%s' does not have a SkeletalMeshComponent."),
+              *FoundActor->GetName());
+          ErrorCode = TEXT("ACTOR_NO_SKELETAL_MESH_COMPONENT");
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"), *Message);
         }
+      } else {
+        Message = FString::Printf(TEXT("Actor '%s' not found."), *ActorName);
+        ErrorCode = TEXT("ACTOR_NOT_FOUND");
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"), *Message);
       }
 
       if (!TargetMesh) {
-        Message = FString::Printf(
-            TEXT("Could not find skeletal mesh on actor '%s'"), *ActorName);
-        ErrorCode = TEXT("ACTOR_NO_SKELETAL_MESH");
         Resp->SetStringField(TEXT("actorName"), ActorName);
         bSuccess = false;
         SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message,
@@ -1254,9 +1270,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
     }
 
     if (!SourceSkeleton || !TargetSkeleton) {
-      bSuccess = true;
-      Message = TEXT("Retargeting completed (not connected or skeleton not "
-                     "found; no assets processed)");
+      bSuccess = false;
+      Message =
+          TEXT("Retargeting failed - source or target skeleton not found");
+      ErrorCode = TEXT("ASSET_NOT_FOUND");
+      Resp->SetStringField(TEXT("error"), Message);
       Resp->SetStringField(TEXT("sourceSkeleton"), SourceSkeletonPath);
       Resp->SetStringField(TEXT("targetSkeleton"), TargetSkeletonPath);
     } else {
@@ -1973,23 +1991,24 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     }
   }
 
-  // Fallback to ActorSS search if iterator didn't find it (rare but redundant safety)
+  // Fallback to ActorSS search if iterator didn't find it (rare but redundant
+  // safety)
   if (!TargetActor) {
-      for (AActor *Actor : AllActors) {
-        if (Actor &&
-            (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
-             Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase))) {
-          TargetActor = Actor;
-          break;
-        }
+    for (AActor *Actor : AllActors) {
+      if (Actor &&
+          (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
+           Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase))) {
+        TargetActor = Actor;
+        break;
       }
+    }
   }
 
   if (!TargetActor) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetStringField(TEXT("error"),
-                         FString::Printf(TEXT("Actor not found: %s"),
-                                         *ActorName));
+    Resp->SetStringField(
+        TEXT("error"),
+        FString::Printf(TEXT("Actor not found: %s"), *ActorName));
     Resp->SetStringField(TEXT("actorName"), ActorName);
     Resp->SetStringField(TEXT("montagePath"), MontagePath);
     Resp->SetNumberField(TEXT("playRate"), PlayRate);
@@ -2023,9 +2042,9 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
   UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *MontagePath);
   if (!Montage) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetStringField(TEXT("error"),
-                         FString::Printf(TEXT("Failed to load montage: %s"),
-                                         *MontagePath));
+    Resp->SetStringField(
+        TEXT("error"),
+        FString::Printf(TEXT("Failed to load montage: %s"), *MontagePath));
     Resp->SetStringField(TEXT("actorName"), ActorName);
     Resp->SetStringField(TEXT("montagePath"), MontagePath);
     Resp->SetNumberField(TEXT("playRate"), PlayRate);
@@ -2137,23 +2156,23 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
       }
     }
   }
-  
+
   if (!TargetActor) {
-      for (AActor *Actor : AllActors) {
-        if (Actor &&
-            (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
-             Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase))) {
-          TargetActor = Actor;
-          break;
-        }
+    for (AActor *Actor : AllActors) {
+      if (Actor &&
+          (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
+           Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase))) {
+        TargetActor = Actor;
+        break;
       }
+    }
   }
 
   if (!TargetActor) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetStringField(TEXT("error"),
-                         FString::Printf(TEXT("Actor not found: %s"),
-                                         *ActorName));
+    Resp->SetStringField(
+        TEXT("error"),
+        FString::Printf(TEXT("Actor not found: %s"), *ActorName));
     Resp->SetStringField(TEXT("actorName"), ActorName);
     Resp->SetNumberField(TEXT("blendWeight"), BlendWeight);
 

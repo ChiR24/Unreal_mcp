@@ -1,21 +1,25 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import { executeAutomationRequest } from './common-handlers.js';
+import { normalizeArgs } from './argument-helper.js';
 
 export async function handleAssetTools(action: string, args: any, tools: ITools) {
   switch (action) {
     case 'list': {
       // Route through C++ HandleListAssets for proper asset enumeration
-      const pathFilter = args.directory || args.path || args.assetPath || '/Game';
-      const limit = typeof args.limit === 'number' ? args.limit : 50;
-      // Default to non-recursive (current directory only) unless specified
-      const recursive = args.recursive === true;
-      const depth = typeof args.depth === 'number' ? args.depth : undefined;
+      const params = normalizeArgs(args, [
+        { key: 'path', aliases: ['directory', 'assetPath'], default: '/Game' },
+        { key: 'limit', default: 50 },
+        { key: 'recursive', default: false },
+        { key: 'depth', default: undefined }
+      ]);
+      
+      const recursive = params.recursive === true || (params.depth !== undefined && params.depth > 0);
 
       const res = await executeAutomationRequest(tools, 'list', {
-        path: pathFilter,
-        recursive: recursive || (depth !== undefined && depth > 0), // Enable recursion if depth is requested
-        depth: depth
+        path: params.path,
+        recursive,
+        depth: params.depth
       });
 
       // const result = cleanObject(res); // Unused
@@ -27,8 +31,8 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       const folders = Array.isArray(response.folders) ? response.folders : (response.result?.folders || []);
 
       const totalCount = assets.length;
-      const limitedAssets = assets.slice(0, limit);
-      const remaining = Math.max(0, totalCount - limit);
+      const limitedAssets = assets.slice(0, params.limit);
+      const remaining = Math.max(0, totalCount - params.limit);
 
       let message = `Found ${totalCount} assets`;
       if (folders.length > 0) {
@@ -36,13 +40,8 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       }
       message += `: ${limitedAssets.map((a: any) => a.path || a.package || a.name).join(', ')}`;
 
-      if (folders.length > 0 && limitedAssets.length < limit) {
-        // If we have space in the limit, maybe show some folder names?
-        // Or just list them separately?
-        // The prompt was "list folder as well".
-        // Let's append them to the list if it's short, or just mention them.
-        // Simpler: Just append to the text list.
-        const remainingLimit = limit - limitedAssets.length;
+      if (folders.length > 0 && limitedAssets.length < params.limit) {
+        const remainingLimit = params.limit - limitedAssets.length;
         if (remainingLimit > 0) {
           const limitedFolders = folders.slice(0, remainingLimit);
           if (limitedAssets.length > 0) message += ', ';
@@ -64,57 +63,45 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       };
     }
     case 'create_folder': {
-      const rawPath =
-        (typeof args.path === 'string' && args.path.trim().length > 0)
-          ? args.path
-          : (typeof args.directoryPath === 'string' ? args.directoryPath : '');
-      if (typeof rawPath !== 'string' || rawPath.trim() === '') {
-        throw new Error('Invalid path: must be a non-empty string');
-      }
-      const normalizedPath = rawPath.trim();
-      const res = await tools.assetTools.createFolder(normalizedPath);
+      const params = normalizeArgs(args, [
+        { key: 'path', aliases: ['directoryPath'], required: true }
+      ]);
+      const res = await tools.assetTools.createFolder(params.path);
       return cleanObject(res);
     }
     case 'import': {
-      const sourcePath = typeof args.sourcePath === 'string' ? args.sourcePath.trim() : '';
-      const destinationPath = typeof args.destinationPath === 'string' ? args.destinationPath.trim() : '';
-
-      if (!sourcePath || !destinationPath) {
-        throw new Error('Both sourcePath and destinationPath are required for import action');
-      }
+      const params = normalizeArgs(args, [
+        { key: 'sourcePath', required: true },
+        { key: 'destinationPath', required: true },
+        { key: 'overwrite', default: false },
+        { key: 'save', default: true }
+      ]);
 
       const res = await tools.assetTools.importAsset({
-        sourcePath,
-        destinationPath,
-        overwrite: args.overwrite === true,
-        save: args.save !== false
+        sourcePath: params.sourcePath,
+        destinationPath: params.destinationPath,
+        overwrite: params.overwrite,
+        save: params.save
       });
       return cleanObject(res);
     }
     case 'duplicate': {
-      const sourcePath = args.sourcePath || args.assetPath;
-      if (!sourcePath) throw new Error('Missing sourcePath or assetPath');
+      const params = normalizeArgs(args, [
+        { key: 'sourcePath', aliases: ['assetPath'], required: true },
+        { key: 'destinationPath' },
+        { key: 'newName' }
+      ]);
 
-      let destinationPath = args.destinationPath;
-      if (args.newName) {
-        // If newName is provided, we can infer destinationPath if it's missing,
-        // or ensure the destination path ends with the new name.
+      let destinationPath = params.destinationPath;
+      if (params.newName) {
         if (!destinationPath) {
-          // Inferred from source path's parent
-          const lastSlash = sourcePath.lastIndexOf('/');
-          const parentDir = lastSlash > 0 ? sourcePath.substring(0, lastSlash) : '/Game';
-          destinationPath = `${parentDir}/${args.newName}`;
-        } else if (!destinationPath.endsWith(args.newName)) {
-          // If destination is a folder (heuristic), append name?
-          // Or if user gave a path not ending in name.
-          // Best practice: if they gave a path, assume they mean the full path unless it ends in /
+          const lastSlash = params.sourcePath.lastIndexOf('/');
+          const parentDir = lastSlash > 0 ? params.sourcePath.substring(0, lastSlash) : '/Game';
+          destinationPath = `${parentDir}/${params.newName}`;
+        } else if (!destinationPath.endsWith(params.newName)) {
           if (destinationPath.endsWith('/')) {
-            destinationPath = `${destinationPath}${args.newName}`;
+            destinationPath = `${destinationPath}${params.newName}`;
           }
-          // Else we trust their destinationPath, or we could check if it looks like a folder?
-          // For safety, let's assume if they gave newName, they might want it enforced.
-          // But standard behavior is destinationPath overrides.
-          // Let's just stick to: if no destinationPath, use source parent + newName.
         }
       }
 
@@ -122,29 +109,30 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         throw new Error('destinationPath or newName is required for duplicate action');
       }
 
-      // Pass directly, letting C++ handle errors.
       const res = await tools.assetTools.duplicateAsset({
-        sourcePath,
+        sourcePath: params.sourcePath,
         destinationPath
       });
       return cleanObject(res);
     }
     case 'rename': {
-      const sourcePath = args.sourcePath || args.assetPath;
-      if (!sourcePath) throw new Error('Missing sourcePath or assetPath');
+      const params = normalizeArgs(args, [
+        { key: 'sourcePath', aliases: ['assetPath'], required: true },
+        { key: 'destinationPath' },
+        { key: 'newName' }
+      ]);
 
-      let destinationPath = args.destinationPath;
-      if (!destinationPath && args.newName) {
-        // Construct destination path from source directory and new name
-        const lastSlash = sourcePath.lastIndexOf('/');
-        const parentDir = lastSlash > 0 ? sourcePath.substring(0, lastSlash) : '/Game';
-        destinationPath = `${parentDir}/${args.newName}`;
+      let destinationPath = params.destinationPath;
+      if (!destinationPath && params.newName) {
+        const lastSlash = params.sourcePath.lastIndexOf('/');
+        const parentDir = lastSlash > 0 ? params.sourcePath.substring(0, lastSlash) : '/Game';
+        destinationPath = `${parentDir}/${params.newName}`;
       }
 
       if (!destinationPath) throw new Error('Missing destinationPath or newName');
 
       const res: any = await tools.assetTools.renameAsset({
-        sourcePath,
+        sourcePath: params.sourcePath,
         destinationPath
       });
 
@@ -155,7 +143,7 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
             success: false,
             error: 'ASSET_ALREADY_EXISTS',
             message: res.message || 'Asset already exists at destination',
-            sourcePath,
+            sourcePath: params.sourcePath,
             destinationPath
           });
         }
@@ -163,18 +151,19 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       return cleanObject(res);
     }
     case 'move': {
-      const sourcePath = args.sourcePath || args.assetPath;
-      if (!sourcePath) throw new Error('Missing sourcePath or assetPath');
+      const params = normalizeArgs(args, [
+        { key: 'sourcePath', aliases: ['assetPath'], required: true },
+        { key: 'destinationPath' }
+      ]);
 
-      let destinationPath = args.destinationPath;
-      // If destination doesn't include the asset name, append it
-      const assetName = sourcePath.split('/').pop();
+      let destinationPath = params.destinationPath;
+      const assetName = params.sourcePath.split('/').pop();
       if (assetName && destinationPath && !destinationPath.endsWith(assetName)) {
         destinationPath = `${destinationPath.replace(/\/$/, '')}/${assetName}`;
       }
 
       const res = await tools.assetTools.moveAsset({
-        sourcePath,
+        sourcePath: params.sourcePath,
         destinationPath
       });
       return cleanObject(res);
@@ -182,16 +171,16 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
     case 'delete_assets':
     case 'delete_asset':
     case 'delete': {
-      // Handle various input formats for paths
       let paths: string[] = [];
       if (Array.isArray(args.paths)) {
         paths = args.paths;
       } else if (Array.isArray(args.assetPaths)) {
         paths = args.assetPaths;
-      } else if (typeof args.assetPath === 'string') {
-        paths = [args.assetPath];
-      } else if (typeof args.path === 'string') {
-        paths = [args.path];
+      } else {
+         const single = args.assetPath || args.path;
+         if (typeof single === 'string' && single.trim()) {
+             paths = [single.trim()];
+         }
       }
 
       if (paths.length === 0) {
@@ -202,22 +191,35 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       return cleanObject(res);
     }
     case 'generate_lods': {
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true },
+        { key: 'lodCount', required: true }
+      ]);
       return cleanObject(await tools.assetTools.generateLODs({
-        assetPath: args.assetPath,
-        lodCount: args.lodCount
+        assetPath: params.assetPath,
+        lodCount: params.lodCount
       }));
     }
     case 'create_thumbnail': {
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true },
+        { key: 'width' },
+        { key: 'height' }
+      ]);
       const res = await tools.assetTools.createThumbnail({
-        assetPath: args.assetPath,
-        width: args.width,
-        height: args.height
+        assetPath: params.assetPath,
+        width: params.width,
+        height: params.height
       });
       return cleanObject(res);
     }
     case 'set_tags': {
       try {
-        const res = await tools.assetTools.setTags({ assetPath: args.assetPath, tags: args.tags });
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', required: true },
+          { key: 'tags', required: true }
+        ]);
+        const res = await tools.assetTools.setTags({ assetPath: params.assetPath, tags: params.tags });
         return cleanObject(res);
       } catch (err: any) {
         const message = String(err?.message || err || '').toLowerCase();
@@ -240,15 +242,16 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       }
     }
     case 'get_metadata': {
-      const res: any = await tools.assetTools.getMetadata({ assetPath: args.assetPath });
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true }
+      ]);
+      const res: any = await tools.assetTools.getMetadata({ assetPath: params.assetPath });
       const tags = res.tags || {};
       const metadata = res.metadata || {};
       const merged = { ...tags, ...metadata };
       const tagCount = Object.keys(merged).length;
 
-      // Enhance the response message with the actual metadata
       const cleanRes = cleanObject(res);
-      // DEBUG: Force output of raw response to verify C++ fields
       cleanRes.message = `Metadata retrieved (${tagCount} items)`;
       cleanRes.tags = tags;
       if (Object.keys(metadata).length > 0) {
@@ -258,21 +261,27 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       return cleanRes;
     }
     case 'set_metadata': {
-      // Delegate to Automation Bridge so metadata is written on the asset's package.
       const res = await executeAutomationRequest(tools, 'set_metadata', args);
       return cleanObject(res);
     }
     case 'validate':
     case 'validate_asset': {
-      const res = await tools.assetTools.validate({ assetPath: args.assetPath });
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true }
+      ]);
+      const res = await tools.assetTools.validate({ assetPath: params.assetPath });
       return cleanObject(res);
     }
     case 'generate_report': {
-      // Generate report can be slow for large projects, increase timeout to 2 minutes
+      const params = normalizeArgs(args, [
+        { key: 'directory' },
+        { key: 'reportType' },
+        { key: 'outputPath' }
+      ]);
       const res = await tools.assetTools.generateReport({
-        directory: args.directory,
-        reportType: args.reportType,
-        outputPath: args.outputPath
+        directory: params.directory,
+        reportType: params.reportType,
+        outputPath: params.outputPath
       });
       return cleanObject(res);
     }
@@ -301,57 +310,81 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       return cleanObject(res);
     }
     case 'search_assets': {
+      const params = normalizeArgs(args, [
+        { key: 'classNames' },
+        { key: 'packagePaths' },
+        { key: 'recursivePaths' },
+        { key: 'recursiveClasses' },
+        { key: 'limit' }
+      ]);
       const res = await tools.assetTools.searchAssets({
-        classNames: args.classNames,
-        packagePaths: args.packagePaths,
-        recursivePaths: args.recursivePaths,
-        recursiveClasses: args.recursiveClasses,
-        limit: args.limit
+        classNames: params.classNames,
+        packagePaths: params.packagePaths,
+        recursivePaths: params.recursivePaths,
+        recursiveClasses: params.recursiveClasses,
+        limit: params.limit
       });
       return cleanObject(res);
     }
     case 'find_by_tag': {
-      const tag = args.tag;
-      const value = args.value;
-      if (!tag) {
-        throw new Error('tag is required');
-      }
-      return tools.assetTools.findByTag({ tag, value });
+      const params = normalizeArgs(args, [
+        { key: 'tag', required: true },
+        { key: 'value' }
+      ]);
+      return tools.assetTools.findByTag({ tag: params.tag, value: params.value });
     }
     case 'get_dependencies': {
-      const res = await tools.assetTools.getDependencies({ assetPath: args.assetPath, recursive: args.recursive });
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true },
+        { key: 'recursive' }
+      ]);
+      const res = await tools.assetTools.getDependencies({ assetPath: params.assetPath, recursive: params.recursive });
       return cleanObject(res);
     }
     case 'get_source_control_state': {
-      const res = await tools.assetTools.getSourceControlState({ assetPath: args.assetPath });
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true }
+      ]);
+      const res = await tools.assetTools.getSourceControlState({ assetPath: params.assetPath });
       return cleanObject(res);
     }
     case 'analyze_graph': {
-      // Map 'analyze_graph' to 'get_asset_graph' which is the C++ handler
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true },
+        { key: 'maxDepth' }
+      ]);
       const res = await executeAutomationRequest(tools, 'get_asset_graph', {
-        assetPath: args.assetPath,
-        maxDepth: args.maxDepth
+        assetPath: params.assetPath,
+        maxDepth: params.maxDepth
       });
       return cleanObject(res);
     }
     case 'create_render_target': {
-      // Route to manage_render command
+      const params = normalizeArgs(args, [
+        { key: 'name', required: true },
+        { key: 'packagePath', aliases: ['path'], default: '/Game' },
+        { key: 'width' },
+        { key: 'height' },
+        { key: 'format' }
+      ]);
       const res = await executeAutomationRequest(tools, 'manage_render', {
         subAction: 'create_render_target',
-        name: args.name,
-        packagePath: args.path || args.packagePath || '/Game', // C++ expects packagePath
-        width: args.width,
-        height: args.height,
-        format: args.format,
-        save: true // Force save explicitly if supported by bridge
+        name: params.name,
+        packagePath: params.packagePath,
+        width: params.width,
+        height: params.height,
+        format: params.format,
+        save: true
       });
       return cleanObject(res);
     }
     case 'nanite_rebuild_mesh': {
-      // Route to manage_render command
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', aliases: ['meshPath'], required: true }
+      ]);
       const res = await executeAutomationRequest(tools, 'manage_render', {
         subAction: 'nanite_rebuild_mesh',
-        assetPath: args.meshPath || args.assetPath
+        assetPath: params.assetPath
       });
       return cleanObject(res);
     }
@@ -374,51 +407,66 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       return cleanObject(res);
     }
     case 'add_material_parameter': {
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true },
+        { key: 'parameterName', aliases: ['name'], required: true },
+        { key: 'parameterType', aliases: ['type'] },
+        { key: 'value', aliases: ['defaultValue'] }
+      ]);
       const res = await executeAutomationRequest(tools, 'add_material_parameter', {
-        assetPath: args.assetPath,
-        name: args.parameterName,
-        type: args.parameterType || args.type,
-        value: args.defaultValue ?? args.value
+        assetPath: params.assetPath,
+        name: params.parameterName,
+        type: params.parameterType,
+        value: params.value
       });
       return cleanObject(res);
     }
     case 'list_instances': {
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true }
+      ]);
       const res = await executeAutomationRequest(tools, 'list_instances', {
-        assetPath: args.assetPath
+        assetPath: params.assetPath
       });
       return cleanObject(res);
     }
     case 'reset_instance_parameters': {
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true }
+      ]);
       const res = await executeAutomationRequest(tools, 'reset_instance_parameters', {
-        assetPath: args.assetPath
+        assetPath: params.assetPath
       });
       return cleanObject(res);
     }
     case 'exists': {
-      // Use the editor tool to check existence if possible, or fall back to automation
-      // But since we want to test the automation handler 'exists', let's route it there.
-      // Wait, 'exists' might be a generic tool. Let's check if C++ implements it.
-      // The C++ handler for 'exists' was added in McpAutomationBridge_AssetWorkflowHandlers.cpp
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true }
+      ]);
       const res = await executeAutomationRequest(tools, 'exists', {
-        assetPath: args.assetPath
+        assetPath: params.assetPath
       });
       return cleanObject(res);
     }
     case 'get_material_stats': {
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true }
+      ]);
       const res = await executeAutomationRequest(tools, 'get_material_stats', {
-        assetPath: args.assetPath
+        assetPath: params.assetPath
       });
       return cleanObject(res);
     }
     case 'rebuild_material': {
-      // Call rebuild_material handler directly
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true }
+      ]);
       const res = await executeAutomationRequest(tools, 'rebuild_material', {
-        assetPath: args.assetPath
+        assetPath: params.assetPath
       });
       return cleanObject(res);
     }
     case 'add_material_node': {
-      // Map common node names to their full class names
       const materialNodeAliases: Record<string, string> = {
         'Multiply': 'MaterialExpressionMultiply',
         'Add': 'MaterialExpressionAdd',
@@ -448,20 +496,22 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         'StaticSwitchParameter': 'MaterialExpressionStaticSwitchParameter'
       };
 
-      const rawType = args.nodeType || args.type;
-      const type = materialNodeAliases[rawType] || rawType;
+      const params = normalizeArgs(args, [
+        { key: 'assetPath', required: true },
+        { key: 'nodeType', aliases: ['type'], required: true, map: materialNodeAliases },
+        { key: 'posX' },
+        { key: 'posY' }
+      ]);
 
       const res = await executeAutomationRequest(tools, 'add_material_node', {
-        assetPath: args.assetPath,
-        nodeType: type,
-        posX: args.posX,
-        posY: args.posY
+        assetPath: params.assetPath,
+        nodeType: params.nodeType,
+        posX: params.posX,
+        posY: params.posY
       });
       return cleanObject(res);
     }
     default:
-      // Fallback to direct bridge call for other asset actions if needed, or error
-      // Pass the specific action from args instead of the generic tool name
       const res: any = await executeAutomationRequest(tools, action || 'manage_asset', args);
       const result = res?.result ?? res ?? {};
       const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';

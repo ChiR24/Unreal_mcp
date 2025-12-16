@@ -51,9 +51,6 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
   if (SoundPath.IsEmpty())
     return nullptr;
 
-  if (SoundPath.IsEmpty())
-    return nullptr;
-
   USoundBase *Sound = nullptr;
   if (UEditorAssetLibrary::DoesAssetExist(SoundPath)) {
     Sound = Cast<USoundBase>(UEditorAssetLibrary::LoadAsset(SoundPath));
@@ -63,7 +60,6 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
     return Sound;
 
   // Optimization: If it looks like a path and wasn't found, fail immediately
-  // to avoid expensive recursive search which causes timeouts.
   if (SoundPath.Contains(TEXT("/"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("Sound asset '%s' not found (skipping recursive search)."),
@@ -71,7 +67,7 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
     return nullptr;
   }
 
-  // Fallback: Try to find the asset by Name if the full path failed
+  // Fallback: Try to find the asset by Name
   FString AssetName = FPaths::GetBaseFilename(SoundPath);
   FAssetRegistryModule &AssetRegistryModule =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -97,6 +93,74 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
          TEXT("Sound asset '%s' not found."), *SoundPath);
+  return nullptr;
+}
+
+static USoundMix *ResolveSoundMix(const FString &MixPath) {
+  if (MixPath.IsEmpty())
+    return nullptr;
+
+  USoundMix *Mix = nullptr;
+  if (UEditorAssetLibrary::DoesAssetExist(MixPath)) {
+    Mix = Cast<USoundMix>(UEditorAssetLibrary::LoadAsset(MixPath));
+  }
+  if (Mix)
+    return Mix;
+
+  if (MixPath.Contains(TEXT("/")))
+    return nullptr;
+
+  FString AssetName = FPaths::GetBaseFilename(MixPath);
+  FAssetRegistryModule &AssetRegistryModule =
+      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+  TArray<FAssetData> AssetData;
+  FARFilter Filter;
+  Filter.ClassPaths.Add(USoundMix::StaticClass()->GetClassPathName());
+  Filter.bRecursivePaths = true;
+  Filter.PackagePaths.Add(TEXT("/Game"));
+  AssetRegistryModule.Get().GetAssets(Filter, AssetData);
+
+  for (const FAssetData &Data : AssetData) {
+    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase)) {
+      Mix = Cast<USoundMix>(Data.GetAsset());
+      if (Mix)
+        return Mix;
+    }
+  }
+  return nullptr;
+}
+
+static USoundClass *ResolveSoundClass(const FString &ClassPath) {
+  if (ClassPath.IsEmpty())
+    return nullptr;
+
+  USoundClass *Class = nullptr;
+  if (UEditorAssetLibrary::DoesAssetExist(ClassPath)) {
+    Class = Cast<USoundClass>(UEditorAssetLibrary::LoadAsset(ClassPath));
+  }
+  if (Class)
+    return Class;
+
+  if (ClassPath.Contains(TEXT("/")))
+    return nullptr;
+
+  FString AssetName = FPaths::GetBaseFilename(ClassPath);
+  FAssetRegistryModule &AssetRegistryModule =
+      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+  TArray<FAssetData> AssetData;
+  FARFilter Filter;
+  Filter.ClassPaths.Add(USoundClass::StaticClass()->GetClassPathName());
+  Filter.bRecursivePaths = true;
+  Filter.PackagePaths.Add(TEXT("/Game"));
+  AssetRegistryModule.Get().GetAssets(Filter, AssetData);
+
+  for (const FAssetData &Data : AssetData) {
+    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase)) {
+      Class = Cast<USoundClass>(Data.GetAsset());
+      if (Class)
+        return Class;
+    }
+  }
   return nullptr;
 }
 
@@ -476,7 +540,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       return true;
     }
 
-    USoundMix *Mix = LoadObject<USoundMix>(nullptr, *MixName);
+    USoundMix *Mix = ResolveSoundMix(MixName);
     if (Mix) {
       if (GEditor && GEditor->GetEditorWorldContext().World()) {
         UGameplayStatics::PushSoundMixModifier(
@@ -505,7 +569,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       return true;
     }
 
-    USoundMix *Mix = LoadObject<USoundMix>(nullptr, *MixName);
+    USoundMix *Mix = ResolveSoundMix(MixName);
     if (Mix) {
       if (GEditor && GEditor->GetEditorWorldContext().World()) {
         UGameplayStatics::PopSoundMixModifier(
@@ -530,8 +594,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     Payload->TryGetStringField(TEXT("mixName"), MixName);
     Payload->TryGetStringField(TEXT("soundClassName"), ClassName);
 
-    USoundMix *Mix = LoadObject<USoundMix>(nullptr, *MixName);
-    USoundClass *Class = LoadObject<USoundClass>(nullptr, *ClassName);
+    USoundMix *Mix = ResolveSoundMix(MixName);
+    USoundClass *Class = ResolveSoundClass(ClassName);
 
     if (!Mix || !Class) {
       SendAutomationError(RequestingSocket, RequestId,
@@ -819,8 +883,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     Payload->TryGetStringField(TEXT("mixName"), MixName);
     Payload->TryGetStringField(TEXT("soundClassName"), ClassName);
 
-    USoundMix *Mix = LoadObject<USoundMix>(nullptr, *MixName);
-    USoundClass *Class = LoadObject<USoundClass>(nullptr, *ClassName);
+    USoundMix *Mix = ResolveSoundMix(MixName);
+    USoundClass *Class = ResolveSoundClass(ClassName);
 
     if (!Mix || !Class) {
       SendAutomationError(RequestingSocket, RequestId,
@@ -846,7 +910,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
   } else if (Lower == TEXT("set_base_sound_mix")) {
     FString MixName;
     Payload->TryGetStringField(TEXT("mixName"), MixName);
-    USoundMix *Mix = LoadObject<USoundMix>(nullptr, *MixName);
+    USoundMix *Mix = ResolveSoundMix(MixName);
     if (!Mix) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Mix not found"),
                           TEXT("ASSET_NOT_FOUND"));
@@ -902,6 +966,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FString AttachTo;
     Payload->TryGetStringField(TEXT("attachTo"), AttachTo);
+    if (AttachTo.IsEmpty())
+      Payload->TryGetStringField(TEXT("actorName"), AttachTo);
 
     UAudioComponent *AudioComp = nullptr;
     UWorld *World =

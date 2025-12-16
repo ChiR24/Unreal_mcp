@@ -61,13 +61,13 @@ export class FoliageTools {
       const response = await this.automationBridge.sendAutomationRequest('add_foliage_type', {
         name,
         meshPath: base,
-        density: params.density,
-        radius: params.radius,
-        minScale: params.minScale,
-        maxScale: params.maxScale,
-        alignToNormal: params.alignToNormal,
-        randomYaw: params.randomYaw,
-        groundSlope: params.groundSlope
+        density: params.density ?? 100,
+        radius: params.radius ?? 0,
+        minScale: params.minScale ?? 1.0,
+        maxScale: params.maxScale ?? 1.0,
+        alignToNormal: params.alignToNormal ?? true,
+        randomYaw: params.randomYaw ?? true,
+        groundSlope: params.groundSlope ?? 45
       }, {
         timeoutMs: 60000
       });

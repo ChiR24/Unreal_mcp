@@ -3,6 +3,8 @@
 #include "McpAutomationBridgeSubsystem.h"
 
 #if WITH_EDITOR
+#include "BehaviorTree/BTDecorator.h"
+#include "BehaviorTree/BTService.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/Composites/BTComposite_Selector.h"
 #include "BehaviorTree/Composites/BTComposite_Sequence.h"
@@ -15,11 +17,14 @@
 #include "BehaviorTreeGraph.h"
 #include "BehaviorTreeGraphNode.h"
 #include "BehaviorTreeGraphNode_Composite.h"
+#include "BehaviorTreeGraphNode_Decorator.h"
 #include "BehaviorTreeGraphNode_Root.h"
+#include "BehaviorTreeGraphNode_Service.h"
 #include "BehaviorTreeGraphNode_Task.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphSchema.h"
 #include "EdGraphSchema_BehaviorTree.h"
+
 
 #endif
 
@@ -159,19 +164,27 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
       return nullptr;
     }
     const FString Needle = IdOrName.TrimStartAndEnd();
+
+    // Iterate nodes
     for (UEdGraphNode *Node : BTGraph->Nodes) {
-      if (!Node) {
+      if (!Node)
         continue;
-      }
-      if (Node->NodeGuid.ToString().Equals(Needle, ESearchCase::IgnoreCase)) {
+
+      // Check exact GUID match first
+      if (Node->NodeGuid.ToString() == Needle)
+        return Node;
+
+      // Check parsed GUID match (handles format differences)
+      FGuid SearchGuid;
+      if (FGuid::Parse(Needle, SearchGuid) && Node->NodeGuid == SearchGuid) {
         return Node;
       }
-      if (Node->GetName().Equals(Needle, ESearchCase::IgnoreCase)) {
+
+      // Check Name and PathName
+      if (Node->GetName().Equals(Needle, ESearchCase::IgnoreCase))
         return Node;
-      }
-      if (Node->GetPathName().Equals(Needle, ESearchCase::IgnoreCase)) {
+      if (Node->GetPathName().Equals(Needle, ESearchCase::IgnoreCase))
         return Node;
-      }
     }
     return nullptr;
   };
@@ -183,6 +196,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     float Y = 0.0f;
     Payload->TryGetNumberField(TEXT("x"), X);
     Payload->TryGetNumberField(TEXT("y"), Y);
+
+    // Check for explicit Node ID
+    FString ProvidedNodeId;
+    Payload->TryGetStringField(TEXT("nodeId"), ProvidedNodeId);
 
     UBehaviorTreeGraphNode *NewNode = nullptr;
 
@@ -231,6 +248,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
         } else if (Resolved->IsChildOf(UBTTaskNode::StaticClass())) {
           NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
           NodeInstanceClass = Resolved;
+        } else if (Resolved->IsChildOf(UBTDecorator::StaticClass())) {
+          NodeClass = UBehaviorTreeGraphNode_Decorator::StaticClass();
+          NodeInstanceClass = Resolved;
+        } else if (Resolved->IsChildOf(UBTService::StaticClass())) {
+          NodeClass = UBehaviorTreeGraphNode_Service::StaticClass();
+          NodeInstanceClass = Resolved;
         }
       }
     }
@@ -238,7 +261,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     if (NodeClass) {
       NewNode = NewObject<UBehaviorTreeGraphNode>(BTGraph, NodeClass);
       if (NewNode) {
-        NewNode->CreateNewGuid();
+
+        // Use provided ID if valid, otherwise create new random one
+        FGuid NewGuid;
+        if (!ProvidedNodeId.IsEmpty() &&
+            FGuid::Parse(ProvidedNodeId, NewGuid)) {
+          NewNode->NodeGuid = NewGuid;
+        } else {
+          NewNode->CreateNewGuid();
+        }
+
         NewNode->NodePosX = X;
         NewNode->NodePosY = Y;
 

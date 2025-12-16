@@ -173,6 +173,18 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
         subAction: 'add_keyframe'
       };
 
+      // Fix: Map common property names to internal names
+      if (property === 'Location') {
+        payload.property = 'Transform';
+        payload.value = { location: args.value };
+      } else if (property === 'Rotation') {
+        payload.property = 'Transform';
+        payload.value = { rotation: args.value };
+      } else if (property === 'Scale') {
+        payload.property = 'Transform';
+        payload.value = { scale: args.value };
+      }
+
       const res = await executeAutomationRequest(tools, 'manage_sequence', payload);
       const errorCode = String((res && (res as any).error) || '').toUpperCase();
       const msgLower = String((res && (res as any).message) || '').toLowerCase();
@@ -245,7 +257,22 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
       if (!Number.isFinite(speed) || speed <= 0) {
         throw new Error('Invalid speed: must be a positive number');
       }
-      const res = await tools.sequenceTools.setPlaybackSpeed({ speed, path: args.path });
+      // Try setting speed
+      let res = await tools.sequenceTools.setPlaybackSpeed({ speed, path: args.path });
+
+      // Fix: Auto-open if editor not open
+      const errorCode = String((res && (res as any).error) || '').toUpperCase();
+      if ((!res || res.success === false) && errorCode === 'EDITOR_NOT_OPEN' && args.path) {
+        // Attempt to open the sequence
+        await tools.sequenceTools.open({ path: args.path });
+
+        // Wait a short moment for editor to initialize on game thread
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Retry
+        res = await tools.sequenceTools.setPlaybackSpeed({ speed, path: args.path });
+      }
+
       return cleanObject(res);
     }
     case 'list': {
@@ -305,6 +332,25 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
       const trackType = typeof args.trackType === 'string' ? args.trackType : '';
       const trackName = typeof args.trackName === 'string' ? args.trackName : '';
       const actorName = typeof args.actorName === 'string' ? args.actorName : undefined;
+
+      // Fix: Check if actor is bound before adding track
+      if (actorName) {
+        const bindingsRes = await tools.sequenceTools.getBindings({ path });
+        if (bindingsRes && bindingsRes.success) {
+          const bindings = bindingsRes.bindings || [];
+          const isBound = bindings.some((b: any) => b.name === actorName);
+          if (!isBound) {
+            return cleanObject({
+              success: false,
+              error: 'BINDING_NOT_FOUND',
+              message: `Actor '${actorName}' is not bound to this sequence. Please call 'add_actor' first.`,
+              action: 'add_track',
+              path,
+              actorName
+            });
+          }
+        }
+      }
 
       const payload = {
         ...args,

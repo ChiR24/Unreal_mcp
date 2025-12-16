@@ -39,7 +39,7 @@ export async function handleAnimationTools(action: string, args: any, tools: ITo
             // Actually, checking args, if 'meshPath' is passed, we should pass it along.
           }
         }
-      } catch (e) { }
+      } catch (_e) { }
     }
 
     const payload = {
@@ -101,7 +101,7 @@ export async function handleAnimationTools(action: string, args: any, tools: ITo
             args.meshPath = meshComp.path;
           }
         }
-      } catch (e) {
+      } catch (_e) {
         // Ignore component lookup errors, fallback to C++ handling
       }
     }
@@ -175,19 +175,26 @@ export async function handleAnimationTools(action: string, args: any, tools: ITo
       }));
     case 'cleanup':
       return cleanObject(await tools.animationTools.cleanup(args.artifacts));
-    case 'create_animation_asset':
+    case 'create_animation_asset': {
+      let assetType = args.assetType;
+      if (!assetType && args.name) {
+        if (args.name.toLowerCase().endsWith('montage') || args.name.toLowerCase().includes('montage')) {
+          assetType = 'montage';
+        }
+      }
       return cleanObject(await tools.animationTools.createAnimationAsset({
         name: args.name,
         path: args.path || args.savePath,
         skeletonPath: args.skeletonPath,
-        assetType: args.assetType
+        assetType
       }));
+    }
     case 'add_notify':
       return cleanObject(await tools.animationTools.addNotify({
         animationPath: args.animationPath,
         assetPath: args.assetPath,
-        notifyName: args.notifyName,
-        time: args.time
+        notifyName: args.notifyName || args.name,
+        time: args.time ?? args.startTime
       }));
     case 'configure_vehicle':
       return cleanObject(await tools.physicsTools.configureVehicle({

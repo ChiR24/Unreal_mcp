@@ -140,7 +140,7 @@ export class LandscapeTools {
     }
 
     const payload = {
-      landscapeName: params.landscapeName,
+      landscapeName: params.landscapeName?.trim(),
       toolMode: tool, // Map 'tool' to 'toolMode'
       brushRadius: params.brushSize ?? params.radius ?? 1000,
       brushFalloff: params.brushFalloff ?? 0.5,
@@ -189,8 +189,8 @@ export class LandscapeTools {
     const maxY = Math.floor(y + radius);
 
     const payload = {
-      landscapeName: params.landscapeName,
-      layerName: params.layerName,
+      landscapeName: params.landscapeName?.trim(),
+      layerName: params.layerName?.trim(),
       region: { minX, minY, maxX, maxY },
       strength: params.strength ?? 1.0
     };
@@ -578,4 +578,66 @@ export class LandscapeTools {
       return { success: false, error: `Failed to configure streaming cells: ${err}` };
     }
   }
+
+  // Modify landscape heightmap
+  async modifyHeightmap(params: {
+    landscapeName: string;
+    heightData: number[];
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+    updateNormals?: boolean;
+  }) {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
+    }
+
+    const { landscapeName, heightData, minX, minY, maxX, maxY } = params;
+
+    if (!landscapeName) {
+      return { success: false, error: 'Landscape name is required' };
+    }
+    if (!heightData || !Array.isArray(heightData) || heightData.length === 0) {
+      return { success: false, error: 'heightData array is required' };
+    }
+
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
+    if (heightData.length !== width * height) {
+      return {
+        success: false,
+        error: `Height data length (${heightData.length}) does not match region dimensions (${width}x${height} = ${width * height})`
+      };
+    }
+
+    try {
+      const response = await this.automationBridge.sendAutomationRequest('modify_heightmap', {
+        landscapeName,
+        heightData,
+        minX,
+        minY,
+        maxX,
+        maxY,
+        updateNormals: params.updateNormals ?? true
+      }, {
+        timeoutMs: 60000
+      });
+
+      if (response.success === false) {
+        return {
+          success: false,
+          error: response.error || response.message || 'Failed to modify heightmap'
+        };
+      }
+
+      return {
+        success: true,
+        message: response.message || 'Heightmap modified successfully'
+      };
+    } catch (err) {
+      return { success: false, error: `Failed to modify heightmap: ${err instanceof Error ? err.message : String(err)}` };
+    }
+  }
 }
+

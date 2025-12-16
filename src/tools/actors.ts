@@ -507,8 +507,12 @@ export class ActorTools extends BaseTool implements IActorTools {
     };
   }
 
-  async listActors() {
-    const response = await this.sendRequest('list_actors', {}, 'control_actor');
+  async listActors(params?: { filter?: string }) {
+    const payload: any = {};
+    if (params?.filter) {
+      payload.filter = params.filter;
+    }
+    const response = await this.sendRequest('list_actors', payload, 'control_actor');
     if (!response.success) {
       return { success: false, error: response.error || 'Failed to list actors' };
     }

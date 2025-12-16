@@ -304,11 +304,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       if (NewSystem) {
         FAssetRegistryModule::AssetCreated(NewSystem);
         Package->MarkPackageDirty();
-        UEditorAssetLibrary::SaveAsset(NewSystem->GetPathName());
+        // Return validity check
+        FString AssetPath = NewSystem->GetPathName();
+        // If it's something like /Game/Path/Asset.Asset, try to simplify for
+        // user convenience But LoadAsset works with the full Object path or
+        // Package path. Let's ensure we save it properly.
+        UEditorAssetLibrary::SaveAsset(AssetPath);
 
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("assetPath"), NewSystem->GetPathName());
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("packageName"), Package->GetPathName());
+
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Niagara System created"), Resp);
       } else {
@@ -487,7 +494,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           const TSharedPtr<FJsonValue> EndVal =
               LocalPayload->TryGetField(TEXT("endLocation"));
           if (EndVal.IsValid()) {
-            // Reuse parsing logic if possible, or duplicate safely
             if (EndVal->Type == EJson::Array) {
               const TArray<TSharedPtr<FJsonValue>> &Arr = EndVal->AsArray();
               if (Arr.Num() >= 3)
@@ -553,6 +559,76 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
         DrawDebugCone(World, Loc, Direction, Length, AngleWidth, AngleHeight,
                       16, DebugColor, false, Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("capsule")) {
+        FQuat Rot = FQuat::Identity;
+        if (LocalPayload->HasField(TEXT("rotation"))) {
+          const TArray<TSharedPtr<FJsonValue>> *RotArr = nullptr;
+          if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotArr) &&
+              RotArr && RotArr->Num() >= 3) {
+            Rot = FRotator((float)(*RotArr)[0]->AsNumber(),
+                           (float)(*RotArr)[1]->AsNumber(),
+                           (float)(*RotArr)[2]->AsNumber())
+                      .Quaternion();
+          }
+        }
+        float HalfHeight = Size; // Default if not specified
+        if (LocalPayload->HasField(TEXT("halfHeight"))) {
+          HalfHeight = (float)LocalPayload->GetNumberField(TEXT("halfHeight"));
+        }
+        DrawDebugCapsule(World, Loc, HalfHeight, Size, Rot, DebugColor, false,
+                         Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("arrow")) {
+        FVector EndLoc = Loc + FVector(100, 0, 0);
+        if (LocalPayload->HasField(TEXT("endLocation"))) {
+          // ... parsing logic same as line ...
+          const TSharedPtr<FJsonValue> EndVal =
+              LocalPayload->TryGetField(TEXT("endLocation"));
+          if (EndVal.IsValid()) {
+            if (EndVal->Type == EJson::Array) {
+              const TArray<TSharedPtr<FJsonValue>> &Arr = EndVal->AsArray();
+              if (Arr.Num() >= 3)
+                EndLoc = FVector((float)Arr[0]->AsNumber(),
+                                 (float)Arr[1]->AsNumber(),
+                                 (float)Arr[2]->AsNumber());
+            } else if (EndVal->Type == EJson::Object) {
+              const TSharedPtr<FJsonObject> O = EndVal->AsObject();
+              if (O.IsValid())
+                EndLoc = FVector((float)(O->HasField(TEXT("x"))
+                                             ? O->GetNumberField(TEXT("x"))
+                                             : 0.0),
+                                 (float)(O->HasField(TEXT("y"))
+                                             ? O->GetNumberField(TEXT("y"))
+                                             : 0.0),
+                                 (float)(O->HasField(TEXT("z"))
+                                             ? O->GetNumberField(TEXT("z"))
+                                             : 0.0));
+            }
+          }
+        }
+        float ArrowSize = Size > 0 ? Size : 10.0f;
+        DrawDebugDirectionalArrow(World, Loc, EndLoc, ArrowSize, DebugColor,
+                                  false, Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("plane")) {
+        // Draw a simple plane using a box with 0 height or DrawDebugSolidPlane
+        // if available but DrawDebugBox is safer for wireframe Using Box with
+        // minimal Z thickness
+        FVector BoxSize = FVector(Size, Size, 1.0f);
+        if (LocalPayload->HasField(TEXT("boxSize"))) {
+          // ... parsing ...
+        }
+        FQuat Rot = FQuat::Identity;
+        if (LocalPayload->HasField(TEXT("rotation"))) {
+          const TArray<TSharedPtr<FJsonValue>> *RotArr = nullptr;
+          if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotArr) &&
+              RotArr && RotArr->Num() >= 3) {
+            Rot = FRotator((float)(*RotArr)[0]->AsNumber(),
+                           (float)(*RotArr)[1]->AsNumber(),
+                           (float)(*RotArr)[2]->AsNumber())
+                      .Quaternion();
+          }
+        }
+        DrawDebugBox(World, Loc, BoxSize, Rot, DebugColor, false, Duration, 0,
+                     Thickness);
       } else {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), false);
@@ -561,7 +637,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
             FString::Printf(TEXT("Unsupported shape type: %s"), *ShapeType));
         Resp->SetStringField(
             TEXT("supportedShapes"),
-            TEXT("sphere, box, circle, line, point, coordinate"));
+            TEXT("sphere, box, circle, line, point, coordinate, cylinder, "
+                 "cone, capsule, arrow, plane"));
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Unsupported shape type"), Resp,
                                TEXT("UNSUPPORTED_SHAPE"));

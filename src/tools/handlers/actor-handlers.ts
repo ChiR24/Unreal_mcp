@@ -1,8 +1,12 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
+import { executeAutomationRequest } from './common-handlers.js';
+import { Logger } from '../../utils/logger.js';
+import { normalizeArgs } from './argument-helper.js';
 
 type ActorActionHandler = (args: any, tools: ITools) => Promise<any>;
+
+const logger = new Logger('ActorHandlers');
 
 const handlers: Record<string, ActorActionHandler> = {
     spawn: async (args, tools) => {
@@ -26,15 +30,13 @@ const handlers: Record<string, ActorActionHandler> = {
             'Actor': '/Script/Engine.Actor'
         };
 
-        let classPath = args.classPath;
-
-        // Apply alias if classPath matches a known alias
-        if (classPath && classAliases[classPath]) {
-            classPath = classAliases[classPath];
-        }
-
-        classPath = requireNonEmptyString(classPath, 'classPath', 'Invalid classPath: must be a non-empty string');
-        const timeoutMs = typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined;
+        const params = normalizeArgs(args, [
+            { key: 'classPath', aliases: ['class', 'type', 'actorClass'], required: true, map: classAliases },
+            { key: 'actorName', aliases: ['name'] },
+            { key: 'timeoutMs', default: undefined }
+        ]);
+        
+        const timeoutMs = typeof params.timeoutMs === 'number' ? params.timeoutMs : undefined;
 
         // Extremely small timeouts are treated as an immediate timeout-style
         // failure so tests can exercise timeout handling deterministically
@@ -48,13 +50,16 @@ const handlers: Record<string, ActorActionHandler> = {
         }
 
         // For SplineActor alias, add SplineComponent automatically
-        const componentToAdd = (args.classPath === 'SplineActor' || args.classPath === 'Spline')
+        // Check original args for raw input or assume normalized classPath check is sufficient if map didn't obscure it?
+        // Map transforms 'SplineActor' -> '/Script/Engine.Actor', so we check original args.
+        const originalClass = args.classPath || args.class || args.type || args.actorClass;
+        const componentToAdd = (originalClass === 'SplineActor' || originalClass === 'Spline')
             ? 'SplineComponent'
             : undefined;
 
         const result = await tools.actorTools.spawn({
-            classPath,
-            actorName: args.actorName,
+            classPath: params.classPath,
+            actorName: params.actorName,
             location: args.location,
             rotation: args.rotation,
             meshPath: args.meshPath,
@@ -77,17 +82,21 @@ const handlers: Record<string, ActorActionHandler> = {
         if (args.actorNames && Array.isArray(args.actorNames)) {
             return tools.actorTools.delete({ actorNames: args.actorNames });
         }
-        const actorName = requireNonEmptyString(args.actorName || args.name, 'actorName', 'Invalid actorName');
-        return tools.actorTools.delete({ actorName });
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name'], required: true }
+        ]);
+        return tools.actorTools.delete({ actorName: params.actorName });
     },
     apply_force: async (args, tools) => {
-        const actorName = requireNonEmptyString(args.actorName, 'actorName');
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name'], required: true }
+        ]);
         const force = args.force;
 
         // Function to attempt applying force, returning the result or throwing
         const tryApplyForce = async () => {
             return await tools.actorTools.applyForce({
-                actorName,
+                actorName: params.actorName,
                 force
             });
         };
@@ -102,9 +111,9 @@ const handlers: Record<string, ActorActionHandler> = {
             if (errorMsg.toUpperCase().includes('PHYSICS')) {
                 try {
                     // Auto-enable physics logic
-                    const compsResult = await tools.actorTools.getComponents(actorName);
+                    const compsResult = await tools.actorTools.getComponents(params.actorName);
                     if (compsResult && compsResult.success && Array.isArray(compsResult.components)) {
-                        console.log('DEBUG: Components found:', JSON.stringify(compsResult.components));
+                        logger.debug('Components found:', JSON.stringify(compsResult.components));
                         const meshComp = compsResult.components.find((c: any) => {
                             const name = c.name || c;
                             const match = typeof name === 'string' && (
@@ -112,15 +121,15 @@ const handlers: Record<string, ActorActionHandler> = {
                                 name.toLowerCase().includes('mesh') ||
                                 name.toLowerCase().includes('primitive')
                             );
-                            console.log(`DEBUG: Checking component '${name}' matches? ${match}`);
+                            logger.debug(`Checking component '${name}' matches? ${match}`);
                             return match;
                         });
 
                         if (meshComp) {
                             const compName = meshComp.name || meshComp;
-                            console.log(`Auto-enabling physics for component: ${compName}`); // Debug log
+                            logger.debug(`Auto-enabling physics for component: ${compName}`); // Debug log
                             await tools.actorTools.setComponentProperties({
-                                actorName,
+                                actorName: params.actorName,
                                 componentName: compName,
                                 properties: { SimulatePhysics: true, bSimulatePhysics: true, Mobility: 2 }
                             });
@@ -140,59 +149,80 @@ const handlers: Record<string, ActorActionHandler> = {
         }
     },
     set_transform: async (args, tools) => {
-        const actorName = requireNonEmptyString(args.actorName, 'actorName');
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name'], required: true }
+        ]);
         return tools.actorTools.setTransform({
-            actorName,
+            actorName: params.actorName,
             location: args.location,
             rotation: args.rotation,
             scale: args.scale
         });
     },
     get_transform: async (args, tools) => {
-        const actorName = requireNonEmptyString(args.actorName, 'actorName');
-        return tools.actorTools.getTransform(actorName);
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name'], required: true }
+        ]);
+        return tools.actorTools.getTransform(params.actorName);
     },
     duplicate: async (args, tools) => {
-        const actorName = requireNonEmptyString(args.actorName, 'actorName');
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name'], required: true },
+            { key: 'newName', aliases: ['nameTo'] }
+        ]);
         return tools.actorTools.duplicate({
-            actorName,
-            newName: args.newName,
+            actorName: params.actorName,
+            newName: params.newName,
             offset: args.offset
         });
     },
     attach: async (args, tools) => {
-        // Allow actorName as alias for childActor for consistency with other tools
-        const childActor = requireNonEmptyString(args.childActor || args.actorName, 'childActor (or actorName)');
-        const parentActor = requireNonEmptyString(args.parentActor, 'parentActor');
-        return tools.actorTools.attach({ childActor, parentActor });
+        const params = normalizeArgs(args, [
+            { key: 'childActor', aliases: ['actorName', 'child'], required: true },
+            { key: 'parentActor', aliases: ['parent'], required: true }
+        ]);
+        return tools.actorTools.attach({ childActor: params.childActor, parentActor: params.parentActor });
     },
     detach: async (args, tools) => {
-        const actorName = requireNonEmptyString(args.actorName || args.childActor, 'actorName', 'detach requires actorName (or childActor)');
-        return tools.actorTools.detach(actorName);
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['childActor', 'child'], required: true }
+        ]);
+        return tools.actorTools.detach(params.actorName);
     },
     add_tag: async (args, tools) => {
-        const actorName = requireNonEmptyString(args.actorName, 'actorName');
-        const tag = requireNonEmptyString(args.tag, 'tag');
-        return tools.actorTools.addTag({ actorName, tag });
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name'], required: true },
+            { key: 'tag', required: true }
+        ]);
+        return tools.actorTools.addTag({ actorName: params.actorName, tag: params.tag });
     },
     remove_tag: async (args, tools) => {
-        const actorName = requireNonEmptyString(args.actorName, 'actorName');
-        const tag = requireNonEmptyString(args.tag, 'tag');
-        return tools.actorTools.removeTag({ actorName, tag });
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name'], required: true },
+            { key: 'tag', required: true }
+        ]);
+        return tools.actorTools.removeTag({ actorName: params.actorName, tag: params.tag });
     },
     find_by_tag: async (args, tools) => {
-        const rawTag = typeof args.tag === 'string' ? args.tag : '';
-        return tools.actorTools.findByTag({ tag: rawTag, matchType: args.matchType });
+        const params = normalizeArgs(args, [
+            { key: 'tag', default: '' }
+        ]);
+        return tools.actorTools.findByTag({ tag: params.tag, matchType: args.matchType });
     },
     delete_by_tag: async (args, tools) => {
-        const tag = requireNonEmptyString(args.tag, 'tag');
-        return tools.actorTools.deleteByTag(tag);
+        const params = normalizeArgs(args, [
+            { key: 'tag', required: true }
+        ]);
+        return tools.actorTools.deleteByTag(params.tag);
     },
     spawn_blueprint: async (args, tools) => {
-        const blueprintPath = requireNonEmptyString(args.blueprintPath, 'blueprintPath', 'Invalid blueprintPath: must be a non-empty string');
+        const params = normalizeArgs(args, [
+            { key: 'blueprintPath', aliases: ['path', 'bp'], required: true },
+            { key: 'actorName', aliases: ['name'] }
+        ]);
         const result = await tools.actorTools.spawnBlueprint({
-            blueprintPath,
-            actorName: args.actorName,
+            blueprintPath: params.blueprintPath,
+            actorName: params.actorName,
             location: args.location,
             rotation: args.rotation
         });
@@ -220,16 +250,13 @@ const handlers: Record<string, ActorActionHandler> = {
     },
     find_by_name: async (args, tools) => {
         // Support both actorName and name parameters for consistency
-        const query = typeof (args.name ?? args.actorName ?? args.query) === 'string'
-            ? String(args.name ?? args.actorName ?? args.query).trim()
-            : '';
-        if (!query) {
-            return { success: false, error: 'INVALID_ARGUMENT', message: 'name (or actorName) is required' };
-        }
-
+        const params = normalizeArgs(args, [
+            { key: 'name', aliases: ['actorName', 'query'], required: true }
+        ]);
+        
         // Use the plugin's fuzzy query endpoint (contains-match) instead of the
         // exact lookup endpoint. This improves "spawn then find" reliability.
-        return tools.actorTools.findByName(query);
+        return tools.actorTools.findByName(params.name);
     }
 };
 

@@ -369,7 +369,7 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
             'load', 'save', 'save_as', 'save_level_as', 'stream', 'create_level', 'create_light', 'build_lighting',
             'set_metadata', 'load_cells', 'set_datalayer',
             'export_level', 'import_level', 'list_levels', 'get_summary', 'delete', 'validate_level',
-            'cleanup_invalid_datalayers'
+            'cleanup_invalid_datalayers', 'add_sublevel'
           ],
           description: 'Action'
         },
@@ -395,7 +395,11 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
         destinationPath: { type: 'string' },
         note: { type: 'string' },
         // Delete
-        levelPaths: { type: 'array', items: { type: 'string' } }
+        levelPaths: { type: 'array', items: { type: 'string' } },
+        // Sublevel
+        subLevelPath: { type: 'string' },
+        parentLevel: { type: 'string' },
+        streamingMethod: { type: 'string', enum: ['Blueprint', 'AlwaysLoaded'] }
       },
       required: ['action']
     },
@@ -490,9 +494,10 @@ Supported actions:
         name: { type: 'string' },
         systemName: { type: 'string' },
         systemPath: { type: 'string', description: 'Required for spawning Niagara effects (spawn_niagara, create_volumetric_fog, etc) and most graph operations.' },
+        preset: { type: 'string', description: 'Required for particle action. Path to particle system asset.' },
         location: commonSchemas.location,
         scale: { type: 'number' },
-        shape: { type: 'string' },
+        shape: { type: 'string', description: 'Supported: sphere, box, cylinder, line, cone, capsule, arrow, plane' },
         size: { type: 'number' },
         color: { type: 'array', items: { type: 'number' } },
         // Graph
@@ -503,7 +508,9 @@ Supported actions:
         parameterName: { type: 'string' },
         parameterType: { type: 'string', description: 'Float, Vector, Color, Bool, etc.' },
         type: { type: 'string', description: 'Alias for parameterType' },
-        value: { description: 'Value.' }
+        value: { description: 'Value.' },
+        // Cleanup
+        filter: { type: 'string', description: 'Filter for cleanup action. Required.' }
       },
       required: ['action']
     },
@@ -543,6 +550,13 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
         },
         // Common
         name: { type: 'string', description: 'Name of landscape, foliage type, or procedural volume.' },
+        landscapeName: { type: 'string' },
+        heightData: { type: 'array', items: { type: 'number' } },
+        minX: { type: 'number' },
+        minY: { type: 'number' },
+        maxX: { type: 'number' },
+        maxY: { type: 'number' },
+        updateNormals: { type: 'boolean' },
         location: commonSchemas.location,
         rotation: commonSchemas.rotation,
         scale: commonSchemas.scale,
@@ -575,6 +589,17 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
         alignToNormal: { type: 'boolean' },
         randomYaw: { type: 'boolean' },
         locations: { type: 'array', items: commonSchemas.location },
+        transforms: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              location: commonSchemas.location,
+              rotation: commonSchemas.rotation,
+              scale: commonSchemas.scale
+            }
+          }
+        },
         position: commonSchemas.location,
 
         // Procedural
@@ -849,7 +874,7 @@ Supported actions:
         propertyPath: { type: 'string', description: 'Alternate property path parameter.' },
         value: { description: 'Value to set.' },
         // Actor/Component identifiers
-        actorName: { type: 'string', description: 'Actor name for inspection.' },
+        actorName: { type: 'string', description: 'Actor name (required for snapshots, export, and component resolution).' },
         name: { type: 'string', description: 'Object name (alternative to objectPath).' },
         componentName: { type: 'string', description: 'Component name for component property access.' },
         // Search/Filter
@@ -885,7 +910,12 @@ Use it when you need to:
 - play sounds (3D/2D).
 - control audio components.
 
-Supported actions: create_sound_cue, play_sound_at_location, play_sound_2d, create_audio_component, create_sound_mix, push_sound_mix, pop_sound_mix, set_sound_mix_class_override, clear_sound_mix_class_override, set_base_sound_mix, prime_sound, play_sound_attached, spawn_sound_at_location, fade_sound_in, fade_sound_out.`,
+Supported actions:
+- Assets: create_sound_cue, create_sound_mix, create_sound_class, create_reverb_zone, create_ambient_sound.
+- Playback: play_sound_at_location, play_sound_2d, play_sound_attached, spawn_sound_at_location.
+- Components: create_audio_component, fade_sound, fade_sound_in, fade_sound_out.
+- Mixes: push_sound_mix, pop_sound_mix, set_sound_mix_class_override, clear_sound_mix_class_override, set_base_sound_mix.
+- Global: enable_audio_analysis, set_doppler_effect, set_audio_occlusion, set_sound_attenuation.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -896,7 +926,10 @@ Supported actions: create_sound_cue, play_sound_at_location, play_sound_2d, crea
             'create_sound_mix', 'push_sound_mix', 'pop_sound_mix',
             'set_sound_mix_class_override', 'clear_sound_mix_class_override', 'set_base_sound_mix',
             'prime_sound', 'play_sound_attached', 'spawn_sound_at_location',
-            'fade_sound_in', 'fade_sound_out', 'create_ambient_sound'
+            'fade_sound_in', 'fade_sound_out', 'create_ambient_sound',
+            // Added missing actions
+            'create_sound_class', 'set_sound_attenuation', 'create_reverb_zone',
+            'enable_audio_analysis', 'fade_sound', 'set_doppler_effect', 'set_audio_occlusion'
           ],
           description: 'Action'
         },
@@ -917,7 +950,24 @@ Supported actions: create_sound_cue, play_sound_at_location, play_sound_2d, crea
         targetVolume: { type: 'number' },
         attachPointName: { type: 'string' },
         actorName: { type: 'string' },
-        componentName: { type: 'string' }
+        componentName: { type: 'string' },
+        // Added missing parameters
+        parentClass: { type: 'string' },
+        properties: { type: 'object' },
+        innerRadius: { type: 'number' },
+        falloffDistance: { type: 'number' },
+        attenuationShape: { type: 'string' },
+        falloffMode: { type: 'string' },
+        reverbEffect: { type: 'string' },
+        size: commonSchemas.scale,
+        fftSize: { type: 'number' },
+        outputType: { type: 'string' },
+        soundName: { type: 'string' },
+        fadeType: { type: 'string' },
+        scale: { type: 'number' },
+        lowPassFilterFrequency: { type: 'number' },
+        volumeAttenuation: { type: 'number' },
+        enabled: { type: 'boolean' }
       },
       required: ['action']
     },

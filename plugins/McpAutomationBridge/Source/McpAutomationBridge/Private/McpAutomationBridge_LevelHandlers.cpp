@@ -4,7 +4,10 @@
 
 #if WITH_EDITOR
 #include "Editor.h"
+#include "EditorLevelUtils.h"
 #include "Engine/LevelStreaming.h"
+#include "Engine/LevelStreamingAlwaysLoaded.h"
+#include "Engine/LevelStreamingDynamic.h"
 #include "Engine/World.h"
 #include "FileHelpers.h"
 #include "LevelEditor.h"
@@ -35,8 +38,10 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       (Lower == TEXT("manage_level") || Lower == TEXT("save_current_level") ||
        Lower == TEXT("create_new_level") || Lower == TEXT("stream_level") ||
        Lower == TEXT("spawn_light") || Lower == TEXT("build_lighting") ||
+       Lower == TEXT("spawn_light") || Lower == TEXT("build_lighting") ||
        Lower == TEXT("bake_lightmap") || Lower == TEXT("list_levels") ||
-       Lower == TEXT("export_level") || Lower == TEXT("import_level"));
+       Lower == TEXT("export_level") || Lower == TEXT("import_level") ||
+       Lower == TEXT("add_sublevel"));
   if (!bIsLevelAction)
     return false;
 
@@ -145,7 +150,10 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     } else if (LowerSub == TEXT("export_level")) {
       EffectiveAction = TEXT("export_level");
     } else if (LowerSub == TEXT("import_level")) {
+    } else if (LowerSub == TEXT("import_level")) {
       EffectiveAction = TEXT("import_level");
+    } else if (LowerSub == TEXT("add_sublevel")) {
+      EffectiveAction = TEXT("add_sublevel");
     } else {
       SendAutomationError(
           RequestingSocket, RequestId,
@@ -658,6 +666,92 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         TEXT("NOT_IMPLEMENTED"));
     return true;
   }
+  if (EffectiveAction == TEXT("add_sublevel")) {
+    FString SubLevelPath;
+    if (Payload.IsValid())
+      Payload->TryGetStringField(TEXT("subLevelPath"), SubLevelPath);
+    if (SubLevelPath.IsEmpty() && Payload.IsValid())
+      Payload->TryGetStringField(TEXT("levelPath"), SubLevelPath);
+
+    if (SubLevelPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("subLevelPath required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Robustness: Cleanup before adding
+    if (GEditor) {
+      GEditor->ForceGarbageCollection(true);
+    }
+
+    // Verify file existence (more robust than DoesPackageExist for new files)
+    FString Filename;
+    bool bFileFound = false;
+    if (FPackageName::TryConvertLongPackageNameToFilename(
+            SubLevelPath, Filename, FPackageName::GetMapPackageExtension())) {
+      if (IFileManager::Get().FileExists(*Filename)) {
+        bFileFound = true;
+      }
+    }
+
+    // Fallback: Check without conversion if it's already a file path?
+    if (!bFileFound && IFileManager::Get().FileExists(*SubLevelPath)) {
+      bFileFound = true;
+    }
+
+    if (!bFileFound) {
+      // Try checking DoesPackageExist as last resort
+      if (!FPackageName::DoesPackageExist(SubLevelPath)) {
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Level file not found: %s"), *SubLevelPath),
+            nullptr, TEXT("PACKAGE_NOT_FOUND"));
+        return true;
+      }
+    }
+
+    FString StreamingMethod = TEXT("Blueprint");
+    if (Payload.IsValid())
+      Payload->TryGetStringField(TEXT("streamingMethod"), StreamingMethod);
+
+    if (!GEditor) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Editor unavailable"), nullptr,
+                             TEXT("NO_EDITOR"));
+      return true;
+    }
+
+    UWorld *World = GEditor->GetEditorWorldContext().World();
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No world loaded"), nullptr,
+                             TEXT("NO_WORLD"));
+      return true;
+    }
+
+    // Determine streaming class
+    UClass *StreamingClass = ULevelStreamingDynamic::StaticClass();
+    if (StreamingMethod.Equals(TEXT("AlwaysLoaded"), ESearchCase::IgnoreCase)) {
+      StreamingClass = ULevelStreamingAlwaysLoaded::StaticClass();
+    }
+
+    ULevelStreaming *NewLevel = UEditorLevelUtils::AddLevelToWorld(
+        World, *SubLevelPath, StreamingClass);
+    if (NewLevel) {
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Sublevel added successfully"), nullptr);
+    } else {
+      // Did we fail because it's already there?
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Failed to add sublevel %s (Check logs)"),
+                          *SubLevelPath),
+          nullptr, TEXT("ADD_FAILED"));
+    }
+    return true;
+  }
+
   return false;
 #else
   SendAutomationResponse(RequestingSocket, RequestId, false,

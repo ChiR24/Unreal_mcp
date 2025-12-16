@@ -1463,6 +1463,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
       TSharedPtr<FJsonObject> CompData = MakeShared<FJsonObject>();
       CompData->SetStringField(TEXT("name"), Comp->GetName());
       CompData->SetStringField(TEXT("class"), Comp->GetClass()->GetName());
+      CompData->SetStringField(TEXT("path"), Comp->GetPathName());
 
       if (USceneComponent *SceneComp = Cast<USceneComponent>(Comp)) {
         CompData->SetBoolField(TEXT("isSceneComponent"), true);
