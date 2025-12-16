@@ -70,7 +70,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - Roadmap: expand the bridge with elevated actions (SCS authoring, typed property marshaling, modal mediation, asset workflows).
 
 ### Plugin Setup Video Guide
-<video src="./Public/Plugin_setup_guide.mp4" controls="controls" style="max-width: 100%;"></video>
+https://github.com/user-attachments/assets/17bfb47d-d455-4fc8-be16-ec12c23fe211
 
 ### WebAssembly Performance (Optional)
 
