@@ -2423,8 +2423,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorStop(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("eject"))
     return HandleControlEditorEject(RequestId, Payload, RequestingSocket);
-  if (LowerSub == TEXT("eject"))
-    return HandleControlEditorEject(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("possess"))
     return HandleControlEditorPossess(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("focus_actor"))
