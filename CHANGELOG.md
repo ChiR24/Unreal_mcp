@@ -87,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Blueprint graph management and Niagara functionalities (`aff4d55`)
 - Physics simulation setup in AnimationTools (`83a6f5d`)
 - **New Asset Actions:**
+```text
   - `generate_lods`, `add_material_parameter`, `list_instances`
   - `reset_instance_parameters`, `get_material_stats`, `exists`
   - `nanite_rebuild_mesh`

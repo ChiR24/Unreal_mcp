@@ -867,16 +867,22 @@ query {
 
 ## Additional Resources
 
-- [GraphQL Official Website](https://graphql.org/)
-- [GraphQL Schema and Types](https://graphql.org/learn/schema/)
-- [GraphQL Queries and Mutations](https://graphql.org/learn/queries-and-mutations/)
-- [Apollo Client](https://www.apollographql.com/docs/react/) - Popular GraphQL client
+### GraphQL Clients
 - [GraphiQL](https://github.com/graphql/graphiql) - In-browser GraphQL IDE
+- [Apollo Studio](https://studio.apollographql.com) - Powerful visual editor
+- [Insomnia](https://insomnia.rest/) - REST client with GraphQL support
+- [Postman](https://www.postman.com/) - API platform with GraphQL support
+
+### Learning Resources
+- [Introduction to GraphQL](https://graphql.org/learn/)
+- [Queries and Mutations](https://graphql.org/learn/queries/)
+- [Apollo Client React](https://www.apollographql.com/docs/react/)
+- [GraphQL Best Practices](https://graphql.org/learn/best-practices/)
 
 ## Next Steps
 
 1. Start the MCP server with `GRAPHQL_ENABLED=true`
-2. Use a GraphQL client (GraphiQL, Apollo Studio, or Postman) to explore the schema
+2. Use a GraphQL client (GraphiQL, Apollo Studio, Insomnia, or Postman) to explore the schema
 3. Try the query examples above
 4. Build your own queries tailored to your needs
 5. Consider using fragments and variables for complex workflows

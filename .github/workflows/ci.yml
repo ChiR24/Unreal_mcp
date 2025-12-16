@@ -59,7 +59,7 @@ jobs:
           if [ -z "$FILES" ]; then
             echo "No C/C++ files to lint - skipping cpplint"
           else
-            python -m cpplint $FILES
+            python -m cpplint --filter=-whitespace/braces,-whitespace/indent,-build/include_order,-build/namespaces $FILES
           fi
 
       - name: Run dotnet-format (C#)

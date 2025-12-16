@@ -32,7 +32,7 @@ This roadmap outlines the development plan for expanding the capabilities of the
 - [x] **Pipeline Integration**: Direct UBT execution with output streaming.
 - [x] **Documentation**: Comprehensive handler mappings and API references.
 - [ ] **Real-time Streaming**: Streaming logs and test results via SSE or chunked responses.
-- [ ] **Advanced Rendering**: Nanite/Lumen specific tools (partially implemented).
+- [ ] **Advanced Rendering**: Nanite/Lumen-specific tools (partially implemented).
 - [x] **Metrics Dashboard**: `ue://health` view backed by bridge/server metrics.
 - [x] **UE 5.7 Support**: Full compatibility with Unreal Engine 5.7 (Control Rig, Subobject Data).
 

@@ -95,8 +95,10 @@ ue://automation-bridge # Connection status
 
 ```cpp
 // In McpAutomationBridgeSubsystem.cpp
-case "create_material":
+if (Action == TEXT("create_material"))
+{
     return AssetWorkflowHandlers::CreateMaterial(Payload, Reply);
+}
 ```
 
 ```typescript

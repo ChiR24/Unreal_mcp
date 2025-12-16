@@ -106,8 +106,8 @@ WASM_ENABLED=true
 WASM_MONITORING_ENABLED=true
 
 # Existing MCP settings
-MCP_AUTOMATION_WS_HOST=127.0.0.1
-MCP_AUTOMATION_WS_PORT=8090
+MCP_AUTOMATION_HOST=127.0.0.1
+MCP_AUTOMATION_PORT=8091
 ```
 
 ## Migration Steps
@@ -652,11 +652,18 @@ echo $WASM_ENABLED  # Should be "true"
 ### Documentation
 - [GraphQL API Documentation](GraphQL-API.md)
 - [WebAssembly Integration Guide](WebAssembly-Integration.md)
-- [README](../README.md)
+- Added **GraphQL API** (optional) for complex queries.
+    - Disabled by default (`GRAPHQL_ENABLED=false`).
+    - Uses Apollo Server.
+    - Integrated with **Apollo Sandbox** (local IDE) or [Apollo Studio](https://studio.apollographql.com). - GraphQL platform
+- [Postman](https://www.postman.com/) - API testing
+
+### Learning
+- [GraphQL.org](https://graphql.org/) - Official GraphQL documentation
+- [WebAssembly.org](https://webassembly.org/) - WebAssembly specification
 
 ### Tools
 - [GraphiQL](https://github.com/graphql/graphiql) - In-browser GraphQL IDE
-- [Apollo Studio](https://www.apollographql.com/studio) - GraphQL platform
 - [Postman](https://www.postman.com/) - API testing
 
 ### Learning

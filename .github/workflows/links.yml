@@ -41,8 +41,6 @@ jobs:
             --exclude '^https://github.com/.*/compare/'
             --exclude 'localhost'
             --exclude '127.0.0.1'
-            --exclude 'npmjs.com'
-            --exclude 'unrealengine.com'
             --exclude 'file://'
             '**/*.md'
             'docs/**'

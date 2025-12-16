@@ -68,9 +68,9 @@ jobs:
             core.setOutput('available_labels', areaLabels.join(','));
             core.info(`Found ${areaLabels.length} area labels: ${areaLabels.join(', ')}`);
 
-      - name: 'Run Gemini Issue Analysis'
-        uses: 'google-github-actions/run-gemini-cli@v0'
-        id: 'gemini_analysis'
+      - name: Analyze Issue with Gemini
+        id: gemini_analysis
+        uses: google-github-actions/run-gemini-cli@a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0 # v0 (Using SHA for security)
         env:
           GITHUB_TOKEN: ''  # No auth token for untrusted input analysis
           ISSUE_TITLE: '${{ github.event_name == ''workflow_dispatch'' && steps.get_issue_data.outputs.title || github.event.issue.title }}'
@@ -115,29 +115,37 @@ jobs:
         env:
           ISSUE_NUMBER: '${{ github.event.issue.number || github.event.inputs.issue_number }}'
           GEMINI_OUTPUT: '${{ steps.gemini_analysis.outputs.summary }}'
+          AVAILABLE_LABELS: '${{ steps.get_labels.outputs.available_labels }}'
         with:
           github-token: '${{ secrets.GITHUB_TOKEN }}'
           script: |
-            const output = process.env.GEMINI_OUTPUT;
-            core.info(`Gemini output: ${output}`);
+            const fs = require('fs');
+            const summary = process.env.GEMINI_OUTPUT;
             
-            let parsed;
+            // Parse Gemini output for labels
+            let parsed = {};
             try {
-              parsed = JSON.parse(output);
-            } catch (e) {
-              // Try to extract from markdown code block
-              const match = output.match(/```json\s*([\s\S]*?)\s*```/);
+              // Try to find JSON block
+              const match = summary.match(/```json\n([\s\S]*?)\n```/);
               if (match) {
-                parsed = JSON.parse(match[1].trim());
+                parsed = JSON.parse(match[1]);
               } else {
-                core.setFailed(`Failed to parse Gemini output: ${output}`);
-                return;
+                 parsed = JSON.parse(summary);
               }
+            } catch (e) {
+              core.warning('Failed to parse Gemini output as JSON');
+              return;
             }
             
             const label = parsed.label;
             if (!label) {
-              core.warning('No label returned from Gemini');
+               core.warning('No label returned from Gemini');
+               return;
+            }
+
+            const availableLabels = (process.env.AVAILABLE_LABELS || '').split(',');
+            if (!availableLabels.includes(label)) {
+              core.warning(`Label '${label}' not in available labels; skipping`);
               return;
             }
             

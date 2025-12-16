@@ -92,7 +92,7 @@ DefaultBindAddress=0.0.0.0
 ```
 
 **Environment Variables (optional):**
-```
+```bash
 UE_HOST=127.0.0.1
 MCP_AUTOMATION_PORT=8091
 ```
@@ -107,7 +107,7 @@ Each test displays:
 - Error details for failed tests
 
 Example:
-```
+```text
 ============================================================
 Starting Asset Management Tests
 Total test cases: 10
