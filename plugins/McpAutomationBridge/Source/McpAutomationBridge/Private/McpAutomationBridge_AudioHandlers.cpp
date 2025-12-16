@@ -26,6 +26,16 @@
 
 #endif
 
+/**
+ * Finds an actor by object path/name or by actor label/name within an optional world.
+ *
+ * Searches first for an exact object path or registered name, and if not found and a World is provided,
+ * iterates actors in that World comparing actor label and actor name case-insensitively.
+ *
+ * @param ActorName Actor object path, registered name, or actor label to search for.
+ * @param World Optional world to search actor labels/names in when direct lookup fails.
+ * @return `AActor*` Pointer to the matched actor, `nullptr` if no matching actor is found or ActorName is empty.
+ */
 static AActor *FindAudioActorByName(const FString &ActorName, UWorld *World) {
   if (ActorName.IsEmpty())
     return nullptr;
@@ -47,6 +57,16 @@ static AActor *FindAudioActorByName(const FString &ActorName, UWorld *World) {
   return nullptr;
 }
 
+/**
+ * @brief Resolves a USoundBase asset from an asset path or an asset name.
+ *
+ * Attempts to load the sound by the provided path; if the input appears to be a simple name
+ * (no path separators), searches the project's /Game assets for a matching USoundWave or
+ * USoundCue by name.
+ *
+ * @param SoundPath Asset path (e.g. "/Game/Audio/MyCue.MyCue") or an asset name (e.g. "MyCue").
+ * @return USoundBase* Pointer to the resolved sound asset, or nullptr if not found.
+ */
 static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
   if (SoundPath.IsEmpty())
     return nullptr;
@@ -96,6 +116,17 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
   return nullptr;
 }
 
+/**
+ * @brief Resolve a USoundMix by asset path or asset name.
+ *
+ * Attempts to load a USoundMix using the provided MixPath. If MixPath contains a
+ * full asset path and the asset exists, that asset is returned. If MixPath does
+ * not contain a path separator, the function treats it as an asset name and
+ * searches the /Game packages for a matching USoundMix (case-insensitive).
+ *
+ * @param MixPath Asset path or asset name to resolve.
+ * @return USoundMix* Pointer to the resolved USoundMix, or nullptr if not found.
+ */
 static USoundMix *ResolveSoundMix(const FString &MixPath) {
   if (MixPath.IsEmpty())
     return nullptr;
@@ -130,6 +161,16 @@ static USoundMix *ResolveSoundMix(const FString &MixPath) {
   return nullptr;
 }
 
+/**
+ * @brief Locates and returns a USoundClass by asset path or by asset name.
+ *
+ * Attempts to load the sound class directly if ClassPath refers to an existing asset; otherwise,
+ * if ClassPath does not contain a '/' it searches the project's /Game assets for a sound class
+ * with a matching name (case-insensitive).
+ *
+ * @param ClassPath Asset path (e.g. "/Game/Audio/MyClass") or asset name ("MyClass").
+ * @return USoundClass* Pointer to the resolved sound class, or nullptr if not found or ClassPath is empty.
+ */
 static USoundClass *ResolveSoundClass(const FString &ClassPath) {
   if (ClassPath.IsEmpty())
     return nullptr;
@@ -164,6 +205,17 @@ static USoundClass *ResolveSoundClass(const FString &ClassPath) {
   return nullptr;
 }
 
+/**
+ * @brief Handle audio-related automation actions described by a JSON payload and perform corresponding editor-side audio operations.
+ *
+ * Processes actions whose names start with audio_/create_sound_/play_sound_/set_sound_/push_sound_/pop_sound_/create_audio_/create_ambient_/create_reverb_/enable_audio_/fade_sound/set_doppler_/set_audio_/clear_sound_/set_base_sound_/prime_/spawn_sound_. In editor builds this may create audio assets (SoundCue, SoundClass, SoundMix), play or spawn sounds (2D/3D, attached or at location), manage SoundMix state and overrides, fade audio, prime sounds, and create audio components; non-editor builds return a NOT_IMPLEMENTED response.
+ *
+ * @param RequestId Identifier for the automation request.
+ * @param Action Action name to handle (comparison is case-insensitive and matched by known prefixes).
+ * @param Payload JSON object containing action parameters (e.g., asset paths, location/rotation arrays, volume, pitch, names).
+ * @param RequestingSocket Optional socket that initiated the request (used for sending responses/errors).
+ * @return bool `true` if the request was processed (either handled successfully or an error/response was sent); `false` if the action name is not an audio-related command and was not handled. 
+ */
 bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,

@@ -33,7 +33,11 @@
 #include "Engine/Blueprint.h"
 #endif
 
-// Sanitize incoming JSON by stripping control characters that break parsers
+/**
+ * Removes control characters (ASCII codes less than 32) from the input JSON string.
+ * @param In Input string that may contain control characters.
+ * @returns String with all characters with ASCII value < 32 removed.
+ */
 static inline FString SanitizeIncomingJson(const FString &In) {
   FString Out;
   Out.Reserve(In.Len());
@@ -47,7 +51,18 @@ static inline FString SanitizeIncomingJson(const FString &In) {
 
 // Sanitize a project-relative path to prevent traversal attacks.
 // Ensures the path starts with a valid root (e.g. /Game, /Engine, /Plugin) and
-// does not contain ".."
+/**
+ * Normalize and validate a project-relative asset path.
+ *
+ * Ensures the returned path is normalized, begins with a leading '/', rejects any path containing
+ * directory traversal sequences (".."), and accepts common roots (/Game, /Engine, /Script) or
+ * plugin-like roots (heuristic). If a traversal sequence is found the function logs a warning and
+ * returns an empty string.
+ *
+ * @param InPath Input path to sanitize.
+ * @returns Sanitized project-relative path beginning with '/', or an empty string if the input was
+ *          empty or rejected (for example, when containing "..").
+ */
 static inline FString SanitizeProjectRelativePath(const FString &InPath) {
   if (InPath.IsEmpty())
     return FString();
@@ -94,6 +109,12 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
   return CleanPath;
 }
 
+/**
+ * Validate a basic asset path format.
+ *
+ * @returns `true` if Path is non-empty, begins with a leading '/', and does not contain
+ *          the parent-traversal segment ("..") or consecutive slashes ("//"); `false` otherwise.
+ */
 static inline bool IsValidAssetPath(const FString &Path) {
   return !Path.IsEmpty() && Path.StartsWith(TEXT("/")) &&
          !Path.Contains(TEXT("..")) && !Path.Contains(TEXT("//"));
@@ -114,7 +135,16 @@ struct FNormalizedAssetPath {
   FString ErrorMessage;
 };
 
-static inline FNormalizedAssetPath NormalizeAssetPath(const FString &InPath) {
+/**
+   * Normalize an input asset path to a valid long package name and validate it.
+   *
+   * @param InPath The asset path or object path to normalize (may be short, relative, or an object path).
+   * @returns An FNormalizedAssetPath containing:
+   *   - Path: the normalized package path candidate (may be unchanged if invalid),
+   *   - bIsValid: `true` when the path is a valid long package name and, when applicable, the package exists,
+   *   - ErrorMessage: populated with a validation error when `bIsValid` is `false`.
+   */
+  static inline FNormalizedAssetPath NormalizeAssetPath(const FString &InPath) {
   FNormalizedAssetPath Result;
   Result.bIsValid = false;
 
@@ -345,7 +375,12 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
 }
 #endif
 
-// Extract top-level JSON objects by scanning for balanced braces.
+/**
+ * Extracts top-level JSON objects from a string.
+ *
+ * @param In The input string that may contain one or more JSON objects mixed with other text.
+ * @returns An array of substring FStrings, each containing a complete top-level JSON object in the same order they appear in the input; empty if none are found.
+ */
 static inline TArray<FString> ExtractTopLevelJsonObjects(const FString &In) {
   TArray<FString> Results;
   int32 Depth = 0;
@@ -367,7 +402,11 @@ static inline TArray<FString> ExtractTopLevelJsonObjects(const FString &In) {
   return Results;
 }
 
-// Convert UTF-8 bytes of a FString to a lowercase hex string for diagnostics
+/**
+ * Produce a lowercase hexadecimal representation of the UTF-8 encoding of a string for diagnostic use.
+ * @param In The input string to encode as UTF-8 bytes.
+ * @returns A lowercase hex string representing the UTF-8 bytes of `In` (two hex characters per byte).
+ */
 static inline FString HexifyUtf8(const FString &In) {
   FTCHARToUTF8 Converter(*In);
   const uint8 *Bytes = reinterpret_cast<const uint8 *>(Converter.Get());
@@ -381,9 +420,23 @@ static inline FString HexifyUtf8(const FString &In) {
 }
 
 // Lightweight output capture to collect log lines emitted during
-// automation operations that write to GLog.
+/**
+ * Captures log output written to GLog into an in-memory list of lines.
+ *
+ * Instances can be attached as an FOutputDevice to collect serialized log messages.
+ * The captured lines have trailing newline characters removed and are stored in FIFO order.
+ * The Serialize override ignores null input.
+ *
+ * @returns For Consume(): an array of captured log lines; the captured list is cleared from the instance.
+ */
 struct FMcpOutputCapture : public FOutputDevice {
   TArray<FString> Lines;
+  /**
+   * Capture a log line, trim any trailing newline characters, and append the result to the internal Lines buffer.
+   * @param V Null-terminated string containing the log message; ignored if null.
+   * @param Verbosity Verbosity level of the log message.
+   * @param Category Log category name.
+   */
   virtual void Serialize(const TCHAR *V, ELogVerbosity::Type Verbosity,
                          const FName &Category) override {
     if (!V)
@@ -403,7 +456,24 @@ struct FMcpOutputCapture : public FOutputDevice {
 };
 
 // Export a single UProperty value from an object into a JSON value.
-// Export a single UProperty value from an object into a JSON value.
+/**
+ * Convert a single Unreal property value from a container into a JSON value.
+ *
+ * Supported property kinds include: strings and names, booleans, numeric types
+ * (float, double, int32, int64, byte), enum properties (name when available or
+ * numeric value), object references (returns path string or JSON null), soft
+ * object/class references (soft path string or JSON null), common structs
+ * (FVector/FVector-like exported as [x,y,z], FRotator exported as
+ * [pitch,yaw,roll], other structs exported as textual representation),
+ * arrays, maps (stringifiable keys with basic value types), and sets.
+ *
+ * @param TargetContainer Pointer to the memory/container that holds the
+ *        property's value.
+ * @param Property The property definition to export.
+ * @returns A shared pointer to an FJsonValue representing the property's value,
+ *          or `nullptr` if the inputs are invalid or the property type is not
+ *          supported. JSON `null` values are returned for valid null object or
+ *          soft-reference properties when appropriate.
 static inline TSharedPtr<FJsonValue>
 ExportPropertyToJsonValue(void *TargetContainer, FProperty *Property) {
   if (!TargetContainer || !Property)
@@ -757,7 +827,19 @@ static inline void ScanPathSynchronous(const FString & /*InPath*/,
 #endif
 
 // Apply a JSON value to an FProperty on a UObject. Returns true on success and
-// populates OutError with a descriptive string on failure.
+/**
+ * Apply a JSON value to a reflected property on a target container (object or struct).
+ *
+ * Converts and assigns common JSON types to the matching Unreal property type (bool, string/name,
+ * numeric types, enums/byte, object and soft references, structs for Vector/Rotator or JSON-string-to-struct,
+ * and arrays with common inner types). On failure it sets a descriptive message in OutError.
+ *
+ * @param TargetContainer Pointer to the memory/container that holds the property value (e.g., UObject or struct instance).
+ * @param Property The reflected FProperty to assign into.
+ * @param ValueField The JSON value to apply.
+ * @param OutError Receives a descriptive error message when the function returns false.
+ * @returns `true` if the JSON value was successfully converted and assigned to the property, `false` otherwise.
+ */
 static inline bool
 ApplyJsonValueToProperty(void *TargetContainer, FProperty *Property,
                          const TSharedPtr<FJsonValue> &ValueField,
@@ -1175,7 +1257,14 @@ ApplyJsonValueToProperty(void *TargetContainer, FProperty *Property,
   return false;
 }
 
-// Read vector and rotator typed fields from JSON helpers
+/**
+ * Populate Out with the vector found at the given JSON field, or use Default if the field is missing or invalid.
+ *
+ * @param Obj JSON object to read the field from; may be null.
+ * @param FieldName Name of the field containing the vector (object with x/y/z or an array of three numbers).
+ * @param Out Receives the resulting FVector.
+ * @param Default Fallback FVector used when the field is absent or cannot be parsed.
+ */
 static inline void ReadVectorField(const TSharedPtr<FJsonObject> &Obj,
                                    const TCHAR *FieldName, FVector &Out,
                                    const FVector &Default) {
@@ -1205,6 +1294,19 @@ static inline void ReadVectorField(const TSharedPtr<FJsonObject> &Obj,
   Out = Default;
 }
 
+/**
+ * Read a rotator field from a JSON object into an FRotator.
+ *
+ * Attempts to read a rotator located at FieldName in Obj. Supports either an
+ * object form with numeric fields "pitch"/"yaw"/"roll" (case-insensitive) or an
+ * array form [pitch, yaw, roll]. If the field is missing or invalid, Out is
+ * set to Default.
+ *
+ * @param Obj JSON object to read from.
+ * @param FieldName Name of the field within Obj containing the rotator.
+ * @param Out Output rotator populated from the JSON field or Default on failure.
+ * @param Default Fallback rotator used when the JSON field is absent or invalid.
+ */
 static inline void ReadRotatorField(const TSharedPtr<FJsonObject> &Obj,
                                     const TCHAR *FieldName, FRotator &Out,
                                     const FRotator &Default) {
@@ -1234,6 +1336,13 @@ static inline void ReadRotatorField(const TSharedPtr<FJsonObject> &Obj,
   Out = Default;
 }
 
+/**
+ * Extracts a FVector from a JSON object field, returning a default when the field is absent or invalid.
+ * @param Source JSON object to read from.
+ * @param FieldName Name of the field to extract (expects an object with x/y/z or an array).
+ * @param DefaultValue Value to return when the field is missing or cannot be parsed.
+ * @returns The parsed FVector from the specified field, or DefaultValue if parsing failed.
+ */
 static inline FVector ExtractVectorField(const TSharedPtr<FJsonObject> &Source,
                                          const TCHAR *FieldName,
                                          const FVector &DefaultValue) {
@@ -1242,6 +1351,13 @@ static inline FVector ExtractVectorField(const TSharedPtr<FJsonObject> &Source,
   return Parsed;
 }
 
+/**
+ * Extracts a rotator value from a JSON object field, returning the provided default when the field is absent or cannot be parsed.
+ * @param Source JSON object to read the field from.
+ * @param FieldName Name of the field to extract.
+ * @param DefaultValue Value returned when the field is missing or invalid.
+ * @returns Parsed FRotator from the specified field, or DefaultValue if extraction fails.
+ */
 static inline FRotator
 ExtractRotatorField(const TSharedPtr<FJsonObject> &Source,
                     const TCHAR *FieldName, const FRotator &DefaultValue) {
@@ -1257,7 +1373,15 @@ ExtractRotatorField(const TSharedPtr<FJsonObject> &Source,
 // Resolve a nested property path (e.g., "Transform.Location.X" or
 // "MyComponent.Intensity"). Returns the final property and the pointer to the
 // container holding it. OutError is populated with a descriptive error message
-// on failure.
+/**
+ * Resolve a dotted property path against a root UObject and locate the terminal property and its owning container.
+ *
+ * @param RootObject Root UObject to begin lookup from.
+ * @param PropertyPath Dotted property path (e.g., "Transform.Location.X").
+ * @param OutContainerPtr Set to a pointer to the container that holds the resolved property on success; remains nullptr on failure.
+ * @param OutError Set to a descriptive error message on failure; cleared on entry.
+ * @returns Pointer to the resolved FProperty for the final segment, or nullptr if resolution failed.
+ */
 static inline FProperty *ResolveNestedPropertyPath(UObject *RootObject,
                                                    const FString &PropertyPath,
                                                    void *&OutContainerPtr,
@@ -1340,7 +1464,14 @@ static inline FProperty *ResolveNestedPropertyPath(UObject *RootObject,
 
 // Helper to find an SCS node by a (case-insensitive) name. Uses reflection
 // to iterate the internal AllNodes array so this implementation does not
-// require the concrete USCS_Node type to be visible at compile time.
+/**
+ * Finds a Simple Construction Script node with the given name in the provided USimpleConstructionScript.
+ *
+ * Matches case-insensitively first against a node's `VariableName` property when present, and falls back to the node's object name.
+ * @param SCS Pointer to the USimpleConstructionScript to search; may be nullptr.
+ * @param Name Name to match against nodes (case-insensitive).
+ * @returns Pointer to the matching USCS_Node, or nullptr if no match is found or input is invalid.
+ */
 static inline USCS_Node *FindScsNodeByName(USimpleConstructionScript *SCS,
                                            const FString &Name) {
   if (!SCS || Name.IsEmpty())
@@ -1386,7 +1517,19 @@ static inline USCS_Node *FindScsNodeByName(USimpleConstructionScript *SCS,
 
 #if WITH_EDITOR
 // Attempt to locate and load a Blueprint by several heuristics. Returns nullptr
-// on failure and populates OutNormalized and OutError accordingly.
+/**
+ * Locate and load a Blueprint asset from a variety of request formats and return the loaded Blueprint.
+ *
+ * Attempts to resolve the input `Req` as an exact asset path (package.object), a package path (with /Game/ prepended when missing),
+ * or by querying the Asset Registry for a matching package name. On success `OutNormalized` is set to a normalized package path
+ * (without the object suffix) and the loaded `UBlueprint*` is returned; on failure `OutError` is set and nullptr is returned.
+ *
+ * @param Req The requested asset identifier; may be an absolute package path, an object-qualified path (Package.Asset),
+ *            or a short path relative to /Game (e.g., "Folder/Asset" or "/Game/Folder/Asset").
+ * @param OutNormalized Out parameter that will receive the normalized package path for the resolved asset (no object suffix) on success.
+ * @param OutError Out parameter that will receive a descriptive error message if resolution or loading fails.
+ * @returns The loaded `UBlueprint*` when the asset is found and loaded, or `nullptr` on failure.
+ */
 static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
                                              FString &OutNormalized,
                                              FString &OutError) {
@@ -1471,13 +1614,38 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
 }
 #endif
 
-// Generic conversion helpers to produce FString from common engine types
+/**
+ * Return the input FString unchanged.
+ *
+ * @param In The string to convert.
+ * @returns The same FString provided as input.
+ */
 static inline FString ConvertToString(const FString &In) { return In; }
+/**
+ * Convert a FName to its FString representation.
+ * @param In The name to convert.
+ * @returns The FString produced by calling ToString() on the input name.
+ */
 static inline FString ConvertToString(const FName &In) { return In.ToString(); }
+/**
+ * Convert an FText to its string representation.
+ * @param In Text to convert.
+ * @returns FString containing the text's contents.
+ */
 static inline FString ConvertToString(const FText &In) { return In.ToString(); }
 
 // Attempt to resolve a blueprint path to a normalized form without necessarily
-// loading the Blueprint object. Returns true when a normalized path is found.
+/**
+ * Find a normalized Blueprint package path for the given request string without loading the asset.
+ *
+ * Normalizes common forms (prepends /Game when missing a root, strips a trailing `.uasset`
+ * extension, and removes object-path suffixes like `/PackageName.ObjectName`) and checks
+ * for the asset's existence using a lightweight existence test.
+ *
+ * @param Req Input path or identifier (may be relative, start with `/`, include `.uasset`, or be an object path).
+ * @param OutNormalized Output set to the normalized package path (e.g., `/Game/...`) when found.
+ * @returns `true` if an existing normalized blueprint path was found and written to OutNormalized, `false` otherwise.
+ */
 static inline bool FindBlueprintNormalizedPath(const FString &Req,
                                                FString &OutNormalized) {
   OutNormalized.Empty();
@@ -1531,11 +1699,10 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
 }
 
 /**
- * Robustly resolves a UClass from a string input.
- * Input can be:
- * 1. Full path: "/Script/Engine.Actor"
- * 2. Short name: "Actor", "WidgetBlueprint" (searches common packages)
- * 3. Class path: "/Game/MyBP.MyBP_C"
+ * Resolve a UClass from a string that may be a full path, a blueprint class path, or a short class name.
+ *
+ * @param Input The input string representing the class (examples: "/Script/Engine.Actor", "/Game/MyBP.MyBP_C", or "Actor").
+ * @returns A pointer to the resolved UClass if found, `nullptr` otherwise.
  */
 static inline UClass *ResolveUClass(const FString &Input) {
   if (Input.IsEmpty())
