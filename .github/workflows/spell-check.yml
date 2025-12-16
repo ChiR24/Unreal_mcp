@@ -1,4 +1,6 @@
 name: Spell Check
+permissions:
+  contents: read
 
 on:
   push:
