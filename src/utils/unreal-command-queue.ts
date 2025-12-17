@@ -14,6 +14,7 @@ export class UnrealCommandQueue {
   private isProcessing = false;
   private lastCommandTime = 0;
   private lastStatCommandTime = 0;
+  private processorInterval?: ReturnType<typeof setInterval>;
 
   // Config
   private readonly MIN_COMMAND_DELAY = 100;
@@ -139,11 +140,22 @@ export class UnrealCommandQueue {
   }
 
   private startProcessor(): void {
-    setInterval(() => {
+    this.processorInterval = setInterval(() => {
       if (!this.isProcessing && this.queue.length > 0) {
         this.processQueue();
       }
     }, 1000);
+  }
+
+  /**
+   * Stop the command queue processor and clean up the interval.
+   * Should be called during shutdown to allow clean process exit.
+   */
+  stopProcessor(): void {
+    if (this.processorInterval) {
+      clearInterval(this.processorInterval);
+      this.processorInterval = undefined;
+    }
   }
 
   private delay(ms: number): Promise<void> {

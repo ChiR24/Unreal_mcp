@@ -16,6 +16,14 @@ export class RequestTracker {
         private maxPendingRequests: number
     ) { }
 
+    /**
+     * Get the maximum number of pending requests allowed.
+     * @returns The configured maximum pending requests limit
+     */
+    public getMaxPendingRequests(): number {
+        return this.maxPendingRequests;
+    }
+
     public createRequest(
         action: string,
         payload: Record<string, unknown>,
