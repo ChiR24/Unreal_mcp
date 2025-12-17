@@ -1,28 +1,58 @@
+/**
+ * Validates console commands before execution to prevent dangerous operations.
+ * Blocks crash-inducing commands, shell injection, and Python execution.
+ */
 export class CommandValidator {
+    /**
+     * Commands that can crash the engine or cause severe instability.
+     * These are blocked unconditionally.
+     */
     private static readonly DANGEROUS_COMMANDS = [
-        'quit', 'exit', 'delete', 'destroy', 'kill', 'crash',
+        // Engine termination commands
+        'quit', 'exit', 'kill', 'crash',
+        // Crash-inducing commands
+        'r.gpucrash', 'r.crash', 'debug crash', 'forcecrash', 'debug break',
+        'assert false', 'check(false)',
+        // View buffer commands that can crash on some hardware
         'viewmode visualizebuffer basecolor',
         'viewmode visualizebuffer worldnormal',
-        'r.gpucrash',
-        'buildpaths', // Can cause access violation if nav system not initialized
-        'rebuildnavigation', // Can also crash without proper nav setup
-        'obj garbage', 'obj list', 'memreport' // Heavy debug commands that can stall
+        // Heavy operations that can cause access violations if systems not initialized
+        'buildpaths', 'rebuildnavigation',
+        // Heavy debug commands that can stall or crash
+        'obj garbage', 'obj list', 'memreport',
+        // Potentially destructive without proper setup
+        'delete', 'destroy'
     ];
 
+    /**
+     * Tokens that indicate shell injection or external system access attempts.
+     * Any command containing these is blocked.
+     */
     private static readonly FORBIDDEN_TOKENS = [
+        // Shell commands (Windows/Unix)
         'rm ', 'rm-', 'del ', 'format ', 'shutdown', 'reboot',
         'rmdir', 'mklink', 'copy ', 'move ', 'start "', 'system(',
+        // Python injection attempts
         'import os', 'import subprocess', 'subprocess.', 'os.system',
         'exec(', 'eval(', '__import__', 'import sys', 'import importlib',
         'with open', 'open(', 'write(', 'read('
     ];
 
+    /**
+     * Patterns that indicate obviously invalid commands.
+     * Used to warn about likely typos or invalid input.
+     */
     private static readonly INVALID_PATTERNS = [
         /^\d+$/,  // Just numbers
         /^invalid_command/i,
         /^this_is_not_a_valid/i,
     ];
 
+    /**
+     * Validates a console command for safety before execution.
+     * @param command - The console command string to validate
+     * @throws Error if the command is dangerous, contains forbidden tokens, or is invalid
+     */
     static validate(command: string): void {
         if (!command || typeof command !== 'string') {
             throw new Error('Invalid command: must be a non-empty string');
@@ -56,11 +86,22 @@ export class CommandValidator {
         }
     }
 
+    /**
+     * Check if a command looks like an obviously invalid or mistyped command.
+     * @param command - The command to check
+     * @returns true if the command matches known invalid patterns
+     */
     static isLikelyInvalid(command: string): boolean {
         const cmdTrimmed = command.trim();
         return this.INVALID_PATTERNS.some(pattern => pattern.test(cmdTrimmed));
     }
 
+    /**
+     * Get the priority level of a command for throttling purposes.
+     * Lower numbers indicate heavier operations that need more throttling.
+     * @param command - The command to evaluate
+     * @returns Priority level (1=heavy, 5=medium, 7=default, 8-9=light)
+     */
     static getPriority(command: string): number {
         if (command.includes('BuildLighting') || command.includes('BuildPaths')) {
             return 1; // Heavy operation
