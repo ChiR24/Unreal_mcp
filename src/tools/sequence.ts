@@ -1,7 +1,7 @@
 import { BaseTool } from './base-tool.js';
 import { ISequenceTools } from '../types/tool-interfaces.js';
 import { SequenceResponse } from '../types/automation-responses.js';
-import { wasmIntegration as _wasmIntegration } from '../wasm/index.js';
+import { wasmIntegration } from '../wasm/index.js';
 
 export interface LevelSequence {
   path: string;
@@ -322,6 +322,20 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
       frame: params.frame,
       value: params.value
     });
+
+    // Use WASM for transform processing
+    if (params.property === 'Transform' && params.value) {
+      const loc = params.value.location;
+      const rot = params.value.rotation;
+      const scale = params.value.scale;
+      if (loc && rot && scale) {
+        const locArr: [number, number, number] = [loc.x, loc.y, loc.z];
+        const rotArr: [number, number, number] = [rot.pitch, rot.yaw, rot.roll];
+        const scaleArr: [number, number, number] = [scale.x, scale.y, scale.z];
+        wasmIntegration.composeTransform(locArr, rotArr, scaleArr);
+        console.error('[WASM] Using composeTransform for keyframe validation');
+      }
+    }
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_add_keyframe' } as const;
     }

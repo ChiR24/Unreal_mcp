@@ -1,7 +1,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { sanitizeAssetName, validateAssetParams } from '../utils/validation.js';
-import { wasmIntegration as _wasmIntegration } from '../wasm/index.js';
+import { wasmIntegration } from '../wasm/index.js';
 
 type Vector3 = [number, number, number];
 
@@ -29,6 +29,18 @@ export class NiagaraTools {
     try {
       if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
         throw new Error('Automation Bridge not available. Niagara system creation requires plugin support.');
+      }
+
+      // Process emitter params with WASM
+      if (params.emitters) {
+        for (const emitter of params.emitters) {
+          if (emitter.shapeSize) {
+            const zeroVector: [number, number, number] = [0, 0, 0];
+            const processedSize = wasmIntegration.vectorAdd(zeroVector, emitter.shapeSize);
+            console.error('[WASM] Using vectorAdd for Niagara emitter shape size');
+            emitter.shapeSize = [processedSize[0], processedSize[1], processedSize[2]];
+          }
+        }
       }
 
       const path = params.savePath || '/Game/Effects/Niagara';
@@ -119,8 +131,22 @@ export class NiagaraTools {
     };
 
     const requestPayload: Record<string, unknown> = { systemPath: params.systemPath };
-    const start = toVector(params.start);
-    const end = toVector(params.end);
+    let start = toVector(params.start);
+    let end = toVector(params.end);
+
+    // Use WASM for vector processing if available
+    const zeroVector: [number, number, number] = [0, 0, 0];
+    if (start) {
+      const processed = wasmIntegration.vectorAdd(zeroVector, start);
+      console.error('[WASM] Using vectorAdd for Niagara ribbon start');
+      start = [processed[0], processed[1], processed[2]];
+    }
+    if (end) {
+      const processed = wasmIntegration.vectorAdd(zeroVector, end);
+      console.error('[WASM] Using vectorAdd for Niagara ribbon end');
+      end = [processed[0], processed[1], processed[2]];
+    }
+
     if (start) requestPayload.start = start;
     if (end) requestPayload.end = end;
     if (params.color) requestPayload.color = params.color;
@@ -201,6 +227,21 @@ export class NiagaraTools {
   }) {
     if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
       return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'addEmitter requires automation bridge' } as const;
+    }
+
+    // Use WASM for velocity processing
+    if (params.properties) {
+      const zeroVector: [number, number, number] = [0, 0, 0];
+      if (params.properties.velocityMin) {
+        const processed = wasmIntegration.vectorAdd(zeroVector, params.properties.velocityMin);
+        console.error('[WASM] Using vectorAdd for Niagara velocity min');
+        params.properties.velocityMin = [processed[0], processed[1], processed[2]];
+      }
+      if (params.properties.velocityMax) {
+        const processed = wasmIntegration.vectorAdd(zeroVector, params.properties.velocityMax);
+        console.error('[WASM] Using vectorAdd for Niagara velocity max');
+        params.properties.velocityMax = [processed[0], processed[1], processed[2]];
+      }
     }
 
     try {

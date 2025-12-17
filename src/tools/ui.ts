@@ -123,7 +123,6 @@ export class UITools {
   async setWidgetText(_params: {
     key: string; // The widget name to find
     value: string; // The text to set
-    componentName?: string; // Legacy/Unused in new impl
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation bridge required for setting widget text');
@@ -149,7 +148,6 @@ export class UITools {
   async setWidgetImage(_params: {
     key: string;
     texturePath: string;
-    componentName?: string; // Unused
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation bridge required for setting widget images');

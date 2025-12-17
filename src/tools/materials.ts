@@ -146,8 +146,14 @@ export class MaterialTools {
           if (!(errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION'))) {
             return { success: false, error: resp?.error ?? resp?.message ?? 'CREATE_MATERIAL_INSTANCE_FAILED' } as any;
           }
-        } catch (_e) {
-          // fall back to python path below
+        } catch (e) {
+          // If the error is simply generic or unknown action, we fall back.
+          // But if it's a specific error, we might log it.
+          // For now, let's at least not silence everything.
+          const msg = e instanceof Error ? e.message : String(e);
+          if (!msg.includes('unknown') && !msg.includes('UNKNOWN_PLUGIN_ACTION')) {
+            console.warn(`[MaterialTools] Plugin create_material_instance failed with specific error (falling back to python): ${msg}`);
+          }
         }
       }
 

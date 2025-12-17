@@ -3,6 +3,12 @@ import { IAssetTools } from '../types/tool-interfaces.js';
 import { wasmIntegration } from '../wasm/index.js';
 import { Logger } from '../utils/logger.js';
 import { AssetResponse } from '../types/automation-responses.js';
+import { sanitizePath } from '../utils/path-security.js';
+import {
+  DEFAULT_ASSET_OP_TIMEOUT_MS,
+  EXTENDED_ASSET_OP_TIMEOUT_MS,
+  LONG_RUNNING_OP_TIMEOUT_MS
+} from '../constants.js';
 
 const log = new Logger('AssetTools');
 
@@ -21,14 +27,17 @@ export class AssetTools extends BaseTool implements IAssetTools {
     }
 
     // Remove double slashes just in case
-    return normalized.replace(/\/+/g, '/');
+    normalized = normalized.replace(/\/+/g, '/');
+
+    // Security check
+    return sanitizePath(normalized);
   }
 
   async importAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean; save?: boolean }) {
     const res = await this.sendRequest<AssetResponse>('manage_asset', {
       ...params,
       subAction: 'import'
-    }, 'manage_asset', { timeoutMs: 120000 });
+    }, 'manage_asset', { timeoutMs: EXTENDED_ASSET_OP_TIMEOUT_MS });
     if (res && res.success) {
       return { ...res, asset: this.normalizeAssetPath(params.destinationPath), source: params.sourcePath };
     }
@@ -44,7 +53,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       destinationPath,
       overwrite: params.overwrite ?? false,
       subAction: 'duplicate'
-    }, 'manage_asset', { timeoutMs: 60000 });
+    }, 'manage_asset', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS });
     if (res && res.success) {
       return { ...res, asset: destinationPath, source: sourcePath };
     }
@@ -59,7 +68,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       sourcePath,
       destinationPath,
       subAction: 'rename'
-    }, 'manage_asset', { timeoutMs: 60000 });
+    }, 'manage_asset', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS });
     if (res && res.success) {
       return { ...res, asset: destinationPath, oldName: sourcePath };
     }
@@ -74,7 +83,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       sourcePath,
       destinationPath,
       subAction: 'move'
-    }, 'manage_asset', { timeoutMs: 60000 });
+    }, 'manage_asset', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS });
     if (res && res.success) {
       return { ...res, asset: destinationPath, from: sourcePath };
     }
@@ -87,7 +96,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
     return this.sendRequest<AssetResponse>('asset_query', {
       ...params,
       subAction: 'find_by_tag'
-    }, 'asset_query', { timeoutMs: 60000 });
+    }, 'asset_query', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS });
   }
 
   async deleteAssets(params: { paths: string[]; fixupRedirectors?: boolean; timeoutMs?: number }) {
@@ -102,7 +111,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       assetPaths,
       fixupRedirectors: params.fixupRedirectors,
       subAction: 'delete'
-    }, 'manage_asset', { timeoutMs: params.timeoutMs || 120000 });
+    }, 'manage_asset', { timeoutMs: params.timeoutMs || EXTENDED_ASSET_OP_TIMEOUT_MS });
   }
 
   async searchAssets(params: { classNames?: string[]; packagePaths?: string[]; recursivePaths?: boolean; recursiveClasses?: boolean; limit?: number }) {
@@ -116,7 +125,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       ...params,
       packagePaths,
       subAction: 'search_assets'
-    }, 'asset_query', { timeoutMs: 60000 });
+    }, 'asset_query', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS });
 
     if (!response.success) {
       const errorMsg = response.error || `Failed to search assets.Raw response: ${JSON.stringify(response)} `;
@@ -152,7 +161,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
             // Let's stick to the existing fallback logic but maybe fix the command if known?
             // Since 'save_asset' is not in Subsystem.cpp, it fails.
             // Let's rely on executeEditorFunction below.
-            { timeoutMs: 60000 }
+            { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS }
           );
 
           if (response && response.success !== false) {
@@ -190,7 +199,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
     return this.sendRequest<AssetResponse>('manage_asset', {
       path,
       subAction: 'create_folder'
-    }, 'manage_asset', { timeoutMs: 60000 });
+    }, 'manage_asset', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS });
   }
 
   async getDependencies(params: { assetPath: string; recursive?: boolean }) {
@@ -243,7 +252,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
         assetPath,
         maxDepth,
         subAction: 'get_asset_graph'
-      }, 'manage_asset', { timeoutMs: 60000 });
+      }, 'manage_asset', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS });
 
       if (!response.success || !response.graph) {
         return { success: false, error: response.error || 'Failed to retrieve asset graph from engine' };
@@ -315,7 +324,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
       subAction: 'generate_thumbnail'
-    }, 'manage_asset', { timeoutMs: 60000 });
+    }, 'manage_asset', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS });
   }
 
   async setTags(params: { assetPath: string; tags: string[] }) {
@@ -323,7 +332,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
       subAction: 'set_tags'
-    }, 'manage_asset', { timeoutMs: 60000 });
+    }, 'manage_asset', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS });
   }
 
   async generateReport(params: { directory: string; reportType?: string; outputPath?: string }) {
@@ -331,7 +340,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       ...params,
       directory: this.normalizeAssetPath(params.directory),
       subAction: 'generate_report'
-    }, 'manage_asset', { timeoutMs: 300000 });
+    }, 'manage_asset', { timeoutMs: LONG_RUNNING_OP_TIMEOUT_MS });
   }
 
   async validate(params: { assetPath: string }) {
@@ -339,7 +348,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
       subAction: 'validate'
-    }, 'manage_asset', { timeoutMs: 300000 });
+    }, 'manage_asset', { timeoutMs: LONG_RUNNING_OP_TIMEOUT_MS });
   }
 
   async generateLODs(params: { assetPath: string; lodCount: number }) {
@@ -360,7 +369,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
         assetPaths: [assetPath],
         numLODs: lodCount,
         subAction: 'generate_lods'
-      }, { timeoutMs: 120000 });
+      }, { timeoutMs: EXTENDED_ASSET_OP_TIMEOUT_MS });
 
       if (!response || response.success === false) {
         return {

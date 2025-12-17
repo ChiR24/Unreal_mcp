@@ -5,6 +5,7 @@ import { createGraphQLSchema } from './schema.js';
 import type { GraphQLContext } from './types.js';
 import type { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
+import { createLoaders } from './loaders.js';
 
 export interface GraphQLServerConfig {
   enabled?: boolean;
@@ -65,7 +66,8 @@ export class GraphQLServer {
         },
         context: (): GraphQLContext => ({
           bridge: this.bridge,
-          automationBridge: this.automationBridge
+          automationBridge: this.automationBridge,
+          loaders: createLoaders(this.automationBridge)
         }),
         logging: {
           debug: (...args) => this.log.debug('[GraphQL]', ...args),

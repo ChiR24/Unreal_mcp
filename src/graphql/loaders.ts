@@ -6,7 +6,7 @@
  */
 
 import DataLoader from 'dataloader';
-import { AutomationBridge } from '../automation/index.js';
+import type { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
 
 const log = new Logger('GraphQL:Loaders');
@@ -85,7 +85,7 @@ export function createLoaders(automationBridge: AutomationBridge): GraphQLLoader
                             result.actors?.find(a => a.name === name || a.label === name) ?? null
                         );
                     }
-                } catch (error) {
+                } catch {
                     log.debug('Batch fetch not supported, falling back to individual fetches');
                 }
 

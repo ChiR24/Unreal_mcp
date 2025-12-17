@@ -2,6 +2,12 @@ import { BaseTool } from './base-tool.js';
 import { ILevelTools } from '../types/tool-interfaces.js';
 import { LevelResponse } from '../types/automation-responses.js';
 import { wasmIntegration as _wasmIntegration } from '../wasm/index.js';
+import { sanitizePath } from '../utils/path-security.js';
+import {
+  DEFAULT_OPERATION_TIMEOUT_MS,
+  DEFAULT_ASSET_OP_TIMEOUT_MS,
+  LONG_RUNNING_OP_TIMEOUT_MS
+} from '../constants.js';
 
 type LevelExportRecord = { target: string; timestamp: number; note?: string };
 type ManagedLevelRecord = {
@@ -40,6 +46,18 @@ export class LevelTools extends BaseTool implements ILevelTools {
     if (!formatted.startsWith('/Game/')) {
       formatted = `/Game/${formatted.replace(/^\/+/, '')}`;
     }
+
+    // Security validation
+    try {
+      formatted = sanitizePath(formatted);
+    } catch (e: any) {
+      // If sanitizePath fails, we should probably propagate that error, 
+      // but normalizeLevelPath signature expects to return an object.
+      // For now, let's log and rethrow or fallback? 
+      // Throwing is safer as it prevents operation on invalid path.
+      throw new Error(`Security validation failed for level path: ${e.message}`);
+    }
+
     formatted = formatted.replace(/\.umap$/i, '');
     if (formatted.endsWith('/')) {
       formatted = formatted.slice(0, -1);
@@ -285,7 +303,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         action: 'export_level',
         levelPath: resolved,
         exportPath: params.exportPath
-      }, { timeoutMs: params.timeoutMs ?? 300000 });
+      }, { timeoutMs: params.timeoutMs ?? LONG_RUNNING_OP_TIMEOUT_MS });
 
       if (res?.success === false) {
         return {
@@ -319,7 +337,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         action: 'import_level',
         packagePath: params.packagePath,
         destinationPath: destination.path
-      }, { timeoutMs: params.timeoutMs ?? 300000 });
+      }, { timeoutMs: params.timeoutMs ?? LONG_RUNNING_OP_TIMEOUT_MS });
 
       if ((res as any)?.success === false) {
         return {
@@ -353,7 +371,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         action: 'save_level_as',
         savePath: target.path
       }, {
-        timeoutMs: 60000
+        timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS
       });
 
       if (response.success === false) {
@@ -451,7 +469,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         const response = await this.sendAutomationRequest<LevelResponse>('manage_level', {
           action: 'load',
           levelPath: params.levelPath
-        }, { timeoutMs: 30000 });
+        }, { timeoutMs: DEFAULT_OPERATION_TIMEOUT_MS });
 
         if (response.success) {
           this.setCurrentLevel(normalizedPath);
@@ -540,7 +558,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
       }
 
       const response = await this.sendAutomationRequest<LevelResponse>('manage_level', payload, {
-        timeoutMs: 60000
+        timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS
       });
 
       if (response.success === false) {
@@ -586,7 +604,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         levelPath: fullPath,
         useWorldPartition: isPartitioned
       }, {
-        timeoutMs: 60000
+        timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS
       });
 
       if (response.success === false) {
@@ -660,7 +678,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         subLevelPath: sub,
         parentPath: parent,
         streamingMethod: params.streamingMethod
-      }, { timeoutMs: 30000 });
+      }, { timeoutMs: DEFAULT_OPERATION_TIMEOUT_MS });
 
       // Retry with .umap if package not found (Workaround for C++ strictness)
       // Also retry if ADD_FAILED, as UEditorLevelUtils might have failed due to path resolution internally
@@ -672,7 +690,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
           subLevelPath: subWithExt,
           parentPath: parent,
           streamingMethod: params.streamingMethod
-        }, { timeoutMs: 30000 });
+        }, { timeoutMs: DEFAULT_OPERATION_TIMEOUT_MS });
       }
 
       if (response.success) {
@@ -735,7 +753,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         shouldBeLoaded: params.shouldBeLoaded,
         shouldBeVisible
       }, {
-        timeoutMs: 60000
+        timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS
       });
 
       if (response.success === false) {
