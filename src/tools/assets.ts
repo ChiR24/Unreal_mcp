@@ -1,7 +1,10 @@
-
 import { BaseTool } from './base-tool.js';
 import { IAssetTools } from '../types/tool-interfaces.js';
 import { wasmIntegration } from '../wasm/index.js';
+import { Logger } from '../utils/logger.js';
+import { AssetResponse } from '../types/automation-responses.js';
+
+const log = new Logger('AssetTools');
 
 export class AssetTools extends BaseTool implements IAssetTools {
   private normalizeAssetPath(path: string): string {
@@ -22,7 +25,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async importAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean; save?: boolean }) {
-    const res = await this.sendRequest('manage_asset', {
+    const res = await this.sendRequest<AssetResponse>('manage_asset', {
       ...params,
       subAction: 'import'
     }, 'manage_asset', { timeoutMs: 120000 });
@@ -36,7 +39,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
     const sourcePath = this.normalizeAssetPath(params.sourcePath);
     const destinationPath = this.normalizeAssetPath(params.destinationPath);
 
-    const res = await this.sendRequest('manage_asset', {
+    const res = await this.sendRequest<AssetResponse>('manage_asset', {
       sourcePath,
       destinationPath,
       overwrite: params.overwrite ?? false,
@@ -52,7 +55,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
     const sourcePath = this.normalizeAssetPath(params.sourcePath);
     const destinationPath = this.normalizeAssetPath(params.destinationPath);
 
-    const res = await this.sendRequest('manage_asset', {
+    const res = await this.sendRequest<AssetResponse>('manage_asset', {
       sourcePath,
       destinationPath,
       subAction: 'rename'
@@ -67,7 +70,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
     const sourcePath = this.normalizeAssetPath(params.sourcePath);
     const destinationPath = this.normalizeAssetPath(params.destinationPath);
 
-    const res = await this.sendRequest('manage_asset', {
+    const res = await this.sendRequest<AssetResponse>('manage_asset', {
       sourcePath,
       destinationPath,
       subAction: 'move'
@@ -81,7 +84,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
   async findByTag(params: { tag: string; value?: string }) {
     // tag searches don't usually involve paths, but if they did we'd normalize.
     // preserving existing logic for findByTag as it takes 'tag' and 'value'.
-    return this.sendRequest('asset_query', {
+    return this.sendRequest<AssetResponse>('asset_query', {
       ...params,
       subAction: 'find_by_tag'
     }, 'asset_query', { timeoutMs: 60000 });
@@ -95,7 +98,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
     // C++ 'HandleDeleteAssets' handles single delete, 'HandleBulkDeleteAssets' handles bulk.
     // Let's use 'bulk_delete' if we have multiple, or 'delete' for consistency?
     // C++ HandleAssetAction dispatches 'bulk_delete' to HandleBulkDeleteAssets.
-    return this.sendRequest('manage_asset', {
+    return this.sendRequest<AssetResponse>('manage_asset', {
       assetPaths,
       fixupRedirectors: params.fixupRedirectors,
       subAction: 'delete'
@@ -109,14 +112,14 @@ export class AssetTools extends BaseTool implements IAssetTools {
       : ['/Game'];
 
     // Route via asset_query action with subAction 'search_assets'
-    const response = await this.sendRequest('asset_query', {
+    const response = await this.sendRequest<AssetResponse>('asset_query', {
       ...params,
       packagePaths,
       subAction: 'search_assets'
     }, 'asset_query', { timeoutMs: 60000 });
 
     if (!response.success) {
-      const errorMsg = response.error || `Failed to search assets. Raw response: ${JSON.stringify(response)}`;
+      const errorMsg = response.error || `Failed to search assets.Raw response: ${JSON.stringify(response)} `;
       return { success: false, error: errorMsg };
     }
 
@@ -160,8 +163,11 @@ export class AssetTools extends BaseTool implements IAssetTools {
               ...response
             };
           }
-        } catch (_err) {
-          // Fall through to executeEditorFunction
+        } catch (primaryError) {
+          // Log the primary method failure before trying fallback
+          // This helps debugging when both methods fail
+          log.debug('saveAsset primary method failed, trying fallback', primaryError);
+          // Fall through to executeEditorFunction fallback
         }
       }
 
@@ -174,14 +180,14 @@ export class AssetTools extends BaseTool implements IAssetTools {
 
       return { success: false, error: (res as any)?.error ?? 'Failed to save asset' };
     } catch (err) {
-      return { success: false, error: `Failed to save asset: ${err}` };
+      return { success: false, error: `Failed to save asset: ${err} ` };
     }
   }
 
   async createFolder(folderPath: string) {
     // Folders are paths too
     const path = this.normalizeAssetPath(folderPath);
-    return this.sendRequest('manage_asset', {
+    return this.sendRequest<AssetResponse>('manage_asset', {
       path,
       subAction: 'create_folder'
     }, 'manage_asset', { timeoutMs: 60000 });
@@ -190,7 +196,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
   async getDependencies(params: { assetPath: string; recursive?: boolean }) {
     // get_dependencies is typically an asset query or managed asset action?
     // HandleAssetAction has 'get_dependencies' dispatch.
-    return this.sendRequest('manage_asset', {
+    return this.sendRequest<AssetResponse>('manage_asset', {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
       subAction: 'get_dependencies'
@@ -202,7 +208,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
     // It's not in HandleAssetAction explicitly, maybe 'asset_query' subAction?
     // Let's check AssetQueryHandlers.cpp or AssetWorkflowHandlers.cpp dispatch.
     // Assuming 'asset_query' supports it (original code used asset_query).
-    return this.sendRequest('asset_query', {
+    return this.sendRequest<AssetResponse>('asset_query', {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
       subAction: 'get_source_control_state'
@@ -210,7 +216,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async getMetadata(params: { assetPath: string }) {
-    const response = await this.sendRequest('manage_asset', {
+    const response = await this.sendRequest<AssetResponse>('manage_asset', {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
       subAction: 'get_metadata'
@@ -233,7 +239,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
 
     try {
       // Offload the heavy graph traversal to C++
-      const response: any = await this.sendRequest('manage_asset', {
+      const response: any = await this.sendRequest<AssetResponse>('manage_asset', {
         assetPath,
         maxDepth,
         subAction: 'get_asset_graph'
@@ -300,12 +306,12 @@ export class AssetTools extends BaseTool implements IAssetTools {
         analysis
       };
     } catch (e: any) {
-      return { success: false, error: `Analysis failed: ${e.message}` };
+      return { success: false, error: `Analysis failed: ${e.message} ` };
     }
   }
 
   async createThumbnail(params: { assetPath: string; width?: number; height?: number }) {
-    return this.sendRequest('manage_asset', {
+    return this.sendRequest<AssetResponse>('manage_asset', {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
       subAction: 'generate_thumbnail'
@@ -313,7 +319,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async setTags(params: { assetPath: string; tags: string[] }) {
-    return this.sendRequest('manage_asset', {
+    return this.sendRequest<AssetResponse>('manage_asset', {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
       subAction: 'set_tags'
@@ -321,7 +327,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async generateReport(params: { directory: string; reportType?: string; outputPath?: string }) {
-    return this.sendRequest('manage_asset', {
+    return this.sendRequest<AssetResponse>('manage_asset', {
       ...params,
       directory: this.normalizeAssetPath(params.directory),
       subAction: 'generate_report'
@@ -329,7 +335,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async validate(params: { assetPath: string }) {
-    return this.sendRequest('manage_asset', {
+    return this.sendRequest<AssetResponse>('manage_asset', {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
       subAction: 'validate'
@@ -376,7 +382,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
     } catch (error) {
       return {
         success: false,
-        error: `Failed to generate LODs: ${error instanceof Error ? error.message : String(error)}`
+        error: `Failed to generate LODs: ${error instanceof Error ? error.message : String(error)} `
       };
     }
   }

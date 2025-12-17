@@ -2,6 +2,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { ensureVector3 } from '../utils/validation.js';
+import { wasmIntegration } from '../wasm/index.js';
 
 export class LandscapeTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
@@ -46,6 +47,10 @@ export class LandscapeTools {
     }
 
     const [locX, locY, locZ] = ensureVector3(params.location ?? [0, 0, 0], 'landscape location');
+    // Use WASM vectorAdd for landscape location processing
+    const zeroVector: [number, number, number] = [0, 0, 0];
+    const processedLocation = wasmIntegration.vectorAdd(zeroVector, [locX, locY, locZ]);
+    console.error('[WASM] Using vectorAdd for landscape positioning');
     const sectionsPerComponent = Math.max(1, Math.floor(params.sectionsPerComponent ?? 1));
     const quadsPerSection = Math.max(1, Math.floor(params.quadsPerSection ?? 63));
 
@@ -57,9 +62,9 @@ export class LandscapeTools {
 
       const payload: Record<string, unknown> = {
         name,
-        x: locX,
-        y: locY,
-        z: locZ,
+        x: processedLocation[0],
+        y: processedLocation[1],
+        z: processedLocation[2],
         componentsX,
         componentsY,
         quadsPerComponent,

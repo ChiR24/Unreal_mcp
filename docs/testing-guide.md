@@ -230,7 +230,7 @@ This prevents false positives from connection errors.
 **Problem**: Unreal Engine is not running or not accessible
 
 **Solutions**:
-1. Launch Unreal Engine 5.6
+1. Launch Unreal Engine 5.0-5.7
 2. Open your project
 3. Verify Unreal Engine is running with the MCP plugin enabled
 4. Check `DefaultEngine.ini` configuration
@@ -417,7 +417,7 @@ For issues with:
 ## Next Steps
 
 1. **Build the server**: `npm run build`
-2. **Start Unreal Engine 5.6**
+2. **Start Unreal Engine 5.0-5.7**
 3. **Run your first test**: `npm run test:system`
 4. **Review the report**: Check `tests/reports/` folder
 5. **Test other tools**: Run `npm run test:<toolname>` for each tool you use

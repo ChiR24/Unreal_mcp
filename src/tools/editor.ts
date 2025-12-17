@@ -2,6 +2,8 @@ import { BaseTool } from './base-tool.js';
 import { IEditorTools } from '../types/tool-interfaces.js';
 import { toVec3Object, toRotObject } from '../utils/normalize.js';
 import { DEFAULT_SCREENSHOT_RESOLUTION } from '../constants.js';
+import { EditorResponse } from '../types/automation-responses.js';
+import { wasmIntegration } from '../wasm/index.js';
 
 export class EditorTools extends BaseTool implements IEditorTools {
   private cameraBookmarks = new Map<string, { location: [number, number, number]; rotation: [number, number, number]; savedAt: number }>();
@@ -10,14 +12,14 @@ export class EditorTools extends BaseTool implements IEditorTools {
 
   async isInPIE(): Promise<boolean> {
     try {
-      const response = await this.sendAutomationRequest(
+      const response = await this.sendAutomationRequest<EditorResponse>(
         'check_pie_state',
         {},
         { timeoutMs: 5000 }
       );
 
       if (response && response.success !== false) {
-        return response.isInPIE === true || response.result?.isInPIE === true;
+        return response.isInPIE === true || (response.result as any)?.isInPIE === true;
       }
 
       return false;
@@ -37,7 +39,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
   async playInEditor(timeoutMs: number = 30000) {
     try {
       try {
-        const response = await this.sendAutomationRequest(
+        const response = await this.sendAutomationRequest<EditorResponse>(
           'control_editor',
           { action: 'play' },
           { timeoutMs }
@@ -65,7 +67,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
   async stopPlayInEditor() {
     try {
       try {
-        const response = await this.sendAutomationRequest(
+        const response = await this.sendAutomationRequest<EditorResponse>(
           'control_editor',
           { action: 'stop' },
           { timeoutMs: 30000 }
@@ -125,12 +127,12 @@ export class EditorTools extends BaseTool implements IEditorTools {
     message?: string;
   }> {
     try {
-      const resp = await this.sendAutomationRequest(
+      const resp = await this.sendAutomationRequest<EditorResponse>(
         'control_editor',
         { action: 'get_camera' },
         { timeoutMs: 3000 }
       );
-      const result = resp?.result ?? resp;
+      const result: any = resp?.result ?? resp;
       const loc = result?.location ?? result?.camera?.location;
       const rot = result?.rotation ?? result?.camera?.rotation;
       const locArr: [number, number, number] | undefined = Array.isArray(loc) && loc.length === 3 ? [Number(loc[0]) || 0, Number(loc[1]) || 0, Number(loc[2]) || 0] : undefined;
@@ -182,7 +184,18 @@ export class EditorTools extends BaseTool implements IEditorTools {
 
     // Use native control_editor.set_camera when available
     try {
-      const resp = await this.sendAutomationRequest('control_editor', {
+      // Use WASM composeTransform for camera transform calculation
+      const locArray: [number, number, number] = location
+        ? [((location as any).x ?? (location as any)[0] ?? 0), ((location as any).y ?? (location as any)[1] ?? 0), ((location as any).z ?? (location as any)[2] ?? 0)]
+        : [0, 0, 0];
+      const rotArray: [number, number, number] = rotation
+        ? [((rotation as any).pitch ?? (rotation as any)[0] ?? 0), ((rotation as any).yaw ?? (rotation as any)[1] ?? 0), ((rotation as any).roll ?? (rotation as any)[2] ?? 0)]
+        : [0, 0, 0];
+      // Compose transform to validate and process camera positioning via WASM
+      wasmIntegration.composeTransform(locArray, rotArray, [1, 1, 1]);
+      console.error('[WASM] Using composeTransform for camera positioning');
+
+      const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
         action: 'set_camera',
         location: location as any,
         rotation: rotation as any

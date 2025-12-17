@@ -1,6 +1,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { sanitizeAssetName, validateAssetParams } from '../utils/validation.js';
+import { wasmIntegration as _wasmIntegration } from '../wasm/index.js';
 
 type Vector3 = [number, number, number];
 

@@ -1,5 +1,7 @@
 import { BaseTool } from './base-tool.js';
 import { ILevelTools } from '../types/tool-interfaces.js';
+import { LevelResponse } from '../types/automation-responses.js';
+import { wasmIntegration as _wasmIntegration } from '../wasm/index.js';
 
 type LevelExportRecord = { target: string; timestamp: number; note?: string };
 type ManagedLevelRecord = {
@@ -208,7 +210,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
   async listLevels() {
     // Try to get actual levels from UE via automation bridge
     try {
-      const response = await this.sendAutomationRequest('list_levels', {}, {
+      const response = await this.sendAutomationRequest<LevelResponse>('list_levels', {}, {
         timeoutMs: 10000
       });
 
@@ -222,6 +224,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         const finalLevels = [...ueLevels, ...managedOnly];
 
         const result: Record<string, unknown> = {
+          ...response,
           success: true,
           message: 'Levels listed from Unreal Engine',
           levels: finalLevels,
@@ -232,7 +235,6 @@ export class LevelTools extends BaseTool implements ILevelTools {
             levels: finalLevels,
             count: finalLevels.length
           },
-          ...response,
           managedLevels: managed.levels,
           managedLevelCount: managed.count
         };
@@ -279,16 +281,16 @@ export class LevelTools extends BaseTool implements ILevelTools {
     }
 
     try {
-      const res = await this.sendAutomationRequest('manage_level', {
+      const res = await this.sendAutomationRequest<LevelResponse>('manage_level', {
         action: 'export_level',
         levelPath: resolved,
         exportPath: params.exportPath
       }, { timeoutMs: params.timeoutMs ?? 300000 });
 
-      if ((res as any)?.success === false) {
+      if (res?.success === false) {
         return {
           success: false,
-          error: (res as any).error || (res as any).message || 'Export failed',
+          error: res.error || res.message || 'Export failed',
           levelPath: resolved,
           exportPath: params.exportPath,
           details: res
@@ -313,7 +315,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
       : this.normalizeLevelPath(`/Game/Maps/Imported_${Math.floor(Date.now() / 1000)}`);
 
     try {
-      const res = await this.sendAutomationRequest('manage_level', {
+      const res = await this.sendAutomationRequest<LevelResponse>('manage_level', {
         action: 'import_level',
         packagePath: params.packagePath,
         destinationPath: destination.path
@@ -347,7 +349,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
 
     // Delegate to automation bridge
     try {
-      const response = await this.sendAutomationRequest('manage_level', {
+      const response = await this.sendAutomationRequest<LevelResponse>('manage_level', {
         action: 'save_level_as',
         savePath: target.path
       }, {
@@ -446,7 +448,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     } else {
       // Try loading via automation bridge first (more robust)
       try {
-        const response = await this.sendAutomationRequest('manage_level', {
+        const response = await this.sendAutomationRequest<LevelResponse>('manage_level', {
           action: 'load',
           levelPath: params.levelPath
         }, { timeoutMs: 30000 });
@@ -459,11 +461,11 @@ export class LevelTools extends BaseTool implements ILevelTools {
             visible: true
           });
           return {
+            ...response,
             success: true,
             message: `Level loaded: ${params.levelPath}`,
             level: normalizedPath,
-            streaming: false,
-            ...response
+            streaming: false
           };
         }
       } catch (_e) {
@@ -537,7 +539,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         payload.savePath = params.savePath;
       }
 
-      const response = await this.sendAutomationRequest('manage_level', payload, {
+      const response = await this.sendAutomationRequest<LevelResponse>('manage_level', payload, {
         timeoutMs: 60000
       });
 
@@ -546,9 +548,9 @@ export class LevelTools extends BaseTool implements ILevelTools {
       }
 
       const result: Record<string, unknown> = {
+        ...response,
         success: true,
-        message: response.message || 'Level saved',
-        ...response
+        message: response.message || 'Level saved'
       };
 
       if (response.skipped) {
@@ -580,7 +582,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     const fullPath = `${basePath}/${params.levelName}`;
 
     try {
-      const response = await this.sendAutomationRequest('create_new_level', {
+      const response = await this.sendAutomationRequest<LevelResponse>('create_new_level', {
         levelPath: fullPath,
         useWorldPartition: isPartitioned
       }, {
@@ -597,13 +599,13 @@ export class LevelTools extends BaseTool implements ILevelTools {
       }
 
       const result: Record<string, unknown> = {
+        ...response,
         success: true,
         message: response.message || 'Level created',
         path: response.levelPath || fullPath,
         packagePath: response.packagePath ?? fullPath,
         objectPath: response.objectPath,
-        partitioned: isPartitioned,
-        ...response
+        partitioned: isPartitioned
       };
 
       if (response.warnings) {
@@ -652,7 +654,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
 
     // Attempt automation first (cleaner)
     try {
-      let response = await this.sendAutomationRequest('manage_level', {
+      let response = await this.sendAutomationRequest<LevelResponse>('manage_level', {
         action: 'add_sublevel',
         levelPath: sub, // Backwards compat
         subLevelPath: sub,
@@ -664,7 +666,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
       // Also retry if ADD_FAILED, as UEditorLevelUtils might have failed due to path resolution internally
       if (response && (response.error === 'PACKAGE_NOT_FOUND' || response.error === 'ADD_FAILED') && !sub.endsWith('.umap')) {
         const subWithExt = sub + '.umap';
-        response = await this.sendAutomationRequest('manage_level', {
+        response = await this.sendAutomationRequest<LevelResponse>('manage_level', {
           action: 'add_sublevel',
           levelPath: subWithExt,
           subLevelPath: subWithExt,
@@ -688,7 +690,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
 
     // Console fallback
     // Try using LevelEditor.AddLevel command which is available in Editor context
-    const consoleResponse = await this.sendAutomationRequest('console_command', {
+    const consoleResponse = await this.sendAutomationRequest<LevelResponse>('console_command', {
       command: `LevelEditor.AddLevel ${sub}`
     });
 
@@ -727,7 +729,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     const shouldBeVisible = params.shouldBeVisible ?? params.shouldBeLoaded;
 
     try {
-      const response = await this.sendAutomationRequest('stream_level', {
+      const response = await this.sendAutomationRequest<LevelResponse>('stream_level', {
         levelPath: levelPath || '',
         levelName: levelName || '',
         shouldBeLoaded: params.shouldBeLoaded,
@@ -889,7 +891,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     selectedOnly?: boolean;
   }) {
     try {
-      const response = await this.sendAutomationRequest('build_navigation_mesh', {
+      const response = await this.sendAutomationRequest<LevelResponse>('build_navigation_mesh', {
         rebuildAll: params.rebuildAll ?? false,
         selectedOnly: params.selectedOnly ?? false
       }, {

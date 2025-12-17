@@ -9,7 +9,7 @@ export abstract class BaseTool implements IBaseTool {
         return this.bridge.getAutomationBridge();
     }
 
-    protected async sendRequest(action: string, params: Record<string, unknown>, toolName: string = 'unknown_tool', options?: { timeoutMs?: number }): Promise<any> {
+    protected async sendRequest<T = unknown>(action: string, params: Record<string, unknown>, toolName: string = 'unknown_tool', options?: { timeoutMs?: number }): Promise<T> {
         const automation = this.getAutomationBridge();
 
         // Basic validation
@@ -39,10 +39,10 @@ export abstract class BaseTool implements IBaseTool {
             throw new Error(errorMessage);
         }
 
-        return response.result ?? response;
+        return (response.result ?? response) as T;
     }
 
-    protected async sendAutomationRequest(action: string, params: Record<string, unknown> = {}, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number }): Promise<any> {
+    protected async sendAutomationRequest<T = unknown>(action: string, params: Record<string, unknown> = {}, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number }): Promise<T> {
         const automation = this.getAutomationBridge();
         if (!automation.isConnected()) {
             throw new Error('Automation bridge not connected');

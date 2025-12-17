@@ -2,27 +2,32 @@
 import { spawn } from 'node:child_process';
 
 const tests = [
-  'test:control_actor', // Pass
-  'test:control_editor', // Pass
-  'test:manage_level', // Pass
-  'test:animation', // Pass
-  'test:materials', // Pass
-  'test:niagara', // Pass
-  'test:landscape', // Pass
-  'test:sequence', // Pass
-  'test:system', // Pass
-  'test:console_command', // Pass
-  'test:inspect', // Pass
-  'test:manage_asset', // Pass
-  'test:blueprint', // Pass
-  'test:blueprint_graph', // Pass
-  // 'test:graphql', // Pass
-  'test:wasm:all', // Pass
+  'test:control_actor', // 1
+  'test:control_editor', // 1
+  'test:manage_level', // crashed 1
+  'test:animation',
+  'test:materials',
+  'test:niagara',
+  'test:landscape',
+  'test:sequence', // crashed 1
+  'test:system',
+  'test:console_command',
+  'test:inspect',
+  'test:manage_asset',
+  'test:blueprint',
+  'test:blueprint_graph',
+  'test:audio',
+  'test:behavior_tree',
+  'test:lighting',
+  'test:performance',
+  'test:input',
+  'test:asset_graph',
+  'test:graphql',
+  'test:wasm:all',
   'test:no-inline-python',
-  'test:plugin-handshake', // Pass
-  'test:asset_advanced', // Pass
-  'test:render', // Pass
-  'test:world_partition' // Pass
+  'test:plugin-handshake',
+  'test:asset_advanced',
+  'test:world_partition'
 ];
 
 const isWindows = process.platform === 'win32';

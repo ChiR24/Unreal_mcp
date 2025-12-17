@@ -1,5 +1,7 @@
 import { BaseTool } from './base-tool.js';
 import { ISequenceTools } from '../types/tool-interfaces.js';
+import { SequenceResponse } from '../types/automation-responses.js';
+import { wasmIntegration as _wasmIntegration } from '../wasm/index.js';
 
 export interface LevelSequence {
   path: string;
@@ -39,7 +41,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     const finalTimeout = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : defaultTimeout;
 
     try {
-      const response = await this.sendAutomationRequest(
+      const response = await this.sendAutomationRequest<SequenceResponse>(
         action,
         payload,
         { timeoutMs: finalTimeout, waitForEvent: false }
