@@ -9,6 +9,10 @@ export interface BaseToolResponse {
   message?: string;
   error?: string;
   warning?: string;
+  /** Whether this error is retriable (e.g., connection failures) */
+  retriable?: boolean;
+  /** Scope/context for the error (e.g., 'tool-call/manage_asset') */
+  scope?: string;
 }
 
 // Asset Management Types
