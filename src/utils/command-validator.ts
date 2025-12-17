@@ -5,7 +5,8 @@ export class CommandValidator {
         'viewmode visualizebuffer worldnormal',
         'r.gpucrash',
         'buildpaths', // Can cause access violation if nav system not initialized
-        'rebuildnavigation' // Can also crash without proper nav setup
+        'rebuildnavigation', // Can also crash without proper nav setup
+        'obj garbage', 'obj list', 'memreport' // Heavy debug commands that can stall
     ];
 
     private static readonly FORBIDDEN_TOKENS = [
@@ -13,7 +14,7 @@ export class CommandValidator {
         'rmdir', 'mklink', 'copy ', 'move ', 'start "', 'system(',
         'import os', 'import subprocess', 'subprocess.', 'os.system',
         'exec(', 'eval(', '__import__', 'import sys', 'import importlib',
-        'with open', 'open('
+        'with open', 'open(', 'write(', 'read('
     ];
 
     private static readonly INVALID_PATTERNS = [

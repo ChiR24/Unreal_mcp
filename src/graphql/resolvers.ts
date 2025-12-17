@@ -258,33 +258,7 @@ async function listActors(
   }
 }
 
-/**
- * Helper to get blueprint details
- */
-async function getBlueprint(
-  automationBridge: AutomationBridge,
-  blueprintPath: string
-): Promise<Blueprint | null> {
-  try {
-    const response = await automationBridge.sendAutomationRequest(
-      'get_blueprint',
-      {
-        blueprintPath
-      },
-      { timeoutMs: 30000 }
-    );
 
-    if (response.success && response.result) {
-      return response.result as Blueprint;
-    }
-
-    logAutomationFailure('get_blueprint', response);
-    return null;
-  } catch (error) {
-    console.error('Failed to get blueprint:', error);
-    return null;
-  }
-}
 
 /**
  * GraphQL Resolvers Implementation
@@ -320,17 +294,10 @@ export const resolvers = {
 
     asset: async (_: any, { path }: { path: string }, context: GraphQLContext) => {
       try {
-        const response = await context.automationBridge.sendAutomationRequest(
-          'get_asset',
-          { assetPath: path },
-          { timeoutMs: 10000 }
-        );
-
-        if (response.success && response.result) {
-          return response.result;
+        if (!context.loaders) {
+          throw new Error('Loaders not initialized');
         }
-
-        return null;
+        return await context.loaders.assetLoader.load(path);
       } catch (error) {
         console.error('Failed to get asset:', error);
         return null;
@@ -365,11 +332,10 @@ export const resolvers = {
 
     actor: async (_: any, { name }: { name: string }, context: GraphQLContext) => {
       try {
-        const actors = await listActors(context.automationBridge, { tag: name });
-        if (actors.actors.length > 0) {
-          return actors.actors[0];
+        if (!context.loaders) {
+          throw new Error('Loaders not initialized');
         }
-        return null;
+        return await context.loaders.actorLoader.load(name);
       } catch (error) {
         console.error('Failed to get actor:', error);
         return null;
@@ -423,7 +389,10 @@ export const resolvers = {
     },
 
     blueprint: async (_: any, { path }: { path: string }, context: GraphQLContext) => {
-      return await getBlueprint(context.automationBridge, path);
+      if (!context.loaders) {
+        throw new Error('Loaders not initialized');
+      }
+      return await context.loaders.blueprintLoader.load(path);
     },
 
     levels: async (_: any, __: any, context: GraphQLContext) => {

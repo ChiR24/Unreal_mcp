@@ -1,10 +1,10 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+// import { ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { UnrealBridge } from './unreal-bridge.js';
 import { AutomationBridge } from './automation/index.js';
 import { Logger } from './utils/logger.js';
 import { HealthMonitor } from './services/health-monitor.js';
-import { prompts } from './prompts/index.js';
+// import { prompts } from './prompts/index.js';
 import { AssetResources } from './resources/assets.js';
 import { ActorResources } from './resources/actors.js';
 import { LevelResources } from './resources/levels.js';
@@ -73,7 +73,7 @@ export class ServerSetup {
     );
     toolRegistry.register();
 
-    this.registerPrompts();
+    // this.registerPrompts();
   }
 
   private validateEnvironment() {
@@ -110,39 +110,5 @@ export class ServerSetup {
     return ok;
   }
 
-  private registerPrompts() {
-    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
-      return {
-        prompts: prompts.map(p => ({
-          name: p.name,
-          description: p.description,
-          arguments: Object.entries(p.arguments || {}).map(([name, schema]) => {
-            const meta: Record<string, unknown> = {};
-            if (schema.type) meta.type = schema.type;
-            if (schema.enum) meta.enum = schema.enum;
-            if (schema.default !== undefined) meta.default = schema.default;
-            return {
-              name,
-              description: schema.description,
-              required: schema.required ?? false,
-              ...(Object.keys(meta).length ? { _meta: meta } : {})
-            };
-          })
-        }))
-      };
-    });
 
-    this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-      const prompt = prompts.find(p => p.name === request.params.name);
-      if (!prompt) {
-        throw new Error(`Unknown prompt: ${request.params.name}`);
-      }
-      const args = (request.params.arguments || {}) as Record<string, unknown>;
-      const messages = prompt.build(args);
-      return {
-        description: prompt.description,
-        messages
-      };
-    });
-  }
 }

@@ -40,7 +40,7 @@ export const EnvSchema = z.object({
   // Unreal Settings
   UE_PROJECT_PATH: z.string().optional(),
   UE_EDITOR_EXE: z.string().optional(),
-  UE_SCREENSHOT_DIR: z.string().optional(),
+
 
   // Connection Settings
   MCP_AUTOMATION_PORT: z.preprocess((v) => stringToNumber(v, 8091), z.number().default(8091)),

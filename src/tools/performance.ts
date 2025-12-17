@@ -474,7 +474,7 @@ export class PerformanceTools {
   // Draw call optimization
   async optimizeDrawCalls(params: {
     enableInstancing?: boolean;
-    enableBatching?: boolean; // no-op (deprecated internal toggle)
+
     mergeActors?: boolean;
     actors?: string[];
   }) {
@@ -495,7 +495,6 @@ export class PerformanceTools {
 
           const payload: any = {
             enableInstancing: params.enableInstancing,
-            enableBatching: params.enableBatching,
             mergeActors: params.mergeActors,
             actors: actors
           };

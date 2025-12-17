@@ -53,48 +53,48 @@ export interface SourceControlState {
 }
 
 export interface IAssetTools {
-    importAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean; save?: boolean }): Promise<any>;
-    createFolder(path: string): Promise<any>;
-    duplicateAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean }): Promise<any>;
-    renameAsset(params: { sourcePath: string; destinationPath: string }): Promise<any>;
-    moveAsset(params: { sourcePath: string; destinationPath: string }): Promise<any>;
-    deleteAssets(params: { paths: string[]; fixupRedirectors?: boolean; timeoutMs?: number }): Promise<any>;
-    searchAssets(params: { classNames?: string[]; packagePaths?: string[]; recursivePaths?: boolean; recursiveClasses?: boolean; limit?: number }): Promise<any>;
-    saveAsset(assetPath: string): Promise<any>;
-    findByTag(params: { tag: string; value?: string }): Promise<any>;
-    getDependencies(params: { assetPath: string; recursive?: boolean }): Promise<any>;
-    getMetadata(params: { assetPath: string }): Promise<any>;
-    getSourceControlState(params: { assetPath: string }): Promise<SourceControlState | any>;
-    analyzeGraph(params: { assetPath: string; maxDepth?: number }): Promise<any>;
-    createThumbnail(params: { assetPath: string; width?: number; height?: number }): Promise<any>;
-    setTags(params: { assetPath: string; tags: string[] }): Promise<any>;
-    generateReport(params: { directory: string; reportType?: string; outputPath?: string }): Promise<any>;
-    validate(params: { assetPath: string }): Promise<any>;
-    generateLODs(params: { assetPath: string; lodCount: number; reductionSettings?: Record<string, unknown> }): Promise<any>;
+    importAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean; save?: boolean }): Promise<StandardActionResponse>;
+    createFolder(path: string): Promise<StandardActionResponse>;
+    duplicateAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean }): Promise<StandardActionResponse>;
+    renameAsset(params: { sourcePath: string; destinationPath: string }): Promise<StandardActionResponse>;
+    moveAsset(params: { sourcePath: string; destinationPath: string }): Promise<StandardActionResponse>;
+    deleteAssets(params: { paths: string[]; fixupRedirectors?: boolean; timeoutMs?: number }): Promise<StandardActionResponse>;
+    searchAssets(params: { classNames?: string[]; packagePaths?: string[]; recursivePaths?: boolean; recursiveClasses?: boolean; limit?: number }): Promise<StandardActionResponse>;
+    saveAsset(assetPath: string): Promise<StandardActionResponse>;
+    findByTag(params: { tag: string; value?: string }): Promise<StandardActionResponse>;
+    getDependencies(params: { assetPath: string; recursive?: boolean }): Promise<StandardActionResponse>;
+    getMetadata(params: { assetPath: string }): Promise<StandardActionResponse>;
+    getSourceControlState(params: { assetPath: string }): Promise<SourceControlState | StandardActionResponse>;
+    analyzeGraph(params: { assetPath: string; maxDepth?: number }): Promise<StandardActionResponse>;
+    createThumbnail(params: { assetPath: string; width?: number; height?: number }): Promise<StandardActionResponse>;
+    setTags(params: { assetPath: string; tags: string[] }): Promise<StandardActionResponse>;
+    generateReport(params: { directory: string; reportType?: string; outputPath?: string }): Promise<StandardActionResponse>;
+    validate(params: { assetPath: string }): Promise<StandardActionResponse>;
+    generateLODs(params: { assetPath: string; lodCount: number; reductionSettings?: Record<string, unknown> }): Promise<StandardActionResponse>;
 }
 
 export interface ISequenceTools {
-    create(params: { name: string; path?: string; timeoutMs?: number }): Promise<any>;
-    open(params: { path: string }): Promise<any>;
-    addCamera(params: { spawnable?: boolean; path?: string }): Promise<any>;
-    addActor(params: { actorName: string; createBinding?: boolean; path?: string }): Promise<any>;
-    addActors(params: { actorNames: string[]; path?: string }): Promise<any>;
-    removeActors(params: { actorNames: string[]; path?: string }): Promise<any>;
-    getBindings(params: { path?: string }): Promise<any>;
-    addSpawnableFromClass(params: { className: string; path?: string }): Promise<any>;
-    play(params: { path?: string; startTime?: number; loopMode?: 'once' | 'loop' | 'pingpong' }): Promise<any>;
-    pause(params?: { path?: string }): Promise<any>;
-    stop(params?: { path?: string }): Promise<any>;
-    setSequenceProperties(params: { path?: string; frameRate?: number; lengthInFrames?: number; playbackStart?: number; playbackEnd?: number }): Promise<any>;
-    getSequenceProperties(params: { path?: string }): Promise<any>;
-    setPlaybackSpeed(params: { speed: number; path?: string }): Promise<any>;
-    list(params: { path?: string }): Promise<any>;
-    duplicate(params: { path: string; destinationPath: string }): Promise<any>;
-    rename(params: { path: string; newName: string }): Promise<any>;
-    deleteSequence(params: { path: string }): Promise<any>;
-    getMetadata(params: { path: string }): Promise<any>;
-    listTracks(params: { path: string }): Promise<any>;
-    setWorkRange(params: { path?: string; start: number; end: number }): Promise<any>;
+    create(params: { name: string; path?: string; timeoutMs?: number }): Promise<StandardActionResponse>;
+    open(params: { path: string }): Promise<StandardActionResponse>;
+    addCamera(params: { spawnable?: boolean; path?: string }): Promise<StandardActionResponse>;
+    addActor(params: { actorName: string; createBinding?: boolean; path?: string }): Promise<StandardActionResponse>;
+    addActors(params: { actorNames: string[]; path?: string }): Promise<StandardActionResponse>;
+    removeActors(params: { actorNames: string[]; path?: string }): Promise<StandardActionResponse>;
+    getBindings(params: { path?: string }): Promise<StandardActionResponse>;
+    addSpawnableFromClass(params: { className: string; path?: string }): Promise<StandardActionResponse>;
+    play(params: { path?: string; startTime?: number; loopMode?: 'once' | 'loop' | 'pingpong' }): Promise<StandardActionResponse>;
+    pause(params?: { path?: string }): Promise<StandardActionResponse>;
+    stop(params?: { path?: string }): Promise<StandardActionResponse>;
+    setSequenceProperties(params: { path?: string; frameRate?: number; lengthInFrames?: number; playbackStart?: number; playbackEnd?: number }): Promise<StandardActionResponse>;
+    getSequenceProperties(params: { path?: string }): Promise<StandardActionResponse>;
+    setPlaybackSpeed(params: { speed: number; path?: string }): Promise<StandardActionResponse>;
+    list(params: { path?: string }): Promise<StandardActionResponse>;
+    duplicate(params: { path: string; destinationPath: string }): Promise<StandardActionResponse>;
+    rename(params: { path: string; newName: string }): Promise<StandardActionResponse>;
+    deleteSequence(params: { path: string }): Promise<StandardActionResponse>;
+    getMetadata(params: { path: string }): Promise<StandardActionResponse>;
+    listTracks(params: { path: string }): Promise<StandardActionResponse>;
+    setWorkRange(params: { path?: string; start: number; end: number }): Promise<StandardActionResponse>;
 }
 
 export interface IAssetResources {
@@ -102,32 +102,32 @@ export interface IAssetResources {
 }
 
 export interface IBlueprintTools {
-    createBlueprint(params: { name: string; blueprintType?: string; savePath?: string; parentClass?: string; properties?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    modifyConstructionScript(params: { blueprintPath: string; operations: any[]; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    addComponent(params: { blueprintName: string; componentType: string; componentName: string; attachTo?: string; transform?: Record<string, unknown>; properties?: Record<string, unknown>; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    waitForBlueprint(blueprintRef: string | string[], timeoutMs?: number): Promise<any>;
-    getBlueprint(params: { blueprintName: string; timeoutMs?: number }): Promise<any>;
-    getBlueprintInfo(params: { blueprintPath: string; timeoutMs?: number }): Promise<any>;
-    probeSubobjectDataHandle(opts?: { componentClass?: string }): Promise<any>;
-    setBlueprintDefault(params: { blueprintName: string; propertyName: string; value: unknown }): Promise<any>;
-    addVariable(params: { blueprintName: string; variableName: string; variableType: string; defaultValue?: any; category?: string; isReplicated?: boolean; isPublic?: boolean; variablePinType?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    removeVariable(params: { blueprintName: string; variableName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    addEvent(params: { blueprintName: string; eventType: string; customEventName?: string; parameters?: Array<{ name: string; type: string }>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    removeEvent(params: { blueprintName: string; eventName: string; customEventName?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    addFunction(params: { blueprintName: string; functionName: string; inputs?: Array<{ name: string; type: string }>; outputs?: Array<{ name: string; type: string }>; isPublic?: boolean; category?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    setVariableMetadata(params: { blueprintName: string; variableName: string; metadata: Record<string, unknown>; timeoutMs?: number }): Promise<any>;
-    renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    addConstructionScript(params: { blueprintName: string; scriptName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<any>;
-    compileBlueprint(params: { blueprintName: string; saveAfterCompile?: boolean }): Promise<any>;
-    getBlueprintSCS(params: { blueprintPath: string; timeoutMs?: number }): Promise<any>;
-    addSCSComponent(params: { blueprintPath: string; componentClass: string; componentName: string; parentComponent?: string; meshPath?: string; materialPath?: string; timeoutMs?: number }): Promise<any>;
-    removeSCSComponent(params: { blueprintPath: string; componentName: string; timeoutMs?: number }): Promise<any>;
-    reparentSCSComponent(params: { blueprintPath: string; componentName: string; newParent: string; timeoutMs?: number }): Promise<any>;
-    setSCSComponentTransform(params: { blueprintPath: string; componentName: string; location?: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number]; timeoutMs?: number }): Promise<any>;
-    setSCSComponentProperty(params: { blueprintPath: string; componentName: string; propertyName: string; propertyValue: any; timeoutMs?: number }): Promise<any>;
-    addNode(params: { blueprintName: string; nodeType: string; graphName?: string; functionName?: string; variableName?: string; nodeName?: string; eventName?: string; memberClass?: string; posX?: number; posY?: number; timeoutMs?: number }): Promise<any>;
-    connectPins(params: { blueprintName: string; sourceNodeGuid: string; targetNodeGuid: string; sourcePinName?: string; targetPinName?: string; timeoutMs?: number }): Promise<any>;
+    createBlueprint(params: { name: string; blueprintType?: string; savePath?: string; parentClass?: string; properties?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    modifyConstructionScript(params: { blueprintPath: string; operations: any[]; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    addComponent(params: { blueprintName: string; componentType: string; componentName: string; attachTo?: string; transform?: Record<string, unknown>; properties?: Record<string, unknown>; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    waitForBlueprint(blueprintRef: string | string[], timeoutMs?: number): Promise<StandardActionResponse>;
+    getBlueprint(params: { blueprintName: string; timeoutMs?: number }): Promise<StandardActionResponse>;
+    getBlueprintInfo(params: { blueprintPath: string; timeoutMs?: number }): Promise<StandardActionResponse>;
+    probeSubobjectDataHandle(opts?: { componentClass?: string }): Promise<StandardActionResponse>;
+    setBlueprintDefault(params: { blueprintName: string; propertyName: string; value: unknown }): Promise<StandardActionResponse>;
+    addVariable(params: { blueprintName: string; variableName: string; variableType: string; defaultValue?: any; category?: string; isReplicated?: boolean; isPublic?: boolean; variablePinType?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    removeVariable(params: { blueprintName: string; variableName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    addEvent(params: { blueprintName: string; eventType: string; customEventName?: string; parameters?: Array<{ name: string; type: string }>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    removeEvent(params: { blueprintName: string; eventName: string; customEventName?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    addFunction(params: { blueprintName: string; functionName: string; inputs?: Array<{ name: string; type: string }>; outputs?: Array<{ name: string; type: string }>; isPublic?: boolean; category?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    setVariableMetadata(params: { blueprintName: string; variableName: string; metadata: Record<string, unknown>; timeoutMs?: number }): Promise<StandardActionResponse>;
+    renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    addConstructionScript(params: { blueprintName: string; scriptName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    compileBlueprint(params: { blueprintName: string; saveAfterCompile?: boolean }): Promise<StandardActionResponse>;
+    getBlueprintSCS(params: { blueprintPath: string; timeoutMs?: number }): Promise<StandardActionResponse>;
+    addSCSComponent(params: { blueprintPath: string; componentClass: string; componentName: string; parentComponent?: string; meshPath?: string; materialPath?: string; timeoutMs?: number }): Promise<StandardActionResponse>;
+    removeSCSComponent(params: { blueprintPath: string; componentName: string; timeoutMs?: number }): Promise<StandardActionResponse>;
+    reparentSCSComponent(params: { blueprintPath: string; componentName: string; newParent: string; timeoutMs?: number }): Promise<StandardActionResponse>;
+    setSCSComponentTransform(params: { blueprintPath: string; componentName: string; location?: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number]; timeoutMs?: number }): Promise<StandardActionResponse>;
+    setSCSComponentProperty(params: { blueprintPath: string; componentName: string; propertyName: string; propertyValue: any; timeoutMs?: number }): Promise<StandardActionResponse>;
+    addNode(params: { blueprintName: string; nodeType: string; graphName?: string; functionName?: string; variableName?: string; nodeName?: string; eventName?: string; memberClass?: string; posX?: number; posY?: number; timeoutMs?: number }): Promise<StandardActionResponse>;
+    connectPins(params: { blueprintName: string; sourceNodeGuid: string; targetNodeGuid: string; sourcePinName?: string; targetPinName?: string; timeoutMs?: number }): Promise<StandardActionResponse>;
 }
 
 export interface ILevelTools {
@@ -158,24 +158,24 @@ export interface ILevelTools {
 export interface IEditorTools {
     isInPIE(): Promise<boolean>;
     ensureNotInPIE(): Promise<void>;
-    playInEditor(timeoutMs?: number): Promise<any>;
-    stopPlayInEditor(): Promise<any>;
-    pausePlayInEditor(): Promise<any>;
-    pauseInEditor(): Promise<any>;
-    buildLighting(): Promise<any>;
-    setViewportCamera(location?: { x: number; y: number; z: number } | [number, number, number] | null | undefined, rotation?: { pitch: number; yaw: number; roll: number } | [number, number, number] | null | undefined): Promise<any>;
-    setCameraSpeed(speed: number): Promise<any>;
-    setFOV(fov: number): Promise<any>;
-    takeScreenshot(filename?: string, resolution?: string): Promise<any>;
-    resumePlayInEditor(): Promise<any>;
-    stepPIEFrame(steps?: number): Promise<any>;
-    startRecording(options?: { filename?: string; frameRate?: number; durationSeconds?: number; metadata?: Record<string, unknown> }): Promise<any>;
-    stopRecording(): Promise<any>;
-    createCameraBookmark(name: string): Promise<any>;
-    jumpToCameraBookmark(name: string): Promise<any>;
-    setEditorPreferences(category: string | undefined, preferences: Record<string, unknown>): Promise<any>;
-    setViewportResolution(width: number, height: number): Promise<any>;
-    executeConsoleCommand(command: string): Promise<any>;
+    playInEditor(timeoutMs?: number): Promise<StandardActionResponse>;
+    stopPlayInEditor(): Promise<StandardActionResponse>;
+    pausePlayInEditor(): Promise<StandardActionResponse>;
+    pauseInEditor(): Promise<StandardActionResponse>;
+    buildLighting(): Promise<StandardActionResponse>;
+    setViewportCamera(location?: { x: number; y: number; z: number } | [number, number, number] | null | undefined, rotation?: { pitch: number; yaw: number; roll: number } | [number, number, number] | null | undefined): Promise<StandardActionResponse>;
+    setCameraSpeed(speed: number): Promise<StandardActionResponse>;
+    setFOV(fov: number): Promise<StandardActionResponse>;
+    takeScreenshot(filename?: string, resolution?: string): Promise<StandardActionResponse>;
+    resumePlayInEditor(): Promise<StandardActionResponse>;
+    stepPIEFrame(steps?: number): Promise<StandardActionResponse>;
+    startRecording(options?: { filename?: string; frameRate?: number; durationSeconds?: number; metadata?: Record<string, unknown> }): Promise<StandardActionResponse>;
+    stopRecording(): Promise<StandardActionResponse>;
+    createCameraBookmark(name: string): Promise<StandardActionResponse>;
+    jumpToCameraBookmark(name: string): Promise<StandardActionResponse>;
+    setEditorPreferences(category: string | undefined, preferences: Record<string, unknown>): Promise<StandardActionResponse>;
+    setViewportResolution(width: number, height: number): Promise<StandardActionResponse>;
+    executeConsoleCommand(command: string): Promise<StandardActionResponse>;
 }
 
 export interface IEnvironmentTools {
@@ -188,32 +188,32 @@ export interface IEnvironmentTools {
 }
 
 export interface ILandscapeTools {
-    createLandscape(params: { name: string; location?: [number, number, number]; sizeX?: number; sizeY?: number; quadsPerSection?: number; sectionsPerComponent?: number; componentCount?: number; materialPath?: string; enableWorldPartition?: boolean; runtimeGrid?: string; isSpatiallyLoaded?: boolean; dataLayers?: string[] }): Promise<any>;
-    sculptLandscape(params: { landscapeName: string; tool: string; brushSize?: number; brushFalloff?: number; strength?: number; location?: [number, number, number]; radius?: number }): Promise<any>;
-    paintLandscape(params: { landscapeName: string; layerName: string; position: [number, number, number]; brushSize?: number; strength?: number; targetValue?: number; radius?: number; density?: number }): Promise<any>;
-    createProceduralTerrain(params: { name: string; location?: [number, number, number]; subdivisions?: number; heightFunction?: string; material?: string; settings?: Record<string, unknown> }): Promise<any>;
-    createLandscapeGrassType(params: { name: string; meshPath: string; density?: number; minScale?: number; maxScale?: number; path?: string; staticMesh?: string }): Promise<any>;
-    setLandscapeMaterial(params: { landscapeName: string; materialPath: string }): Promise<any>;
-    modifyHeightmap(params: { landscapeName: string; heightData: number[]; minX: number; minY: number; maxX: number; maxY: number; updateNormals?: boolean }): Promise<any>;
+    createLandscape(params: { name: string; location?: [number, number, number]; sizeX?: number; sizeY?: number; quadsPerSection?: number; sectionsPerComponent?: number; componentCount?: number; materialPath?: string; enableWorldPartition?: boolean; runtimeGrid?: string; isSpatiallyLoaded?: boolean; dataLayers?: string[] }): Promise<StandardActionResponse>;
+    sculptLandscape(params: { landscapeName: string; tool: string; brushSize?: number; brushFalloff?: number; strength?: number; location?: [number, number, number]; radius?: number }): Promise<StandardActionResponse>;
+    paintLandscape(params: { landscapeName: string; layerName: string; position: [number, number, number]; brushSize?: number; strength?: number; targetValue?: number; radius?: number; density?: number }): Promise<StandardActionResponse>;
+    createProceduralTerrain(params: { name: string; location?: [number, number, number]; subdivisions?: number; heightFunction?: string; material?: string; settings?: Record<string, unknown> }): Promise<StandardActionResponse>;
+    createLandscapeGrassType(params: { name: string; meshPath: string; density?: number; minScale?: number; maxScale?: number; path?: string; staticMesh?: string }): Promise<StandardActionResponse>;
+    setLandscapeMaterial(params: { landscapeName: string; materialPath: string }): Promise<StandardActionResponse>;
+    modifyHeightmap(params: { landscapeName: string; heightData: number[]; minX: number; minY: number; maxX: number; maxY: number; updateNormals?: boolean }): Promise<StandardActionResponse>;
 }
 
 export interface IFoliageTools {
-    addFoliageType(params: { name: string; meshPath: string; density?: number; radius?: number; minScale?: number; maxScale?: number; alignToNormal?: boolean; randomYaw?: boolean; groundSlope?: number }): Promise<any>;
-    addFoliage(params: { foliageType: string; locations: Array<{ x: number; y: number; z: number }> }): Promise<any>;
-    paintFoliage(params: { foliageType: string; position: [number, number, number]; brushSize?: number; paintDensity?: number; eraseMode?: boolean }): Promise<any>;
-    createProceduralFoliage(params: { name: string; bounds?: { location: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } }; foliageTypes?: Array<{ meshPath: string; density: number; minScale?: number; maxScale?: number; alignToNormal?: boolean; randomYaw?: boolean }>; volumeName?: string; position?: [number, number, number]; size?: [number, number, number]; seed?: number; tileSize?: number }): Promise<any>;
-    addFoliageInstances(params: { foliageType: string; transforms: Array<{ location: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number] }> }): Promise<any>;
-    getFoliageInstances(params: { foliageType?: string }): Promise<any>;
-    removeFoliage(params: { foliageType?: string; removeAll?: boolean }): Promise<any>;
-    createInstancedMesh(params: { name: string; meshPath: string; instances: Array<{ position: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number] }>; enableCulling?: boolean; cullDistance?: number }): Promise<any>;
-    setFoliageLOD(params: { foliageType: string; lodDistances?: number[]; screenSize?: number[] }): Promise<any>;
-    setFoliageCollision(params: { foliageType: string; collisionEnabled?: boolean; collisionProfile?: string; generateOverlapEvents?: boolean }): Promise<any>;
-    createGrassSystem(params: { name: string; grassTypes: Array<{ meshPath: string; density: number; minScale?: number; maxScale?: number }>; windStrength?: number; windSpeed?: number }): Promise<any>;
-    removeFoliageInstances(params: { foliageType: string; position: [number, number, number]; radius: number }): Promise<any>;
-    selectFoliageInstances(params: { foliageType: string; position?: [number, number, number]; radius?: number; selectAll?: boolean }): Promise<any>;
-    updateFoliageInstances(params: { foliageType: string; updateTransforms?: boolean; updateMesh?: boolean; newMeshPath?: string }): Promise<any>;
-    createFoliageSpawner(params: { name: string; spawnArea: 'Landscape' | 'StaticMesh' | 'BSP' | 'Foliage' | 'All'; excludeAreas?: Array<[number, number, number, number]> }): Promise<any>;
-    optimizeFoliage(params: { mergeInstances?: boolean; generateClusters?: boolean; clusterSize?: number; reduceDrawCalls?: boolean }): Promise<any>;
+    addFoliageType(params: { name: string; meshPath: string; density?: number; radius?: number; minScale?: number; maxScale?: number; alignToNormal?: boolean; randomYaw?: boolean; groundSlope?: number }): Promise<StandardActionResponse>;
+    addFoliage(params: { foliageType: string; locations: Array<{ x: number; y: number; z: number }> }): Promise<StandardActionResponse>;
+    paintFoliage(params: { foliageType: string; position: [number, number, number]; brushSize?: number; paintDensity?: number; eraseMode?: boolean }): Promise<StandardActionResponse>;
+    createProceduralFoliage(params: { name: string; bounds?: { location: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } }; foliageTypes?: Array<{ meshPath: string; density: number; minScale?: number; maxScale?: number; alignToNormal?: boolean; randomYaw?: boolean }>; volumeName?: string; position?: [number, number, number]; size?: [number, number, number]; seed?: number; tileSize?: number }): Promise<StandardActionResponse>;
+    addFoliageInstances(params: { foliageType: string; transforms: Array<{ location: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number] }> }): Promise<StandardActionResponse>;
+    getFoliageInstances(params: { foliageType?: string }): Promise<StandardActionResponse>;
+    removeFoliage(params: { foliageType?: string; removeAll?: boolean }): Promise<StandardActionResponse>;
+    createInstancedMesh(params: { name: string; meshPath: string; instances: Array<{ position: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number] }>; enableCulling?: boolean; cullDistance?: number }): Promise<StandardActionResponse>;
+    setFoliageLOD(params: { foliageType: string; lodDistances?: number[]; screenSize?: number[] }): Promise<StandardActionResponse>;
+    setFoliageCollision(params: { foliageType: string; collisionEnabled?: boolean; collisionProfile?: string; generateOverlapEvents?: boolean }): Promise<StandardActionResponse>;
+    createGrassSystem(params: { name: string; grassTypes: Array<{ meshPath: string; density: number; minScale?: number; maxScale?: number }>; windStrength?: number; windSpeed?: number }): Promise<StandardActionResponse>;
+    removeFoliageInstances(params: { foliageType: string; position: [number, number, number]; radius: number }): Promise<StandardActionResponse>;
+    selectFoliageInstances(params: { foliageType: string; position?: [number, number, number]; radius?: number; selectAll?: boolean }): Promise<StandardActionResponse>;
+    updateFoliageInstances(params: { foliageType: string; updateTransforms?: boolean; updateMesh?: boolean; newMeshPath?: string }): Promise<StandardActionResponse>;
+    createFoliageSpawner(params: { name: string; spawnArea: 'Landscape' | 'StaticMesh' | 'BSP' | 'Foliage' | 'All'; excludeAreas?: Array<[number, number, number, number]> }): Promise<StandardActionResponse>;
+    optimizeFoliage(params: { mergeInstances?: boolean; generateClusters?: boolean; clusterSize?: number; reduceDrawCalls?: boolean }): Promise<StandardActionResponse>;
 }
 
 export interface ITools {

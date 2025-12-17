@@ -1,39 +1,44 @@
-import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { StandardActionResponse } from '../types/tool-interfaces.js';
+import { cleanObject } from './safe-json.js';
 
 export class ResponseFactory {
-    static success(message: string, data?: unknown): CallToolResult {
-        const content: any[] = [{ type: 'text', text: message }];
-
-        if (data) {
-            content.push({
-                type: 'text',
-                text: JSON.stringify(data, null, 2)
-            });
-        }
-
+    /**
+     * Create a standard success response
+     */
+    static success(data: any, message: string = 'Operation successful'): StandardActionResponse {
         return {
-            content,
-            isError: false
+            success: true,
+            message,
+            data: cleanObject(data)
         };
     }
 
-    static error(message: string, error?: unknown): CallToolResult {
-        const errorText = error instanceof Error ? error.message : String(error);
-        const fullMessage = error ? `${message}: ${errorText}` : message;
+    /**
+     * Create a standard error response
+     * @param error The error object or message
+     * @param defaultMessage Fallback message if error is not an Error object
+     */
+    static error(error: any, defaultMessage: string = 'Operation failed'): StandardActionResponse {
+        const errorMessage = error instanceof Error ? error.message : String(error || defaultMessage);
+
+        // Log the full error for debugging (internal logs) but return a clean message to the client
+        console.error(`[ResponseFactory] Error:`, error);
 
         return {
-            content: [{ type: 'text', text: fullMessage }],
-            isError: true
+            success: false,
+            message: errorMessage,
+            data: null
         };
     }
 
-    static json(data: unknown): CallToolResult {
+    /**
+     * Create a validation error response
+     */
+    static validationError(message: string): StandardActionResponse {
         return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify(data, null, 2)
-            }],
-            isError: false
+            success: false,
+            message: `Validation Error: ${message}`,
+            data: null
         };
     }
 }
