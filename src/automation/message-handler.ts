@@ -12,6 +12,30 @@ function FStringSafe(val: unknown): string {
     }
 }
 
+/** Response result with optional saved flag */
+interface ResponseResult {
+    saved?: boolean;
+    action?: string;
+    success?: boolean;
+    message?: string;
+    error?: string;
+    [key: string]: unknown;
+}
+
+/** Event message structure */
+interface EventMessage extends AutomationBridgeMessage {
+    requestId?: string;
+    event?: string;
+    payload?: unknown;
+    result?: ResponseResult;
+    message?: string;
+}
+
+/** Response with optional action field */
+interface ResponseWithAction extends AutomationBridgeResponseMessage {
+    action?: string;
+}
+
 export class MessageHandler {
     private log = new Logger('MessageHandler');
 
@@ -70,7 +94,7 @@ export class MessageHandler {
                 }
 
                 // If the response indicates it's already saved/done, resolve immediately
-                const result = enforcedResponse.result as any;
+                const result = enforcedResponse.result as ResponseResult | undefined;
                 if (result && result.saved === true) {
                     this.requestTracker.resolveRequest(requestId, enforcedResponse);
                     return;
@@ -93,7 +117,7 @@ export class MessageHandler {
     }
 
     private handleAutomationEvent(message: AutomationBridgeMessage): void {
-        const evt: any = message as any;
+        const evt = message as EventMessage;
         const reqId = typeof evt.requestId === 'string' ? evt.requestId : undefined;
 
         if (reqId) {
@@ -106,7 +130,7 @@ export class MessageHandler {
                     const synthetic: AutomationBridgeResponseMessage = {
                         type: 'automation_response',
                         requestId: reqId,
-                        success: evtSuccess !== undefined ? evtSuccess : (baseSuccess !== undefined ? baseSuccess : undefined as any),
+                        success: evtSuccess !== undefined ? evtSuccess : baseSuccess,
                         message: typeof evt.result?.message === 'string' ? evt.result.message : (typeof evt.message === 'string' ? evt.message : FStringSafe(evt.event)),
                         error: typeof evt.result?.error === 'string' ? evt.result.error : undefined,
                         result: evt.result ?? evt.payload ?? undefined
@@ -128,9 +152,10 @@ export class MessageHandler {
         try {
             const expected = (expectedAction || '').toString().toLowerCase();
             const echoed: string | undefined = (() => {
-                const r: any = response as any;
-                const candidate = (typeof r.action === 'string' && r.action) || (typeof r.result?.action === 'string' && r.result.action);
-                return candidate as any;
+                const r = response as ResponseWithAction;
+                const resultObj = response.result as ResponseResult | undefined;
+                const candidate = (typeof r.action === 'string' && r.action) || (typeof resultObj?.action === 'string' && resultObj.action);
+                return candidate || undefined;
             })();
 
             if (expected && echoed && typeof echoed === 'string') {
@@ -151,7 +176,7 @@ export class MessageHandler {
                 const startsEitherWay = got.startsWith(expected) || expected.startsWith(got);
 
                 if (!startsEitherWay) {
-                    const mutated: any = { ...response };
+                    const mutated: ResponseWithAction = { ...response };
                     mutated.success = false;
                     if (!mutated.error) mutated.error = 'ACTION_PREFIX_MISMATCH';
                     const msgBase = typeof mutated.message === 'string' ? mutated.message + ' ' : '';
@@ -160,7 +185,7 @@ export class MessageHandler {
                 }
             }
         } catch (e) {
-            this.log.debug('enforceActionMatch check skipped', e as any);
+            this.log.debug('enforceActionMatch check skipped', e instanceof Error ? e.message : String(e));
         }
         return response;
     }

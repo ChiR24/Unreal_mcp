@@ -217,8 +217,10 @@ export class AutomationBridge extends EventEmitter {
                 this.lastHandshakeFailure = undefined;
                 this.connectionManager.updateLastMessageTime();
 
-                // Extract remote address/port
-                const underlying: any = (socket as any)._socket || (socket as any).socket;
+                // Extract remote address/port from underlying TCP socket
+                // Note: WebSocket types don't expose _socket, but it exists at runtime
+                const socketWithInternal = socket as unknown as { _socket?: { remoteAddress?: string; remotePort?: number }; socket?: { remoteAddress?: string; remotePort?: number } };
+                const underlying = socketWithInternal._socket || socketWithInternal.socket;
                 const remoteAddr = underlying?.remoteAddress ?? undefined;
                 const remotePort = underlying?.remotePort ?? undefined;
 

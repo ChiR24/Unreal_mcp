@@ -5,6 +5,20 @@ import { IActorTools, StandardActionResponse } from '../types/tool-interfaces.js
 import { ActorResponse } from '../types/automation-responses.js';
 import { wasmIntegration } from '../wasm/index.js';
 
+/** Extended actor response with spawn-specific fields */
+interface SpawnActorResponse extends ActorResponse {
+  data?: {
+    name?: string;
+    objectPath?: string;
+    [key: string]: unknown;
+  };
+  actorName?: string;
+  actorPath?: string;
+  warnings?: string[];
+  details?: unknown[];
+  componentPaths?: string[];
+}
+
 export class ActorTools extends BaseTool implements IActorTools {
   constructor(bridge: UnrealBridge) {
     super(bridge);
@@ -46,7 +60,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     try {
       const bridge = this.getAutomationBridge();
       const timeoutMs = typeof params.timeoutMs === 'number' && params.timeoutMs > 0 ? params.timeoutMs : undefined;
-      const response = await bridge.sendAutomationRequest<ActorResponse>(
+      const response = await bridge.sendAutomationRequest<SpawnActorResponse>(
         'control_actor',
         {
           action: 'spawn',
@@ -61,37 +75,38 @@ export class ActorTools extends BaseTool implements IActorTools {
 
       if (!response || !response.success) {
         const error = response?.error;
-        const errorMsg = typeof error === 'string' ? error : (error as any)?.message || response?.message || 'Failed to spawn actor';
+        const errorObj = typeof error === 'object' && error !== null ? error as { message?: string } : null;
+        const errorMsg = typeof error === 'string' ? error : errorObj?.message || response?.message || 'Failed to spawn actor';
         throw new Error(errorMsg);
       }
 
-      const data = (response as any).data || {};
+      const data = response.data || {};
       const result: StandardActionResponse = {
         success: true,
         message: response.message || `Spawned actor ${className}`,
-        actorName: data.name || (response as any).actorName,
-        actorPath: data.objectPath || (response as any).actorPath,
+        actorName: data.name || response.actorName,
+        actorPath: data.objectPath || response.actorPath,
         resolvedClass: mappedClassPath,
         requestedClass: className,
         location: { x: locX, y: locY, z: locZ },
         rotation: { pitch: rotPitch, yaw: rotYaw, roll: rotRoll },
         data: data,
         actor: {
-          name: data.name || (response as any).actorName,
-          path: data.objectPath || (response as any).actorPath || mappedClassPath
+          name: data.name || response.actorName,
+          path: data.objectPath || response.actorPath || mappedClassPath
         }
       };
 
-      if ((response as any).warnings?.length) {
-        result.warnings = (response as any).warnings;
+      if (response.warnings?.length) {
+        result.warnings = response.warnings;
       }
 
       // Legacy support for older fields if they exist at top level
-      if ((response as any).details?.length) {
-        result.details = (response as any).details;
+      if (response.details?.length) {
+        result.details = response.details;
       }
-      if ((response as any).componentPaths?.length) {
-        result.componentPaths = (response as any).componentPaths;
+      if (response.componentPaths?.length) {
+        result.componentPaths = response.componentPaths;
       }
 
       return result;
