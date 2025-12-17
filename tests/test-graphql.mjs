@@ -150,10 +150,19 @@ async function testGraphQLServer() {
     log.info('You can test it with: curl -X POST -H "Content-Type: application/json" -d \'{"query": "{ assets { edges { node { name path } } } }"\' http://127.0.0.1:4000/graphql');
 
     // Run tests
-    await runGraphQLTests();
+    const results = await runGraphQLTests();
 
-    // Keep server running for manual testing
-    log.info('\nGraphQL server is still running. Press Ctrl+C to stop.');
+    // Auto-exit after tests complete
+    log.info('\nTests completed. Shutting down...');
+    await graphQLServer.stop();
+
+    if (results.failed > 0) {
+      log.info(`\n❌ ${results.failed}/${results.total} tests failed`);
+      process.exit(1);
+    } else {
+      log.info(`\n✅ All ${results.passed}/${results.total} tests passed`);
+      process.exit(0);
+    }
   } catch (error) {
     log.error('Failed to start GraphQL server:', error);
     process.exit(1);
@@ -259,6 +268,37 @@ async function runGraphQLTests() {
           }
         }
       `
+    },
+    {
+      name: 'Error Handling - Invalid Query',
+      query: `
+        {
+          invalidField {
+            name
+          }
+        }
+      `,
+      expectError: true
+    },
+    {
+      name: 'Pagination Test',
+      query: `
+        {
+          assets(pagination: { limit: 1, offset: 0 }) {
+            edges {
+              node {
+                name
+              }
+              cursor
+            }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+            }
+            totalCount
+          }
+        }
+      `
     }
   ];
 
@@ -278,11 +318,21 @@ async function runGraphQLTests() {
       const result = await response.json();
 
       if (result.errors) {
-        log.error(`  ❌ ${test.name} - GraphQL Errors:`, JSON.stringify(result.errors));
-        failed++;
+        if (test.expectError) {
+          log.info(`  ✅ ${test.name} - Expected error received`);
+          passed++;
+        } else {
+          log.error(`  ❌ ${test.name} - GraphQL Errors:`, JSON.stringify(result.errors));
+          failed++;
+        }
       } else if (result.data) {
-        log.info(`  ✅ ${test.name} - Success`);
-        passed++;
+        if (test.expectError) {
+          log.error(`  ❌ ${test.name} - Expected error but got data`);
+          failed++;
+        } else {
+          log.info(`  ✅ ${test.name} - Success`);
+          passed++;
+        }
       } else {
         log.error(`  ❌ ${test.name} - No data returned`);
         failed++;

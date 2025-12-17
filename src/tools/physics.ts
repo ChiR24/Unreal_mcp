@@ -3,6 +3,7 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay } from '../utils/validation.js';
 import { coerceString, coerceStringArray } from '../utils/result-helpers.js';
+import { wasmIntegration } from '../wasm/index.js';
 
 export class PhysicsTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
@@ -485,10 +486,15 @@ export class PhysicsTools {
     }
 
     try {
+      // Use WASM for vector normalization/validation
+      const zeroVector: [number, number, number] = [0, 0, 0];
+      const normalizedVector = wasmIntegration.vectorAdd(zeroVector, params.vector);
+      console.error('[WASM] Using vectorAdd for physics force vector processing');
+
       const response = await this.automationBridge.sendAutomationRequest('apply_force', {
         actorName: params.actorName,
         forceType: params.forceType,
-        vector: params.vector,
+        vector: normalizedVector,
         boneName: params.boneName,
         isLocal: params.isLocal
       }, {

@@ -129,6 +129,35 @@ interface Blueprint {
   scsHierarchy?: Record<string, any>;
 }
 
+import { Logger } from '../utils/logger.js';
+
+const log = new Logger('GraphQL:Resolvers');
+
+/**
+ * Creates a GraphQL-friendly error with proper extensions
+ */
+class GraphQLResolverError extends Error {
+  extensions: { code: string; originalError?: string };
+
+  constructor(message: string, code: string = 'UNREAL_ENGINE_ERROR', originalError?: Error) {
+    super(message);
+    this.name = 'GraphQLResolverError';
+    this.extensions = {
+      code,
+      originalError: originalError?.message
+    };
+  }
+}
+
+/**
+ * Helper to create resolver errors with proper logging
+ */
+function createResolverError(operation: string, error: unknown): GraphQLResolverError {
+  const message = error instanceof Error ? error.message : String(error);
+  log.error(`${operation} failed:`, message);
+  return new GraphQLResolverError(`${operation} failed: ${message}`, 'UNREAL_ENGINE_ERROR', error instanceof Error ? error : undefined);
+}
+
 function logAutomationFailure(source: string, response: any) {
   try {
     if (!response || response.success !== false) {
@@ -138,7 +167,7 @@ function logAutomationFailure(source: string, response: any) {
     if (errorText.length === 0) {
       return;
     }
-    console.error(`[GraphQL] ${source} automation failure:`, errorText);
+    log.error(`${source} automation failure:`, errorText);
   } catch {
   }
 }
@@ -158,7 +187,7 @@ async function getActorProperties(
     });
     return result.success ? result.value || {} : {};
   } catch (error) {
-    console.error('Failed to get actor properties:', error);
+    log.error('Failed to get actor properties:', error);
     return {};
   }
 }
@@ -190,11 +219,11 @@ async function listAssets(
     }
 
     logAutomationFailure('list_assets', response);
-    console.error('Failed to list assets:', response);
+    log.warn('Failed to list assets - returning empty set');
     return { assets: [], totalCount: 0 };
   } catch (error) {
-    console.error('Failed to list assets:', error);
-    return { assets: [], totalCount: 0 };
+    log.error('Failed to list assets:', error);
+    throw createResolverError('listAssets', error);
   }
 }
 
@@ -524,9 +553,9 @@ export const resolvers = {
           { subAction: 'get_cells' },
           { timeoutMs: 10000 }
         );
-        
+
         if (response.success && response.result) {
-            return (response.result as any).cells || [];
+          return (response.result as any).cells || [];
         }
         return [];
       } catch (error) {
@@ -550,7 +579,7 @@ export const resolvers = {
         const edges = assets.map((asset, index) => ({
           node: {
             ...asset,
-            emitters: [], 
+            emitters: [],
             parameters: []
           },
           cursor: Buffer.from(`${asset.path}:${offset + index}`).toString('base64')

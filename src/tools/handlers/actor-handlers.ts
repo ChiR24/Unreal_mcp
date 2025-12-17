@@ -1,12 +1,9 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import { executeAutomationRequest } from './common-handlers.js';
-import { Logger } from '../../utils/logger.js';
 import { normalizeArgs } from './argument-helper.js';
 
 type ActorActionHandler = (args: any, tools: ITools) => Promise<any>;
-
-const logger = new Logger('ActorHandlers');
 
 const handlers: Record<string, ActorActionHandler> = {
     spawn: async (args, tools) => {
@@ -35,7 +32,7 @@ const handlers: Record<string, ActorActionHandler> = {
             { key: 'actorName', aliases: ['name'] },
             { key: 'timeoutMs', default: undefined }
         ]);
-        
+
         const timeoutMs = typeof params.timeoutMs === 'number' ? params.timeoutMs : undefined;
 
         // Extremely small timeouts are treated as an immediate timeout-style
@@ -113,7 +110,6 @@ const handlers: Record<string, ActorActionHandler> = {
                     // Auto-enable physics logic
                     const compsResult = await tools.actorTools.getComponents(params.actorName);
                     if (compsResult && compsResult.success && Array.isArray(compsResult.components)) {
-                        logger.debug('Components found:', JSON.stringify(compsResult.components));
                         const meshComp = compsResult.components.find((c: any) => {
                             const name = c.name || c;
                             const match = typeof name === 'string' && (
@@ -121,13 +117,11 @@ const handlers: Record<string, ActorActionHandler> = {
                                 name.toLowerCase().includes('mesh') ||
                                 name.toLowerCase().includes('primitive')
                             );
-                            logger.debug(`Checking component '${name}' matches? ${match}`);
                             return match;
                         });
 
                         if (meshComp) {
                             const compName = meshComp.name || meshComp;
-                            logger.debug(`Auto-enabling physics for component: ${compName}`); // Debug log
                             await tools.actorTools.setComponentProperties({
                                 actorName: params.actorName,
                                 componentName: compName,
@@ -253,7 +247,7 @@ const handlers: Record<string, ActorActionHandler> = {
         const params = normalizeArgs(args, [
             { key: 'name', aliases: ['actorName', 'query'], required: true }
         ]);
-        
+
         // Use the plugin's fuzzy query endpoint (contains-match) instead of the
         // exact lookup endpoint. This improves "spawn then find" reliability.
         return tools.actorTools.findByName(params.name);

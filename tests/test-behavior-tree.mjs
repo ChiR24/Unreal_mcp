@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Behavior Tree Test Suite (20 cases)
+ * Comprehensive Behavior Tree Test Suite
  * Tool: manage_behavior_tree
+ * Coverage: All 6 actions with success, error, and edge cases
  */
 
 import { runToolTests } from './test-runner.mjs';
@@ -9,252 +10,434 @@ import { runToolTests } from './test-runner.mjs';
 const btPath = '/Game/AI/BT_TestTree';
 
 const testCases = [
-  // Setup: Create a Behavior Tree asset first
+  // === PRE-CLEANUP ===
   {
-    scenario: "Create Behavior Tree Asset",
-    toolName: "manage_asset",
-    arguments: {
-      action: "create_asset", // Assuming generic asset creation or create_behavior_tree if specialized
-      // Actually, let's use generic import or assume it exists for now, 
-      // or create via blueprint/asset tools if supported.
-      // Fallback: use generic create_asset with BehaviorTree class if supported, 
-      // otherwise 'create_behavior_tree' might be needed in manage_asset or manage_behavior_tree.
-      // Checking consolidated definitions: manage_behavior_tree has add_node etc, but no create_tree.
-      // manage_asset has import/create_material... maybe generic create?
-      // Let's assume we use a pre-existing one or create one via a helper if available.
-      // For test, let's try to create one using manage_asset generic if possible, or skip creation.
-      // Let's try to assume it exists or use a known path.
-      // For robustness, let's try to create via a python command in 'system_control' if we can't natively.
-      action: "execute_console_command", 
-      command: "py.exec \"unreal.AssetToolsHelpers.get_asset_tools().create_asset('BT_TestTree', '/Game/AI', unreal.BehaviorTree, unreal.BehaviorTreeFactory())\""
-    },
-    toolName: "system_control",
-    expected: "success"
+    scenario: 'Pre-cleanup: Delete existing BT',
+    toolName: 'manage_asset',
+    arguments: { action: 'delete', assetPaths: [btPath] },
+    expected: 'success|not_found'
   },
+
+  // === CREATE ===
   {
-    scenario: "Add Root Node (Selector)",
-    toolName: "manage_behavior_tree",
+    scenario: 'Create Behavior Tree',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "add_node",
+      action: 'create',
+      name: 'BT_TestTree',
+      savePath: '/Game/AI'
+    },
+    expected: 'success'
+  },
+
+  // === ADD NODES (add_node) ===
+  {
+    scenario: 'Add Root Selector Node',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'add_node',
       assetPath: btPath,
-      nodeType: "Selector",
-      nodeId: "RootSelector",
+      nodeType: 'Selector',
+      nodeId: 'RootSelector',
       x: 0,
       y: 0
     },
-    expected: "success"
+    expected: 'success'
   },
   {
-    scenario: "Add Sequence Node",
-    toolName: "manage_behavior_tree",
+    scenario: 'Add Sequence Node',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "add_node",
+      action: 'add_node',
       assetPath: btPath,
-      nodeType: "Sequence",
-      nodeId: "MainSequence",
+      nodeType: 'Sequence',
+      nodeId: 'MainSequence',
       x: -200,
       y: 150
     },
-    expected: "success"
+    expected: 'success'
   },
   {
-    scenario: "Connect Root to Sequence",
-    toolName: "manage_behavior_tree",
+    scenario: 'Add Task Node (Wait)',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "connect_nodes",
+      action: 'add_node',
       assetPath: btPath,
-      parentNodeId: "RootSelector",
-      childNodeId: "MainSequence"
-    },
-    expected: "success"
-  },
-  {
-    scenario: "Add Task Node (Wait)",
-    toolName: "manage_behavior_tree",
-    arguments: {
-      action: "add_node",
-      assetPath: btPath,
-      nodeType: "Task",
-      nodeClass: "BTTask_Wait", // Assuming class name resolution
-      nodeId: "WaitTask",
+      nodeType: 'Task',
+      nodeId: 'WaitTask',
       x: -300,
-      y: 300
+      y: 300,
+      comment: 'Wait 5 seconds'
     },
-    expected: "success"
+    expected: 'success'
   },
   {
-    scenario: "Connect Sequence to Task",
-    toolName: "manage_behavior_tree",
+    scenario: 'Add Decorator Node',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "connect_nodes",
+      action: 'add_node',
       assetPath: btPath,
-      parentNodeId: "MainSequence",
-      childNodeId: "WaitTask"
+      nodeType: 'Decorator',
+      nodeId: 'BBDecorator',
+      parentNodeId: 'MainSequence',
+      x: -400,
+      y: 200
     },
-    expected: "success"
+    expected: 'success'
   },
   {
-    scenario: "Set Task Property (Wait Time)",
-    toolName: "manage_behavior_tree",
+    scenario: 'Add Service Node',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "set_node_properties",
+      action: 'add_node',
       assetPath: btPath,
-      nodeId: "WaitTask",
-      properties: {
-        "WaitTime": 5.0
-      }
+      nodeType: 'Service',
+      nodeId: 'FocusService',
+      parentNodeId: 'RootSelector',
+      x: 100,
+      y: 100
     },
-    expected: "success"
+    expected: 'success'
   },
   {
-    scenario: "Add Decorator (Blackboard)",
-    toolName: "manage_behavior_tree",
+    scenario: 'Add SimpleParallel Node',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "add_node",
+      action: 'add_node',
       assetPath: btPath,
-      nodeType: "Decorator",
-      nodeClass: "BTDecorator_Blackboard",
-      parentNodeId: "MainSequence", // Decorators attach to nodes (composites/tasks)
-      nodeId: "BBDecorator"
-    },
-    expected: "success"
-  },
-  {
-    scenario: "Set Decorator Property",
-    toolName: "manage_behavior_tree",
-    arguments: {
-      action: "set_node_properties",
-      assetPath: btPath,
-      nodeId: "BBDecorator",
-      properties: {
-        "BlackboardKey": "TargetActor"
-      }
-    },
-    expected: "success"
-  },
-  {
-    scenario: "Add Service (Default Focus)",
-    toolName: "manage_behavior_tree",
-    arguments: {
-      action: "add_node",
-      assetPath: btPath,
-      nodeType: "Service",
-      nodeClass: "BTService_DefaultFocus",
-      parentNodeId: "RootSelector",
-      nodeId: "FocusService"
-    },
-    expected: "success"
-  },
-  {
-    scenario: "Remove Node (Wait Task)",
-    toolName: "manage_behavior_tree",
-    arguments: {
-      action: "remove_node",
-      assetPath: btPath,
-      nodeId: "WaitTask"
-    },
-    expected: "success"
-  },
-  {
-    scenario: "Break Connections",
-    toolName: "manage_behavior_tree",
-    arguments: {
-      action: "break_connections",
-      assetPath: btPath,
-      parentNodeId: "RootSelector",
-      childNodeId: "MainSequence"
-    },
-    expected: "success"
-  },
-  {
-    scenario: "Add Parallel Node",
-    toolName: "manage_behavior_tree",
-    arguments: {
-      action: "add_node",
-      assetPath: btPath,
-      nodeType: "SimpleParallel",
-      nodeId: "ParallelNode",
+      nodeType: 'SimpleParallel',
+      nodeId: 'ParallelNode',
       x: 200,
       y: 150
     },
-    expected: "success"
+    expected: 'success'
   },
   {
-    scenario: "Connect Root to Parallel",
-    toolName: "manage_behavior_tree",
+    scenario: 'Add MoveTo Task',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "connect_nodes",
+      action: 'add_node',
       assetPath: btPath,
-      parentNodeId: "RootSelector",
-      childNodeId: "ParallelNode"
-    },
-    expected: "success"
-  },
-  {
-    scenario: "Add Custom Task (MoveTo)",
-    toolName: "manage_behavior_tree",
-    arguments: {
-      action: "add_node",
-      assetPath: btPath,
-      nodeType: "Task",
-      nodeClass: "BTTask_MoveTo",
-      nodeId: "MoveToTask",
+      nodeType: 'Task',
+      nodeId: 'MoveToTask',
       x: 200,
       y: 300
     },
-    expected: "success"
+    expected: 'success'
   },
   {
-    scenario: "Error: Add Invalid Node Type",
-    toolName: "manage_behavior_tree",
+    scenario: 'Add FinishWithResult Task',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "add_node",
+      action: 'add_node',
       assetPath: btPath,
-      nodeType: "InvalidType"
+      nodeType: 'Task',
+      nodeId: 'FinishTask',
+      x: 300,
+      y: 300
     },
-    expected: "error"
+    expected: 'success'
   },
+
+  // === CONNECT NODES (connect_nodes) ===
   {
-    scenario: "Error: Connect Cycle",
-    toolName: "manage_behavior_tree",
+    scenario: 'Connect Root to Sequence',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "connect_nodes",
+      action: 'connect_nodes',
       assetPath: btPath,
-      parentNodeId: "MoveToTask",
-      childNodeId: "RootSelector"
+      parentNodeId: 'RootSelector',
+      childNodeId: 'MainSequence'
     },
-    expected: "error"
+    expected: 'success'
   },
   {
-    scenario: "Error: Set Property on Invalid Node",
-    toolName: "manage_behavior_tree",
+    scenario: 'Connect Sequence to WaitTask',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "set_node_properties",
+      action: 'connect_nodes',
       assetPath: btPath,
-      nodeId: "NonExistentNode",
-      properties: { "Val": 1 }
+      parentNodeId: 'MainSequence',
+      childNodeId: 'WaitTask'
     },
-    expected: "error|not_found"
+    expected: 'success'
   },
   {
-    scenario: "Edge: Comment String",
-    toolName: "manage_behavior_tree",
+    scenario: 'Connect Root to Parallel',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "set_node_properties",
+      action: 'connect_nodes',
       assetPath: btPath,
-      nodeId: "RootSelector",
-      comment: "Main Entry Point"
+      parentNodeId: 'RootSelector',
+      childNodeId: 'ParallelNode'
     },
-    expected: "success"
+    expected: 'success'
   },
   {
-    scenario: "Cleanup BT Asset",
-    toolName: "manage_asset",
+    scenario: 'Connect Parallel to MoveTo',
+    toolName: 'manage_behavior_tree',
     arguments: {
-      action: "delete",
-      assetPaths: [btPath]
+      action: 'connect_nodes',
+      assetPath: btPath,
+      parentNodeId: 'ParallelNode',
+      childNodeId: 'MoveToTask'
     },
-    expected: "success"
+    expected: 'success'
+  },
+
+  // === SET NODE PROPERTIES (set_node_properties) ===
+  {
+    scenario: 'Set WaitTask property (WaitTime)',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'set_node_properties',
+      assetPath: btPath,
+      nodeId: 'WaitTask',
+      properties: { WaitTime: 5.0 }
+    },
+    expected: 'success'
+  },
+  {
+    scenario: 'Set Decorator property (BlackboardKey)',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'set_node_properties',
+      assetPath: btPath,
+      nodeId: 'BBDecorator',
+      properties: { BlackboardKey: 'TargetActor' }
+    },
+    expected: 'success'
+  },
+  {
+    scenario: 'Set RootSelector comment',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'set_node_properties',
+      assetPath: btPath,
+      nodeId: 'RootSelector',
+      comment: 'Main Entry Point'
+    },
+    expected: 'success'
+  },
+  {
+    scenario: 'Set multiple properties',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'set_node_properties',
+      assetPath: btPath,
+      nodeId: 'MoveToTask',
+      properties: { AcceptableRadius: 50.0, bStopOnOverlap: true }
+    },
+    expected: 'success'
+  },
+
+  // === BREAK CONNECTIONS (break_connections) ===
+  {
+    scenario: 'Break Root to Sequence connection',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'break_connections',
+      assetPath: btPath,
+      parentNodeId: 'RootSelector',
+      childNodeId: 'MainSequence'
+    },
+    expected: 'success'
+  },
+  {
+    scenario: 'Reconnect Root to Sequence',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'connect_nodes',
+      assetPath: btPath,
+      parentNodeId: 'RootSelector',
+      childNodeId: 'MainSequence'
+    },
+    expected: 'success'
+  },
+
+  // === REMOVE NODES (remove_node) ===
+  {
+    scenario: 'Remove FinishTask',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'remove_node',
+      assetPath: btPath,
+      nodeId: 'FinishTask'
+    },
+    expected: 'success'
+  },
+  {
+    scenario: 'Remove FocusService',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'remove_node',
+      assetPath: btPath,
+      nodeId: 'FocusService'
+    },
+    expected: 'success'
+  },
+
+  // === REAL-WORLD SCENARIO: AI Patrol Tree ===
+  {
+    scenario: 'Patrol - Create Second BT',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'create',
+      name: 'BT_Patrol',
+      savePath: '/Game/AI'
+    },
+    expected: 'success'
+  },
+  {
+    scenario: 'Patrol - Add Root',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'add_node',
+      assetPath: '/Game/AI/BT_Patrol',
+      nodeType: 'Sequence',
+      nodeId: 'PatrolRoot',
+      x: 0,
+      y: 0
+    },
+    expected: 'success'
+  },
+  {
+    scenario: 'Patrol - Add MoveToPatrol',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'add_node',
+      assetPath: '/Game/AI/BT_Patrol',
+      nodeType: 'Task',
+      nodeId: 'MoveToPatrol',
+      x: 0,
+      y: 150
+    },
+    expected: 'success'
+  },
+  {
+    scenario: 'Patrol - Add Wait',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'add_node',
+      assetPath: '/Game/AI/BT_Patrol',
+      nodeType: 'Task',
+      nodeId: 'WaitAtPatrol',
+      x: 100,
+      y: 150
+    },
+    expected: 'success'
+  },
+  {
+    scenario: 'Patrol - Connect nodes',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'connect_nodes',
+      assetPath: '/Game/AI/BT_Patrol',
+      parentNodeId: 'PatrolRoot',
+      childNodeId: 'MoveToPatrol'
+    },
+    expected: 'success'
+  },
+
+  // === ERROR CASES ===
+  {
+    scenario: 'Error: Add invalid node type',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'add_node',
+      assetPath: btPath,
+      nodeType: 'InvalidType'
+    },
+    expected: 'error'
+  },
+  {
+    scenario: 'Error: Connect cycle',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'connect_nodes',
+      assetPath: btPath,
+      parentNodeId: 'MoveToTask',
+      childNodeId: 'RootSelector'
+    },
+    expected: 'error'
+  },
+  {
+    scenario: 'Error: Set property on invalid node',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'set_node_properties',
+      assetPath: btPath,
+      nodeId: 'NonExistentNode',
+      properties: { Val: 1 }
+    },
+    expected: 'error|not_found'
+  },
+  {
+    scenario: 'Error: Remove non-existent node',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'remove_node',
+      assetPath: btPath,
+      nodeId: 'GhostNode'
+    },
+    expected: 'error|not_found'
+  },
+  {
+    scenario: 'Error: Connect to non-existent parent',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'connect_nodes',
+      assetPath: btPath,
+      parentNodeId: 'NonExistentParent',
+      childNodeId: 'WaitTask'
+    },
+    expected: 'error|not_found'
+  },
+  {
+    scenario: 'Error: Create without name',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'create',
+      savePath: '/Game/AI'
+    },
+    expected: 'error|missing'
+  },
+
+  // === EDGE CASES ===
+  {
+    scenario: 'Edge: Negative coordinates',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'add_node',
+      assetPath: btPath,
+      nodeType: 'Selector',
+      nodeId: 'NegPosNode',
+      x: -1000,
+      y: -1000
+    },
+    expected: 'success'
+  },
+  {
+    scenario: 'Edge: Empty properties object',
+    toolName: 'manage_behavior_tree',
+    arguments: {
+      action: 'set_node_properties',
+      assetPath: btPath,
+      nodeId: 'RootSelector',
+      properties: {}
+    },
+    expected: 'success'
+  },
+
+  // === CLEANUP ===
+  {
+    scenario: 'Cleanup: Delete test BT assets',
+    toolName: 'manage_asset',
+    arguments: {
+      action: 'delete',
+      assetPaths: [btPath, '/Game/AI/BT_Patrol']
+    },
+    expected: 'success'
   }
 ];
 

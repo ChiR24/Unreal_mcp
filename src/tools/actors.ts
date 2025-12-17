@@ -2,6 +2,8 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { ensureRotation, ensureVector3 } from '../utils/validation.js';
 import { BaseTool } from './base-tool.js';
 import { IActorTools, StandardActionResponse } from '../types/tool-interfaces.js';
+import { ActorResponse } from '../types/automation-responses.js';
+import { wasmIntegration } from '../wasm/index.js';
 
 export class ActorTools extends BaseTool implements IActorTools {
   constructor(bridge: UnrealBridge) {
@@ -44,7 +46,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     try {
       const bridge = this.getAutomationBridge();
       const timeoutMs = typeof params.timeoutMs === 'number' && params.timeoutMs > 0 ? params.timeoutMs : undefined;
-      const response = await bridge.sendAutomationRequest(
+      const response = await bridge.sendAutomationRequest<ActorResponse>(
         'control_actor',
         {
           action: 'spawn',
@@ -58,7 +60,9 @@ export class ActorTools extends BaseTool implements IActorTools {
       );
 
       if (!response || !response.success) {
-        throw new Error(response?.error || response?.message || 'Failed to spawn actor');
+        const error = response?.error;
+        const errorMsg = typeof error === 'string' ? error : (error as any)?.message || response?.message || 'Failed to spawn actor';
+        throw new Error(errorMsg);
       }
 
       const data = (response as any).data || {};
@@ -117,7 +121,7 @@ export class ActorTools extends BaseTool implements IActorTools {
       // DELETE_PARTIAL as a handled, partial-success cleanup instead
       // of surfacing it as a hard error to the consolidated handler.
       const bridge = this.getAutomationBridge();
-      const response: any = await bridge.sendAutomationRequest('control_actor', {
+      const response: any = await bridge.sendAutomationRequest<ActorResponse>('control_actor', {
         action: 'delete',
         actorNames: names
       });
@@ -158,7 +162,7 @@ export class ActorTools extends BaseTool implements IActorTools {
       throw new Error('Invalid actorName');
     }
 
-    return this.sendRequest('delete', { actorName: params.actorName }, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('delete', { actorName: params.actorName }, 'control_actor');
   }
 
   async applyForce(params: { actorName: string; force: { x: number; y: number; z: number } }) {
@@ -183,7 +187,7 @@ export class ActorTools extends BaseTool implements IActorTools {
       };
     }
 
-    return this.sendRequest('apply_force', {
+    return this.sendRequest<StandardActionResponse>('apply_force', {
       actorName: params.actorName,
       force: { x: forceX, y: forceY, z: forceZ }
     }, 'control_actor');
@@ -259,7 +263,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (location) payload.location = { x: location[0], y: location[1], z: location[2] };
     if (rotation) payload.rotation = { pitch: rotation[0], yaw: rotation[1], roll: rotation[2] };
 
-    return this.sendRequest('spawn_blueprint', payload, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('spawn_blueprint', payload, 'control_actor');
   }
 
   async setTransform(params: { actorName: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; scale?: { x: number; y: number; z: number } }) {
@@ -282,14 +286,14 @@ export class ActorTools extends BaseTool implements IActorTools {
       payload.scale = { x: scl[0], y: scl[1], z: scl[2] };
     }
 
-    return this.sendRequest('set_transform', payload, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('set_transform', payload, 'control_actor');
   }
 
   async getTransform(actorName: string) {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    return this.sendRequest('get_transform', { actorName }, 'control_actor')
+    return this.sendRequest<StandardActionResponse>('get_transform', { actorName }, 'control_actor')
       .then(response => {
         // If response is standardized, extract data or return as is.
         // For now, return the full response which includes data.
@@ -302,7 +306,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (!actorName) {
       throw new Error('Invalid actorName');
     }
-    return this.sendRequest('set_visibility', { actorName, visible: Boolean(params.visible) }, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('set_visibility', { actorName, visible: Boolean(params.visible) }, 'control_actor');
   }
 
   async addComponent(params: { actorName: string; componentType: string; componentName?: string; properties?: Record<string, unknown> }) {
@@ -311,7 +315,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (!actorName) throw new Error('Invalid actorName');
     if (!componentType) throw new Error('Invalid componentType');
 
-    return this.sendRequest('add_component', {
+    return this.sendRequest<StandardActionResponse>('add_component', {
       actorName,
       componentType,
       componentName: typeof params.componentName === 'string' ? params.componentName : undefined,
@@ -325,7 +329,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (!actorName) throw new Error('Invalid actorName');
     if (!componentName) throw new Error('Invalid componentName');
 
-    return this.sendRequest('set_component_properties', {
+    return this.sendRequest<StandardActionResponse>('set_component_properties', {
       actorName,
       componentName,
       properties: params.properties ?? {}
@@ -336,7 +340,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    const response = await this.sendRequest('get_components', { actorName }, 'control_actor');
+    const response = await this.sendRequest<StandardActionResponse>('get_components', { actorName }, 'control_actor');
     if (!response.success) {
       return { success: false, error: response.error || `Failed to get components for actor ${actorName}` };
     }
@@ -365,10 +369,14 @@ export class ActorTools extends BaseTool implements IActorTools {
     }
     if (params.offset) {
       const offs = ensureVector3(params.offset, 'duplicate offset');
-      payload.offset = { x: offs[0], y: offs[1], z: offs[2] };
+      // Use WASM vectorAdd for offset calculation (origin + offset)
+      const origin: [number, number, number] = [0, 0, 0];
+      const calculatedOffset = wasmIntegration.vectorAdd(origin, offs);
+      console.error('[WASM] Using vectorAdd for duplicate offset calculation');
+      payload.offset = { x: calculatedOffset[0], y: calculatedOffset[1], z: calculatedOffset[2] };
     }
 
-    return this.sendRequest('duplicate', payload, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('duplicate', payload, 'control_actor');
   }
 
   async addTag(params: { actorName: string; tag: string }) {
@@ -377,7 +385,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (!actorName) throw new Error('Invalid actorName');
     if (!tag) throw new Error('Invalid tag');
 
-    return this.sendRequest('add_tag', { actorName, tag }, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('add_tag', { actorName, tag }, 'control_actor');
   }
 
   async removeTag(params: { actorName: string; tag: string }) {
@@ -386,7 +394,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (!actorName) throw new Error('Invalid actorName');
     if (!tag) throw new Error('Invalid tag');
 
-    return this.sendRequest('remove_tag', { actorName, tag }, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('remove_tag', { actorName, tag }, 'control_actor');
   }
 
   async findByTag(params: { tag: string; matchType?: string }) {
@@ -404,7 +412,7 @@ export class ActorTools extends BaseTool implements IActorTools {
       };
     }
 
-    return this.sendRequest('find_by_tag', {
+    return this.sendRequest<StandardActionResponse>('find_by_tag', {
       tag,
       matchType: typeof params.matchType === 'string' ? params.matchType : undefined
     }, 'control_actor');
@@ -414,7 +422,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (typeof name !== 'string' || name.trim().length === 0) {
       throw new Error('Invalid actor name query');
     }
-    return this.sendRequest('find_by_name', { name: name.trim() }, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('find_by_name', { name: name.trim() }, 'control_actor');
   }
 
   async detach(actorName: string) {
@@ -428,7 +436,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    return this.sendRequest('detach', { actorName }, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('detach', { actorName }, 'control_actor');
   }
 
   async attach(params: { childActor: string; parentActor: string }) {
@@ -437,20 +445,20 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (!child) throw new Error('Invalid childActor');
     if (!parent) throw new Error('Invalid parentActor');
 
-    return this.sendRequest('attach', { childActor: child, parentActor: parent }, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('attach', { childActor: child, parentActor: parent }, 'control_actor');
   }
 
   async deleteByTag(tag: string) {
     if (typeof tag !== 'string' || tag.trim().length === 0) {
       throw new Error('Invalid tag');
     }
-    return this.sendRequest('delete_by_tag', { tag: tag.trim() }, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('delete_by_tag', { tag: tag.trim() }, 'control_actor');
   }
 
   async setBlueprintVariables(params: { actorName: string; variables: Record<string, unknown> }) {
     const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
     if (!actorName) throw new Error('Invalid actorName');
-    return this.sendRequest('set_blueprint_variables', { actorName, variables: params.variables ?? {} }, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('set_blueprint_variables', { actorName, variables: params.variables ?? {} }, 'control_actor');
   }
 
   async createSnapshot(params: { actorName: string; snapshotName: string }) {
@@ -458,7 +466,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     const snapshotName = typeof params.snapshotName === 'string' ? params.snapshotName.trim() : '';
     if (!actorName) throw new Error('Invalid actorName');
     if (!snapshotName) throw new Error('Invalid snapshotName');
-    return this.sendRequest('create_snapshot', { actorName, snapshotName }, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('create_snapshot', { actorName, snapshotName }, 'control_actor');
   }
 
   async restoreSnapshot(params: { actorName: string; snapshotName: string }) {
@@ -466,12 +474,12 @@ export class ActorTools extends BaseTool implements IActorTools {
     const snapshotName = typeof params.snapshotName === 'string' ? params.snapshotName.trim() : '';
     if (!actorName) throw new Error('Invalid actorName');
     if (!snapshotName) throw new Error('Invalid snapshotName');
-    return this.sendRequest('restore_snapshot', { actorName, snapshotName }, 'control_actor');
+    return this.sendRequest<StandardActionResponse>('restore_snapshot', { actorName, snapshotName }, 'control_actor');
   }
   async exportActor(params: { actorName: string; destinationPath?: string }) {
     const actorName = typeof params.actorName === 'string' ? params.actorName.trim() : '';
     if (!actorName) throw new Error('Invalid actorName');
-    return this.sendRequest('export', {
+    return this.sendRequest<StandardActionResponse>('export', {
       actorName,
       destinationPath: params.destinationPath
     }, 'control_actor');
@@ -481,7 +489,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    const response = await this.sendRequest('get_bounding_box', { actorName }, 'control_actor');
+    const response = await this.sendRequest<StandardActionResponse>('get_bounding_box', { actorName }, 'control_actor');
     if (!response.success) {
       return { success: false, error: response.error || `Failed to get bounding box for actor ${actorName}` };
     }
@@ -496,7 +504,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    const response = await this.sendRequest('get_metadata', { actorName }, 'control_actor');
+    const response = await this.sendRequest<StandardActionResponse>('get_metadata', { actorName }, 'control_actor');
     if (!response.success) {
       return { success: false, error: response.error || `Failed to get metadata for actor ${actorName}` };
     }
@@ -512,7 +520,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (params?.filter) {
       payload.filter = params.filter;
     }
-    const response = await this.sendRequest('list_actors', payload, 'control_actor');
+    const response = await this.sendRequest<StandardActionResponse>('list_actors', payload, 'control_actor');
     if (!response.success) {
       return { success: false, error: response.error || 'Failed to list actors' };
     }

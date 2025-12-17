@@ -6,169 +6,110 @@
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.7-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
 
-A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine through the native C++ Automation Bridge plugin. Built with TypeScript, C++, and Rust (WebAssembly) for ultra-high-performance game development automation.
+A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine through a native C++ Automation Bridge plugin. Built with TypeScript, C++, and Rust (WebAssembly).
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
+- [Available Tools](#available-tools)
+- [WebAssembly Acceleration](#webassembly-acceleration)
+- [GraphQL API](#graphql-api)
+- [Docker](#docker)
+- [Documentation](#documentation)
+- [Development](#development)
+- [Contributing](#contributing)
+
+---
 
 ## Features
 
-### Core Capabilities
-- **Asset Management** - Browse, import, and create materials
-- **Actor Control** - Spawn, delete, and manipulate actors with physics
-- **Editor Control** - PIE sessions, camera, and viewport management
-- **Level Management** - Load/save levels, lighting, and environment building
-- **Animation & Physics** - Blueprints, state machines, ragdolls, constraints, vehicle setup
-- **Visual Effects** - Niagara particles, GPU simulations, procedural effects
-- **Sequencer** - Cinematics, camera animations, and timeline control
-- **Graph Editing** - Blueprint, Niagara, Material, and Behavior Tree graph manipulation
-- **World Partition** - Load cells, manage data layers
-- **Render Management** - Render targets, Nanite, Lumen
-- **Pipeline & Testing** - Run UBT, automated tests
-- **Observability** - Log streaming, gameplay debugger, insights, asset queries
-- **Console Commands** - Safe execution with dangerous command filtering
-- **GraphQL API** - Flexible data querying for assets, actors, and blueprints
+| Category | Capabilities |
+|----------|-------------|
+| **Asset Management** | Browse, import, duplicate, rename, delete assets; create materials |
+| **Actor Control** | Spawn, delete, transform, physics, tags, components |
+| **Editor Control** | PIE sessions, camera, viewport, screenshots, bookmarks |
+| **Level Management** | Load/save levels, streaming, World Partition, data layers |
+| **Animation & Physics** | Animation BPs, state machines, ragdolls, vehicles, constraints |
+| **Visual Effects** | Niagara particles, GPU simulations, procedural effects, debug shapes |
+| **Sequencer** | Cinematics, timeline control, camera animations, keyframes |
+| **Graph Editing** | Blueprint, Niagara, Material, and Behavior Tree graph manipulation |
+| **Audio** | Sound cues, audio components, sound mixes, ambient sounds |
+| **System** | Console commands, UBT, tests, logs, project settings, CVars |
 
-### High-Performance WebAssembly
-- **5-8x faster JSON parsing** - WASM-accelerated property parsing
-- **5-10x faster transform math** - Optimized 3D vector/matrix operations
-- **3-5x faster dependency resolution** - Rapid asset graph traversal
-- **Automatic fallbacks** - Works perfectly without WASM binary
-- **Performance monitoring** - Built-in metrics tracking
+### Architecture
 
-## Quick Start
+- **Native C++ Automation** — All operations route through the MCP Automation Bridge plugin
+- **Graceful Degradation** — Server starts even without an active Unreal connection
+- **On-Demand Connection** — Retries automation handshakes with exponential backoff
+- **Command Safety** — Blocks dangerous console commands
+- **Asset Caching** — 10-second TTL for improved performance
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- Unreal Engine 5.0-5.7
-- Required UE Plugins (enable via **Edit ▸ Plugins**):
-  - **MCP Automation Bridge** – Native C++ WebSocket automation transport (ships inside `plugins/McpAutomationBridge`)
-  - **Editor Scripting Utilities** – Unlocks Editor Actor/Asset subsystems for native tool operations
-  - **Sequencer** *(built-in)* – Keep enabled for cinematic tools
-  - **Level Sequence Editor** – Required for `manage_sequence` operations
-  - **Control Rig** – Required for animation and physics tools
-  - **Subobject Data Interface** – Required for Blueprint component manipulation (UE 5.7+)
 
-> 💡 After toggling any plugin, restart the editor to finalize activation. The MCP Automation Bridge provides all automation capabilities through native C++ handlers.
+- **Node.js** 18+
+- **Unreal Engine** 5.0–5.7
 
-### Plugin feature map
+### Step 1: Install MCP Server
 
-| Plugin | Location | Used By | Notes |
-|--------|----------|---------|-------|
-| MCP Automation Bridge | Project Plugins ▸ MCP Automation Bridge | All automation operations | Primary C++ automation transport with native handlers |
-| Editor Scripting Utilities | Scripting | Asset/Actor subsystem operations | Supplies Editor Actor/Asset subsystems |
-| Sequencer | Built-in | Sequencer tools | Ensure not disabled in project settings |
-| Level Sequence Editor | Animation | Sequencer tools | Required for `manage_sequence` operations |
-| Control Rig | Animation | Animation/Physics tools | Required for `animation_physics` operations |
-| Subobject Data Interface | Scripting | Blueprint tools | Required for `manage_blueprint` component operations (UE 5.7+) |
-
-> Tools such as `physics.configureVehicle` accept an optional `pluginDependencies` array so you can list the specific Unreal plugins your project relies on (for example, Chaos Vehicles or third-party vehicle frameworks). When provided, the server will verify those plugins are active before running the configuration.
-
-### MCP Automation Bridge plugin
-- Location: `plugins/McpAutomationBridge`
-- Installation: copy the folder into your project's `Plugins/` directory and regenerate project files.
-- Configuration: enable **MCP Automation Bridge** in **Edit ▸ Plugins**, restart the editor, then set the endpoint/token under **Edit ▸ Project Settings ▸ Plugins ▸ MCP Automation Bridge**. The bridge ships with its own lightweight WebSocket client, so you no longer need the engine's WebSockets plugin enabled.
-- Current scope: manages a WebSocket session to the Node MCP server (`ws://127.0.0.1:8091` by default), implements reconnect backoff, and responds to editor functions, property operations, blueprint actions, and more through native implementations.
-- Diagnostics: the `ue://automation-bridge` MCP resource surfaces handshake timestamps, recent disconnects, pending automation requests, and whether the Node listener is running—handy when validating editor connectivity from a client.
-- Roadmap: expand the bridge with elevated actions (SCS authoring, typed property marshaling, modal mediation, asset workflows).
-
-### Plugin Setup Video Guide
-https://github.com/user-attachments/assets/17bfb47d-d455-4fc8-be16-ec12c23fe211
-
-### WebAssembly Performance (Optional)
-
-The MCP server includes WebAssembly acceleration for computationally intensive operations. WASM is **automatically used when available** and **gracefully falls back** to pure TypeScript when the bundle or toolchain is missing.
-
-**To enable full WASM acceleration (5–8x faster operations):**
-
+**Option A: NPX (Recommended)**
 ```bash
-# 1. Install Rust toolchain and wasm-pack (once per machine)
-#    See https://rustup.rs for installing Rust.
-cargo install wasm-pack
-
-# 2. Build TypeScript + WASM bundle
-#    The build script always runs the TypeScript compiler and then
-#    optionally builds the WASM bundle. If wasm-pack is missing the
-#    build will succeed with a warning and the server will use
-#    TypeScript fallbacks.
-npm run build
-
-# 3. Ensure WASM is enabled (default is enabled if WASM_ENABLED is unset)
-#    In .env or your process environment:
-#    WASM_ENABLED=true
-
-# 4. Start the server or run tests – the logs will include a
-#    "WebAssembly module initialized successfully" message when the
-#    bundle is present and loaded.
-npm start
+npx unreal-engine-mcp-server
 ```
 
-**Without WASM (still fully functional):**
-
+**Option B: Clone & Build**
 ```bash
-# Disable WASM explicitly (optional)
-# In .env or environment:
-#   WASM_ENABLED=false
-
-npm start
-# Server will always use TypeScript implementations only.
-```
-
-When the WASM bundle is not present or `wasm-pack` is not installed:
-
-- `npm run build` prints a concise message:
-  > WASM build failed or wasm-pack missing; continuing with TypeScript-only build.
-- At runtime, the server attempts to load the bundle once. On `ERR_MODULE_NOT_FOUND`
-  it logs a single warning suggesting `npm run build`/`cargo install wasm-pack` and
-  permanently falls back to TypeScript for that process.
-
-WASM acceleration applies to:
-- JSON property parsing (5-8x faster)
-- Transform calculations (5-10x faster)
-- Vector/matrix math (5x faster)
-- Asset dependency resolution (3-5x faster)
-
-### Installation
-
-Clone and Build
-
-```bash
-# Clone the repository
 git clone https://github.com/ChiR24/Unreal_mcp.git
 cd Unreal_mcp
-
-# Install dependencies and build
 npm install
 npm run build
-
-# Run directly
 node dist/cli.js
 ```
 
-### Unreal Engine Configuration
+### Step 2: Install Unreal Plugin
 
-No additional engine configuration required. The MCP Automation Bridge plugin handles all automation through native C++ code.
+The MCP Automation Bridge plugin is included at `Unreal_mcp/plugins/McpAutomationBridge`.
 
-## MCP Client Configuration
-
-### Claude Desktop / Cursor
-
-#### For NPM Installation (Local)
-
-```json
-{
-  "mcpServers": {
-    "unreal-engine": {
-      "command": "npx",
-      "args": ["unreal-engine-mcp-server"],
-      "env": {
-        "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject",
-        "MCP_AUTOMATION_PORT": "8091"
-      }
-    }
-  }
-}
+**Method 1: Copy Folder**
 ```
+Copy:  Unreal_mcp/plugins/McpAutomationBridge/
+To:    YourUnrealProject/Plugins/McpAutomationBridge/
+```
+Regenerate project files after copying.
 
-#### For Clone/Build Installation
+**Method 2: Add in Editor**
+1. Open Unreal Editor → **Edit → Plugins**
+2. Click **"Add"** → Browse to `Unreal_mcp/plugins/`
+3. Select the `McpAutomationBridge` folder
 
+**Video Guide:**
+https://github.com/user-attachments/assets/17bfb47d-d455-4fc8-be16-ec12c23fe211
+
+### Step 3: Enable Required Plugins
+
+Enable via **Edit → Plugins**, then restart the editor:
+
+| Plugin | Required For |
+|--------|--------------|
+| **MCP Automation Bridge** | All automation operations |
+| **Editor Scripting Utilities** | Asset/Actor subsystem operations |
+| **Sequencer** | Sequencer tools |
+| **Level Sequence Editor** | `manage_sequence` operations |
+| **Control Rig** | `animation_physics` operations |
+| **Subobject Data Interface** | Blueprint components (UE 5.7+) |
+
+### Step 4: Configure MCP Client
+
+Add to your Claude Desktop / Cursor config file:
+
+**Using Clone/Build:**
 ```json
 {
   "mcpServers": {
@@ -176,7 +117,7 @@ No additional engine configuration required. The MCP Automation Bridge plugin ha
       "command": "node",
       "args": ["path/to/Unreal_mcp/dist/cli.js"],
       "env": {
-        "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject",
+        "UE_PROJECT_PATH": "C:/Path/To/YourProject",
         "MCP_AUTOMATION_PORT": "8091"
       }
     }
@@ -184,120 +125,143 @@ No additional engine configuration required. The MCP Automation Bridge plugin ha
 }
 ```
 
-## Available Tools (17)
+**Using NPX:**
+```json
+{
+  "mcpServers": {
+    "unreal-engine": {
+      "command": "npx",
+      "args": ["unreal-engine-mcp-server"],
+      "env": {
+        "UE_PROJECT_PATH": "C:/Path/To/YourProject"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Configuration
+
+### Environment Variables
+
+```env
+# Required
+UE_PROJECT_PATH="C:/Path/To/YourProject"
+
+# Automation Bridge
+MCP_AUTOMATION_HOST=127.0.0.1
+MCP_AUTOMATION_PORT=8091
+
+# Logging
+LOG_LEVEL=info  # debug | info | warn | error
+
+# Optional
+WASM_ENABLED=true
+MCP_AUTOMATION_REQUEST_TIMEOUT_MS=120000
+ASSET_LIST_TTL_MS=10000
+```
+
+---
+
+## Available Tools
 
 | Tool | Description |
 |------|-------------|
 | `manage_asset` | Assets, Materials, Render Targets, Behavior Trees |
-| `control_actor` | Spawn, delete, modify, physics |
-| `control_editor` | PIE, Camera, UI Input |
-| `manage_level` | Load/Save, World Partition |
-| `manage_lighting` | Spawn Lights, GI, Shadows, Build Lighting |
-| `manage_performance` | Profiling, Optimization, Scalability |
+| `control_actor` | Spawn, delete, transform, physics, tags |
+| `control_editor` | PIE, Camera, viewport, screenshots |
+| `manage_level` | Load/Save, World Partition, streaming |
+| `manage_lighting` | Spawn lights, GI, shadows, build lighting |
+| `manage_performance` | Profiling, optimization, scalability |
 | `animation_physics` | Animation BPs, Vehicles, Ragdolls |
 | `manage_effect` | Niagara, Particles, Debug Shapes |
 | `manage_blueprint` | Create, SCS, Graph Editing |
 | `manage_blueprint_graph` | Direct Blueprint Graph Manipulation |
 | `build_environment` | Landscape, Foliage, Procedural |
 | `system_control` | UBT, Tests, Logs, Project Settings, CVars |
-| `manage_sequence` | Sequencer/Cinematics |
+| `manage_sequence` | Sequencer / Cinematics |
 | `inspect` | Object Introspection |
 | `manage_audio` | Audio Assets & Components |
 | `manage_behavior_tree` | Behavior Tree Graph Editing |
 | `manage_input` | Enhanced Input Actions & Contexts |
 
+### Supported Asset Types
 
-## Documentation
+Blueprints • Materials • Textures • Static Meshes • Skeletal Meshes • Levels • Sounds • Particles • Niagara Systems • Behavior Trees
 
-- [Handler Mappings](docs/handler-mapping.md) - TypeScript to C++ routing guide
-- [GraphQL API](docs/GraphQL-API.md) - Query and mutation reference
-- [Automation Progress](docs/native-automation-progress.md) - Implementation status
+---
 
-## Key Features
+## WebAssembly Acceleration
 
-- **Native C++ Automation** - All operations route through the MCP Automation Bridge plugin's native C++ handlers
-- **Graceful Degradation** - Server starts even without an active Unreal connection
-- **On-Demand Connection** - Retries automation handshakes with backoff instead of persistent polling
-- **Non-Intrusive Health Checks** - Uses echo commands every 30 seconds while connected
-- **Command Safety** - Blocks dangerous console commands
-- **Input Flexibility** - Vectors/rotators accept object or array format
-- **Asset Caching** - 10-second TTL for improved performance
-- **GraphQL** - Specialized endpoint for complex queries
+Optional WASM acceleration for computationally intensive operations. **Enabled by default** when available, falls back to TypeScript automatically.
 
-### Native C++ Architecture
+| Operation | Speedup |
+|-----------|---------|
+| JSON parsing | 5–8x |
+| Transform calculations | 5–10x |
+| Vector/matrix math | 5x |
+| Dependency resolution | 3–5x |
 
-The server uses a 100% native C++ approach: all automation operations are implemented as native C++ handlers in the MCP Automation Bridge plugin (under `plugins/McpAutomationBridge/Source/`). This eliminates dependencies and provides better performance, reliability, and type safety.
+### Building WASM (Optional)
 
-Configuration and runtime defaults are centralized in `src/constants.ts`. All operations route through the automation bridge's WebSocket protocol to native plugin handlers.
-
-## Supported Asset Types
-
-Blueprints, Materials, Textures, Static/Skeletal Meshes, Levels, Sounds, Particles, Niagara Systems, Behavior Trees
-
-## Example Console Commands
-
-- **Statistics**: `stat fps`, `stat gpu`, `stat memory`
-- **View Modes**: `viewmode wireframe`, `viewmode unlit`
-- **Gameplay**: `slomo 0.5`, `god`, `fly`
-- **Rendering**: `r.screenpercentage 50`, `r.vsync 0`
-
-### Configuration
-
-### Environment Variables
-
-```env
-UE_PROJECT_PATH="C:/Users/YourName/Documents/Unreal Projects/YourProject"  # Absolute path to your .uproject file
-LOG_LEVEL=info                        # debug | info | warn | error
-
-# Automation bridge WebSocket client (Node -> Unreal editor)
-MCP_AUTOMATION_HOST=127.0.0.1         # Host/interface for the automation bridge connection
-MCP_AUTOMATION_PORT=8091              # Primary bridge port (must match the plugin's port)
-MCP_AUTOMATION_CLIENT_MODE=true       # Set to false to disable the automation bridge client
-MCP_AUTOMATION_CAPABILITY_TOKEN=      # Optional capability token for handshake security
-
-# Legacy/Alternative variables
-# MCP_AUTOMATION_WS_PORT=8090         # Fallback port if MCP_AUTOMATION_PORT is unset
-# MCP_AUTOMATION_BRIDGE_ENABLED=true  # Legacy alias for MCP_AUTOMATION_CLIENT_MODE
-
-# WebAssembly acceleration
-WASM_ENABLED=true                     # Default: enabled if unset; set false to force TS-only
-# Optional override when hosting the WASM bundle elsewhere:
-# WASM_PATH=file:///absolute/path/to/unreal_mcp_wasm.js
-
-# Timeouts / caching (advanced – safe defaults are baked in)
-MCP_AUTOMATION_REQUEST_TIMEOUT_MS=120000
-MCP_AUTOMATION_EVENT_TIMEOUT_MS=0
-ASSET_LIST_TTL_MS=10000
+```bash
+cargo install wasm-pack  # Once per machine
+npm run build            # Builds TS + WASM
 ```
 
-Note on configuration precedence
-- The server uses `dotenv` to load `.env` for local development. A `.env.production` file is included as a reference for production deployments; copy values into your real environment or secret store as appropriate.
-- Environment variables (.env / system env) override the internal runtime defaults (for example, defaults in `src/index.ts`, `src/automation-bridge.ts`, and individual tool implementations). This lets you tune timeouts, logging, and WASM behavior without modifying source code. Keep secrets in `.env` or a secret manager — do not store secrets in source files.
+To disable: `WASM_ENABLED=false`
 
-Mock mode
+---
 
+## GraphQL API
 
-### Docker
+Optional GraphQL endpoint for complex queries. **Disabled by default.**
+
+```env
+GRAPHQL_ENABLED=true
+GRAPHQL_PORT=4000
+```
+
+See [GraphQL API Documentation](docs/GraphQL-API.md).
+
+---
+
+## Docker
 
 ```bash
 docker build -t unreal-mcp .
-docker run -it --rm unreal-mcp
+docker run -it --rm -e UE_PROJECT_PATH=/project unreal-mcp
 ```
 
-Pull from Docker Hub
+---
 
-```bash
-docker pull mcp/server/unreal-engine-mcp-server:latest
-docker run --rm -it mcp/server/unreal-engine-mcp-server:latest
-```
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Handler Mappings](docs/handler-mapping.md) | TypeScript to C++ routing |
+| [GraphQL API](docs/GraphQL-API.md) | Query and mutation reference |
+| [WebAssembly Integration](docs/WebAssembly-Integration.md) | WASM performance guide |
+| [Plugin Extension](docs/editor-plugin-extension.md) | C++ plugin architecture |
+| [Testing Guide](docs/testing-guide.md) | How to run and write tests |
+| [Migration Guide v0.5.0](docs/Migration-Guide-v0.5.0.md) | Upgrade to v0.5.0 |
+| [Roadmap](docs/Roadmap.md) | Development phases |
+| [Automation Progress](docs/native-automation-progress.md) | Implementation status |
+
+---
 
 ## Development
 
 ```bash
-npm run build          # Build TypeScript and (optionally) the WebAssembly bundle
-npm run lint           # Run ESLint
-npm run lint:fix       # Fix linting issues
+npm run build       # Build TypeScript + WASM
+npm run lint        # Run ESLint
+npm run test:unit   # Run unit tests
+npm run test:all    # Run all tests
 ```
+
+---
 
 ## Contributing
 
@@ -306,6 +270,8 @@ Contributions welcome! Please:
 - Keep PRs focused and small
 - Follow existing code style
 
+---
+
 ## License
 
-MIT - See [LICENSE](LICENSE) file
+MIT — See [LICENSE](LICENSE)

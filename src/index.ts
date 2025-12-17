@@ -13,6 +13,7 @@ import { HealthMonitor } from './services/health-monitor.js';
 import { ServerSetup } from './server-setup.js';
 import { startMetricsServer } from './services/metrics-server.js';
 import { config } from './config.js';
+import { GraphQLServer } from './graphql/server.js';
 
 const require = createRequire(import.meta.url);
 const packageInfo: { name?: string; version?: string } = (() => {
@@ -106,6 +107,12 @@ export function createServer() {
   // Optionally expose Prometheus-style metrics via /metrics
   startMetricsServer({ healthMonitor, automationBridge, logger: log });
 
+  // Initialize GraphQL server (controlled by GRAPHQL_ENABLED env var)
+  const graphqlServer = new GraphQLServer(bridge, automationBridge);
+  graphqlServer.start().catch((error) => {
+    log.warn('GraphQL server failed to start:', error);
+  });
+
   // Initialize WebAssembly module for high-performance operations (5-8x faster)
   log.debug('Initializing WebAssembly integration...');
   initializeWASM().then(() => {
@@ -145,7 +152,7 @@ export function createServer() {
   const serverSetup = new ServerSetup(server, bridge, automationBridge, log, healthMonitor);
   serverSetup.setup(); // Register tools, resources, and prompts
 
-  return { server, bridge, automationBridge };
+  return { server, bridge, automationBridge, graphqlServer };
 }
 
 // Export configuration schema for session UI and runtime validation
@@ -170,7 +177,7 @@ export default function createServerDefault({ config }: { config?: any } = {}) {
 }
 
 export async function startStdioServer() {
-  const { server, automationBridge } = createServer();
+  const { server, automationBridge, graphqlServer } = createServer();
   const transport = new StdioServerTransport();
   let shuttingDown = false;
 
@@ -185,6 +192,12 @@ export async function startStdioServer() {
       automationBridge.stop();
     } catch (error) {
       log.warn('Failed to stop automation bridge cleanly', error);
+    }
+
+    try {
+      await graphqlServer.stop();
+    } catch (error) {
+      log.warn('Failed to stop GraphQL server cleanly', error);
     }
 
     try {

@@ -156,16 +156,106 @@ async function testWASMIntegration() {
   log.info('\n=== Performance Report ===');
   log.info(wasmIntegration.reportPerformance());
 
-  // Test 8: Fallback Mechanism
-  log.info('\n=== Test 8: Fallback Mechanism ===');
-  log.info('Testing TypeScript fallback by clearing metrics...');
-  wasmIntegration.clearMetrics();
+  // Test 9: Circular Dependency Detection
+  log.info('\n=== Test 9: Circular Dependency Detection ===');
+  const circularDeps = {
+    'AssetA': ['AssetB'],
+    'AssetB': ['AssetC'],
+    'AssetC': ['AssetA'] // Creates a cycle
+  };
 
-  // Force a few operations to test metrics
-  await wasmIntegration.parseProperties(testJson);
-  const newMetrics = wasmIntegration.getMetrics();
+  try {
+    const circular = await wasmIntegration.findCircularDependencies(circularDeps);
+    log.info(`✅ Circular dependency detection completed`);
+    log.info(`Found ${circular.length} circular dependency chains`);
+    if (circular.length > 0) {
+      log.info(`Cycle: ${circular[0].join(' -> ')}`);
+    }
+  } catch (error) {
+    log.error('❌ Circular dependency detection failed:', error.message);
+  }
 
-  log.info(`✅ Metrics reset successful (${newMetrics.totalOperations} operations)`);
+  // Test 10: Topological Sort
+  log.info('\n=== Test 10: Topological Sort ===');
+  const sortDeps = {
+    'D': [],
+    'C': ['D'],
+    'B': ['C', 'D'],
+    'A': ['B', 'C']
+  };
+
+  try {
+    const sorted = await wasmIntegration.topologicalSort(sortDeps);
+    log.info(`✅ Topological sort completed`);
+    log.info(`Order: ${sorted.join(' -> ')}`);
+    // D should come before C, C before B, B before A
+    const dIdx = sorted.indexOf('D');
+    const cIdx = sorted.indexOf('C');
+    const bIdx = sorted.indexOf('B');
+    const aIdx = sorted.indexOf('A');
+    if (dIdx < cIdx && cIdx < bIdx && bIdx < aIdx) {
+      log.info('✅ Sort order is correct');
+    } else {
+      log.warn('⚠️ Sort order may be incorrect');
+    }
+  } catch (error) {
+    log.error('❌ Topological sort failed:', error.message);
+  }
+
+  // Test 11: Edge Cases
+  log.info('\n=== Test 11: Edge Cases ===');
+
+  // Empty JSON
+  try {
+    const emptyResult = await wasmIntegration.parseProperties('{}');
+    log.info(`✅ Empty JSON parsing: ${Object.keys(emptyResult).length === 0 ? 'passed' : 'result has keys'}`);
+  } catch (error) {
+    log.error('❌ Empty JSON parsing failed:', error.message);
+  }
+
+  // Invalid JSON (should fallback gracefully)
+  try {
+    await wasmIntegration.parseProperties('not valid json');
+    log.warn('⚠️ Invalid JSON did not throw - fallback handled');
+  } catch (error) {
+    log.info(`✅ Invalid JSON correctly rejected: ${error.message.substring(0, 50)}...`);
+  }
+
+  // Zero vectors
+  try {
+    const zeroAdd = wasmIntegration.vectorAdd([0, 0, 0], [0, 0, 0]);
+    const isZero = zeroAdd.every(v => v === 0);
+    log.info(`✅ Zero vector addition: ${isZero ? 'passed' : 'unexpected result'}`);
+  } catch (error) {
+    log.error('❌ Zero vector test failed:', error.message);
+  }
+
+  // Test 12: Performance Benchmark
+  log.info('\n=== Test 12: Performance Benchmark ===');
+  const iterations = 100;
+  const largeJson = JSON.stringify({
+    assets: Array.from({ length: 50 }, (_, i) => ({
+      name: `Asset${i}`,
+      path: `/Game/Assets/Asset${i}`,
+      properties: { value: i * 100, enabled: i % 2 === 0 }
+    }))
+  });
+
+  const benchStart = performance.now();
+  for (let i = 0; i < iterations; i++) {
+    await wasmIntegration.parseProperties(largeJson);
+  }
+  const benchDuration = performance.now() - benchStart;
+  log.info(`✅ Parsed ${iterations} large JSON objects in ${benchDuration.toFixed(2)}ms`);
+  log.info(`Average: ${(benchDuration / iterations).toFixed(3)}ms per parse`);
+
+  // Vector math benchmark
+  const vecStart = performance.now();
+  for (let i = 0; i < 1000; i++) {
+    wasmIntegration.vectorAdd([i, i + 1, i + 2], [i * 2, i * 3, i * 4]);
+  }
+  const vecDuration = performance.now() - vecStart;
+  log.info(`✅ 1000 vector additions in ${vecDuration.toFixed(2)}ms`);
 
   // Final Summary
   log.info('\n=== Test Summary ===');

@@ -1,6 +1,7 @@
 import { BaseTool } from '../tools/base-tool.js';
 import { IAssetResources } from '../types/tool-interfaces.js';
 import { coerceString } from '../utils/result-helpers.js';
+import { AutomationResponse } from '../types/automation-responses.js';
 
 export class AssetResources extends BaseTool implements IAssetResources {
   // Simple in-memory cache for asset listing
@@ -175,14 +176,14 @@ export class AssetResources extends BaseTool implements IAssetResources {
       // Use the native C++ plugin's list action instead of Python
       try {
         const normalizedDir = this.normalizeDir(dir);
-        const response = await this.sendAutomationRequest(
+        const response = await this.sendAutomationRequest<AutomationResponse>(
           'list',
           { directory: normalizedDir, limit, recursive: false },
           { timeoutMs: 30000 }
         );
 
         if (response.success !== false && response.result) {
-          const payload = response.result;
+          const payload = response.result as any;
 
           const foldersArr = Array.isArray(payload.folders_list)
             ? payload.folders_list.map((f: any) => ({
@@ -257,12 +258,12 @@ export class AssetResources extends BaseTool implements IAssetResources {
 
     try {
       const normalizedPath = this.normalizeDir(assetPath);
-      const response = await this.sendAutomationRequest(
+      const response = await this.sendAutomationRequest<AutomationResponse>(
         'asset_exists',
         { asset_path: normalizedPath }
       );
 
-      return response?.success !== false && response?.result?.exists === true;
+      return response?.success !== false && (response?.result as any)?.exists === true;
     } catch {
       return false;
     }

@@ -652,18 +652,10 @@ echo $WASM_ENABLED  # Should be "true"
 ### Documentation
 - [GraphQL API Documentation](GraphQL-API.md)
 - [WebAssembly Integration Guide](WebAssembly-Integration.md)
-- Added **GraphQL API** (optional) for complex queries.
-    - Disabled by default (`GRAPHQL_ENABLED=false`).
-    - Uses Apollo Server.
-    - Integrated with **Apollo Sandbox** (local IDE) or [Apollo Studio](https://studio.apollographql.com). - GraphQL platform
-- [Postman](https://www.postman.com/) - API testing
-
-### Learning
-- [GraphQL.org](https://graphql.org/) - Official GraphQL documentation
-- [WebAssembly.org](https://webassembly.org/) - WebAssembly specification
 
 ### Tools
 - [GraphiQL](https://github.com/graphql/graphiql) - In-browser GraphQL IDE
+- [Apollo Studio](https://studio.apollographql.com) - GraphQL platform
 - [Postman](https://www.postman.com/) - API testing
 
 ### Learning

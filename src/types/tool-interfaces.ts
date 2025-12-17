@@ -8,7 +8,7 @@ export interface StandardActionResponse<T = any> {
     success: boolean;
     data?: T;
     warnings?: string[];
-    error?: {
+    error?: string | {
         code: string;
         message: string;
         [key: string]: unknown;

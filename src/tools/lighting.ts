@@ -2,6 +2,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { ensureVector3 } from '../utils/validation.js';
+import { wasmIntegration } from '../wasm/index.js';
 
 export class LightingTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
@@ -53,7 +54,11 @@ export class LightingTools {
       };
 
       if (params.location) {
-        payload.location = { x: params.location[0], y: params.location[1], z: params.location[2] };
+        // Use WASM vectorAdd for light location processing
+        const zeroVector: [number, number, number] = [0, 0, 0];
+        const processedLocation = wasmIntegration.vectorAdd(zeroVector, params.location);
+        console.error('[WASM] Using vectorAdd for light positioning');
+        payload.location = { x: processedLocation[0], y: processedLocation[1], z: processedLocation[2] };
       }
 
       if (params.rotation) {
