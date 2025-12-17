@@ -10,6 +10,7 @@ const WAIT_FOR_EVENT_ACTIONS = new Set<string>([
 export class RequestTracker {
     private pendingRequests = new Map<string, PendingRequest>();
     private coalescedRequests = new Map<string, Promise<AutomationBridgeResponseMessage>>();
+    private lastRequestSentAt?: Date;
 
 
     constructor(
@@ -22,6 +23,22 @@ export class RequestTracker {
      */
     public getMaxPendingRequests(): number {
         return this.maxPendingRequests;
+    }
+
+    /**
+     * Get the timestamp of when the last request was sent.
+     * @returns The Date of last request or undefined if no requests sent yet
+     */
+    public getLastRequestSentAt(): Date | undefined {
+        return this.lastRequestSentAt;
+    }
+
+    /**
+     * Update the last request sent timestamp.
+     * Called when a new request is dispatched.
+     */
+    public updateLastRequestSentAt(): void {
+        this.lastRequestSentAt = new Date();
     }
 
     public createRequest(

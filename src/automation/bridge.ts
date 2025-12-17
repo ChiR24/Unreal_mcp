@@ -341,7 +341,7 @@ export class AutomationBridge extends EventEmitter {
                 ? { message: this.lastError.message, at: this.lastError.at.toISOString() }
                 : null,
             lastMessageAt: this.connectionManager.getLastMessageTime()?.toISOString() ?? null,
-            lastRequestSentAt: null, // TODO: Track this in RequestTracker?
+            lastRequestSentAt: this.requestTracker.getLastRequestSentAt()?.toISOString() ?? null,
             pendingRequests: this.requestTracker.getPendingCount(),
             pendingRequestDetails: this.requestTracker.getPendingDetails(),
             connections: connectionInfos,
@@ -350,8 +350,8 @@ export class AutomationBridge extends EventEmitter {
             serverName: this.serverName,
             serverVersion: this.serverVersion,
             maxConcurrentConnections: this.maxConcurrentConnections,
-            maxPendingRequests: 100, // TODO: Expose from RequestTracker
-            heartbeatIntervalMs: 30000 // TODO: Expose from ConnectionManager
+            maxPendingRequests: this.requestTracker.getMaxPendingRequests(),
+            heartbeatIntervalMs: this.connectionManager.getHeartbeatIntervalMs()
         };
     }
 
@@ -487,6 +487,7 @@ export class AutomationBridge extends EventEmitter {
         }).catch(() => { }); // catch to prevent unhandled rejection during finally chain? no, finally returns new promise
 
         if (this.send(message)) {
+            this.requestTracker.updateLastRequestSentAt();
             return resultPromise;
         } else {
             this.requestTracker.rejectRequest(requestId, new Error('Failed to send request'));

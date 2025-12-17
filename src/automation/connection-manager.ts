@@ -17,6 +17,14 @@ export class ConnectionManager extends EventEmitter {
         super();
     }
 
+    /**
+     * Get the configured heartbeat interval in milliseconds.
+     * @returns The heartbeat interval or 0 if disabled
+     */
+    public getHeartbeatIntervalMs(): number {
+        return this.heartbeatIntervalMs;
+    }
+
     public registerSocket(
         socket: WebSocket,
         port: number,
