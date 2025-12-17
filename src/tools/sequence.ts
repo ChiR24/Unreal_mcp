@@ -1,5 +1,5 @@
 import { BaseTool } from './base-tool.js';
-import { ISequenceTools } from '../types/tool-interfaces.js';
+import { ISequenceTools, StandardActionResponse } from '../types/tool-interfaces.js';
 import { SequenceResponse } from '../types/automation-responses.js';
 import { wasmIntegration } from '../wasm/index.js';
 
@@ -63,7 +63,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     return txt.includes('unknown_action') || txt.includes('unknown automation action') || txt.includes('not_implemented') || txt === 'unknown_plugin_action';
   }
 
-  async create(params: { name: string; path?: string; timeoutMs?: number }) {
+  async create(params: { name: string; path?: string; timeoutMs?: number }): Promise<StandardActionResponse> {
     const name = params.name?.trim();
     const base = (params.path || '/Game/Sequences').replace(/\/$/, '');
     if (!name) return { success: false, error: 'name is required' };
@@ -81,7 +81,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     return resp;
   }
 
-  async open(params: { path: string }) {
+  async open(params: { path: string }): Promise<StandardActionResponse> {
     const path = params.path?.trim();
     const resp = await this.sendAction('sequence_open', { path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
@@ -93,7 +93,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     return resp;
   }
 
-  async addCamera(params: { spawnable?: boolean; path?: string }) {
+  async addCamera(params: { spawnable?: boolean; path?: string }): Promise<StandardActionResponse> {
     const path = this.resolveSequencePath(params.path);
     const resp = await this.sendAction('sequence_add_camera', { path, spawnable: params.spawnable !== false });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
@@ -102,7 +102,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     return resp;
   }
 
-  async addActor(params: { actorName: string; createBinding?: boolean; path?: string }) {
+  async addActor(params: { actorName: string; createBinding?: boolean; path?: string }): Promise<StandardActionResponse> {
     const path = this.resolveSequencePath(params.path);
     const resp = await this.sendAction('sequence_add_actor', { path, actorName: params.actorName, createBinding: params.createBinding });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
@@ -114,7 +114,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Play the current level sequence
    */
-  async play(params?: { path?: string; startTime?: number; loopMode?: 'once' | 'loop' | 'pingpong' }) {
+  async play(params?: { path?: string; startTime?: number; loopMode?: 'once' | 'loop' | 'pingpong' }): Promise<StandardActionResponse> {
     const path = this.resolveSequencePath(params?.path);
     const resp = await this.sendAction('sequence_play', { path, startTime: params?.startTime, loopMode: params?.loopMode });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
@@ -126,7 +126,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Pause the current level sequence
    */
-  async pause(params?: { path?: string }) {
+  async pause(params?: { path?: string }): Promise<StandardActionResponse> {
     const path = this.resolveSequencePath(params?.path);
     const resp = await this.sendAction('sequence_pause', { path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
@@ -138,7 +138,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Stop/close the current level sequence
    */
-  async stop(params?: { path?: string }) {
+  async stop(params?: { path?: string }): Promise<StandardActionResponse> {
     const path = this.resolveSequencePath(params?.path);
     const resp = await this.sendAction('sequence_stop', { path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
@@ -156,7 +156,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     lengthInFrames?: number;
     playbackStart?: number;
     playbackEnd?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const payload: Record<string, unknown> = {
       path: params.path,
       frameRate: params.frameRate,
@@ -174,7 +174,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Set display rate (fps)
    */
-  async setDisplayRate(params: { path?: string; frameRate: string | number }) {
+  async setDisplayRate(params: { path?: string; frameRate: string | number }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_set_display_rate', { path: params.path, frameRate: params.frameRate });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_set_display_rate' } as const;
@@ -185,7 +185,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Get sequence properties
    */
-  async getSequenceProperties(params: { path?: string }) {
+  async getSequenceProperties(params: { path?: string }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_get_properties', { path: params.path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_get_properties' } as const;
@@ -196,7 +196,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Set playback speed/rate
    */
-  async setPlaybackSpeed(params: { speed: number; path?: string }) {
+  async setPlaybackSpeed(params: { speed: number; path?: string }): Promise<StandardActionResponse> {
     const path = this.resolveSequencePath(params.path);
     const resp = await this.sendAction('sequence_set_playback_speed', { path, speed: params.speed });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
@@ -208,7 +208,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Get all bindings in the current sequence
    */
-  async getBindings(params?: { path?: string }) {
+  async getBindings(params?: { path?: string }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_get_bindings', { path: params?.path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_get_bindings' } as const;
@@ -219,7 +219,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Add multiple actors to sequence at once
    */
-  async addActors(params: { actorNames: string[]; path?: string }) {
+  async addActors(params: { actorNames: string[]; path?: string }): Promise<StandardActionResponse> {
     const path = this.resolveSequencePath(params.path);
     const resp = await this.sendAction('sequence_add_actors', { path, actorNames: params.actorNames });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
@@ -231,7 +231,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Remove actors from binding
    */
-  async removeActors(params: { actorNames: string[]; path?: string }) {
+  async removeActors(params: { actorNames: string[]; path?: string }): Promise<StandardActionResponse> {
     const path = this.resolveSequencePath(params.path);
     const resp = await this.sendAction('sequence_remove_actors', { path, actorNames: params.actorNames });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
@@ -243,7 +243,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Create a spawnable from an actor class
    */
-  async addSpawnableFromClass(params: { className: string; path?: string }) {
+  async addSpawnableFromClass(params: { className: string; path?: string }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_add_spawnable_from_class', { className: params.className, path: params.path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_add_spawnable_from_class' } as const;
@@ -251,7 +251,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     return resp;
   }
 
-  async list(params?: { path?: string }) {
+  async list(params?: { path?: string }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_list', { path: params?.path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_list' } as const;
@@ -267,7 +267,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     return resp;
   }
 
-  async duplicate(params: { path: string; destinationPath: string }) {
+  async duplicate(params: { path: string; destinationPath: string }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_duplicate', { path: params.path, destinationPath: params.destinationPath });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_duplicate' } as const;
@@ -275,7 +275,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     return resp;
   }
 
-  async rename(params: { path: string; newName: string }) {
+  async rename(params: { path: string; newName: string }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_rename', { path: params.path, newName: params.newName });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_rename' } as const;
@@ -283,7 +283,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     return resp;
   }
 
-  async deleteSequence(params: { path: string }) {
+  async deleteSequence(params: { path: string }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_delete', { path: params.path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_delete' } as const;
@@ -291,7 +291,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     return resp;
   }
 
-  async getMetadata(params: { path?: string }) {
+  async getMetadata(params: { path?: string }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_get_metadata', { path: params.path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_get_metadata' } as const;
@@ -313,7 +313,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
       rotation?: { roll: number; pitch: number; yaw: number };
       scale?: { x: number; y: number; z: number };
     };
-  }) {
+  }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_add_keyframe', {
       path: params.path,
       bindingId: params.bindingId,
@@ -345,7 +345,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * List tracks in a sequence
    */
-  async listTracks(params: { path: string }) {
+  async listTracks(params: { path: string }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_list_tracks', { path: params.path });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_list_tracks' } as const;
@@ -364,7 +364,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   /**
    * Set playback work range
    */
-  async setWorkRange(params: { path?: string; start: number; end: number }) {
+  async setWorkRange(params: { path?: string; start: number; end: number }): Promise<StandardActionResponse> {
     const resp = await this.sendAction('sequence_set_work_range', { path: params.path, start: params.start, end: params.end });
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_set_work_range' } as const;

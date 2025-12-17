@@ -1,5 +1,5 @@
 import { BaseTool } from './base-tool.js';
-import { IBlueprintTools } from '../types/tool-interfaces.js';
+import { IBlueprintTools, StandardActionResponse } from '../types/tool-interfaces.js';
 import { Logger } from '../utils/logger.js';
 import { validateAssetParams, concurrencyDelay } from '../utils/validation.js';
 import { coerceString } from '../utils/result-helpers.js';
@@ -54,7 +54,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     return candidates.filter(Boolean);
   }
 
-  async createBlueprint(params: { name: string; blueprintType?: string; savePath?: string; parentClass?: string; properties?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async createBlueprint(params: { name: string; blueprintType?: string; savePath?: string; parentClass?: string; properties?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     try {
       const validation = validateAssetParams({ name: params.name, savePath: params.savePath || '/Game/Blueprints' });
       if (!validation.valid) return { success: false, message: `Failed to create blueprint: ${validation.error}`, error: validation.error };
@@ -99,7 +99,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
-  async modifyConstructionScript(params: { blueprintPath: string; operations: any[]; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async modifyConstructionScript(params: { blueprintPath: string; operations: any[]; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, message: 'Blueprint path is required', error: 'INVALID_BLUEPRINT_PATH' };
     if (!Array.isArray(params.operations) || params.operations.length === 0) return { success: false, message: 'At least one SCS operation is required', error: 'MISSING_OPERATIONS' };
@@ -128,7 +128,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     return res;
   }
 
-  async addComponent(params: { blueprintName: string; componentType: string; componentName: string; attachTo?: string; transform?: Record<string, unknown>; properties?: Record<string, unknown>; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async addComponent(params: { blueprintName: string; componentType: string; componentName: string; attachTo?: string; transform?: Record<string, unknown>; properties?: Record<string, unknown>; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const blueprintName = coerceString(params.blueprintName);
     if (!blueprintName) return { success: false as const, message: 'Blueprint name is required', error: 'INVALID_BLUEPRINT' };
     const componentClass = coerceString(params.componentType);
@@ -156,7 +156,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
-  async waitForBlueprint(blueprintRef: string | string[], timeoutMs?: number) {
+  async waitForBlueprint(blueprintRef: string | string[], timeoutMs?: number): Promise<StandardActionResponse> {
     const candidates = Array.isArray(blueprintRef) ? blueprintRef : this.buildCandidates(blueprintRef as string | undefined);
     if (!candidates || candidates.length === 0) return { success: false, error: 'Invalid blueprint reference', checked: [] } as any;
     if (this.pluginBlueprintActionsAvailable === false) {
@@ -193,7 +193,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     return { success: false, error: `Timeout waiting for blueprint after ${tot}ms`, checked: candidates } as any;
   }
 
-  async getBlueprint(params: { blueprintName: string; timeoutMs?: number; }) {
+  async getBlueprint(params: { blueprintName: string; timeoutMs?: number; }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false, error: 'Invalid blueprint name' } as const;
@@ -214,7 +214,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
-  async getBlueprintInfo(params: { blueprintPath: string; timeoutMs?: number }) {
+  async getBlueprintInfo(params: { blueprintPath: string; timeoutMs?: number }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
@@ -248,24 +248,24 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
-  async probeSubobjectDataHandle(opts: { componentClass?: string } = {}) {
-    return await this.sendAction('blueprint_probe_subobject_handle', { componentClass: opts.componentClass });
+  async probeSubobjectDataHandle(opts: { componentClass?: string } = {}): Promise<StandardActionResponse> {
+    return await this.sendAction('blueprint_probe_subobject_handle', { componentClass: opts.componentClass }) as any;
   }
 
-  async setBlueprintDefault(params: { blueprintName: string; propertyName: string; value: unknown }) {
+  async setBlueprintDefault(params: { blueprintName: string; propertyName: string; value: unknown }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
-    return await this.sendAction('blueprint_set_default', { blueprintCandidates: candidates, requestedPath: primary, propertyName: params.propertyName, value: params.value });
+    return await this.sendAction('blueprint_set_default', { blueprintCandidates: candidates, requestedPath: primary, propertyName: params.propertyName, value: params.value }) as any;
   }
 
-  async addVariable(params: { blueprintName: string; variableName: string; variableType: string; defaultValue?: any; category?: string; isReplicated?: boolean; isPublic?: boolean; variablePinType?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async addVariable(params: { blueprintName: string; variableName: string; variableType: string; defaultValue?: any; category?: string; isReplicated?: boolean; isPublic?: boolean; variablePinType?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
     const pluginResp = await this.sendAction('blueprint_add_variable', { blueprintCandidates: candidates, requestedPath: primary, variableName: params.variableName, variableType: params.variableType, defaultValue: params.defaultValue, category: params.category, isReplicated: params.isReplicated, isPublic: params.isPublic, variablePinType: params.variablePinType }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
     if (pluginResp && pluginResp.success) {
-      return pluginResp;
+      return pluginResp as any;
     }
     if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_add_variable' } as const;
@@ -273,24 +273,24 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_ADD_VARIABLE_FAILED', message: pluginResp?.message ?? 'Failed to add variable via automation bridge' } as const;
   }
 
-  async removeVariable(params: { blueprintName: string; variableName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async removeVariable(params: { blueprintName: string; variableName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
     const pluginResp = await this.sendAction('blueprint_remove_variable', { blueprintCandidates: candidates, requestedPath: primary, variableName: params.variableName }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
-    if (pluginResp && pluginResp.success) return pluginResp;
+    if (pluginResp && pluginResp.success) return pluginResp as any;
     if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_remove_variable' } as const;
     }
     return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_REMOVE_VARIABLE_FAILED', message: pluginResp?.message ?? 'Failed to remove variable via automation bridge' } as const;
   }
 
-  async renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
     const pluginResp = await this.sendAction('blueprint_rename_variable', { blueprintCandidates: candidates, requestedPath: primary, oldName: params.oldName, newName: params.newName }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
-    if (pluginResp && pluginResp.success) return pluginResp;
+    if (pluginResp && pluginResp.success) return pluginResp as any;
     if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_rename_variable' } as const;
     }
@@ -299,13 +299,13 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
 
 
 
-  async addEvent(params: { blueprintName: string; eventType: string; customEventName?: string; parameters?: Array<{ name: string; type: string }>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async addEvent(params: { blueprintName: string; eventType: string; customEventName?: string; parameters?: Array<{ name: string; type: string }>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
     const pluginResp = await this.sendAction('blueprint_add_event', { blueprintCandidates: candidates, requestedPath: primary, eventType: params.eventType, customEventName: params.customEventName, parameters: params.parameters }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
     if (pluginResp && pluginResp.success) {
-      return pluginResp;
+      return pluginResp as any;
     }
     if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_add_event' } as const;
@@ -313,7 +313,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_ADD_EVENT_FAILED', message: pluginResp?.message ?? 'Failed to add event via automation bridge' } as const;
   }
 
-  async removeEvent(params: { blueprintName: string; eventName: string; customEventName?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async removeEvent(params: { blueprintName: string; eventName: string; customEventName?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
@@ -325,7 +325,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     try {
       const pluginResp = await this.sendAction('blueprint_remove_event', { blueprintCandidates: candidates, requestedPath: primary, eventName: finalEventName }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
       if (pluginResp && pluginResp.success) {
-        return pluginResp;
+        return pluginResp as any;
       }
       if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
         return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_remove_event' } as const;
@@ -336,13 +336,13 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
-  async addFunction(params: { blueprintName: string; functionName: string; inputs?: Array<{ name: string; type: string }>; outputs?: Array<{ name: string; type: string }>; isPublic?: boolean; category?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async addFunction(params: { blueprintName: string; functionName: string; inputs?: Array<{ name: string; type: string }>; outputs?: Array<{ name: string; type: string }>; isPublic?: boolean; category?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
     const pluginResp = await this.sendAction('blueprint_add_function', { blueprintCandidates: candidates, requestedPath: primary, functionName: params.functionName, inputs: params.inputs, outputs: params.outputs, isPublic: params.isPublic, category: params.category }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
     if (pluginResp && pluginResp.success) {
-      return pluginResp;
+      return pluginResp as any;
     }
     if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_add_function' } as const;
@@ -350,13 +350,13 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_ADD_FUNCTION_FAILED', message: pluginResp?.message ?? 'Failed to add function via automation bridge' } as const;
   }
 
-  async setVariableMetadata(params: { blueprintName: string; variableName: string; metadata: Record<string, unknown>; timeoutMs?: number }) {
+  async setVariableMetadata(params: { blueprintName: string; variableName: string; metadata: Record<string, unknown>; timeoutMs?: number }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
     const pluginResp = await this.sendAction('blueprint_set_variable_metadata', { blueprintCandidates: candidates, requestedPath: primary, variableName: params.variableName, metadata: params.metadata }, { timeoutMs: params.timeoutMs });
     if (pluginResp && pluginResp.success) {
-      return pluginResp;
+      return pluginResp as any;
     }
     if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_set_variable_metadata' } as const;
@@ -364,19 +364,19 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     return { success: false, error: pluginResp?.error ?? 'SET_VARIABLE_METADATA_FAILED', message: pluginResp?.message ?? 'Failed to set variable metadata via automation bridge' } as const;
   }
 
-  async addConstructionScript(params: { blueprintName: string; scriptName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }) {
+  async addConstructionScript(params: { blueprintName: string; scriptName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
     const pluginResp = await this.sendAction('blueprint_add_construction_script', { blueprintCandidates: candidates, requestedPath: primary, scriptName: params.scriptName }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
-    if (pluginResp && pluginResp.success) return pluginResp;
+    if (pluginResp && pluginResp.success) return pluginResp as any;
     if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_add_construction_script' } as const;
     }
     return { success: false, error: pluginResp?.error ?? 'ADD_CONSTRUCTION_SCRIPT_FAILED', message: pluginResp?.message ?? 'Failed to add construction script via automation bridge' } as const;
   }
 
-  async compileBlueprint(params: { blueprintName: string; saveAfterCompile?: boolean; }) {
+  async compileBlueprint(params: { blueprintName: string; saveAfterCompile?: boolean; }): Promise<StandardActionResponse> {
     try {
       const candidates = this.buildCandidates(params.blueprintName);
       const primary = candidates[0] ?? params.blueprintName;
@@ -386,7 +386,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
           ...pluginResp,
           blueprint: primary,
           message: pluginResp.message || `Compiled ${primary}`
-        };
+        } as any;
       }
       if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
         this.pluginBlueprintActionsAvailable = false;
@@ -398,7 +398,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
-  async getBlueprintSCS(params: { blueprintPath: string; timeoutMs?: number }) {
+  async getBlueprintSCS(params: { blueprintPath: string; timeoutMs?: number }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
@@ -409,7 +409,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
         { blueprint_path: blueprintPath },
         { timeoutMs: params.timeoutMs });
 
-      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && pluginResp.success) return pluginResp as any;
       if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
         return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement get_blueprint_scs' } as const;
       }
@@ -427,7 +427,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     meshPath?: string;
     materialPath?: string;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
@@ -467,7 +467,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
           this.log.warn?.(`addSCSComponent reported warning: ${(pluginResp as any).message}`);
         }
       }
-      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && pluginResp.success) return pluginResp as any;
       if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
         return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement add_scs_component' } as const;
       }
@@ -477,7 +477,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
-  async removeSCSComponent(params: { blueprintPath: string; componentName: string; timeoutMs?: number }) {
+  async removeSCSComponent(params: { blueprintPath: string; componentName: string; timeoutMs?: number }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
@@ -498,7 +498,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
           this.log.warn?.(`removeSCSComponent reported warning: ${(pluginResp as any).message}`);
         }
       }
-      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && pluginResp.success) return pluginResp as any;
       if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
         return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement remove_scs_component' } as const;
       }
@@ -513,7 +513,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     componentName: string;
     newParent: string;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
@@ -538,7 +538,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
           this.log.warn?.(`reparentSCSComponent reported warning: ${(pluginResp as any).message}`);
         }
       }
-      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && pluginResp.success) return pluginResp as any;
       if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
         return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement reparent_scs_component' } as const;
       }
@@ -555,7 +555,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     rotation?: [number, number, number];
     scale?: [number, number, number];
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
@@ -583,7 +583,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
           this.log.warn?.(`setSCSComponentTransform reported warning: ${(pluginResp as any).message}`);
         }
       }
-      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && pluginResp.success) return pluginResp as any;
       if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
         return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement set_scs_component_transform' } as const;
       }
@@ -599,7 +599,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     propertyName: string;
     propertyValue: any;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
@@ -632,7 +632,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
           this.log.warn?.(`setSCSComponentProperty reported warning: ${(pluginResp as any).message}`);
         }
       }
-      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && pluginResp.success) return pluginResp as any;
       if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
         return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement set_scs_component_property' } as const;
       }
@@ -646,7 +646,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     blueprintPath: string;
     graphName?: string;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
@@ -664,7 +664,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
           success: true,
           nodes: (pluginResp.result as any).nodes,
           graphName: (pluginResp.result as any).graphName
-        };
+        } as any;
       }
       if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
         return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement get_nodes' } as const;
@@ -688,7 +688,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     posX?: number;
     posY?: number;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
@@ -708,7 +708,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       y: params.posY
     };
     const res = await this.sendAction('manage_blueprint_graph', payload, { timeoutMs: params.timeoutMs });
-    return res;
+    return res as any;
   }
 
   async deleteNode(params: {
@@ -716,7 +716,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     nodeId: string;
     graphName?: string;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
@@ -727,7 +727,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       graphName: params.graphName || 'EventGraph',
       nodeId: params.nodeId
     }, { timeoutMs: params.timeoutMs });
-    return res;
+    return res as any;
   }
 
   async createRerouteNode(params: {
@@ -736,7 +736,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     x: number;
     y: number;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
 
@@ -747,7 +747,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       x: params.x,
       y: params.y
     }, { timeoutMs: params.timeoutMs });
-    return res;
+    return res as any;
   }
 
   async setNodeProperty(params: {
@@ -757,7 +757,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     value: string;
     graphName?: string;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
@@ -771,7 +771,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       propertyName: params.propertyName,
       value: params.value
     }, { timeoutMs: params.timeoutMs });
-    return res;
+    return res as any;
   }
 
   async getNodeDetails(params: {
@@ -779,7 +779,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     nodeId: string;
     graphName?: string;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
@@ -790,14 +790,14 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       graphName: params.graphName || 'EventGraph',
       nodeId: params.nodeId
     }, { timeoutMs: params.timeoutMs });
-    return res;
+    return res as any;
   }
 
   async getGraphDetails(params: {
     blueprintPath: string;
     graphName?: string;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
 
@@ -806,7 +806,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       blueprintPath: blueprintPath,
       graphName: params.graphName || 'EventGraph'
     }, { timeoutMs: params.timeoutMs });
-    return res;
+    return res as any;
   }
 
   async getPinDetails(params: {
@@ -815,7 +815,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     pinName?: string;
     graphName?: string;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
@@ -827,7 +827,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       nodeId: params.nodeId,
       pinName: params.pinName
     }, { timeoutMs: params.timeoutMs });
-    return res;
+    return res as any;
   }
 
 
@@ -838,7 +838,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     sourcePinName?: string;
     targetPinName?: string;
     timeoutMs?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
@@ -869,6 +869,6 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       fromPinName: fromPinName,
       toPinName: toPinName
     }, { timeoutMs: params.timeoutMs });
-    return res;
+    return res as any;
   }
 }

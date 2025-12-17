@@ -337,7 +337,7 @@ export async function handleSequenceTools(action: string, args: any, tools: IToo
       if (actorName) {
         const bindingsRes = await tools.sequenceTools.getBindings({ path });
         if (bindingsRes && bindingsRes.success) {
-          const bindings = bindingsRes.bindings || [];
+          const bindings = (bindingsRes.bindings as any[]) || [];
           const isBound = bindings.some((b: any) => b.name === actorName);
           if (!isBound) {
             return cleanObject({
