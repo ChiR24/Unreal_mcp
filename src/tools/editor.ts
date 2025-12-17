@@ -1,5 +1,5 @@
 import { BaseTool } from './base-tool.js';
-import { IEditorTools } from '../types/tool-interfaces.js';
+import { IEditorTools, StandardActionResponse } from '../types/tool-interfaces.js';
 import { toVec3Object, toRotObject } from '../utils/normalize.js';
 import { DEFAULT_SCREENSHOT_RESOLUTION } from '../constants.js';
 import { EditorResponse } from '../types/automation-responses.js';
@@ -36,7 +36,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async playInEditor(timeoutMs: number = 30000) {
+  async playInEditor(timeoutMs: number = 30000): Promise<StandardActionResponse> {
     try {
       try {
         const response = await this.sendAutomationRequest<EditorResponse>(
@@ -64,7 +64,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async stopPlayInEditor() {
+  async stopPlayInEditor(): Promise<StandardActionResponse> {
     try {
       try {
         const response = await this.sendAutomationRequest<EditorResponse>(
@@ -94,7 +94,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async pausePlayInEditor() {
+  async pausePlayInEditor(): Promise<StandardActionResponse> {
     try {
       // Pause/Resume PIE
       await this.bridge.executeConsoleCommand('pause');
@@ -105,11 +105,11 @@ export class EditorTools extends BaseTool implements IEditorTools {
   }
 
   // Alias for consistency with naming convention
-  async pauseInEditor() {
+  async pauseInEditor(): Promise<StandardActionResponse> {
     return this.pausePlayInEditor();
   }
 
-  async buildLighting() {
+  async buildLighting(): Promise<StandardActionResponse> {
     try {
       // Use console command to build lighting
       await this.bridge.executeConsoleCommand('BuildLighting');
@@ -146,7 +146,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async setViewportCamera(location?: { x: number; y: number; z: number } | [number, number, number] | null | undefined, rotation?: { pitch: number; yaw: number; roll: number } | [number, number, number] | null | undefined) {
+  async setViewportCamera(location?: { x: number; y: number; z: number } | [number, number, number] | null | undefined, rotation?: { pitch: number; yaw: number; roll: number } | [number, number, number] | null | undefined): Promise<StandardActionResponse> {
     // Special handling for when both location and rotation are missing/invalid
     // Allow rotation-only updates
     if (location === null) {
@@ -193,7 +193,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
         : [0, 0, 0];
       // Compose transform to validate and process camera positioning via WASM
       wasmIntegration.composeTransform(locArray, rotArray, [1, 1, 1]);
-      console.error('[WASM] Using composeTransform for camera positioning');
+      // console.error('[WASM] Using composeTransform for camera positioning');
 
       const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
         action: 'set_camera',
@@ -209,7 +209,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async setCameraSpeed(speed: number) {
+  async setCameraSpeed(speed: number): Promise<StandardActionResponse> {
     try {
       await this.bridge.executeConsoleCommand(`camspeed ${speed}`);
       return { success: true, message: `Camera speed set to ${speed}` };
@@ -218,7 +218,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async setFOV(fov: number) {
+  async setFOV(fov: number): Promise<StandardActionResponse> {
     try {
       await this.bridge.executeConsoleCommand(`fov ${fov}`);
       return { success: true, message: `FOV set to ${fov}` };
@@ -227,7 +227,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async takeScreenshot(filename?: string, resolution?: string) {
+  async takeScreenshot(filename?: string, resolution?: string): Promise<StandardActionResponse> {
     try {
       if (resolution && !/^\d+x\d+$/.test(resolution)) {
         return { success: false, error: 'Invalid resolution format. Use WxH (e.g. 1920x1080)' };
@@ -250,7 +250,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async resumePlayInEditor() {
+  async resumePlayInEditor(): Promise<StandardActionResponse> {
     try {
       // Use console command to toggle pause (resumes if paused)
       await this.bridge.executeConsoleCommand('pause');
@@ -263,7 +263,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async stepPIEFrame(steps: number = 1) {
+  async stepPIEFrame(steps: number = 1): Promise<StandardActionResponse> {
     const clampedSteps = Number.isFinite(steps) ? Math.max(1, Math.floor(steps)) : 1;
     try {
       // Use console command to step frames
@@ -280,7 +280,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async startRecording(options?: { filename?: string; frameRate?: number; durationSeconds?: number; metadata?: Record<string, unknown> }) {
+  async startRecording(options?: { filename?: string; frameRate?: number; durationSeconds?: number; metadata?: Record<string, unknown> }): Promise<StandardActionResponse> {
     const startedAt = Date.now();
     this.activeRecording = {
       name: typeof options?.filename === 'string' ? options.filename.trim() : undefined,
@@ -299,7 +299,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     };
   }
 
-  async stopRecording() {
+  async stopRecording(): Promise<StandardActionResponse> {
     if (!this.activeRecording) {
       return {
         success: true as const,
@@ -317,7 +317,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     };
   }
 
-  async createCameraBookmark(name: string) {
+  async createCameraBookmark(name: string): Promise<StandardActionResponse> {
     const trimmedName = name.trim();
     if (!trimmedName) {
       return { success: false as const, error: 'bookmarkName is required' };
@@ -348,7 +348,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     };
   }
 
-  async jumpToCameraBookmark(name: string) {
+  async jumpToCameraBookmark(name: string): Promise<StandardActionResponse> {
     const trimmedName = name.trim();
     if (!trimmedName) {
       return { success: false as const, error: 'bookmarkName is required' };
@@ -373,7 +373,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     };
   }
 
-  async setEditorPreferences(category: string | undefined, preferences: Record<string, unknown>) {
+  async setEditorPreferences(category: string | undefined, preferences: Record<string, unknown>): Promise<StandardActionResponse> {
     const resolvedCategory = typeof category === 'string' && category.trim().length > 0 ? category.trim() : 'General';
     const existing = this.editorPreferences.get(resolvedCategory) ?? {};
     this.editorPreferences.set(resolvedCategory, { ...existing, ...preferences });
@@ -385,7 +385,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     };
   }
 
-  async setViewportResolution(width: number, height: number) {
+  async setViewportResolution(width: number, height: number): Promise<StandardActionResponse> {
     try {
       // Clamp to reasonable limits
       const clampedWidth = Math.max(320, Math.min(7680, width));
@@ -406,7 +406,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     }
   }
 
-  async executeConsoleCommand(command: string) {
+  async executeConsoleCommand(command: string): Promise<StandardActionResponse> {
     try {
       // Sanitize and validate command
       if (!command || typeof command !== 'string') {

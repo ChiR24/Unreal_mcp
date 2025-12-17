@@ -3,8 +3,9 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { ensureVector3 } from '../utils/validation.js';
 import { wasmIntegration } from '../wasm/index.js';
+import { ILandscapeTools, StandardActionResponse } from '../types/tool-interfaces.js';
 
-export class LandscapeTools {
+export class LandscapeTools implements ILandscapeTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
@@ -24,7 +25,7 @@ export class LandscapeTools {
     runtimeGrid?: string;
     isSpatiallyLoaded?: boolean;
     dataLayers?: string[];
-  }) {
+  }): Promise<StandardActionResponse> {
     const name = params.name?.trim();
     if (!name) {
       return { success: false, error: 'Landscape name is required' };
@@ -106,7 +107,7 @@ export class LandscapeTools {
         result.spatiallyLoaded = params.isSpatiallyLoaded;
       }
 
-      return result;
+      return result as StandardActionResponse;
     } catch (error) {
       return {
         success: false,
@@ -125,7 +126,7 @@ export class LandscapeTools {
     strength?: number;
     location?: [number, number, number];
     radius?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const [x, y, z] = ensureVector3(params.location ?? [0, 0, 0], 'sculpt location');
 
     const tool = (params.tool || '').trim();
@@ -166,7 +167,7 @@ export class LandscapeTools {
       success: true,
       message: `Sculpting applied to ${params.landscapeName}`,
       details: response
-    };
+    } as StandardActionResponse;
   }
 
   // Paint landscape
@@ -179,7 +180,7 @@ export class LandscapeTools {
     targetValue?: number;
     radius?: number;
     density?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available.');
     }
@@ -213,7 +214,7 @@ export class LandscapeTools {
       success: true,
       message: `Painted layer ${params.layerName}`,
       details: response
-    };
+    } as StandardActionResponse;
   }
 
   // Create procedural terrain using ProceduralMeshComponent
@@ -226,7 +227,7 @@ export class LandscapeTools {
     heightFunction?: string; // Expression for height calculation
     material?: string;
     settings?: Record<string, unknown>;
-  }) {
+  }): Promise<StandardActionResponse> {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Procedural terrain creation requires plugin support.');
     }
@@ -266,7 +267,7 @@ export class LandscapeTools {
         size: result?.size,
         subdivisions: result?.subdivisions,
         details: result
-      };
+      } as StandardActionResponse;
     } catch (error) {
       return {
         success: false,
@@ -284,7 +285,7 @@ export class LandscapeTools {
     maxScale?: number;
     path?: string; // Legacy support
     staticMesh?: string; // Legacy support
-  }): Promise<any> {
+  }): Promise<StandardActionResponse> {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
     }
@@ -328,7 +329,7 @@ export class LandscapeTools {
         success: true,
         message: response?.message || `Landscape grass type '${name}' created`,
         assetPath: result?.asset_path || response?.assetPath || response?.asset_path
-      };
+      } as StandardActionResponse;
     } catch (error) {
       return {
         success: false,
@@ -338,7 +339,7 @@ export class LandscapeTools {
   }
 
   // Set the material used by an existing landscape actor
-  async setLandscapeMaterial(params: { landscapeName: string; materialPath: string }): Promise<any> {
+  async setLandscapeMaterial(params: { landscapeName: string; materialPath: string }): Promise<StandardActionResponse> {
     const landscapeName = typeof params.landscapeName === 'string' ? params.landscapeName.trim() : '';
     const materialPath = typeof params.materialPath === 'string' ? params.materialPath.trim() : '';
 
@@ -371,7 +372,7 @@ export class LandscapeTools {
         message: response?.message || `Landscape material set on '${landscapeName}'`,
         landscapeName: response?.landscapeName || landscapeName,
         materialPath: response?.materialPath || materialPath
-      };
+      } as StandardActionResponse;
     } catch (error) {
       return {
         success: false,
@@ -388,7 +389,7 @@ export class LandscapeTools {
     minScale?: number;
     maxScale?: number;
     randomRotation?: boolean;
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands: string[] = [];
 
     commands.push(`CreateLandscapeGrass ${params.landscapeName} ${params.grassType}`);
@@ -415,7 +416,7 @@ export class LandscapeTools {
     landscapeName: string;
     collisionMipLevel?: number;
     simpleCollision?: boolean;
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands: string[] = [];
 
     if (params.collisionMipLevel !== undefined) {
@@ -438,7 +439,7 @@ export class LandscapeTools {
     landscapeName: string;
     targetTriangleCount?: number;
     preserveDetails?: boolean;
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands: string[] = [];
 
     if (params.targetTriangleCount !== undefined) {
@@ -463,7 +464,7 @@ export class LandscapeTools {
     location?: [number, number, number];
     size?: [number, number];
     depth?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const loc = params.location || [0, 0, 0];
     const size = params.size || [1000, 1000];
     const depth = params.depth || 100;
@@ -480,7 +481,7 @@ export class LandscapeTools {
     runtimeGrid?: string;
     dataLayers?: string[];
     streamingDistance?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. World Partition operations require plugin support.');
     }
@@ -507,7 +508,7 @@ export class LandscapeTools {
         success: true,
         message: response.message || 'World Partition configured',
         changes: response.changes
-      };
+      } as StandardActionResponse;
     } catch (err) {
       return { success: false, error: `Failed to configure World Partition: ${err instanceof Error ? err.message : String(err)}` };
     }
@@ -518,7 +519,7 @@ export class LandscapeTools {
     landscapeName: string;
     dataLayerNames: string[];
     operation: 'add' | 'remove' | 'set';
-  }) {
+  }): Promise<StandardActionResponse> {
     try {
       const commands = [];
 
@@ -540,7 +541,7 @@ export class LandscapeTools {
         success: true,
         message: `Data layers ${params.operation === 'add' ? 'added' : params.operation === 'remove' ? 'removed' : 'set'} for landscape`,
         layers: params.dataLayerNames
-      };
+      } as StandardActionResponse;
     } catch (err) {
       return { success: false, error: `Failed to manage data layers: ${err}` };
     }
@@ -552,7 +553,7 @@ export class LandscapeTools {
     cellSize?: number;
     loadingRange?: number;
     enableHLOD?: boolean;
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands = [];
 
     // World Partition runtime commands
@@ -578,7 +579,7 @@ export class LandscapeTools {
           loadingRange: params.loadingRange,
           hlod: params.enableHLOD
         }
-      };
+      } as StandardActionResponse;
     } catch (err) {
       return { success: false, error: `Failed to configure streaming cells: ${err}` };
     }
@@ -593,7 +594,7 @@ export class LandscapeTools {
     maxX: number;
     maxY: number;
     updateNormals?: boolean;
-  }) {
+  }): Promise<StandardActionResponse> {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
     }
@@ -639,7 +640,7 @@ export class LandscapeTools {
       return {
         success: true,
         message: response.message || 'Heightmap modified successfully'
-      };
+      } as StandardActionResponse;
     } catch (err) {
       return { success: false, error: `Failed to modify heightmap: ${err instanceof Error ? err.message : String(err)}` };
     }

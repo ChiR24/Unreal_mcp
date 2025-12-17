@@ -9,7 +9,7 @@ export interface StandardActionResponse<T = any> {
     data?: T;
     warnings?: string[];
     error?: string | {
-        code: string;
+        code?: string;
         message: string;
         [key: string]: unknown;
     } | null;
@@ -131,28 +131,28 @@ export interface IBlueprintTools {
 }
 
 export interface ILevelTools {
-    listLevels(): Promise<any>;
-    getLevelSummary(levelPath?: string): Promise<any>;
+    listLevels(): Promise<StandardActionResponse>;
+    getLevelSummary(levelPath?: string): Promise<StandardActionResponse>;
     registerLight(levelPath: string | undefined, info: { name: string; type: string; details?: Record<string, unknown> }): void;
-    exportLevel(params: { levelPath?: string; exportPath: string; note?: string; timeoutMs?: number }): Promise<any>;
-    importLevel(params: { packagePath: string; destinationPath?: string; streaming?: boolean; timeoutMs?: number }): Promise<any>;
-    saveLevelAs(params: { sourcePath?: string; targetPath: string }): Promise<any>;
-    deleteLevels(params: { levelPaths: string[] }): Promise<any>;
-    loadLevel(params: { levelPath: string; streaming?: boolean; position?: [number, number, number] }): Promise<any>;
-    saveLevel(params: { levelName?: string; savePath?: string }): Promise<any>;
-    createLevel(params: { levelName: string; template?: 'Empty' | 'Default' | 'VR' | 'TimeOfDay'; savePath?: string }): Promise<any>;
-    addSubLevel(params: { parentLevel?: string; subLevelPath: string; streamingMethod?: 'Blueprint' | 'AlwaysLoaded' }): Promise<any>;
-    streamLevel(params: { levelPath?: string; levelName?: string; shouldBeLoaded: boolean; shouldBeVisible?: boolean; position?: [number, number, number] }): Promise<any>;
-    setupWorldComposition(params: { enableComposition: boolean; tileSize?: number; distanceStreaming?: boolean; streamingDistance?: number }): Promise<any>;
-    editLevelBlueprint(params: { eventType: 'BeginPlay' | 'EndPlay' | 'Tick' | 'Custom'; customEventName?: string; nodes?: Array<{ nodeType: string; position: [number, number]; connections?: string[] }> }): Promise<any>;
-    createSubLevel(params: { name: string; type: 'Persistent' | 'Streaming' | 'Lighting' | 'Gameplay'; parent?: string }): Promise<any>;
-    setWorldSettings(params: { gravity?: number; worldScale?: number; gameMode?: string; defaultPawn?: string; killZ?: number }): Promise<any>;
-    setLevelBounds(params: { min: [number, number, number]; max: [number, number, number] }): Promise<any>;
-    buildNavMesh(params: { rebuildAll?: boolean; selectedOnly?: boolean }): Promise<any>;
-    setLevelVisibility(params: { levelName: string; visible: boolean }): Promise<any>;
-    setWorldOrigin(params: { location: [number, number, number] }): Promise<any>;
-    createStreamingVolume(params: { levelName: string; position: [number, number, number]; size: [number, number, number]; streamingDistance?: number }): Promise<any>;
-    setLevelLOD(params: { levelName: string; lodLevel: number; distance: number }): Promise<any>;
+    exportLevel(params: { levelPath?: string; exportPath: string; note?: string; timeoutMs?: number }): Promise<StandardActionResponse>;
+    importLevel(params: { packagePath: string; destinationPath?: string; streaming?: boolean; timeoutMs?: number }): Promise<StandardActionResponse>;
+    saveLevelAs(params: { sourcePath?: string; targetPath: string }): Promise<StandardActionResponse>;
+    deleteLevels(params: { levelPaths: string[] }): Promise<StandardActionResponse>;
+    loadLevel(params: { levelPath: string; streaming?: boolean; position?: [number, number, number] }): Promise<StandardActionResponse>;
+    saveLevel(params: { levelName?: string; savePath?: string }): Promise<StandardActionResponse>;
+    createLevel(params: { levelName: string; template?: 'Empty' | 'Default' | 'VR' | 'TimeOfDay'; savePath?: string }): Promise<StandardActionResponse>;
+    addSubLevel(params: { parentLevel?: string; subLevelPath: string; streamingMethod?: 'Blueprint' | 'AlwaysLoaded' }): Promise<StandardActionResponse>;
+    streamLevel(params: { levelPath?: string; levelName?: string; shouldBeLoaded: boolean; shouldBeVisible?: boolean; position?: [number, number, number] }): Promise<StandardActionResponse>;
+    setupWorldComposition(params: { enableComposition: boolean; tileSize?: number; distanceStreaming?: boolean; streamingDistance?: number }): Promise<StandardActionResponse>;
+    editLevelBlueprint(params: { eventType: 'BeginPlay' | 'EndPlay' | 'Tick' | 'Custom'; customEventName?: string; nodes?: Array<{ nodeType: string; position: [number, number]; connections?: string[] }> }): Promise<StandardActionResponse>;
+    createSubLevel(params: { name: string; type: 'Persistent' | 'Streaming' | 'Lighting' | 'Gameplay'; parent?: string }): Promise<StandardActionResponse>;
+    setWorldSettings(params: { gravity?: number; worldScale?: number; gameMode?: string; defaultPawn?: string; killZ?: number }): Promise<StandardActionResponse>;
+    setLevelBounds(params: { min: [number, number, number]; max: [number, number, number] }): Promise<StandardActionResponse>;
+    buildNavMesh(params: { rebuildAll?: boolean; selectedOnly?: boolean }): Promise<StandardActionResponse>;
+    setLevelVisibility(params: { levelName: string; visible: boolean }): Promise<StandardActionResponse>;
+    setWorldOrigin(params: { location: [number, number, number] }): Promise<StandardActionResponse>;
+    createStreamingVolume(params: { levelName: string; position: [number, number, number]; size: [number, number, number]; streamingDistance?: number }): Promise<StandardActionResponse>;
+    setLevelLOD(params: { levelName: string; lodLevel: number; distance: number }): Promise<StandardActionResponse>;
 }
 
 export interface IEditorTools {
@@ -179,12 +179,12 @@ export interface IEditorTools {
 }
 
 export interface IEnvironmentTools {
-    setTimeOfDay(hour: unknown): Promise<any>;
-    setSunIntensity(intensity: unknown): Promise<any>;
-    setSkylightIntensity(intensity: unknown): Promise<any>;
-    exportSnapshot(params: { path?: unknown; filename?: unknown }): Promise<any>;
-    importSnapshot(params: { path?: unknown; filename?: unknown }): Promise<any>;
-    cleanup(params?: { names?: unknown }): Promise<any>;
+    setTimeOfDay(hour: unknown): Promise<StandardActionResponse>;
+    setSunIntensity(intensity: unknown): Promise<StandardActionResponse>;
+    setSkylightIntensity(intensity: unknown): Promise<StandardActionResponse>;
+    exportSnapshot(params: { path?: unknown; filename?: unknown }): Promise<StandardActionResponse>;
+    importSnapshot(params: { path?: unknown; filename?: unknown }): Promise<StandardActionResponse>;
+    cleanup(params?: { names?: unknown }): Promise<StandardActionResponse>;
 }
 
 export interface ILandscapeTools {

@@ -1,5 +1,5 @@
 import { BaseTool } from './base-tool.js';
-import { ILevelTools } from '../types/tool-interfaces.js';
+import { ILevelTools, StandardActionResponse } from '../types/tool-interfaces.js';
 import { LevelResponse } from '../types/automation-responses.js';
 import { wasmIntegration as _wasmIntegration } from '../wasm/index.js';
 import { sanitizePath } from '../utils/path-security.js';
@@ -225,7 +225,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     this.ensureRecord(normalized.path, { loaded: true, visible: true });
   }
 
-  async listLevels() {
+  async listLevels(): Promise<StandardActionResponse> {
     // Try to get actual levels from UE via automation bridge
     try {
       const response = await this.sendAutomationRequest<LevelResponse>('list_levels', {}, {
@@ -257,7 +257,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
           managedLevelCount: managed.count
         };
 
-        return result;
+        return result as StandardActionResponse;
       }
     } catch {
       // Fall back to managed levels if automation bridge fails
@@ -267,12 +267,12 @@ export class LevelTools extends BaseTool implements ILevelTools {
     return this.listManagedLevels();
   }
 
-  async getLevelSummary(levelPath?: string) {
+  async getLevelSummary(levelPath?: string): Promise<StandardActionResponse> {
     const resolved = this.resolveLevelPath(levelPath);
     if (!resolved) {
       return { success: false, error: 'No level specified' };
     }
-    return this.summarizeLevel(resolved);
+    return this.summarizeLevel(resolved) as StandardActionResponse;
   }
 
   registerLight(levelPath: string | undefined, info: { name: string; type: string; details?: Record<string, unknown> }) {
@@ -292,7 +292,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     });
   }
 
-  async exportLevel(params: { levelPath?: string; exportPath: string; note?: string; timeoutMs?: number }) {
+  async exportLevel(params: { levelPath?: string; exportPath: string; note?: string; timeoutMs?: number }): Promise<StandardActionResponse> {
     const resolved = this.resolveLevelPath(params.levelPath);
     if (!resolved) {
       return { success: false, error: 'No level specified for export' };
@@ -312,7 +312,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
           levelPath: resolved,
           exportPath: params.exportPath,
           details: res
-        };
+        } as StandardActionResponse;
       }
 
       return {
@@ -321,13 +321,13 @@ export class LevelTools extends BaseTool implements ILevelTools {
         levelPath: resolved,
         exportPath: params.exportPath,
         details: res
-      };
+      } as StandardActionResponse;
     } catch (e: any) {
       return { success: false, error: `Export failed: ${e.message}` };
     }
   }
 
-  async importLevel(params: { packagePath: string; destinationPath?: string; streaming?: boolean; timeoutMs?: number }) {
+  async importLevel(params: { packagePath: string; destinationPath?: string; streaming?: boolean; timeoutMs?: number }): Promise<StandardActionResponse> {
     const destination = params.destinationPath
       ? this.normalizeLevelPath(params.destinationPath)
       : this.normalizeLevelPath(`/Game/Maps/Imported_${Math.floor(Date.now() / 1000)}`);
@@ -345,7 +345,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
           error: (res as any).error || (res as any).message || 'Import failed',
           levelPath: destination.path,
           details: res
-        };
+        } as StandardActionResponse;
       }
 
       return {
@@ -355,13 +355,13 @@ export class LevelTools extends BaseTool implements ILevelTools {
         partitioned: true,
         streaming: Boolean(params.streaming),
         details: res
-      };
+      } as StandardActionResponse;
     } catch (e: any) {
       return { success: false, error: `Import failed: ${e.message}` };
     }
   }
 
-  async saveLevelAs(params: { sourcePath?: string; targetPath: string }) {
+  async saveLevelAs(params: { sourcePath?: string; targetPath: string }): Promise<StandardActionResponse> {
     const source = this.resolveLevelPath(params.sourcePath);
     const target = this.normalizeLevelPath(params.targetPath);
 
@@ -411,13 +411,13 @@ export class LevelTools extends BaseTool implements ILevelTools {
         success: true,
         message: response.message || `Level saved as ${target.path}`,
         levelPath: target.path
-      };
+      } as StandardActionResponse;
     } catch (error) {
       return { success: false, error: `Failed to save level as: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
 
-  async deleteLevels(params: { levelPaths: string[] }) {
+  async deleteLevels(params: { levelPaths: string[] }): Promise<StandardActionResponse> {
     const removed: string[] = [];
     for (const path of params.levelPaths) {
       const normalized = this.normalizeLevelPath(path).path;
@@ -431,14 +431,14 @@ export class LevelTools extends BaseTool implements ILevelTools {
       success: true,
       message: removed.length ? `Deleted ${removed.length} managed level(s)` : 'No managed levels removed',
       removed
-    };
+    } as StandardActionResponse;
   }
 
   async loadLevel(params: {
     levelPath: string;
     streaming?: boolean;
     position?: [number, number, number];
-  }) {
+  }): Promise<StandardActionResponse> {
     const normalizedPath = this.normalizeLevelPath(params.levelPath).path;
 
     if (params.streaming) {
@@ -455,7 +455,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
           message: `Streaming level loaded: ${params.levelPath}`,
           levelPath: normalizedPath,
           streaming: true
-        };
+        } as StandardActionResponse;
       } catch (err) {
         return {
           success: false,
@@ -484,7 +484,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
             message: `Level loaded: ${params.levelPath}`,
             level: normalizedPath,
             streaming: false
-          };
+          } as StandardActionResponse;
         }
       } catch (_e) {
         // Fallback to console logic
@@ -512,7 +512,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
                 error: 'not_found',
                 message,
                 level: normalizedPath
-              };
+              } as StandardActionResponse;
             }
           }
         } catch {
@@ -531,7 +531,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
           message: `Level loaded: ${params.levelPath}`,
           level: normalizedPath,
           streaming: false
-        };
+        } as StandardActionResponse;
       } catch (err) {
         return {
           success: false,
@@ -545,7 +545,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
   async saveLevel(params: {
     levelName?: string;
     savePath?: string;
-  }) {
+  }): Promise<StandardActionResponse> {
     try {
       if (params.savePath && !params.savePath.startsWith('/Game/')) {
         throw new Error(`Invalid save path: ${params.savePath}`);
@@ -584,7 +584,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         result.details = response.details;
       }
 
-      return result;
+      return result as StandardActionResponse;
     } catch (error) {
       return { success: false, error: `Failed to save level: ${error instanceof Error ? error.message : String(error)}` };
     }
@@ -594,7 +594,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     levelName: string;
     template?: 'Empty' | 'Default' | 'VR' | 'TimeOfDay';
     savePath?: string;
-  }) {
+  }): Promise<StandardActionResponse> {
     const basePath = params.savePath || '/Game/Maps';
     const isPartitioned = true; // default to World Partition for UE5
     const fullPath = `${basePath}/${params.levelName}`;
@@ -613,7 +613,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
           error: response.error || response.message || 'Failed to create level',
           path: fullPath,
           partitioned: isPartitioned
-        };
+        } as StandardActionResponse;
       }
 
       const result: Record<string, unknown> = {
@@ -641,14 +641,14 @@ export class LevelTools extends BaseTool implements ILevelTools {
         createdAt: Date.now()
       });
 
-      return result;
+      return result as StandardActionResponse;
     } catch (error) {
       return {
         success: false,
         error: `Failed to create level: ${error instanceof Error ? error.message : String(error)}`,
         path: fullPath,
         partitioned: isPartitioned
-      };
+      } as StandardActionResponse;
     }
   }
 
@@ -656,7 +656,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     parentLevel?: string;
     subLevelPath: string;
     streamingMethod?: 'Blueprint' | 'AlwaysLoaded';
-  }) {
+  }): Promise<StandardActionResponse> {
     const parent = params.parentLevel ? this.resolveLevelPath(params.parentLevel) : this.currentLevelPath;
     const sub = this.normalizeLevelPath(params.subLevelPath).path;
 
@@ -695,12 +695,12 @@ export class LevelTools extends BaseTool implements ILevelTools {
 
       if (response.success) {
         this.ensureRecord(sub, { loaded: true, visible: true, streaming: true });
-        return response;
+        return response as StandardActionResponse;
       } else if (response.error === 'UNKNOWN_ACTION') {
         // Fallthrough to console fallback if action not implemented
       } else {
         // Return actual error if it's something else (e.g. execution failed)
-        return response;
+        return response as StandardActionResponse;
       }
     } catch (_e: any) {
       // If connection failed, might fallback. But if we got a response, respect it.
@@ -718,7 +718,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         success: true,
         message: `Sublevel added via console: ${sub}`,
         data: { method: 'console' }
-      };
+      } as StandardActionResponse;
     }
 
     return {
@@ -727,7 +727,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
       // Return the last relevant error + console error
       message: 'Failed to add sublevel via automation or console.',
       details: { consoleError: consoleResponse }
-    };
+    } as StandardActionResponse;
   }
 
   async streamLevel(params: {
@@ -736,7 +736,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     shouldBeLoaded: boolean;
     shouldBeVisible?: boolean;
     position?: [number, number, number];
-  }) {
+  }): Promise<StandardActionResponse> {
     const rawPath = typeof params.levelPath === 'string' ? params.levelPath.trim() : '';
     const levelPath = rawPath.length > 0 ? rawPath : undefined;
     const providedName = typeof params.levelName === 'string' ? params.levelName.trim() : '';
@@ -778,7 +778,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
             handledResult.details = response.details;
           }
 
-          return handledResult;
+          return handledResult as StandardActionResponse;
         }
 
         return {
@@ -788,7 +788,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
           levelPath: levelPath,
           loaded: params.shouldBeLoaded,
           visible: shouldBeVisible
-        };
+        } as StandardActionResponse;
       }
 
       const result: Record<string, unknown> = {
@@ -807,7 +807,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         result.details = response.details;
       }
 
-      return result;
+      return result as StandardActionResponse;
     } catch (_error) {
       // Fallback to console command
       const levelIdentifier = levelName ?? levelPath ?? '';
@@ -824,7 +824,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     tileSize?: number;
     distanceStreaming?: boolean;
     streamingDistance?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands: string[] = [];
 
     if (params.enableComposition) {
@@ -852,7 +852,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
       position: [number, number];
       connections?: string[];
     }>;
-  }) {
+  }): Promise<StandardActionResponse> {
     const command = `OpenLevelBlueprint ${params.eventType}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -861,7 +861,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     name: string;
     type: 'Persistent' | 'Streaming' | 'Lighting' | 'Gameplay';
     parent?: string;
-  }) {
+  }): Promise<StandardActionResponse> {
     const command = `CreateSubLevel ${params.name} ${params.type} ${params.parent || 'None'}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -872,7 +872,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     gameMode?: string;
     defaultPawn?: string;
     killZ?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands: string[] = [];
 
     if (params.gravity !== undefined) {
@@ -899,7 +899,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
   async setLevelBounds(params: {
     min: [number, number, number];
     max: [number, number, number];
-  }) {
+  }): Promise<StandardActionResponse> {
     const command = `SetLevelBounds ${params.min.join(',')} ${params.max.join(',')}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -907,7 +907,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
   async buildNavMesh(params: {
     rebuildAll?: boolean;
     selectedOnly?: boolean;
-  }) {
+  }): Promise<StandardActionResponse> {
     try {
       const response = await this.sendAutomationRequest<LevelResponse>('build_navigation_mesh', {
         rebuildAll: params.rebuildAll ?? false,
@@ -944,7 +944,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         result.details = response.details;
       }
 
-      return result;
+      return result as StandardActionResponse;
     } catch (error) {
       return {
         success: false,
@@ -956,14 +956,14 @@ export class LevelTools extends BaseTool implements ILevelTools {
   async setLevelVisibility(params: {
     levelName: string;
     visible: boolean;
-  }) {
+  }): Promise<StandardActionResponse> {
     const command = `SetLevelVisibility ${params.levelName} ${params.visible}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
   async setWorldOrigin(params: {
     location: [number, number, number];
-  }) {
+  }): Promise<StandardActionResponse> {
     const command = `SetWorldOriginLocation ${params.location.join(' ')}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -973,7 +973,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     position: [number, number, number];
     size: [number, number, number];
     streamingDistance?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const command = `CreateStreamingVolume ${params.levelName} ${params.position.join(' ')} ${params.size.join(' ')} ${params.streamingDistance || 0}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -982,7 +982,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     levelName: string;
     lodLevel: number;
     distance: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const command = `SetLevelLOD ${params.levelName} ${params.lodLevel} ${params.distance}`;
     return this.bridge.executeConsoleCommand(command);
   }

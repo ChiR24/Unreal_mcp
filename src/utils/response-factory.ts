@@ -22,7 +22,7 @@ export class ResponseFactory {
         const errorMessage = error instanceof Error ? error.message : String(error || defaultMessage);
 
         // Log the full error for debugging (internal logs) but return a clean message to the client
-        console.error(`[ResponseFactory] Error:`, error);
+        console.error('[ResponseFactory] Error:', error);
 
         return {
             success: false,

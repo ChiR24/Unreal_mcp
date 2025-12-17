@@ -2,8 +2,9 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { coerceBoolean, coerceNumber, coerceString } from '../utils/result-helpers.js';
+import { IFoliageTools, StandardActionResponse } from '../types/tool-interfaces.js';
 
-export class FoliageTools {
+export class FoliageTools implements IFoliageTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
@@ -24,7 +25,7 @@ export class FoliageTools {
     alignToNormal?: boolean;
     randomYaw?: boolean;
     groundSlope?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     // Basic validation to prevent bad inputs like 'undefined' and empty strings
     const errors: string[] = [];
     const name = String(params?.name ?? '').trim();
@@ -99,7 +100,7 @@ export class FoliageTools {
         message: exists
           ? `Foliage type '${name}' ready (${method})`
           : `Created foliage '${name}' but verification did not find it yet`
-      };
+      } as StandardActionResponse;
     } catch (error) {
       return {
         success: false,
@@ -115,7 +116,7 @@ export class FoliageTools {
     brushSize?: number;
     paintDensity?: number;
     eraseMode?: boolean;
-  }) {
+  }): Promise<StandardActionResponse> {
     const errors: string[] = [];
     const foliageType = String(params?.foliageType ?? '').trim();
     const pos = Array.isArray(params?.position) ? params.position : [0, 0, 0];
@@ -174,7 +175,7 @@ export class FoliageTools {
         added,
         note,
         message: `Painted ${added} instances for '${foliageType}' around (${pos[0]}, ${pos[1]}, ${pos[2]})`
-      };
+      } as StandardActionResponse;
     } catch (error) {
       return {
         success: false,
@@ -184,7 +185,7 @@ export class FoliageTools {
   }
 
   // Query foliage instances (plugin-native)
-  async getFoliageInstances(params: { foliageType?: string }) {
+  async getFoliageInstances(params: { foliageType?: string }): Promise<StandardActionResponse> {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Foliage operations require plugin support.');
     }
@@ -200,15 +201,16 @@ export class FoliageTools {
       return {
         success: true,
         count: coerceNumber(payload.count) ?? 0,
-        instances: (payload.instances as any[]) ?? []
-      };
+        instances: (payload.instances as any[]) ?? [],
+        message: 'Foliage instances retrieved'
+      } as StandardActionResponse;
     } catch (error) {
       return { success: false, error: `Failed to get foliage instances: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
 
   // Remove foliage (plugin-native)
-  async removeFoliage(params: { foliageType?: string; removeAll?: boolean }) {
+  async removeFoliage(params: { foliageType?: string; removeAll?: boolean }): Promise<StandardActionResponse> {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Foliage operations require plugin support.');
     }
@@ -224,8 +226,9 @@ export class FoliageTools {
       const payload = response.result as Record<string, unknown>;
       return {
         success: true,
-        instancesRemoved: coerceNumber(payload.instancesRemoved) ?? 0
-      };
+        instancesRemoved: coerceNumber(payload.instancesRemoved) ?? 0,
+        message: 'Foliage removed'
+      } as StandardActionResponse;
     } catch (error) {
       return { success: false, error: `Failed to remove foliage: ${error instanceof Error ? error.message : String(error)}` };
     }
@@ -242,7 +245,7 @@ export class FoliageTools {
     }>;
     enableCulling?: boolean;
     cullDistance?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands: string[] = [];
 
     commands.push(`CreateInstancedStaticMesh ${params.name} ${params.meshPath}`);
@@ -271,7 +274,7 @@ export class FoliageTools {
     foliageType: string;
     lodDistances?: number[];
     screenSize?: number[];
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands: string[] = [];
 
     if (params.lodDistances) {
@@ -288,7 +291,7 @@ export class FoliageTools {
   }
 
   // Alias for addFoliageType to match interface/handler usage
-  async addFoliage(params: { foliageType: string; locations: Array<{ x: number; y: number; z: number }> }) {
+  async addFoliage(params: { foliageType: string; locations: Array<{ x: number; y: number; z: number }> }): Promise<StandardActionResponse> {
     // Delegate to paintFoliage which handles placing instances at locations
     if (params.locations && params.locations.length > 0) {
       if (!this.automationBridge) {
@@ -331,7 +334,7 @@ export class FoliageTools {
     size?: [number, number, number];
     seed?: number;
     tileSize?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available.');
     }
@@ -376,7 +379,7 @@ export class FoliageTools {
       volumeActor: result?.volume_actor,
       spawnerPath: result?.spawner_path,
       foliageTypesCount: result?.foliage_types_count
-    };
+    } as StandardActionResponse;
   }
 
   /**
@@ -390,7 +393,7 @@ export class FoliageTools {
       rotation?: [number, number, number];
       scale?: [number, number, number];
     }>;
-  }) {
+  }): Promise<StandardActionResponse> {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Foliage instance placement requires plugin support.');
     }
@@ -417,7 +420,7 @@ export class FoliageTools {
         success: true,
         message: response.message || `Added ${result?.instances_count || params.transforms.length} foliage instances`,
         instancesCount: result?.instances_count
-      };
+      } as StandardActionResponse;
     } catch (error) {
       return {
         success: false,
@@ -432,7 +435,7 @@ export class FoliageTools {
     collisionEnabled?: boolean;
     collisionProfile?: string;
     generateOverlapEvents?: boolean;
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands: string[] = [];
 
     if (params.collisionEnabled !== undefined) {
@@ -463,7 +466,7 @@ export class FoliageTools {
     }>;
     windStrength?: number;
     windSpeed?: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands: string[] = [];
 
     commands.push(`CreateGrassSystem ${params.name}`);
@@ -492,7 +495,7 @@ export class FoliageTools {
     foliageType: string;
     position: [number, number, number];
     radius: number;
-  }) {
+  }): Promise<StandardActionResponse> {
     const command = `RemoveFoliageInRadius ${params.foliageType} ${params.position.join(' ')} ${params.radius}`;
     return this.bridge.executeConsoleCommand(command);
   }
@@ -503,7 +506,7 @@ export class FoliageTools {
     position?: [number, number, number];
     radius?: number;
     selectAll?: boolean;
-  }) {
+  }): Promise<StandardActionResponse> {
     let command: string;
 
     if (params.selectAll) {
@@ -523,7 +526,7 @@ export class FoliageTools {
     updateTransforms?: boolean;
     updateMesh?: boolean;
     newMeshPath?: string;
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands: string[] = [];
 
     if (params.updateTransforms) {
@@ -546,7 +549,7 @@ export class FoliageTools {
     name: string;
     spawnArea: 'Landscape' | 'StaticMesh' | 'BSP' | 'Foliage' | 'All';
     excludeAreas?: Array<[number, number, number, number]>; // [x, y, z, radius]
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands: string[] = [];
 
     commands.push(`CreateFoliageSpawner ${params.name} ${params.spawnArea}`);
@@ -568,7 +571,7 @@ export class FoliageTools {
     generateClusters?: boolean;
     clusterSize?: number;
     reduceDrawCalls?: boolean;
-  }) {
+  }): Promise<StandardActionResponse> {
     const commands = [];
 
     if (params.mergeInstances) {

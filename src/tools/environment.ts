@@ -3,15 +3,9 @@ import path from 'node:path';
 import { AutomationBridge } from '../automation/index.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { DEFAULT_SKYLIGHT_INTENSITY, DEFAULT_SUN_INTENSITY, DEFAULT_TIME_OF_DAY } from '../constants.js';
+import { IEnvironmentTools, StandardActionResponse } from '../types/tool-interfaces.js';
 
-interface EnvironmentResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  details?: Record<string, unknown>;
-}
-
-export class EnvironmentTools {
+export class EnvironmentTools implements IEnvironmentTools {
   constructor(_bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) {
@@ -69,7 +63,7 @@ export class EnvironmentTools {
     return num;
   }
 
-  private async invoke(action: string, payload: Record<string, unknown>): Promise<EnvironmentResult> {
+  private async invoke(action: string, payload: Record<string, unknown>): Promise<StandardActionResponse> {
     try {
       const bridge = this.ensureAutomationBridge();
       const response = await bridge.sendAutomationRequest(action, payload, { timeoutMs: 40000 });
@@ -79,42 +73,42 @@ export class EnvironmentTools {
           error: typeof response.error === 'string' && response.error.length > 0 ? response.error : 'ENVIRONMENT_CONTROL_FAILED',
           message: typeof response.message === 'string' ? response.message : undefined,
           details: typeof response.result === 'object' && response.result ? response.result as Record<string, unknown> : undefined
-        };
+        } as StandardActionResponse;
       }
       const resultPayload = typeof response.result === 'object' && response.result ? response.result as Record<string, unknown> : undefined;
       return {
         success: true,
         message: typeof response.message === 'string' ? response.message : 'Environment control action succeeded',
         details: resultPayload
-      };
+      } as StandardActionResponse;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         error: message || 'ENVIRONMENT_CONTROL_FAILED'
-      };
+      } as StandardActionResponse;
     }
   }
 
-  async setTimeOfDay(hour: unknown): Promise<EnvironmentResult> {
+  async setTimeOfDay(hour: unknown): Promise<StandardActionResponse> {
     const normalizedHour = this.normalizeNumber(hour, 'hour', this.getDefaultTimeOfDay());
     const clampedHour = Math.min(Math.max(normalizedHour, 0), 24);
     return this.invoke('set_time_of_day', { hour: clampedHour });
   }
 
-  async setSunIntensity(intensity: unknown): Promise<EnvironmentResult> {
+  async setSunIntensity(intensity: unknown): Promise<StandardActionResponse> {
     const normalized = this.normalizeNumber(intensity, 'intensity', this.getDefaultSunIntensity());
     const finalValue = Math.max(normalized, 0);
     return this.invoke('set_sun_intensity', { intensity: finalValue });
   }
 
-  async setSkylightIntensity(intensity: unknown): Promise<EnvironmentResult> {
+  async setSkylightIntensity(intensity: unknown): Promise<StandardActionResponse> {
     const normalized = this.normalizeNumber(intensity, 'intensity', this.getDefaultSkylightIntensity());
     const finalValue = Math.max(normalized, 0);
     return this.invoke('set_skylight_intensity', { intensity: finalValue });
   }
 
-  async exportSnapshot(params: { path?: unknown; filename?: unknown }): Promise<EnvironmentResult> {
+  async exportSnapshot(params: { path?: unknown; filename?: unknown }): Promise<StandardActionResponse> {
     try {
       const rawPath = typeof params?.path === 'string' && params.path.trim().length > 0
         ? params.path.trim()
@@ -157,17 +151,17 @@ export class EnvironmentTools {
         success: true,
         message: `Environment snapshot exported to ${targetPath}`,
         details: { path: targetPath }
-      };
+      } as StandardActionResponse;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         error: `Failed to export environment snapshot: ${message}`
-      };
+      } as StandardActionResponse;
     }
   }
 
-  async importSnapshot(params: { path?: unknown; filename?: unknown }): Promise<EnvironmentResult> {
+  async importSnapshot(params: { path?: unknown; filename?: unknown }): Promise<StandardActionResponse> {
     const rawPath = typeof params?.path === 'string' && params.path.trim().length > 0
       ? params.path.trim()
       : './tests/reports/env_snapshot.json';
@@ -210,7 +204,7 @@ export class EnvironmentTools {
           return {
             success: true,
             message: `Environment snapshot file not found at ${targetPath}; import treated as no-op`
-          };
+          } as StandardActionResponse;
         }
         throw err;
       }
@@ -219,17 +213,17 @@ export class EnvironmentTools {
         success: true,
         message: `Environment snapshot import handled from ${targetPath}`,
         details: parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : undefined
-      };
+      } as StandardActionResponse;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         error: `Failed to import environment snapshot: ${message}`
-      };
+      } as StandardActionResponse;
     }
   }
 
-  async cleanup(params?: { names?: unknown; name?: unknown }): Promise<EnvironmentResult> {
+  async cleanup(params?: { names?: unknown; name?: unknown }): Promise<StandardActionResponse> {
     try {
       const rawNames = Array.isArray(params?.names) ? params.names : [];
       if (typeof params?.name === 'string' && params.name.trim().length > 0) {
@@ -244,7 +238,7 @@ export class EnvironmentTools {
         return {
           success: true,
           message: 'No environment actor names provided for cleanup; no-op'
-        };
+        } as StandardActionResponse;
       }
 
       const bridge = this.ensureAutomationBridge();
@@ -264,7 +258,7 @@ export class EnvironmentTools {
               : 'Failed to delete environment actors'),
           message: typeof resp?.message === 'string' ? resp.message : undefined,
           details: result
-        };
+        } as StandardActionResponse;
       }
 
       const result = resp && typeof resp.result === 'object' ? resp.result as Record<string, unknown> : undefined;
@@ -275,13 +269,13 @@ export class EnvironmentTools {
           ? resp.message
           : `Environment actors deleted: ${cleaned.join(', ')}`,
         details: result ?? { names: cleaned }
-      };
+      } as StandardActionResponse;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         error: `Failed to cleanup environment actors: ${message}`
-      };
+      } as StandardActionResponse;
     }
   }
 }
