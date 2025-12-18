@@ -1311,6 +1311,102 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
             TEXT("Object property requires valid object path, got: %s"),
             *PropertyValue);
       }
+    } else if (FStructProperty *StructProp =
+                   CastField<FStructProperty>(FoundProperty)) {
+      // Handle struct properties (FVector, FVector2D, FLinearColor, etc.)
+      void *PropAddr = StructProp->ContainerPtrToValuePtr<void>(TargetObject);
+      FString StructName =
+          StructProp->Struct ? StructProp->Struct->GetName() : FString();
+
+      // Try to parse JSON object value from payload
+      const TSharedPtr<FJsonObject> *JsonObjValue = nullptr;
+      if (Payload->TryGetObjectField(TEXT("value"), JsonObjValue) &&
+          JsonObjValue->IsValid()) {
+        // Handle FVector explicitly
+        if (StructName.Equals(TEXT("Vector"), ESearchCase::IgnoreCase)) {
+          FVector *Vec = static_cast<FVector *>(PropAddr);
+          double X = 0, Y = 0, Z = 0;
+          (*JsonObjValue)->TryGetNumberField(TEXT("X"), X);
+          (*JsonObjValue)->TryGetNumberField(TEXT("Y"), Y);
+          (*JsonObjValue)->TryGetNumberField(TEXT("Z"), Z);
+          if (X == 0 && Y == 0 && Z == 0) {
+            (*JsonObjValue)->TryGetNumberField(TEXT("x"), X);
+            (*JsonObjValue)->TryGetNumberField(TEXT("y"), Y);
+            (*JsonObjValue)->TryGetNumberField(TEXT("z"), Z);
+          }
+          *Vec = FVector(X, Y, Z);
+          bSuccess = true;
+        }
+        // Handle FVector2D
+        else if (StructName.Equals(TEXT("Vector2D"), ESearchCase::IgnoreCase)) {
+          FVector2D *Vec = static_cast<FVector2D *>(PropAddr);
+          double X = 0, Y = 0;
+          (*JsonObjValue)->TryGetNumberField(TEXT("X"), X);
+          (*JsonObjValue)->TryGetNumberField(TEXT("Y"), Y);
+          if (X == 0 && Y == 0) {
+            (*JsonObjValue)->TryGetNumberField(TEXT("x"), X);
+            (*JsonObjValue)->TryGetNumberField(TEXT("y"), Y);
+          }
+          *Vec = FVector2D(X, Y);
+          bSuccess = true;
+        }
+        // Handle FLinearColor
+        else if (StructName.Equals(TEXT("LinearColor"),
+                                   ESearchCase::IgnoreCase)) {
+          FLinearColor *Color = static_cast<FLinearColor *>(PropAddr);
+          double R = 0, G = 0, B = 0, A = 1;
+          (*JsonObjValue)->TryGetNumberField(TEXT("R"), R);
+          (*JsonObjValue)->TryGetNumberField(TEXT("G"), G);
+          (*JsonObjValue)->TryGetNumberField(TEXT("B"), B);
+          (*JsonObjValue)->TryGetNumberField(TEXT("A"), A);
+          if (R == 0 && G == 0 && B == 0) {
+            (*JsonObjValue)->TryGetNumberField(TEXT("r"), R);
+            (*JsonObjValue)->TryGetNumberField(TEXT("g"), G);
+            (*JsonObjValue)->TryGetNumberField(TEXT("b"), B);
+            (*JsonObjValue)->TryGetNumberField(TEXT("a"), A);
+          }
+          *Color = FLinearColor(R, G, B, A);
+          bSuccess = true;
+        }
+        // Handle FRotator
+        else if (StructName.Equals(TEXT("Rotator"), ESearchCase::IgnoreCase)) {
+          FRotator *Rot = static_cast<FRotator *>(PropAddr);
+          double Pitch = 0, Yaw = 0, Roll = 0;
+          (*JsonObjValue)->TryGetNumberField(TEXT("Pitch"), Pitch);
+          (*JsonObjValue)->TryGetNumberField(TEXT("Yaw"), Yaw);
+          (*JsonObjValue)->TryGetNumberField(TEXT("Roll"), Roll);
+          if (Pitch == 0 && Yaw == 0 && Roll == 0) {
+            (*JsonObjValue)->TryGetNumberField(TEXT("pitch"), Pitch);
+            (*JsonObjValue)->TryGetNumberField(TEXT("yaw"), Yaw);
+            (*JsonObjValue)->TryGetNumberField(TEXT("roll"), Roll);
+          }
+          *Rot = FRotator(Pitch, Yaw, Roll);
+          bSuccess = true;
+        }
+      }
+
+      // Fallback: try ImportText for string representation
+      if (!bSuccess && !PropertyValue.IsEmpty() && StructProp->Struct) {
+        const TCHAR *Buffer = *PropertyValue;
+        // Use UScriptStruct::ImportText (not FStructProperty)
+        const TCHAR *ImportResult = StructProp->Struct->ImportText(
+            Buffer, PropAddr, nullptr, PPF_None, GWarn, StructName);
+        bSuccess = (ImportResult != nullptr);
+        if (!bSuccess) {
+          ErrorMessage = FString::Printf(
+              TEXT("Failed to parse struct value '%s' for property '%s' of "
+                   "type '%s'. For FVector use {\"X\":val,\"Y\":val,\"Z\":val} "
+                   "or string \"(X=val,Y=val,Z=val)\""),
+              *PropertyValue, *PropertyName, *StructName);
+        }
+      }
+
+      if (!bSuccess && ErrorMessage.IsEmpty()) {
+        ErrorMessage = FString::Printf(
+            TEXT("Struct property '%s' of type '%s' requires JSON object "
+                 "value like {\"X\":val,\"Y\":val,\"Z\":val}"),
+            *PropertyName, *StructName);
+      }
     } else {
       ErrorMessage =
           FString::Printf(TEXT("Property type '%s' not supported for setting"),

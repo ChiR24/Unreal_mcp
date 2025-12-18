@@ -860,6 +860,42 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     return res as any;
   }
 
+  async listNodeTypes(params: {
+    blueprintPath?: string;
+    timeoutMs?: number;
+  } = {}): Promise<StandardActionResponse> {
+    const res = await this.sendAction('manage_blueprint_graph', {
+      subAction: 'list_node_types',
+      blueprintPath: params.blueprintPath || '/Game/Temp',
+      graphName: 'EventGraph'
+    }, { timeoutMs: params.timeoutMs });
+    return res as any;
+  }
+
+  async setPinDefaultValue(params: {
+    blueprintPath: string;
+    nodeId: string;
+    pinName: string;
+    value: string;
+    graphName?: string;
+    timeoutMs?: number;
+  }): Promise<StandardActionResponse> {
+    const blueprintPath = coerceString(params.blueprintPath);
+    if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
+    if (!params.pinName) return { success: false, error: 'INVALID_PIN_NAME', message: 'Pin name is required' } as const;
+
+    const res = await this.sendAction('manage_blueprint_graph', {
+      subAction: 'set_pin_default_value',
+      blueprintPath: blueprintPath,
+      graphName: params.graphName || 'EventGraph',
+      nodeId: params.nodeId,
+      pinName: params.pinName,
+      value: params.value
+    }, { timeoutMs: params.timeoutMs });
+    return res as any;
+  }
+
 
   async connectPins(params: {
     blueprintName: string;
