@@ -48,10 +48,11 @@ export class EditorTools extends BaseTool implements IEditorTools {
           return { success: true, message: response.message || 'PIE started' };
         }
         return { success: false, error: response?.error || response?.message || 'Failed to start PIE' };
-      } catch (err: any) {
+      } catch (err: unknown) {
         // If it's a timeout, return error instead of falling back
-        if (err.message && /time.*out/i.test(err.message)) {
-          return { success: false, error: `Timeout waiting for PIE to start: ${err.message}` };
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (errMsg && /time.*out/i.test(errMsg)) {
+          return { success: false, error: `Timeout waiting for PIE to start: ${errMsg}` };
         }
 
         // Fallback to console commands if automation bridge is unavailable or fails (non-timeout)

@@ -59,7 +59,7 @@ export class UITools {
         package_path: path,
         factory_class: 'WidgetBlueprintFactory',
         asset_class: 'unreal.WidgetBlueprint'
-      } as Record<string, any>;
+      } as Record<string, unknown>;
 
       const resp = await this.bridge.executeEditorFunction('CREATE_ASSET', payload as any);
       const result = resp && typeof resp === 'object' ? (resp.result ?? resp) : resp;

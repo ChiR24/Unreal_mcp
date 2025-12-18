@@ -35,7 +35,7 @@ export interface PropertyInfo {
   type: string;
   value?: any;
   flags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   category?: string;
   tooltip?: string;
   description?: string;
@@ -141,7 +141,7 @@ export class IntrospectionTools {
     return value;
   }
 
-  private isPlainObject(value: any): value is Record<string, any> {
+  private isPlainObject(value: any): value is Record<string, unknown> {
     return !!value && typeof value === 'object' && !Array.isArray(value);
   }
 
@@ -200,7 +200,7 @@ export class IntrospectionTools {
     const rawValue = entry.value ?? entry.currentValue ?? entry.defaultValue ?? entry.data ?? entry;
     const value = this.convertPropertyValue(rawValue, type);
     const flags: string[] | undefined = entry.flags ?? entry.attributes;
-    const metadata: Record<string, any> | undefined = entry.metadata ?? entry.annotations;
+    const metadata: Record<string, unknown> | undefined = entry.metadata ?? entry.annotations;
     const filtered = this.shouldFilterProperty(name, value, flags, detailed);
     const dictionaryEntry = lookupPropertyMetadata(name);
     const propertyInfo: PropertyInfo = {
@@ -220,12 +220,12 @@ export class IntrospectionTools {
     return propertyInfo;
   }
 
-  private flattenPropertyMap(source: Record<string, any>, prefix = '', detailed = false): PropertyInfo[] {
+  private flattenPropertyMap(source: Record<string, unknown>, prefix = '', detailed = false): PropertyInfo[] {
     const properties: PropertyInfo[] = [];
     for (const [rawKey, rawValue] of Object.entries(source)) {
       const name = prefix ? `${prefix}.${rawKey}` : rawKey;
       if (this.isLikelyPropertyDescriptor(rawValue)) {
-        const normalized = this.normalizePropertyEntry({ ...rawValue, name }, detailed);
+        const normalized = this.normalizePropertyEntry({ ...(rawValue as Record<string, unknown>), name }, detailed);
         if (normalized) properties.push(normalized);
         continue;
       }
@@ -441,8 +441,8 @@ export class IntrospectionTools {
         }
 
         return res;
-      } catch (err: any) {
-        const errorMsg = err?.message || String(err);
+      } catch (err: unknown) {
+        const errorMsg = (err instanceof Error ? err.message : undefined) || String(err);
         if (errorMsg.includes('404')) {
           return { success: false, error: `Property '${params.propertyName}' not found on object '${params.objectPath}'` };
         }
