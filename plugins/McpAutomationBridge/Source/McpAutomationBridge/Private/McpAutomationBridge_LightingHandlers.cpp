@@ -1,6 +1,7 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "UObject/UObjectIterator.h"
 
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Engine/ExponentialHeightFog.h"
@@ -107,71 +108,52 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       return true;
     }
 
-    UClass *LightClass = nullptr;
-    if (LightClassStr == TEXT("DirectionalLight"))
-      LightClass = ADirectionalLight::StaticClass();
-    else if (LightClassStr == TEXT("PointLight"))
-      LightClass = APointLight::StaticClass();
-    else if (LightClassStr == TEXT("SpotLight"))
-      LightClass = ASpotLight::StaticClass();
-    else if (LightClassStr == TEXT("RectLight"))
-      LightClass = ARectLight::StaticClass();
-    else {
-      // Dynamic fallback: Try to resolve any light class by name
-      LightClass = ResolveUClass(LightClassStr);
+    // Dynamic resolution with heuristics
+    UClass *LightClass = ResolveUClass(LightClassStr);
 
-      // Try with "A" prefix for actor classes (e.g., "SkyLight" -> "ASkyLight")
-      if (!LightClass && !LightClassStr.StartsWith(TEXT("A"))) {
-        LightClass =
-            ResolveUClass(FString::Printf(TEXT("A%s"), *LightClassStr));
-      }
+    // Try finding with 'A' prefix (standard Actor prefix)
+    if (!LightClass) {
+      LightClass = ResolveUClass(TEXT("A") + LightClassStr);
+    }
 
-      // Validate the resolved class is actually a light actor
-      if (!LightClass || !LightClass->IsChildOf(ALight::StaticClass())) {
-        SendAutomationError(
-            RequestingSocket, RequestId,
-            FString::Printf(
-                TEXT("Light class not found or not a light type: %s"),
-                *LightClassStr),
-            TEXT("INVALID_ARGUMENT"));
-        return true;
-      }
+    if (!LightClass || !LightClass->IsChildOf(ALight::StaticClass())) {
+      SendAutomationError(
+          RequestingSocket, RequestId,
+          FString::Printf(TEXT("Invalid light class: %s"), *LightClassStr),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
     }
 
     FVector Location = FVector::ZeroVector;
-    const TSharedPtr<FJsonObject> *LocObj;
-    if (Payload->TryGetObjectField(TEXT("location"), LocObj)) {
-      Location.X = (*LocObj)->GetNumberField(TEXT("x"));
-      Location.Y = (*LocObj)->GetNumberField(TEXT("y"));
-      Location.Z = (*LocObj)->GetNumberField(TEXT("z"));
+    const TSharedPtr<FJsonObject> *LocPtr;
+    if (Payload->TryGetObjectField(TEXT("location"), LocPtr)) {
+      Location.X = (*LocPtr)->GetNumberField(TEXT("x"));
+      Location.Y = (*LocPtr)->GetNumberField(TEXT("y"));
+      Location.Z = (*LocPtr)->GetNumberField(TEXT("z"));
     }
 
     FRotator Rotation = FRotator::ZeroRotator;
-    const TSharedPtr<FJsonObject> *RotObj;
-    if (Payload->TryGetObjectField(TEXT("rotation"), RotObj)) {
-      Rotation.Pitch = (*RotObj)->GetNumberField(TEXT("pitch"));
-      Rotation.Yaw = (*RotObj)->GetNumberField(TEXT("yaw"));
-      Rotation.Roll = (*RotObj)->GetNumberField(TEXT("roll"));
+    const TSharedPtr<FJsonObject> *RotPtr;
+    if (Payload->TryGetObjectField(TEXT("rotation"), RotPtr)) {
+      Rotation.Pitch = (*RotPtr)->GetNumberField(TEXT("pitch"));
+      Rotation.Yaw = (*RotPtr)->GetNumberField(TEXT("yaw"));
+      Rotation.Roll = (*RotPtr)->GetNumberField(TEXT("roll"));
     }
 
-    AActor *NewLight = nullptr;
-    UWorld *TargetWorld = (GEditor->PlayWorld) ? GEditor->PlayWorld : nullptr;
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-    if (TargetWorld) {
-      // PIE Path
-      FActorSpawnParameters SpawnParams;
-      SpawnParams.SpawnCollisionHandlingOverride =
-          ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-      NewLight = TargetWorld->SpawnActor(LightClass, &Location, &Rotation,
-                                         SpawnParams);
-    } else {
-      // Editor Path
-      NewLight = ActorSS->SpawnActorFromClass(LightClass, Location, Rotation);
-      // Explicitly set location/rotation
-      if (NewLight) {
-        NewLight->SetActorLocationAndRotation(
-            Location, Rotation, false, nullptr, ETeleportType::TeleportPhysics);
-      }
+    // Fix: Declare NewLight before use
+    AActor *NewLight = ActorSS->GetWorld()->SpawnActor(LightClass, &Location,
+                                                       &Rotation, SpawnParams);
+
+    // Explicitly set location/rotation
+    if (NewLight) {
+      // Set label immediately
+      NewLight->SetActorLabel(LightClassStr);
+      NewLight->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
+                                            ETeleportType::TeleportPhysics);
     }
 
     if (!NewLight) {

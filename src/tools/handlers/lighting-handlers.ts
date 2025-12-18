@@ -141,6 +141,9 @@ export async function handleLightingTools(action: string, args: any, tools: IToo
         useTemplate: args.useTemplate
       }));
     }
+    case 'list_light_types': {
+      return cleanObject(await tools.lightingTools.listLightTypes());
+    }
     default:
       throw new Error(`Unknown lighting action: ${action}`);
   }

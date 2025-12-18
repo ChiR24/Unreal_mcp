@@ -30,6 +30,17 @@ export class LightingTools {
   }
 
   /**
+   * List available light types (classes)
+   */
+  async listLightTypes() {
+    if (!this.automationBridge) {
+      throw new Error('Automation Bridge required to list light types');
+    }
+    const response = await this.automationBridge.sendAutomationRequest('list_light_types', {});
+    return response;
+  }
+
+  /**
    * Spawn a light actor using the Automation Bridge.
    * @param lightClass The Unreal light class name (e.g. 'DirectionalLight', 'PointLight')
    * @param params Light spawn parameters
