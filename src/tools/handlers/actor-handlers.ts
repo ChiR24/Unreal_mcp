@@ -1,4 +1,3 @@
-import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import { normalizeArgs } from './argument-helper.js';
