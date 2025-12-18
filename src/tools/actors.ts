@@ -308,12 +308,22 @@ export class ActorTools extends BaseTool implements IActorTools {
     if (typeof actorName !== 'string' || actorName.trim().length === 0) {
       throw new Error('Invalid actorName');
     }
-    return this.sendRequest<StandardActionResponse>('get_transform', { actorName }, 'control_actor')
-      .then(response => {
-        // If response is standardized, extract data or return as is.
-        // For now, return the full response which includes data.
-        return response;
-      });
+    const response = await this.sendRequest<StandardActionResponse>('get_transform', { actorName }, 'control_actor');
+    if (!response.success) {
+      return { success: false, error: response.error || `Failed to get transform for actor ${actorName}` };
+    }
+
+    // Extract transform data from nested response (data.data or data or result)
+    const rawData: any = response.data ?? response.result ?? response;
+    const data: any = rawData?.data ?? rawData;
+
+    return {
+      success: true,
+      message: 'Transform retrieved',
+      location: data.location ?? data.Location,
+      rotation: data.rotation ?? data.Rotation,
+      scale: data.scale ?? data.Scale
+    };
   }
 
   async setVisibility(params: { actorName: string; visible: boolean }) {

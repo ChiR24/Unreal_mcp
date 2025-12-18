@@ -1046,7 +1046,8 @@ Supported actions: create_node, delete_node, connect_pins, break_pin_links, set_
           type: 'string',
           enum: [
             'create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property',
-            'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details'
+            'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
+            'list_node_types', 'set_pin_default_value'
           ],
           description: 'Action'
         },

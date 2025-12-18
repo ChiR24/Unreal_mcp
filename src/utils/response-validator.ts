@@ -27,114 +27,130 @@ function buildSummaryText(toolName: string, payload: unknown): string {
     return `${toolName} responded`;
   }
 
-  // 1. Check for specific "data" or "result" wrapper
+  // Recursively flatten data/result wrappers into effective payload
   const effectivePayload: Record<string, any> = { ...(payload as object) };
-  if (isRecord(effectivePayload.data)) {
-    Object.assign(effectivePayload, effectivePayload.data);
-  }
-  if (isRecord(effectivePayload.result)) {
-    Object.assign(effectivePayload, effectivePayload.result);
-  }
+
+  const flattenWrappers = (obj: Record<string, any>, depth = 0): void => {
+    if (depth > 5) return; // Prevent infinite loops
+    if (isRecord(obj.data)) {
+      Object.assign(obj, obj.data);
+      delete obj.data;
+      flattenWrappers(obj, depth + 1);
+    }
+    if (isRecord(obj.result)) {
+      Object.assign(obj, obj.result);
+      delete obj.result;
+      flattenWrappers(obj, depth + 1);
+    }
+  };
+  flattenWrappers(effectivePayload);
 
   const parts: string[] = [];
+  const addedKeys = new Set<string>();
 
-  // 2. Identify "List" responses (Arrays) - Prioritize showing content
-  const listKeys = ['actors', 'levels', 'assets', 'folders', 'blueprints', 'components', 'pawnClasses', 'foliageTypes', 'nodes', 'tracks', 'bindings', 'keys'];
-  for (const key of listKeys) {
-    if (Array.isArray(effectivePayload[key])) {
-      const arr = effectivePayload[key] as any[];
-      const names = arr.map(i => isRecord(i) ? (i.name || i.path || i.id || i.assetName || i.objectPath || i.packageName || i.nodeName || '<?>') : String(i));
-      const count = arr.length;
-      const preview = names.slice(0, 100).join(', '); // Show up to 100
-      const suffix = count > 100 ? `, ... (+${count - 100} more)` : '';
-      parts.push(`${key}: ${preview}${suffix} (Total: ${count})`);
-    }
-  }
+  // Keys to skip (internal/redundant)
+  const skipKeys = new Set(['requestId', 'type', 'data', 'result', 'warnings']);
 
-  // 3. Identify "Entity" operations (Single significant object)
-  if (typeof effectivePayload.actor === 'string' || isRecord(effectivePayload.actor)) {
-    const a = effectivePayload.actor;
-    const name = isRecord(a) ? (a.name || a.path) : a;
-    const loc = isRecord(effectivePayload.location) ? ` at [${effectivePayload.location.x},${effectivePayload.location.y},${effectivePayload.location.z}]` : '';
-    parts.push(`Actor: ${name}${loc}`);
-  }
+  // Helper to format a value for display
+  const formatValue = (val: unknown): string => {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'string') return val.length > 150 ? val.slice(0, 150) + '...' : val;
+    if (typeof val === 'number' || typeof val === 'boolean') return String(val);
 
-  if (typeof effectivePayload.asset === 'string' || isRecord(effectivePayload.asset)) {
-    const a = effectivePayload.asset;
-    const path = isRecord(a) ? (a.path || a.name) : a;
-    parts.push(`Asset: ${path}`);
-  }
-
-  if (typeof effectivePayload.blueprint === 'string' || isRecord(effectivePayload.blueprint)) {
-    const bp = effectivePayload.blueprint;
-    const name = isRecord(bp) ? (bp.name || bp.path || effectivePayload.blueprintPath) : bp;
-    parts.push(`Blueprint: ${name}`);
-  }
-
-  if (typeof effectivePayload.sequence === 'string' || isRecord(effectivePayload.sequence)) {
-    const seq = effectivePayload.sequence;
-    const name = isRecord(seq) ? (seq.name || seq.path) : seq;
-    parts.push(`Sequence: ${name}`);
-  }
-
-  // 4. Generic Key-Value Summary (Contextual)
-  // Added: sequencePath, graphName, nodeName, variableName, memberName, scriptName, etc.
-  const usefulKeys = [
-    'success', 'error', 'message', 'assets', 'folders', 'count', 'totalCount',
-    'saved', 'valid', 'issues', 'class', 'skeleton', 'parent',
-    'package', 'dependencies', 'graph', 'tags', 'metadata', 'properties'
-  ];
-
-  for (const key of usefulKeys) {
-    if (effectivePayload[key] !== undefined && effectivePayload[key] !== null) {
-      const val = effectivePayload[key];
-      // Special handling for objects like metadata
-      if (typeof val === 'object') {
-        if (key === 'metadata' || key === 'properties' || key === 'tags') {
-          const entries = Object.entries(val as object);
-          // Format as "Key=Value", skip generic types if possible, or just show raw
-          const formatted = entries.map(([k, v]) => `${k}=${v}`);
-          const limit = 50; // Show more items as requested
-          parts.push(`${key}: { ${formatted.slice(0, limit).join(', ')}${formatted.length > limit ? '...' : ''} }`);
-          continue;
+    // Handle arrays - show items with names/paths
+    if (Array.isArray(val)) {
+      if (val.length === 0) return '[] (0)';
+      const items = val.slice(0, 30).map(v => {
+        if (isRecord(v)) {
+          // Try common identifier fields
+          return v.name || v.path || v.id || v.nodeId || v.nodeName || v.className ||
+            v.displayName || v.type || v.assetPath || v.objectPath ||
+            JSON.stringify(v).slice(0, 50);
         }
-        // Try to find a name if it's an object
-        // Skip complex objects unless handled above
-        continue;
+        return String(v);
+      });
+      const suffix = val.length > 30 ? `, ... (+${val.length - 30} more)` : '';
+      return `[${items.join(', ')}${suffix}] (${val.length})`;
+    }
+
+    // Handle transform-like objects (location/rotation/scale)
+    if (isRecord(val)) {
+      const keys = Object.keys(val);
+      // Check if it looks like a 3D vector/transform
+      if (keys.some(k => ['x', 'y', 'z', 'pitch', 'yaw', 'roll'].includes(k))) {
+        const x = val.x ?? val.pitch ?? 0;
+        const y = val.y ?? val.yaw ?? 0;
+        const z = val.z ?? val.roll ?? 0;
+        return `[${x}, ${y}, ${z}]`;
       }
+      // Generic object - show key=value pairs
+      const entries = Object.entries(val).slice(0, 8);
+      const formatted = entries.map(([k, v]) => {
+        const vStr = typeof v === 'object' ? JSON.stringify(v).slice(0, 40) : String(v);
+        return `${k}=${vStr}`;
+      });
+      return `{ ${formatted.join(', ')}${keys.length > 8 ? ' ...' : ''} }`;
+    }
 
-      const strVal = String(val);
-      // Avoid traversing huge strings
-      if (strVal.length > 100) continue;
+    return String(val);
+  };
 
-      if (!parts.some(p => p.includes(strVal))) {
-        parts.push(`${key}: ${strVal}`);
+  // Process all keys in priority order
+  // 1. First add 'success' and 'error' at the start
+  for (const key of ['success', 'error']) {
+    if (effectivePayload[key] !== undefined && !addedKeys.has(key)) {
+      const formatted = formatValue(effectivePayload[key]);
+      if (formatted) {
+        parts.push(`${key}: ${formatted}`);
+        addedKeys.add(key);
       }
     }
   }
 
-  // 5. Add standard status messages LAST
-  const success = typeof payload.success === 'boolean' ? payload.success : undefined;
-  const message = typeof payload.message === 'string' ? normalizeText(payload.message) : '';
-  const error = typeof payload.error === 'string' ? normalizeText(payload.error) : '';
+  // 2. Then add ALL other keys dynamically
+  let hasArrays = false;
+  for (const [key, val] of Object.entries(effectivePayload)) {
+    if (addedKeys.has(key)) continue;
+    if (skipKeys.has(key)) continue;
+    if (val === undefined || val === null) continue;
+    if (typeof val === 'string' && val.trim() === '') continue;
 
-  if (parts.length > 0) {
-    if (message && message.toLowerCase() !== 'success') {
+    // Skip 'message' for now - handle later to avoid duplication
+    if (key === 'message') continue;
+
+    // Track if we have arrays (to skip duplicate count/totalCount later)
+    if (Array.isArray(val) && val.length > 0) hasArrays = true;
+
+    // Skip count/totalCount if we already have arrays showing counts
+    if ((key === 'count' || key === 'totalCount') && hasArrays) continue;
+
+    const formatted = formatValue(val);
+    if (formatted) {
+      parts.push(`${key}: ${formatted}`);
+      addedKeys.add(key);
+    }
+  }
+
+  // 3. Handle message last - but skip if it duplicates existing info
+  const message = typeof effectivePayload.message === 'string' ? normalizeText(effectivePayload.message) : '';
+  if (message && message.toLowerCase() !== 'success') {
+    // Skip if message duplicates count info
+    const isDuplicateInfo = /^(found|listed|retrieved|got|loaded|created|deleted|saved|spawned)\s+\d+/i.test(message) ||
+      /Folders:\s*\[/.test(message) ||
+      /\d+\s+(assets?|folders?|items?|actors?|components?)\s+(and|in|at)/i.test(message);
+
+    // Also skip if message content is already represented in parts
+    const messageInParts = parts.some(p => p.toLowerCase().includes(message.toLowerCase().slice(0, 30)));
+
+    if (!isDuplicateInfo && !messageInParts) {
       parts.push(message);
     }
-  } else {
-    // No data parts, rely on message/error
-    if (message) parts.push(message);
-    if (error) parts.push(`Error: ${error}`);
-    if (parts.length === 0 && success !== undefined) {
-      parts.push(success ? 'Success' : 'Failed');
-    }
   }
 
-  // 6. Warnings
-  const warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+  // 4. Warnings at end
+  const warnings = Array.isArray(effectivePayload.warnings) ? effectivePayload.warnings : [];
   if (warnings.length > 0) {
-    parts.push(`Warnings: ${warnings.length}`);
+    parts.push(`Warnings: ${warnings.map((w: any) => typeof w === 'string' ? w : JSON.stringify(w)).join('; ')}`);
   }
 
   return parts.length > 0 ? parts.join(' | ') : `${toolName} responded`;
