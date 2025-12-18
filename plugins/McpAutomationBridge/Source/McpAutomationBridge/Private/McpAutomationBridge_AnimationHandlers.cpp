@@ -218,7 +218,7 @@ static void ApplyBlendSpaceConfiguration(UObject *BlendSpaceAsset,
         * current editor world.                                                \
         *                                                                      \
         * Skips empty or whitespace-only commands. If any command fails or the \
-        * editor/world is unavailable, an explanatory message is written to                             \
+        * editor/world is unavailable, an explanatory message is written to    \
         * OutErrorMessage.                                                     \
         *                                                                      \
         * @param Commands Array of editor command strings to execute.          \
@@ -795,15 +795,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
             {TEXT("plane"), TEXT("Aircraft")}};
 
         const FString *VehicleTypePtr = VehicleTypeMap.Find(NormalizedType);
-        if (!VehicleTypePtr) {
-          Message = TEXT(
-              "Invalid vehicleType: expected Car, Bike, Tank, or Aircraft");
-          ErrorCode = TEXT("INVALID_ARGUMENT");
-          Resp->SetStringField(TEXT("error"), Message);
-        } else {
+        // Use mapped value or passthrough raw value for unknown types
+        FString FinalVehicleType =
+            VehicleTypePtr ? *VehicleTypePtr : VehicleTypeRaw;
+
+        {
           TArray<FString> Commands;
           Commands.Add(FString::Printf(TEXT("CreateVehicle %s %s"),
-                                       *VehicleName, **VehicleTypePtr));
+                                       *VehicleName, *FinalVehicleType));
 
           const TArray<TSharedPtr<FJsonValue>> *WheelsArray = nullptr;
           if (Payload->TryGetArrayField(TEXT("wheels"), WheelsArray) &&
