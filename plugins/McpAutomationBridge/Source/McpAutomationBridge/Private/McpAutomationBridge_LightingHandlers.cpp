@@ -43,6 +43,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       !Lower.StartsWith(TEXT("setup_global_illumination")) &&
       !Lower.StartsWith(TEXT("configure_shadows")) &&
       !Lower.StartsWith(TEXT("set_exposure")) &&
+      !Lower.StartsWith(TEXT("list_light_types")) &&
       !Lower.StartsWith(TEXT("set_ambient_occlusion"))) {
     return false;
   }
@@ -61,6 +62,38 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("EditorActorSubsystem not available"),
                         TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+    return true;
+  }
+
+  if (Lower == TEXT("list_light_types")) {
+    TArray<TSharedPtr<FJsonValue>> Types;
+    // Add common shortcuts first
+    Types.Add(MakeShared<FJsonValueString>(TEXT("DirectionalLight")));
+    Types.Add(MakeShared<FJsonValueString>(TEXT("PointLight")));
+    Types.Add(MakeShared<FJsonValueString>(TEXT("SpotLight")));
+    Types.Add(MakeShared<FJsonValueString>(TEXT("RectLight")));
+
+    // Discover all ALight subclasses via reflection
+    TSet<FString> AddedNames;
+    AddedNames.Add(TEXT("DirectionalLight"));
+    AddedNames.Add(TEXT("PointLight"));
+    AddedNames.Add(TEXT("SpotLight"));
+    AddedNames.Add(TEXT("RectLight"));
+
+    for (TObjectIterator<UClass> It; It; ++It) {
+      if (It->IsChildOf(ALight::StaticClass()) &&
+          !It->HasAnyClassFlags(CLASS_Abstract) &&
+          !AddedNames.Contains(It->GetName())) {
+        Types.Add(MakeShared<FJsonValueString>(It->GetName()));
+        AddedNames.Add(It->GetName());
+      }
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetArrayField(TEXT("types"), Types);
+    Resp->SetNumberField(TEXT("count"), Types.Num());
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Available light types"), Resp);
     return true;
   }
 
@@ -84,11 +117,25 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     else if (LightClassStr == TEXT("RectLight"))
       LightClass = ARectLight::StaticClass();
     else {
-      SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Unknown light class: %s"), *LightClassStr),
-          TEXT("INVALID_ARGUMENT"));
-      return true;
+      // Dynamic fallback: Try to resolve any light class by name
+      LightClass = ResolveUClass(LightClassStr);
+
+      // Try with "A" prefix for actor classes (e.g., "SkyLight" -> "ASkyLight")
+      if (!LightClass && !LightClassStr.StartsWith(TEXT("A"))) {
+        LightClass =
+            ResolveUClass(FString::Printf(TEXT("A%s"), *LightClassStr));
+      }
+
+      // Validate the resolved class is actually a light actor
+      if (!LightClass || !LightClass->IsChildOf(ALight::StaticClass())) {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(
+                TEXT("Light class not found or not a light type: %s"),
+                *LightClassStr),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
     }
 
     FVector Location = FVector::ZeroVector;

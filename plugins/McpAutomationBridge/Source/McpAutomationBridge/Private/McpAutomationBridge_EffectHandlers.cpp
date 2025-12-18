@@ -59,6 +59,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                                Lower.StartsWith(TEXT("create_effect"));
   if (!bIsCreateEffect && !Lower.StartsWith(TEXT("spawn_")) &&
       !Lower.Equals(TEXT("set_niagara_parameter")) &&
+      !Lower.Equals(TEXT("list_debug_shapes")) &&
       !Lower.Equals(TEXT("clear_debug_shapes")))
     return false;
 
@@ -71,6 +72,29 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     SendAutomationResponse(RequestingSocket, RequestId, bOk, Msg, ResObj,
                            ErrCode);
   };
+
+  // Discovery: list available debug shape types
+  if (Lower.Equals(TEXT("list_debug_shapes"))) {
+    TArray<TSharedPtr<FJsonValue>> Shapes;
+    Shapes.Add(MakeShared<FJsonValueString>(TEXT("sphere")));
+    Shapes.Add(MakeShared<FJsonValueString>(TEXT("box")));
+    Shapes.Add(MakeShared<FJsonValueString>(TEXT("circle")));
+    Shapes.Add(MakeShared<FJsonValueString>(TEXT("line")));
+    Shapes.Add(MakeShared<FJsonValueString>(TEXT("point")));
+    Shapes.Add(MakeShared<FJsonValueString>(TEXT("coordinate")));
+    Shapes.Add(MakeShared<FJsonValueString>(TEXT("cylinder")));
+    Shapes.Add(MakeShared<FJsonValueString>(TEXT("cone")));
+    Shapes.Add(MakeShared<FJsonValueString>(TEXT("capsule")));
+    Shapes.Add(MakeShared<FJsonValueString>(TEXT("arrow")));
+    Shapes.Add(MakeShared<FJsonValueString>(TEXT("plane")));
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetArrayField(TEXT("shapes"), Shapes);
+    Resp->SetNumberField(TEXT("count"), Shapes.Num());
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Available debug shape types"), Resp);
+    return true;
+  }
 
   // Handle create_effect tool with sub-actions
   if (Lower.Equals(TEXT("clear_debug_shapes"))) {

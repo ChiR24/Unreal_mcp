@@ -2375,6 +2375,39 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
   if (EffectiveAction == TEXT("sequence_remove_track"))
     return HandleSequenceRemoveTrack(RequestId, LocalPayload, RequestingSocket);
 
+  if (EffectiveAction == TEXT("sequence_list_track_types")) {
+    // Discovery: list available track types
+    TArray<TSharedPtr<FJsonValue>> Types;
+    // Add common shortcuts first
+    Types.Add(MakeShared<FJsonValueString>(TEXT("transform")));
+    Types.Add(MakeShared<FJsonValueString>(TEXT("3dtransform")));
+    Types.Add(MakeShared<FJsonValueString>(TEXT("audio")));
+    Types.Add(MakeShared<FJsonValueString>(TEXT("event")));
+
+    // Discover all UMovieSceneTrack subclasses via reflection
+    TSet<FString> AddedNames;
+    AddedNames.Add(TEXT("transform"));
+    AddedNames.Add(TEXT("3dtransform"));
+    AddedNames.Add(TEXT("audio"));
+    AddedNames.Add(TEXT("event"));
+
+    for (TObjectIterator<UClass> It; It; ++It) {
+      if (It->IsChildOf(UMovieSceneTrack::StaticClass()) &&
+          !It->HasAnyClassFlags(CLASS_Abstract) &&
+          !AddedNames.Contains(It->GetName())) {
+        Types.Add(MakeShared<FJsonValueString>(It->GetName()));
+        AddedNames.Add(It->GetName());
+      }
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetArrayField(TEXT("types"), Types);
+    Resp->SetNumberField(TEXT("count"), Types.Num());
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Available track types"), Resp);
+    return true;
+  }
+
   if (EffectiveAction == TEXT("sequence_add_track")) {
     // add_track action: Add a track to a binding in a level sequence
     FString SeqPath = ResolveSequencePath(LocalPayload);
@@ -2481,8 +2514,30 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
       }
     }
 
-    // For master tracks or other track types, would need additional
-    // implementation based on available track classes
+    // Dynamic fallback: Try to resolve any track class by name
+    if (!NewTrack) {
+      UClass *TrackClass = ResolveUClass(TrackType);
+
+      // Try with common prefixes
+      if (!TrackClass) {
+        TrackClass = ResolveUClass(
+            FString::Printf(TEXT("UMovieScene%sTrack"), *TrackType));
+      }
+      if (!TrackClass) {
+        TrackClass = ResolveUClass(
+            FString::Printf(TEXT("MovieScene%sTrack"), *TrackType));
+      }
+
+      // Validate it's actually a track class
+      if (TrackClass &&
+          TrackClass->IsChildOf(UMovieSceneTrack::StaticClass())) {
+        if (BindingGuid.IsValid()) {
+          NewTrack = MovieScene->AddTrack(TrackClass, BindingGuid);
+        } else {
+          NewTrack = MovieScene->AddTrack(TrackClass);
+        }
+      }
+    }
 
     if (NewTrack) {
       Sequence->MarkPackageDirty();
