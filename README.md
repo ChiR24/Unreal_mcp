@@ -90,7 +90,8 @@ Regenerate project files after copying.
 3. Select the `McpAutomationBridge` folder
 
 **Video Guide:**
-https://github.com/user-attachments/assets/17bfb47d-d455-4fc8-be16-ec12c23fe211
+
+https://github.com/user-attachments/assets/d8b86ebc-4364-48c9-9781-de854bf3ef7d
 
 ### Step 3: Enable Required Plugins
 

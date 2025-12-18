@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.1] - 2025-12-17
+
+> [!WARNING]
+> ### ⚠️ Breaking Changes
+> - **Standardized Return Types** - All tool methods now return `StandardActionResponse` type instead of generic objects. Consumers must update their code to handle the new response structure with `success`, `data`, `warnings`, and `error` fields. (`5e615c5`)
+> - **Test Suite Structure** - New test files added and existing tests enhanced with comprehensive coverage.
+
+### 🔄 Changed
+
+<details>
+<summary><b>🎯 Standardized Tool Interfaces</b> (<code>5e615c5</code>)</summary>
+
+| Component | Change |
+|-----------|--------|
+| Tool Methods | Updated all tool methods to return `StandardActionResponse` type for consistency |
+| Tool Interfaces | Modified interfaces (assets, blueprint, editor, environment, foliage, landscape, level, sequence) to use standardized response format |
+| Type System | Added proper type imports and exports for `StandardActionResponse` |
+| Handler Files | Updated to work with new standardized response types |
+| Response Structure | All implementations return correct structure with `success`/`error` fields |
+
+</details>
+
+### ✨ Added
+
+<details>
+<summary><b>🧪 Comprehensive Test Suite</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/25">#25</a>)</summary>
+
+| Feature | Description |
+|---------|-------------|
+| **Test Coverage** | Added comprehensive test files with success, error, and edge cases |
+| **GraphQL DataLoader** | Implemented N+1 query optimization with batching and caching |
+| **Type-Safe Interfaces** | Added type-safe automation response interfaces for better error handling |
+| **Utility Tests** | Added tests for core utilities (normalize, safe-json, validation) |
+| **Real-World Scenarios** | Enhanced coverage with real-world scenarios and cleanup procedures |
+| **New Test Suites** | Audio, lighting, performance, input, and asset graph management |
+| **Enhanced Logging** | Improved diagnostic logging throughout tools |
+| **Documentation** | Updated supported Unreal Engine versions (5.0-5.7) in testing documentation |
+
+</details>
+
+### 🧹 Maintenance
+
+- 🗑️ **Prompts Module Cleanup** - Removed prompts module and related GraphQL prompt functionality ([#26](https://github.com/ChiR24/Unreal_mcp/pull/26))
+- 🔒 **Security Updates** - Removed unused dependencies (axios, json5, yargs) from package.json for security (`5e615c5`)
+- 📐 **Tool Interfaces** - Enhanced asset and level tools with security validation and timeout handling (`5e615c5`)
+
+### 📦 Dependencies
+
+<details>
+<summary><b>GitHub Actions Updates</b></summary>
+
+| Package | Update | PR | Commit |
+|---------|--------|-----|--------|
+| `actions/checkout` | v4 → v6 | [#23](https://github.com/ChiR24/Unreal_mcp/pull/23) | `4c6b3b5` |
+| `actions/setup-node` | v4 → v6 | [#22](https://github.com/ChiR24/Unreal_mcp/pull/22) | `71aa35c` |
+| `softprops/action-gh-release` | 2.0.8 → 2.5.0 | [#21](https://github.com/ChiR24/Unreal_mcp/pull/21) | `b6c8a46` |
+
+</details>
+
+<details>
+<summary><b>NPM Package Updates</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/24">#24</a>, <code>5e615c5</code>)</summary>
+
+| Package | Update |
+|---------|--------|
+| `@modelcontextprotocol/sdk` | 1.25.0 → 1.25.1 |
+| `@types/node` | 25.0.2 → 25.0.3 |
+
+</details>
+
+---
+
 ## 🏷️ [0.5.0] - 2025-12-16
 
 > [!IMPORTANT]
