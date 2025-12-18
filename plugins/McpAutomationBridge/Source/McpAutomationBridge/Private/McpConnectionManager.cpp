@@ -7,7 +7,6 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
-
 // Reuse the log category from the subsystem for consistency
 // (It is declared extern in McpAutomationBridgeSubsystem.h)
 

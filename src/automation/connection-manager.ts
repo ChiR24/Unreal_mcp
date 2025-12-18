@@ -55,6 +55,16 @@ export class ConnectionManager extends EventEmitter {
         socket.on('pong', () => {
             this.lastMessageAt = new Date();
         });
+
+        // Auto-cleanup on close or error
+        socket.once('close', () => {
+            this.removeSocket(socket);
+        });
+
+        socket.once('error', (error) => {
+            this.log.error('Socket error in ConnectionManager', error);
+            this.removeSocket(socket);
+        });
     }
 
     public removeSocket(socket: WebSocket): SocketInfo | undefined {

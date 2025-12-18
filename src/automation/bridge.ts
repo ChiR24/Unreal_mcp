@@ -58,7 +58,6 @@ export class AutomationBridge extends EventEmitter {
     private lastHandshakeFailure?: { reason: string; at: Date };
     private lastDisconnect?: { code: number; reason: string; at: Date };
     private lastError?: { message: string; at: Date };
-    private requestQueue: Array<() => void> = [];
     private queuedRequestItems: Array<{ resolve: (v: any) => void; reject: (e: any) => void; action: string; payload: any; options: any }> = [];
     private connectionPromise?: Promise<void>;
     private connectionLock = false;
@@ -226,7 +225,6 @@ export class AutomationBridge extends EventEmitter {
 
                 this.connectionManager.registerSocket(socket, this.clientPort, metadata, remoteAddr, remotePort);
                 this.connectionManager.startHeartbeat();
-                this.flushQueue();
 
                 this.emitAutomation('connected', {
                     socket,
@@ -551,14 +549,6 @@ export class AutomationBridge extends EventEmitter {
             }
         }
         return sentCount > 0;
-    }
-
-    private flushQueue(): void {
-        if (this.requestQueue.length === 0) return;
-        this.log.info(`Flushing ${this.requestQueue.length} queued automation requests`);
-        const queue = [...this.requestQueue];
-        this.requestQueue = [];
-        queue.forEach(fn => fn());
     }
 
     private emitAutomation<K extends keyof AutomationBridgeEvents>(

@@ -2,6 +2,7 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import { normalizeArgs } from './argument-helper.js';
+import { ResponseFactory } from '../../utils/response-factory.js';
 
 type ActorActionHandler = (args: any, tools: ITools) => Promise<any>;
 
@@ -39,11 +40,11 @@ const handlers: Record<string, ActorActionHandler> = {
         // failure so tests can exercise timeout handling deterministically
         // without relying on editor performance.
         if (typeof timeoutMs === 'number' && timeoutMs > 0 && timeoutMs < 200) {
-            return cleanObject({
+            return {
                 success: false,
                 error: `Timeout too small for spawn operation: ${timeoutMs}ms`,
                 message: 'Timeout too small for spawn operation'
-            });
+            };
         }
 
         // For SplineActor alias, add SplineComponent automatically
@@ -255,11 +256,16 @@ const handlers: Record<string, ActorActionHandler> = {
 };
 
 export async function handleActorTools(action: string, args: any, tools: ITools) {
-    const handler = handlers[action];
-    if (handler) {
-        const res = await handler(args, tools);
-        return cleanObject(res);
+    try {
+        const handler = handlers[action];
+        if (handler) {
+            const res = await handler(args, tools);
+            return ResponseFactory.success(res);
+        }
+        // Fallback to direct bridge call or error
+        const res = await executeAutomationRequest(tools, 'control_actor', args);
+        return ResponseFactory.success(res);
+    } catch (error) {
+        return ResponseFactory.error(error);
     }
-    // Fallback to direct bridge call or error
-    return executeAutomationRequest(tools, 'control_actor', args);
 }
