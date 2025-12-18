@@ -17,6 +17,14 @@ export class ConnectionManager extends EventEmitter {
         super();
     }
 
+    /**
+     * Get the configured heartbeat interval in milliseconds.
+     * @returns The heartbeat interval or 0 if disabled
+     */
+    public getHeartbeatIntervalMs(): number {
+        return this.heartbeatIntervalMs;
+    }
+
     public registerSocket(
         socket: WebSocket,
         port: number,
@@ -46,6 +54,16 @@ export class ConnectionManager extends EventEmitter {
         // Handle WebSocket pong frames for heartbeat tracking
         socket.on('pong', () => {
             this.lastMessageAt = new Date();
+        });
+
+        // Auto-cleanup on close or error
+        socket.once('close', () => {
+            this.removeSocket(socket);
+        });
+
+        socket.once('error', (error) => {
+            this.log.error('Socket error in ConnectionManager', error);
+            this.removeSocket(socket);
         });
     }
 

@@ -230,7 +230,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
     // BaseTool unwraps the result, so 'response' is likely the payload itself.
     // However, if the result was null, 'response' might be the wrapper.
     // We handle both cases to be robust.
-    const resultObj = (response.result || response) as Record<string, any>;
+    const resultObj = (response.result || response) as Record<string, unknown>;
     return {
       success: true,
       message: 'Metadata retrieved',
@@ -310,8 +310,8 @@ export class AssetTools extends BaseTool implements IAssetTools {
         message: 'graph analyzed',
         analysis
       };
-    } catch (e: any) {
-      return { success: false, error: `Analysis failed: ${e.message} ` };
+    } catch (e: unknown) {
+      return { success: false, error: `Analysis failed: ${e instanceof Error ? e.message : String(e)} ` };
     }
   }
 

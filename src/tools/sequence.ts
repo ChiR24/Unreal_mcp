@@ -51,7 +51,7 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
       const result = response.result ?? response;
 
       return { success, message: response.message ?? undefined, error: response.success === false ? (response.error ?? response.message) : undefined, result, requestId: response.requestId } as any;
-    } catch (err: any) {
+    } catch (err: unknown) {
       return { success: false, error: String(err), message: String(err) } as const;
     }
   }

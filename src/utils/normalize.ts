@@ -4,47 +4,66 @@ export interface Rot3Obj { pitch: number; yaw: number; roll: number; }
 export type Vec3Tuple = [number, number, number];
 export type Rot3Tuple = [number, number, number];
 
-export function toVec3Object(input: any): Vec3Obj | null {
+/** Input that may represent a 3D vector */
+type VectorInput = Vec3Obj | Vec3Tuple | Record<string, unknown> | unknown[];
+
+/** Input that may represent a 3D rotation */
+type RotationInput = Rot3Obj | Rot3Tuple | Record<string, unknown> | unknown[];
+
+/**
+ * Convert various input formats to a Vec3 object
+ * @param input - Array, object with x/y/z or X/Y/Z properties
+ */
+export function toVec3Object(input: VectorInput | unknown): Vec3Obj | null {
   try {
     if (Array.isArray(input) && input.length === 3) {
       const [x, y, z] = input;
       if ([x, y, z].every(v => typeof v === 'number' && isFinite(v))) {
-        return { x, y, z };
+        return { x: x as number, y: y as number, z: z as number };
       }
     }
-    if (input && typeof input === 'object') {
-      const x = Number((input as any).x ?? (input as any).X);
-      const y = Number((input as any).y ?? (input as any).Y);
-      const z = Number((input as any).z ?? (input as any).Z);
+    if (input && typeof input === 'object' && !Array.isArray(input)) {
+      const obj = input as Record<string, unknown>;
+      const x = Number(obj.x ?? obj.X);
+      const y = Number(obj.y ?? obj.Y);
+      const z = Number(obj.z ?? obj.Z);
       if ([x, y, z].every(v => typeof v === 'number' && !isNaN(v) && isFinite(v))) {
         return { x, y, z };
       }
     }
-  } catch {}
+  } catch { }
   return null;
 }
 
-export function toRotObject(input: any): Rot3Obj | null {
+/**
+ * Convert various input formats to a Rotation object
+ * @param input - Array, object with pitch/yaw/roll or Pitch/Yaw/Roll properties
+ */
+export function toRotObject(input: RotationInput | unknown): Rot3Obj | null {
   try {
     if (Array.isArray(input) && input.length === 3) {
       const [pitch, yaw, roll] = input;
       if ([pitch, yaw, roll].every(v => typeof v === 'number' && isFinite(v))) {
-        return { pitch, yaw, roll };
+        return { pitch: pitch as number, yaw: yaw as number, roll: roll as number };
       }
     }
-    if (input && typeof input === 'object') {
-      const pitch = Number((input as any).pitch ?? (input as any).Pitch);
-      const yaw = Number((input as any).yaw ?? (input as any).Yaw);
-      const roll = Number((input as any).roll ?? (input as any).Roll);
+    if (input && typeof input === 'object' && !Array.isArray(input)) {
+      const obj = input as Record<string, unknown>;
+      const pitch = Number(obj.pitch ?? obj.Pitch);
+      const yaw = Number(obj.yaw ?? obj.Yaw);
+      const roll = Number(obj.roll ?? obj.Roll);
       if ([pitch, yaw, roll].every(v => typeof v === 'number' && !isNaN(v) && isFinite(v))) {
         return { pitch, yaw, roll };
       }
     }
-  } catch {}
+  } catch { }
   return null;
 }
 
-export function toVec3Tuple(input: any): Vec3Tuple | null {
+/**
+ * Convert vector input to a tuple format [x, y, z]
+ */
+export function toVec3Tuple(input: VectorInput | unknown): Vec3Tuple | null {
   const vec = toVec3Object(input);
   if (!vec) {
     return null;
@@ -53,7 +72,10 @@ export function toVec3Tuple(input: any): Vec3Tuple | null {
   return [x, y, z];
 }
 
-export function toRotTuple(input: any): Rot3Tuple | null {
+/**
+ * Convert rotation input to a tuple format [pitch, yaw, roll]
+ */
+export function toRotTuple(input: RotationInput | unknown): Rot3Tuple | null {
   const rot = toRotObject(input);
   if (!rot) {
     return null;

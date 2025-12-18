@@ -50,12 +50,12 @@ export class LevelTools extends BaseTool implements ILevelTools {
     // Security validation
     try {
       formatted = sanitizePath(formatted);
-    } catch (e: any) {
+    } catch (e: unknown) {
       // If sanitizePath fails, we should probably propagate that error, 
       // but normalizeLevelPath signature expects to return an object.
       // For now, let's log and rethrow or fallback? 
       // Throwing is safer as it prevents operation on invalid path.
-      throw new Error(`Security validation failed for level path: ${e.message}`);
+      throw new Error(`Security validation failed for level path: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     formatted = formatted.replace(/\.umap$/i, '');
@@ -322,8 +322,8 @@ export class LevelTools extends BaseTool implements ILevelTools {
         exportPath: params.exportPath,
         details: res
       } as StandardActionResponse;
-    } catch (e: any) {
-      return { success: false, error: `Export failed: ${e.message}` };
+    } catch (e: unknown) {
+      return { success: false, error: `Export failed: ${e instanceof Error ? e.message : String(e)}` };
     }
   }
 
@@ -356,8 +356,8 @@ export class LevelTools extends BaseTool implements ILevelTools {
         streaming: Boolean(params.streaming),
         details: res
       } as StandardActionResponse;
-    } catch (e: any) {
-      return { success: false, error: `Import failed: ${e.message}` };
+    } catch (e: unknown) {
+      return { success: false, error: `Import failed: ${e instanceof Error ? e.message : String(e)}` };
     }
   }
 

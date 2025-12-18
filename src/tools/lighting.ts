@@ -40,7 +40,7 @@ export class LightingTools {
       name: string;
       location?: [number, number, number];
       rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
-      properties?: Record<string, any>;
+      properties?: Record<string, unknown>;
     }
   ) {
     if (!this.automationBridge) {
@@ -48,7 +48,7 @@ export class LightingTools {
     }
 
     try {
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         lightClass,
         name: params.name,
       };
@@ -98,7 +98,7 @@ export class LightingTools {
     castShadows?: boolean;
     temperature?: number;
     useAsAtmosphereSunLight?: boolean;
-    properties?: Record<string, any>;
+    properties?: Record<string, unknown>;
   }) {
     const name = this.normalizeName(params.name);
     if (!this.automationBridge) {
@@ -149,7 +149,7 @@ export class LightingTools {
     const rot = params.rotation || [0, 0, 0];
 
     // Build properties for the light
-    const properties: Record<string, any> = params.properties || {};
+    const properties: Record<string, unknown> = params.properties || {};
     if (params.intensity !== undefined) {
       properties.intensity = params.intensity;
     }
@@ -175,9 +175,9 @@ export class LightingTools {
       });
 
       return { success: true, message: `Directional light '${name}' spawned` };
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Don't mask errors as "not implemented" - report the actual error from the bridge
-      return { success: false, error: `Failed to create directional light: ${e?.message ?? e}` } as any;
+      return { success: false, error: `Failed to create directional light: ${(e instanceof Error ? e.message : String(e)) ?? e}` };
     }
   }
 
@@ -247,7 +247,7 @@ export class LightingTools {
     }
 
     // Build properties for the light
-    const properties: Record<string, any> = {};
+    const properties: Record<string, unknown> = {};
     if (params.intensity !== undefined) {
       properties.intensity = params.intensity;
     }
@@ -273,9 +273,9 @@ export class LightingTools {
       });
 
       return { success: true, message: `Point light '${name}' spawned at ${location.join(', ')}` };
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Don't mask errors as "not implemented" - report the actual error from the bridge
-      return { success: false, error: `Failed to create point light: ${e?.message ?? e}` } as any;
+      return { success: false, error: `Failed to create point light: ${(e instanceof Error ? e.message : String(e)) ?? e}` };
     }
   }
 
@@ -369,7 +369,7 @@ export class LightingTools {
       }
     }
     // Build properties for the light
-    const properties: Record<string, any> = {};
+    const properties: Record<string, unknown> = {};
     if (params.intensity !== undefined) {
       properties.intensity = params.intensity;
     }
@@ -398,9 +398,9 @@ export class LightingTools {
       });
 
       return { success: true, message: `Spot light '${name}' spawned at ${params.location.join(', ')}` };
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Don't mask errors as "not implemented" - report the actual error from the bridge
-      return { success: false, error: `Failed to create spot light: ${e?.message ?? e}` } as any;
+      return { success: false, error: `Failed to create spot light: ${(e instanceof Error ? e.message : String(e)) ?? e}` };
     }
   }
 
@@ -485,7 +485,7 @@ export class LightingTools {
       }
     }
     // Build properties for the light
-    const properties: Record<string, any> = {};
+    const properties: Record<string, unknown> = {};
     if (params.intensity !== undefined) {
       properties.intensity = params.intensity;
     }
@@ -508,9 +508,9 @@ export class LightingTools {
       });
 
       return { success: true, message: `Rect light '${name}' spawned at ${params.location.join(', ')}` };
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Don't mask errors as "not implemented" - report the actual error from the bridge
-      return { success: false, error: `Failed to create rect light: ${e?.message ?? e}` } as any;
+      return { success: false, error: `Failed to create rect light: ${(e instanceof Error ? e.message : String(e)) ?? e}` };
     }
   }
 
@@ -581,13 +581,13 @@ export class LightingTools {
     }
 
     try {
-      const properties: Record<string, any> = {};
+      const properties: Record<string, unknown> = {};
       if (params.intensity !== undefined) properties.Intensity = params.intensity;
       if (params.castShadows !== undefined) properties.CastShadows = params.castShadows;
       if (params.realTimeCapture !== undefined) properties.RealTimeCapture = params.realTimeCapture;
       if (params.color) properties.LightColor = { r: params.color[0], g: params.color[1], b: params.color[2], a: 1.0 };
 
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         name,
         sourceType: params.sourceType || 'CapturedScene',
         location: params.location,
@@ -811,12 +811,12 @@ export class LightingTools {
         success: true,
         message: response.message || 'Lighting build started',
         ...(response.result || {})
-      } as any;
+      };
     } catch (error) {
       return {
         success: false,
         error: `Failed to build lighting: ${error instanceof Error ? error.message : String(error)}`
-      } as any;
+      };
     }
   }
 

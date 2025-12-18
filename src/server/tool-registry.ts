@@ -210,7 +210,7 @@ export class ToolRegistry {
 
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const { name } = request.params;
-            let args: any = request.params.arguments || {};
+            let args: Record<string, unknown> = request.params.arguments || {};
             const startTime = Date.now();
 
             const connected = await this.ensureConnected();
@@ -258,13 +258,13 @@ export class ToolRegistry {
                         const props = inputSchema.properties || {};
                         const required: string[] = Array.isArray(inputSchema.required) ? inputSchema.required : [];
                         const missing = required.filter((k: string) => {
-                            const v = (args as any)[k];
+                            const v = (args as Record<string, unknown>)[k];
                             if (v === undefined || v === null) return true;
                             if (typeof v === 'string' && v.trim() === '') return true;
                             return false;
                         });
 
-                        const primitiveProps: any = {};
+                        const primitiveProps: Record<string, unknown> = {};
                         for (const k of missing) {
                             const p = props[k];
                             if (!p || typeof p !== 'object') continue;

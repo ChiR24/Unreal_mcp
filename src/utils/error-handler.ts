@@ -17,60 +17,133 @@ export enum ErrorType {
 }
 
 /**
+ * Debug information attached to error responses in development mode
+ */
+interface ErrorResponseDebug {
+  errorType: ErrorType;
+  originalError: string;
+  stack?: string;
+  context?: Record<string, unknown>;
+  retriable: boolean;
+  scope: string;
+}
+
+/**
+ * Extended error response with optional debug info
+ */
+interface ErrorToolResponse extends BaseToolResponse {
+  _debug?: ErrorResponseDebug;
+}
+
+/**
+ * Represents any error object with common properties
+ */
+interface ErrorLike {
+  message?: string;
+  code?: string;
+  type?: string;
+  errorType?: string;
+  stack?: string;
+  response?: { status?: number };
+}
+
+/**
+ * Normalize any error type to ErrorLike interface
+ */
+function normalizeErrorToLike(error: unknown): ErrorLike {
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      stack: error.stack,
+      code: (error as NodeJS.ErrnoException).code
+    };
+  }
+  if (typeof error === 'object' && error !== null) {
+    const obj = error as Record<string, unknown>;
+    return {
+      message: typeof obj.message === 'string' ? obj.message : undefined,
+      code: typeof obj.code === 'string' ? obj.code : undefined,
+      type: typeof obj.type === 'string' ? obj.type : undefined,
+      errorType: typeof obj.errorType === 'string' ? obj.errorType : undefined,
+      stack: typeof obj.stack === 'string' ? obj.stack : undefined,
+      response: typeof obj.response === 'object' && obj.response !== null
+        ? {
+          status: typeof (obj.response as Record<string, unknown>).status === 'number'
+            ? (obj.response as Record<string, unknown>).status as number
+            : undefined
+        }
+        : undefined
+    };
+  }
+  return { message: String(error) };
+}
+
+/**
  * Consistent error handling for all tools
  */
 export class ErrorHandler {
   /**
    * Create a standardized error response
+   * @param error - The error object (can be Error, string, object with message, or unknown)
+   * @param toolName - Name of the tool that failed
+   * @param context - Optional additional context for debugging
    */
   static createErrorResponse(
-    error: any,
+    error: unknown,
     toolName: string,
-    context?: any
-  ): BaseToolResponse {
-    const errorType = this.categorizeError(error);
-    const userMessage = this.getUserFriendlyMessage(errorType, error);
-    const retriable = this.isRetriable(error);
-    const scope = context?.scope || `tool-call/${toolName}`;
-    
+    context?: Record<string, unknown>
+  ): ErrorToolResponse {
+    const errorObj = normalizeErrorToLike(error);
+    const errorType = this.categorizeError(errorObj);
+    const userMessage = this.getUserFriendlyMessage(errorType, errorObj);
+    const retriable = this.isRetriable(errorObj);
+    const scope = (context?.scope as string) || `tool-call/${toolName}`;
+    const errorMessage = errorObj.message || String(error);
+    const errorStack = errorObj.stack;
+
     log.error(`Tool ${toolName} failed:`, {
       type: errorType,
-      message: error.message || error,
+      message: errorMessage,
       retriable,
       scope,
       context
     });
 
-    return {
+    const response: ErrorToolResponse = {
       success: false,
       error: userMessage,
       message: `Failed to execute ${toolName}: ${userMessage}`,
-      retriable: retriable as any,
-      scope: scope as any,
-      // Add debug info in development
-      ...(process.env.NODE_ENV === 'development' && {
-        _debug: {
-          errorType,
-          originalError: error.message || String(error),
-          stack: error.stack,
-          context,
-          retriable,
-          scope
-        }
-      })
-    } as any;
+      retriable,
+      scope
+    };
+
+    // Add debug info in development
+    if (process.env.NODE_ENV === 'development') {
+      response._debug = {
+        errorType,
+        originalError: errorMessage,
+        stack: errorStack,
+        context,
+        retriable,
+        scope
+      };
+    }
+
+    return response;
   }
 
   /**
    * Categorize error by type
+   * @param error - The error to categorize
    */
-  private static categorizeError(error: any): ErrorType {
-    const explicitType = (error?.type || error?.errorType || '').toString().toUpperCase();
+  private static categorizeError(error: ErrorLike | Error | string): ErrorType {
+    const errorObj = typeof error === 'object' ? error as ErrorLike : null;
+    const explicitType = (errorObj?.type || errorObj?.errorType || '').toString().toUpperCase();
     if (explicitType && Object.values(ErrorType).includes(explicitType as ErrorType)) {
       return explicitType as ErrorType;
     }
 
-    const errorMessage = error?.message?.toLowerCase() || String(error).toLowerCase();
+    const errorMessage = (errorObj?.message || String(error)).toLowerCase();
 
     // Connection errors
     if (
@@ -122,49 +195,59 @@ export class ErrorHandler {
 
   /**
    * Get user-friendly error message
+   * @param type - The categorized error type
+   * @param error - The original error
    */
-  private static getUserFriendlyMessage(type: ErrorType, error: any): string {
-    const originalMessage = error.message || String(error);
+  private static getUserFriendlyMessage(type: ErrorType, error: ErrorLike | Error | string): string {
+    const originalMessage = (typeof error === 'object' && error !== null && 'message' in error)
+      ? (error as { message?: string }).message || String(error)
+      : String(error);
 
     switch (type) {
       case ErrorType.CONNECTION:
         return 'Failed to connect to Unreal Engine. Please ensure the Automation Bridge plugin is active and the editor is running.';
-      
+
       case ErrorType.VALIDATION:
         return `Invalid input: ${originalMessage}`;
-      
+
       case ErrorType.UNREAL_ENGINE:
         return `Unreal Engine error: ${originalMessage}`;
-      
+
       case ErrorType.PARAMETER:
         return `Invalid parameters: ${originalMessage}`;
-      
+
       case ErrorType.TIMEOUT:
         return 'Operation timed out. Unreal Engine may be busy or unresponsive.';
-      
+
       case ErrorType.EXECUTION:
         return `Execution failed: ${originalMessage}`;
-      
+
       default:
         return originalMessage;
     }
   }
 
-  /** Determine if an error is likely retriable */
-  private static isRetriable(error: any): boolean {
+  /**
+   * Determine if an error is likely retriable
+   * @param error - The error to check
+   */
+  private static isRetriable(error: ErrorLike | Error | string): boolean {
     try {
-      const code = (error?.code || '').toString().toUpperCase();
-      const msg = (error?.message || String(error) || '').toLowerCase();
-      const status = Number((error?.response?.status));
-      if (['ECONNRESET','ECONNREFUSED','ETIMEDOUT','EPIPE'].includes(code)) return true;
+      const errorObj = typeof error === 'object' ? error as ErrorLike : null;
+      const code = (errorObj?.code || '').toString().toUpperCase();
+      const msg = (errorObj?.message || String(error) || '').toLowerCase();
+      const status = Number(errorObj?.response?.status);
+      if (['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EPIPE'].includes(code)) return true;
       if (/timeout|timed out|network|connection|closed|unavailable|busy|temporar/.test(msg)) return true;
       if (!isNaN(status) && (status === 429 || (status >= 500 && status < 600))) return true;
-    } catch {}
+    } catch { }
     return false;
   }
 
   /**
    * Retry a function with exponential backoff
+   * @param fn - The async function to retry
+   * @param options - Retry configuration options
    */
   static async retryWithBackoff<T>(
     fn: () => Promise<T>,
@@ -173,14 +256,14 @@ export class ErrorHandler {
       initialDelay?: number;
       maxDelay?: number;
       backoffMultiplier?: number;
-      shouldRetry?: (error: any) => boolean;
+      shouldRetry?: (error: ErrorLike | Error | unknown) => boolean;
     } = {}
   ): Promise<T> {
     const maxRetries = options.maxRetries ?? 3;
     const initialDelay = options.initialDelay ?? 1000;
     const maxDelay = options.maxDelay ?? 10000;
     const multiplier = options.backoffMultiplier ?? 2;
-    const shouldRetry = options.shouldRetry ?? ((err) => this.isRetriable(err));
+    const shouldRetry = options.shouldRetry ?? ((err: unknown) => this.isRetriable(err as ErrorLike));
 
     let delay = initialDelay;
 
@@ -191,7 +274,7 @@ export class ErrorHandler {
         if (attempt === maxRetries || !shouldRetry(error)) {
           throw error;
         }
-        
+
         await new Promise(resolve => setTimeout(resolve, delay));
         delay = Math.min(delay * multiplier, maxDelay);
       }

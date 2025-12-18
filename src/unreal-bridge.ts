@@ -5,14 +5,59 @@ import { DEFAULT_AUTOMATION_HOST, DEFAULT_AUTOMATION_PORT } from './constants.js
 import { UnrealCommandQueue } from './utils/unreal-command-queue.js';
 import { CommandValidator } from './utils/command-validator.js';
 
+/** Connection event payload for automation bridge events */
+interface ConnectionEventInfo {
+  host?: string;
+  port?: number;
+  reason?: string;
+  error?: string;
+  [key: string]: unknown;
+}
+
+/** Result object from automation requests */
+interface AutomationResult {
+  value?: unknown;
+  propertyValue?: unknown;
+  message?: string;
+  warnings?: string[];
+  [key: string]: unknown;
+}
+
+/** Subsystems feature flags */
+interface SubsystemFlags {
+  unrealEditor?: boolean;
+  levelEditor?: boolean;
+  editorActor?: boolean;
+  [key: string]: unknown;
+}
+
+/** Engine version result */
+interface EngineVersionResult {
+  version?: string;
+  major?: number;
+  minor?: number;
+  patch?: number;
+  isUE56OrAbove?: boolean;
+  [key: string]: unknown;
+}
+
+/** Console command response */
+interface ConsoleCommandResponse {
+  success?: boolean;
+  message?: string;
+  error?: string;
+  transport?: string;
+  [key: string]: unknown;
+}
+
 export class UnrealBridge {
   private log = new Logger('UnrealBridge');
   private connected = false;
   private automationBridge?: AutomationBridge;
   private automationBridgeListeners?: {
-    connected: (info: any) => void;
-    disconnected: (info: any) => void;
-    handshakeFailed: (info: any) => void;
+    connected: (info: ConnectionEventInfo) => void;
+    disconnected: (info: ConnectionEventInfo) => void;
+    handshakeFailed: (info: ConnectionEventInfo) => void;
   };
 
   // Command queue for throttling
@@ -35,17 +80,17 @@ export class UnrealBridge {
       return;
     }
 
-    const onConnected = (info: any) => {
+    const onConnected = (info: ConnectionEventInfo) => {
       this.connected = true;
       this.log.debug('Automation bridge connected', info);
     };
 
-    const onDisconnected = (info: any) => {
+    const onDisconnected = (info: ConnectionEventInfo) => {
       this.connected = false;
       this.log.debug('Automation bridge disconnected', info);
     };
 
-    const onHandshakeFailed = (info: any) => {
+    const onHandshakeFailed = (info: ConnectionEventInfo) => {
       this.connected = false;
       this.log.warn('Automation bridge handshake failed', info);
     };
@@ -279,13 +324,13 @@ export class UnrealBridge {
       );
 
       const success = response.success !== false;
-      const rawResult =
+      const rawResult: AutomationResult | undefined =
         response.result && typeof response.result === 'object'
           ? { ...(response.result as Record<string, unknown>) }
-          : response.result;
+          : undefined;
       const value =
-        (rawResult as any)?.value ??
-        (rawResult as any)?.propertyValue ??
+        rawResult?.value ??
+        rawResult?.propertyValue ??
         (success ? rawResult : undefined);
 
       if (success) {
@@ -297,8 +342,8 @@ export class UnrealBridge {
           propertyValue: value,
           transport: 'automation_bridge',
           message: response.message,
-          warnings: Array.isArray((rawResult as any)?.warnings)
-            ? (rawResult as any).warnings
+          warnings: Array.isArray(rawResult?.warnings)
+            ? rawResult.warnings
             : undefined,
           raw: rawResult,
           bridge: {
@@ -389,10 +434,10 @@ export class UnrealBridge {
       );
 
       const success = response.success !== false;
-      const rawResult =
+      const rawResult: AutomationResult | undefined =
         response.result && typeof response.result === 'object'
           ? { ...(response.result as Record<string, unknown>) }
-          : response.result;
+          : undefined;
 
       if (success) {
         return {
@@ -401,7 +446,7 @@ export class UnrealBridge {
           propertyName,
           message:
             response.message ||
-            (typeof (rawResult as any)?.message === 'string' ? (rawResult as any).message : undefined),
+            (typeof rawResult?.message === 'string' ? rawResult.message : undefined),
           transport: 'automation_bridge',
           raw: rawResult,
           bridge: {
@@ -469,14 +514,14 @@ export class UnrealBridge {
         throw new Error('Automation bridge not connected');
       }
 
-      const pluginResp: any = await this.automationBridge.sendAutomationRequest(
+      const pluginResp: ConsoleCommandResponse = await this.automationBridge.sendAutomationRequest(
         'console_command',
         { command: cmdTrimmed },
         { timeoutMs: 30000 }
       );
 
       if (pluginResp && pluginResp.success) {
-        return { ...(pluginResp as any), transport: 'automation_bridge' };
+        return { ...pluginResp, transport: 'automation_bridge' };
       }
 
       const errMsg = pluginResp?.message || pluginResp?.error || 'Plugin execution failed';
@@ -553,14 +598,14 @@ export class UnrealBridge {
 
     const bridge = this.getAutomationBridge();
     try {
-      const resp: any = await bridge.sendAutomationRequest(
+      const resp = await bridge.sendAutomationRequest(
         'system_control',
         { action: 'get_engine_version' },
         { timeoutMs: 15000 }
       );
-      const raw = resp && typeof resp.result === 'object'
-        ? (resp.result as any)
-        : (resp?.result ?? resp ?? {});
+      const raw: EngineVersionResult = resp && typeof resp.result === 'object'
+        ? (resp.result as Record<string, unknown>)
+        : (resp?.result as Record<string, unknown>) ?? resp ?? {};
       const version = typeof raw.version === 'string' ? raw.version : 'unknown';
       const major = typeof raw.major === 'number' ? raw.major : 0;
       const minor = typeof raw.minor === 'number' ? raw.minor : 0;
@@ -596,16 +641,16 @@ export class UnrealBridge {
 
     const bridge = this.getAutomationBridge();
     try {
-      const resp: any = await bridge.sendAutomationRequest(
+      const resp = await bridge.sendAutomationRequest(
         'system_control',
         { action: 'get_feature_flags' },
         { timeoutMs: 15000 }
       );
       const raw = resp && typeof resp.result === 'object'
-        ? (resp.result as any)
-        : (resp?.result ?? resp ?? {});
-      const subs = raw && typeof raw.subsystems === 'object'
-        ? (raw.subsystems as any)
+        ? (resp.result as Record<string, unknown>)
+        : (resp?.result as Record<string, unknown>) ?? resp ?? {};
+      const subs: SubsystemFlags = raw && typeof raw.subsystems === 'object'
+        ? (raw.subsystems as SubsystemFlags)
         : {};
       return {
         subsystems: {

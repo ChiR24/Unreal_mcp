@@ -120,7 +120,7 @@ export class MaterialTools {
     }
   }
 
-  async createMaterialInstance(name: string, path: string, parentMaterial: string, parameters?: Record<string, any>) {
+  async createMaterialInstance(name: string, path: string, parentMaterial: string, parameters?: Record<string, unknown>) {
     try {
       if (!name || name.trim() === '') {
         return { success: false, error: 'Material instance name cannot be empty' };

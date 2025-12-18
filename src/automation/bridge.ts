@@ -58,9 +58,9 @@ export class AutomationBridge extends EventEmitter {
     private lastHandshakeFailure?: { reason: string; at: Date };
     private lastDisconnect?: { code: number; reason: string; at: Date };
     private lastError?: { message: string; at: Date };
-    private requestQueue: Array<() => void> = [];
     private queuedRequestItems: Array<{ resolve: (v: any) => void; reject: (e: any) => void; action: string; payload: any; options: any }> = [];
     private connectionPromise?: Promise<void>;
+    private connectionLock = false;
 
     constructor(options: AutomationBridgeOptions = {}) {
         super();
@@ -216,14 +216,15 @@ export class AutomationBridge extends EventEmitter {
                 this.lastHandshakeFailure = undefined;
                 this.connectionManager.updateLastMessageTime();
 
-                // Extract remote address/port
-                const underlying: any = (socket as any)._socket || (socket as any).socket;
+                // Extract remote address/port from underlying TCP socket
+                // Note: WebSocket types don't expose _socket, but it exists at runtime
+                const socketWithInternal = socket as unknown as { _socket?: { remoteAddress?: string; remotePort?: number }; socket?: { remoteAddress?: string; remotePort?: number } };
+                const underlying = socketWithInternal._socket || socketWithInternal.socket;
                 const remoteAddr = underlying?.remoteAddress ?? undefined;
                 const remotePort = underlying?.remotePort ?? undefined;
 
                 this.connectionManager.registerSocket(socket, this.clientPort, metadata, remoteAddr, remotePort);
                 this.connectionManager.startHeartbeat();
-                this.flushQueue();
 
                 this.emitAutomation('connected', {
                     socket,
@@ -340,7 +341,7 @@ export class AutomationBridge extends EventEmitter {
                 ? { message: this.lastError.message, at: this.lastError.at.toISOString() }
                 : null,
             lastMessageAt: this.connectionManager.getLastMessageTime()?.toISOString() ?? null,
-            lastRequestSentAt: null, // TODO: Track this in RequestTracker?
+            lastRequestSentAt: this.requestTracker.getLastRequestSentAt()?.toISOString() ?? null,
             pendingRequests: this.requestTracker.getPendingCount(),
             pendingRequestDetails: this.requestTracker.getPendingDetails(),
             connections: connectionInfos,
@@ -349,8 +350,8 @@ export class AutomationBridge extends EventEmitter {
             serverName: this.serverName,
             serverVersion: this.serverVersion,
             maxConcurrentConnections: this.maxConcurrentConnections,
-            maxPendingRequests: 100, // TODO: Expose from RequestTracker
-            heartbeatIntervalMs: 30000 // TODO: Expose from ConnectionManager
+            maxPendingRequests: this.requestTracker.getMaxPendingRequests(),
+            heartbeatIntervalMs: this.connectionManager.getHeartbeatIntervalMs()
         };
     }
 
@@ -363,8 +364,9 @@ export class AutomationBridge extends EventEmitter {
             if (this.enabled) {
                 this.log.info('Automation bridge not connected, attempting lazy connection...');
 
-                // Avoid multiple simultaneous connection attempts
-                if (!this.connectionPromise) {
+                // Avoid multiple simultaneous connection attempts using lock
+                if (!this.connectionPromise && !this.connectionLock) {
+                    this.connectionLock = true;
                     this.connectionPromise = new Promise<void>((resolve, reject) => {
                         const onConnect = () => {
                             cleanup(); resolve();
@@ -383,8 +385,9 @@ export class AutomationBridge extends EventEmitter {
                             this.off('connected', onConnect);
                             this.off('error', onError);
                             this.off('handshakeFailed', onHandshakeFail);
-                            // If we failed, clear the promise so next attempt can try again
-                            if (this.connectionPromise) this.connectionPromise = undefined;
+                            // Clear lock and promise so next attempt can try again
+                            this.connectionLock = false;
+                            this.connectionPromise = undefined;
                         };
 
                         this.once('connected', onConnect);
@@ -402,10 +405,16 @@ export class AutomationBridge extends EventEmitter {
                 try {
                     // Wait for connection with a short timeout for the connection itself
                     const connectTimeout = 5000;
-                    await Promise.race([
-                        this.connectionPromise,
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Lazy connection timeout')), connectTimeout))
-                    ]);
+                    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+                    const timeoutPromise = new Promise<never>((_, reject) => {
+                        timeoutId = setTimeout(() => reject(new Error('Lazy connection timeout')), connectTimeout);
+                    });
+
+                    try {
+                        await Promise.race([this.connectionPromise, timeoutPromise]);
+                    } finally {
+                        if (timeoutId) clearTimeout(timeoutId);
+                    }
                 } catch (err: any) {
                     this.log.error('Lazy connection failed', err);
                     // We don't throw here immediately, we let the isConnected check fail below 
@@ -426,7 +435,7 @@ export class AutomationBridge extends EventEmitter {
         // We use requestTracker directly to check limit as it's the source of truth
         // Note: requestTracker exposes maxPendingRequests via constructor but generic check logic isn't public
         // We assumed getPendingCount() is available
-        if (this.requestTracker.getPendingCount() >= (this as any).requestTracker.maxPendingRequests) {
+        if (this.requestTracker.getPendingCount() >= this.requestTracker.getMaxPendingRequests()) {
             return new Promise<T>((resolve, reject) => {
                 this.queuedRequestItems.push({
                     resolve,
@@ -478,6 +487,7 @@ export class AutomationBridge extends EventEmitter {
         }).catch(() => { }); // catch to prevent unhandled rejection during finally chain? no, finally returns new promise
 
         if (this.send(message)) {
+            this.requestTracker.updateLastRequestSentAt();
             return resultPromise;
         } else {
             this.requestTracker.rejectRequest(requestId, new Error('Failed to send request'));
@@ -491,7 +501,7 @@ export class AutomationBridge extends EventEmitter {
         // while we have capacity and items
         while (
             this.queuedRequestItems.length > 0 &&
-            this.requestTracker.getPendingCount() < (this as any).requestTracker.maxPendingRequests
+            this.requestTracker.getPendingCount() < this.requestTracker.getMaxPendingRequests()
         ) {
             const item = this.queuedRequestItems.shift();
             if (item) {
@@ -539,14 +549,6 @@ export class AutomationBridge extends EventEmitter {
             }
         }
         return sentCount > 0;
-    }
-
-    private flushQueue(): void {
-        if (this.requestQueue.length === 0) return;
-        this.log.info(`Flushing ${this.requestQueue.length} queued automation requests`);
-        const queue = [...this.requestQueue];
-        this.requestQueue = [];
-        queue.forEach(fn => fn());
     }
 
     private emitAutomation<K extends keyof AutomationBridgeEvents>(
