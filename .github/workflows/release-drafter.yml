@@ -15,8 +15,9 @@ jobs:
       contents: write
       pull-requests: write
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: release-drafter/release-drafter@v6.1.0 # v6.1.0
+      - uses: release-drafter/release-drafter@v6
         with:
           config-name: release-drafter-config.yml
         env:

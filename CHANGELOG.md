@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.2] - 2025-12-18
+
+> [!IMPORTANT]
+> ### 🔄 Breaking Changes
+> - **Standardized Tools & Type Safety** - All tool handlers now use consistent interfaces with improved type safety. Some internal API signatures have changed. (`079e3c2`)
+
+### ✨ Added
+
+<details>
+<summary><b>🛠️ Blueprint Enhancements</b> (<code>e710751</code>)</summary>
+
+| Feature | Description |
+|---------|-------------|
+| **Dynamic Node Creation** | Support for creating nodes dynamically in Blueprint graphs |
+| **Struct Property Support** | Added ability to set and get struct properties on Blueprint components |
+
+</details>
+
+### 🔄 Changed
+
+<details>
+<summary><b>🎯 Standardized Tool Interfaces</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/28">#28</a>)</summary>
+
+| Component | Change |
+|-----------|--------|
+| Tool Handlers | Optimized bridge communication and standardized response handling |
+| Type Safety | Hardened type definitions across all tool interfaces |
+| Bridge Optimization | Improved performance and reliability of automation bridge |
+
+</details>
+
+### 🔧 CI/CD
+
+- 🔗 **MCP Publisher** - Fixed download URL format in workflow steps (`0d452e7`)
+- 🧹 **Workflow Cleanup** - Removed unnecessary success conditions from MCP workflow steps (`82bd575`)
+
+---
+
 ## 🏷️ [0.5.1] - 2025-12-17
 
 > [!WARNING]
