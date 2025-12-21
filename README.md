@@ -43,10 +43,13 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 ### Architecture
 
 - **Native C++ Automation** — All operations route through the MCP Automation Bridge plugin
+- **Dynamic Type Discovery** — Runtime introspection for lights, debug shapes, and sequencer tracks
 - **Graceful Degradation** — Server starts even without an active Unreal connection
 - **On-Demand Connection** — Retries automation handshakes with exponential backoff
-- **Command Safety** — Blocks dangerous console commands
+- **Command Safety** — Blocks dangerous console commands with pattern-based validation
 - **Asset Caching** — 10-second TTL for improved performance
+- **Metrics Rate Limiting** — Per-IP rate limiting (60 req/min) on Prometheus endpoint
+- **Centralized Configuration** — Unified class aliases and type definitions
 
 ---
 

@@ -7,6 +7,135 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.3] - 2025-12-21
+
+> [!IMPORTANT]
+> ### 🔄 Major Enhancements
+> - **Dynamic Type Discovery** - New runtime introspection for lights, debug shapes, and sequencer tracks
+> - **Metrics Rate Limiting** - Per-IP rate limiting (60 req/min) on Prometheus endpoint
+> - **Centralized Class Configuration** - Unified Unreal Engine class aliases
+> - **Enhanced Type Safety** - Comprehensive TypeScript interfaces replacing `any` types
+
+### ✨ Added
+
+<details>
+<summary><b>🔍 Dynamic Discovery & Engine Handlers</b></summary>
+
+| Feature | Description |
+|---------|-------------|
+| **list_light_types** | Discovers all available light class types at runtime |
+| **list_debug_shapes** | Enumerates supported debug shape types |
+| **list_track_types** | Lists all sequencer track types available in the engine |
+| **Heuristic Resolution** | Improved C++ handlers use multiple naming conventions and inheritance validation |
+| **Vehicle Type Support** | Expanded vehicle type from union to string for flexibility |
+
+**C++ Changes:**
+- `McpAutomationBridge_LightingHandlers.cpp` - Runtime `ResolveUClass` for lights
+- `McpAutomationBridge_SequenceHandlers.cpp` - Runtime resolution for tracks
+- Added `UObjectIterator.h` for dynamic type scanning
+- Unified spawn/track-creation flows
+- Removed editor/PIE branching logic
+
+</details>
+
+<details>
+<summary><b>⚙️ Tooling & Configuration</b></summary>
+
+| Feature | Description |
+|---------|-------------|
+| **class-aliases.ts** | Centralized Unreal Engine class name mappings |
+| **handler-types.ts** | Comprehensive TypeScript interfaces (ActorArgs, EditorArgs, LightingArgs, etc.) |
+| **timeout constants** | Command-specific operation timeouts in constants.ts |
+| **listDebugShapes()** | Programmatic access in DebugVisualizationTools |
+
+**Type System:**
+- Geometry types: Vector3, Rotator, Transform
+- Required-component lookups
+- Centralized class-alias mappings
+
+</details>
+
+<details>
+<summary><b>📈 Metrics Server Enhancements</b></summary>
+
+| Feature | Description |
+|---------|-------------|
+| **Rate Limiting** | Per-IP limit of 60 requests/minute |
+| **Server Lifecycle** | Returns instance for better management |
+| **Error Handling** | Improved internal error handling |
+
+</details>
+
+<details>
+<summary><b>📚 Documentation & DX</b></summary>
+
+| Feature | Description |
+|---------|-------------|
+| **handler-mapping.md** | Updated with new discovery actions |
+| **README.md** | Clarified WASM build instructions |
+| **Tool Definitions** | Synchronized with new discovery actions |
+
+</details>
+
+### 🔧 Changed
+
+<details>
+<summary><b>Handler Type Safety & Logic</b></summary>
+
+**src/tools/handlers/common-handlers.ts:**
+- Replaced `any` typings with strict `HandlerArgs`/`LocationInput`/`RotationInput`
+- Added automation-bridge connectivity validation
+- Enhanced location/rotation normalization with type guards
+
+**Specialized Handlers:**
+- `actor-handlers.ts` - Applied typed handler-args
+- `asset-handlers.ts` - Improved argument normalization
+- `blueprint-handlers.ts` - Added new action cases
+- `editor-handlers.ts` - Enhanced default handling
+- `effect-handlers.ts` - Added `list_debug_shapes`
+- `graph-handlers.ts` - Improved validation
+- `level-handlers.ts` - Type-safe operations
+- `lighting-handlers.ts` - Added `list_light_types`
+- `pipeline-handlers.ts` - Enhanced error handling
+
+</details>
+
+<details>
+<summary><b>Infrastructure & Utilities</b></summary>
+
+**Security & Validation:**
+- `command-validator.ts` - Blocks semicolons, pipes, backticks
+- `error-handler.ts` - Enhanced error logging
+- `response-validator.ts` - Improved Ajv typing
+- `safe-json.ts` - Generic typing for cleanObject
+- `validation.ts` - Expanded path-traversal protection
+
+**Performance:**
+- `unreal-command-queue.ts` - Optimized queue processing (250ms interval)
+- `unreal-bridge.ts` - Centralized timeout constants
+
+</details>
+
+### 🛠️ Fixed
+
+- **Command Injection Prevention** - Additional dangerous command patterns blocked
+- **Path Security** - Enhanced asset-name validation
+- **Type Safety** - Eliminated `any` types across handler functions
+- **Error Messages** - Clearer error messages for class resolution failures
+
+### 📊 Statistics
+
+- **Files Changed:** 20+
+- **New Interfaces:** 15+ handler type definitions
+- **Discovery Actions:** 3 new runtime introspection methods
+- **Security Enhancements:** 5+ new validation patterns
+
+### 🔄 Dependencies
+
+- **graphql-yoga**: Bumped from 5.17.1 to 5.18.0 (#31)
+
+---
+
 ## 🏷️ [0.5.2] - 2025-12-18
 
 > [!IMPORTANT]
