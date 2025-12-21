@@ -100,6 +100,10 @@ export async function handleEffectTools(action: string, args: any, tools: ITools
   if (action === 'clear_debug_shapes') {
     return executeAutomationRequest(tools, action, args);
   }
+  // Discovery action: list available debug shape types
+  if (action === 'list_debug_shapes') {
+    return executeAutomationRequest(tools, 'list_debug_shapes', args);
+  }
   if (action === 'cleanup') {
     args.action = 'cleanup';
     args.subAction = 'cleanup';

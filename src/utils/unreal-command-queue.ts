@@ -140,11 +140,13 @@ export class UnrealCommandQueue {
   }
 
   private startProcessor(): void {
+    // Fallback processor - primary processing is triggered directly from execute()
+    // Reduced from 1000ms to 250ms for faster recovery if processor stalls
     this.processorInterval = setInterval(() => {
       if (!this.isProcessing && this.queue.length > 0) {
         this.processQueue();
       }
-    }, 1000);
+    }, 250);
   }
 
   /**

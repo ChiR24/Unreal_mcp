@@ -487,7 +487,7 @@ Supported actions:
             'create_volumetric_fog', 'create_particle_trail', 'create_environment_effect', 'create_impact_effect', 'create_niagara_ribbon',
             'activate', 'activate_effect', 'deactivate', 'reset', 'advance_simulation',
             'add_niagara_module', 'connect_niagara_pins', 'remove_niagara_node', 'set_niagara_parameter',
-            'clear_debug_shapes', 'cleanup'
+            'clear_debug_shapes', 'cleanup', 'list_debug_shapes'
           ],
           description: 'Action'
         },
@@ -737,7 +737,7 @@ Supported actions:
             'get_properties', 'set_properties', 'duplicate', 'rename', 'delete', 'list', 'get_metadata', 'set_metadata',
             'add_spawnable_from_class', 'add_track', 'add_section', 'set_display_rate', 'set_tick_resolution',
             'set_work_range', 'set_view_range', 'set_track_muted', 'set_track_solo', 'set_track_locked',
-            'list_tracks', 'remove_track'
+            'list_tracks', 'remove_track', 'list_track_types'
           ],
           description: 'Action'
         },
@@ -1100,7 +1100,7 @@ Supported actions:
             'spawn_light', 'create_light', 'spawn_sky_light', 'create_sky_light', 'ensure_single_sky_light',
             'create_lightmass_volume', 'create_lighting_enabled_level', 'create_dynamic_light',
             'setup_global_illumination', 'configure_shadows', 'set_exposure', 'set_ambient_occlusion', 'setup_volumetric_fog',
-            'build_lighting'
+            'build_lighting', 'list_light_types'
           ],
           description: 'Action'
         },

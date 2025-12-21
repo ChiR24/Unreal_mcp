@@ -7,6 +7,7 @@
 #include "MovieSceneSection.h"
 #include "MovieSceneSequence.h"
 #include "MovieSceneTrack.h"
+#include "UObject/UObjectIterator.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -2484,59 +2485,39 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
 
     // Add the track
     UMovieSceneTrack *NewTrack = nullptr;
-    FString TrackTypeLower = TrackType.ToLower();
 
-#if __has_include("Tracks/MovieScene3DTransformTrack.h")
-    if (TrackTypeLower == TEXT("transform") ||
-        TrackTypeLower == TEXT("3dtransform")) {
-      if (BindingGuid.IsValid()) {
-        NewTrack = MovieScene->AddTrack(
-            UMovieScene3DTransformTrack::StaticClass(), BindingGuid);
-      }
+    // Dynamic resolution with heuristics
+    UClass *TrackClass = ResolveUClass(TrackType);
+
+    // Try with common prefixes
+    if (!TrackClass) {
+      TrackClass = ResolveUClass(
+          FString::Printf(TEXT("UMovieScene%sTrack"), *TrackType));
     }
-#endif
+    if (!TrackClass) {
+      TrackClass =
+          ResolveUClass(FString::Printf(TEXT("MovieScene%sTrack"), *TrackType));
+    }
+    // Try simple "U" prefix
+    if (!TrackClass) {
+      TrackClass = ResolveUClass(FString::Printf(TEXT("U%s"), *TrackType));
+    }
 
-    if (TrackTypeLower == TEXT("audio")) {
+    // Validate it's actually a track class
+    if (TrackClass && TrackClass->IsChildOf(UMovieSceneTrack::StaticClass())) {
       if (BindingGuid.IsValid()) {
-        NewTrack = MovieScene->AddTrack(UMovieSceneAudioTrack::StaticClass(),
-                                        BindingGuid);
+        NewTrack = MovieScene->AddTrack(TrackClass, BindingGuid);
       } else {
-        NewTrack = MovieScene->AddTrack(UMovieSceneAudioTrack::StaticClass());
+        NewTrack = MovieScene->AddTrack(TrackClass);
       }
-    }
-
-    if (TrackTypeLower == TEXT("event")) {
-      if (BindingGuid.IsValid()) {
-        NewTrack = MovieScene->AddTrack(UMovieSceneEventTrack::StaticClass(),
-                                        BindingGuid);
-      } else {
-        NewTrack = MovieScene->AddTrack(UMovieSceneEventTrack::StaticClass());
-      }
-    }
-
-    // Dynamic fallback: Try to resolve any track class by name
-    if (!NewTrack) {
-      UClass *TrackClass = ResolveUClass(TrackType);
-
-      // Try with common prefixes
-      if (!TrackClass) {
-        TrackClass = ResolveUClass(
-            FString::Printf(TEXT("UMovieScene%sTrack"), *TrackType));
-      }
-      if (!TrackClass) {
-        TrackClass = ResolveUClass(
-            FString::Printf(TEXT("MovieScene%sTrack"), *TrackType));
-      }
-
-      // Validate it's actually a track class
-      if (TrackClass &&
-          TrackClass->IsChildOf(UMovieSceneTrack::StaticClass())) {
-        if (BindingGuid.IsValid()) {
-          NewTrack = MovieScene->AddTrack(TrackClass, BindingGuid);
-        } else {
-          NewTrack = MovieScene->AddTrack(TrackClass);
-        }
-      }
+    } else if (TrackClass) {
+      // Found a class but it's not a track
+      SendAutomationError(
+          RequestingSocket, RequestId,
+          FString::Printf(TEXT("Class '%s' is not a UMovieSceneTrack"),
+                          *TrackClass->GetName()),
+          TEXT("INVALID_CLASS_TYPE"));
+      return true;
     }
 
     if (NewTrack) {

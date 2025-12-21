@@ -1,8 +1,9 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
+import type { LevelArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
 
-export async function handleLevelTools(action: string, args: any, tools: ITools) {
+export async function handleLevelTools(action: string, args: LevelArgs, tools: ITools) {
   switch (action) {
     case 'load':
     case 'load_level': {
@@ -118,14 +119,14 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
     case 'export_level': {
       const res = await tools.levelTools.exportLevel({
         levelPath: args.levelPath,
-        exportPath: args.exportPath || args.destinationPath,
+        exportPath: args.exportPath ?? args.destinationPath ?? '',
         timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
       });
       return cleanObject(res);
     }
     case 'import_level': {
       const res = await tools.levelTools.importLevel({
-        packagePath: args.packagePath || args.sourcePath, // Allow sourcePath as fallback for backward compat
+        packagePath: args.packagePath ?? args.sourcePath ?? '',
         destinationPath: args.destinationPath,
         timeoutMs: typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined
       });
@@ -140,7 +141,7 @@ export async function handleLevelTools(action: string, args: any, tools: ITools)
       return cleanObject(res);
     }
     case 'delete': {
-      const levelPaths = Array.isArray(args.levelPaths) ? args.levelPaths : [args.levelPath];
+      const levelPaths = Array.isArray(args.levelPaths) ? args.levelPaths.filter((p): p is string => typeof p === 'string') : (args.levelPath ? [args.levelPath] : []);
       const res = await tools.levelTools.deleteLevels({ levelPaths });
       return cleanObject(res);
     }

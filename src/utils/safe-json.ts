@@ -1,11 +1,18 @@
 import { Logger } from './logger.js';
 
-// Remove circular references and non-serializable properties from an object
-export function cleanObject(obj: any, maxDepth: number = 10): any {
-  const seen = new WeakSet();
-  const logger = new Logger('safe-json');
+// Module-level logger to avoid creating new instances on every call
+const log = new Logger('safe-json');
 
-  function clean(value: any, depth: number, path: string = 'root'): any {
+/**
+ * Remove circular references and non-serializable properties from an object.
+ * @param obj - The object to clean
+ * @param maxDepth - Maximum recursion depth (default: 10)
+ * @returns Cleaned object safe for JSON serialization
+ */
+export function cleanObject<T = unknown>(obj: T, maxDepth: number = 10): T {
+  const seen = new WeakSet<object>();
+
+  function clean(value: unknown, depth: number, path: string = 'root'): unknown {
     // Prevent infinite recursion
     if (depth > maxDepth) {
       return '[Max depth reached]';
@@ -26,7 +33,8 @@ export function cleanObject(obj: any, maxDepth: number = 10): any {
       return value;
     }
 
-    // Check for circular reference
+    // Check for circular reference - keep in set permanently for this call
+    // This prevents the same object from appearing in multiple branches
     if (seen.has(value)) {
       return '[Circular Reference]';
     }
@@ -35,31 +43,28 @@ export function cleanObject(obj: any, maxDepth: number = 10): any {
 
     // Handle arrays
     if (Array.isArray(value)) {
-      const result = value.map((item, index) => clean(item, depth + 1, `${path}[${index}]`));
-      seen.delete(value); // Remove from seen after processing
-      return result;
+      return value.map((item, index) => clean(item, depth + 1, `${path}[${index}]`));
     }
 
     // Handle objects
-    const cleaned: any = {};
+    const cleaned: Record<string, unknown> = {};
 
     // Use Object.keys to avoid prototype properties
-    const keys = Object.keys(value);
+    const keys = Object.keys(value as object);
     for (const key of keys) {
       try {
-        const cleanedValue = clean(value[key], depth + 1, `${path}.${key}`);
+        const cleanedValue = clean((value as Record<string, unknown>)[key], depth + 1, `${path}.${key}`);
         if (cleanedValue !== undefined) {
           cleaned[key] = cleanedValue;
         }
       } catch (e) {
         // Skip properties that throw errors when accessed
-        logger.error(`Error cleaning property ${path}.${key}`, e);
+        log.error(`Error cleaning property ${path}.${key}`, e);
       }
     }
 
-    seen.delete(value); // Remove from seen after processing
     return cleaned;
   }
 
-  return clean(obj, 0);
+  return clean(obj, 0) as T;
 }

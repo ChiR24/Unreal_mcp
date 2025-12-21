@@ -332,7 +332,7 @@ export class PhysicsTools {
    */
   async configureVehicle(params: {
     vehicleName: string;
-    vehicleType: 'Car' | 'Bike' | 'Tank' | 'Aircraft';
+    vehicleType: string;
     wheels?: Array<{
       name: string;
       radius: number;

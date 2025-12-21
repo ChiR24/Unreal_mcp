@@ -1,7 +1,7 @@
 import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import type { AutomationBridge } from './automation/index.js';
-import { DEFAULT_AUTOMATION_HOST, DEFAULT_AUTOMATION_PORT } from './constants.js';
+import { DEFAULT_AUTOMATION_HOST, DEFAULT_AUTOMATION_PORT, CONSOLE_COMMAND_TIMEOUT_MS, ENGINE_QUERY_TIMEOUT_MS } from './constants.js';
 import { UnrealCommandQueue } from './utils/unreal-command-queue.js';
 import { CommandValidator } from './utils/command-validator.js';
 
@@ -153,7 +153,9 @@ export class UnrealBridge {
     if (this.connectPromise) {
       try {
         await this.connectPromise;
-      } catch { }
+      } catch (err) {
+        this.log.debug('Existing connect promise rejected', err instanceof Error ? err.message : String(err));
+      }
       return this.connected;
     }
 
@@ -483,7 +485,7 @@ export class UnrealBridge {
   }
 
   // Execute a console command safely with validation and throttling
-  async executeConsoleCommand(command: string, _options: Record<string, never> = {}): Promise<any> {
+  async executeConsoleCommand(command: string): Promise<any> {
     const automationAvailable = Boolean(
       this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function'
     );
@@ -517,7 +519,7 @@ export class UnrealBridge {
       const pluginResp: ConsoleCommandResponse = await this.automationBridge.sendAutomationRequest(
         'console_command',
         { command: cmdTrimmed },
-        { timeoutMs: 30000 }
+        { timeoutMs: CONSOLE_COMMAND_TIMEOUT_MS }
       );
 
       if (pluginResp && pluginResp.success) {
@@ -601,7 +603,7 @@ export class UnrealBridge {
       const resp = await bridge.sendAutomationRequest(
         'system_control',
         { action: 'get_engine_version' },
-        { timeoutMs: 15000 }
+        { timeoutMs: ENGINE_QUERY_TIMEOUT_MS }
       );
       const raw: EngineVersionResult = resp && typeof resp.result === 'object'
         ? (resp.result as Record<string, unknown>)
@@ -644,7 +646,7 @@ export class UnrealBridge {
       const resp = await bridge.sendAutomationRequest(
         'system_control',
         { action: 'get_feature_flags' },
-        { timeoutMs: 15000 }
+        { timeoutMs: ENGINE_QUERY_TIMEOUT_MS }
       );
       const raw = resp && typeof resp.result === 'object'
         ? (resp.result as Record<string, unknown>)

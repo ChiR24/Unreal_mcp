@@ -1,8 +1,9 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
+import type { LightingArgs } from '../../types/handler-types.js';
 import { normalizeLocation } from './common-handlers.js';
 
-export async function handleLightingTools(action: string, args: any, tools: ITools) {
+export async function handleLightingTools(action: string, args: LightingArgs, tools: ITools) {
   // Normalize location parameter to accept both {x,y,z} and [x,y,z] formats
   const normalizedLocation = normalizeLocation(args.location);
 
@@ -140,6 +141,9 @@ export async function handleLightingTools(action: string, args: any, tools: IToo
         copyActors: args.copyActors,
         useTemplate: args.useTemplate
       }));
+    }
+    case 'list_light_types': {
+      return cleanObject(await tools.lightingTools.listLightTypes());
     }
     default:
       throw new Error(`Unknown lighting action: ${action}`);

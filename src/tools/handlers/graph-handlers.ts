@@ -1,8 +1,9 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
+import type { GraphArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
-export async function handleGraphTools(toolName: string, action: string, args: any, tools: ITools) {
+export async function handleGraphTools(toolName: string, action: string, args: GraphArgs, tools: ITools) {
     // Common validation
     if (!args.assetPath && !args.blueprintPath && !args.systemPath) {
         // Some actions might not need a path if they operate on "currently open" asset, 
@@ -20,11 +21,11 @@ export async function handleGraphTools(toolName: string, action: string, args: a
         case 'manage_behavior_tree':
             return handleBehaviorTree(action, args, tools);
         default:
-            return { success: false, error: 'UNKNOWN_TOOL', message: `Unknown graph tool: ${toolName}` };
+            throw new Error(`Unknown graph tool: ${toolName}`);
     }
 }
 
-async function handleBlueprintGraph(action: string, args: any, tools: ITools) {
+async function handleBlueprintGraph(action: string, args: GraphArgs, tools: ITools) {
     const processedArgs = { ...args, subAction: action };
 
     // Default graphName
@@ -95,7 +96,7 @@ async function handleBlueprintGraph(action: string, args: any, tools: ITools) {
     return cleanObject({ ...res, ...(res.result || {}) });
 }
 
-async function handleNiagaraGraph(action: string, args: any, tools: ITools) {
+async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools) {
     const payload = { ...args, subAction: action };
     // Map systemPath to assetPath if missing
     if (payload.systemPath && !payload.assetPath) {
@@ -105,12 +106,12 @@ async function handleNiagaraGraph(action: string, args: any, tools: ITools) {
     return cleanObject({ ...res, ...(res.result || {}) });
 }
 
-async function handleMaterialGraph(action: string, args: any, tools: ITools) {
+async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITools) {
     const res: any = await executeAutomationRequest(tools, 'manage_material_graph', { ...args, subAction: action }, 'Automation bridge not available');
     return cleanObject({ ...res, ...(res.result || {}) });
 }
 
-async function handleBehaviorTree(action: string, args: any, tools: ITools) {
+async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools) {
     const res: any = await executeAutomationRequest(tools, 'manage_behavior_tree', { ...args, subAction: action }, 'Automation bridge not available');
     return cleanObject({ ...res, ...(res.result || {}) });
 }
