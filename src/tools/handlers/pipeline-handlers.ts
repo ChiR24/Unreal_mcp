@@ -1,11 +1,12 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
+import type { PipelineArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
-export async function handlePipelineTools(action: string, args: any, tools: ITools) {
+export async function handlePipelineTools(action: string, args: PipelineArgs, tools: ITools) {
   switch (action) {
     case 'run_ubt': {
       const target = args.target;
@@ -14,7 +15,7 @@ export async function handlePipelineTools(action: string, args: any, tools: IToo
       const extraArgs = args.arguments || '';
 
       if (!target) {
-        return { success: false, error: 'MISSING_TARGET', message: 'Target is required for run_ubt' };
+        throw new Error('Target is required for run_ubt');
       }
 
       // Try to find UnrealBuildTool
@@ -34,7 +35,7 @@ export async function handlePipelineTools(action: string, args: any, tools: IToo
       }
 
       if (!projectPath) {
-        return { success: false, error: 'MISSING_PROJECT_PATH', message: 'UE_PROJECT_PATH environment variable is not set and no projectPath argument was provided.' };
+        throw new Error('UE_PROJECT_PATH environment variable is not set and no projectPath argument was provided.');
       }
 
       // If projectPath points to a .uproject file, use it. If it's a directory, look for a .uproject file.
@@ -48,7 +49,7 @@ export async function handlePipelineTools(action: string, args: any, tools: IToo
             uprojectFile = path.join(projectPath, found);
           }
         } catch (_e) {
-          return { success: false, error: 'INVALID_PROJECT_PATH', message: `Could not read project directory: ${projectPath}` };
+          throw new Error(`Could not read project directory: ${projectPath}`);
         }
       }
 

@@ -10,6 +10,11 @@ import { toRotTuple, toVec3Tuple } from './normalize.js';
 const MAX_PATH_LENGTH = 260;
 
 /**
+ * Maximum asset name length
+ */
+const MAX_ASSET_NAME_LENGTH = 64;
+
+/**
  * Invalid characters for Unreal Engine asset names
  * Note: Dashes are allowed in Unreal asset names
  */
@@ -34,39 +39,39 @@ export function sanitizeAssetName(name: string): string {
   if (!name || typeof name !== 'string') {
     return 'Asset';
   }
-  
+
   // Remove leading/trailing whitespace
   let sanitized = name.trim();
-  
+
   // Replace invalid characters with underscores
   sanitized = sanitized.replace(INVALID_CHARS, '_');
-  
+
   // Remove consecutive underscores
   sanitized = sanitized.replace(/_+/g, '_');
-  
+
   // Remove leading/trailing underscores
   sanitized = sanitized.replace(/^_+|_+$/g, '');
-  
+
   // If name is empty after sanitization, use default
   if (!sanitized) {
     return 'Asset';
   }
-  
+
   // If name is a reserved keyword, append underscore
   if (RESERVED_KEYWORDS.includes(sanitized)) {
     sanitized = `${sanitized}_Asset`;
   }
-  
+
   // Ensure name starts with a letter
   if (!/^[A-Za-z]/.test(sanitized)) {
     sanitized = `Asset_${sanitized}`;
   }
-  
+
   // Truncate overly long names to reduce risk of hitting path length limits
-  if (sanitized.length > 64) {
-    sanitized = sanitized.slice(0, 64);
+  if (sanitized.length > MAX_ASSET_NAME_LENGTH) {
+    sanitized = sanitized.slice(0, MAX_ASSET_NAME_LENGTH);
   }
-  
+
   return sanitized;
 }
 
@@ -79,7 +84,7 @@ export function sanitizePath(path: string): string {
   if (!path || typeof path !== 'string') {
     return '/Game';
   }
-  
+
   // Normalize slashes
   path = path.replace(/\\/g, '/');
 
@@ -87,9 +92,14 @@ export function sanitizePath(path: string): string {
   if (!path.startsWith('/')) {
     path = `/${path}`;
   }
-  
+
   // Split path into segments and sanitize each
   let segments = path.split('/').filter(s => s.length > 0);
+
+  // Block path traversal attempts
+  if (segments.some(s => s === '..' || s === '.')) {
+    throw new Error('Path traversal (..) is not allowed');
+  }
 
   if (segments.length === 0) {
     return '/Game';
@@ -108,10 +118,10 @@ export function sanitizePath(path: string): string {
     }
     return sanitizeAssetName(segment);
   });
-  
+
   // Reconstruct path
   const sanitizedPath = '/' + sanitizedSegments.join('/');
-  
+
   return sanitizedPath;
 }
 
@@ -146,20 +156,20 @@ export function validateAssetParams(params: {
 } {
   // Sanitize name
   const sanitizedName = sanitizeAssetName(params.name);
-  
+
   // Sanitize path if provided
-  const sanitizedPath = params.savePath 
+  const sanitizedPath = params.savePath
     ? sanitizePath(params.savePath)
     : params.savePath;
-  
+
   // Construct full path for validation
   const fullPath = sanitizedPath
     ? `${sanitizedPath}/${sanitizedName}`
     : `/Game/${sanitizedName}`;
-  
+
   // Validate path length
   const pathValidation = validatePathLength(fullPath);
-  
+
   if (!pathValidation.valid) {
     return {
       valid: false,
@@ -167,7 +177,7 @@ export function validateAssetParams(params: {
       error: pathValidation.error
     };
   }
-  
+
   return {
     valid: true,
     sanitized: {
@@ -187,7 +197,7 @@ export function resolveSkeletalMeshPath(input: string): string | null {
   if (!input || typeof input !== 'string') {
     return null;
   }
-  
+
   // Common skeleton to mesh mappings
   const skeletonToMeshMap: { [key: string]: string } = {
     '/Game/Mannequin/Character/Mesh/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
@@ -199,12 +209,12 @@ export function resolveSkeletalMeshPath(input: string): string | null {
     '/Game/Characters/Mannequins/Skeletons/UE5_Manny_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
     '/Game/Characters/Mannequins/Skeletons/UE5_Quinn_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple'
   };
-  
+
   // Check if this is a known skeleton path
   if (skeletonToMeshMap[input]) {
     return skeletonToMeshMap[input];
   }
-  
+
   // If it contains _Skeleton, try to convert to mesh name
   if (input.includes('_Skeleton')) {
     // Try common replacements
@@ -224,12 +234,12 @@ export function resolveSkeletalMeshPath(input: string): string | null {
     );
     return meshPath;
   }
-  
+
   // If it starts with SK_ (skeleton prefix), try SKM_ (skeletal mesh prefix)
   if (input.includes('/SK_')) {
     return input.replace('/SK_', '/SKM_');
   }
-  
+
   // Return as-is if no conversion needed
   return input;
 }

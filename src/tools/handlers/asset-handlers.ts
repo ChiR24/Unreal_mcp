@@ -188,9 +188,27 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           throw new Error('No paths provided for delete action');
         }
 
-        const res = await tools.assetTools.deleteAssets({ paths });
+        // Normalize paths: strip object sub-path suffix (e.g., /Game/Folder/Asset.Asset -> /Game/Folder/Asset)
+        // This handles the common pattern where full object paths are provided instead of package paths
+        const normalizedPaths = paths.map(p => {
+          let normalized = p.replace(/\\/g, '/').trim();
+          // If the path contains a dot after the last slash, it's likely an object path (e.g., /Game/Folder/Asset.Asset)
+          const lastSlash = normalized.lastIndexOf('/');
+          if (lastSlash >= 0) {
+            const afterSlash = normalized.substring(lastSlash + 1);
+            const dotIndex = afterSlash.indexOf('.');
+            if (dotIndex > 0) {
+              // Strip the .ObjectName suffix
+              normalized = normalized.substring(0, lastSlash + 1 + dotIndex);
+            }
+          }
+          return normalized;
+        });
+
+        const res = await tools.assetTools.deleteAssets({ paths: normalizedPaths });
         return ResponseFactory.success(res, 'Assets deleted successfully');
       }
+
       case 'generate_lods': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true },

@@ -174,15 +174,15 @@ ASSET_LIST_TTL_MS=10000
 | `control_actor` | Spawn, delete, transform, physics, tags |
 | `control_editor` | PIE, Camera, viewport, screenshots |
 | `manage_level` | Load/Save, World Partition, streaming |
-| `manage_lighting` | Spawn lights, GI, shadows, build lighting |
+| `manage_lighting` | Spawn lights, GI, shadows, build lighting, **list_light_types** |
 | `manage_performance` | Profiling, optimization, scalability |
-| `animation_physics` | Animation BPs, Vehicles, Ragdolls |
-| `manage_effect` | Niagara, Particles, Debug Shapes |
+| `animation_physics` | Animation BPs, Vehicles (custom types), Ragdolls |
+| `manage_effect` | Niagara, Particles, Debug Shapes, **list_debug_shapes** |
 | `manage_blueprint` | Create, SCS, Graph Editing |
 | `manage_blueprint_graph` | Direct Blueprint Graph Manipulation |
 | `build_environment` | Landscape, Foliage, Procedural |
 | `system_control` | UBT, Tests, Logs, Project Settings, CVars |
-| `manage_sequence` | Sequencer / Cinematics |
+| `manage_sequence` | Sequencer / Cinematics, **list_track_types** |
 | `inspect` | Object Introspection |
 | `manage_audio` | Audio Assets & Components |
 | `manage_behavior_tree` | Behavior Tree Graph Editing |
@@ -209,7 +209,7 @@ Optional WASM acceleration for computationally intensive operations. **Enabled b
 
 ```bash
 cargo install wasm-pack  # Once per machine
-npm run build            # Builds TS + WASM
+npm run build:wasm       # Builds  WASM
 ```
 
 To disable: `WASM_ENABLED=false`

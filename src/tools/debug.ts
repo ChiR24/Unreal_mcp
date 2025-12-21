@@ -611,4 +611,12 @@ export class DebugVisualizationTools {
       return { success: false, error: `Failed to clear debug shapes: ${err}` };
     }
   }
+
+  async listDebugShapes() {
+    if (this.automationBridge) {
+      const response = await this.automationBridge.sendAutomationRequest('list_debug_shapes', {});
+      return response;
+    }
+    return { success: false, error: 'AUTOMATION_BRIDGE_REQUIRED', message: 'Listing debug shapes requires Automation Bridge' };
+  }
 }

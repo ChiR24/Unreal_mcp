@@ -122,6 +122,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `configure_shadows` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
 | `set_exposure` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
 | `set_ambient_occlusion` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
+| `list_light_types` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | Discovery: Returns all `ALight` subclasses |
 
 ## 7. Performance Manager (`manage_performance`)
 
@@ -148,7 +149,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `create_animation_bp` | `McpAutomationBridge_AnimationHandlers.cpp` | `HandleCreateAnimBlueprint` | |
 | `play_montage` | `McpAutomationBridge_AnimationHandlers.cpp` | `HandlePlayAnimMontage` | |
 | `setup_ragdoll` | `McpAutomationBridge_AnimationHandlers.cpp` | `HandleSetupRagdoll` | |
-| `configure_vehicle` | `McpAutomationBridge_AnimationHandlers.cpp` | `HandleAnimationPhysicsAction` | |
+| `configure_vehicle` | `McpAutomationBridge_AnimationHandlers.cpp` | `HandleAnimationPhysicsAction` | Supports custom vehicle type passthrough |
 
 ## 9. Effects Manager (`manage_effect`)
 
@@ -160,6 +161,8 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `create_niagara_system` | `McpAutomationBridge_EffectHandlers.cpp` | `HandleCreateNiagaraSystem` | |
 | `create_niagara_emitter` | `McpAutomationBridge_EffectHandlers.cpp` | `HandleCreateNiagaraEmitter` | |
 | `add_niagara_module` | `McpAutomationBridge_NiagaraGraphHandlers.cpp` | `HandleNiagaraGraphAction` | |
+| `list_debug_shapes` | `McpAutomationBridge_EffectHandlers.cpp` | `HandleEffectAction` | Discovery: Returns all debug shape types |
+| `clear_debug_shapes` | `McpAutomationBridge_EffectHandlers.cpp` | `HandleEffectAction` | Clears persistent debug shapes |
 
 ## 10. Environment Builder (`build_environment`)
 
@@ -202,6 +205,8 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `play` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleSequenceAction` | |
 | `add_keyframe` | `McpAutomationBridge_SequencerHandlers.cpp` | `HandleAddSequencerKeyframe` | |
 | `add_camera` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleAddCameraTrack` | |
+| `add_track` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleSequenceAction` | Dynamic track class resolution |
+| `list_track_types` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleSequenceAction` | Discovery: Returns all `UMovieSceneTrack` subclasses |
 
 ## 13. Introspection (`inspect`)
 

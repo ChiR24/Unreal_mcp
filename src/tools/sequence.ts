@@ -362,6 +362,17 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
   }
 
   /**
+   * List available track types
+   */
+  async listTrackTypes(): Promise<StandardActionResponse> {
+    const resp = await this.sendAction('list_track_types', {});
+    if (!resp.success && this.isUnknownActionResponse(resp)) {
+      return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement list_track_types' } as const;
+    }
+    return resp;
+  }
+
+  /**
    * Set playback work range
    */
   async setWorkRange(params: { path?: string; start: number; end: number }): Promise<StandardActionResponse> {

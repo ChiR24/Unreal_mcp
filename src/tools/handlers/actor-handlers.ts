@@ -2,33 +2,14 @@ import { ITools } from '../../types/tool-interfaces.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import { normalizeArgs } from './argument-helper.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
+import { ACTOR_CLASS_ALIASES, getRequiredComponent } from '../../config/class-aliases.js';
 
 type ActorActionHandler = (args: any, tools: ITools) => Promise<any>;
 
 const handlers: Record<string, ActorActionHandler> = {
     spawn: async (args, tools) => {
-        // Class name aliases for user-friendly names
-        const classAliases: Record<string, string> = {
-            'SplineActor': '/Script/Engine.Actor',  // Use Actor with SplineComponent
-            'Spline': '/Script/Engine.Actor',       // Use Actor with SplineComponent
-            'PointLight': '/Script/Engine.PointLight',
-            'SpotLight': '/Script/Engine.SpotLight',
-            'DirectionalLight': '/Script/Engine.DirectionalLight',
-            'Camera': '/Script/Engine.CameraActor',
-            'CameraActor': '/Script/Engine.CameraActor',
-            'StaticMeshActor': '/Script/Engine.StaticMeshActor',
-            'SkeletalMeshActor': '/Script/Engine.SkeletalMeshActor',
-            'PlayerStart': '/Script/Engine.PlayerStart',
-            'TriggerBox': '/Script/Engine.TriggerBox',
-            'TriggerSphere': '/Script/Engine.TriggerSphere',
-            'BlockingVolume': '/Script/Engine.BlockingVolume',
-            'Pawn': '/Script/Engine.Pawn',
-            'Character': '/Script/Engine.Character',
-            'Actor': '/Script/Engine.Actor'
-        };
-
         const params = normalizeArgs(args, [
-            { key: 'classPath', aliases: ['class', 'type', 'actorClass'], required: true, map: classAliases },
+            { key: 'classPath', aliases: ['class', 'type', 'actorClass'], required: true, map: ACTOR_CLASS_ALIASES },
             { key: 'actorName', aliases: ['name'] },
             { key: 'timeoutMs', default: undefined }
         ]);
@@ -39,20 +20,13 @@ const handlers: Record<string, ActorActionHandler> = {
         // failure so tests can exercise timeout handling deterministically
         // without relying on editor performance.
         if (typeof timeoutMs === 'number' && timeoutMs > 0 && timeoutMs < 200) {
-            return {
-                success: false,
-                error: `Timeout too small for spawn operation: ${timeoutMs}ms`,
-                message: 'Timeout too small for spawn operation'
-            };
+            throw new Error(`Timeout too small for spawn operation: ${timeoutMs}ms`);
         }
 
         // For SplineActor alias, add SplineComponent automatically
-        // Check original args for raw input or assume normalized classPath check is sufficient if map didn't obscure it?
-        // Map transforms 'SplineActor' -> '/Script/Engine.Actor', so we check original args.
+        // Check original args for raw input since map transforms the alias
         const originalClass = args.classPath || args.class || args.type || args.actorClass;
-        const componentToAdd = (originalClass === 'SplineActor' || originalClass === 'Spline')
-            ? 'SplineComponent'
-            : undefined;
+        const componentToAdd = getRequiredComponent(originalClass);
 
         const result = await tools.actorTools.spawn({
             classPath: params.classPath,
