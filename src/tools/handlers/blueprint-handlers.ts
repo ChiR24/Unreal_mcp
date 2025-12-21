@@ -368,7 +368,7 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
 }
 
 export async function handleBlueprintGet(args: any, tools: ITools) {
-  const res = await executeAutomationRequest(tools, 'blueprint_get', args, 'Automation bridge not available for blueprint operations');
+  const res = await executeAutomationRequest(tools, 'blueprint_get', args, 'Automation bridge not available for blueprint operations') as { success?: boolean; message?: string } | null;
   if (res && res.success) {
     return cleanObject({
       ...res,

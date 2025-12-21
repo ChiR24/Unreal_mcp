@@ -49,6 +49,14 @@ export class CommandValidator {
     ];
 
     /**
+     * Pre-compiled patterns for dangerous commands using word boundaries.
+     * This prevents false positives like 'show exit menu' matching 'exit'.
+     */
+    private static readonly DANGEROUS_PATTERNS = CommandValidator.DANGEROUS_COMMANDS.map(
+        cmd => new RegExp(`(?:^|\\s)${cmd.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`, 'i')
+    );
+
+    /**
      * Validates a console command for safety before execution.
      * @param command - The console command string to validate
      * @throws Error if the command is dangerous, contains forbidden tokens, or is invalid
@@ -73,7 +81,8 @@ export class CommandValidator {
             throw new Error('Python console commands are blocked from external calls for safety.');
         }
 
-        if (this.DANGEROUS_COMMANDS.some(dangerous => cmdLower.includes(dangerous))) {
+        // Use word-boundary matching to avoid false positives like 'show exit menu'
+        if (this.DANGEROUS_PATTERNS.some(pattern => pattern.test(cmdLower))) {
             throw new Error(`Dangerous command blocked: ${command}`);
         }
 
@@ -81,8 +90,21 @@ export class CommandValidator {
             throw new Error('Command chaining with && or || is blocked for safety.');
         }
 
+        // Block semicolon and pipe which can also be used for command chaining/injection
+        if (cmdTrimmed.includes(';')) {
+            throw new Error('Command chaining with ; (semicolon) is blocked for safety.');
+        }
+        if (cmdTrimmed.includes('|')) {
+            throw new Error('Command piping with | is blocked for safety.');
+        }
+
         if (this.FORBIDDEN_TOKENS.some(token => cmdLower.includes(token))) {
             throw new Error(`Command contains unsafe token and was blocked: ${command}`);
+        }
+
+        // Block backticks which can be used for shell execution
+        if (cmdTrimmed.includes('`')) {
+            throw new Error('Backtick characters are blocked for safety.');
         }
     }
 

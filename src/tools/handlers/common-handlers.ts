@@ -1,12 +1,19 @@
 import { ITools } from '../../types/tool-interfaces.js';
+import type { HandlerArgs, Vector3, Rotator } from '../../types/handler-types.js';
 
-export function ensureArgsPresent(args: any) {
+/**
+ * Validates that args is not null/undefined.
+ */
+export function ensureArgsPresent(args: unknown): asserts args is Record<string, unknown> {
   if (args === null || args === undefined) {
     throw new Error('Invalid arguments: null or undefined');
   }
 }
 
-export function requireAction(args: any): string {
+/**
+ * Extracts and validates the 'action' field from args.
+ */
+export function requireAction(args: HandlerArgs): string {
   ensureArgsPresent(args);
   const action = args.action;
   if (typeof action !== 'string' || action.trim() === '') {
@@ -15,20 +22,26 @@ export function requireAction(args: any): string {
   return action;
 }
 
-export function requireNonEmptyString(value: any, field: string, message?: string): string {
+/**
+ * Validates that a value is a non-empty string.
+ */
+export function requireNonEmptyString(value: unknown, field: string, message?: string): string {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new Error(message ?? `Invalid ${field}: must be a non-empty string`);
   }
   return value;
 }
 
+/**
+ * Execute a request via the automation bridge.
+ */
 export async function executeAutomationRequest(
   tools: ITools,
   toolName: string,
-  args: any,
+  args: HandlerArgs,
   errorMessage: string = 'Automation bridge not available',
   options: { timeoutMs?: number } = {}
-) {
+): Promise<unknown> {
   const automationBridge = tools.automationBridge;
   // If the bridge is missing or not a function, we can't proceed with automation requests
   if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
@@ -42,11 +55,14 @@ export async function executeAutomationRequest(
   return await automationBridge.sendAutomationRequest(toolName, args, options);
 }
 
+/** Input type for location normalization */
+type LocationInput = Vector3 | [number, number, number] | number[] | null | undefined;
+
 /**
  * Normalize location to [x, y, z] array format
  * Accepts both {x,y,z} object and [x,y,z] array formats
  */
-export function normalizeLocation(location: any): [number, number, number] | undefined {
+export function normalizeLocation(location: LocationInput): [number, number, number] | undefined {
   if (!location) return undefined;
 
   // Already array format
@@ -56,17 +72,21 @@ export function normalizeLocation(location: any): [number, number, number] | und
 
   // Object format {x, y, z}
   if (typeof location === 'object' && ('x' in location || 'y' in location || 'z' in location)) {
-    return [Number(location.x) || 0, Number(location.y) || 0, Number(location.z) || 0];
+    const loc = location as Vector3;
+    return [Number(loc.x) || 0, Number(loc.y) || 0, Number(loc.z) || 0];
   }
 
   return undefined;
 }
 
+/** Input type for rotation normalization */
+type RotationInput = Rotator | [number, number, number] | number[] | null | undefined;
+
 /**
  * Normalize rotation to {pitch, yaw, roll} object format
  * Accepts both {pitch,yaw,roll} object and [pitch,yaw,roll] array formats
  */
-export function normalizeRotation(rotation: any): { pitch: number; yaw: number; roll: number } | undefined {
+export function normalizeRotation(rotation: RotationInput): Rotator | undefined {
   if (!rotation) return undefined;
 
   // Array format [pitch, yaw, roll]
@@ -76,10 +96,11 @@ export function normalizeRotation(rotation: any): { pitch: number; yaw: number; 
 
   // Already object format
   if (typeof rotation === 'object') {
+    const rot = rotation as Rotator;
     return {
-      pitch: Number(rotation.pitch) || 0,
-      yaw: Number(rotation.yaw) || 0,
-      roll: Number(rotation.roll) || 0
+      pitch: Number(rot.pitch) || 0,
+      yaw: Number(rot.yaw) || 0,
+      roll: Number(rot.roll) || 0
     };
   }
 

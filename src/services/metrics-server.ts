@@ -85,7 +85,7 @@ function formatPrometheusMetrics(options: MetricsServerOptions): string {
   return lines.join('\n') + '\n';
 }
 
-export function startMetricsServer(options: MetricsServerOptions): void {
+export function startMetricsServer(options: MetricsServerOptions): http.Server | null {
   const { logger } = options;
 
   const portEnv = process.env.MCP_METRICS_PORT || process.env.PROMETHEUS_PORT;
@@ -93,7 +93,29 @@ export function startMetricsServer(options: MetricsServerOptions): void {
 
   if (!port || !Number.isFinite(port) || port <= 0) {
     logger.debug('Metrics server disabled (set MCP_METRICS_PORT to enable Prometheus /metrics endpoint).');
-    return;
+    return null;
+  }
+
+  // Simple rate limiting: max 60 requests per minute per IP
+  const RATE_LIMIT_WINDOW_MS = 60000;
+  const RATE_LIMIT_MAX_REQUESTS = 60;
+  const requestCounts = new Map<string, { count: number; resetAt: number }>();
+
+  function checkRateLimit(ip: string): boolean {
+    const now = Date.now();
+    const record = requestCounts.get(ip);
+
+    if (!record || now >= record.resetAt) {
+      requestCounts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+      return true;
+    }
+
+    if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+      return false;
+    }
+
+    record.count++;
+    return true;
   }
 
   try {
@@ -117,13 +139,22 @@ export function startMetricsServer(options: MetricsServerOptions): void {
         return;
       }
 
+      // Apply rate limiting
+      const clientIp = req.socket.remoteAddress || 'unknown';
+      if (!checkRateLimit(clientIp)) {
+        res.statusCode = 429;
+        res.setHeader('Retry-After', '60');
+        res.end('Too Many Requests');
+        return;
+      }
+
       try {
         const body = formatPrometheusMetrics(options);
         res.statusCode = 200;
         res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
         res.end(body);
       } catch (err) {
-        logger.warn('Failed to render /metrics payload', err as any);
+        logger.warn('Failed to render /metrics payload', err as Error);
         res.statusCode = 500;
         res.end('Internal Server Error');
       }
@@ -136,7 +167,10 @@ export function startMetricsServer(options: MetricsServerOptions): void {
     server.on('error', (err) => {
       logger.warn('Metrics server error', err as any);
     });
+
+    return server;
   } catch (err) {
     logger.warn('Failed to start metrics server', err as any);
+    return null;
   }
 }

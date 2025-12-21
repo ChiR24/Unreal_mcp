@@ -1,8 +1,9 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
+import type { EditorArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
 
-export async function handleEditorTools(action: string, args: any, tools: ITools) {
+export async function handleEditorTools(action: string, args: EditorArgs, tools: ITools) {
   switch (action) {
     case 'play': {
       const res = await tools.editorTools.playInEditor(args.timeoutMs);
@@ -16,14 +17,14 @@ export async function handleEditorTools(action: string, args: any, tools: ITools
     case 'eject': {
       const inPie = await tools.editorTools.isInPIE();
       if (!inPie) {
-        return { success: false, error: 'NOT_IN_PIE', message: 'Cannot eject while not in PIE' };
+        throw new Error('Cannot eject while not in PIE');
       }
       return await executeAutomationRequest(tools, 'control_editor', { action: 'eject' });
     }
     case 'possess': {
       const inPie = await tools.editorTools.isInPIE();
       if (!inPie) {
-        return { success: false, error: 'NOT_IN_PIE', message: 'Cannot possess actor while not in PIE' };
+        throw new Error('Cannot possess actor while not in PIE');
       }
       return await executeAutomationRequest(tools, 'control_editor', args);
     }
@@ -40,7 +41,7 @@ export async function handleEditorTools(action: string, args: any, tools: ITools
       return cleanObject(res);
     }
     case 'console_command': {
-      const res = await tools.editorTools.executeConsoleCommand(args.command);
+      const res = await tools.editorTools.executeConsoleCommand(args.command ?? '');
       return cleanObject(res);
     }
     case 'set_camera': {
@@ -63,17 +64,17 @@ export async function handleEditorTools(action: string, args: any, tools: ITools
       return { success: true, message: 'Stepped frame', action: 'step_frame' };
     }
     case 'create_bookmark': {
-      const idx = parseInt(args.bookmarkName) || 0;
+      const idx = parseInt(args.bookmarkName ?? '0') || 0;
       await tools.editorTools.executeConsoleCommand(`r.SetBookmark ${idx}`);
       return { success: true, message: `Created bookmark ${idx}`, action: 'create_bookmark' };
     }
     case 'jump_to_bookmark': {
-      const idx = parseInt(args.bookmarkName) || 0;
+      const idx = parseInt(args.bookmarkName ?? '0') || 0;
       await tools.editorTools.executeConsoleCommand(`r.JumpToBookmark ${idx}`);
       return { success: true, message: `Jumped to bookmark ${idx}`, action: 'jump_to_bookmark' };
     }
     case 'set_preferences': {
-      const res = await tools.editorTools.setEditorPreferences(args.category, args.preferences);
+      const res = await tools.editorTools.setEditorPreferences(args.category ?? '', args.preferences ?? {});
       return cleanObject(res);
     }
     case 'open_asset': {

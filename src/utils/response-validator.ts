@@ -1,4 +1,4 @@
-import Ajv from 'ajv';
+import Ajv, { ValidateFunction } from 'ajv';
 import { Logger } from './logger.js';
 import { cleanObject } from './safe-json.js';
 import { wasmIntegration } from '../wasm/index.js';
@@ -161,16 +161,14 @@ function buildSummaryText(toolName: string, payload: unknown): string {
  * Validates tool responses against their defined output schemas
  */
 export class ResponseValidator {
-  // Keep ajv as any to avoid complex interop typing issues with Ajv's ESM/CJS dual export
-  // shape when using NodeNext module resolution.
-  private ajv: any;
-  private validators: Map<string, any> = new Map();
+  // Ajv instance - using Ajv.default for ESM/CJS interop
+  private ajv: Ajv.default;
+  private validators: Map<string, ValidateFunction> = new Map();
 
   constructor() {
-    // Cast Ajv to any for construction to avoid errors when TypeScript's NodeNext
-    // module resolution represents the import as a namespace object.
-    const AjvCtor: any = (Ajv as any)?.default ?? Ajv;
-    this.ajv = new AjvCtor({
+    // Ajv exports differ between ESM and CJS - handle both patterns
+    const AjvClass = (Ajv as unknown as { default: typeof Ajv.default }).default ?? Ajv.default;
+    this.ajv = new AjvClass({
       allErrors: true,
       verbose: true,
       strict: true // Enforce strict schema validation
