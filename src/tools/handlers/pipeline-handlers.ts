@@ -6,6 +6,67 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
+function validateUbtArgumentsString(extraArgs: string): void {
+  if (!extraArgs || typeof extraArgs !== 'string') {
+    return;
+  }
+
+  const forbiddenChars = ['\n', '\r', ';', '|', '`', '&&', '||', '>', '<'];
+  for (const char of forbiddenChars) {
+    if (extraArgs.includes(char)) {
+      throw new Error(
+        `UBT arguments contain forbidden character(s) and are blocked for safety. Blocked: ${JSON.stringify(char)}.`
+      );
+    }
+  }
+}
+
+function tokenizeArgs(extraArgs: string): string[] {
+  if (!extraArgs) {
+    return [];
+  }
+
+  const args: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  let escapeNext = false;
+
+  for (let i = 0; i < extraArgs.length; i++) {
+    const ch = extraArgs[i];
+
+    if (escapeNext) {
+      current += ch;
+      escapeNext = false;
+      continue;
+    }
+
+    if (ch === '\\') {
+      escapeNext = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (!inQuotes && /\s/.test(ch)) {
+      if (current.length > 0) {
+        args.push(current);
+        current = '';
+      }
+    } else {
+      current += ch;
+    }
+  }
+
+  if (current.length > 0) {
+    args.push(current);
+  }
+
+  return args;
+}
+
 export async function handlePipelineTools(action: string, args: PipelineArgs, tools: ITools) {
   switch (action) {
     case 'run_ubt': {
@@ -18,8 +79,9 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
         throw new Error('Target is required for run_ubt');
       }
 
-      // Try to find UnrealBuildTool
-      let ubtPath = 'UnrealBuildTool'; // Assume in PATH by default
+      validateUbtArgumentsString(extraArgs);
+
+      let ubtPath = 'UnrealBuildTool';
       const enginePath = process.env.UE_ENGINE_PATH || process.env.UNREAL_ENGINE_PATH;
 
       if (enginePath) {
@@ -38,10 +100,8 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
         throw new Error('UE_PROJECT_PATH environment variable is not set and no projectPath argument was provided.');
       }
 
-      // If projectPath points to a .uproject file, use it. If it's a directory, look for a .uproject file.
       let uprojectFile = projectPath;
       if (!uprojectFile.endsWith('.uproject')) {
-        // Find first .uproject in the directory
         try {
           const files = fs.readdirSync(projectPath);
           const found = files.find(f => f.endsWith('.uproject'));
@@ -53,16 +113,19 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
         }
       }
 
+      const projectArg = `-Project="${uprojectFile}"`;
+      const extraTokens = tokenizeArgs(extraArgs);
+
       const cmdArgs = [
         target,
         platform,
         configuration,
-        `-Project="${uprojectFile}"`,
-        extraArgs
-      ].filter(Boolean);
+        projectArg,
+        ...extraTokens
+      ];
 
       return new Promise((resolve) => {
-        const child = spawn(ubtPath, cmdArgs, { shell: true });
+        const child = spawn(ubtPath, cmdArgs, { shell: false });
 
         const MAX_OUTPUT_SIZE = 20 * 1024; // 20KB cap
         let stdout = '';
@@ -91,12 +154,14 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
             ? '\n[Output truncated for response payload]'
             : '';
 
+          const quotedArgs = cmdArgs.map(arg => arg.includes(' ') ? `"${arg}"` : arg);
+
           if (code === 0) {
             resolve({
               success: true,
               message: 'UnrealBuildTool finished successfully',
               output: stdout + truncatedNote,
-              command: `${ubtPath} ${cmdArgs.join(' ')}`
+              command: `${ubtPath} ${quotedArgs.join(' ')}`
             });
           } else {
             resolve({
@@ -105,23 +170,24 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
               message: `UnrealBuildTool failed with code ${code}`,
               output: stdout + truncatedNote,
               errorOutput: stderr + truncatedNote,
-              command: `${ubtPath} ${cmdArgs.join(' ')}`
+              command: `${ubtPath} ${quotedArgs.join(' ')}`
             });
           }
         });
 
         child.on('error', (err) => {
+          const quotedArgs = cmdArgs.map(arg => arg.includes(' ') ? `"${arg}"` : arg);
+
           resolve({
             success: false,
             error: 'SPAWN_FAILED',
             message: `Failed to spawn UnrealBuildTool: ${err.message}`,
-            command: `${ubtPath} ${cmdArgs.join(' ')}`
+            command: `${ubtPath} ${quotedArgs.join(' ')}`
           });
         });
       });
     }
     default:
-      // Fallback to automation bridge if we add more actions later that are bridge-supported
       const res = await executeAutomationRequest(tools, 'manage_pipeline', { ...args, subAction: action }, 'Automation bridge not available for manage_pipeline');
       return cleanObject(res);
   }

@@ -446,6 +446,8 @@ uint32 FMcpBridgeWebSocket::RunServer() {
   TSharedRef<FInternetAddr> ListenAddr = SocketSubsystem->CreateInternetAddr();
 
   bool bResolvedHost = false;
+  bool bExplicitBindAll = false;
+
   if (!ListenHost.IsEmpty()) {
     FString HostToBind = ListenHost;
     if (HostToBind.Equals(TEXT("localhost"), ESearchCase::IgnoreCase)) {
@@ -457,10 +459,23 @@ uint32 FMcpBridgeWebSocket::RunServer() {
     if (bIsValidIp) {
       bResolvedHost = true;
     }
+
+    bExplicitBindAll = HostToBind.Equals(TEXT("0.0.0.0"), ESearchCase::IgnoreCase) ||
+                       HostToBind.Equals(TEXT("::"), ESearchCase::IgnoreCase);
   }
 
   if (!bResolvedHost) {
-    ListenAddr->SetAnyAddress();
+    if (!bExplicitBindAll) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("Invalid ListenHost '%s'. Falling back to 127.0.0.1 for safety. To bind all interfaces, explicitly set ListenHost=0.0.0.0."),
+             *ListenHost);
+
+      bool bFallbackIsValidIp = false;
+      ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
+      bResolvedHost = bFallbackIsValidIp;
+    } else {
+      ListenAddr->SetAnyAddress();
+    }
   }
 
   ListenAddr->SetPort(Port);

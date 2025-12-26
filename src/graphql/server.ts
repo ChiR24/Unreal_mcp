@@ -50,11 +50,32 @@ export class GraphQLServer {
       return;
     }
 
+    const isLoopback = this.config.host === '127.0.0.1' ||
+                        this.config.host === '::1' ||
+                        this.config.host.toLowerCase() === 'localhost';
+
+    const allowRemote = process.env.GRAPHQL_ALLOW_REMOTE === 'true';
+
+    if (!isLoopback && !allowRemote) {
+      this.log.warn(
+        `GraphQL server is configured to bind to non-loopback host '${this.config.host}'. GraphQL is for local debugging only. ` +
+          'To allow remote binding, set GRAPHQL_ALLOW_REMOTE=true. Aborting start.'
+      );
+      return;
+    }
+
+    if (!isLoopback && allowRemote) {
+      if (this.config.cors.origin === '*') {
+        this.log.warn(
+          "GraphQL server is binding to a remote host with permissive CORS origin '*'. " +
+            'Set GRAPHQL_CORS_ORIGIN to specific origins for production. Using permissive CORS for now.'
+        );
+      }
+    }
+
     try {
-      // Create GraphQL schema
       const schema = createGraphQLSchema(this.bridge, this.automationBridge);
 
-      // Create Yoga server
       const yoga = createYoga({
         schema,
         graphqlEndpoint: this.config.path,
@@ -77,12 +98,10 @@ export class GraphQLServer {
         }
       });
 
-      // Create HTTP server with Yoga's request handler
       this.server = createServer(
         yoga as any
       );
 
-      // Start server
       await new Promise<void>((resolve, reject) => {
         if (!this.server) {
           reject(new Error('Server not initialized'));
@@ -102,9 +121,6 @@ export class GraphQLServer {
           resolve();
         });
       });
-
-      // Setup graceful shutdown
-      this.setupShutdown();
     } catch (error) {
       this.log.error('Failed to start GraphQL server:', error);
       throw error;
@@ -128,22 +144,6 @@ export class GraphQLServer {
         }
       });
     });
-  }
-
-  private setupShutdown(): void {
-    const gracefulShutdown = async (signal: string) => {
-      this.log.info(`Received ${signal}, shutting down GraphQL server...`);
-      try {
-        await this.stop();
-        process.exit(0);
-      } catch (error) {
-        this.log.error('Error during GraphQL server shutdown:', error);
-        process.exit(1);
-      }
-    };
-
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
   }
 
   getConfig() {

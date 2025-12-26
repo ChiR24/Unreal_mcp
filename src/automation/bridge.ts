@@ -6,7 +6,9 @@ import {
     DEFAULT_AUTOMATION_PORT,
     DEFAULT_NEGOTIATED_PROTOCOLS,
     DEFAULT_HEARTBEAT_INTERVAL_MS,
-    DEFAULT_MAX_PENDING_REQUESTS
+    DEFAULT_MAX_PENDING_REQUESTS,
+    DEFAULT_MAX_QUEUED_REQUESTS,
+    MAX_WS_MESSAGE_SIZE_BYTES
 } from '../constants.js';
 import { createRequire } from 'node:module';
 import {
@@ -45,6 +47,7 @@ export class AutomationBridge extends EventEmitter {
     private readonly clientPort: number;
     private readonly serverLegacyEnabled: boolean;
     private readonly maxConcurrentConnections: number;
+    private readonly maxQueuedRequests: number;
 
     private connectionManager: ConnectionManager;
     private requestTracker: RequestTracker;
@@ -131,6 +134,7 @@ export class AutomationBridge extends EventEmitter {
 
         const maxPendingRequests = Math.max(1, options.maxPendingRequests ?? DEFAULT_MAX_PENDING_REQUESTS);
         const maxConcurrentConnections = Math.max(1, options.maxConcurrentConnections ?? 10);
+        this.maxQueuedRequests = Math.max(0, options.maxQueuedRequests ?? DEFAULT_MAX_QUEUED_REQUESTS);
 
         this.clientHost = options.clientHost ?? process.env.MCP_AUTOMATION_CLIENT_HOST ?? DEFAULT_AUTOMATION_HOST;
         this.clientPort = options.clientPort ?? sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) ?? DEFAULT_AUTOMATION_PORT;
@@ -185,13 +189,21 @@ export class AutomationBridge extends EventEmitter {
 
             this.log.debug(`Negotiated protocols: ${JSON.stringify(this.negotiatedProtocols)}`);
 
-            // Compatibility fix: If only one protocol, pass as string to ensure ws/plugin compatibility
-            const protocols = 'mcp-automation';
+            const protocols = this.negotiatedProtocols.length === 1
+                ? this.negotiatedProtocols[0]
+                : this.negotiatedProtocols;
 
             this.log.debug(`Using WebSocket protocols arg: ${JSON.stringify(protocols)}`);
 
+            const headers: Record<string, string> | undefined = this.capabilityToken
+                ? {
+                    'X-MCP-Capability': this.capabilityToken,
+                    'X-MCP-Capability-Token': this.capabilityToken
+                  }
+                : undefined;
+
             const socket = new WebSocket(url, protocols, {
-                headers: this.capabilityToken ? { 'X-MCP-Capability': this.capabilityToken } : undefined,
+                headers,
                 perMessageDeflate: false
             });
 
@@ -233,10 +245,13 @@ export class AutomationBridge extends EventEmitter {
                     protocol: socket.protocol || null
                 });
 
-                // Set up message handling for the authenticated socket
                 socket.on('message', (data) => {
                     try {
                         const text = typeof data === 'string' ? data : data.toString('utf8');
+                        if (text.length > MAX_WS_MESSAGE_SIZE_BYTES) {
+                            this.log.error(`Received oversized message (${text.length} bytes, max: ${MAX_WS_MESSAGE_SIZE_BYTES}). Dropping.`);
+                            return;
+                        }
                         this.log.debug(`[AutomationBridge Client] Received message: ${text.substring(0, 1000)}`);
                         const parsed = JSON.parse(text) as AutomationBridgeMessage;
                         this.connectionManager.updateLastMessageTime();
@@ -431,11 +446,10 @@ export class AutomationBridge extends EventEmitter {
             throw new Error('Automation bridge not connected');
         }
 
-        // Check if we need to queue (unless it's a priority request which standard ones are not)
-        // We use requestTracker directly to check limit as it's the source of truth
-        // Note: requestTracker exposes maxPendingRequests via constructor but generic check logic isn't public
-        // We assumed getPendingCount() is available
         if (this.requestTracker.getPendingCount() >= this.requestTracker.getMaxPendingRequests()) {
+            if (this.queuedRequestItems.length >= this.maxQueuedRequests) {
+                throw new Error(`Automation bridge request queue is full (max: ${this.maxQueuedRequests}). Please retry later.`);
+            }
             return new Promise<T>((resolve, reject) => {
                 this.queuedRequestItems.push({
                     resolve,
