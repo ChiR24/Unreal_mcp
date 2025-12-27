@@ -4,6 +4,9 @@ import { BaseTool } from './base-tool.js';
 import { IActorTools, StandardActionResponse } from '../types/tool-interfaces.js';
 import { ActorResponse } from '../types/automation-responses.js';
 import { wasmIntegration } from '../wasm/index.js';
+import { Logger } from '../utils/logger.js';
+
+const log = new Logger('ActorTools');
 
 /** Extended actor response with spawn-specific fields */
 interface SpawnActorResponse extends ActorResponse {
@@ -397,7 +400,7 @@ export class ActorTools extends BaseTool implements IActorTools {
       // Use WASM vectorAdd for offset calculation (origin + offset)
       const origin: [number, number, number] = [0, 0, 0];
       const calculatedOffset = wasmIntegration.vectorAdd(origin, offs);
-      console.error('[WASM] Using vectorAdd for duplicate offset calculation');
+      log.debug('[WASM] Using vectorAdd for duplicate offset calculation');
       payload.offset = { x: calculatedOffset[0], y: calculatedOffset[1], z: calculatedOffset[2] };
     }
 

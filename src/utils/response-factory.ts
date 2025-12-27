@@ -1,5 +1,8 @@
 import { StandardActionResponse } from '../types/tool-interfaces.js';
+import { Logger } from './logger.js';
 import { cleanObject } from './safe-json.js';
+
+const log = new Logger('ResponseFactory');
 
 export class ResponseFactory {
     /**
@@ -22,7 +25,7 @@ export class ResponseFactory {
         const errorMessage = error instanceof Error ? error.message : String(error || defaultMessage);
 
         // Log the full error for debugging (internal logs) but return a clean message to the client
-        console.error('[ResponseFactory] Error:', error);
+        log.error('[ResponseFactory] Error:', error);
 
         return {
             success: false,

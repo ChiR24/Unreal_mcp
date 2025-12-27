@@ -1,5 +1,8 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
+import { Logger } from '../utils/logger.js';
+
+const log = new Logger('MaterialTools');
 
 export class MaterialTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
@@ -152,12 +155,13 @@ export class MaterialTools {
           // For now, let's at least not silence everything.
           const msg = e instanceof Error ? e.message : String(e);
           if (!msg.includes('unknown') && !msg.includes('UNKNOWN_PLUGIN_ACTION')) {
-            console.warn(`[MaterialTools] Plugin create_material_instance failed with specific error (falling back to python): ${msg}`);
+            log.warn(`Plugin create_material_instance failed with specific error (falling back to python): ${msg}`);
           }
         }
       }
 
       // Fallback: use the centralized editor function template for material instance
+
       const createParams = {
         asset_name: name,
         package_path: cleanPath,

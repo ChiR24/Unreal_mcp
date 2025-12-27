@@ -194,7 +194,6 @@ export class EditorTools extends BaseTool implements IEditorTools {
         : [0, 0, 0];
       // Compose transform to validate and process camera positioning via WASM
       wasmIntegration.composeTransform(locArray, rotArray, [1, 1, 1]);
-      // console.error('[WASM] Using composeTransform for camera positioning');
 
       const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
         action: 'set_camera',

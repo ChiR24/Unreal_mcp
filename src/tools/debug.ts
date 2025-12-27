@@ -3,6 +3,9 @@
 
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
+import { Logger } from '../utils/logger.js';
+
+const log = new Logger('DebugVisualizationTools');
 
 export class DebugVisualizationTools {
   private bridge: UnrealBridge;
@@ -473,7 +476,7 @@ export class DebugVisualizationTools {
       'LightComplexity', 'ShaderComplexity', 'LightmapDensity', 'StationaryLightOverlap'
     ];
     if (UNSAFE_VIEWMODES.includes(params.mode)) {
-      console.error(`⚠️ Viewmode '${params.mode}' may be unstable in some UE configurations.`);
+      log.warn(`Viewmode '${params.mode}' may be unstable in some UE configurations.`);
       try { await this.bridge.executeConsoleCommand('stop'); } catch { }
       await new Promise(resolve => setTimeout(resolve, 100));
     }

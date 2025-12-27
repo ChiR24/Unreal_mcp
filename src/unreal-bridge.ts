@@ -690,4 +690,12 @@ export class UnrealBridge {
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
+
+  dispose(): void {
+    try {
+      this.commandQueue.stopProcessor();
+    } catch (error) {
+      this.log.debug('Failed to stop command queue processor', error);
+    }
+  }
 }

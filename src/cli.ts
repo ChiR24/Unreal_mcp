@@ -2,6 +2,11 @@
 // Dynamic import loader: prefer compiled JS when present (./index.js) but
 // gracefully fall back to TypeScript source (./index.ts) when running via
 // ts-node-esm or similar dev workflows where compiled JS isn't available.
+
+import { Logger } from './utils/logger.js';
+
+const log = new Logger('CLI');
+
 (async () => {
   try {
     const m = await import('./index.js');
@@ -24,11 +29,11 @@
             throw new Error('startStdioServer not exported from index.ts');
           }
       } catch (err2) {
-        console.error('Failed to start server (fallback to TypeScript failed):', err2);
+        log.error('Failed to start server (fallback to TypeScript failed):', err2);
         process.exit(1);
       }
     }
-    console.error('Failed to start server:', err);
+    log.error('Failed to start server:', err);
     process.exit(1);
   }
 })();
