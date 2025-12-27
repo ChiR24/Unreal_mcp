@@ -43,7 +43,7 @@ const testCases = [
     scenario: "Edge: Very long safe command",
     toolName: "system_control",
     arguments: { action: "console_command", command: "stat fps; stat gpu; stat memory" },
-    expected: "success"
+    expected: "blocked|command_blocked|blocked for safety"
   },
   {
     scenario: "Warning: Unknown command",

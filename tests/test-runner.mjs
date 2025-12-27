@@ -20,6 +20,66 @@ let serverArgs = process.env.UNREAL_MCP_SERVER_ARGS ? process.env.UNREAL_MCP_SER
 const serverCwd = process.env.UNREAL_MCP_SERVER_CWD ?? repoRoot;
 const serverEnv = Object.assign({}, process.env);
 
+const DEFAULT_RESPONSE_LOG_MAX_CHARS = 6000; // default max chars
+const RESPONSE_LOGGING_ENABLED = process.env.UNREAL_MCP_TEST_LOG_RESPONSES !== '0';
+
+function clampString(value, maxChars) {
+  if (typeof value !== 'string') return '';
+  if (value.length <= maxChars) return value;
+  return value.slice(0, maxChars) + `\n... (truncated, ${value.length - maxChars} chars omitted)`;
+}
+
+function tryParseJson(text) {
+  if (typeof text !== 'string') return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+export function normalizeMcpResponse(response) {
+  const normalized = {
+    isError: Boolean(response?.isError),
+    structuredContent: response?.structuredContent ?? null,
+    contentText: '',
+    content: response?.content ?? undefined
+  };
+
+  if (normalized.structuredContent === null && Array.isArray(response?.content)) {
+    for (const entry of response.content) {
+      if (entry?.type !== 'text' || typeof entry.text !== 'string') continue;
+      const parsed = tryParseJson(entry.text);
+      if (parsed !== null) {
+        normalized.structuredContent = parsed;
+        break;
+      }
+    }
+  }
+
+  if (Array.isArray(response?.content) && response.content.length > 0) {
+    normalized.contentText = response.content
+      .map((entry) => (entry && typeof entry.text === 'string' ? entry.text : ''))
+      .filter((text) => text.length > 0)
+      .join('\n');
+  }
+
+  return normalized;
+}
+
+function logMcpResponse(toolName, normalizedResponse) {
+  const maxChars = Number(process.env.UNREAL_MCP_TEST_RESPONSE_MAX_CHARS ?? DEFAULT_RESPONSE_LOG_MAX_CHARS);
+  const payload = {
+    isError: normalizedResponse.isError,
+    structuredContent: normalizedResponse.structuredContent,
+    contentText: normalizedResponse.contentText,
+    content: normalizedResponse.content
+  };
+  const json = JSON.stringify(payload, null, 2);
+  console.log(`[MCP RESPONSE] ${toolName}:`);
+  console.log(clampString(json, Number.isFinite(maxChars) && maxChars > 0 ? maxChars : DEFAULT_RESPONSE_LOG_MAX_CHARS));
+}
+
 function formatResultLine(testCase, status, detail, durationMs) {
   const durationText = typeof durationMs === 'number' ? ` (${durationMs.toFixed(1)} ms)` : '';
   return `[${status.toUpperCase()}] ${testCase.scenario}${durationText}${detail ? ` => ${detail}` : ''}`;
@@ -515,13 +575,13 @@ export async function runToolTests(toolName, testCases) {
           }
         }
         const normalizedResponse = { ...response, structuredContent };
+        if (RESPONSE_LOGGING_ENABLED) {
+          logMcpResponse(testCase.toolName + " :: " + testCase.scenario, normalizeMcpResponse(normalizedResponse));
+        }
         const { passed, reason } = evaluateExpectation(testCase, normalizedResponse);
 
         if (!passed) {
           console.log(`[FAILED] ${testCase.scenario} (${durationMs.toFixed(1)} ms) => ${reason}`);
-          if (normalizedResponse) {
-            console.log(`[DEBUG] Full response for ${testCase.scenario}:`, JSON.stringify(normalizedResponse, null, 2));
-          }
           results.push({
             scenario: testCase.scenario,
             toolName: testCase.toolName,

@@ -12,6 +12,7 @@ export interface AutomationBridgeOptions {
     heartbeatIntervalMs?: number;
     maxPendingRequests?: number;
     maxConcurrentConnections?: number;
+    maxQueuedRequests?: number;
     clientMode?: boolean;
     clientHost?: string;
     clientPort?: number;

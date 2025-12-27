@@ -59,9 +59,9 @@ describe('sanitizePath', () => {
     });
 
     it('sanitizes path segments with dots', () => {
-        const result = sanitizePath('/Game/../MyAsset');
-        // Each segment is sanitized, .. becomes a segment that gets sanitized
-        expect(result).toContain('/');
+        expect(() => sanitizePath('/Game/../MyAsset')).toThrow(
+            'Path traversal (..) is not allowed'
+        );
     });
 });
 

@@ -3,7 +3,6 @@ import { HealthMonitor } from './health-monitor.js';
 import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
 import { wasmIntegration } from '../wasm/index.js';
-import { DEFAULT_AUTOMATION_HOST } from '../constants.js';
 
 interface MetricsServerOptions {
   healthMonitor: HealthMonitor;
@@ -96,6 +95,8 @@ export function startMetricsServer(options: MetricsServerOptions): http.Server |
     return null;
   }
 
+  const host = process.env.MCP_METRICS_HOST || '127.0.0.1';
+
   // Simple rate limiting: max 60 requests per minute per IP
   const RATE_LIMIT_WINDOW_MS = 60000;
   const RATE_LIMIT_MAX_REQUESTS = 60;
@@ -139,7 +140,6 @@ export function startMetricsServer(options: MetricsServerOptions): http.Server |
         return;
       }
 
-      // Apply rate limiting
       const clientIp = req.socket.remoteAddress || 'unknown';
       if (!checkRateLimit(clientIp)) {
         res.statusCode = 429;
@@ -160,8 +160,8 @@ export function startMetricsServer(options: MetricsServerOptions): http.Server |
       }
     });
 
-    server.listen(port, () => {
-      logger.info(`Prometheus metrics server listening on http://${DEFAULT_AUTOMATION_HOST}:${port}/metrics`);
+    server.listen(port, host, () => {
+      logger.info(`Prometheus metrics server listening on http://${host}:${port}/metrics`);
     });
 
     server.on('error', (err) => {

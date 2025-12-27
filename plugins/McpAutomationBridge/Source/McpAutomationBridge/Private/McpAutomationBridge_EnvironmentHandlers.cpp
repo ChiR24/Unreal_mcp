@@ -1,4 +1,4 @@
-﻿#include "McpAutomationBridgeGlobals.h"
+#include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 
@@ -1020,6 +1020,30 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
   if (LowerCommand.Contains(TEXT("&&")) || LowerCommand.Contains(TEXT("||"))) {
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("Command chaining is blocked for safety"),
+                           nullptr, TEXT("COMMAND_BLOCKED"));
+    return true;
+  }
+
+  // 4. Block line breaks
+  if (LowerCommand.Contains(TEXT("\n")) || LowerCommand.Contains(TEXT("\r"))) {
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Multi-line commands are blocked for safety"),
+                           nullptr, TEXT("COMMAND_BLOCKED"));
+    return true;
+  }
+
+  // 5. Block semicolon and pipe
+  if (LowerCommand.Contains(TEXT(";")) || LowerCommand.Contains(TEXT("|"))) {
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Command chaining with semicolon or pipe is blocked for safety"),
+                           nullptr, TEXT("COMMAND_BLOCKED"));
+    return true;
+  }
+
+  // 6. Block backticks
+  if (LowerCommand.Contains(TEXT("`"))) {
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Commands containing backticks are blocked for safety"),
                            nullptr, TEXT("COMMAND_BLOCKED"));
     return true;
   }
