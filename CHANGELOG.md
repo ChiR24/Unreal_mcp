@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.4] - 2025-12-27
+
+> [!IMPORTANT]
+> ### 🛡️ Security Release
+> This release focuses on **security hardening** and **defensive improvements** across the entire stack, including command injection prevention, network isolation, and resource management.
+
+### 🛡️ Security & Command Hardening
+
+<details>
+<summary><b>UBT Validation & Safe Execution</b></summary>
+
+| Feature | Description |
+|---------|-------------|
+| **UBT Argument Validation** | Added `validateUbtArgumentsString` and `tokenizeArgs` to block dangerous characters (`;`, `|`, backticks) |
+| **Safe Process Spawning** | Updated child process spawning to use `shell: false`, preventing shell injection attacks |
+| **Console Command Validation** | Implemented strict input validation for the Unreal Automation Bridge to block chained or multi-line commands |
+| **Argument Quoting** | Improved logging and execution logic to correctly quote arguments containing spaces |
+
+</details>
+
+### 🌐 Network & Host Binding
+
+<details>
+<summary><b>Localhost Default & Remote Configuration</b></summary>
+
+| Feature | Description |
+|---------|-------------|
+| **Localhost Default** | WebSocket, Metrics, and GraphQL servers now bind to `127.0.0.1` by default |
+| **Remote Exposure Prevention** | Prevents accidental remote exposure of services |
+| **GRAPHQL_ALLOW_REMOTE** | Added environment variable check for explicit remote binding configuration |
+| **Security Warnings** | Warnings logged for unsafe/permissive network settings |
+
+</details>
+
+### 🚦 Resource Management
+
+<details>
+<summary><b>Rate Limiting & Queue Management</b></summary>
+
+| Feature | Description |
+|---------|-------------|
+| **IP-Based Rate Limiting** | Implemented rate limiting on the metrics server |
+| **Queue Limits** | Introduced `maxQueuedRequests` to automation bridge to prevent memory exhaustion |
+| **Message Size Enforcement** | Enforced `MAX_WS_MESSAGE_SIZE_BYTES` for WebSocket connections to reject oversized payloads |
+
+</details>
+
+### 🧪 Testing & Cleanup
+
+<details>
+<summary><b>Test Updates & File Cleanup</b></summary>
+
+| Change | Description |
+|--------|-------------|
+| **Path Sanitization Tests** | Modified validation tests to verify path sanitization and expect errors for traversal attempts |
+| **Removed Legacy Tests** | Removed outdated test files (`run-unreal-tool-tests.mjs`, `test-asset-errors.mjs`) |
+| **Response Logging** | Implemented better response logging in the test runner |
+
+</details>
+
+### 🔄 Dependencies
+
+- **dependencies group**: Bumped 2 updates via @dependabot ([#33](https://github.com/ChiR24/Unreal_mcp/pull/33))
+
+---
+
 ## 🏷️ [0.5.3] - 2025-12-21
 
 > [!IMPORTANT]
