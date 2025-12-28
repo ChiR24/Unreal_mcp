@@ -1,6 +1,6 @@
 [package]
 name = "unreal-mcp-wasm"
-version = "0.1.0"
+version = "0.5.5"
 edition = "2021"
 authors = ["Unreal Engine MCP Team"]
 description = "WebAssembly module for performance-critical operations in Unreal Engine MCP Server"
