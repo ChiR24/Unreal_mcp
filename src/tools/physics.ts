@@ -147,7 +147,6 @@ export class PhysicsTools {
       }
 
       // Add concurrency delay to prevent race conditions
-
       await concurrencyDelay();
 
       // IMPORTANT: Physics assets require a SKELETAL MESH, not a skeleton
