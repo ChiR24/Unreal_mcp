@@ -57,7 +57,6 @@ export class PhysicsTools {
   }
 
   /**
-
    * Setup Ragdoll Physics
    * NOTE: Requires a valid skeletal mesh to create physics asset
    * @param skeletonPath - Path to an existing skeletal mesh asset (required)
