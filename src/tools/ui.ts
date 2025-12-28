@@ -2,6 +2,9 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
+import { Logger } from '../utils/logger.js';
+
+const log = new Logger('UITools');
 
 export class UITools {
   private automationBridge?: AutomationBridge;
@@ -45,7 +48,7 @@ export class UITools {
           };
         }
       } catch (error) {
-        console.warn('UITools.createWidget automation bridge request failed, falling back to editor function:', error);
+        log.warn('createWidget automation bridge request failed; falling back to editor function', error);
       }
     }
 

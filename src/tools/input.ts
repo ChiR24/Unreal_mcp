@@ -1,5 +1,8 @@
 
 import { AutomationBridge } from '../automation/index.js';
+import { Logger } from '../utils/logger.js';
+
+const log = new Logger('InputTools');
 
 interface ToolDefinition {
     name: string;
@@ -92,7 +95,7 @@ export class InputTools {
 
         // Warn if key is not in our known list (but still attempt the mapping)
         if (!VALID_KEY_NAMES.has(trimmedKey)) {
-            console.warn(`[InputTools] Key '${trimmedKey}' is not in the standard key list. Attempting mapping anyway.`);
+            log.warn(`Key '${trimmedKey}' is not in the standard key list. Attempting mapping anyway.`);
         }
 
         return this.automationBridge.sendAutomationRequest('manage_input', {

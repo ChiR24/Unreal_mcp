@@ -253,7 +253,7 @@ async function listActors(
     logAutomationFailure('list_actors', response);
     return { actors: [] };
   } catch (error) {
-    console.error('Failed to list actors:', error);
+    log.error('Failed to list actors:', error);
     return { actors: [] };
   }
 }
@@ -299,7 +299,7 @@ export const resolvers = {
         }
         return await context.loaders.assetLoader.load(path);
       } catch (error) {
-        console.error('Failed to get asset:', error);
+        log.error('Failed to get asset:', error);
         return null;
       }
     },
@@ -337,7 +337,7 @@ export const resolvers = {
         }
         return await context.loaders.actorLoader.load(name);
       } catch (error) {
-        console.error('Failed to get actor:', error);
+        log.error('Failed to get actor:', error);
         return null;
       }
     },
@@ -374,10 +374,12 @@ export const resolvers = {
           totalCount: blueprints.length
         };
       } catch (error) {
-        console.error('Failed to list blueprints:', error);
+        log.error('Failed to list blueprints:', error);
+
         return {
           edges: [],
           pageInfo: {
+
             hasNextPage: false,
             hasPreviousPage: false,
             startCursor: null,
@@ -409,7 +411,7 @@ export const resolvers = {
 
         return [];
       } catch (error) {
-        console.error('Failed to list levels:', error);
+        log.error('Failed to list levels:', error);
         return [];
       }
     },
@@ -428,7 +430,7 @@ export const resolvers = {
 
         return null;
       } catch (error) {
-        console.error('Failed to get current level:', error);
+        log.error('Failed to get current level:', error);
         return null;
       }
     },
@@ -460,7 +462,7 @@ export const resolvers = {
           totalCount
         };
       } catch (error) {
-        console.error('Failed to list materials:', error);
+        log.error('Failed to list materials:', error);
         return {
           edges: [],
           pageInfo: {
@@ -501,7 +503,7 @@ export const resolvers = {
           totalCount
         };
       } catch (error) {
-        console.error('Failed to list sequences:', error);
+        log.error('Failed to list sequences:', error);
         return {
           edges: [],
           pageInfo: {
@@ -528,7 +530,7 @@ export const resolvers = {
         }
         return [];
       } catch (error) {
-        console.error('Failed to list world partition cells:', error);
+        log.error('Failed to list world partition cells:', error);
         return [];
       }
     },
@@ -565,7 +567,7 @@ export const resolvers = {
           totalCount
         };
       } catch (error) {
-        console.error('Failed to list niagara systems:', error);
+        log.error('Failed to list niagara systems:', error);
         return {
           edges: [],
           pageInfo: {
@@ -596,7 +598,7 @@ export const resolvers = {
         }
         return null;
       } catch (error) {
-        console.error('Failed to get niagara system:', error);
+        log.error('Failed to get niagara system:', error);
         return null;
       }
     },
@@ -618,7 +620,7 @@ export const resolvers = {
 
         return [];
       } catch (error) {
-        console.error('Failed to search:', error);
+        log.error('Failed to search:', error);
         return [];
       }
     }
@@ -643,7 +645,7 @@ export const resolvers = {
 
         throw new Error(response.error || 'Failed to duplicate asset');
       } catch (error) {
-        console.error('Failed to duplicate asset:', error);
+        log.error('Failed to duplicate asset:', error);
         throw error;
       }
     },
@@ -665,7 +667,7 @@ export const resolvers = {
 
         throw new Error(response.error || 'Failed to move asset');
       } catch (error) {
-        console.error('Failed to move asset:', error);
+        log.error('Failed to move asset:', error);
         throw error;
       }
     },
@@ -682,7 +684,7 @@ export const resolvers = {
 
         return response.success || false;
       } catch (error) {
-        console.error('Failed to delete asset:', error);
+        log.error('Failed to delete asset:', error);
         return false;
       }
     },
@@ -701,7 +703,7 @@ export const resolvers = {
 
         throw new Error(response.error || 'Failed to spawn actor');
       } catch (error) {
-        console.error('Failed to spawn actor:', error);
+        log.error('Failed to spawn actor:', error);
         throw error;
       }
     },
@@ -718,7 +720,7 @@ export const resolvers = {
 
         return response.success || false;
       } catch (error) {
-        console.error('Failed to delete actor:', error);
+        log.error('Failed to delete actor:', error);
         return false;
       }
     },
@@ -740,7 +742,7 @@ export const resolvers = {
 
         throw new Error(response.error || 'Failed to set actor transform');
       } catch (error) {
-        console.error('Failed to set actor transform:', error);
+        log.error('Failed to set actor transform:', error);
         throw error;
       }
     },
@@ -759,7 +761,7 @@ export const resolvers = {
 
         throw new Error(response.error || 'Failed to create blueprint');
       } catch (error) {
-        console.error('Failed to create blueprint:', error);
+        log.error('Failed to create blueprint:', error);
         throw error;
       }
     },
@@ -781,7 +783,7 @@ export const resolvers = {
 
         throw new Error(response.error || 'Failed to add variable to blueprint');
       } catch (error) {
-        console.error('Failed to add variable to blueprint:', error);
+        log.error('Failed to add variable to blueprint:', error);
         throw error;
       }
     },
@@ -803,7 +805,7 @@ export const resolvers = {
 
         throw new Error(response.error || 'Failed to add function to blueprint');
       } catch (error) {
-        console.error('Failed to add function to blueprint:', error);
+        log.error('Failed to add function to blueprint:', error);
         throw error;
       }
     },
@@ -824,7 +826,7 @@ export const resolvers = {
 
         throw new Error(response.error || 'Failed to load level');
       } catch (error) {
-        console.error('Failed to load level:', error);
+        log.error('Failed to load level:', error);
         throw error;
       }
     },
@@ -841,7 +843,7 @@ export const resolvers = {
 
         return response.success || false;
       } catch (error) {
-        console.error('Failed to save level:', error);
+        log.error('Failed to save level:', error);
         return false;
       }
     },
@@ -864,7 +866,7 @@ export const resolvers = {
 
         throw new Error(response.error || 'Failed to create material instance');
       } catch (error) {
-        console.error('Failed to create material instance:', error);
+        log.error('Failed to create material instance:', error);
         throw error;
       }
     }
@@ -888,7 +890,7 @@ export const resolvers = {
 
         return [];
       } catch (error) {
-        console.error('Failed to get asset dependencies:', error);
+        log.error('Failed to get asset dependencies:', error);
         return [];
       }
     },
@@ -909,7 +911,7 @@ export const resolvers = {
 
         return [];
       } catch (error) {
-        console.error('Failed to get asset dependents:', error);
+        log.error('Failed to get asset dependents:', error);
         return [];
       }
     }
@@ -936,7 +938,7 @@ export const resolvers = {
 
         return [];
       } catch (error) {
-        console.error('Failed to get actor components:', error);
+        log.error('Failed to get actor components:', error);
         return [];
       }
     }
@@ -977,7 +979,7 @@ export const resolvers = {
 
         return [];
       } catch (error) {
-        console.error('Failed to get material parameters:', error);
+        log.error('Failed to get material parameters:', error);
         return [];
       }
     }
@@ -1000,7 +1002,7 @@ export const resolvers = {
 
         return [];
       } catch (error) {
-        console.error('Failed to get sequence tracks:', error);
+        log.error('Failed to get sequence tracks:', error);
         return [];
       }
     }

@@ -30,6 +30,10 @@ constexpr uint8 OpCodeClose = 0x8;
 constexpr uint8 OpCodePing = 0x9;
 constexpr uint8 OpCodePong = 0xA;
 
+constexpr uint64 MaxWebSocketMessageBytes = 5ULL * 1024ULL * 1024ULL;
+constexpr uint64 MaxWebSocketFramePayloadBytes = MaxWebSocketMessageBytes;
+constexpr int32 WebSocketCloseCodeMessageTooBig = 1009;
+
 struct FParsedWebSocketUrl {
   FString Host;
   int32 Port = 80;
@@ -1198,6 +1202,11 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
     PayloadLength = FromNetwork64(LongVal);
   }
 
+  if (PayloadLength > MaxWebSocketFramePayloadBytes) {
+    TearDown(TEXT("WebSocket message too large."), false, WebSocketCloseCodeMessageTooBig);
+    return false;
+  }
+
   uint8 MaskKey[4] = {0, 0, 0, 0};
   if (bMasked) {
     if (!ReceiveExact(MaskKey, 4)) {
@@ -1255,6 +1264,12 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
       return false;
     }
 
+    const uint64 NewSize = static_cast<uint64>(FragmentAccumulator.Num()) + static_cast<uint64>(Payload.Num());
+    if (NewSize > MaxWebSocketMessageBytes) {
+      TearDown(TEXT("WebSocket message too large."), false, WebSocketCloseCodeMessageTooBig);
+      return false;
+    }
+
     FragmentAccumulator.Append(Payload);
 
     if (bFinalFrame) {
@@ -1275,6 +1290,10 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
     if (bFinalFrame) {
       HandleTextPayload(Payload);
     } else {
+      if (static_cast<uint64>(Payload.Num()) > MaxWebSocketMessageBytes) {
+        TearDown(TEXT("WebSocket message too large."), false, WebSocketCloseCodeMessageTooBig);
+        return false;
+      }
       FragmentAccumulator = Payload;
       bFragmentMessageActive = true;
     }

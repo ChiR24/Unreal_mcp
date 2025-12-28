@@ -4,6 +4,9 @@ import { AutomationBridge } from '../automation/index.js';
 import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay } from '../utils/validation.js';
 import { coerceString, coerceStringArray } from '../utils/result-helpers.js';
 import { wasmIntegration } from '../wasm/index.js';
+import { Logger } from '../utils/logger.js';
+
+const log = new Logger('PhysicsTools');
 
 export class PhysicsTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
@@ -47,7 +50,7 @@ export class PhysicsTools {
         return alternate;
       }
     } catch (error) {
-      console.error('Failed to find skeletal mesh:', error);
+      log.warn('Failed to find skeletal mesh', error);
     }
 
     return '/Engine/EngineMeshes/SkeletalCube';
@@ -128,17 +131,17 @@ export class PhysicsTools {
       // Try to resolve skeleton to mesh mapping
       const resolvedPath = resolveSkeletalMeshPath(meshPath);
       if (resolvedPath && resolvedPath !== meshPath) {
-        console.error(`Auto-correcting path from ${meshPath} to ${resolvedPath}`);
+        log.warn(`Auto-correcting path from ${meshPath} to ${resolvedPath}`);
         meshPath = resolvedPath;
       }
 
       // Auto-resolve if it looks like a skeleton path or is empty
       if (!meshPath || meshPath.includes('_Skeleton') || meshPath === 'None' || meshPath === '') {
-        console.error('Resolving skeletal mesh path...');
+        log.debug('Resolving skeletal mesh path...');
         const resolvedMesh = await this.findValidSkeletalMesh();
         if (resolvedMesh) {
           meshPath = resolvedMesh;
-          console.error(`Using resolved skeletal mesh: ${meshPath}`);
+          log.debug(`Using resolved skeletal mesh: ${meshPath}`);
         }
       }
 
@@ -162,13 +165,13 @@ export class PhysicsTools {
       // Auto-fix common incorrect paths
       let actualSkeletonPath = params.skeletonPath;
       if (actualSkeletonPath && skeletonToMeshMap[actualSkeletonPath]) {
-        console.error(`Auto-correcting path from ${actualSkeletonPath} to ${skeletonToMeshMap[actualSkeletonPath]}`);
+        log.warn(`Auto-correcting path from ${actualSkeletonPath} to ${skeletonToMeshMap[actualSkeletonPath]}`);
         actualSkeletonPath = skeletonToMeshMap[actualSkeletonPath];
       }
 
       if (actualSkeletonPath && (actualSkeletonPath.includes('_Skeleton') || actualSkeletonPath.includes('SK_Mannequin'))) {
         // This is likely a skeleton path, not a skeletal mesh
-        console.error('Warning: Path appears to be a skeleton, not a skeletal mesh. Auto-correcting to SKM_Manny_Simple.');
+        log.warn('Path appears to be a skeleton, not a skeletal mesh. Auto-correcting to SKM_Manny_Simple.');
       }
 
       // Use Automation Bridge for physics asset creation
@@ -489,7 +492,7 @@ export class PhysicsTools {
       // Use WASM for vector normalization/validation
       const zeroVector: [number, number, number] = [0, 0, 0];
       const normalizedVector = wasmIntegration.vectorAdd(zeroVector, params.vector);
-      console.error('[WASM] Using vectorAdd for physics force vector processing');
+      log.debug('[WASM] Using vectorAdd for physics force vector processing');
 
       const response = await this.automationBridge.sendAutomationRequest('apply_force', {
         actorName: params.actorName,

@@ -105,7 +105,7 @@ export function createServer() {
   });
 
   // Optionally expose Prometheus-style metrics via /metrics
-  startMetricsServer({ healthMonitor, automationBridge, logger: log });
+  const metricsServer = startMetricsServer({ healthMonitor, automationBridge, logger: log });
 
   // Initialize GraphQL server (controlled by GRAPHQL_ENABLED env var)
   const graphqlServer = new GraphQLServer(bridge, automationBridge);
@@ -152,7 +152,7 @@ export function createServer() {
   const serverSetup = new ServerSetup(server, bridge, automationBridge, log, healthMonitor);
   serverSetup.setup(); // Register tools, resources, and prompts
 
-  return { server, bridge, automationBridge, graphqlServer };
+  return { server, bridge, automationBridge, graphqlServer, metricsServer };
 }
 
 // Export configuration schema for session UI and runtime validation
@@ -169,7 +169,7 @@ export default function createServerDefault({ config }: { config?: any } = {}) {
       if (typeof config.projectPath === 'string' && config.projectPath.trim()) process.env.UE_PROJECT_PATH = config.projectPath;
     }
   } catch (e) {
-    console.debug('[createServerDefault] Failed to apply config to environment:', (e as any)?.message || e);
+    log.debug('[createServerDefault] Failed to apply config to environment:', (e as any)?.message || e);
   }
 
   const { server } = createServer();
@@ -177,9 +177,33 @@ export default function createServerDefault({ config }: { config?: any } = {}) {
 }
 
 export async function startStdioServer() {
-  const { server, automationBridge, graphqlServer } = createServer();
+  const { server, bridge, automationBridge, graphqlServer, metricsServer } = createServer();
   const transport = new StdioServerTransport();
   let shuttingDown = false;
+
+  const closeMetricsServer = async (): Promise<void> => {
+    if (!metricsServer) {
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      try {
+        metricsServer.close((error?: Error) => {
+          const errorCode = (error as any)?.code;
+          if (error && errorCode !== 'ERR_SERVER_NOT_RUNNING') {
+            log.warn('Failed to close metrics server cleanly', error);
+          }
+          resolve();
+        });
+      } catch (error) {
+        const errorCode = (error as any)?.code;
+        if (errorCode !== 'ERR_SERVER_NOT_RUNNING') {
+          log.warn('Failed to close metrics server cleanly', error);
+        }
+        resolve();
+      }
+    });
+  };
 
   const handleShutdown = async (signal?: NodeJS.Signals) => {
     if (shuttingDown) {
@@ -192,6 +216,18 @@ export async function startStdioServer() {
       automationBridge.stop();
     } catch (error) {
       log.warn('Failed to stop automation bridge cleanly', error);
+    }
+
+    try {
+      bridge.dispose();
+    } catch (error) {
+      log.warn('Failed to dispose Unreal bridge cleanly', error);
+    }
+
+    try {
+      await closeMetricsServer();
+    } catch (error) {
+      log.warn('Failed to close metrics server cleanly', error);
     }
 
     try {
@@ -220,12 +256,29 @@ export async function startStdioServer() {
   });
 
   process.once('beforeExit', () => {
-    automationBridge.stop();
+    try {
+      automationBridge.stop();
+    } catch { }
+    try {
+      bridge.dispose();
+    } catch { }
+    try {
+      metricsServer?.close();
+    } catch { }
+  });
+ 
+  process.once('exit', () => {
+    try {
+      automationBridge.stop();
+    } catch { }
+    try {
+      bridge.dispose();
+    } catch { }
+    try {
+      metricsServer?.close();
+    } catch { }
   });
 
-  process.once('exit', () => {
-    automationBridge.stop();
-  });
 
   const originalWrite = process.stdout.write;
   process.stdout.write = function (...args: any[]) {

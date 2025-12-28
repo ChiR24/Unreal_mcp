@@ -2,6 +2,9 @@ import { BaseTool } from '../tools/base-tool.js';
 import { IAssetResources } from '../types/tool-interfaces.js';
 import { coerceString } from '../utils/result-helpers.js';
 import { AutomationResponse } from '../types/automation-responses.js';
+import { Logger } from '../utils/logger.js';
+
+const log = new Logger('AssetResources');
 
 export class AssetResources extends BaseTool implements IAssetResources {
   // Simple in-memory cache for asset listing
@@ -155,7 +158,7 @@ export class AssetResources extends BaseTool implements IAssetResources {
       this.cache.set(cacheKey, { timestamp: Date.now(), data: result });
       return result;
     } catch (err: any) {
-      console.warn(`Asset listing page ${page} failed:`, err.message);
+      log.warn(`Asset listing page ${page} failed: ${err.message}`);
     }
 
     return {
@@ -223,7 +226,7 @@ export class AssetResources extends BaseTool implements IAssetResources {
       // No fallback available
     } catch (err: any) {
       const errorMessage = err?.message ? String(err.message) : 'Asset registry request failed';
-      console.warn('Engine asset listing failed:', errorMessage);
+      log.warn(`Engine asset listing failed: ${errorMessage}`);
       return {
         success: false,
         path: this.normalizeDir(dir),

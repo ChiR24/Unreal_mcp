@@ -2,6 +2,9 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { sanitizeAssetName, validateAssetParams } from '../utils/validation.js';
 import { wasmIntegration } from '../wasm/index.js';
+import { Logger } from '../utils/logger.js';
+
+const log = new Logger('NiagaraTools');
 
 type Vector3 = [number, number, number];
 
@@ -37,7 +40,7 @@ export class NiagaraTools {
           if (emitter.shapeSize) {
             const zeroVector: [number, number, number] = [0, 0, 0];
             const processedSize = wasmIntegration.vectorAdd(zeroVector, emitter.shapeSize);
-            console.error('[WASM] Using vectorAdd for Niagara emitter shape size');
+            log.debug('[WASM] Using vectorAdd for Niagara emitter shape size');
             emitter.shapeSize = [processedSize[0], processedSize[1], processedSize[2]];
           }
         }
@@ -138,12 +141,12 @@ export class NiagaraTools {
     const zeroVector: [number, number, number] = [0, 0, 0];
     if (start) {
       const processed = wasmIntegration.vectorAdd(zeroVector, start);
-      console.error('[WASM] Using vectorAdd for Niagara ribbon start');
+      log.debug('[WASM] Using vectorAdd for Niagara ribbon start');
       start = [processed[0], processed[1], processed[2]];
     }
     if (end) {
       const processed = wasmIntegration.vectorAdd(zeroVector, end);
-      console.error('[WASM] Using vectorAdd for Niagara ribbon end');
+      log.debug('[WASM] Using vectorAdd for Niagara ribbon end');
       end = [processed[0], processed[1], processed[2]];
     }
 
@@ -234,12 +237,12 @@ export class NiagaraTools {
       const zeroVector: [number, number, number] = [0, 0, 0];
       if (params.properties.velocityMin) {
         const processed = wasmIntegration.vectorAdd(zeroVector, params.properties.velocityMin);
-        console.error('[WASM] Using vectorAdd for Niagara velocity min');
+        log.debug('[WASM] Using vectorAdd for Niagara velocity min');
         params.properties.velocityMin = [processed[0], processed[1], processed[2]];
       }
       if (params.properties.velocityMax) {
         const processed = wasmIntegration.vectorAdd(zeroVector, params.properties.velocityMax);
-        console.error('[WASM] Using vectorAdd for Niagara velocity max');
+        log.debug('[WASM] Using vectorAdd for Niagara velocity max');
         params.properties.velocityMax = [processed[0], processed[1], processed[2]];
       }
     }

@@ -1,4 +1,7 @@
 import { ITools } from '../types/tool-interfaces.js';
+import { Logger } from '../utils/logger.js';
+
+const log = new Logger('DynamicHandlerRegistry');
 
 type ToolHandler = (args: any, tools: ITools) => Promise<any>;
 
@@ -7,7 +10,7 @@ export class DynamicHandlerRegistry {
 
   register(toolName: string, handler: ToolHandler) {
     if (this.handlers.has(toolName)) {
-      console.warn(`Handler for tool '${toolName}' is being overwritten.`);
+      log.warn(`Handler for tool '${toolName}' is being overwritten.`);
     }
     this.handlers.set(toolName, handler);
   }
