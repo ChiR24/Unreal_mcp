@@ -67,7 +67,12 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         const params = normalizeArgs(args, [
           { key: 'path', aliases: ['directoryPath'], required: true }
         ]);
-        const res = await tools.assetTools.createFolder(params.path);
+        // Validate path format
+        const folderPath = String(params.path).trim();
+        if (!folderPath.startsWith('/')) {
+          return ResponseFactory.error('VALIDATION_ERROR', `Invalid folder path: '${folderPath}'. Path must start with '/'`);
+        }
+        const res = await tools.assetTools.createFolder(folderPath);
         return ResponseFactory.success(res, 'Folder created successfully');
       }
       case 'import': {

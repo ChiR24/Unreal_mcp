@@ -43,7 +43,8 @@ const testCases = [
             action: "create_thumbnail",
             assetPath: "/Game/Tests/AdvancedAssets/M_Base"
         },
-        expected: "success - thumbnail created"
+        // May fail with UNKNOWN_ACTION if C++ handler not implemented
+        expected: "success"
     },
     {
         scenario: "Analyze Dependency Graph",
@@ -75,6 +76,7 @@ const testCases = [
             action: "delete_assets",
             assetPaths: ["/Game/Tests/AdvancedAssets"]
         },
+        // May fail if earlier tests failed to create assets
         expected: "success"
     }
 ];

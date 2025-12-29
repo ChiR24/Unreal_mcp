@@ -351,12 +351,68 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     // DYNAMIC NODE CREATION - Find node classes at runtime
     // ========================================================================
 
+    // Map user-friendly node names to their K2Node class names
+    static TMap<FString, FString> NodeTypeAliases = {
+        // Flow Control
+        {TEXT("Branch"), TEXT("K2Node_IfThenElse")},
+        {TEXT("IfThenElse"), TEXT("K2Node_IfThenElse")},
+        {TEXT("Sequence"), TEXT("K2Node_ExecutionSequence")},
+        {TEXT("ExecutionSequence"), TEXT("K2Node_ExecutionSequence")},
+        {TEXT("Select"), TEXT("K2Node_Select")},
+        {TEXT("Switch"), TEXT("K2Node_SwitchInteger")},
+        {TEXT("SwitchOnInt"), TEXT("K2Node_SwitchInteger")},
+        {TEXT("SwitchOnEnum"), TEXT("K2Node_SwitchEnum")},
+        {TEXT("SwitchOnString"), TEXT("K2Node_SwitchString")},
+        {TEXT("SwitchOnName"), TEXT("K2Node_SwitchName")},
+        // Flow Control
+        {TEXT("DoOnce"), TEXT("K2Node_DoOnce")},
+        {TEXT("DoN"), TEXT("K2Node_DoN")},
+        {TEXT("FlipFlop"), TEXT("K2Node_FlipFlop")},
+        {TEXT("Gate"), TEXT("K2Node_Gate")},
+        {TEXT("MultiGate"), TEXT("K2Node_MultiGate")},
+        // Loops
+        {TEXT("ForLoop"), TEXT("K2Node_ForLoop")},
+        {TEXT("ForLoopWithBreak"), TEXT("K2Node_ForLoopWithBreak")},
+        {TEXT("ForEachLoop"), TEXT("K2Node_ForEachElementInEnum")},
+        {TEXT("WhileLoop"), TEXT("K2Node_WhileLoop")},
+        // Data
+        {TEXT("MakeArray"), TEXT("K2Node_MakeArray")},
+        {TEXT("MakeStruct"), TEXT("K2Node_MakeStruct")},
+        {TEXT("BreakStruct"), TEXT("K2Node_BreakStruct")},
+        {TEXT("MakeMap"), TEXT("K2Node_MakeMap")},
+        {TEXT("MakeSet"), TEXT("K2Node_MakeSet")},
+        // Actor/Component
+        {TEXT("SpawnActorFromClass"), TEXT("K2Node_SpawnActorFromClass")},
+        {TEXT("GetAllActorsOfClass"), TEXT("K2Node_GetAllActorsOfClass")},
+        // Misc
+        {TEXT("Self"), TEXT("K2Node_Self")},
+        {TEXT("GetSelf"), TEXT("K2Node_Self")},
+        {TEXT("Timeline"), TEXT("K2Node_Timeline")},
+        {TEXT("Knot"), TEXT("K2Node_Knot")},
+        {TEXT("Reroute"), TEXT("K2Node_Knot")},
+        {TEXT("Comment"), TEXT("EdGraphNode_Comment")},
+        // Literals
+        {TEXT("Literal"), TEXT("K2Node_Literal")},
+    };
+
     // Helper: Try to find a UK2Node subclass by name
     auto FindNodeClassByName = [](const FString &TypeName) -> UClass * {
+      // First check for aliases
+      FString ResolvedName = TypeName;
+      if (const FString *Alias = NodeTypeAliases.Find(TypeName)) {
+        ResolvedName = *Alias;
+      }
+
       TArray<FString> NamesToTry;
-      NamesToTry.Add(TypeName);
-      NamesToTry.Add(FString::Printf(TEXT("K2Node_%s"), *TypeName));
-      NamesToTry.Add(FString::Printf(TEXT("UK2Node_%s"), *TypeName));
+      NamesToTry.Add(ResolvedName);
+      NamesToTry.Add(FString::Printf(TEXT("K2Node_%s"), *ResolvedName));
+      NamesToTry.Add(FString::Printf(TEXT("UK2Node_%s"), *ResolvedName));
+      // Also try the original name if different
+      if (ResolvedName != TypeName) {
+        NamesToTry.Add(TypeName);
+        NamesToTry.Add(FString::Printf(TEXT("K2Node_%s"), *TypeName));
+        NamesToTry.Add(FString::Printf(TEXT("UK2Node_%s"), *TypeName));
+      }
 
       for (TObjectIterator<UClass> It; It; ++It) {
         if (!It->IsChildOf(UEdGraphNode::StaticClass()))

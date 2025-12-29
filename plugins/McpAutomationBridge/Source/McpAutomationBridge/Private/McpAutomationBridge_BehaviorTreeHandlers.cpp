@@ -4,7 +4,9 @@
 
 #if WITH_EDITOR
 #include "BehaviorTree/BTDecorator.h"
+#include "BehaviorTree/Decorators/BTDecorator_Blackboard.h"
 #include "BehaviorTree/BTService.h"
+#include "BehaviorTree/Services/BTService_DefaultFocus.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/Composites/BTComposite_Selector.h"
 #include "BehaviorTree/Composites/BTComposite_Sequence.h"
@@ -253,6 +255,22 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     } else if (NodeType == TEXT("Root")) {
       NodeClass = UBehaviorTreeGraphNode_Root::StaticClass();
       // Root doesn't have an instance class in the same way
+    } else if (NodeType == TEXT("Task")) {
+      // Generic Task - creates a Wait task as default
+      NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+      NodeInstanceClass = UBTTask_Wait::StaticClass();
+    } else if (NodeType == TEXT("Decorator") || NodeType == TEXT("Blackboard")) {
+      // Generic Decorator - creates a Blackboard decorator as default
+      NodeClass = UBehaviorTreeGraphNode_Decorator::StaticClass();
+      NodeInstanceClass = UBTDecorator_Blackboard::StaticClass();
+    } else if (NodeType == TEXT("Service") || NodeType == TEXT("DefaultFocus")) {
+      // Generic Service - creates a DefaultFocus service as default
+      NodeClass = UBehaviorTreeGraphNode_Service::StaticClass();
+      NodeInstanceClass = UBTService_DefaultFocus::StaticClass();
+    } else if (NodeType == TEXT("Composite")) {
+      // Generic Composite - creates a Sequence as default
+      NodeClass = UBehaviorTreeGraphNode_Composite::StaticClass();
+      NodeInstanceClass = UBTComposite_Sequence::StaticClass();
     } else {
       // Try to resolve as a class path
       UClass *Resolved = ResolveClassByName(NodeType);

@@ -8,7 +8,7 @@ import { coerceString } from '../utils/result-helpers.js';
 interface ActionResponse extends StandardActionResponse {
   result?: Record<string, unknown>;
   requestId?: string;
-  blueprint?: string;
+  blueprint?: unknown;
   blueprintPath?: string;
   component?: string;
   componentName?: string;
@@ -102,11 +102,13 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
         const res = await this.sendAction('blueprint_create', payload, { timeoutMs: typeof params.timeoutMs === 'number' ? params.timeoutMs : pluginTimeout, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
         if (res && res.success) {
           this.pluginBlueprintActionsAvailable = true;
+          const createdPath = `${sanitized.savePath}/${sanitized.name}`.replace('//', '/');
           // Enrich response for Validator
           return {
             ...res,
-            blueprint: sanitized.name,
-            path: `${sanitized.savePath}/${sanitized.name}`.replace('//', '/'),
+            blueprint: res.result ?? { name: sanitized.name },
+            blueprintPath: createdPath,
+            path: createdPath,
             message: res.message || `Created blueprint ${sanitized.name}`
           };
         }

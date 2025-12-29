@@ -3,6 +3,12 @@ import { ITools } from '../../types/tool-interfaces.js';
 import type { LightingArgs } from '../../types/handler-types.js';
 import { normalizeLocation } from './common-handlers.js';
 
+// Valid light types supported by UE
+const VALID_LIGHT_TYPES = ['point', 'directional', 'spot', 'rect', 'sky'];
+
+// Valid GI methods
+const VALID_GI_METHODS = ['lumen', 'screenspace', 'none', 'raytraced', 'ssgi'];
+
 export async function handleLightingTools(action: string, args: LightingArgs, tools: ITools) {
   // Normalize location parameter to accept both {x,y,z} and [x,y,z] formats
   const normalizedLocation = normalizeLocation(args.location);
@@ -12,6 +18,16 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
     case 'create_light': {
       // Map generic create_light to specific types if provided
       const lightType = args.lightType ? args.lightType.toLowerCase() : 'point';
+      
+      // Validate light type
+      if (!VALID_LIGHT_TYPES.includes(lightType)) {
+        return {
+          success: false,
+          error: 'INVALID_LIGHT_TYPE',
+          message: `Invalid lightType: '${args.lightType}'. Must be one of: ${VALID_LIGHT_TYPES.join(', ')}`,
+          action: action
+        };
+      }
       const commonParams = {
         name: args.name,
         location: normalizedLocation || args.location,
@@ -96,8 +112,21 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
       }));
     }
     case 'setup_global_illumination': {
+      // Validate GI method if provided
+      let methodLower: string | undefined;
+      if (args.method) {
+        methodLower = String(args.method).toLowerCase();
+        if (!VALID_GI_METHODS.includes(methodLower)) {
+          return {
+            success: false,
+            error: 'INVALID_GI_METHOD',
+            message: `Invalid GI method: '${args.method}'. Must be one of: ${VALID_GI_METHODS.join(', ')}`,
+            action: 'setup_global_illumination'
+          };
+        }
+      }
       return cleanObject(await tools.lightingTools.setupGlobalIllumination({
-        method: args.method,
+        method: methodLower || args.method,
         quality: args.quality,
         indirectLightingIntensity: args.indirectLightingIntensity,
         bounces: args.bounces
