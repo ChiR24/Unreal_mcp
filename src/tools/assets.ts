@@ -319,7 +319,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
     return this.sendRequest<AssetResponse>('manage_asset', {
       ...params,
       assetPath: this.normalizeAssetPath(params.assetPath),
-      subAction: 'generate_thumbnail'
+      subAction: 'generate_thumbnail'  // C++ handler expects 'generate_thumbnail', not 'create_thumbnail'
     }, 'manage_asset', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS });
   }
 

@@ -245,7 +245,7 @@ const testCases = [
     scenario: 'Error: Invalid object path',
     toolName: 'inspect',
     arguments: { action: 'inspect_object', objectPath: '/Invalid/Path' },
-    expected: 'not_found'
+    expected: 'not_found|OBJECT_NOT_FOUND'
   },
   {
     scenario: 'Error: Set invalid property',

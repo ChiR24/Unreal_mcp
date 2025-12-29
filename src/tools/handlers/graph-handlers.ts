@@ -3,6 +3,64 @@ import { ITools } from '../../types/tool-interfaces.js';
 import type { GraphArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
+// Blueprint node type aliases: map human-friendly names to K2Node class names
+// NOTE: These aliases are applied in TS before sending to C++. The C++ plugin has
+// its own fallback alias map (McpAutomationBridge_BlueprintGraphHandlers.cpp) which
+// handles unmapped types. Keep these in sync with the C++ map.
+const BLUEPRINT_NODE_ALIASES: Record<string, string> = {
+    'Branch': 'K2Node_IfThenElse',
+    'IfThenElse': 'K2Node_IfThenElse',
+    'Sequence': 'K2Node_ExecutionSequence',
+    'ExecutionSequence': 'K2Node_ExecutionSequence',
+    'ForEachLoop': 'K2Node_ForEachElementInEnum',
+    'ForLoop': 'K2Node_ForLoop',  // Basic ForLoop - use ForLoopWithBreak for break support
+    'ForLoopWithBreak': 'K2Node_ForLoopWithBreak',
+    'WhileLoop': 'K2Node_WhileLoop',
+    'Switch': 'K2Node_SwitchInteger',
+    'SwitchOnInt': 'K2Node_SwitchInteger',
+    'SwitchOnString': 'K2Node_SwitchString',
+    'SwitchOnName': 'K2Node_SwitchName',
+    'SwitchOnEnum': 'K2Node_SwitchEnum',
+    'Select': 'K2Node_Select',
+    'DoOnce': 'K2Node_DoOnce',
+    'DoN': 'K2Node_DoN',
+    'FlipFlop': 'K2Node_FlipFlop',
+    'Gate': 'K2Node_Gate',
+    'MultiGate': 'K2Node_MultiGate',
+    // 'Delay': 'K2Node_Delay', // Removed: Handled as function call in C++
+    'Timeline': 'K2Node_Timeline',
+    'SpawnActorFromClass': 'K2Node_SpawnActorFromClass',
+    // 'DestroyActor': 'K2Node_DestroyActor', // Removed: Handled as function call in C++
+    'GetAllActorsOfClass': 'K2Node_GetAllActorsOfClass'
+};
+
+// Behavior Tree node type aliases
+const BT_NODE_ALIASES: Record<string, { class: string; type: string }> = {
+    'Task': { class: 'BTTask_Wait', type: 'task' },
+    'Wait': { class: 'BTTask_Wait', type: 'task' },
+    'MoveTo': { class: 'BTTask_MoveTo', type: 'task' },
+    'PlaySound': { class: 'BTTask_PlaySound', type: 'task' },
+    'PlayAnimation': { class: 'BTTask_PlayAnimation', type: 'task' },
+    'RunBehavior': { class: 'BTTask_RunBehavior', type: 'task' },
+    'MakeNoise': { class: 'BTTask_MakeNoise', type: 'task' },
+    'RotateToFaceBBEntry': { class: 'BTTask_RotateToFaceBBEntry', type: 'task' },
+    'Decorator': { class: 'BTDecorator_Blackboard', type: 'decorator' },
+    'Blackboard': { class: 'BTDecorator_Blackboard', type: 'decorator' },
+    'CompareBBEntries': { class: 'BTDecorator_CompareBBEntries', type: 'decorator' },
+    'Cooldown': { class: 'BTDecorator_Cooldown', type: 'decorator' },
+    'DoesPathExist': { class: 'BTDecorator_DoesPathExist', type: 'decorator' },
+    'ForceSuccess': { class: 'BTDecorator_ForceSuccess', type: 'decorator' },
+    'KeepInCone': { class: 'BTDecorator_KeepInCone', type: 'decorator' },
+    'Loop': { class: 'BTDecorator_Loop', type: 'decorator' },
+    'TimeLimit': { class: 'BTDecorator_TimeLimit', type: 'decorator' },
+    'Service': { class: 'BTService_DefaultFocus', type: 'service' },
+    'DefaultFocus': { class: 'BTService_DefaultFocus', type: 'service' },
+    'RunEQS': { class: 'BTService_RunEQS', type: 'service' },
+    'Selector': { class: 'BTComposite_Selector', type: 'composite' },
+    'SequenceNode': { class: 'BTComposite_Sequence', type: 'composite' },
+    'SimpleParallel': { class: 'BTComposite_SimpleParallel', type: 'composite' }
+};
+
 export async function handleGraphTools(toolName: string, action: string, args: GraphArgs, tools: ITools) {
     // Common validation
     if (!args.assetPath && !args.blueprintPath && !args.systemPath) {
@@ -31,6 +89,11 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
     // Default graphName
     if (!processedArgs.graphName) {
         processedArgs.graphName = 'EventGraph';
+    }
+
+    // Map human-friendly node type names to K2Node class names
+    if (processedArgs.nodeType && BLUEPRINT_NODE_ALIASES[processedArgs.nodeType]) {
+        processedArgs.nodeType = BLUEPRINT_NODE_ALIASES[processedArgs.nodeType];
     }
 
     // Fix Issue 1: Map FunctionCall to CallFunction
@@ -112,6 +175,18 @@ async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITool
 }
 
 async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools) {
-    const res: any = await executeAutomationRequest(tools, 'manage_behavior_tree', { ...args, subAction: action }, 'Automation bridge not available');
+    const processedArgs: any = { ...args, subAction: action };
+    
+    // Map human-friendly node type names to BT class names
+    if (processedArgs.nodeType && BT_NODE_ALIASES[processedArgs.nodeType]) {
+        const alias = BT_NODE_ALIASES[processedArgs.nodeType];
+        processedArgs.nodeType = alias.class;
+        // Set nodeCategory if not already set
+        if (!processedArgs.nodeCategory) {
+            processedArgs.nodeCategory = alias.type;
+        }
+    }
+    
+    const res: any = await executeAutomationRequest(tools, 'manage_behavior_tree', processedArgs, 'Automation bridge not available');
     return cleanObject({ ...res, ...(res.result || {}) });
 }

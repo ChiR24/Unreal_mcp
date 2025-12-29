@@ -1,11 +1,28 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 
+// Valid profiling types
+const VALID_PROFILING_TYPES = ['cpu', 'gpu', 'memory', 'renderthread', 'all', 'fps', 'gamethread'];
+
+// Valid scalability levels (0-4)
+const MIN_SCALABILITY_LEVEL = 0;
+const MAX_SCALABILITY_LEVEL = 4;
+
 export async function handlePerformanceTools(action: string, args: any, tools: ITools) {
   switch (action) {
     case 'start_profiling': {
+      const profilingType = args.type ? String(args.type).toLowerCase() : 'all';
+      if (!VALID_PROFILING_TYPES.includes(profilingType)) {
+        return {
+          success: false,
+          error: 'INVALID_PROFILING_TYPE',
+          message: `Invalid profiling type: '${args.type}'. Must be one of: ${VALID_PROFILING_TYPES.join(', ')}`,
+          action: 'start_profiling'
+        };
+      }
+      // Use normalized profilingType to ensure consistency with validation
       return cleanObject(await tools.performanceTools.startProfiling({
-        type: args.type || 'All',
+        type: profilingType,
         duration: args.duration
       }));
     }
@@ -32,7 +49,9 @@ export async function handlePerformanceTools(action: string, args: any, tools: I
     }
     case 'set_scalability': {
       const category = args.category || 'ViewDistance';
-      const level = typeof args.level === 'number' ? args.level : 3;
+      let level = typeof args.level === 'number' ? args.level : 3;
+      // Clamp level to valid range 0-4
+      level = Math.max(MIN_SCALABILITY_LEVEL, Math.min(MAX_SCALABILITY_LEVEL, level));
       return cleanObject(await tools.performanceTools.setScalability({
         category,
         level

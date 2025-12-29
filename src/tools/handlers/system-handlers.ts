@@ -44,7 +44,20 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         profileType: rawType || 'CPU'
       };
     }
-    case 'set_quality':
+    case 'show_stats': {
+      const category = typeof args?.category === 'string' ? args.category.trim() : (args?.type || 'Unit');
+      const enabled = args?.enabled !== false;
+      const cmd = `stat ${category}`;
+      await tools.systemTools.executeConsoleCommand(cmd);
+      return {
+        success: true,
+        message: `Stats display ${enabled ? 'enabled' : 'disabled'} for category: ${category}`,
+        action: 'show_stats',
+        category,
+        enabled
+      };
+    }
+    case 'set_quality': {
       const quality = args.quality || args.level || 'medium'; // handle 'level' as well since test uses it
       let qVal: number;
       if (typeof quality === 'number') {
@@ -53,6 +66,8 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         const qStr = String(quality).toLowerCase();
         qVal = (qStr === 'high' || qStr === 'epic') ? 3 : (qStr === 'low' ? 0 : (qStr === 'cinematic' ? 4 : 1));
       }
+      // Clamp quality level to valid range 0-4
+      qVal = Math.max(0, Math.min(4, qVal));
 
       const category = String(args.category || 'ViewDistance').toLowerCase();
       let cvar = 'sg.ViewDistanceQuality';
@@ -69,6 +84,7 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
 
       await tools.systemTools.executeConsoleCommand(`${cvar} ${qVal}`);
       return { success: true, message: `${category} quality derived from '${quality}' set to ${qVal} via ${cvar}`, action: 'set_quality' };
+    }
     case 'execute_command':
       return cleanObject(await tools.systemTools.executeConsoleCommand(args.command));
     case 'create_widget': {

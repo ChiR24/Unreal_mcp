@@ -1,8 +1,9 @@
 import { ITools } from '../../types/tool-interfaces.js';
-import { executeAutomationRequest } from './common-handlers.js';
-import { normalizeArgs } from './argument-helper.js';
-import { ResponseFactory } from '../../utils/response-factory.js';
 import { ACTOR_CLASS_ALIASES, getRequiredComponent } from '../../config/class-aliases.js';
+import { cleanObject } from '../../utils/safe-json.js';
+import { ResponseFactory } from '../../utils/response-factory.js';
+import { normalizeArgs } from './argument-helper.js';
+import { executeAutomationRequest } from './common-handlers.js';
 
 type ActorActionHandler = (args: any, tools: ITools) => Promise<any>;
 
@@ -233,11 +234,13 @@ export async function handleActorTools(action: string, args: any, tools: ITools)
         const handler = handlers[action];
         if (handler) {
             const res = await handler(args, tools);
-            return ResponseFactory.success(res);
+            // The actor tool handlers already return a StandardActionResponse-like object.
+            // Don't wrap into { data: ... } since tests and tool schemas expect actorName/actorPath at top-level.
+            return cleanObject(res);
         }
         // Fallback to direct bridge call or error
         const res = await executeAutomationRequest(tools, 'control_actor', args);
-        return ResponseFactory.success(res);
+        return cleanObject(res);
     } catch (error) {
         return ResponseFactory.error(error);
     }

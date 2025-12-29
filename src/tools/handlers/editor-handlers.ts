@@ -109,8 +109,18 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return { success: true, message: `Set view mode to ${viewMode}`, action: 'set_view_mode' };
     }
     case 'set_viewport_resolution': {
-      await tools.editorTools.executeConsoleCommand(`r.SetRes ${args.width}x${args.height}`);
-      return { success: true, message: `Set viewport resolution to ${args.width}x${args.height}`, action: 'set_viewport_resolution' };
+      const width = Number(args.width);
+      const height = Number(args.height);
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Width and height must be positive numbers',
+          action: 'set_viewport_resolution'
+        };
+      }
+      await tools.editorTools.executeConsoleCommand(`r.SetRes ${width}x${height}`);
+      return { success: true, message: `Set viewport resolution to ${width}x${height}`, action: 'set_viewport_resolution' };
     }
     case 'set_viewport_realtime': {
       const enabled = args.enabled !== undefined ? args.enabled : (args.realtime !== false);
