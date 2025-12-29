@@ -1,0 +1,364 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to set (e.g., 0.5.5)'
+        required: true
+        type: string
+      auto_increment:
+        description: 'Auto-increment version (overrides version input)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - major
+          - minor
+          - patch
+        default: ''
+      create_changelog:
+        description: 'Create new CHANGELOG entry (template)'
+        required: false
+        type: boolean
+        default: false
+      update_wasm_crate:
+        description: 'Update Rust crate version (for WASM API breaking changes only)'
+        required: false
+        type: boolean
+        default: false
+      branch:
+        description: 'Target branch'
+        required: false
+        type: string
+        default: 'main'
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    name: Bump Version
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.branch || 'main' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Get current version
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current npm version: $CURRENT_VERSION"
+
+      - name: Validate version format
+        if: inputs.auto_increment == ''
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Version must be in semver format: X.Y.Z"
+            exit 1
+          fi
+          echo "✅ Version format validated: $VERSION"
+
+      - name: Calculate new version (auto-increment)
+        if: inputs.auto_increment != ''
+        id: calc_version
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          INCREMENT="${{ github.event.inputs.auto_increment }}"
+          
+          echo "Current version: $CURRENT"
+          echo "Increment type: $INCREMENT"
+          
+          # Parse version
+          MAJOR=$(echo $CURRENT | cut -d. -f1)
+          MINOR=$(echo $CURRENT | cut -d. -f2)
+          PATCH=$(echo $CURRENT | cut -d. -f3)
+          
+          # Increment based on type
+          case $INCREMENT in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New npm version: $NEW_VERSION"
+
+      - name: Get current WASM crate version
+        id: current_wasm_version
+        if: inputs.update_wasm_crate == 'true'
+        run: |
+          WASM_VERSION=$(grep '^version = ' wasm/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$WASM_VERSION" >> $GITHUB_OUTPUT
+          echo "Current WASM crate version: $WASM_VERSION"
+
+      - name: Calculate new WASM crate version
+        id: calc_wasm_version
+        if: inputs.update_wasm_crate == 'true'
+        run: |
+          CURRENT="${{ steps.current_wasm_version.outputs.version }}"
+          
+          # Parse version
+          MAJOR=$(echo $CURRENT | cut -d. -f1)
+          MINOR=$(echo $CURRENT | cut -d. -f2)
+          PATCH=$(echo $CURRENT | cut -d. -f3)
+          
+          # Increment patch for WASM
+          PATCH=$((PATCH + 1))
+          NEW_WASM_VERSION="$MAJOR.$MINOR.$PATCH"
+          
+          echo "wasm_version=$NEW_WASM_VERSION" >> $GITHUB_OUTPUT
+          echo "New WASM crate version: $NEW_WASM_VERSION"
+
+      - name: Set final npm version
+        id: final_version
+        run: |
+          if [ "${{ inputs.auto_increment }}" != "" ]; then
+            VERSION="${{ steps.calc_version.outputs.version }}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Final npm version: $VERSION"
+
+      - name: Update package.json
+        run: |
+          VERSION="${{ steps.final_version.outputs.version }}"
+          npm version "$VERSION" --no-git-tag-version
+          echo "✅ Updated package.json and package-lock.json to $VERSION"
+
+      - name: Update server.json
+        run: |
+          VERSION="${{ steps.final_version.outputs.version }}"
+          jq --arg v "$VERSION" '.version = $v | .packages[] |= if .registryType == "npm" then .version = $v else . end' server.json > tmp && mv tmp server.json
+          echo "✅ Updated server.json to $VERSION"
+
+      - name: Update src/index.ts
+        run: |
+          VERSION="${{ steps.final_version.outputs.version }}"
+          
+          # Update only the DEFAULT_SERVER_VERSION fallback string (targeted replacement)
+          perl -0777 -i -pe "s/(const DEFAULT_SERVER_VERSION[\\s\\S]*?:\\s*)'[^']+';/\${1}'$VERSION';/" src/index.ts
+          
+          echo "✅ Updated src/index.ts DEFAULT_SERVER_VERSION fallback to $VERSION"
+
+      - name: Update WASM crate version (optional)
+        if: inputs.update_wasm_crate == 'true'
+        run: |
+          VERSION="${{ steps.calc_wasm_version.outputs.wasm_version }}"
+          OLD_VERSION="${{ steps.current_wasm_version.outputs.version }}"
+          
+          # Escape dots for sed regex
+          OLD_VERSION_ESCAPED=$(echo "$OLD_VERSION" | sed 's/\./\\./g')
+          
+          # Update version in Cargo.toml (only the package version line)
+          sed -i "s/^version = \"$OLD_VERSION_ESCAPED\"/version = \"$VERSION\"/" wasm/Cargo.toml
+          
+          echo "✅ Updated wasm/Cargo.toml from $OLD_VERSION to $VERSION"
+          echo "⚠️  Remember: WASM crate version should only change for API-breaking changes"
+
+      - name: Verify no hardcoded npm versions remain
+        run: |
+          OLD_VERSION="${{ steps.current_version.outputs.version }}"
+          
+          # Search for remaining occurrences (excluding expected files)
+          FOUND=$(grep -r "$OLD_VERSION" --include="*.json" --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.git 2>/dev/null | grep -v "CHANGELOG.md" | grep -v "package-lock.json" | grep -v "wasm" || true)
+          
+          if [ -n "$FOUND" ]; then
+            echo "⚠️ Warning: Found remaining instances of $OLD_VERSION in code:"
+            echo "$FOUND"
+            echo "This might be intentional (e.g., CHANGELOG.md, docs)"
+          else
+            echo "✅ No hardcoded npm versions found (excluding CHANGELOG.md, package-lock.json, wasm/)"
+          fi
+
+      - name: Create CHANGELOG entry
+        if: inputs.create_changelog == 'true'
+        run: |
+          VERSION="${{ steps.final_version.outputs.version }}"
+          DATE=$(date +%Y-%m-%d)
+          
+          # Create new CHANGELOG entry
+          cat > changelog_entry.tmp << 'CHANGELOG_EOF'
+          ## 🏷️ [VERSION_PLACEHOLDER] - DATE_PLACEHOLDER
+          
+          > [!NOTE]
+          > ### 🚀 New Release
+          > This is a new release. Fill in changelog details below.
+          
+          ### ✨ Added
+          
+          <details>
+          <summary><b>New Features</b></summary>
+          
+          | Feature | Description |
+          |---------|-------------|
+          | | |
+          
+          </details>
+          
+          ### 🔧 Changed
+          
+          <details>
+          <summary><b>Improvements</b></summary>
+          
+          | Component | Change |
+          |-----------|--------|
+          | | |
+          
+          </details>
+          
+          ### 🐛 Fixed
+          
+          - 
+          
+          ### 📊 Statistics
+          
+          - **Files Changed:** 
+          - **New Features:** 
+          - **Bug Fixes:** 
+          
+          ---
+          
+          CHANGELOG_EOF
+          
+          # Replace placeholders
+          sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" changelog_entry.tmp
+          sed -i "s/DATE_PLACEHOLDER/$DATE/g" changelog_entry.tmp
+          
+          # Read the new entry
+          NEW_ENTRY=$(cat changelog_entry.tmp)
+          
+          # Insert after the first --- line (after header)
+          awk -v entry="$NEW_ENTRY" '
+            /^---$/ && !found { print; found=1; getline; print entry; next }
+            { print }
+          ' CHANGELOG.md > CHANGELOG.md.tmp
+          
+          mv CHANGELOG.md.tmp CHANGELOG.md
+          rm changelog_entry.tmp
+          
+          echo "✅ Created CHANGELOG entry for $VERSION"
+
+      - name: Show changes
+        run: |
+          echo "## 📋 Changes Summary"
+          echo ""
+          echo "### Files Modified:"
+          git diff --stat
+          echo ""
+          echo "### Detailed Changes:"
+          git diff
+
+      - name: Commit changes
+        run: |
+          VERSION="${{ steps.final_version.outputs.version }}"
+          
+          if [ "${{ inputs.create_changelog }}" == "true" ]; then
+            COMMIT_MESSAGE="chore(release): bump version to v$VERSION"
+          else
+            COMMIT_MESSAGE="chore: bump version to v$VERSION"
+          fi
+          
+          git add package.json package-lock.json server.json src/index.ts
+          
+          if [ "${{ inputs.create_changelog }}" == "true" ]; then
+            git add CHANGELOG.md
+          fi
+          
+          if [ "${{ inputs.update_wasm_crate }}" == "true" ]; then
+            git add wasm/Cargo.toml
+          fi
+          
+          git commit -m "$COMMIT_MESSAGE"
+          echo "✅ Committed changes"
+
+      - name: Create git tag
+        run: |
+          VERSION="${{ steps.final_version.outputs.version }}"
+          TAG="v$VERSION"
+          
+          # Create annotated tag
+          git tag -a "$TAG" -m "Release $TAG"
+          
+          echo "✅ Created git tag: $TAG"
+
+      - name: Push changes and tag
+        run: |
+          BRANCH="${{ github.event.inputs.branch || 'main' }}"
+          
+          # Push commit and tag
+          git push origin "$BRANCH"
+          git push origin "v${{ steps.final_version.outputs.version }}"
+          
+          echo "✅ Pushed changes to $BRANCH"
+          echo "✅ Pushed tag v${{ steps.final_version.outputs.version }}"
+
+      - name: Create Release Summary
+        run: |
+          VERSION="${{ steps.final_version.outputs.version }}"
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          
+          echo "## ✅ Version Bump Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Previous Version:** \`$CURRENT\`" >> $GITHUB_STEP_SUMMARY
+          echo "**New Version:** \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Files Updated:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`package.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`server.json\` (2 occurrences)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`src/index.ts\`" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ inputs.update_wasm_crate }}" == "true" ]; then
+            echo "- \`wasm/Cargo.toml\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ inputs.create_changelog }}" == "true" ]; then
+            echo "- \`CHANGELOG.md\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Changes:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          git diff --stat HEAD~1 HEAD >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🏷️ Tag Created:" >> $GITHUB_STEP_SUMMARY
+          echo "Tag: \`v$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📝 Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the pushed changes" >> $GITHUB_STEP_SUMMARY
+          echo "2. Fill in CHANGELOG.md with release notes (if created)" >> $GITHUB_STEP_SUMMARY
+          echo "3. Wait for automated workflows:" >> $GITHUB_STEP_SUMMARY
+          echo "   - \`release.yml\` will trigger automatically on tag push" >> $GITHUB_STEP_SUMMARY
+          echo "   - \`publish-mcp.yml\` will trigger automatically on tag push" >> $GITHUB_STEP_SUMMARY

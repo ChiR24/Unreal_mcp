@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: 'Get PR diff stats'
         id: 'diff_stats'
-        uses: 'actions/github-script@v8'
+        uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # v8.0.0
         with:
           github-token: '${{ secrets.GITHUB_TOKEN }}'
           script: |
@@ -59,7 +59,7 @@ jobs:
           fi
 
       - name: 'Apply size label'
-        uses: 'actions/github-script@v8'
+        uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # v8.0.0
         env:
           SIZE_LABEL: '${{ steps.size_label.outputs.size_label }}'
         with:
@@ -100,7 +100,7 @@ jobs:
 
       - name: 'Comment on large PRs'
         if: steps.size_label.outputs.size_label == 'size/xl'
-        uses: 'actions/github-script@v8'
+        uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # v8.0.0
         with:
           github-token: '${{ secrets.GITHUB_TOKEN }}'
           script: |
