@@ -1,5 +1,4 @@
 import WebSocket from 'ws';
-import { promisify } from 'node:util';
 
 async function doHandshake(port = 8090, capabilityToken) {
   return new Promise((resolve, reject) => {
@@ -26,7 +25,9 @@ async function doHandshake(port = 8090, capabilityToken) {
       // clearTimeout(timeout); // Don't clear yet, wait for ACK
       try {
         const msgStr = typeof data === 'string' ? data : data.toString('utf8');
-        console.log('Received:', msgStr.substring(0, 200));
+        // Sanitize log output to prevent log injection (CWE-117)
+        const safeMsg = msgStr.substring(0, 200).replace(/[\r\n]/g, '');
+        console.log('Received:', safeMsg);
         const parsed = JSON.parse(msgStr);
         
         if (parsed.type === 'bridge_ack') {
@@ -39,7 +40,11 @@ async function doHandshake(port = 8090, capabilityToken) {
           resolve({ success: false, error: parsed.error });
         } else {
           // Might be other messages? Ignore or log.
-          console.log('Ignoring non-ack message:', parsed.type);
+          // Sanitize parsed.type to prevent log injection (CWE-117)
+          const safeType = typeof parsed.type === 'string' 
+            ? parsed.type.replace(/[\r\n]/g, '') 
+            : '[invalid]';
+          console.log('Ignoring non-ack message:', safeType);
         }
       } catch (err) {
         clearTimeout(timeout);

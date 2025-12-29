@@ -154,7 +154,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
       // Explicit null is not allowed for location
       throw new Error('Invalid location: null is not allowed');
     }
-    if (location !== undefined && location !== null) {
+    if (location !== undefined) {
       const locObj = toVec3Object(location);
       if (!locObj) {
         throw new Error('Invalid location: must be {x,y,z} or [x,y,z]');

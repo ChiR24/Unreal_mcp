@@ -75,14 +75,15 @@ export class AssetResources extends BaseTool implements IAssetResources {
   async list(dir = '/Game', _recursive = false, limit = 50) {
     // ALWAYS use non-recursive listing to show only immediate children
     // This prevents timeouts and makes navigation clearer
-    _recursive = false; // Force non-recursive
+    // Note: _recursive parameter is intentionally ignored (kept for API compatibility)
+    const recursive = false; // Force non-recursive
 
     // Normalize directory first
     dir = this.normalizeDir(dir);
 
     // Cache fast-path
     try {
-      const key = this.makeKey(dir, false);
+      const key = this.makeKey(dir, recursive);
       const entry = this.cache.get(key);
       const now = Date.now();
       if (entry && (now - entry.timestamp) < this.ttlMs) {

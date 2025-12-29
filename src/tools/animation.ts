@@ -359,8 +359,8 @@ export class AnimationTools {
             const path = typeof resultObj.blendSpacePath === 'string'
               ? (resultObj.blendSpacePath as string)
               : `${assetPath}/${assetName}`;
-            const warnings = Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
-            const details = resultObj ? resultObj.details : undefined;
+          const warnings = Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
+            const details = resultObj.details;
             return {
               success: true,
               message: resp.message || `Blend Space ${assetName} created`,
@@ -433,7 +433,7 @@ export class AnimationTools {
               ? (resultObj.controlRigPath as string)
               : fullPath;
             const warnings = Array.isArray(resultObj.warnings) ? (resultObj.warnings as string[]) : undefined;
-            const details = resultObj ? resultObj.details : undefined;
+            const details = resultObj.details;
             this.trackArtifact(assetName, { path: controlRigPath, type: 'ControlRig' });
             return {
               success: true,

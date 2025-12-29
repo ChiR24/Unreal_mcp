@@ -59,7 +59,7 @@ runner.addStep('Spawn Test Actor', async (tools) => {
 
 
 runner.addStep('Load World Partition Cells', async (tools) => {
-  const result = await tools.executeTool('manage_world_partition', {
+  await tools.executeTool('manage_world_partition', {
     action: 'load_cells',
     origin: [0, 0, 0],
     extent: [10000, 10000, 10000]
