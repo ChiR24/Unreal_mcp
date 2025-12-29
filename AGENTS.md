@@ -63,8 +63,8 @@ Model Context Protocol (MCP) server for Unreal Engine 5. Dual-process architectu
 
 ### Testing
 - Unit tests: Vitest (`npm run test:unit`) - no UE required
-- Integration tests: Custom .mjs runner (`npm run test:<name>`) - UE Editor required
-- Custom runner handles connection waits, flexible matching (`success|not_found`)
+- Integration tests: Consolidated suite (`npm test`) - UE Editor + plugin required
+- CI smoke test: `npm run test:smoke` with `MOCK_UNREAL_CONNECTION=true`
 
 ## ANTI-PATTERNS (THIS PROJECT)
 
@@ -105,8 +105,8 @@ npm run lint:csharp       # dotnet-format C#
 
 # Test
 npm run test:unit        # Vitest, no UE
-npm test                # All integration (requires UE)
-npm run test:blueprint  # Single tool test
+npm test                 # Consolidated integration (requires UE)
+npm run test:smoke       # CI smoke test (mock mode)
 ```
 
 ## NOTES

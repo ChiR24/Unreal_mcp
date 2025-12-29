@@ -281,9 +281,9 @@ const testCases = [
   // Group 8: Operations & Performance (5 scenarios)
   // ============================================================
   {
-    scenario: 'Level: get level summary',
+    scenario: 'Level: list available levels',
     toolName: 'manage_level',
-    arguments: { action: 'get_summary' },
+    arguments: { action: 'list_levels' },
     expected: 'success'
   },
   {

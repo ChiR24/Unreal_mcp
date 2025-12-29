@@ -112,7 +112,7 @@ export class EnvironmentTools implements IEnvironmentTools {
     try {
       const rawPath = typeof params?.path === 'string' && params.path.trim().length > 0
         ? params.path.trim()
-        : './tests/reports/env_snapshot.json';
+        : './tmp/unreal-mcp/env_snapshot.json';
       const rawFilename = typeof params?.filename === 'string' && params.filename.trim().length > 0
         ? params.filename.trim()
         : undefined;
@@ -164,7 +164,7 @@ export class EnvironmentTools implements IEnvironmentTools {
   async importSnapshot(params: { path?: unknown; filename?: unknown }): Promise<StandardActionResponse> {
     const rawPath = typeof params?.path === 'string' && params.path.trim().length > 0
       ? params.path.trim()
-      : './tests/reports/env_snapshot.json';
+      : './tmp/unreal-mcp/env_snapshot.json';
     const rawFilename = typeof params?.filename === 'string' && params.filename.trim().length > 0
       ? params.filename.trim()
       : undefined;

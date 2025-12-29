@@ -38,9 +38,6 @@
     "test:unit:coverage": "vitest run --coverage",
     "test:all": "node tests/integration.mjs",
     "test:smoke": "node --loader ts-node/esm scripts/smoke-test.ts",
-    "test:no-inline-python": "node tests/test-no-inline-python.mjs",
-    "test:plugin-handshake": "node tests/test-plugin-handshake.mjs",
-    "test:wasm": "node tests/test-wasm.mjs",
     "build:wasm": "echo 'Building WebAssembly module...' && cd wasm && wasm-pack build --target web --out-dir ../src/wasm/pkg && cd .. && node scripts/patch-wasm.js",
     "type-check": "tsc --noEmit",
     "prebuild": "npm run lint && npm run clean"
