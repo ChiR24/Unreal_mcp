@@ -5,10 +5,10 @@
  * Tests the GraphQL server functionality
  */
 
-import { createServer } from 'http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { GraphQLServer } from '../dist/graphql/server.js';
 import { UnrealBridge } from '../dist/unreal-bridge.js';
-import { AutomationBridge } from '../dist/automation/index.js';
 
 // Test automation bridge for verifying GraphQL integration
 class TestAutomationBridge {
