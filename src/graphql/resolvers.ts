@@ -19,7 +19,7 @@ export const scalarResolvers = {
   Vector: {
     serialize: (value: unknown) => {
       if (!value) return null;
-      return typeof value === 'object' && value !== null && 'x' in value && 'y' in value && 'z' in value
+      return typeof value === 'object' && 'x' in value && 'y' in value && 'z' in value
         ? value
         : null;
     },
@@ -38,7 +38,7 @@ export const scalarResolvers = {
   Rotator: {
     serialize: (value: unknown) => {
       if (!value) return null;
-      return typeof value === 'object' && value !== null && 'pitch' in value && 'yaw' in value && 'roll' in value
+      return typeof value === 'object' && 'pitch' in value && 'yaw' in value && 'roll' in value
         ? value
         : null;
     },
