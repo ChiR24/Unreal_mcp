@@ -70,7 +70,7 @@ Model Context Protocol (MCP) server for Unreal Engine 5. Dual-process architectu
 
 - **Breaking stdout**: Never write to stdout in runtime (reserved for JSON-RPC)
 - **Empty catches without reason**: Document why errors are swallowed
-- **`as any` overuse**: 193+ instances exist - reduce in new code, prefer explicit types
+- **`as any` / `: any`**: Eliminated from source code - maintain zero `any` policy
 - **Non-null assertions**: Avoid `!` unless proven safe
 - **Skipping C++ handler**: Adding tool without UE side won't work
 - **Path format mismatch**: Always normalize `/Content` to `/Game`

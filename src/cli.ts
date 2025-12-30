@@ -17,9 +17,10 @@ const log = new Logger('CLI');
     }
   } catch (err) {
     // If index.js cannot be resolved, try importing the TypeScript source
-    // at runtime (useful when running via ts-node-esm). Cast the error to
-    // `any` when inspecting runtime-only properties like `code`.
-    if (err && (((err as any).code === 'ERR_MODULE_NOT_FOUND') || String(err).includes('Unable to resolve'))) {
+    // at runtime (useful when running via ts-node-esm). Cast the error when
+    // inspecting runtime-only properties like `code`.
+    const errObj = err as Record<string, unknown> | null;
+    if (err && ((errObj?.code === 'ERR_MODULE_NOT_FOUND') || String(err).includes('Unable to resolve'))) {
       try {
           const tsModuleSpecifier = new URL('./index.ts', import.meta.url).href;
           const m2 = await import(tsModuleSpecifier);

@@ -89,6 +89,19 @@ export interface PendingRequest {
     initialResponse?: AutomationBridgeResponseMessage | undefined;
 }
 
+/**
+ * Represents a queued request item waiting to be sent when capacity is available.
+ * Uses unknown for resolve/reject values since the queue stores items from different
+ * generic Promise<T> contexts.
+ */
+export interface QueuedRequestItem {
+    resolve: (value: unknown) => void;
+    reject: (reason: unknown) => void;
+    action: string;
+    payload: Record<string, unknown>;
+    options: Record<string, unknown>;
+}
+
 export interface SocketInfo {
     connectionId: string;
     port: number;

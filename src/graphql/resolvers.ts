@@ -2,70 +2,84 @@ import type { GraphQLContext } from './types.js';
 import type { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 
+// GraphQL AST node types for parseLiteral
+interface ASTFieldNode {
+  name: { value: string };
+  value: { value: unknown; kind?: string; fields?: ASTFieldNode[] };
+}
+
+interface ASTNode {
+  kind: string;
+  value?: unknown;
+  fields?: ASTFieldNode[];
+  values?: ASTNode[];
+}
+
 export const scalarResolvers = {
   Vector: {
-    serialize: (value: any) => {
+    serialize: (value: unknown) => {
       if (!value) return null;
-      return typeof value === 'object' && 'x' in value && 'y' in value && 'z' in value
+      return typeof value === 'object' && value !== null && 'x' in value && 'y' in value && 'z' in value
         ? value
         : null;
     },
-    parseValue: (value: any) => value,
-    parseLiteral: (ast: any) => {
-      if (ast.kind === 'ObjectValue') {
-        const value: any = {};
-        ast.fields.forEach((field: any) => {
-          value[field.name.value] = field.value.value;
+    parseValue: (value: unknown) => value,
+    parseLiteral: (ast: ASTNode) => {
+      if (ast.kind === 'ObjectValue' && ast.fields) {
+        const result: Record<string, unknown> = {};
+        ast.fields.forEach((field: ASTFieldNode) => {
+          result[field.name.value] = field.value.value;
         });
-        return value;
+        return result;
       }
       return null;
     }
   },
   Rotator: {
-    serialize: (value: any) => {
+    serialize: (value: unknown) => {
       if (!value) return null;
-      return typeof value === 'object' && 'pitch' in value && 'yaw' in value && 'roll' in value
+      return typeof value === 'object' && value !== null && 'pitch' in value && 'yaw' in value && 'roll' in value
         ? value
         : null;
     },
-    parseValue: (value: any) => value,
-    parseLiteral: (ast: any) => {
-      if (ast.kind === 'ObjectValue') {
-        const value: any = {};
-        ast.fields.forEach((field: any) => {
-          value[field.name.value] = field.value.value;
+    parseValue: (value: unknown) => value,
+    parseLiteral: (ast: ASTNode) => {
+      if (ast.kind === 'ObjectValue' && ast.fields) {
+        const result: Record<string, unknown> = {};
+        ast.fields.forEach((field: ASTFieldNode) => {
+          result[field.name.value] = field.value.value;
         });
-        return value;
+        return result;
       }
       return null;
     }
   },
   Transform: {
-    serialize: (value: any) => value,
-    parseValue: (value: any) => value,
-    parseLiteral: (ast: any) => {
-      if (ast.kind === 'ObjectValue') {
-        const value: any = {};
-        ast.fields.forEach((field: any) => {
-          if (field.value.kind === 'ObjectValue') {
-            value[field.name.value] = {};
-            field.value.fields.forEach((f: any) => {
-              value[field.name.value][f.name.value] = f.value.value;
+    serialize: (value: unknown) => value,
+    parseValue: (value: unknown) => value,
+    parseLiteral: (ast: ASTNode) => {
+      if (ast.kind === 'ObjectValue' && ast.fields) {
+        const result: Record<string, unknown> = {};
+        ast.fields.forEach((field: ASTFieldNode) => {
+          if (field.value.kind === 'ObjectValue' && field.value.fields) {
+            result[field.name.value] = {};
+            const nestedObj = result[field.name.value] as Record<string, unknown>;
+            field.value.fields.forEach((f: ASTFieldNode) => {
+              nestedObj[f.name.value] = f.value.value;
             });
           } else {
-            value[field.name.value] = field.value.value;
+            result[field.name.value] = field.value.value;
           }
         });
-        return value;
+        return result;
       }
       return null;
     }
   },
   JSON: {
-    serialize: (value: any) => value,
-    parseValue: (value: any) => value,
-    parseLiteral: (ast: any) => {
+    serialize: (value: unknown) => value,
+    parseValue: (value: unknown) => value,
+    parseLiteral: (ast: ASTNode): unknown => {
       switch (ast.kind) {
         case 'StringValue':
           return ast.value;
@@ -75,13 +89,16 @@ export const scalarResolvers = {
         case 'FloatValue':
           return Number(ast.value);
         case 'ObjectValue':
-          const value: any = {};
-          ast.fields.forEach((field: any) => {
-            value[field.name.value] = (scalarResolvers as any).JSON.parseLiteral(field.value);
-          });
-          return value;
+          if (ast.fields) {
+            const result: Record<string, unknown> = {};
+            ast.fields.forEach((field: ASTFieldNode) => {
+              result[field.name.value] = scalarResolvers.JSON.parseLiteral(field.value as ASTNode);
+            });
+            return result;
+          }
+          return {};
         case 'ListValue':
-          return ast.values.map((v: any) => (scalarResolvers as any).JSON.parseLiteral(v));
+          return (ast.values ?? []).map((v: ASTNode) => scalarResolvers.JSON.parseLiteral(v));
         default:
           return null;
       }
@@ -95,7 +112,7 @@ interface Asset {
   class: string;
   packagePath: string;
   size?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   tags?: string[];
 }
 
@@ -106,7 +123,7 @@ interface Actor {
   rotation?: { pitch: number; yaw: number; roll: number };
   scale?: { x: number; y: number; z: number };
   tags?: string[];
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 interface Blueprint {
@@ -116,8 +133,8 @@ interface Blueprint {
   variables?: Array<{
     name: string;
     type: string;
-    defaultValue?: any;
-    metadata?: Record<string, any>;
+    defaultValue?: unknown;
+    metadata?: Record<string, unknown>;
   }>;
   functions?: Array<{
     name: string;
@@ -125,8 +142,8 @@ interface Blueprint {
     outputs?: Array<{ name: string; type: string }>;
   }>;
   events?: Array<{ name: string; type: string }>;
-  components?: Array<{ name: string; type: string; properties?: Record<string, any> }>;
-  scsHierarchy?: Record<string, any>;
+  components?: Array<{ name: string; type: string; properties?: Record<string, unknown> }>;
+  scsHierarchy?: Record<string, unknown>;
 }
 
 import { Logger } from '../utils/logger.js';
@@ -158,12 +175,12 @@ function createResolverError(operation: string, error: unknown): GraphQLResolver
   return new GraphQLResolverError(`${operation} failed: ${message}`, 'UNREAL_ENGINE_ERROR', error instanceof Error ? error : undefined);
 }
 
-function logAutomationFailure(source: string, response: any) {
+function logAutomationFailure(source: string, response: Record<string, unknown> | null) {
   try {
     if (!response || response.success !== false) {
       return;
     }
-    const errorText = (response.error || response.message || '').toString();
+    const errorText = ((response.error || response.message || '') as string).toString();
     if (errorText.length === 0) {
       return;
     }
@@ -178,14 +195,14 @@ function logAutomationFailure(source: string, response: any) {
 async function getActorProperties(
   bridge: UnrealBridge,
   actorName: string
-): Promise<Record<string, any>> {
+): Promise<Record<string, unknown>> {
   try {
     const result = await bridge.getObjectProperty({
       objectPath: actorName,
       propertyName: '*',
       timeoutMs: 5000
     });
-    return result.success ? result.value || {} : {};
+    return result.success ? (result.value as Record<string, unknown>) || {} : {};
   } catch (error) {
     log.error('Failed to get actor properties:', error);
     return {};
@@ -211,10 +228,10 @@ async function listAssets(
     );
 
     if (response.success && response.result) {
-      const result = response.result as any;
+      const result = response.result as Record<string, unknown>;
       return {
-        assets: result.assets || [],
-        totalCount: result.totalCount || 0
+        assets: (result.assets || []) as Asset[],
+        totalCount: (result.totalCount || 0) as number
       };
     }
 
@@ -244,9 +261,9 @@ async function listActors(
     );
 
     if (response.success && response.result) {
-      const result = response.result as any;
+      const result = response.result as Record<string, unknown>;
       return {
-        actors: result.actors || []
+        actors: (result.actors || []) as Actor[]
       };
     }
 
@@ -263,10 +280,64 @@ async function listActors(
 /**
  * GraphQL Resolvers Implementation
  */
+
+// Argument types for resolvers
+interface AssetFilter {
+  class?: string;
+  tag?: string;
+  pathStartsWith?: string;
+}
+
+interface ActorFilter {
+  class?: string;
+  tag?: string;
+}
+
+interface PaginationArgs {
+  offset?: number;
+  limit?: number;
+}
+
+interface ListArgs {
+  filter?: AssetFilter | ActorFilter;
+  pagination?: PaginationArgs;
+}
+
+interface SpawnActorInput {
+  class: string;
+  name?: string;
+  location?: { x: number; y: number; z: number };
+  rotation?: { pitch: number; yaw: number; roll: number };
+}
+
+interface TransformInput {
+  location?: { x: number; y: number; z: number };
+  rotation?: { pitch: number; yaw: number; roll: number };
+  scale?: { x: number; y: number; z: number };
+}
+
+interface BlueprintInput {
+  name: string;
+  parentClass?: string;
+  path?: string;
+}
+
+interface VariableInput {
+  name: string;
+  type: string;
+  defaultValue?: unknown;
+}
+
+interface FunctionInput {
+  name: string;
+  inputs?: Array<{ name: string; type: string }>;
+  outputs?: Array<{ name: string; type: string }>;
+}
+
 export const resolvers = {
   // Query resolvers
   Query: {
-    assets: async (_: any, args: any, context: GraphQLContext) => {
+    assets: async (_: unknown, args: ListArgs, context: GraphQLContext) => {
       const { filter, pagination } = args;
       const { assets, totalCount } = await listAssets(
         context.automationBridge,
@@ -292,7 +363,7 @@ export const resolvers = {
       };
     },
 
-    asset: async (_: any, { path }: { path: string }, context: GraphQLContext) => {
+    asset: async (_: unknown, { path }: { path: string }, context: GraphQLContext) => {
       try {
         if (!context.loaders) {
           throw new Error('Loaders not initialized');
@@ -304,7 +375,7 @@ export const resolvers = {
       }
     },
 
-    actors: async (_: any, args: any, context: GraphQLContext) => {
+    actors: async (_: unknown, args: ListArgs, context: GraphQLContext) => {
       const { filter, pagination } = args;
       const { actors } = await listActors(context.automationBridge, filter);
 
@@ -330,7 +401,7 @@ export const resolvers = {
       };
     },
 
-    actor: async (_: any, { name }: { name: string }, context: GraphQLContext) => {
+    actor: async (_: unknown, { name }: { name: string }, context: GraphQLContext) => {
       try {
         if (!context.loaders) {
           throw new Error('Loaders not initialized');
@@ -342,7 +413,7 @@ export const resolvers = {
       }
     },
 
-    blueprints: async (_: any, args: any, context: GraphQLContext) => {
+    blueprints: async (_: unknown, args: ListArgs, context: GraphQLContext) => {
       const { filter, pagination } = args;
       try {
         const response = await context.automationBridge.sendAutomationRequest(
@@ -354,8 +425,9 @@ export const resolvers = {
           { timeoutMs: 30000 }
         );
 
+        const resultObj = (response.result ?? {}) as Record<string, unknown>;
         const blueprints: Blueprint[] = response.success && response.result
-          ? (response.result as any).blueprints || []
+          ? (resultObj.blueprints || []) as Blueprint[]
           : [];
 
         const edges = blueprints.map((blueprint, index) => ({
@@ -363,10 +435,11 @@ export const resolvers = {
           cursor: Buffer.from(`${blueprint.path}:${index}`).toString('base64')
         }));
 
+        const totalCount = (resultObj.totalCount as number) || 0;
         return {
           edges,
           pageInfo: {
-            hasNextPage: (pagination?.offset || 0) + blueprints.length < (response.result as any)?.totalCount || 0,
+            hasNextPage: (pagination?.offset || 0) + blueprints.length < totalCount,
             hasPreviousPage: (pagination?.offset || 0) > 0,
             startCursor: edges.length > 0 ? edges[0].cursor : null,
             endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null
@@ -390,14 +463,14 @@ export const resolvers = {
       }
     },
 
-    blueprint: async (_: any, { path }: { path: string }, context: GraphQLContext) => {
+    blueprint: async (_: unknown, { path }: { path: string }, context: GraphQLContext) => {
       if (!context.loaders) {
         throw new Error('Loaders not initialized');
       }
       return await context.loaders.blueprintLoader.load(path);
     },
 
-    levels: async (_: any, __: any, context: GraphQLContext) => {
+    levels: async (_: unknown, __: unknown, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'list_levels',
@@ -406,7 +479,8 @@ export const resolvers = {
         );
 
         if (response.success && response.result) {
-          return (response.result as any).levels || [];
+          const resultObj = response.result as Record<string, unknown>;
+          return (resultObj.levels || []) as unknown[];
         }
 
         return [];
@@ -416,7 +490,7 @@ export const resolvers = {
       }
     },
 
-    currentLevel: async (_: any, __: any, context: GraphQLContext) => {
+    currentLevel: async (_: unknown, __: unknown, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'get_current_level',
@@ -435,7 +509,7 @@ export const resolvers = {
       }
     },
 
-    materials: async (_: any, args: any, context: GraphQLContext) => {
+    materials: async (_: unknown, args: ListArgs, context: GraphQLContext) => {
       const { filter, pagination } = args;
       try {
         const materialFilter = { ...filter, class: 'MaterialInterface' };
@@ -476,7 +550,7 @@ export const resolvers = {
       }
     },
 
-    sequences: async (_: any, args: any, context: GraphQLContext) => {
+    sequences: async (_: unknown, args: ListArgs, context: GraphQLContext) => {
       const { filter, pagination } = args;
       try {
         const sequenceFilter = { ...filter, class: 'LevelSequence' };
@@ -517,7 +591,7 @@ export const resolvers = {
       }
     },
 
-    worldPartitionCells: async (_: any, __: any, context: GraphQLContext) => {
+    worldPartitionCells: async (_: unknown, __: unknown, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'manage_world_partition',
@@ -526,7 +600,8 @@ export const resolvers = {
         );
 
         if (response.success && response.result) {
-          return (response.result as any).cells || [];
+          const resultObj = response.result as Record<string, unknown>;
+          return (resultObj.cells || []) as unknown[];
         }
         return [];
       } catch (error) {
@@ -535,7 +610,7 @@ export const resolvers = {
       }
     },
 
-    niagaraSystems: async (_: any, args: any, context: GraphQLContext) => {
+    niagaraSystems: async (_: unknown, args: ListArgs, context: GraphQLContext) => {
       const { filter, pagination } = args;
       try {
         // Re-use list_assets with filter for NiagaraSystem class
@@ -581,7 +656,7 @@ export const resolvers = {
       }
     },
 
-    niagaraSystem: async (_: any, { path }: { path: string }, context: GraphQLContext) => {
+    niagaraSystem: async (_: unknown, { path }: { path: string }, context: GraphQLContext) => {
       try {
         // Check if it's a niagara system
         const asset = await context.automationBridge.sendAutomationRequest(
@@ -589,9 +664,10 @@ export const resolvers = {
           { assetPath: path },
           { timeoutMs: 10000 }
         );
-        if (asset.success && asset.result && (asset.result as any).class === 'NiagaraSystem') {
+        const resultObj = (asset.result ?? {}) as Record<string, unknown>;
+        if (asset.success && asset.result && resultObj.class === 'NiagaraSystem') {
           return {
-            ...(asset.result as any),
+            ...resultObj,
             emitters: [],
             parameters: []
           };
@@ -603,7 +679,7 @@ export const resolvers = {
       }
     },
 
-    search: async (_: any, { query, type }: any, context: GraphQLContext) => {
+    search: async (_: unknown, { query, type }: { query: string; type?: string }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'search',
@@ -615,7 +691,8 @@ export const resolvers = {
         );
 
         if (response.success && response.result) {
-          return (response.result as any).results || [];
+          const resultObj = response.result as Record<string, unknown>;
+          return (resultObj.results || []) as unknown[];
         }
 
         return [];
@@ -628,7 +705,7 @@ export const resolvers = {
 
   // Mutation resolvers
   Mutation: {
-    duplicateAsset: async (_: any, { path, newName }: any, context: GraphQLContext) => {
+    duplicateAsset: async (_: unknown, { path, newName }: { path: string; newName: string }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'duplicate_asset',
@@ -650,7 +727,7 @@ export const resolvers = {
       }
     },
 
-    moveAsset: async (_: any, { path, newPath }: any, context: GraphQLContext) => {
+    moveAsset: async (_: unknown, { path, newPath }: { path: string; newPath: string }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'move_asset',
@@ -672,7 +749,7 @@ export const resolvers = {
       }
     },
 
-    deleteAsset: async (_: any, { path }: { path: string }, context: GraphQLContext) => {
+    deleteAsset: async (_: unknown, { path }: { path: string }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'delete_asset',
@@ -689,11 +766,11 @@ export const resolvers = {
       }
     },
 
-    spawnActor: async (_: any, { input }: any, context: GraphQLContext) => {
+    spawnActor: async (_: unknown, { input }: { input: SpawnActorInput }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'spawn_actor',
-          input,
+          { ...input },
           { timeoutMs: 10000 }
         );
 
@@ -708,7 +785,7 @@ export const resolvers = {
       }
     },
 
-    deleteActor: async (_: any, { name }: { name: string }, context: GraphQLContext) => {
+    deleteActor: async (_: unknown, { name }: { name: string }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'delete_actor',
@@ -725,7 +802,7 @@ export const resolvers = {
       }
     },
 
-    setActorTransform: async (_: any, { name, transform }: any, context: GraphQLContext) => {
+    setActorTransform: async (_: unknown, { name, transform }: { name: string; transform: TransformInput }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'set_actor_transform',
@@ -747,11 +824,11 @@ export const resolvers = {
       }
     },
 
-    createBlueprint: async (_: any, { input }: any, context: GraphQLContext) => {
+    createBlueprint: async (_: unknown, { input }: { input: BlueprintInput }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'create_blueprint',
-          input,
+          { ...input },
           { timeoutMs: 60000 }
         );
 
@@ -766,7 +843,7 @@ export const resolvers = {
       }
     },
 
-    addVariableToBlueprint: async (_: any, { path, input }: any, context: GraphQLContext) => {
+    addVariableToBlueprint: async (_: unknown, { path, input }: { path: string; input: VariableInput }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'add_variable_to_blueprint',
@@ -788,7 +865,7 @@ export const resolvers = {
       }
     },
 
-    addFunctionToBlueprint: async (_: any, { path, input }: any, context: GraphQLContext) => {
+    addFunctionToBlueprint: async (_: unknown, { path, input }: { path: string; input: FunctionInput }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'add_function_to_blueprint',
@@ -810,7 +887,7 @@ export const resolvers = {
       }
     },
 
-    loadLevel: async (_: any, { path }: { path: string }, context: GraphQLContext) => {
+    loadLevel: async (_: unknown, { path }: { path: string }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'load_level',
@@ -831,7 +908,7 @@ export const resolvers = {
       }
     },
 
-    saveLevel: async (_: any, { path }: { path?: string }, context: GraphQLContext) => {
+    saveLevel: async (_: unknown, { path }: { path?: string }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'save_level',
@@ -848,7 +925,7 @@ export const resolvers = {
       }
     },
 
-    createMaterialInstance: async (_: any, { parentPath, name, parameters }: any, context: GraphQLContext) => {
+    createMaterialInstance: async (_: unknown, { parentPath, name, parameters }: { parentPath: string; name: string; parameters?: Record<string, unknown> }, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'create_material_instance',
@@ -874,7 +951,7 @@ export const resolvers = {
 
   // Field resolvers
   Asset: {
-    dependencies: async (parent: Asset, _: any, context: GraphQLContext) => {
+    dependencies: async (parent: Asset, _: unknown, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'get_asset_dependencies',
@@ -885,7 +962,8 @@ export const resolvers = {
         );
 
         if (response.success && response.result) {
-          return (response.result as any).dependencies || [];
+          const resultObj = response.result as Record<string, unknown>;
+          return (resultObj.dependencies || []) as string[];
         }
 
         return [];
@@ -895,7 +973,7 @@ export const resolvers = {
       }
     },
 
-    dependents: async (parent: Asset, _: any, context: GraphQLContext) => {
+    dependents: async (parent: Asset, _: unknown, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'get_asset_dependents',
@@ -906,7 +984,8 @@ export const resolvers = {
         );
 
         if (response.success && response.result) {
-          return (response.result as any).dependents || [];
+          const resultObj = response.result as Record<string, unknown>;
+          return (resultObj.dependents || []) as string[];
         }
 
         return [];
@@ -918,11 +997,11 @@ export const resolvers = {
   },
 
   Actor: {
-    properties: async (parent: Actor, _: any, context: GraphQLContext) => {
+    properties: async (parent: Actor, _: unknown, context: GraphQLContext) => {
       return await getActorProperties(context.bridge, parent.name);
     },
 
-    components: async (parent: Actor, _: any, context: GraphQLContext) => {
+    components: async (parent: Actor, _: unknown, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'get_actor_components',
@@ -933,7 +1012,8 @@ export const resolvers = {
         );
 
         if (response.success && response.result) {
-          return (response.result as any).components || [];
+          const resultObj = response.result as Record<string, unknown>;
+          return (resultObj.components || []) as unknown[];
         }
 
         return [];
@@ -945,25 +1025,25 @@ export const resolvers = {
   },
 
   Blueprint: {
-    variables: async (parent: Blueprint, _args: any, _context: GraphQLContext) => {
+    variables: async (parent: Blueprint, _args: unknown, _context: GraphQLContext) => {
       return parent.variables || [];
     },
 
-    functions: async (parent: Blueprint, _args: any, _context: GraphQLContext) => {
+    functions: async (parent: Blueprint, _args: unknown, _context: GraphQLContext) => {
       return parent.functions || [];
     },
 
-    events: async (parent: Blueprint, _args: any, _context: GraphQLContext) => {
+    events: async (parent: Blueprint, _args: unknown, _context: GraphQLContext) => {
       return parent.events || [];
     },
 
-    components: async (parent: Blueprint, _args: any, _context: GraphQLContext) => {
+    components: async (parent: Blueprint, _args: unknown, _context: GraphQLContext) => {
       return parent.components || [];
     }
   },
 
   Material: {
-    parameters: async (parent: any, _: any, context: GraphQLContext) => {
+    parameters: async (parent: Asset, _: unknown, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'get_material_parameters',
@@ -974,7 +1054,8 @@ export const resolvers = {
         );
 
         if (response.success && response.result) {
-          return (response.result as any).parameters || [];
+          const resultObj = response.result as Record<string, unknown>;
+          return (resultObj.parameters || []) as unknown[];
         }
 
         return [];
@@ -986,7 +1067,7 @@ export const resolvers = {
   },
 
   Sequence: {
-    tracks: async (parent: any, _: any, context: GraphQLContext) => {
+    tracks: async (parent: Asset, _: unknown, context: GraphQLContext) => {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'get_sequence_tracks',
@@ -997,7 +1078,8 @@ export const resolvers = {
         );
 
         if (response.success && response.result) {
-          return (response.result as any).tracks || [];
+          const resultObj = response.result as Record<string, unknown>;
+          return (resultObj.tracks || []) as unknown[];
         }
 
         return [];
