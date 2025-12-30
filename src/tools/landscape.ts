@@ -260,15 +260,15 @@ export class LandscapeTools implements ILandscapeTools {
         };
       }
 
-      const result = response.result as any;
+      const result = (response.result ?? {}) as Record<string, unknown>;
       return {
         success: true,
         message: response.message || `Created procedural terrain '${params.name}'`,
-        actorName: result?.actor_name,
-        vertices: result?.vertices,
-        triangles: result?.triangles,
-        size: result?.size,
-        subdivisions: result?.subdivisions,
+        actorName: result.actor_name,
+        vertices: result.vertices,
+        triangles: result.triangles,
+        size: result.size,
+        subdivisions: result.subdivisions,
         details: result
       } as StandardActionResponse;
     } catch (error) {
@@ -312,26 +312,26 @@ export class LandscapeTools implements ILandscapeTools {
     }
 
     try {
-      const response: any = await this.automationBridge.sendAutomationRequest('create_landscape_grass_type', {
+      const response = await this.automationBridge.sendAutomationRequest('create_landscape_grass_type', {
         name,
         meshPath: meshPathRaw,
         density: params.density || 1.0,
         minScale: params.minScale || 0.8,
         maxScale: params.maxScale || 1.2
-      }, { timeoutMs: 90000 });
+      }, { timeoutMs: 90000 }) as Record<string, unknown>;
 
       if (response && response.success === false) {
         return {
           success: false,
-          error: response.error || response.message || 'Failed to create landscape grass type'
+          error: (response.error as string) || (response.message as string) || 'Failed to create landscape grass type'
         };
       }
 
-      const result = response.result as any;
+      const result = (response.result ?? {}) as Record<string, unknown>;
       return {
         success: true,
-        message: response?.message || `Landscape grass type '${name}' created`,
-        assetPath: result?.asset_path || response?.assetPath || response?.asset_path
+        message: (response.message as string) || `Landscape grass type '${name}' created`,
+        assetPath: (result.asset_path as string) || (response.assetPath as string) || (response.asset_path as string)
       } as StandardActionResponse;
     } catch (error) {
       return {
@@ -358,23 +358,23 @@ export class LandscapeTools implements ILandscapeTools {
     }
 
     try {
-      const response: any = await this.automationBridge.sendAutomationRequest('set_landscape_material', {
+      const response = await this.automationBridge.sendAutomationRequest('set_landscape_material', {
         landscapeName,
         materialPath
-      }, { timeoutMs: 60000 });
+      }, { timeoutMs: 60000 }) as Record<string, unknown>;
 
       if (response && response.success === false) {
         return {
           success: false,
-          error: response.error || response.message || 'Failed to set landscape material'
+          error: (response.error as string) || (response.message as string) || 'Failed to set landscape material'
         };
       }
 
       return {
         success: true,
-        message: response?.message || `Landscape material set on '${landscapeName}'`,
-        landscapeName: response?.landscapeName || landscapeName,
-        materialPath: response?.materialPath || materialPath
+        message: (response.message as string) || `Landscape material set on '${landscapeName}'`,
+        landscapeName: (response.landscapeName as string) || landscapeName,
+        materialPath: (response.materialPath as string) || materialPath
       } as StandardActionResponse;
     } catch (error) {
       return {

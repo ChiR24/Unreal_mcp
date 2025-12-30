@@ -61,23 +61,24 @@ export class MaterialTools {
       // Use Automation Bridge for material creation
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
         try {
-          const resp: any = await this.automationBridge.sendAutomationRequest('create_material', {
+          const resp = await this.automationBridge.sendAutomationRequest('create_material', {
             name: effectiveName,
             destinationPath: cleanPath
-          });
+          }) as Record<string, unknown>;
 
           if (resp && resp.success !== false) {
+            const result = (resp.result ?? {}) as Record<string, unknown>;
             return {
               success: true,
-              path: resp.path || resp.result?.path || materialPath,
-              message: resp.message || `Material ${name} created at ${materialPath}`,
-              warnings: resp.warnings
+              path: (resp.path || result.path || materialPath) as string,
+              message: (resp.message || `Material ${name} created at ${materialPath}`) as string,
+              warnings: resp.warnings as string[] | undefined
             };
           }
 
           return {
             success: false,
-            error: resp?.error ?? resp?.message ?? 'Failed to create material'
+            error: (resp?.error ?? resp?.message ?? 'Failed to create material') as string
           };
         } catch (err) {
           return {
@@ -136,18 +137,19 @@ export class MaterialTools {
       // Plugin-first attempt
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
         try {
-          const resp: any = await this.automationBridge.sendAutomationRequest('create_material_instance', {
+          const resp = await this.automationBridge.sendAutomationRequest('create_material_instance', {
             name,
             destinationPath: cleanPath,
             parentMaterial,
             parameters
-          });
+          }) as Record<string, unknown>;
           if (resp && resp.success !== false) {
-            return { success: true, path: resp.path || resp.result?.path || `${cleanPath}/${name}`, message: resp.message || `Material instance ${name} created at ${cleanPath}/${name}`, warnings: resp.warnings } as any;
+            const result = (resp.result ?? {}) as Record<string, unknown>;
+            return { success: true, path: (resp.path || result.path || `${cleanPath}/${name}`) as string, message: (resp.message || `Material instance ${name} created at ${cleanPath}/${name}`) as string, warnings: resp.warnings };
           }
           const errTxt = String(resp?.error ?? resp?.message ?? '');
           if (!(errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION'))) {
-            return { success: false, error: resp?.error ?? resp?.message ?? 'CREATE_MATERIAL_INSTANCE_FAILED' } as any;
+            return { success: false, error: (resp?.error ?? resp?.message ?? 'CREATE_MATERIAL_INSTANCE_FAILED') as string };
           }
         } catch (e) {
           // If the error is simply generic or unknown action, we fall back.
@@ -175,7 +177,8 @@ export class MaterialTools {
       try {
         const res = await this.bridge.executeEditorFunction('CREATE_ASSET', createParams);
         if (res && res.success !== false) {
-          const createdPath = res.path || res.result?.path || `${cleanPath}/${name}`;
+          const resResult = (res.result ?? {}) as Record<string, unknown>;
+          const createdPath = (res.path || resResult.path || `${cleanPath}/${name}`) as string;
           // Attempt to set parent via plugin-native setObjectProperty when available
           if (parentMaterial) {
             try {
@@ -188,18 +191,19 @@ export class MaterialTools {
           try {
             await this.bridge.executeEditorFunction('SAVE_ASSET', { path: createdPath });
           } catch (_) { }
-          return { success: true, path: createdPath, message: `Material instance ${name} created at ${createdPath}` } as any;
+          return { success: true, path: createdPath, message: `Material instance ${name} created at ${createdPath}` };
         }
         // If plugin indicated unknown action and python fallback not allowed, surface explicit failure
-        const errTxt = String((res as any)?.error ?? (res as any)?.message ?? '');
+        const resRecord = res as Record<string, unknown>;
+        const errTxt = String(resRecord?.error ?? resRecord?.message ?? '');
         if (errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION')) {
-          return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement create_material_instance' } as any;
+          return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement create_material_instance' };
         }
-        return { success: false, error: (res as any)?.error ?? (res as any)?.message ?? 'CREATE_MATERIAL_INSTANCE_FAILED' } as any;
+        return { success: false, error: (resRecord?.error ?? resRecord?.message ?? 'CREATE_MATERIAL_INSTANCE_FAILED') as string };
       } catch (err) {
         // If executeEditorFunction threw due to bridge not connected or python disabled,
         // preserve previous behavior by returning structured failure.
-        return { success: false, error: String(err) || 'CREATE_MATERIAL_INSTANCE_FAILED' } as any;
+        return { success: false, error: String(err) || 'CREATE_MATERIAL_INSTANCE_FAILED' };
       }
     } catch (err) {
       return { success: false, error: `Failed to create material instance: ${err}` };

@@ -414,7 +414,7 @@ export function createGraphQLSchema(
 ) {
   // Union type resolver
   const SearchResult = {
-    __resolveType(obj: any) {
+    __resolveType(obj: Record<string, unknown>) {
       if (obj.name && obj.path && obj.class) {
         return 'Asset';
       }

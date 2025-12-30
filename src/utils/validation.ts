@@ -148,7 +148,7 @@ export function validatePathLength(path: string): { valid: boolean; error?: stri
 export function validateAssetParams(params: {
   name: string;
   savePath?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }): {
   valid: boolean;
   sanitized: typeof params;

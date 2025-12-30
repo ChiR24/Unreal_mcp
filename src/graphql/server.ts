@@ -1,5 +1,5 @@
 import { createYoga } from 'graphql-yoga';
-import { createServer } from 'http';
+import { createServer, type RequestListener } from 'http';
 import { Logger } from '../utils/logger.js';
 import { createGraphQLSchema } from './schema.js';
 import type { GraphQLContext } from './types.js';
@@ -99,7 +99,7 @@ export class GraphQLServer {
       });
 
       this.server = createServer(
-        yoga as any
+        yoga as RequestListener
       );
 
       await new Promise<void>((resolve, reject) => {

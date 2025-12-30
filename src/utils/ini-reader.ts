@@ -33,7 +33,7 @@ export async function readIniFile(filePath: string): Promise<Record<string, Reco
   }
 }
 
-export async function getProjectSetting(projectPath: string, category: string, sectionName: string, key?: string): Promise<any> {
+export async function getProjectSetting(projectPath: string, category: string, sectionName: string, key?: string): Promise<Record<string, unknown> | string | null> {
     // Normalize project path to directory
     let dirPath = projectPath;
     if (dirPath.toLowerCase().endsWith('.uproject')) {

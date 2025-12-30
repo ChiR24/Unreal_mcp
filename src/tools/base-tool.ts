@@ -28,7 +28,7 @@ export abstract class BaseTool implements IBaseTool {
                 if (typeof response.error === 'string') {
                     errorMessage = response.error;
                 } else if (typeof response.error === 'object') {
-                    const errObj = response.error as any;
+                    const errObj = response.error as Record<string, unknown>;
                     if (errObj.message) {
                         errorMessage = `${errObj.message} (Code: ${errObj.code || 'UNKNOWN'})`;
                     }

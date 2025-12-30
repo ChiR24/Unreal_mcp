@@ -300,7 +300,7 @@ export interface EnvironmentArgs extends HandlerArgs {
 // ============================================================================
 
 export interface LightingArgs extends HandlerArgs {
-    lightType?: 'Directional' | 'Point' | 'Spot' | 'Rect';
+    lightType?: string;
     name?: string;
     location?: Vector3;
     rotation?: Rotator;
@@ -311,16 +311,36 @@ export interface LightingArgs extends HandlerArgs {
     falloffExponent?: number;
     innerCone?: number;
     outerCone?: number;
+    width?: number;
+    height?: number;
     castShadows?: boolean;
-    method?: 'Lightmass' | 'LumenGI' | 'ScreenSpace' | 'None';
+    method?: string;
     bounces?: number;
     quality?: string;
     enabled?: boolean;
     density?: number;
+    scatteringIntensity?: number;
     fogHeight?: number;
     cubemapPath?: string;
-    sourceType?: 'CapturedScene' | 'SpecifiedCubemap';
+    sourceType?: string;
     recapture?: boolean;
+    size?: number;
+    levelName?: string;
+    copyActors?: boolean;
+    useTemplate?: boolean;
+    pulse?: boolean;
+    useAsAtmosphereSunLight?: boolean;
+    shadowQuality?: string;
+    cascadedShadows?: boolean;
+    shadowDistance?: number;
+    contactShadows?: boolean;
+    rayTracedShadows?: boolean;
+    compensationValue?: number;
+    minBrightness?: number;
+    maxBrightness?: number;
+    indirectLightingIntensity?: number;
+    buildOnlySelected?: boolean;
+    buildReflectionCaptures?: boolean;
 }
 
 // ============================================================================
@@ -439,4 +459,125 @@ export interface PipelineArgs extends HandlerArgs {
     configuration?: string;
     arguments?: string;
     projectPath?: string;
+}
+
+// ============================================================================
+// Animation & Physics Types
+// ============================================================================
+
+/** Axis definition for blend spaces */
+export interface BlendSpaceAxis {
+    minValue?: number;
+    maxValue?: number;
+    name?: string;
+}
+
+export interface AnimationArgs extends HandlerArgs {
+    name?: string;
+    blueprintName?: string;
+    skeletonPath?: string;
+    targetSkeleton?: string;
+    savePath?: string;
+    path?: string;
+    actorName?: string;
+    meshPath?: string;
+    montagePath?: string;
+    playRate?: number;
+    
+    // Blend space
+    horizontalAxis?: BlendSpaceAxis;
+    verticalAxis?: BlendSpaceAxis;
+    minX?: number;
+    maxX?: number;
+    minY?: number;
+    maxY?: number;
+    
+    // State machine
+    machineName?: string;
+    states?: unknown[];
+    transitions?: unknown[];
+    blueprintPath?: string;
+    
+    // IK
+    ikBones?: unknown[];
+    enableFootPlacement?: boolean;
+    
+    // Procedural anim
+    systemName?: string;
+    baseAnimation?: string;
+    modifiers?: unknown[];
+    
+    // Blend tree
+    treeName?: string;
+    blendType?: string;
+    basePose?: string;
+    additiveAnimations?: unknown[];
+    
+    // Animation asset
+    assetType?: string;
+    
+    // Notify
+    animationPath?: string;
+    assetPath?: string;
+    notifyName?: string;
+    time?: number;
+    startTime?: number;
+    
+    // Vehicle
+    vehicleName?: string;
+    vehicleType?: string;
+    wheels?: unknown[];
+    engine?: unknown;
+    transmission?: unknown;
+    pluginDependencies?: string[];
+    plugins?: string[];
+    
+    // Physics simulation
+    physicsAssetName?: string;
+    
+    // Cleanup
+    artifacts?: unknown[];
+}
+
+// ============================================================================
+// Audio Types
+// ============================================================================
+
+export interface AudioArgs extends HandlerArgs {
+    name?: string;
+    soundPath?: string;
+    wavePath?: string;
+    savePath?: string;
+    location?: Vector3;
+    rotation?: Rotator;
+    volume?: number;
+    pitch?: number;
+    startTime?: number;
+    attenuationPath?: string;
+    concurrencyPath?: string;
+    actorName?: string;
+    componentName?: string;
+    autoPlay?: boolean;
+    is3D?: boolean;
+    innerRadius?: number;
+    falloffDistance?: number;
+    attenuationShape?: string;
+    falloffMode?: string;
+    parentClass?: string;
+    properties?: Record<string, unknown>;
+    classAdjusters?: unknown[];
+    mixName?: string;
+    size?: Vector3;
+    reverbEffect?: string;
+    fadeTime?: number;
+    enabled?: boolean;
+    fftSize?: number;
+    outputType?: string;
+    soundName?: string;
+    targetVolume?: number;
+    fadeType?: string;
+    scale?: number;
+    lowPassFilterFrequency?: number;
+    volumeAttenuation?: number;
+    settings?: Record<string, unknown>;
 }

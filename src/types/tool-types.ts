@@ -134,7 +134,7 @@ export interface SystemControlResponse extends BaseToolResponse {
 // Console Command Types
 export interface ConsoleCommandResponse extends BaseToolResponse {
   command?: string;
-  result?: any;
+  result?: unknown;
   info?: string;
 }
 
@@ -328,7 +328,7 @@ export interface ConsolidatedToolParams {
     name?: string;
     path?: string;
     parentMaterial?: string;
-    parameters?: Record<string, any>;
+    parameters?: Record<string, unknown>;
   };
 
   control_actor: {
@@ -427,15 +427,15 @@ export interface ConsolidatedToolParams {
     dimensions?: number | [number, number];
     horizontalAxis?: { name?: string; minValue?: number; maxValue?: number };
     verticalAxis?: { name?: string; minValue?: number; maxValue?: number };
-    samples?: any[];
+    samples?: Array<Record<string, unknown>>;
 
     // State machine
-    states?: any[];
-    transitions?: any[];
+    states?: Array<Record<string, unknown>>;
+    transitions?: Array<Record<string, unknown>>;
 
     // IK / Retargeting / Procedural
-    chain?: any;
-    effector?: any;
+    chain?: Record<string, unknown>;
+    effector?: Record<string, unknown>;
     // Retargeting
     sourceSkeleton?: string;
     targetSkeleton?: string;
@@ -471,7 +471,7 @@ export interface ConsolidatedToolParams {
     systemName?: string;
     parameterName?: string;
     parameterType?: string;
-    value?: any;
+    value?: unknown;
     isUserParameter?: boolean;
     duration?: number;
   };

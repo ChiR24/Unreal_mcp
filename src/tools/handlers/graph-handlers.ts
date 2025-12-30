@@ -1,7 +1,23 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { GraphArgs } from '../../types/handler-types.js';
+import type { GraphArgs, HandlerArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
+
+/** Response from automation requests */
+interface AutomationResponse {
+    success?: boolean;
+    error?: string;
+    message?: string;
+    result?: Record<string, unknown>;
+    [key: string]: unknown;
+}
+
+/** Extended GraphArgs for internal processing */
+interface ProcessedGraphArgs extends GraphArgs {
+    subAction?: string;
+    nodeCategory?: string;
+    [key: string]: unknown;
+}
 
 // Blueprint node type aliases: map human-friendly names to K2Node class names
 // NOTE: These aliases are applied in TS before sending to C++. The C++ plugin has
@@ -61,7 +77,7 @@ const BT_NODE_ALIASES: Record<string, { class: string; type: string }> = {
     'SimpleParallel': { class: 'BTComposite_SimpleParallel', type: 'composite' }
 };
 
-export async function handleGraphTools(toolName: string, action: string, args: GraphArgs, tools: ITools) {
+export async function handleGraphTools(toolName: string, action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
     // Common validation
     if (!args.assetPath && !args.blueprintPath && !args.systemPath) {
         // Some actions might not need a path if they operate on "currently open" asset, 
@@ -83,8 +99,8 @@ export async function handleGraphTools(toolName: string, action: string, args: G
     }
 }
 
-async function handleBlueprintGraph(action: string, args: GraphArgs, tools: ITools) {
-    const processedArgs = { ...args, subAction: action };
+async function handleBlueprintGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
+    const processedArgs: ProcessedGraphArgs = { ...args, subAction: action };
 
     // Default graphName
     if (!processedArgs.graphName) {
@@ -155,27 +171,28 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
         }
     }
 
-    const res: any = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs, 'Automation bridge not available');
-    return cleanObject({ ...res, ...(res.result || {}) });
+    const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
+    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
 }
 
-async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools) {
-    const payload = { ...args, subAction: action };
+async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
+    const payload: ProcessedGraphArgs = { ...args, subAction: action };
     // Map systemPath to assetPath if missing
     if (payload.systemPath && !payload.assetPath) {
         payload.assetPath = payload.systemPath;
     }
-    const res: any = await executeAutomationRequest(tools, 'manage_niagara_graph', payload, 'Automation bridge not available');
-    return cleanObject({ ...res, ...(res.result || {}) });
+    const res = await executeAutomationRequest(tools, 'manage_niagara_graph', payload as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
+    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
 }
 
-async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITools) {
-    const res: any = await executeAutomationRequest(tools, 'manage_material_graph', { ...args, subAction: action }, 'Automation bridge not available');
-    return cleanObject({ ...res, ...(res.result || {}) });
+async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
+    const payload: ProcessedGraphArgs = { ...args, subAction: action };
+    const res = await executeAutomationRequest(tools, 'manage_material_graph', payload as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
+    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
 }
 
-async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools) {
-    const processedArgs: any = { ...args, subAction: action };
+async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
+    const processedArgs: ProcessedGraphArgs = { ...args, subAction: action };
     
     // Map human-friendly node type names to BT class names
     if (processedArgs.nodeType && BT_NODE_ALIASES[processedArgs.nodeType]) {
@@ -187,6 +204,6 @@ async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools
         }
     }
     
-    const res: any = await executeAutomationRequest(tools, 'manage_behavior_tree', processedArgs, 'Automation bridge not available');
-    return cleanObject({ ...res, ...(res.result || {}) });
+    const res = await executeAutomationRequest(tools, 'manage_behavior_tree', processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
+    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
 }

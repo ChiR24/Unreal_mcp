@@ -3,18 +3,18 @@ import { BaseTool } from './base-tool.js';
 export class BehaviorTreeTools extends BaseTool {
   private async sendAction(subAction: string, payload: Record<string, unknown> = {}) {
     try {
-        const response: any = await this.sendAutomationRequest('manage_behavior_tree', {
+        const response = await this.sendAutomationRequest('manage_behavior_tree', {
             subAction,
             ...payload
-        });
+        }) as Record<string, unknown> | null;
         
         return {
-            success: response?.success ?? false,
-            message: response?.message,
-            error: response?.error,
-            result: response?.result
+            success: (response?.success as boolean) ?? false,
+            message: response?.message as string | undefined,
+            error: response?.error as string | undefined,
+            result: response?.result as unknown
         };
-    } catch (e: any) {
+    } catch (e: unknown) {
         return { success: false, error: String(e) };
     }
   }

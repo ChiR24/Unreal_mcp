@@ -216,8 +216,8 @@ export class AnimationTools {
 
   async createStateMachine(params: {
     machineName?: string;
-    states?: Array<string | { name: string; animation?: string; isEntry?: boolean; isExit?: boolean }>;
-    transitions?: Array<{ sourceState: string; targetState: string; condition?: string }>;
+    states?: unknown[];  // Array of state objects, normalized internally
+    transitions?: unknown[];  // Array of transition objects, normalized internally
     blueprintPath?: string;
   }): Promise<
     | {
@@ -242,10 +242,13 @@ export class AnimationTools {
                 const name = s.trim();
                 return name ? { name } : undefined;
               }
-              if (s && typeof s === 'object' && typeof (s as any).name === 'string') {
-                const name = (s as any).name.trim();
-                if (!name) return undefined;
-                return s as { name: string; animation?: string; isEntry?: boolean; isExit?: boolean };
+              if (s && typeof s === 'object') {
+                const stateObj = s as Record<string, unknown>;
+                if (typeof stateObj.name === 'string') {
+                  const name = stateObj.name.trim();
+                  if (!name) return undefined;
+                  return s as { name: string; animation?: string; isEntry?: boolean; isExit?: boolean };
+                }
               }
               return undefined;
             })
@@ -256,10 +259,11 @@ export class AnimationTools {
         ? params.transitions
           .map((t) => {
             if (!t || typeof t !== 'object') return undefined;
-            const src = (t.sourceState || '').trim();
-            const dst = (t.targetState || '').trim();
+            const tObj = t as Record<string, unknown>;
+            const src = (String(tObj.sourceState ?? '') || '').trim();
+            const dst = (String(tObj.targetState ?? '') || '').trim();
             if (!src || !dst) return undefined;
-            return { sourceState: src, targetState: dst, condition: t.condition };
+            return { sourceState: src, targetState: dst, condition: tObj.condition as string | undefined };
           })
           .filter((t) => !!t)
         : [];
@@ -304,20 +308,21 @@ export class AnimationTools {
   }
 
   async createBlendSpace(params: {
-    name: string;
+    name?: string;
     savePath?: string;
+    path?: string;  // alias for savePath
     dimensions?: 1 | 2;
     skeletonPath?: string;
-    horizontalAxis?: { name: string; minValue: number; maxValue: number };
-    verticalAxis?: { name: string; minValue: number; maxValue: number };
+    horizontalAxis?: { name?: string; minValue?: number; maxValue?: number };
+    verticalAxis?: { name?: string; minValue?: number; maxValue?: number };
     samples?: Array<{ animation: string; x: number; y?: number }>;
   }): Promise<
     | { success: true; message: string; path: string; skeletonPath?: string; warnings?: string[]; details?: unknown }
     | { success: false; error: string }
   > {
     try {
-      const targetPath = params.savePath ?? '/Game/Animations';
-      const validation = validateAssetParams({ name: params.name, savePath: targetPath });
+      const targetPath = params.savePath ?? params.path ?? '/Game/Animations';
+      const validation = validateAssetParams({ name: params.name ?? 'BlendSpace', savePath: targetPath });
       if (!validation.valid) {
         return { success: false, error: validation.error ?? 'Invalid asset parameters' };
       }
@@ -329,7 +334,7 @@ export class AnimationTools {
 
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
         try {
-          const payload: any = {
+          const payload: Record<string, unknown> = {
             action: 'create_blend_space',
             name: assetName,
             savePath: assetPath,
@@ -464,7 +469,7 @@ export class AnimationTools {
 
   async setupIK(params: {
     actorName?: string;
-    ikBones?: string[];
+    ikBones?: unknown[];  // Array of bone names, coerced to strings internally
     enableFootPlacement?: boolean;
   }): Promise<
     | {
@@ -512,7 +517,7 @@ export class AnimationTools {
   async createProceduralAnim(params: {
     systemName?: string;
     baseAnimation?: string;
-    modifiers?: any[];
+    modifiers?: unknown[];  // Array of modifier configs
     savePath?: string;
   }): Promise<
     | {
@@ -559,7 +564,7 @@ export class AnimationTools {
     treeName?: string;
     blendType?: string;
     basePose?: string;
-    additiveAnimations?: any[];
+    additiveAnimations?: unknown[];  // Array of animation configs
     savePath?: string;
   }): Promise<
     | {
@@ -602,7 +607,7 @@ export class AnimationTools {
     }
   }
 
-  async cleanup(artifacts?: string[]): Promise<
+  async cleanup(artifacts?: unknown[]): Promise<
     | {
       success: boolean;
       message: string;
@@ -690,7 +695,7 @@ export class AnimationTools {
   }
 
   async createAnimationAsset(params: {
-    name: string;
+    name?: string;
     path?: string;
     savePath?: string;
     skeletonPath?: string;
@@ -707,7 +712,7 @@ export class AnimationTools {
   > {
     try {
       const targetPath = (params.path || params.savePath) ?? '/Game/Animations';
-      const validation = validateAssetParams({ name: params.name, savePath: targetPath });
+      const validation = validateAssetParams({ name: params.name ?? 'AnimAsset', savePath: targetPath });
       if (!validation.valid) {
         const message = validation.error ?? 'Invalid asset parameters';
         return { success: false, message, error: message };
@@ -722,7 +727,7 @@ export class AnimationTools {
 
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
         try {
-          const payload: any = {
+          const payload: Record<string, unknown> = {
             action: 'create_animation_asset',
             name: assetName,
             savePath: assetPath,

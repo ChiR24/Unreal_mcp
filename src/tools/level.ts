@@ -26,7 +26,7 @@ type ManagedLevelRecord = {
 
 export class LevelTools extends BaseTool implements ILevelTools {
   private managedLevels = new Map<string, ManagedLevelRecord>();
-  private listCache?: { result: { success: true; message: string; count: number; levels: any[] }; timestamp: number };
+  private listCache?: { result: { success: true; message: string; count: number; levels: Array<Record<string, unknown>> }; timestamp: number };
   private readonly LIST_CACHE_TTL_MS = 750;
   private currentLevelPath?: string;
 
@@ -237,7 +237,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         const managed = this.listManagedLevels();
 
         // Merge managed levels into the main list if not already present
-        const ueLevels = (response.allMaps || []) as any[];
+        const ueLevels = (response.allMaps || []) as Array<Record<string, unknown>>;
         const managedOnly = managed.levels.filter(m => !ueLevels.some(u => u.path === m.path));
         const finalLevels = [...ueLevels, ...managedOnly];
 
@@ -339,10 +339,11 @@ export class LevelTools extends BaseTool implements ILevelTools {
         destinationPath: destination.path
       }, { timeoutMs: params.timeoutMs ?? LONG_RUNNING_OP_TIMEOUT_MS });
 
-      if ((res as any)?.success === false) {
+      if ((res as Record<string, unknown>)?.success === false) {
+        const resObj = res as Record<string, unknown>;
         return {
           success: false,
-          error: (res as any).error || (res as any).message || 'Import failed',
+          error: (resObj.error as string) || (resObj.message as string) || 'Import failed',
           levelPath: destination.path,
           details: res
         } as StandardActionResponse;
@@ -496,13 +497,13 @@ export class LevelTools extends BaseTool implements ILevelTools {
           const automation = this.getAutomationBridge();
           if (automation && typeof automation.sendAutomationRequest === 'function' && automation.isConnected()) {
             const targetPath = (params.levelPath ?? '').toString();
-            const existsResp: any = await automation.sendAutomationRequest('execute_editor_function', {
+            const existsResp = await automation.sendAutomationRequest('execute_editor_function', {
               functionName: 'ASSET_EXISTS_SIMPLE',
               path: targetPath
             }, {
               timeoutMs: 5000
-            });
-            const result = existsResp?.result ?? existsResp ?? {};
+            }) as Record<string, unknown>;
+            const result = (existsResp?.result ?? existsResp ?? {}) as Record<string, unknown>;
             const exists = Boolean(result.exists);
 
             if (!exists) {
@@ -702,7 +703,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         // Return actual error if it's something else (e.g. execution failed)
         return response as StandardActionResponse;
       }
-    } catch (_e: any) {
+    } catch (_e: unknown) {
       // If connection failed, might fallback. But if we got a response, respect it.
     }
 

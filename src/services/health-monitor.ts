@@ -54,14 +54,15 @@ export class HealthMonitor {
     this.metrics.averageResponseTime = this.metrics.responseTimes.reduce((a, b) => a + b, 0) / this.metrics.responseTimes.length;
   }
 
-  recordError(errorResponse: any) {
+  recordError(errorResponse: Record<string, unknown>) {
       try {
+        const debugObj = errorResponse._debug as Record<string, unknown> | undefined;
         this.metrics.recentErrors.push({
           time: new Date().toISOString(),
-          scope: (errorResponse as any).scope || 'unknown',
-          type: (errorResponse as any)._debug?.errorType || 'UNKNOWN',
-          message: (errorResponse as any).error || (errorResponse as any).message || 'Unknown error',
-          retriable: Boolean((errorResponse as any).retriable)
+          scope: typeof errorResponse.scope === 'string' ? errorResponse.scope : 'unknown',
+          type: typeof debugObj?.errorType === 'string' ? debugObj.errorType : 'UNKNOWN',
+          message: typeof errorResponse.error === 'string' ? errorResponse.error : (typeof errorResponse.message === 'string' ? errorResponse.message : 'Unknown error'),
+          retriable: Boolean(errorResponse.retriable)
         });
         if (this.metrics.recentErrors.length > 20) this.metrics.recentErrors.splice(0, this.metrics.recentErrors.length - 20);
       } catch { }

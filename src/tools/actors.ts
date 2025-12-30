@@ -139,25 +139,26 @@ export class ActorTools extends BaseTool implements IActorTools {
       // DELETE_PARTIAL as a handled, partial-success cleanup instead
       // of surfacing it as a hard error to the consolidated handler.
       const bridge = this.getAutomationBridge();
-      const response: any = await bridge.sendAutomationRequest<ActorResponse>('control_actor', {
+      const response = await bridge.sendAutomationRequest<ActorResponse>('control_actor', {
         action: 'delete',
         actorNames: names
-      });
+      }) as Record<string, unknown>;
 
-      const result = (response?.data || response?.result || response) ?? {};
-      const deleted = result.deleted ?? names;
-      const missing = result.missing ?? [];
+      const result = ((response?.data || response?.result || response) ?? {}) as Record<string, unknown>;
+      const deleted = (result.deleted ?? names) as string[];
+      const missing = (result.missing ?? []) as string[];
       // Check for structured error in response.error OR legacy top-level error
-      const errorObj = response?.error;
-      const errorCode = (typeof errorObj === 'object' ? errorObj.code : String(errorObj || result.error || '')).toUpperCase();
+      const errorObj = response?.error as Record<string, unknown> | string | undefined;
+      const errorCode = (typeof errorObj === 'object' ? (errorObj.code as string) : String(errorObj || result.error || '')).toUpperCase();
 
       // If some actors were removed and others were already missing,
       // surface this as a partial but still successful cleanup so the
       // tests treat it as handled rather than as an MCP transport error.
       if (response && response.success === false && errorCode === 'DELETE_PARTIAL') {
+        const errMessage = typeof errorObj === 'object' ? (errorObj.message as string) : undefined;
         return {
           success: true,
-          message: errorObj?.message || response.message || 'Some actors could not be deleted',
+          message: errMessage || (response.message as string) || 'Some actors could not be deleted',
           deleted,
           missing,
           partial: true
@@ -165,13 +166,14 @@ export class ActorTools extends BaseTool implements IActorTools {
       }
 
       if (!response || response.success === false) {
-        throw new Error(errorObj?.message || response?.message || 'Failed to delete actors');
+        const errMessage = typeof errorObj === 'object' ? (errorObj.message as string) : undefined;
+        throw new Error(errMessage || (response?.message as string) || 'Failed to delete actors');
       }
 
       return {
         success: true,
-        message: response.message || 'Deleted actors',
-        deleted: result.deleted || deleted,
+        message: (response.message as string) || 'Deleted actors',
+        deleted: (result.deleted as string[]) || deleted,
         ...result
       } as StandardActionResponse;
     }
@@ -317,8 +319,8 @@ export class ActorTools extends BaseTool implements IActorTools {
     }
 
     // Extract transform data from nested response (data.data or data or result)
-    const rawData: any = response.data ?? response.result ?? response;
-    const data: any = rawData?.data ?? rawData;
+    const rawData = (response.data ?? response.result ?? response) as Record<string, unknown>;
+    const data = (rawData?.data ?? rawData) as Record<string, unknown>;
 
     return {
       success: true,
@@ -373,7 +375,7 @@ export class ActorTools extends BaseTool implements IActorTools {
       return { success: false, error: response.error || `Failed to get components for actor ${actorName}` };
     }
 
-    const data: any = response.data ?? response.result ?? response;
+    const data = (response.data ?? response.result ?? response) as Record<string, unknown>;
     const components = Array.isArray(data)
       ? data
       : (Array.isArray(data?.components) ? data.components : []);
@@ -544,7 +546,7 @@ export class ActorTools extends BaseTool implements IActorTools {
   }
 
   async listActors(params?: { filter?: string }) {
-    const payload: any = {};
+    const payload: Record<string, unknown> = {};
     if (params?.filter) {
       payload.filter = params.filter;
     }
@@ -554,7 +556,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     }
     // C++ returns actors in data.actors, or directly in actors field
     // Handle both: response.data?.actors, response.actors, or response.data as array
-    const dataObj = response.data || response.result || {};
+    const dataObj = (response.data || response.result || {}) as Record<string, unknown>;
     const actorsRaw = response.actors || (dataObj && dataObj.actors) || (Array.isArray(dataObj) ? dataObj : []);
     const actors = Array.isArray(actorsRaw) ? actorsRaw : [];
     return {

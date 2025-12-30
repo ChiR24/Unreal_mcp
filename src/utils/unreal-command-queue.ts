@@ -1,9 +1,9 @@
 import { Logger } from './logger.js';
 
-export interface CommandQueueItem<T = any> {
+export interface CommandQueueItem<T = unknown> {
   command: () => Promise<T>;
   resolve: (value: T) => void;
-  reject: (reason?: any) => void;
+  reject: (reason?: unknown) => void;
   priority: number;
   retryCount?: number;
 }
@@ -31,8 +31,8 @@ export class UnrealCommandQueue {
   async execute<T>(command: () => Promise<T>, priority: number = 5): Promise<T> {
     return new Promise((resolve, reject) => {
       this.queue.push({
-        command,
-        resolve,
+        command: command as () => Promise<unknown>,
+        resolve: resolve as (value: unknown) => void,
         reject,
         priority
       });
@@ -69,9 +69,10 @@ export class UnrealCommandQueue {
       try {
         const result = await item.command();
         item.resolve(result);
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Enhanced retry policy
-        const msgRaw = error?.message ?? String(error);
+        const errObj = error as Record<string, unknown> | null;
+        const msgRaw = errObj?.message ?? String(error);
         const msg = String(msgRaw).toLowerCase();
         if (item.retryCount === undefined) item.retryCount = 0;
 

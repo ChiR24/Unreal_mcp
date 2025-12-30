@@ -8,7 +8,7 @@ const log = new Logger('AssetResources');
 
 export class AssetResources extends BaseTool implements IAssetResources {
   // Simple in-memory cache for asset listing
-  private cache = new Map<string, { timestamp: number; data: any }>();
+  private cache = new Map<string, { timestamp: number; data: unknown }>();
   private get ttlMs(): number { return Number(process.env.ASSET_LIST_TTL_MS || 10000); }
   private makeKey(dir: string, recursive: boolean, page?: number) {
     return page !== undefined ? `${dir}::${recursive ? 1 : 0}::${page}` : `${dir}::${recursive ? 1 : 0}`;
@@ -87,7 +87,8 @@ export class AssetResources extends BaseTool implements IAssetResources {
       const entry = this.cache.get(key);
       const now = Date.now();
       if (entry && (now - entry.timestamp) < this.ttlMs) {
-        return { success: true, ...entry.data };
+        const cachedData = entry.data as Record<string, unknown>;
+        return { success: true, ...cachedData };
       }
     } catch { }
 
@@ -104,7 +105,8 @@ export class AssetResources extends BaseTool implements IAssetResources {
     // Always use directory-only listing (immediate children)
     const listed = await this.listDirectoryOnly(dir, false, limit);
     // Ensure a success flag is present so downstream evaluators don't assume success implicitly
-    return { ...listed, success: listed && (listed as any).success === false ? false : true };
+    const listedObj = listed as Record<string, unknown>;
+    return { ...listed, success: listed && listedObj.success === false ? false : true };
   }
 
   /**
@@ -158,8 +160,9 @@ export class AssetResources extends BaseTool implements IAssetResources {
 
       this.cache.set(cacheKey, { timestamp: Date.now(), data: result });
       return result;
-    } catch (err: any) {
-      log.warn(`Asset listing page ${page} failed: ${err.message}`);
+    } catch (err: unknown) {
+      const errObj = err as Record<string, unknown> | null;
+      log.warn(`Asset listing page ${page} failed: ${String(errObj?.message ?? err)}`);
     }
 
     return {
@@ -187,10 +190,11 @@ export class AssetResources extends BaseTool implements IAssetResources {
         );
 
         if (response.success !== false && response.result) {
-          const payload = response.result as any;
+          const payload = response.result as Record<string, unknown>;
 
-          const foldersArr = Array.isArray(payload.folders_list)
-            ? payload.folders_list.map((f: any) => ({
+          const foldersList = payload.folders_list as Array<Record<string, unknown>> | undefined;
+          const foldersArr = Array.isArray(foldersList)
+            ? foldersList.map((f) => ({
               Name: coerceString(f?.n ?? f?.Name ?? f?.name) ?? '',
               Path: coerceString(f?.p ?? f?.Path ?? f?.path) ?? '',
               Class: 'Folder',
@@ -198,8 +202,9 @@ export class AssetResources extends BaseTool implements IAssetResources {
             }))
             : [];
 
-          const assetsArr = Array.isArray(payload.assets)
-            ? payload.assets.map((a: any) => ({
+          const assetsList = payload.assets as Array<Record<string, unknown>> | undefined;
+          const assetsArr = Array.isArray(assetsList)
+            ? assetsList.map((a) => ({
               Name: coerceString(a?.n ?? a?.Name ?? a?.name) ?? '',
               Path: coerceString(a?.p ?? a?.Path ?? a?.path) ?? '',
               Class: coerceString(a?.c ?? a?.Class ?? a?.class) ?? 'Object'
@@ -225,8 +230,9 @@ export class AssetResources extends BaseTool implements IAssetResources {
       } catch { }
 
       // No fallback available
-    } catch (err: any) {
-      const errorMessage = err?.message ? String(err.message) : 'Asset registry request failed';
+    } catch (err: unknown) {
+      const errObj = err as Record<string, unknown> | null;
+      const errorMessage = errObj?.message ? String(errObj.message) : 'Asset registry request failed';
       log.warn(`Engine asset listing failed: ${errorMessage}`);
       return {
         success: false,
@@ -267,7 +273,8 @@ export class AssetResources extends BaseTool implements IAssetResources {
         { asset_path: normalizedPath }
       );
 
-      return response?.success !== false && (response?.result as any)?.exists === true;
+      const resultObj = response?.result as Record<string, unknown> | undefined;
+      return response?.success !== false && resultObj?.exists === true;
     } catch {
       return false;
     }

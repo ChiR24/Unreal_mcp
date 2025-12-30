@@ -20,7 +20,7 @@ export class DebugVisualizationTools {
   }
 
   // Helper to use Automation Bridge for debug operations
-  private async useAutomationBridge(action: string, params: any) {
+  private async useAutomationBridge(action: string, params: Record<string, unknown>) {
     if (!this.automationBridge) {
       return { success: false, error: 'AUTOMATION_BRIDGE_NOT_AVAILABLE', message: 'Automation Bridge not available for debug operations' };
     }
@@ -459,7 +459,7 @@ export class DebugVisualizationTools {
     if (params.mode === 'CollisionPawn' || params.mode === 'CollisionVisibility') {
       // Use collision visualization instead of viewmode (UE doesn't have these as view modes)
       await this.showCollision({ enabled: true, type: 'Both' });
-      return { success: true, message: 'Collision visualization enabled (use show flags, not viewmode)' } as any;
+      return { success: true, message: 'Collision visualization enabled (use show flags, not viewmode)' };
     }
 
     const VALID_VIEWMODES = new Set([
@@ -469,7 +469,7 @@ export class DebugVisualizationTools {
     if (!VALID_VIEWMODES.has(params.mode)) {
       // Fallback to Lit if unknown
       await this.bridge.executeConsoleCommand('viewmode Lit');
-      return { success: false, warning: `Unknown or unsupported viewmode '${params.mode}'. Reverted to Lit.` } as any;
+      return { success: false, warning: `Unknown or unsupported viewmode '${params.mode}'. Reverted to Lit.` };
     }
 
     const UNSAFE_VIEWMODES = [

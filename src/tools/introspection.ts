@@ -27,13 +27,13 @@ export interface ObjectInfo {
   summary?: ObjectSummary;
   filteredProperties?: string[];
   tags?: string[];
-  original?: any;
+  original?: unknown;
 }
 
 export interface PropertyInfo {
   name: string;
   type: string;
-  value?: any;
+  value?: unknown;
   flags?: string[];
   metadata?: Record<string, unknown>;
   category?: string;
@@ -55,7 +55,7 @@ export interface FunctionInfo {
 export interface ParameterInfo {
   name: string;
   type: string;
-  defaultValue?: any;
+  defaultValue?: unknown;
   isOptional?: boolean;
 }
 
@@ -94,14 +94,15 @@ export class IntrospectionTools {
     operation: () => Promise<T>,
     operationName: string
   ): Promise<T> {
-    let lastError: any;
+    let lastError: unknown;
 
     for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
       try {
         return await operation();
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
-        this.log.warn(`${operationName} attempt ${attempt} failed: ${error.message || error}`);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.log.warn(`${operationName} attempt ${attempt} failed: ${errMsg}`);
 
         if (attempt < this.retryAttempts) {
           await new Promise(resolve =>
@@ -117,42 +118,45 @@ export class IntrospectionTools {
   /**
    * Convert Unreal property value to JavaScript-friendly format
    */
-  private convertPropertyValue(value: any, typeName: string): any {
+  private convertPropertyValue(value: unknown, typeName: string): unknown {
     // Handle vectors, rotators, transforms
     if (typeName.includes('Vector')) {
       if (typeof value === 'object' && value !== null) {
-        return { x: value.X || 0, y: value.Y || 0, z: value.Z || 0 };
+        const v = value as Record<string, unknown>;
+        return { x: v.X || 0, y: v.Y || 0, z: v.Z || 0 };
       }
     }
     if (typeName.includes('Rotator')) {
       if (typeof value === 'object' && value !== null) {
-        return { pitch: value.Pitch || 0, yaw: value.Yaw || 0, roll: value.Roll || 0 };
+        const v = value as Record<string, unknown>;
+        return { pitch: v.Pitch || 0, yaw: v.Yaw || 0, roll: v.Roll || 0 };
       }
     }
     if (typeName.includes('Transform')) {
       if (typeof value === 'object' && value !== null) {
+        const v = value as Record<string, unknown>;
         return {
-          location: this.convertPropertyValue(value.Translation || value.Location, 'Vector'),
-          rotation: this.convertPropertyValue(value.Rotation, 'Rotator'),
-          scale: this.convertPropertyValue(value.Scale3D || value.Scale, 'Vector')
+          location: this.convertPropertyValue(v.Translation || v.Location, 'Vector'),
+          rotation: this.convertPropertyValue(v.Rotation, 'Rotator'),
+          scale: this.convertPropertyValue(v.Scale3D || v.Scale, 'Vector')
         };
       }
     }
     return value;
   }
 
-  private isPlainObject(value: any): value is Record<string, unknown> {
+  private isPlainObject(value: unknown): value is Record<string, unknown> {
     return !!value && typeof value === 'object' && !Array.isArray(value);
   }
 
-  private isLikelyPropertyDescriptor(value: any): boolean {
+  private isLikelyPropertyDescriptor(value: unknown): boolean {
     if (!this.isPlainObject(value)) return false;
     if (typeof value.name === 'string' && ('value' in value || 'type' in value)) return true;
     if ('propertyName' in value && ('currentValue' in value || 'defaultValue' in value)) return true;
     return false;
   }
 
-  private shouldFilterProperty(name: string, value: any, flags?: string[], detailed = false): boolean {
+  private shouldFilterProperty(name: string, value: unknown, flags?: string[], detailed = false): boolean {
     if (detailed) return false;
     if (!name) return true;
     const normalized = normalizeDictionaryKey(name);
@@ -166,7 +170,7 @@ export class IntrospectionTools {
     return false;
   }
 
-  private formatDisplayValue(value: any, type: string): string {
+  private formatDisplayValue(value: unknown, type: string): string {
     if (value === null || value === undefined) return 'None';
     if (typeof value === 'string') return value.length > 120 ? `${value.slice(0, 117)}...` : value;
     if (typeof value === 'number' || typeof value === 'boolean') return `${value}`;
@@ -190,33 +194,34 @@ export class IntrospectionTools {
     return String(value);
   }
 
-  private normalizePropertyEntry(entry: any, detailed = false): PropertyInfo | null {
+  private normalizePropertyEntry(entry: unknown, detailed = false): PropertyInfo | null {
     if (!entry) return null;
-    const name: string = entry.name ?? entry.propertyName ?? entry.key ?? '';
+    const e = entry as Record<string, unknown>;
+    const name: string = (e.name ?? e.propertyName ?? e.key ?? '') as string;
     if (!name) return null;
 
-    const candidateType = entry.type ?? entry.propertyType ?? (entry.value !== undefined ? typeof entry.value : undefined);
+    const candidateType = e.type ?? e.propertyType ?? (e.value !== undefined ? typeof e.value : undefined);
     const type = typeof candidateType === 'string' && candidateType.length > 0 ? candidateType : 'unknown';
-    const rawValue = entry.value ?? entry.currentValue ?? entry.defaultValue ?? entry.data ?? entry;
+    const rawValue = e.value ?? e.currentValue ?? e.defaultValue ?? e.data ?? entry;
     const value = this.convertPropertyValue(rawValue, type);
-    const flags: string[] | undefined = entry.flags ?? entry.attributes;
-    const metadata: Record<string, unknown> | undefined = entry.metadata ?? entry.annotations;
+    const flags: string[] | undefined = (e.flags ?? e.attributes) as string[] | undefined;
+    const metadata: Record<string, unknown> | undefined = (e.metadata ?? e.annotations) as Record<string, unknown> | undefined;
     const filtered = this.shouldFilterProperty(name, value, flags, detailed);
     const dictionaryEntry = lookupPropertyMetadata(name);
-    const propertyInfo: PropertyInfo = {
+    const propertyInfo: PropertyInfo & { __filtered?: boolean } = {
       name,
       type,
       value,
       flags,
       metadata,
-      category: dictionaryEntry?.category ?? entry.category,
-      tooltip: entry.tooltip ?? entry.helpText,
-      description: dictionaryEntry?.description ?? entry.description,
+      category: dictionaryEntry?.category ?? (e.category as string | undefined),
+      tooltip: (e.tooltip ?? e.helpText) as string | undefined,
+      description: dictionaryEntry?.description ?? (e.description as string | undefined),
       displayValue: this.formatDisplayValue(value, type),
       dictionaryEntry,
-      isReadOnly: Boolean(entry.isReadOnly || entry.readOnly || flags?.some((f) => f.toLowerCase().includes('readonly')))
+      isReadOnly: Boolean(e.isReadOnly || e.readOnly || flags?.some((f) => f.toLowerCase().includes('readonly')))
     };
-    (propertyInfo as any).__filtered = filtered;
+    propertyInfo.__filtered = filtered;
     return propertyInfo;
   }
 
@@ -252,17 +257,18 @@ export class IntrospectionTools {
     return properties;
   }
 
-  private extractRawProperties(rawInfo: any, detailed = false): PropertyInfo[] {
+  private extractRawProperties(rawInfo: unknown, detailed = false): PropertyInfo[] {
     if (!rawInfo) return [];
-    if (Array.isArray(rawInfo.properties)) {
-      const entries = rawInfo.properties as Array<Record<string, unknown>>;
+    const info = rawInfo as Record<string, unknown>;
+    if (Array.isArray(info.properties)) {
+      const entries = info.properties as Array<Record<string, unknown>>;
       return entries
         .map((entry) => this.normalizePropertyEntry(entry, detailed))
         .filter((entry): entry is PropertyInfo => Boolean(entry));
     }
 
-    if (this.isPlainObject(rawInfo.properties)) {
-      return this.flattenPropertyMap(rawInfo.properties, '', detailed);
+    if (this.isPlainObject(info.properties)) {
+      return this.flattenPropertyMap(info.properties, '', detailed);
     }
 
     if (Array.isArray(rawInfo)) {
@@ -283,12 +289,13 @@ export class IntrospectionTools {
     return [];
   }
 
-  curateObjectInfo(rawInfo: any, objectPath: string, detailed = false): ObjectInfo {
+  curateObjectInfo(rawInfo: unknown, objectPath: string, detailed = false): ObjectInfo {
     const properties = this.extractRawProperties(rawInfo, detailed);
     const filteredProperties: string[] = [];
     const curatedProperties = properties.filter((prop) => {
-      const shouldFilter = (prop as any).__filtered;
-      delete (prop as any).__filtered;
+      const propWithFiltered = prop as PropertyInfo & { __filtered?: boolean };
+      const shouldFilter = propWithFiltered.__filtered;
+      delete propWithFiltered.__filtered;
       if (shouldFilter) {
         filteredProperties.push(prop.name);
       }
@@ -302,34 +309,35 @@ export class IntrospectionTools {
       return prop;
     });
 
+    const info = rawInfo as Record<string, unknown> | null | undefined;
     const summary: ObjectSummary = {
-      name: rawInfo?.name ?? rawInfo?.objectName ?? rawInfo?.displayName,
-      class: rawInfo?.class ?? rawInfo?.className ?? rawInfo?.type ?? rawInfo?.objectClass,
-      path: rawInfo?.path ?? rawInfo?.objectPath ?? objectPath,
-      parent: rawInfo?.outer ?? rawInfo?.parent,
-      tags: Array.isArray(rawInfo?.tags) ? rawInfo.tags : undefined,
+      name: (info?.name ?? info?.objectName ?? info?.displayName) as string | undefined,
+      class: (info?.class ?? info?.className ?? info?.type ?? info?.objectClass) as string | undefined,
+      path: (info?.path ?? info?.objectPath ?? objectPath) as string | undefined,
+      parent: (info?.outer ?? info?.parent) as string | undefined,
+      tags: Array.isArray(info?.tags) ? info.tags as string[] : undefined,
       propertyCount: properties.length,
       curatedPropertyCount: curatedProperties.length,
       filteredPropertyCount: filteredProperties.length,
       categories
     };
 
-    const info: ObjectInfo = {
+    const objectInfo: ObjectInfo = {
       class: summary.class,
       name: summary.name,
       path: summary.path,
       parent: summary.parent,
       tags: summary.tags,
       properties: finalList,
-      functions: Array.isArray(rawInfo?.functions) ? rawInfo.functions : undefined,
-      interfaces: Array.isArray(rawInfo?.interfaces) ? rawInfo.interfaces : undefined,
-      flags: Array.isArray(rawInfo?.flags) ? rawInfo.flags : undefined,
+      functions: Array.isArray(info?.functions) ? info.functions as FunctionInfo[] : undefined,
+      interfaces: Array.isArray(info?.interfaces) ? info.interfaces as string[] : undefined,
+      flags: Array.isArray(info?.flags) ? info.flags as string[] : undefined,
       summary,
       filteredProperties: filteredProperties.length ? filteredProperties : undefined,
       original: rawInfo
     };
 
-    return info;
+    return objectInfo;
   }
 
   async inspectObject(params: { objectPath: string; detailed?: boolean }) {
@@ -388,7 +396,7 @@ export class IntrospectionTools {
   /**
    * Set property value on an object
    */
-  async setProperty(params: { objectPath: string; propertyName: string; value: any }) {
+  async setProperty(params: { objectPath: string; propertyName: string; value: unknown }) {
     return this.executeWithRetry(async () => {
       try {
         // Validate and convert value type if needed
@@ -396,35 +404,36 @@ export class IntrospectionTools {
 
         // Handle special Unreal types
         if (typeof params.value === 'object' && params.value !== null) {
+          const v = params.value as Record<string, unknown>;
           // Vector conversion
-          if ('x' in params.value || 'X' in params.value) {
+          if ('x' in v || 'X' in v) {
             processedValue = {
-              X: params.value.x || params.value.X || 0,
-              Y: params.value.y || params.value.Y || 0,
-              Z: params.value.z || params.value.Z || 0
+              X: v.x || v.X || 0,
+              Y: v.y || v.Y || 0,
+              Z: v.z || v.Z || 0
             };
           }
           // Rotator conversion
-          else if ('pitch' in params.value || 'Pitch' in params.value) {
+          else if ('pitch' in v || 'Pitch' in v) {
             processedValue = {
-              Pitch: params.value.pitch || params.value.Pitch || 0,
-              Yaw: params.value.yaw || params.value.Yaw || 0,
-              Roll: params.value.roll || params.value.Roll || 0
+              Pitch: v.pitch || v.Pitch || 0,
+              Yaw: v.yaw || v.Yaw || 0,
+              Roll: v.roll || v.Roll || 0
             };
           }
           // Transform conversion
-          else if ('location' in params.value || 'Location' in params.value) {
+          else if ('location' in v || 'Location' in v) {
             processedValue = {
               Translation: this.convertPropertyValue(
-                params.value.location || params.value.Location,
+                v.location || v.Location,
                 'Vector'
               ),
               Rotation: this.convertPropertyValue(
-                params.value.rotation || params.value.Rotation,
+                v.rotation || v.Rotation,
                 'Rotator'
               ),
               Scale3D: this.convertPropertyValue(
-                params.value.scale || params.value.Scale || { x: 1, y: 1, z: 1 },
+                v.scale || v.Scale || { x: 1, y: 1, z: 1 },
                 'Vector'
               )
             };
@@ -477,7 +486,7 @@ export class IntrospectionTools {
   async callFunction(params: {
     objectPath: string;
     functionName: string;
-    parameters?: any[];
+    parameters?: unknown[];
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Function call operations require plugin support.');
@@ -525,14 +534,14 @@ export class IntrospectionTools {
     const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response: any = await automationBridge.sendAutomationRequest('inspect', {
+        const response = await automationBridge.sendAutomationRequest('inspect', {
           action: 'inspect_class',
           // C++ plugin expects `classPath` for inspect_class, but accepts both
           // short names and full paths (e.g. "Actor" or "/Script/Engine.Actor").
           classPath: className
         }, {
           timeoutMs: 60000
-        });
+        }) as Record<string, unknown>;
 
         if (response?.success === false) {
           return {
@@ -566,25 +575,25 @@ export class IntrospectionTools {
     const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response: any = await automationBridge.sendAutomationRequest('inspect', {
+        const response = await automationBridge.sendAutomationRequest('inspect', {
           action: 'find_by_class',
           className,
           limit
         }, {
           timeoutMs: 60000
-        });
+        }) as Record<string, unknown>;
 
         if (response?.success === false) {
           return {
             success: false,
-            error: response.error || response.message || 'Failed to find objects'
+            error: (response.error || response.message || 'Failed to find objects') as string
           };
         }
 
-        const data = response?.data ?? response?.result ?? response;
+        const data = (response?.data ?? response?.result ?? response) as Record<string, unknown>;
         const validObjects = Array.isArray(data?.actors)
-          ? data.actors
-          : (Array.isArray(data?.objects) ? data.objects : (Array.isArray(data) ? data : []));
+          ? data.actors as unknown[]
+          : (Array.isArray(data?.objects) ? data.objects as unknown[] : (Array.isArray(data) ? data : []));
         return {
           success: true,
           message: `Found ${validObjects.length} objects`,
@@ -643,7 +652,7 @@ export class IntrospectionTools {
   /**
    * Set property value of a component
    */
-  async setComponentProperty(params: { objectPath: string; componentName: string; propertyName: string; value: any }) {
+  async setComponentProperty(params: { objectPath: string; componentName: string; propertyName: string; value: unknown }) {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Component property operations require plugin support.');
     }

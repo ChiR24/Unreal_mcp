@@ -4,6 +4,7 @@ import type { AutomationBridge } from './automation/index.js';
 import { DEFAULT_AUTOMATION_HOST, DEFAULT_AUTOMATION_PORT, CONSOLE_COMMAND_TIMEOUT_MS, ENGINE_QUERY_TIMEOUT_MS } from './constants.js';
 import { UnrealCommandQueue } from './utils/unreal-command-queue.js';
 import { CommandValidator } from './utils/command-validator.js';
+import type { StandardActionResponse } from './types/tool-interfaces.js';
 
 /** Connection event payload for automation bridge events */
 interface ConnectionEventInfo {
@@ -170,13 +171,14 @@ export class UnrealBridge {
         initialDelay: retryDelayMs,
         maxDelay: 10000,
         backoffMultiplier: 1.5,
-        shouldRetry: (error: any) => {
+        shouldRetry: (error: unknown) => {
           const msg = (error as Error)?.message?.toLowerCase() || '';
           return msg.includes('timeout') || msg.includes('connect') || msg.includes('automation');
         }
       }
-    ).catch((err: any) => {
-      this.log.warn(`Automation bridge connection failed after ${maxAttempts} attempts:`, err.message);
+    ).catch((err: unknown) => {
+      const errObj = err as Record<string, unknown> | null;
+      this.log.warn(`Automation bridge connection failed after ${maxAttempts} attempts:`, String(errObj?.message ?? err));
       this.log.warn('⚠️  Ensure Unreal Editor is running with MCP Automation Bridge plugin enabled');
       this.log.warn(`⚠️  Plugin should listen on ws://${DEFAULT_AUTOMATION_HOST}:${DEFAULT_AUTOMATION_PORT} for MCP server connections`);
     });
@@ -239,13 +241,13 @@ export class UnrealBridge {
         clearTimeout(timer);
       };
 
-      const onConnected = (info: any) => {
+      const onConnected = (info: Record<string, unknown>) => {
         cleanup();
         this.log.debug('Automation bridge connected while waiting', info);
         resolve(true);
       };
 
-      const onHandshakeFailed = (info: any) => {
+      const onHandshakeFailed = (info: Record<string, unknown>) => {
         this.log.warn('Automation bridge handshake failed while waiting', info);
         // We don't resolve false immediately here? The original code didn't. 
         // But handshake failed usually means we should stop waiting.
@@ -253,13 +255,13 @@ export class UnrealBridge {
         resolve(false);
       };
 
-      const onError = (err: any) => {
+      const onError = (err: unknown) => {
         this.log.warn('Automation bridge error while waiting', err);
         cleanup();
         resolve(false);
       };
 
-      const onDisconnected = (info: any) => {
+      const onDisconnected = (info: Record<string, unknown>) => {
         this.log.warn('Automation bridge disconnected while waiting', info);
         cleanup();
         resolve(false);
@@ -282,7 +284,7 @@ export class UnrealBridge {
     propertyName: string;
     timeoutMs?: number;
     allowAlternate?: boolean;
-  }): Promise<Record<string, any>> {
+  }): Promise<StandardActionResponse> {
     const { objectPath, propertyName, timeoutMs } = params;
     if (!objectPath || typeof objectPath !== 'string') {
       throw new Error('Invalid objectPath: must be a non-empty string');
@@ -388,7 +390,7 @@ export class UnrealBridge {
     markDirty?: boolean;
     timeoutMs?: number;
     allowAlternate?: boolean;
-  }): Promise<Record<string, any>> {
+  }): Promise<StandardActionResponse> {
     const { objectPath, propertyName, value, markDirty, timeoutMs } = params;
     if (!objectPath || typeof objectPath !== 'string') {
       throw new Error('Invalid objectPath: must be a non-empty string');
@@ -485,7 +487,7 @@ export class UnrealBridge {
   }
 
   // Execute a console command safely with validation and throttling
-  async executeConsoleCommand(command: string): Promise<any> {
+  async executeConsoleCommand(command: string): Promise<StandardActionResponse> {
     const automationAvailable = Boolean(
       this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function'
     );
@@ -506,7 +508,7 @@ export class UnrealBridge {
 
     const priority = CommandValidator.getPriority(cmdTrimmed);
 
-    const executeCommand = async (): Promise<any> => {
+    const executeCommand = async (): Promise<StandardActionResponse> => {
       if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
         this.log.info(`[MOCK] Executing console command: ${cmdTrimmed}`);
         return { success: true, message: `Mock execution of '${cmdTrimmed}' successful`, transport: 'mock_bridge' };
@@ -523,7 +525,7 @@ export class UnrealBridge {
       );
 
       if (pluginResp && pluginResp.success) {
-        return { ...pluginResp, transport: 'automation_bridge' };
+        return { success: true, ...pluginResp, transport: 'automation_bridge' };
       }
 
       const errMsg = pluginResp?.message || pluginResp?.error || 'Plugin execution failed';
@@ -542,9 +544,9 @@ export class UnrealBridge {
   async executeConsoleCommands(
     commands: Iterable<string | { command: string; priority?: number }>,
     options: { continueOnError?: boolean; delayMs?: number } = {}
-  ): Promise<any[]> {
+  ): Promise<unknown[]> {
     const { continueOnError = false, delayMs = 0 } = options;
-    const results: any[] = [];
+    const results: unknown[] = [];
 
     for (const rawCommand of commands) {
       const descriptor = typeof rawCommand === 'string' ? { command: rawCommand } : rawCommand;
@@ -573,9 +575,9 @@ export class UnrealBridge {
 
   async executeEditorFunction(
     functionName: string,
-    params?: Record<string, any>,
+    params?: Record<string, unknown>,
     _options?: { timeoutMs?: number }
-  ): Promise<any> {
+  ): Promise<StandardActionResponse> {
     if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
       return { success: true, result: { status: 'mock_success', function: functionName } };
     }
@@ -584,12 +586,16 @@ export class UnrealBridge {
       return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE' };
     }
 
-    const resp: any = await this.automationBridge.sendAutomationRequest('execute_editor_function', {
+    const resp = await this.automationBridge.sendAutomationRequest('execute_editor_function', {
       functionName,
       params: params ?? {}
-    }, _options?.timeoutMs ? { timeoutMs: _options.timeoutMs } : undefined);
+    }, _options?.timeoutMs ? { timeoutMs: _options.timeoutMs } : undefined) as StandardActionResponse;
 
-    return resp && resp.success !== false ? (resp.result ?? resp) : resp;
+    if (resp && resp.success !== false) {
+      const result = resp.result as Record<string, unknown> | undefined;
+      return result ? { success: true, ...result } : resp;
+    }
+    return resp;
   }
 
   /** Get Unreal Engine version */

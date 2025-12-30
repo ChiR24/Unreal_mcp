@@ -1,8 +1,9 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { coerceNumber, coerceString } from '../utils/result-helpers.js';
 
 interface CacheEntry {
-  data: any;
+  data: unknown;
   timestamp: number;
 }
 
@@ -11,11 +12,11 @@ export class ActorResources {
   private readonly CACHE_TTL_MS = 5000; // 5 seconds cache for actors (they change more frequently)
   private automationBridgeAvailable = false;
 
-  constructor(private bridge: UnrealBridge, private automationBridge?: any) {
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {
     this.automationBridgeAvailable = Boolean(automationBridge && typeof automationBridge.sendAutomationRequest === 'function');
   }
   
-  private getFromCache(key: string): any | null {
+  private getFromCache(key: string): unknown | null {
     const entry = this.cache.get(key);
     if (entry && (Date.now() - entry.timestamp) < this.CACHE_TTL_MS) {
       return entry.data;
@@ -24,7 +25,7 @@ export class ActorResources {
     return null;
   }
   
-  private setCache(key: string, data: any): void {
+  private setCache(key: string, data: unknown): void {
     this.cache.set(key, { data, timestamp: Date.now() });
   }
 
@@ -36,14 +37,15 @@ export class ActorResources {
     }
     
     try {
-      if (!this.automationBridgeAvailable) {
+      if (!this.automationBridgeAvailable || !this.automationBridge) {
         return { success: false, error: 'Automation bridge is not available. Please ensure Unreal Engine is running with the MCP Automation Bridge plugin.' };
       }
 
-      const resp: any = await this.automationBridge.sendAutomationRequest('control_actor', { action: 'list' });
-      if (resp && resp.success !== false && Array.isArray((resp.result || resp).actors)) {
-        const actors = (resp.result || resp).actors as any[];
-        const count = coerceNumber((resp.result || resp).count) ?? actors.length;
+      const resp = await this.automationBridge.sendAutomationRequest('control_actor', { action: 'list' }) as Record<string, unknown>;
+      const resultObj = (resp?.result ?? resp) as Record<string, unknown>;
+      if (resp && resp.success !== false && Array.isArray(resultObj.actors)) {
+        const actors = resultObj.actors as Array<Record<string, unknown>>;
+        const count = coerceNumber(resultObj.count) ?? actors.length;
         const payload = { success: true as const, count, actors };
         this.setCache('listActors', payload);
         return payload;
@@ -57,21 +59,22 @@ export class ActorResources {
 
   async getActorByName(actorName: string) {
     try {
-      if (!this.automationBridgeAvailable) {
+      if (!this.automationBridgeAvailable || !this.automationBridge) {
         return { success: false, error: 'Automation bridge is not available' };
       }
 
-      const resp: any = await this.automationBridge.sendAutomationRequest('control_actor', {
+      const resp = await this.automationBridge.sendAutomationRequest('control_actor', {
         action: 'find_by_name',
         name: actorName
-      });
+      }) as Record<string, unknown>;
 
-      if (resp && resp.success !== false && resp.result) {
+      const resultObj = resp?.result as Record<string, unknown> | null;
+      if (resp && resp.success !== false && resultObj) {
         return {
           success: true as const,
-          name: coerceString(resp.result.name) ?? actorName,
-          path: coerceString(resp.result.path),
-          class: coerceString(resp.result.class)
+          name: coerceString(resultObj.name) ?? actorName,
+          path: coerceString(resultObj.path),
+          class: coerceString(resultObj.class)
         };
       }
 
@@ -97,19 +100,20 @@ export class ActorResources {
 
   async listActorComponents(actorPath: string) {
     try {
-      if (!this.automationBridgeAvailable) {
+      if (!this.automationBridgeAvailable || !this.automationBridge) {
         return { success: false, error: 'Automation bridge is not available' };
       }
 
-      const resp: any = await this.automationBridge.sendAutomationRequest('control_actor', {
+      const resp = await this.automationBridge.sendAutomationRequest('control_actor', {
         action: 'list_components',
         actor_path: actorPath
-      });
+      }) as Record<string, unknown>;
 
-      if (resp && resp.success !== false && Array.isArray(resp.result?.components)) {
+      const resultObj = resp?.result as Record<string, unknown> | null;
+      if (resp && resp.success !== false && Array.isArray(resultObj?.components)) {
         return {
           success: true as const,
-          components: resp.result.components
+          components: resultObj.components
         };
       }
 

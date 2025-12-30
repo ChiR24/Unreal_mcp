@@ -36,8 +36,9 @@ export class LogTools {
     let text = '';
     try {
       text = await this.tailFile(target, maxLines);
-    } catch (err: any) {
-      return { success: false, error: String(err?.message || err) };
+    } catch (err: unknown) {
+      const errObj = err as Record<string, unknown> | null;
+      return { success: false, error: String(errObj?.message || err) };
     }
     const rawLines = text.split(/\r?\n/).filter(l => l.length > 0);
     const parsed: Entry[] = rawLines.map(l => this.parseLine(l));

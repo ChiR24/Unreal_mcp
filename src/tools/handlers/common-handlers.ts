@@ -55,14 +55,11 @@ export async function executeAutomationRequest(
   return await automationBridge.sendAutomationRequest(toolName, args, options);
 }
 
-/** Input type for location normalization */
-type LocationInput = Vector3 | [number, number, number] | number[] | null | undefined;
-
 /**
  * Normalize location to [x, y, z] array format
  * Accepts both {x,y,z} object and [x,y,z] array formats
  */
-export function normalizeLocation(location: LocationInput): [number, number, number] | undefined {
+export function normalizeLocation(location: unknown): [number, number, number] | undefined {
   if (!location) return undefined;
 
   // Already array format

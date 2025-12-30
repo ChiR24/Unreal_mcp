@@ -77,7 +77,7 @@ export class FoliageTools implements IFoliageTools {
         return {
           success: false,
           error: response.error || response.message || 'Add foliage type failed',
-          note: coerceString((response.result as any)?.note)
+          note: coerceString((response.result as Record<string, unknown>)?.note)
         };
       }
 
@@ -162,12 +162,12 @@ export class FoliageTools implements IFoliageTools {
         return {
           success: false,
           error: response.error || response.message || 'Paint foliage failed',
-          note: coerceString((response.result as any)?.note)
+          note: coerceString((response.result as Record<string, unknown>)?.note)
         };
       }
 
       const payload = response.result as Record<string, unknown>;
-      const added = coerceNumber(payload.instancesPlaced) ?? coerceNumber((payload as any)?.count) ?? 0;
+      const added = coerceNumber(payload.instancesPlaced) ?? coerceNumber(payload.count as number | undefined) ?? 0;
       const note = coerceString(payload.note);
 
       return {
@@ -201,7 +201,7 @@ export class FoliageTools implements IFoliageTools {
       return {
         success: true,
         count: coerceNumber(payload.count) ?? 0,
-        instances: (payload.instances as any[]) ?? [],
+        instances: (payload.instances as Array<Record<string, unknown>>) ?? [],
         message: 'Foliage instances retrieved'
       } as StandardActionResponse;
     } catch (error) {
@@ -371,14 +371,14 @@ export class FoliageTools implements IFoliageTools {
       };
     }
 
-    const result = response.result as any;
+    const result = (response.result ?? {}) as Record<string, unknown>;
     return {
       success: true,
       message: `Procedural foliage volume ${volName} created`,
       details: response,
-      volumeActor: result?.volume_actor,
-      spawnerPath: result?.spawner_path,
-      foliageTypesCount: result?.foliage_types_count
+      volumeActor: result.volume_actor,
+      spawnerPath: result.spawner_path,
+      foliageTypesCount: result.foliage_types_count
     } as StandardActionResponse;
   }
 
@@ -415,12 +415,12 @@ export class FoliageTools implements IFoliageTools {
         };
       }
 
-      const result = response.result as any;
-      return {
-        success: true,
-        message: response.message || `Added ${result?.instances_count || params.transforms.length} foliage instances`,
-        instancesCount: result?.instances_count
-      } as StandardActionResponse;
+        const result = (response.result ?? {}) as Record<string, unknown>;
+        return {
+          success: true,
+          message: response.message || `Added ${result.instances_count ?? params.transforms.length} foliage instances`,
+          instancesCount: result.instances_count
+        } as StandardActionResponse;
     } catch (error) {
       return {
         success: false,
