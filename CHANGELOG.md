@@ -7,6 +7,356 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.6] - 2025-12-30
+
+> [!IMPORTANT]
+> ### 🛡️ Type Safety Milestone
+> This release achieves **near-zero `any` type usage** across the entire codebase. All tool interfaces, handlers, automation bridge, GraphQL resolvers, and WASM integration now use strict TypeScript types with `unknown` and proper type guards.
+
+### ✨ Added
+
+<details>
+<summary><b>📐 New Zod Schema Infrastructure</b></summary>
+
+| File | Description |
+|------|-------------|
+| `src/schemas/primitives.ts` | 261 lines of Zod schemas for Vector3, Rotator, Transform, Color, etc. |
+| `src/schemas/responses.ts` | 380 lines of response validation schemas |
+| `src/schemas/parser.ts` | 167 lines of safe parsing utilities with type guards |
+| `src/schemas/index.ts` | 173 lines of unified schema exports |
+
+**Total:** 981 lines of new type-safe schema infrastructure
+
+</details>
+
+<details>
+<summary><b>🔧 Type-Safe Argument Helpers</b> (<code>d5e6d1e</code>)</summary>
+
+New extraction functions in `argument-helper.ts`:
+
+| Function | Description |
+|----------|-------------|
+| `extractString(params, key)` | Extract required string with assertion |
+| `extractOptionalString(params, key)` | Extract optional string |
+| `extractNumber(params, key)` | Extract required number with assertion |
+| `extractOptionalNumber(params, key)` | Extract optional number |
+| `extractBoolean(params, key)` | Extract required boolean with assertion |
+| `extractOptionalBoolean(params, key)` | Extract optional boolean |
+| `extractArray<T>(params, key, validator?)` | Extract typed array with optional validation |
+| `extractOptionalArray<T>(params, key, validator?)` | Extract optional array |
+| `normalizeArgsTyped(args, configs)` | Returns `NormalizedArgs` interface with accessor methods |
+
+**NormalizedArgs Interface:**
+- `getString(key)`, `getOptionalString(key)`
+- `getNumber(key)`, `getOptionalNumber(key)`
+- `getBoolean(key)`, `getOptionalBoolean(key)`
+- `get(key)` for raw `unknown` access
+- `raw()` for full object access
+
+</details>
+
+<details>
+<summary><b>🔌 WASM Module Interface</b> (<code>d5e6d1e</code>)</summary>
+
+Defined structured `WASMModule` interface replacing `any`:
+
+```typescript
+interface WASMModule {
+  PropertyParser?: new () => { parse_properties(json, maxDepth) };
+  TransformCalculator?: new () => { composeTransform, decomposeMatrix };
+  Vector?: new (x, y, z) => { x, y, z, add(other) };
+  DependencyResolver?: new () => { analyzeDependencies, calculateDepth, ... };
+}
+```
+
+</details>
+
+<details>
+<summary><b>📝 Automation Bridge Types</b> (<code>f97b008</code>)</summary>
+
+| Type | Location | Description |
+|------|----------|-------------|
+| `QueuedRequestItem` | `automation/types.ts` | Typed interface for queued request items |
+| `ASTFieldNode` | `graphql/resolvers.ts` | GraphQL AST node types for parseLiteral |
+| `ASTNode` | `graphql/resolvers.ts` | Typed AST parsing |
+
+</details>
+
+### 🔧 Changed
+
+<details>
+<summary><b>🎯 Tool Interfaces Refactored</b> (<code>d5e6d1e</code>)</summary>
+
+**ITools Interface - Replaced all `any` with concrete types:**
+
+| Property | Before | After |
+|----------|--------|-------|
+| `materialTools` | `any` | `MaterialTools` |
+| `niagaraTools` | `any` | `NiagaraTools` |
+| `animationTools` | `any` | `AnimationTools` |
+| `physicsTools` | `any` | `PhysicsTools` |
+| `lightingTools` | `any` | `LightingTools` |
+| `debugTools` | `any` | `DebugVisualizationTools` |
+| `performanceTools` | `any` | `PerformanceTools` |
+| `audioTools` | `any` | `AudioTools` |
+| `uiTools` | `any` | `UITools` |
+| `introspectionTools` | `any` | `IntrospectionTools` |
+| `engineTools` | `any` | `EngineTools` |
+| `behaviorTreeTools` | `any` | `BehaviorTreeTools` |
+| `logTools` | `any` | `LogTools` |
+| `inputTools` | `any` | `InputTools` |
+| Index signature | `[key: string]: any` | `[key: string]: unknown` |
+
+**StandardActionResponse:**
+- Changed `StandardActionResponse<T = any>` → `StandardActionResponse<T = unknown>`
+
+**IBlueprintTools:**
+- `operations: any[]` → `operations: Array<Record<string, unknown>>`
+- `defaultValue?: any` → `defaultValue?: unknown`
+- `propertyValue: any` → `propertyValue: unknown`
+
+**IAssetResources:**
+- `list(): Promise<any>` → `list(): Promise<Record<string, unknown>>`
+
+</details>
+
+<details>
+<summary><b>🔷 GraphQL Resolvers Type Safety</b> (<code>f97b008</code>, <code>fa4dddc</code>)</summary>
+
+All scalar resolvers now use typed parameters:
+
+| Scalar | Before | After |
+|--------|--------|-------|
+| `Vector.serialize` | `(value: any)` | `(value: unknown)` |
+| `Rotator.serialize` | `(value: any)` | `(value: unknown)` |
+| `Transform.parseLiteral` | `(ast: any)` | `(ast: ASTNode)` |
+| `JSON.parseLiteral` | `(ast: any)` | `(ast: ASTNode): unknown` |
+
+**Internal interfaces typed:**
+- `Asset.metadata?: Record<string, any>` → `Record<string, unknown>`
+- `Actor.properties?: Record<string, any>` → `Record<string, unknown>`
+- `Blueprint.defaultValue?: any` → `unknown`
+
+</details>
+
+<details>
+<summary><b>🌐 Automation Bridge Type Safety</b> (<code>f97b008</code>)</summary>
+
+| Location | Before | After |
+|----------|--------|-------|
+| `onError` callback | `(err: any)` | `(err: unknown)` |
+| `onHandshakeFail` callback | `(err: any)` | `(err: Record<string, unknown>)` |
+| `catch` block | `catch (err: any)` | `catch (err: unknown)` with type guard |
+| `onMessage` handler | `(data: any)` | `(data: Buffer \| string)` |
+| `queuedRequestItems` | inline type with `any` | `QueuedRequestItem[]` |
+
+</details>
+
+<details>
+<summary><b>🔌 WASM Integration Type Safety</b> (<code>d5e6d1e</code>)</summary>
+
+| Method | Before | After |
+|--------|--------|-------|
+| `parseProperties()` | `Promise<any>` | `Promise<unknown>` |
+| `analyzeDependencies()` | `Promise<any>` | `Promise<unknown>` |
+| `fallbackParseProperties()` | `any` | `unknown` |
+| `fallbackAnalyzeDependencies()` | `any` | `Record<string, unknown>` |
+| `globalThis.fetch` patch | `(globalThis as any).fetch` | Typed with `GlobalThisWithFetch` |
+| Error handling | `(error as any)?.code` | `(error as Record<string, unknown>)?.code` |
+
+</details>
+
+<details>
+<summary><b>📊 Handler Types Expanded</b> (<code>d5e6d1e</code>)</summary>
+
+`src/types/handler-types.ts` expanded with 147+ lines of new typed interfaces for all handler argument types.
+
+</details>
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>✅ extractOptionalArray Behavior</b> (<code>f97b008</code>)</summary>
+
+- Now returns `undefined` (instead of throwing) when value is not an array
+- Documented behavior: graceful fallback for type mismatches
+- Allows handlers to use default behavior when optional arrays are invalid
+
+</details>
+
+### 📊 Statistics
+
+- **Files Changed:** 70 source files
+- **Lines Added:** 3,806
+- **Lines Removed:** 1,816
+- **Net Change:** +1,990 lines (mostly type definitions)
+- **New Schema Files:** 4 (981 lines total)
+- **`any` → `unknown` Replacements:** 100+ occurrences
+
+### 🔄 Dependencies
+
+<details>
+<summary><b>GitHub Actions Updates</b></summary>
+
+| Package | Update | PR |
+|---------|--------|-----|
+| `actions/first-interaction` | 1.3.0 → 3.1.0 | [#38](https://github.com/ChiR24/Unreal_mcp/pull/38) |
+| `actions/labeler` | 5.0.0 → 6.0.1 | Dependabot |
+| `github/codeql-action` | SHA update | Dependabot |
+| `release-drafter/release-drafter` | SHA update | Dependabot |
+| Dev dependencies group | 2 updates | Dependabot |
+
+</details>
+
+---
+
+## 🏷️ [0.5.5] - 2025-12-29
+
+> [!NOTE]
+> ### 📝 Quality & Validation Release
+> This release focuses on **input validation**, **structured logging**, and **developer experience** improvements. WebSocket connections now enforce message size limits, Blueprint graph editing supports user-friendly node names, and all tools use structured logging.
+
+### ✨ Added
+
+<details>
+<summary><b>🔌 WebSocket Message Size Limits</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/36">#36</a>)</summary>
+
+| Feature | Description |
+|---------|-------------|
+| **Max Message Size** | 5MB limit for WebSocket frames and accumulated messages |
+| **Close Code 1009** | Connections close with standard "Message Too Big" code when exceeded |
+| **Fragment Accumulation** | Size checks applied during fragmented message assembly |
+
+**C++ Changes:**
+- Added `MaxWebSocketMessageBytes` (5MB) and `MaxWebSocketFramePayloadBytes` constants
+- Implemented size validation at frame receive, fragment accumulation, and initial payload
+- Proper teardown with `WebSocketCloseCodeMessageTooBig` (1009)
+
+</details>
+
+<details>
+<summary><b>🔷 Blueprint Node Type Aliases</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
+
+User-friendly node names now map to internal K2Node classes:
+
+| Alias | K2Node Class |
+|-------|-------------|
+| `Branch` | `K2Node_IfThenElse` |
+| `Sequence` | `K2Node_ExecutionSequence` |
+| `ForLoop` | `K2Node_ForLoop` |
+| `ForLoopWithBreak` | `K2Node_ForLoopWithBreak` |
+| `WhileLoop` | `K2Node_WhileLoop` |
+| `Switch` | `K2Node_SwitchInteger` |
+| `Select` | `K2Node_Select` |
+| `DoOnce`, `DoN`, `FlipFlop`, `Gate`, `MultiGate` | Flow control nodes |
+| `SpawnActorFromClass`, `GetAllActorsOfClass` | Actor manipulation |
+| `Timeline`, `MakeArray`, `MakeStruct`, `BreakStruct` | Data/utility nodes |
+
+**C++ & TypeScript Sync:**
+- `BLUEPRINT_NODE_ALIASES` map in `graph-handlers.ts`
+- `NodeTypeAliases` map in `McpAutomationBridge_BlueprintGraphHandlers.cpp`
+
+</details>
+
+<details>
+<summary><b>🌳 Behavior Tree Generic Node Types</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
+
+| Node Type | Default Class | Category |
+|-----------|---------------|----------|
+| `Task` | `BTTask_Wait` | task |
+| `Decorator` / `Blackboard` | `BTDecorator_Blackboard` | decorator |
+| `Service` / `DefaultFocus` | `BTService_DefaultFocus` | service |
+| `Composite` | `BTComposite_Sequence` | composite |
+
+Aliases for common BT nodes: `Wait`, `MoveTo`, `PlaySound`, `Cooldown`, `Loop`, `TimeLimit`, `Selector`, etc.
+
+</details>
+
+<details>
+<summary><b>📊 show_stats Action</b></summary>
+
+New `show_stats` action in `system_control` tool:
+- Toggle engine stats display (`stat Unit`, `stat FPS`, etc.)
+- Parameters: `category` (string), `enabled` (boolean)
+
+</details>
+
+### 🔧 Changed
+
+<details>
+<summary><b>📋 Structured Logging</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/36">#36</a>)</summary>
+
+Replaced `console.error`/`console.warn` with structured `Logger` across all tools:
+
+| File | Change |
+|------|--------|
+| `actors.ts` | WASM debug logging |
+| `debug.ts` | Viewmode stability warnings |
+| `dynamic-handler-registry.ts` | Handler overwrite warnings |
+| `editor.ts` | Removed commented debug logs |
+| `physics.ts` | Improved error handling with fallback mesh resolution |
+
+</details>
+
+<details>
+<summary><b>🎯 Handler Response Improvements</b></summary>
+
+| Handler | Change |
+|---------|--------|
+| `actor-handlers.ts` | Returns clean responses without `ResponseFactory.success()` wrapping |
+| `blueprint-handlers.ts` | Includes `blueprintPath` in responses |
+| `environment.ts` | Changed default snapshot path to `./tmp/unreal-mcp/` |
+
+</details>
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>✅ Input Validation Enhancements</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
+
+| Handler | Validation Added |
+|---------|------------------|
+| `editor-handlers.ts` | Viewport resolution requires positive numbers |
+| `asset-handlers.ts` | Folder paths must start with `/` |
+| `lighting-handlers.ts` | Valid light types: `point`, `directional`, `spot`, `rect`, `sky` |
+| `lighting-handlers.ts` | Valid GI methods: `lumen`, `screenspace`, `none`, `raytraced`, `ssgi` |
+| `performance-handlers.ts` | Valid profiling types with clear error messages |
+| `performance-handlers.ts` | Scalability levels clamped to 0-4 range |
+| `system-handlers.ts` | Quality level clamped to 0-4 range |
+
+</details>
+
+<details>
+<summary><b>🔧 WASM Binding Patching</b> (<code>7cc602a</code>)</summary>
+
+- Fixed TOCTOU (Time-of-Check-Time-of-Use) race condition in `patch-wasm.js`
+- Uses atomic file operations with file descriptors (`openSync`, `ftruncateSync`, `writeSync`)
+- Proper error handling for missing WASM files
+
+</details>
+
+### 🗑️ Removed
+
+<details>
+<summary><b>🧹 Code Cleanup</b></summary>
+
+| Removed | Lines | Reason |
+|---------|-------|--------|
+| `src/types/responses.ts` content | 355 | Obsolete response type definitions |
+| `scripts/validate-server.js` | 46 | Unused validation script |
+| `scripts/verify-automation-bridge.js` | 177 | Unused functions and broken code |
+
+</details>
+
+### 📊 Statistics
+
+- **Files Changed:** 28+ source files
+- **Lines Removed:** 436 (cleanup)
+- **Lines Added:** 283 (validation + features)
+- **New Node Aliases:** 30+ Blueprint, 20+ Behavior Tree
+
+---
+
 ## 🏷️ [0.5.4] - 2025-12-27
 
 > [!IMPORTANT]
