@@ -24,7 +24,7 @@ export interface SequenceBinding {
 export interface SequenceTrack {
   name: string;
   type: string;
-  sections?: any[];
+  sections?: Array<Record<string, unknown>>;
 }
 
 export class SequenceTools extends BaseTool implements ISequenceTools {
@@ -53,13 +53,13 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
       const success = response && response.success !== false;
       const result = response.result ?? response;
 
-      return { success, message: response.message ?? undefined, error: response.success === false ? (response.error ?? response.message) : undefined, result, requestId: response.requestId } as any;
+      return { success, message: response.message ?? undefined, error: response.success === false ? (response.error ?? response.message) : undefined, result, requestId: response.requestId } as StandardActionResponse;
     } catch (err: unknown) {
       return { success: false, error: String(err), message: String(err) } as const;
     }
   }
 
-  private isUnknownActionResponse(res: any): boolean {
+  private isUnknownActionResponse(res: StandardActionResponse | Record<string, unknown>): boolean {
     if (!res) return false;
     const txt = String((res.error ?? res.message ?? '')).toLowerCase();
     // Only treat specific error codes as "not implemented"
@@ -76,10 +76,12 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
     if (!resp.success && this.isUnknownActionResponse(resp)) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement sequence_create' } as const;
     }
-    if (resp.success && resp.result && resp.result.sequencePath) {
-      const sequence: LevelSequence = { path: resp.result.sequencePath, name };
+    const respObj = resp as Record<string, unknown>;
+    const resultObj = (respObj.result ?? {}) as Record<string, unknown>;
+    if (resp.success && resultObj.sequencePath) {
+      const sequence: LevelSequence = { path: resultObj.sequencePath as string, name };
       this.sequenceCache.set(sequence.path, sequence);
-      return { ...resp, sequence: resp.result.sequencePath };
+      return { ...resp, sequence: resultObj.sequencePath as string };
     }
     return resp;
   }

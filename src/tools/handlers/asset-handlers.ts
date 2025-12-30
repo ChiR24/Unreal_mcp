@@ -1,10 +1,37 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
+import type { HandlerArgs, AssetArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
-import { normalizeArgs } from './argument-helper.js';
+import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean, extractOptionalArray } from './argument-helper.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
 
-export async function handleAssetTools(action: string, args: any, tools: ITools) {
+/** Asset info from list response */
+interface AssetListItem {
+  path?: string;
+  package?: string;
+  name?: string;
+}
+
+/** Response from list/search operations */
+interface AssetListResponse {
+  success?: boolean;
+  assets?: AssetListItem[];
+  result?: { assets?: AssetListItem[]; folders?: string[] };
+  folders?: string[];
+  [key: string]: unknown;
+}
+
+/** Response from asset operations */
+interface AssetOperationResponse {
+  success?: boolean;
+  message?: string;
+  error?: string;
+  tags?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export async function handleAssetTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   try {
     switch (action) {
       case 'list': {
@@ -16,34 +43,37 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'depth', default: undefined }
         ]);
 
-        const recursive = params.recursive === true || (params.depth !== undefined && params.depth > 0);
+        const path = extractOptionalString(params, 'path') ?? '/Game';
+        const limit = extractOptionalNumber(params, 'limit') ?? 50;
+        const recursive = extractOptionalBoolean(params, 'recursive') ?? false;
+        const depth = extractOptionalNumber(params, 'depth');
+
+        const effectiveRecursive = recursive === true || (depth !== undefined && depth > 0);
 
         const res = await executeAutomationRequest(tools, 'list', {
-          path: params.path,
-          recursive,
-          depth: params.depth
-        });
+          path,
+          recursive: effectiveRecursive,
+          depth
+        }) as AssetListResponse;
 
-
-        const response = res as any;
-        const assets = (Array.isArray(response.assets) ? response.assets :
-          (Array.isArray(response.result) ? response.result : (response.result?.assets || [])));
+        const assets: AssetListItem[] = (Array.isArray(res.assets) ? res.assets :
+          (Array.isArray(res.result) ? res.result : (res.result?.assets || [])));
 
         // New: Handle folders
-        const folders = Array.isArray(response.folders) ? response.folders : (response.result?.folders || []);
+        const folders: string[] = Array.isArray(res.folders) ? res.folders : (res.result?.folders || []);
 
         const totalCount = assets.length;
-        const limitedAssets = assets.slice(0, params.limit);
-        const remaining = Math.max(0, totalCount - params.limit);
+        const limitedAssets = assets.slice(0, limit);
+        const remaining = Math.max(0, totalCount - limit);
 
         let message = `Found ${totalCount} assets`;
         if (folders.length > 0) {
           message += ` and ${folders.length} folders`;
         }
-        message += `: ${limitedAssets.map((a: any) => a.path || a.package || a.name).join(', ')}`;
+        message += `: ${limitedAssets.map((a) => a.path || a.package || a.name || 'unknown').join(', ')}`;
 
-        if (folders.length > 0 && limitedAssets.length < params.limit) {
-          const remainingLimit = params.limit - limitedAssets.length;
+        if (folders.length > 0 && limitedAssets.length < limit) {
+          const remainingLimit = limit - limitedAssets.length;
           if (remainingLimit > 0) {
             const limitedFolders = folders.slice(0, remainingLimit);
             if (limitedAssets.length > 0) message += ', ';
@@ -68,7 +98,7 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'path', aliases: ['directoryPath'], required: true }
         ]);
         // Validate path format
-        const folderPath = String(params.path).trim();
+        const folderPath = extractString(params, 'path').trim();
         if (!folderPath.startsWith('/')) {
           return ResponseFactory.error('VALIDATION_ERROR', `Invalid folder path: '${folderPath}'. Path must start with '/'`);
         }
@@ -83,11 +113,16 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'save', default: true }
         ]);
 
+        const sourcePath = extractString(params, 'sourcePath');
+        const destinationPath = extractString(params, 'destinationPath');
+        const overwrite = extractOptionalBoolean(params, 'overwrite') ?? false;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
         const res = await tools.assetTools.importAsset({
-          sourcePath: params.sourcePath,
-          destinationPath: params.destinationPath,
-          overwrite: params.overwrite,
-          save: params.save
+          sourcePath,
+          destinationPath,
+          overwrite,
+          save
         });
         return ResponseFactory.success(res, 'Asset imported successfully');
       }
@@ -98,15 +133,18 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'newName' }
         ]);
 
-        let destinationPath = params.destinationPath;
-        if (params.newName) {
+        const sourcePath = extractString(params, 'sourcePath');
+        let destinationPath = extractOptionalString(params, 'destinationPath');
+        const newName = extractOptionalString(params, 'newName');
+
+        if (newName) {
           if (!destinationPath) {
-            const lastSlash = params.sourcePath.lastIndexOf('/');
-            const parentDir = lastSlash > 0 ? params.sourcePath.substring(0, lastSlash) : '/Game';
-            destinationPath = `${parentDir}/${params.newName}`;
-          } else if (!destinationPath.endsWith(params.newName)) {
+            const lastSlash = sourcePath.lastIndexOf('/');
+            const parentDir = lastSlash > 0 ? sourcePath.substring(0, lastSlash) : '/Game';
+            destinationPath = `${parentDir}/${newName}`;
+          } else if (!destinationPath.endsWith(newName)) {
             if (destinationPath.endsWith('/')) {
-              destinationPath = `${destinationPath}${params.newName}`;
+              destinationPath = `${destinationPath}${newName}`;
             }
           }
         }
@@ -116,7 +154,7 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         }
 
         const res = await tools.assetTools.duplicateAsset({
-          sourcePath: params.sourcePath,
+          sourcePath,
           destinationPath
         });
         return ResponseFactory.success(res, 'Asset duplicated successfully');
@@ -128,19 +166,22 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'newName' }
         ]);
 
-        let destinationPath = params.destinationPath;
-        if (!destinationPath && params.newName) {
-          const lastSlash = params.sourcePath.lastIndexOf('/');
-          const parentDir = lastSlash > 0 ? params.sourcePath.substring(0, lastSlash) : '/Game';
-          destinationPath = `${parentDir}/${params.newName}`;
+        const sourcePath = extractString(params, 'sourcePath');
+        let destinationPath = extractOptionalString(params, 'destinationPath');
+        const newName = extractOptionalString(params, 'newName');
+
+        if (!destinationPath && newName) {
+          const lastSlash = sourcePath.lastIndexOf('/');
+          const parentDir = lastSlash > 0 ? sourcePath.substring(0, lastSlash) : '/Game';
+          destinationPath = `${parentDir}/${newName}`;
         }
 
         if (!destinationPath) throw new Error('Missing destinationPath or newName');
 
-        const res: any = await tools.assetTools.renameAsset({
-          sourcePath: params.sourcePath,
+        const res = await tools.assetTools.renameAsset({
+          sourcePath,
           destinationPath
-        });
+        }) as AssetOperationResponse;
 
         if (res && res.success === false) {
           const msg = (res.message || '').toLowerCase();
@@ -149,7 +190,7 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
               success: false,
               error: 'ASSET_ALREADY_EXISTS',
               message: res.message || 'Asset already exists at destination',
-              sourcePath: params.sourcePath,
+              sourcePath,
               destinationPath
             });
           }
@@ -162,15 +203,16 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'destinationPath' }
         ]);
 
-        let destinationPath = params.destinationPath;
-        const assetName = params.sourcePath.split('/').pop();
+        const sourcePath = extractString(params, 'sourcePath');
+        let destinationPath = extractOptionalString(params, 'destinationPath');
+        const assetName = sourcePath.split('/').pop();
         if (assetName && destinationPath && !destinationPath.endsWith(assetName)) {
           destinationPath = `${destinationPath.replace(/\/$/, '')}/${assetName}`;
         }
 
         const res = await tools.assetTools.moveAsset({
-          sourcePath: params.sourcePath,
-          destinationPath
+          sourcePath,
+          destinationPath: destinationPath ?? ''
         });
         return ResponseFactory.success(res, 'Asset moved successfully');
       }
@@ -178,12 +220,11 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
       case 'delete_asset':
       case 'delete': {
         let paths: string[] = [];
-        if (Array.isArray(args.paths)) {
-          paths = args.paths;
-        } else if (Array.isArray(args.assetPaths)) {
-          paths = args.assetPaths;
+        const argsTyped = args as AssetArgs;
+        if (Array.isArray(argsTyped.assetPaths)) {
+          paths = argsTyped.assetPaths as string[];
         } else {
-          const single = args.assetPath || args.path;
+          const single = argsTyped.assetPath || argsTyped.path;
           if (typeof single === 'string' && single.trim()) {
             paths = [single.trim()];
           }
@@ -219,9 +260,11 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'assetPath', required: true },
           { key: 'lodCount', required: true }
         ]);
+        const assetPath = extractString(params, 'assetPath');
+        const lodCount = typeof params.lodCount === 'number' ? params.lodCount : Number(params.lodCount);
         const res = await tools.assetTools.generateLODs({
-          assetPath: params.assetPath,
-          lodCount: params.lodCount
+          assetPath,
+          lodCount
         });
         return ResponseFactory.success(res, 'LODs generated successfully');
       }
@@ -231,10 +274,13 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'width' },
           { key: 'height' }
         ]);
+        const assetPath = extractString(params, 'assetPath');
+        const width = extractOptionalNumber(params, 'width');
+        const height = extractOptionalNumber(params, 'height');
         const res = await tools.assetTools.createThumbnail({
-          assetPath: params.assetPath,
-          width: params.width,
-          height: params.height
+          assetPath,
+          width,
+          height
         });
         return ResponseFactory.success(res, 'Thumbnail created successfully');
       }
@@ -244,10 +290,12 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
             { key: 'assetPath', required: true },
             { key: 'tags', required: true }
           ]);
-          const res = await tools.assetTools.setTags({ assetPath: params.assetPath, tags: params.tags });
+          const assetPath = extractString(params, 'assetPath');
+          const tags = extractOptionalArray<string>(params, 'tags') ?? [];
+          const res = await tools.assetTools.setTags({ assetPath, tags });
           return ResponseFactory.success(res, 'Tags set successfully');
-        } catch (err: any) {
-          const message = String(err?.message || err || '').toLowerCase();
+        } catch (err: unknown) {
+          const message = String(err instanceof Error ? err.message : err).toLowerCase();
           if (
             message.includes('not_implemented') ||
             message.includes('not implemented') ||
@@ -263,7 +311,8 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true }
         ]);
-        const res: any = await tools.assetTools.getMetadata({ assetPath: params.assetPath });
+        const assetPath = extractString(params, 'assetPath');
+        const res = await tools.assetTools.getMetadata({ assetPath }) as AssetOperationResponse;
         const tags = res.tags || {};
         const metadata = res.metadata || {};
         const merged = { ...tags, ...metadata };
@@ -276,7 +325,7 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           cleanRes.metadata = metadata;
         }
 
-        return ResponseFactory.success(cleanRes, cleanRes.message);
+        return ResponseFactory.success(cleanRes, cleanRes.message as string);
       }
       case 'set_metadata': {
         const res = await executeAutomationRequest(tools, 'set_metadata', args);
@@ -287,7 +336,8 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true }
         ]);
-        const res = await tools.assetTools.validate({ assetPath: params.assetPath });
+        const assetPath = extractString(params, 'assetPath');
+        const res = await tools.assetTools.validate({ assetPath });
         return ResponseFactory.success(res, 'Asset validation complete');
       }
       case 'generate_report': {
@@ -296,24 +346,28 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'reportType' },
           { key: 'outputPath' }
         ]);
+        const directory = extractOptionalString(params, 'directory') ?? '';
+        const reportType = extractOptionalString(params, 'reportType');
+        const outputPath = extractOptionalString(params, 'outputPath');
         const res = await tools.assetTools.generateReport({
-          directory: params.directory,
-          reportType: params.reportType,
-          outputPath: params.outputPath
+          directory,
+          reportType,
+          outputPath
         });
         return ResponseFactory.success(res, 'Report generated successfully');
       }
       case 'create_material_instance': {
-        const res: any = await executeAutomationRequest(
+        const res = await executeAutomationRequest(
           tools,
           'create_material_instance',
           args,
           'Automation bridge not available for create_material_instance'
-        );
+        ) as AssetOperationResponse;
 
-        const result = res?.result ?? res ?? {};
+        const result = res ?? {};
         const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
         const message = typeof result.message === 'string' ? result.message : '';
+        const argsTyped = args as AssetArgs;
 
         if (errorCode === 'PARENT_NOT_FOUND' || message.toLowerCase().includes('parent material not found')) {
           // Keep specific error structure for this business logic case
@@ -321,8 +375,8 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
             success: false,
             error: 'PARENT_NOT_FOUND',
             message: message || 'Parent material not found',
-            path: result.path,
-            parentMaterial: args.parentMaterial
+            path: (result as Record<string, unknown>).path,
+            parentMaterial: argsTyped.parentMaterial
           });
         }
 
@@ -336,12 +390,17 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'recursiveClasses' },
           { key: 'limit' }
         ]);
+        const classNames = extractOptionalArray<string>(params, 'classNames');
+        const packagePaths = extractOptionalArray<string>(params, 'packagePaths');
+        const recursivePaths = extractOptionalBoolean(params, 'recursivePaths');
+        const recursiveClasses = extractOptionalBoolean(params, 'recursiveClasses');
+        const limit = extractOptionalNumber(params, 'limit');
         const res = await tools.assetTools.searchAssets({
-          classNames: params.classNames,
-          packagePaths: params.packagePaths,
-          recursivePaths: params.recursivePaths,
-          recursiveClasses: params.recursiveClasses,
-          limit: params.limit
+          classNames,
+          packagePaths,
+          recursivePaths,
+          recursiveClasses,
+          limit
         });
         return ResponseFactory.success(res, 'Assets found');
       }
@@ -350,7 +409,9 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'tag', required: true },
           { key: 'value' }
         ]);
-        const res = await tools.assetTools.findByTag({ tag: params.tag, value: params.value });
+        const tag = extractString(params, 'tag');
+        const value = extractOptionalString(params, 'value');
+        const res = await tools.assetTools.findByTag({ tag, value });
         return ResponseFactory.success(res, 'Assets found by tag');
       }
       case 'get_dependencies': {
@@ -358,14 +419,17 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'assetPath', required: true },
           { key: 'recursive' }
         ]);
-        const res = await tools.assetTools.getDependencies({ assetPath: params.assetPath, recursive: params.recursive });
+        const assetPath = extractString(params, 'assetPath');
+        const recursive = extractOptionalBoolean(params, 'recursive');
+        const res = await tools.assetTools.getDependencies({ assetPath, recursive });
         return ResponseFactory.success(res, 'Dependencies retrieved');
       }
       case 'get_source_control_state': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true }
         ]);
-        const res = await tools.assetTools.getSourceControlState({ assetPath: params.assetPath });
+        const assetPath = extractString(params, 'assetPath');
+        const res = await tools.assetTools.getSourceControlState({ assetPath });
         return ResponseFactory.success(res, 'Source control state retrieved');
       }
       case 'analyze_graph': {
@@ -373,9 +437,11 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'assetPath', required: true },
           { key: 'maxDepth' }
         ]);
+        const assetPath = extractString(params, 'assetPath');
+        const maxDepth = extractOptionalNumber(params, 'maxDepth');
         const res = await executeAutomationRequest(tools, 'get_asset_graph', {
-          assetPath: params.assetPath,
-          maxDepth: params.maxDepth
+          assetPath,
+          maxDepth
         });
         return ResponseFactory.success(res, 'Graph analysis complete');
       }
@@ -387,13 +453,18 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'height' },
           { key: 'format' }
         ]);
+        const name = extractString(params, 'name');
+        const packagePath = extractOptionalString(params, 'packagePath') ?? '/Game';
+        const width = extractOptionalNumber(params, 'width');
+        const height = extractOptionalNumber(params, 'height');
+        const format = extractOptionalString(params, 'format');
         const res = await executeAutomationRequest(tools, 'manage_render', {
           subAction: 'create_render_target',
-          name: params.name,
-          packagePath: params.packagePath,
-          width: params.width,
-          height: params.height,
-          format: params.format,
+          name,
+          packagePath,
+          width,
+          height,
+          format,
           save: true
         });
         return ResponseFactory.success(res, 'Render target created successfully');
@@ -402,20 +473,22 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['meshPath'], required: true }
         ]);
+        const assetPath = extractString(params, 'assetPath');
         const res = await executeAutomationRequest(tools, 'manage_render', {
           subAction: 'nanite_rebuild_mesh',
-          assetPath: params.assetPath
+          assetPath
         });
         return ResponseFactory.success(res, 'Nanite mesh rebuilt successfully');
       }
       case 'fixup_redirectors': {
-        const directoryRaw = typeof args.directory === 'string' && args.directory.trim().length > 0
-          ? args.directory.trim()
-          : (typeof args.directoryPath === 'string' && args.directoryPath.trim().length > 0
-            ? args.directoryPath.trim()
+        const argsTyped = args as AssetArgs;
+        const directoryRaw = typeof argsTyped.directory === 'string' && argsTyped.directory.trim().length > 0
+          ? argsTyped.directory.trim()
+          : (typeof argsTyped.directoryPath === 'string' && argsTyped.directoryPath.trim().length > 0
+            ? argsTyped.directoryPath.trim()
             : '');
 
-        const payload: any = {};
+        const payload: Record<string, unknown> = {};
         if (directoryRaw) {
           payload.directoryPath = directoryRaw;
         }
@@ -433,11 +506,15 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'parameterType', aliases: ['type'] },
           { key: 'value', aliases: ['defaultValue'] }
         ]);
+        const assetPath = extractString(params, 'assetPath');
+        const parameterName = extractString(params, 'parameterName');
+        const parameterType = extractOptionalString(params, 'parameterType');
+        const value = params.value;
         const res = await executeAutomationRequest(tools, 'add_material_parameter', {
-          assetPath: params.assetPath,
-          name: params.parameterName,
-          type: params.parameterType,
-          value: params.value
+          assetPath,
+          name: parameterName,
+          type: parameterType,
+          value
         });
         return ResponseFactory.success(res, 'Material parameter added successfully');
       }
@@ -445,8 +522,9 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true }
         ]);
+        const assetPath = extractString(params, 'assetPath');
         const res = await executeAutomationRequest(tools, 'list_instances', {
-          assetPath: params.assetPath
+          assetPath
         });
         return ResponseFactory.success(res, 'Instances listed successfully');
       }
@@ -454,8 +532,9 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true }
         ]);
+        const assetPath = extractString(params, 'assetPath');
         const res = await executeAutomationRequest(tools, 'reset_instance_parameters', {
-          assetPath: params.assetPath
+          assetPath
         });
         return ResponseFactory.success(res, 'Instance parameters reset successfully');
       }
@@ -463,8 +542,9 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true }
         ]);
+        const assetPath = extractString(params, 'assetPath');
         const res = await executeAutomationRequest(tools, 'exists', {
-          assetPath: params.assetPath
+          assetPath
         });
         return ResponseFactory.success(res, 'Asset existence check complete');
       }
@@ -472,8 +552,9 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true }
         ]);
+        const assetPath = extractString(params, 'assetPath');
         const res = await executeAutomationRequest(tools, 'get_material_stats', {
-          assetPath: params.assetPath
+          assetPath
         });
         return ResponseFactory.success(res, 'Material stats retrieved');
       }
@@ -481,8 +562,9 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true }
         ]);
+        const assetPath = extractString(params, 'assetPath');
         const res = await executeAutomationRequest(tools, 'rebuild_material', {
-          assetPath: params.assetPath
+          assetPath
         });
         return ResponseFactory.success(res, 'Material rebuilt successfully');
       }
@@ -523,19 +605,25 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
           { key: 'posY' }
         ]);
 
+        const assetPath = extractString(params, 'assetPath');
+        const nodeType = extractString(params, 'nodeType');
+        const posX = extractOptionalNumber(params, 'posX');
+        const posY = extractOptionalNumber(params, 'posY');
+
         const res = await executeAutomationRequest(tools, 'add_material_node', {
-          assetPath: params.assetPath,
-          nodeType: params.nodeType,
-          posX: params.posX,
-          posY: params.posY
+          assetPath,
+          nodeType,
+          posX,
+          posY
         });
         return ResponseFactory.success(res, 'Material node added successfully');
       }
-      default:
-        const res: any = await executeAutomationRequest(tools, action || 'manage_asset', args);
-        const result = res?.result ?? res ?? {};
+      default: {
+        const res = await executeAutomationRequest(tools, action || 'manage_asset', args) as AssetOperationResponse;
+        const result = res ?? {};
         const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
         const message = typeof result.message === 'string' ? result.message : '';
+        const argsTyped = args as AssetArgs;
 
         if (errorCode === 'INVALID_SUBACTION' || message.toLowerCase().includes('unknown subaction')) {
           return cleanObject({
@@ -543,11 +631,12 @@ export async function handleAssetTools(action: string, args: any, tools: ITools)
             error: 'INVALID_SUBACTION',
             message: 'Asset action not recognized by the automation plugin.',
             action: action || 'manage_asset',
-            assetPath: args.assetPath ?? args.path
+            assetPath: argsTyped.assetPath ?? argsTyped.path
           });
         }
 
         return ResponseFactory.success(res, 'Asset action executed successfully');
+      }
     }
   } catch (error) {
     return ResponseFactory.error(error);

@@ -52,8 +52,8 @@ export class LightingTools {
     lightClass: string,
     params: {
       name: string;
-      location?: [number, number, number];
-      rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
+      location?: unknown;
+      rotation?: unknown;
       properties?: Record<string, unknown>;
     }
   ) {
@@ -70,14 +70,16 @@ export class LightingTools {
       if (params.location) {
         // Use WASM vectorAdd for light location processing
         const zeroVector: [number, number, number] = [0, 0, 0];
-        const processedLocation = wasmIntegration.vectorAdd(zeroVector, params.location);
+        const locArray = Array.isArray(params.location) ? params.location as [number, number, number] : zeroVector;
+        const processedLocation = wasmIntegration.vectorAdd(zeroVector, locArray);
         log.debug('[WASM] Using vectorAdd for light positioning');
         payload.location = { x: processedLocation[0], y: processedLocation[1], z: processedLocation[2] };
       }
 
       if (params.rotation) {
         if (Array.isArray(params.rotation)) {
-          payload.rotation = { pitch: params.rotation[0], yaw: params.rotation[1], roll: params.rotation[2] };
+          const rotArray = params.rotation as [number, number, number];
+          payload.rotation = { pitch: rotArray[0], yaw: rotArray[1], roll: rotArray[2] };
         } else {
           payload.rotation = params.rotation;
         }
@@ -105,13 +107,14 @@ export class LightingTools {
 
   // Create directional light
   async createDirectionalLight(params: {
-    name: string;
+    name?: string;
     intensity?: number;
-    color?: [number, number, number];
-    rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
+    color?: number[];
+    location?: unknown;
+    rotation?: unknown;
     castShadows?: boolean;
-    temperature?: number;
-    useAsAtmosphereSunLight?: boolean;
+    temperature?: unknown;
+    useAsAtmosphereSunLight?: unknown;
     properties?: Record<string, unknown>;
   }) {
     const name = this.normalizeName(params.name);
@@ -197,14 +200,14 @@ export class LightingTools {
 
   // Create point light
   async createPointLight(params: {
-    name: string;
-    location?: [number, number, number];
+    name?: string;
+    location?: unknown;
     intensity?: number;
     radius?: number;
     color?: [number, number, number];
     falloffExponent?: number;
     castShadows?: boolean;
-    rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
+    rotation?: unknown;
   }) {
     const name = this.normalizeName(params.name);
     if (!this.automationBridge) {
@@ -212,18 +215,15 @@ export class LightingTools {
     }
 
     // Validate location array
-    // Validate location array
+    let location: [number, number, number] = [0, 0, 0];
     if (params.location !== undefined) {
       // Ensure location is valid array [x,y,z]
       try {
-        params.location = ensureVector3(params.location, 'location');
+        location = ensureVector3(params.location, 'location');
       } catch (e) {
         throw new Error(`Invalid location: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
-
-    // Default location if not provided
-    const location = params.location || [0, 0, 0];
 
     // Validate numeric parameters
     if (params.intensity !== undefined) {
@@ -295,9 +295,9 @@ export class LightingTools {
 
   // Create spot light
   async createSpotLight(params: {
-    name: string;
-    location: [number, number, number];
-    rotation: [number, number, number] | { pitch: number, yaw: number, roll: number };
+    name?: string;
+    location?: unknown;
+    rotation?: unknown;
     intensity?: number;
     innerCone?: number;
     outerCone?: number;
@@ -420,9 +420,9 @@ export class LightingTools {
 
   // Create rect light
   async createRectLight(params: {
-    name: string;
-    location: [number, number, number];
-    rotation: [number, number, number] | { pitch: number, yaw: number, roll: number };
+    name?: string;
+    location?: unknown;
+    rotation?: unknown;
     width?: number;
     height?: number;
     intensity?: number;
@@ -533,12 +533,12 @@ export class LightingTools {
    */
   async createDynamicLight(params: {
     name?: string;
-    lightType?: 'Point' | 'Spot' | 'Directional' | 'Rect' | string;
-    location?: [number, number, number] | { x: number; y: number; z: number };
-    rotation?: [number, number, number];
+    lightType?: string;
+    location?: unknown;
+    rotation?: unknown;
     intensity?: number;
-    color?: [number, number, number, number] | { r: number; g: number; b: number; a?: number };
-    pulse?: { enabled?: boolean; frequency?: number };
+    color?: unknown;
+    pulse?: unknown;
   }) {
     try {
       const name = typeof params.name === 'string' && params.name.trim().length > 0 ? params.name.trim() : `DynamicLight_${Date.now() % 10000}`;
@@ -549,21 +549,40 @@ export class LightingTools {
       // However, we rely on the specific helper methods below which correctly map to 'spawn_light'
       // with the appropriate class and properties.
 
-      const toArray3 = (loc: any): [number, number, number] => Array.isArray(loc)
-        ? [Number(loc[0]) || 0, Number(loc[1]) || 0, Number(loc[2]) || 0]
-        : [Number(loc?.x) || 0, Number(loc?.y) || 0, Number(loc?.z) || 0];
+      const toArray3 = (loc: unknown): [number, number, number] => {
+        if (Array.isArray(loc)) {
+          return [Number(loc[0]) || 0, Number(loc[1]) || 0, Number(loc[2]) || 0];
+        }
+        const locObj = loc as Record<string, unknown> | null | undefined;
+        return [Number(locObj?.x) || 0, Number(locObj?.y) || 0, Number(locObj?.z) || 0];
+      };
       const locArr = toArray3(location);
       const typeNorm = (lightTypeRaw || 'Point').toLowerCase();
 
+      const extractColorArray = (color: unknown): [number, number, number] | undefined => {
+        if (Array.isArray(color) && color.length >= 3) {
+          return [color[0] as number, color[1] as number, color[2] as number];
+        }
+        if (color && typeof color === 'object') {
+          const c = color as Record<string, unknown>;
+          if (typeof c.r === 'number' && typeof c.g === 'number' && typeof c.b === 'number') {
+            return [c.r, c.g, c.b];
+          }
+        }
+        return undefined;
+      };
+
+      const colorArr = extractColorArray(params.color);
+
       switch (typeNorm) {
         case 'directional': case 'directionallight':
-          return await this.createDirectionalLight({ name, intensity: params.intensity, color: Array.isArray(params.color) ? [params.color[0], params.color[1], params.color[2]] as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined), rotation: params.rotation as any });
+          return await this.createDirectionalLight({ name, intensity: params.intensity, color: colorArr, rotation: params.rotation as [number, number, number] | { pitch: number; yaw: number; roll: number } | undefined });
         case 'spot': case 'spotlight':
-          return await this.createSpotLight({ name, location: locArr, rotation: params.rotation as any, intensity: params.intensity, innerCone: undefined, outerCone: undefined, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined) });
+          return await this.createSpotLight({ name, location: locArr, rotation: (params.rotation ?? [0, 0, 0]) as [number, number, number] | { pitch: number; yaw: number; roll: number }, intensity: params.intensity, innerCone: undefined, outerCone: undefined, color: colorArr });
         case 'rect': case 'rectlight':
-          return await this.createRectLight({ name, location: locArr, rotation: params.rotation as any, width: undefined, height: undefined, intensity: params.intensity, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined) });
+          return await this.createRectLight({ name, location: locArr, rotation: (params.rotation ?? [0, 0, 0]) as [number, number, number] | { pitch: number; yaw: number; roll: number }, width: undefined, height: undefined, intensity: params.intensity, color: colorArr });
         case 'point': default:
-          return await this.createPointLight({ name, location: locArr, intensity: params.intensity, radius: undefined, color: Array.isArray(params.color) ? params.color as any : (params.color ? [params.color.r, params.color.g, params.color.b] : undefined), castShadows: undefined });
+          return await this.createPointLight({ name, location: locArr, intensity: params.intensity, radius: undefined, color: colorArr, castShadows: undefined });
       }
 
     } catch (err) {
@@ -573,8 +592,8 @@ export class LightingTools {
 
   // Create sky light
   async createSkyLight(params: {
-    name: string;
-    sourceType?: 'CapturedScene' | 'SpecifiedCubemap';
+    name?: string;
+    sourceType?: string;
     cubemapPath?: string;
     intensity?: number;
     recapture?: boolean;
@@ -668,10 +687,11 @@ export class LightingTools {
         };
       }
 
+      const resultObj = (response.result ?? {}) as Record<string, unknown>;
       return {
         success: true,
-        message: response.message || `Ensured single SkyLight (removed ${(response.result as any)?.removed || 0})`,
-        ...(response.result || {})
+        message: response.message || `Ensured single SkyLight (removed ${resultObj.removed ?? 0})`,
+        ...resultObj
       };
     } catch (error) {
       return {
@@ -683,8 +703,8 @@ export class LightingTools {
 
   // Setup global illumination
   async setupGlobalIllumination(params: {
-    method: 'Lightmass' | 'LumenGI' | 'ScreenSpace' | 'None';
-    quality?: 'Low' | 'Medium' | 'High' | 'Epic';
+    method?: string;
+    quality?: string;
     indirectLightingIntensity?: number;
     bounces?: number;
   }) {
@@ -720,8 +740,9 @@ export class LightingTools {
     }
 
     if (params.quality) {
-      const qualityMap = { 'Low': 0, 'Medium': 1, 'High': 2, 'Epic': 3 };
-      commands.push(`r.Lumen.Quality ${qualityMap[params.quality]}`);
+      const qualityMap: Record<string, number> = { 'Low': 0, 'Medium': 1, 'High': 2, 'Epic': 3 };
+      const qualityValue = qualityMap[params.quality] ?? 1;
+      commands.push(`r.Lumen.Quality ${qualityValue}`);
     }
 
     if (params.indirectLightingIntensity !== undefined) {
@@ -741,7 +762,7 @@ export class LightingTools {
 
   // Configure shadows
   async configureShadows(params: {
-    shadowQuality?: 'Low' | 'Medium' | 'High' | 'Epic';
+    shadowQuality?: string;
     cascadedShadows?: boolean;
     shadowDistance?: number;
     contactShadows?: boolean;
@@ -766,8 +787,9 @@ export class LightingTools {
     const commands = [];
 
     if (params.shadowQuality) {
-      const qualityMap = { 'Low': 0, 'Medium': 1, 'High': 2, 'Epic': 3 };
-      commands.push(`r.ShadowQuality ${qualityMap[params.shadowQuality]}`);
+      const qualityMap: Record<string, number> = { 'Low': 0, 'Medium': 1, 'High': 2, 'Epic': 3 };
+      const qualityValue = qualityMap[params.shadowQuality] ?? 1;
+      commands.push(`r.ShadowQuality ${qualityValue}`);
     }
 
     if (params.cascadedShadows !== undefined) {
@@ -795,7 +817,7 @@ export class LightingTools {
 
   // Build lighting
   async buildLighting(params: {
-    quality?: 'Preview' | 'Medium' | 'High' | 'Production';
+    quality?: string;
     buildOnlySelected?: boolean;
     buildReflectionCaptures?: boolean;
     levelPath?: string;
@@ -839,7 +861,7 @@ export class LightingTools {
     levelName?: string;
     copyActors?: boolean;
     useTemplate?: boolean;
-  }) {
+  } | undefined) {
     const levelName = params?.levelName || 'LightingEnabledLevel';
 
     if (!this.automationBridge) {
@@ -878,9 +900,9 @@ export class LightingTools {
 
   // Create lightmass importance volume
   async createLightmassVolume(params: {
-    name: string;
-    location: [number, number, number];
-    size: [number, number, number];
+    name?: string;
+    location?: unknown;
+    size?: unknown;
   }) {
     const name = this.normalizeName(params.name);
 
@@ -888,11 +910,26 @@ export class LightingTools {
       throw new Error('Automation Bridge not available. Lightmass volume creation requires plugin support.');
     }
 
+    // Normalize location and size to arrays
+    const toVector3 = (val: unknown, defaultVal: [number, number, number]): [number, number, number] => {
+      if (Array.isArray(val) && val.length >= 3) {
+        return [Number(val[0]) || 0, Number(val[1]) || 0, Number(val[2]) || 0];
+      }
+      if (val && typeof val === 'object') {
+        const obj = val as Record<string, unknown>;
+        return [Number(obj.x) || 0, Number(obj.y) || 0, Number(obj.z) || 0];
+      }
+      return defaultVal;
+    };
+
+    const locArr = toVector3(params.location, [0, 0, 0]);
+    const sizeArr = toVector3(params.size, [1000, 1000, 1000]);
+
     try {
       const response = await this.automationBridge.sendAutomationRequest('create_lightmass_volume', {
         name,
-        location: { x: params.location[0], y: params.location[1], z: params.location[2] },
-        size: { x: params.size[0], y: params.size[1], z: params.size[2] }
+        location: { x: locArr[0], y: locArr[1], z: locArr[2] },
+        size: { x: sizeArr[0], y: sizeArr[1], z: sizeArr[2] }
       }, {
         timeoutMs: 60000
       });
@@ -919,7 +956,7 @@ export class LightingTools {
 
   // Set exposure
   async setExposure(params: {
-    method: 'Manual' | 'Auto';
+    method?: string;
     compensationValue?: number;
     minBrightness?: number;
     maxBrightness?: number;
@@ -966,7 +1003,7 @@ export class LightingTools {
     enabled: boolean;
     intensity?: number;
     radius?: number;
-    quality?: 'Low' | 'Medium' | 'High';
+    quality?: string;
   }) {
     if (this.automationBridge) {
       try {
@@ -995,8 +1032,9 @@ export class LightingTools {
     }
 
     if (params.quality) {
-      const qualityMap = { 'Low': 0, 'Medium': 1, 'High': 2 };
-      commands.push(`r.AmbientOcclusion.Quality ${qualityMap[params.quality]}`);
+      const qualityMap: Record<string, number> = { 'Low': 0, 'Medium': 1, 'High': 2 };
+      const qualityValue = qualityMap[params.quality] ?? 1;
+      commands.push(`r.AmbientOcclusion.Quality ${qualityValue}`);
     }
 
     for (const cmd of commands) {

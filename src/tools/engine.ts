@@ -20,8 +20,9 @@ export class EngineTools {
       const child = spawn(exe, [proj], { detached: true, stdio: 'ignore' });
       child.unref();
       return { success: true, pid: child.pid, message: 'Editor launch requested' };
-    } catch (err: any) {
-      return { success: false, error: String(err?.message || err) };
+    } catch (err: unknown) {
+      const errObj = err as Record<string, unknown> | null;
+      return { success: false, error: String(errObj?.message || err) };
     }
   }
 
@@ -31,13 +32,14 @@ export class EngineTools {
     }
 
     try {
-      const resp: any = await this.automationBridge.sendAutomationRequest('quit_editor', {});
+      const resp = await this.automationBridge.sendAutomationRequest('quit_editor', {}) as Record<string, unknown> | null;
       if (resp && resp.success === false) {
-        return { success: false, error: resp.error || resp.message || 'Quit request failed' };
+        return { success: false, error: (resp.error as string) || (resp.message as string) || 'Quit request failed' };
       }
       return { success: true, message: 'Quit command sent' };
-    } catch (err: any) {
-      return { success: false, error: String(err?.message || err) };
+    } catch (err: unknown) {
+      const errObj = err as Record<string, unknown> | null;
+      return { success: false, error: String(errObj?.message || err) };
     }
   }
 }

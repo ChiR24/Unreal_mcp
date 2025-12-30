@@ -104,7 +104,7 @@ export function toFiniteNumber(raw: unknown): number | undefined {
  * partial specifications and returns an object containing only present
  * components (x/y/z) when any are provided; otherwise returns undefined.
  */
-export function normalizePartialVector(value: any, alternateKeys: string[] = ['x', 'y', 'z']): Record<string, number> | undefined {
+export function normalizePartialVector(value: unknown, alternateKeys: string[] = ['x', 'y', 'z']): Record<string, number> | undefined {
   if (value === undefined || value === null) return undefined;
   const result: Record<string, number> = {};
   const assignIfPresent = (component: 'x' | 'y' | 'z', raw: unknown) => {
@@ -132,14 +132,15 @@ export function normalizePartialVector(value: any, alternateKeys: string[] = ['x
  * Normalize a transform-like input into a minimal object containing
  * location/rotation/scale partial descriptors when present.
  */
-export function normalizeTransformInput(transform: any): Record<string, unknown> | undefined {
+export function normalizeTransformInput(transform: unknown): Record<string, unknown> | undefined {
   if (!transform || typeof transform !== 'object') return undefined;
+  const transformObj = transform as Record<string, unknown>;
   const result: Record<string, unknown> = {};
-  const location = normalizePartialVector(transform.location);
+  const location = normalizePartialVector(transformObj.location);
   if (location) result.location = location;
-  const rotation = normalizePartialVector(transform.rotation, ['pitch', 'yaw', 'roll']);
+  const rotation = normalizePartialVector(transformObj.rotation, ['pitch', 'yaw', 'roll']);
   if (rotation) result.rotation = rotation;
-  const scale = normalizePartialVector(transform.scale);
+  const scale = normalizePartialVector(transformObj.scale);
   if (scale) result.scale = scale;
   return Object.keys(result).length > 0 ? result : undefined;
 }

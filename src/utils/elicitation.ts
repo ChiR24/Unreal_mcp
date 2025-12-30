@@ -19,7 +19,7 @@ export interface ElicitOptions {
   timeoutMs?: number;
   // Handler invoked when elicitation cannot be performed; previously named
   // Handler invoked when elicitation cannot be performed.
-  alternate?: () => Promise<{ ok: boolean; value?: any; error?: string }>;
+  alternate?: () => Promise<{ ok: boolean; value?: unknown; error?: string }>;
 }
 
 export function createElicitationHelper(server: Server, log: Logger) {
@@ -62,16 +62,16 @@ export function createElicitationHelper(server: Server, log: Logger) {
 
       if ('properties' in primitive || 'items' in primitive) return false; // nested schemas unsupported
 
-      if (Array.isArray((primitive as any).enum)) {
-        const enumValues = (primitive as any).enum;
+      if (Array.isArray((primitive as Record<string, unknown>).enum)) {
+        const enumValues = (primitive as Record<string, unknown>).enum as unknown[];
         const allStrings = enumValues.every((value: unknown) => typeof value === 'string');
         if (!allStrings) return false;
-        return !('type' in primitive) || (primitive as any).type === 'string';
+        return !('type' in primitive) || (primitive as Record<string, unknown>).type === 'string';
       }
 
-      if ((primitive as any).type === 'string') return true;
-      if ((primitive as any).type === 'number' || (primitive as any).type === 'integer') return true;
-      if ((primitive as any).type === 'boolean') return true;
+      if ((primitive as Record<string, unknown>).type === 'string') return true;
+      if ((primitive as Record<string, unknown>).type === 'number' || (primitive as Record<string, unknown>).type === 'integer') return true;
+      if ((primitive as Record<string, unknown>).type === 'boolean') return true;
 
       return false;
     });
@@ -83,10 +83,10 @@ export function createElicitationHelper(server: Server, log: Logger) {
       return { ok: false, error: 'elicitation-unsupported' };
     }
 
-    const params = { message, requestedSchema } as any;
+    const params = { message, requestedSchema } as Record<string, unknown>;
 
     try {
-      const elicitMethod = (server as any)?.elicitInput;
+      const elicitMethod = (server as unknown as Record<string, unknown>)?.elicitInput;
       if (typeof elicitMethod !== 'function') {
         supported = false;
         throw new Error('elicitInput-not-available');
@@ -94,7 +94,7 @@ export function createElicitationHelper(server: Server, log: Logger) {
 
       const requestedTimeout = opts.timeoutMs;
       const timeoutMs = Math.max(MIN_TIMEOUT_MS, requestedTimeout ?? defaultTimeoutMs);
-      const res: any = await elicitMethod.call(server, params, { timeout: timeoutMs });
+      const res = await (elicitMethod as (params: Record<string, unknown>, opts: { timeout: number }) => Promise<Record<string, unknown>>).call(server, params, { timeout: timeoutMs });
       const action = res?.action;
       const content = res?.content;
 
@@ -105,9 +105,10 @@ export function createElicitationHelper(server: Server, log: Logger) {
       }
       if (opts.alternate) return opts.alternate();
       return { ok: false, error: 'unexpected-response' };
-    } catch (e: any) {
-      const msg = String(e?.message || e);
-      const code = (e as any)?.code ?? (e as any)?.error?.code;
+    } catch (e: unknown) {
+      const errObj = e as Record<string, unknown> | null;
+      const msg = String(errObj?.message || e);
+      const code = errObj?.code ?? (errObj?.error as Record<string, unknown> | null)?.code;
       // If client doesn't support it, don’t try again this session
       if (
         msg.includes('Method not found') ||

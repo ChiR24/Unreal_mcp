@@ -20,7 +20,7 @@ export class UITools {
   // Create widget blueprint
   async createWidget(params: {
     name: string;
-    type?: 'HUD' | 'Menu' | 'Inventory' | 'Dialog' | 'Custom';
+    type?: string;  // 'HUD' | 'Menu' | 'Inventory' | 'Dialog' | 'Custom' - validated by C++
     savePath?: string;
   }) {
     const path = params.savePath || '/Game/UI/Widgets';
@@ -64,17 +64,18 @@ export class UITools {
         asset_class: 'unreal.WidgetBlueprint'
       } as Record<string, unknown>;
 
-      const resp = await this.bridge.executeEditorFunction('CREATE_ASSET', payload as any);
-      const result = resp && typeof resp === 'object' ? (resp.result ?? resp) : resp;
+      const resp = await this.bridge.executeEditorFunction('CREATE_ASSET', payload);
+      const respObj = resp as Record<string, unknown>;
+      const result = resp && typeof resp === 'object' ? ((respObj.result as Record<string, unknown>) ?? respObj) : respObj;
 
       // Interpret common success shapes returned by plugin or Python template
       if (result && (result.success === true || result.created === true || Boolean(result.path))) {
-        return { success: true, message: result.message ?? `Widget created at ${result.path ?? `${path}/${params.name}`}` };
+        return { success: true, message: (result.message as string) ?? `Widget created at ${(result.path as string) ?? `${path}/${params.name}`}` };
       }
 
       // If plugin/template returned a structured failure, surface it
       if (result && result.success === false) {
-        return { success: false, error: result.error ?? result.message ?? 'Failed to create widget blueprint', details: result };
+        return { success: false, error: (result.error as string) ?? (result.message as string) ?? 'Failed to create widget blueprint', details: result };
       }
 
       // Fallback: if no structured response, return generic failure
@@ -92,7 +93,7 @@ export class UITools {
   // Add widget component
   async addWidgetComponent(_params: {
     widgetName: string;
-    componentType: 'Button' | 'Text' | 'Image' | 'ProgressBar' | 'Slider' | 'CheckBox' | 'ComboBox' | 'TextBox' | 'ScrollBox' | 'Canvas' | 'VerticalBox' | 'HorizontalBox' | 'Grid' | 'Overlay';
+    componentType: string; // 'Button' | 'Text' | 'Image' | etc. - validated by C++
     componentName: string;
     slot?: {
       position?: [number, number];
@@ -174,7 +175,7 @@ export class UITools {
   // Create HUD (requires C++ plugin)
   async createHUD(_params: {
     name: string;
-    elements?: Array<any>;
+    elements?: Array<Record<string, unknown>>;
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation bridge required for creating HUDs');
@@ -191,8 +192,9 @@ export class UITools {
         widgetPath: widgetPath
       });
 
+      const resultObj = (response.result ?? {}) as Record<string, unknown>;
       return response.success
-        ? { success: true, message: response.message || 'HUD created', widgetName: (response.result as any)?.widgetName, ...(response.result || {}) }
+        ? { success: true, message: response.message || 'HUD created', widgetName: resultObj.widgetName, ...resultObj }
         : { success: false, error: response.error || response.message || 'Failed to create HUD' };
     } catch (error) {
       return { success: false, error: `Failed to create HUD: ${error instanceof Error ? error.message : String(error)}` };
@@ -238,7 +240,7 @@ export class UITools {
     const playerIndex = params.playerIndex ?? 0;
 
     try {
-      const resp = await this.bridge.executeEditorFunction('ADD_WIDGET_TO_VIEWPORT', { widget_path: params.widgetClass, z_order: zOrder, player_index: playerIndex } as any);
+      const resp = await this.bridge.executeEditorFunction('ADD_WIDGET_TO_VIEWPORT', { widget_path: params.widgetClass, z_order: zOrder, player_index: playerIndex });
       const interpreted = interpretStandardResult(resp, {
         successMessage: `Widget added to viewport with z-order ${zOrder}`,
         failureMessage: 'Failed to add widget to viewport'

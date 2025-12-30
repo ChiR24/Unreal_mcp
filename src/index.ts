@@ -123,8 +123,8 @@ export function createServer() {
 
   // Initialize response validation with schemas
   log.debug('Initializing response validation...');
-  const toolDefs = consolidatedToolDefinitions;
-  toolDefs.forEach((tool: any) => {
+  const toolDefs = consolidatedToolDefinitions as Array<{ name: string; outputSchema?: Record<string, unknown> }>;
+  toolDefs.forEach((tool) => {
     if (tool.outputSchema) {
       responseValidator.registerSchema(tool.name, tool.outputSchema);
     }
@@ -162,14 +162,15 @@ export const configSchema = z.object({
 });
 
 // Default export for runtime configuration support.
-export default function createServerDefault({ config }: { config?: any } = {}) {
+export default function createServerDefault({ config }: { config?: Record<string, unknown> } = {}) {
   try {
     if (config) {
       if (typeof config.logLevel === 'string') process.env.LOG_LEVEL = config.logLevel;
-      if (typeof config.projectPath === 'string' && config.projectPath.trim()) process.env.UE_PROJECT_PATH = config.projectPath;
+      if (typeof config.projectPath === 'string' && (config.projectPath as string).trim()) process.env.UE_PROJECT_PATH = config.projectPath as string;
     }
   } catch (e) {
-    log.debug('[createServerDefault] Failed to apply config to environment:', (e as any)?.message || e);
+    const errObj = e as Record<string, unknown> | null;
+    log.debug('[createServerDefault] Failed to apply config to environment:', errObj?.message ? String(errObj.message) : String(e));
   }
 
   const { server } = createServer();
@@ -189,14 +190,16 @@ export async function startStdioServer() {
     await new Promise<void>((resolve) => {
       try {
         metricsServer.close((error?: Error) => {
-          const errorCode = (error as any)?.code;
+          const errorObj = error as Record<string, unknown> | undefined;
+          const errorCode = errorObj?.code;
           if (error && errorCode !== 'ERR_SERVER_NOT_RUNNING') {
             log.warn('Failed to close metrics server cleanly', error);
           }
           resolve();
         });
       } catch (error) {
-        const errorCode = (error as any)?.code;
+        const errorObj = error as Record<string, unknown> | null;
+        const errorCode = errorObj?.code;
         if (errorCode !== 'ERR_SERVER_NOT_RUNNING') {
           log.warn('Failed to close metrics server cleanly', error);
         }
@@ -237,8 +240,9 @@ export async function startStdioServer() {
     }
 
     try {
-      if (typeof (server as any).close === 'function') {
-        await (server as any).close();
+      const serverObj = server as unknown as Record<string, unknown>;
+      if (typeof serverObj.close === 'function') {
+        await (serverObj.close as () => Promise<void>)();
       }
     } catch (error) {
       log.warn('Failed to close MCP server transport cleanly', error);
@@ -281,13 +285,14 @@ export async function startStdioServer() {
 
 
   const originalWrite = process.stdout.write;
-  process.stdout.write = function (...args: any[]) {
+   
+  process.stdout.write = function (...args: [string | Uint8Array, ...unknown[]]) {
     const message = args[0];
     if (typeof message === 'string' && message.includes('jsonrpc')) {
       log.debug(`Sending to client: ${message.substring(0, 200)}...`);
     }
-    return originalWrite.apply(process.stdout, args as any);
-  } as any;
+    return originalWrite.apply(process.stdout, args as Parameters<typeof originalWrite>);
+  } as typeof process.stdout.write;
 
   await server.connect(transport);
   log.info('Unreal Engine MCP Server started on stdio');

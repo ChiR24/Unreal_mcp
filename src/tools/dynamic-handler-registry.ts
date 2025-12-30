@@ -3,7 +3,7 @@ import { Logger } from '../utils/logger.js';
 
 const log = new Logger('DynamicHandlerRegistry');
 
-type ToolHandler = (args: any, tools: ITools) => Promise<any>;
+type ToolHandler = (args: Record<string, unknown>, tools: ITools) => Promise<unknown>;
 
 export class DynamicHandlerRegistry {
   private handlers = new Map<string, ToolHandler>();

@@ -146,7 +146,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       const bridge = this.getAutomationBridge();
       if (bridge && typeof bridge.sendAutomationRequest === 'function') {
         try {
-          const response: any = await bridge.sendAutomationRequest(
+          const response = await bridge.sendAutomationRequest(
             'manage_asset',
             { assetPath: normalizedPath, subAction: 'save_asset' }, // 'save_asset' isn't explicitly in HandleAssetAction but usually falls back or Editor handles it?
             // Wait, HandleAssetAction does NOT have 'save'.
@@ -178,12 +178,14 @@ export class AssetTools extends BaseTool implements IAssetTools {
 
       // Fallback to executeEditorFunction
       const res = await this.bridge.executeEditorFunction('SAVE_ASSET', { path: normalizedPath });
-      if (res && typeof res === 'object' && (res.success === true || (res.result && res.result.success === true))) {
-        const saved = Boolean(res.saved ?? (res.result && res.result.saved));
-        return { success: true, saved, ...res, ...(res.result || {}) };
+      const resObj = res as Record<string, unknown>;
+      const resultObj = resObj?.result as Record<string, unknown> | undefined;
+      if (res && typeof res === 'object' && (resObj.success === true || (resultObj && resultObj.success === true))) {
+        const saved = Boolean(resObj.saved ?? resultObj?.saved);
+        return { success: true, saved, ...resObj, ...(resultObj || {}) };
       }
 
-      return { success: false, error: (res as any)?.error ?? 'Failed to save asset' };
+      return { success: false, error: resObj?.error as string ?? 'Failed to save asset' };
     } catch (err) {
       return { success: false, error: `Failed to save asset: ${err} ` };
     }
@@ -244,19 +246,19 @@ export class AssetTools extends BaseTool implements IAssetTools {
 
     try {
       // Offload the heavy graph traversal to C++
-      const response: any = await this.sendRequest<AssetResponse>('manage_asset', {
+      const response = await this.sendRequest<AssetResponse>('manage_asset', {
         assetPath,
         maxDepth,
         subAction: 'get_asset_graph'
-      }, 'manage_asset', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS });
+      }, 'manage_asset', { timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS }) as Record<string, unknown>;
 
       if (!response.success || !response.graph) {
-        return { success: false, error: response.error || 'Failed to retrieve asset graph from engine' };
+        return { success: false, error: (response.error as string) || 'Failed to retrieve asset graph from engine' };
       }
 
       const graph: Record<string, string[]> = {};
-      // Convert the JSON object (Record<string, any[]>) to string[]
-      for (const [key, value] of Object.entries(response.graph)) {
+      // Convert the JSON object (Record<string, unknown[]>) to string[]
+      for (const [key, value] of Object.entries(response.graph as Record<string, unknown>)) {
         if (Array.isArray(value)) {
           graph[key] = value.map(v => String(v));
         }
@@ -282,17 +284,18 @@ export class AssetTools extends BaseTool implements IAssetTools {
 
       const topologicalOrder = await wasmIntegration.topologicalSort(graph);
 
-      const dependenciesList = Array.isArray((base as any).dependencies)
-        ? (base as any).dependencies as any[]
+      const baseRecord = base as Record<string, unknown>;
+      const dependenciesList = Array.isArray(baseRecord.dependencies)
+        ? baseRecord.dependencies as unknown[]
         : [];
 
       const totalDependencyCount =
-        (base as any).totalDependencyCount ??
-        (base as any).total_dependency_count ??
-        dependenciesList.length;
+        (baseRecord.totalDependencyCount ??
+        baseRecord.total_dependency_count ??
+        dependenciesList.length) as number;
 
       const analysis = {
-        asset: (base as any).asset ?? assetPath,
+        asset: (baseRecord.asset ?? assetPath) as string,
         dependencies: dependenciesList,
         totalDependencyCount,
         requestedMaxDepth: maxDepth,
@@ -301,7 +304,10 @@ export class AssetTools extends BaseTool implements IAssetTools {
         topologicalOrder,
         stats: {
           nodeCount: dependenciesList.length,
-          leafCount: dependenciesList.filter((d: any) => !d.dependencies || d.dependencies.length === 0).length
+          leafCount: dependenciesList.filter((d: unknown) => {
+            const dep = d as Record<string, unknown>;
+            return !dep.dependencies || (Array.isArray(dep.dependencies) && dep.dependencies.length === 0);
+          }).length
         }
       };
 
@@ -361,16 +367,16 @@ export class AssetTools extends BaseTool implements IAssetTools {
 
     try {
       const automation = this.getAutomationBridge();
-      const response: any = await automation.sendAutomationRequest('manage_asset', {
+      const response = await automation.sendAutomationRequest('manage_asset', {
         assetPaths: [assetPath],
         numLODs: lodCount,
         subAction: 'generate_lods'
-      }, { timeoutMs: EXTENDED_ASSET_OP_TIMEOUT_MS });
+      }, { timeoutMs: EXTENDED_ASSET_OP_TIMEOUT_MS }) as Record<string, unknown>;
 
       if (!response || response.success === false) {
         return {
           success: false,
-          error: response?.error || response?.message || 'Failed to generate LODs',
+          error: ((response?.error || response?.message || 'Failed to generate LODs') as string),
           details: response?.result
         };
       }

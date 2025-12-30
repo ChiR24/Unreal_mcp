@@ -72,8 +72,8 @@ export class ResourceHandler {
         const uptimeMs = Date.now() - this.healthMonitor.metrics.uptime;
         const automationStatus = this.automationBridge.getStatus();
 
-        let versionInfo: any = {};
-        let featureFlags: any = {};
+        let versionInfo: Record<string, unknown> = {};
+        let featureFlags: Record<string, unknown> = {};
         if (this.bridge.isConnected) {
           try { versionInfo = await this.bridge.getEngineVersion(); } catch { }
           try { featureFlags = await this.bridge.getFeatureFlags(); } catch { }

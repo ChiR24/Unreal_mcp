@@ -1,14 +1,26 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
+import type { HandlerArgs, BlueprintArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
-export async function handleBlueprintTools(action: string, args: any, tools: ITools) {
+/** Response from blueprint operations */
+interface BlueprintResponse {
+  success?: boolean;
+  error?: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+export async function handleBlueprintTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+  const argsTyped = args as BlueprintArgs;
+  const argsRecord = args as Record<string, unknown>;
+  
   switch (action) {
     case 'create': {
       // Support 'path' or 'blueprintPath' argument by splitting it into name and savePath if not provided
-      let name = args.name;
-      let savePath = args.savePath;
-      const pathArg = args.path || args.blueprintPath;
+      let name = argsTyped.name;
+      let savePath = argsTyped.savePath;
+      const pathArg = (argsRecord.path as string | undefined) || argsTyped.blueprintPath;
 
       if (pathArg) {
         const parts = pathArg.split('/');
@@ -28,72 +40,72 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
       if (!savePath) savePath = '/Game';
 
       const res = await tools.blueprintTools.createBlueprint({
-        name: name,
-        blueprintType: args.blueprintType,
+        name: name ?? 'NewBlueprint',
+        blueprintType: argsTyped.blueprintType,
         savePath: savePath,
-        parentClass: args.parentClass,
-        properties: args.properties,
-        timeoutMs: args.timeoutMs,
-        waitForCompletion: args.waitForCompletion,
-        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
+        parentClass: argsRecord.parentClass as string | undefined,
+        properties: argsTyped.properties,
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'ensure_exists': {
-      const res = await tools.blueprintTools.waitForBlueprint(args.name || args.blueprintPath || args.path, args.timeoutMs);
-      return cleanObject(res);
+      const res = await tools.blueprintTools.waitForBlueprint(argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '', argsRecord.timeoutMs as number | undefined);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'add_variable': {
       const res = await tools.blueprintTools.addVariable({
-        blueprintName: args.name || args.blueprintPath || args.path,
-        variableName: args.variableName,
-        variableType: args.variableType,
-        defaultValue: args.defaultValue,
-        category: args.category,
-        isReplicated: args.isReplicated,
-        isPublic: args.isPublic,
-        variablePinType: args.variablePinType,
-        timeoutMs: args.timeoutMs,
-        waitForCompletion: args.waitForCompletion,
-        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
+        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        variableName: argsTyped.variableName ?? '',
+        variableType: (argsRecord.variableType as string) ?? 'Boolean',
+        defaultValue: argsRecord.defaultValue,
+        category: argsRecord.category as string | undefined,
+        isReplicated: argsRecord.isReplicated as boolean | undefined,
+        isPublic: argsRecord.isPublic as boolean | undefined,
+        variablePinType: (typeof argsRecord.variablePinType === 'object' && argsRecord.variablePinType !== null ? argsRecord.variablePinType : undefined) as Record<string, unknown> | undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'set_variable_metadata': {
       const res = await tools.blueprintTools.setVariableMetadata({
-        blueprintName: args.name || args.blueprintPath || args.path,
-        variableName: args.variableName,
-        metadata: args.metadata,
-        timeoutMs: args.timeoutMs
+        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        variableName: argsTyped.variableName ?? '',
+        metadata: argsTyped.metadata ?? {},
+        timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'remove_variable': {
       const res = await tools.blueprintTools.removeVariable({
-        blueprintName: args.name || args.blueprintPath || args.path,
-        variableName: args.variableName,
-        timeoutMs: args.timeoutMs,
-        waitForCompletion: args.waitForCompletion,
-        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
+        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        variableName: argsTyped.variableName ?? '',
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'rename_variable': {
       const res = await tools.blueprintTools.renameVariable({
-        blueprintName: args.name || args.blueprintPath || args.path,
-        oldName: args.oldName,
-        newName: args.newName,
-        timeoutMs: args.timeoutMs,
-        waitForCompletion: args.waitForCompletion,
-        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
+        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        oldName: (argsRecord.oldName as string) ?? '',
+        newName: (argsRecord.newName as string) ?? '',
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'set_metadata': {
-      const assetPathRaw = typeof args.assetPath === 'string' ? args.assetPath.trim() : '';
-      const blueprintPathRaw = typeof args.blueprintPath === 'string' ? args.blueprintPath.trim() : '';
-      const nameRaw = typeof args.name === 'string' ? args.name.trim() : '';
-      const savePathRaw = typeof args.savePath === 'string' ? args.savePath.trim() : '';
+      const assetPathRaw = typeof (argsRecord.assetPath) === 'string' ? (argsRecord.assetPath as string).trim() : '';
+      const blueprintPathRaw = typeof argsTyped.blueprintPath === 'string' ? argsTyped.blueprintPath.trim() : '';
+      const nameRaw = typeof argsTyped.name === 'string' ? argsTyped.name.trim() : '';
+      const savePathRaw = typeof argsTyped.savePath === 'string' ? argsTyped.savePath.trim() : '';
 
       let assetPath = assetPathRaw;
       if (!assetPath) {
@@ -108,23 +120,23 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
         throw new Error('Invalid parameters: assetPath or blueprintPath or name+savePath required for set_metadata');
       }
 
-      const metadata = (args.metadata && typeof args.metadata === 'object') ? args.metadata : {};
+      const metadata = (argsTyped.metadata && typeof argsTyped.metadata === 'object') ? argsTyped.metadata : {};
       const res = await executeAutomationRequest(tools, 'set_metadata', { assetPath, metadata });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'add_event': {
-      const blueprintName = args.blueprintPath || args.path || args.name;
-      const usedNameForBlueprint = !args.blueprintPath && !args.path && args.name;
+      const blueprintName = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name || '';
+      const usedNameForBlueprint = !argsTyped.blueprintPath && !(argsRecord.path as string | undefined) && argsTyped.name;
 
-      const res: any = await tools.blueprintTools.addEvent({
+      const res = await tools.blueprintTools.addEvent({
         blueprintName: blueprintName,
-        eventType: args.eventType,
-        customEventName: args.customEventName || (!usedNameForBlueprint ? args.name : undefined),
-        parameters: args.parameters,
-        timeoutMs: args.timeoutMs,
-        waitForCompletion: args.waitForCompletion,
-        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
-      });
+        eventType: argsTyped.eventType ?? 'Custom',
+        customEventName: (argsRecord.customEventName as string | undefined) || (!usedNameForBlueprint ? argsTyped.name : undefined),
+        parameters: argsRecord.parameters as { name: string; type: string }[] | undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
+      }) as BlueprintResponse;
 
       if (res && res.success === false) {
         const msg = (res.message || '').toLowerCase();
@@ -137,88 +149,91 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
           });
         }
       }
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'remove_event': {
       const res = await tools.blueprintTools.removeEvent({
-        blueprintName: args.name || args.blueprintPath || args.path,
-        eventName: args.eventName,
-        customEventName: args.customEventName,
-        timeoutMs: args.timeoutMs,
-        waitForCompletion: args.waitForCompletion,
-        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
+        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        eventName: (argsRecord.eventName as string) ?? '',
+        customEventName: argsRecord.customEventName as string | undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'add_function': {
       // Prioritize explicit path for blueprint, allowing 'name' to be function name
-      const blueprintName = args.blueprintPath || args.path || args.name;
-      const usedNameForBlueprint = !args.blueprintPath && !args.path && args.name;
+      const blueprintName = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name || '';
+      const usedNameForBlueprint = !argsTyped.blueprintPath && !(argsRecord.path as string | undefined) && argsTyped.name;
 
       const res = await tools.blueprintTools.addFunction({
         blueprintName: blueprintName,
-        functionName: args.functionName || args.memberName || (!usedNameForBlueprint ? args.name : undefined),
-        inputs: args.inputs,
-        outputs: args.outputs,
-        isPublic: args.isPublic,
-        category: args.category,
-        timeoutMs: args.timeoutMs,
-        waitForCompletion: args.waitForCompletion,
-        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
+        functionName: (argsRecord.functionName as string | undefined) || argsTyped.memberName || (!usedNameForBlueprint ? argsTyped.name : undefined) || 'NewFunction',
+        inputs: argsRecord.inputs as { name: string; type: string }[] | undefined,
+        outputs: argsRecord.outputs as { name: string; type: string }[] | undefined,
+        isPublic: argsRecord.isPublic as boolean | undefined,
+        category: argsRecord.category as string | undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'add_component': {
       const res = await tools.blueprintTools.addComponent({
-        blueprintName: args.name || args.blueprintPath || args.path,
-        componentType: args.componentType || args.componentClass,
-        componentName: args.componentName,
-        attachTo: args.attachTo,
-        transform: args.transform,
-        properties: args.properties,
-        compile: args.applyAndSave,
-        save: args.applyAndSave,
-        timeoutMs: args.timeoutMs,
-        waitForCompletion: args.waitForCompletion,
-        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
+        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        componentType: argsTyped.componentType || (argsRecord.componentClass as string) || 'SceneComponent',
+        componentName: argsTyped.componentName ?? '',
+        attachTo: argsTyped.attachTo,
+        transform: argsRecord.transform as Record<string, unknown> | undefined,
+        properties: argsTyped.properties,
+        compile: argsRecord.applyAndSave as boolean | undefined,
+        save: argsRecord.applyAndSave as boolean | undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'modify_scs': {
       const res = await tools.blueprintTools.modifyConstructionScript({
-        blueprintPath: args.name || args.blueprintPath || args.path,
-        operations: args.operations,
-        compile: args.applyAndSave,
-        save: args.applyAndSave,
-        timeoutMs: args.timeoutMs,
-        waitForCompletion: args.waitForCompletion,
-        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
+        blueprintPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        operations: (argsRecord.operations as Array<Record<string, unknown>>) ?? [],
+        compile: argsRecord.applyAndSave as boolean | undefined,
+        save: argsRecord.applyAndSave as boolean | undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'set_scs_transform': {
+      const loc = argsRecord.location as { x?: number; y?: number; z?: number } | undefined;
+      const rot = argsRecord.rotation as { pitch?: number; yaw?: number; roll?: number } | undefined;
+      const scl = argsRecord.scale as { x?: number; y?: number; z?: number } | undefined;
       const res = await tools.blueprintTools.setSCSComponentTransform({
-        blueprintPath: args.name || args.blueprintPath || args.path,
-        componentName: args.componentName,
-        location: args.location,
-        rotation: args.rotation,
-        scale: args.scale,
-        timeoutMs: args.timeoutMs
+        blueprintPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        componentName: argsTyped.componentName ?? '',
+        location: loc ? [loc.x ?? 0, loc.y ?? 0, loc.z ?? 0] : undefined,
+        rotation: rot ? [rot.pitch ?? 0, rot.yaw ?? 0, rot.roll ?? 0] : undefined,
+        scale: scl ? [scl.x ?? 1, scl.y ?? 1, scl.z ?? 1] : undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'add_construction_script': {
       const res = await tools.blueprintTools.addConstructionScript({
-        blueprintName: args.name || args.blueprintPath || args.path,
-        scriptName: args.scriptName,
-        timeoutMs: args.timeoutMs,
-        waitForCompletion: args.waitForCompletion,
-        waitForCompletionTimeoutMs: args.waitForCompletionTimeoutMs
+        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        scriptName: (argsRecord.scriptName as string) ?? '',
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'add_node': {
-      if ((args.nodeType === 'CallFunction' || args.nodeType === 'K2Node_CallFunction') && !args.functionName && !args.memberName) {
+      if ((argsTyped.nodeType === 'CallFunction' || argsTyped.nodeType === 'K2Node_CallFunction') && !(argsRecord.functionName as string | undefined) && !argsTyped.memberName) {
         throw new Error('CallFunction node requires functionName parameter');
       }
 
@@ -238,105 +253,105 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
         'ForEach': 'K2Node_ForEachElementInEnum' // Note: ForEachLoop is a macro, this is different
       };
 
-      const resolvedNodeType = nodeAliases[args.nodeType] || args.nodeType;
+      const resolvedNodeType = (argsTyped.nodeType && nodeAliases[argsTyped.nodeType]) || argsTyped.nodeType || 'K2Node_CallFunction';
 
       // Validation for Event nodes
-      if ((resolvedNodeType === 'K2Node_Event' || resolvedNodeType === 'K2Node_CustomEvent') && !args.eventName && !args.customEventName && !args.name) {
+      if ((resolvedNodeType === 'K2Node_Event' || resolvedNodeType === 'K2Node_CustomEvent') && !(argsRecord.eventName as string | undefined) && !(argsRecord.customEventName as string | undefined) && !argsTyped.name) {
         // Allow 'name' as fallback for customEventName/eventName
-        if (!args.eventName) args.eventName = args.name;
+        if (!(argsRecord.eventName as string | undefined)) argsRecord.eventName = argsTyped.name;
 
-        if (!args.eventName) {
+        if (!(argsRecord.eventName as string | undefined)) {
           throw new Error(`${resolvedNodeType} requires eventName (or customEventName) parameter`);
         }
       }
 
       const res = await tools.blueprintTools.addNode({
-        blueprintName: args.name || args.blueprintPath || args.path,
+        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
         nodeType: resolvedNodeType,
-        graphName: args.graphName,
-        functionName: args.functionName,
-        variableName: args.variableName,
-        nodeName: args.nodeName,
-        eventName: args.eventName || args.customEventName,
-        memberClass: args.memberClass,
-        posX: args.posX,
-        posY: args.posY,
-        timeoutMs: args.timeoutMs
+        graphName: argsTyped.graphName,
+        functionName: argsRecord.functionName as string | undefined,
+        variableName: argsTyped.variableName,
+        nodeName: argsRecord.nodeName as string | undefined,
+        eventName: (argsRecord.eventName as string | undefined) || (argsRecord.customEventName as string | undefined),
+        memberClass: argsRecord.memberClass as string | undefined,
+        posX: argsRecord.posX as number | undefined,
+        posY: argsRecord.posY as number | undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'add_scs_component': {
       const res = await tools.blueprintTools.addSCSComponent({
-        blueprintPath: args.name || args.blueprintPath || args.path,
-        componentClass: args.componentClass || args.componentType,
-        componentName: args.componentName,
-        meshPath: args.meshPath,
-        materialPath: args.materialPath,
-        timeoutMs: args.timeoutMs
+        blueprintPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        componentClass: (argsRecord.componentClass as string | undefined) || argsTyped.componentType || 'SceneComponent',
+        componentName: argsTyped.componentName ?? '',
+        meshPath: argsRecord.meshPath as string | undefined,
+        materialPath: argsRecord.materialPath as string | undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'reparent_scs_component': {
       const res = await tools.blueprintTools.reparentSCSComponent({
-        blueprintPath: args.name || args.blueprintPath || args.path,
-        componentName: args.componentName,
-        newParent: args.newParent,
-        timeoutMs: args.timeoutMs
+        blueprintPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        componentName: argsTyped.componentName ?? '',
+        newParent: (argsRecord.newParent as string) ?? '',
+        timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'set_scs_property': {
       const res = await tools.blueprintTools.setSCSComponentProperty({
-        blueprintPath: args.name || args.blueprintPath || args.path,
-        componentName: args.componentName,
-        propertyName: args.propertyName,
-        propertyValue: args.propertyValue,
-        timeoutMs: args.timeoutMs
+        blueprintPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        componentName: argsTyped.componentName ?? '',
+        propertyName: argsTyped.propertyName ?? '',
+        propertyValue: argsRecord.propertyValue,
+        timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'remove_scs_component': {
       const res = await tools.blueprintTools.removeSCSComponent({
-        blueprintPath: args.name || args.blueprintPath || args.path,
-        componentName: args.componentName,
-        timeoutMs: args.timeoutMs
+        blueprintPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        componentName: argsTyped.componentName ?? '',
+        timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'get_scs': {
       const res = await tools.blueprintTools.getBlueprintSCS({
-        blueprintPath: args.name || args.blueprintPath || args.path,
-        timeoutMs: args.timeoutMs
+        blueprintPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'set_default': {
       const res = await tools.blueprintTools.setBlueprintDefault({
-        blueprintName: args.name || args.blueprintPath || args.path,
-        propertyName: args.propertyName,
-        value: args.value
+        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        propertyName: argsTyped.propertyName ?? '',
+        value: argsTyped.value
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'compile': {
       const res = await tools.blueprintTools.compileBlueprint({
-        blueprintName: args.name || args.blueprintPath || args.path,
-        saveAfterCompile: args.saveAfterCompile
+        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        saveAfterCompile: argsRecord.saveAfterCompile as boolean | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'probe_handle': {
       const res = await tools.blueprintTools.probeSubobjectDataHandle({
-        componentClass: args.componentClass
+        componentClass: (argsRecord.componentClass as string) ?? ''
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'get': {
       const res = await tools.blueprintTools.getBlueprintInfo({
-        blueprintPath: args.name || args.blueprintPath || args.path,
-        timeoutMs: args.timeoutMs
+        blueprintPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'connect_pins':
     case 'break_pin_links':
@@ -349,33 +364,36 @@ export async function handleBlueprintTools(action: string, args: any, tools: ITo
       const processedArgs = {
         ...args,
         subAction: action,
-        blueprintPath: args.blueprintPath || args.path || args.name
+        blueprintPath: argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name
       };
       const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs, 'Automation bridge not available for blueprint graph operations');
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
     default: {
       // Translate applyAndSave to compile/save flags for modify_scs action
-      const processedArgs = { ...args };
-      if (args.action === 'modify_scs' && args.applyAndSave === true) {
+      const processedArgs = { ...args } as Record<string, unknown>;
+      if ((argsRecord.action as string | undefined) === 'modify_scs' && argsRecord.applyAndSave === true) {
         processedArgs.compile = true;
         processedArgs.save = true;
       }
       const res = await executeAutomationRequest(tools, 'manage_blueprint', processedArgs, 'Automation bridge not available for blueprint operations');
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
     }
   }
 }
 
-export async function handleBlueprintGet(args: any, tools: ITools) {
+export async function handleBlueprintGet(args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+  const argsTyped = args as BlueprintArgs;
+  const argsRecord = args as Record<string, unknown>;
+  
   const res = await executeAutomationRequest(tools, 'blueprint_get', args, 'Automation bridge not available for blueprint operations') as { success?: boolean; message?: string } | null;
   if (res && res.success) {
-    const blueprintPath = args.blueprintPath || args.path || args.name;
+    const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name;
     return cleanObject({
       ...res,
       blueprintPath: typeof blueprintPath === 'string' ? blueprintPath : undefined,
       message: res.message || 'Blueprint fetched'
-    });
+    }) as Record<string, unknown>;
   }
-  return cleanObject(res);
+  return cleanObject(res) as Record<string, unknown>;
 }

@@ -1,11 +1,12 @@
 import { UnrealBridge } from '../unreal-bridge.js';
+import { AutomationBridge } from '../automation/index.js';
 import { coerceString } from '../utils/result-helpers.js';
 
 export class LevelResources {
-  private automationBridge: any;
+  private automationBridge: AutomationBridge | undefined;
 
   constructor(bridge: UnrealBridge) {
-    this.automationBridge = (bridge as any).automationBridge;
+    this.automationBridge = (bridge as unknown as { automationBridge?: AutomationBridge }).automationBridge;
   }
 
   async getCurrentLevel() {
@@ -14,12 +15,13 @@ export class LevelResources {
         return { success: false, error: 'Automation bridge is not available' };
       }
 
-      const resp: any = await this.automationBridge.sendAutomationRequest('get_level', { action: 'get_current' });
-      if (resp && resp.success !== false && resp.result) {
+      const resp = await this.automationBridge.sendAutomationRequest('get_level', { action: 'get_current' }) as Record<string, unknown>;
+      const resultObj = resp?.result as Record<string, unknown> | null;
+      if (resp && resp.success !== false && resultObj) {
         return {
           success: true,
-          name: coerceString(resp.result.name) ?? 'None',
-          path: coerceString(resp.result.path) ?? 'None'
+          name: coerceString(resultObj.name) ?? 'None',
+          path: coerceString(resultObj.path) ?? 'None'
         };
       }
 
@@ -35,11 +37,12 @@ export class LevelResources {
         return { success: false, error: 'Automation bridge is not available' };
       }
 
-      const resp: any = await this.automationBridge.sendAutomationRequest('get_level', { action: 'get_name' });
-      if (resp && resp.success !== false && resp.result) {
+      const resp = await this.automationBridge.sendAutomationRequest('get_level', { action: 'get_name' }) as Record<string, unknown>;
+      const resultObj = resp?.result as Record<string, unknown> | null;
+      if (resp && resp.success !== false && resultObj) {
         return {
           success: true,
-          path: coerceString(resp.result.path) ?? ''
+          path: coerceString(resultObj.path) ?? ''
         };
       }
 
@@ -55,7 +58,7 @@ export class LevelResources {
         return { success: false, error: 'Automation bridge is not available' };
       }
 
-      const resp: any = await this.automationBridge.sendAutomationRequest('save_level', {});
+      const resp = await this.automationBridge.sendAutomationRequest('save_level', {}) as Record<string, unknown>;
       if (resp && resp.success !== false) {
         return { success: true, message: 'Level saved' };
       }

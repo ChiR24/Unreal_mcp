@@ -185,8 +185,8 @@ export class AudioTools {
     name: string;
     innerRadius?: number;
     falloffDistance?: number;
-    attenuationShape?: 'Sphere' | 'Capsule' | 'Box' | 'Cone';
-    falloffMode?: 'Linear' | 'Logarithmic' | 'Inverse' | 'LogReverse' | 'Natural';
+    attenuationShape?: string;  // 'Sphere' | 'Capsule' | 'Box' | 'Cone' - validated by C++
+    falloffMode?: string;  // 'Linear' | 'Logarithmic' | 'Inverse' | 'LogReverse' | 'Natural' - validated by C++
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Setting sound attenuation requires plugin support.');
@@ -394,9 +394,9 @@ export class AudioTools {
 
   // Audio analysis (requires C++ plugin)
   async enableAudioAnalysis(_params: {
-    enabled: boolean;
+    enabled?: boolean;
     fftSize?: number;
-    outputType?: 'Magnitude' | 'Decibel' | 'Normalized';
+    outputType?: string;  // 'Magnitude' | 'Decibel' | 'Normalized' - validated by C++
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Audio analysis controls require plugin support.');
@@ -425,9 +425,9 @@ export class AudioTools {
   // Fade sound (requires C++ plugin)
   async fadeSound(_params: {
     soundName: string;
-    targetVolume: number;
-    fadeTime: number;
-    fadeType?: 'FadeIn' | 'FadeOut' | 'FadeTo';
+    targetVolume?: number;
+    fadeTime?: number;
+    fadeType?: string;  // 'FadeIn' | 'FadeOut' | 'FadeTo' - validated by C++
   }) {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Fading sound requires plugin support.');
@@ -451,7 +451,7 @@ export class AudioTools {
 
   // Set doppler effect (requires C++ plugin)
   async setDopplerEffect(_params: {
-    enabled: boolean;
+    enabled?: boolean;
     scale?: number;
   }) {
     if (!this.automationBridge) {
@@ -474,7 +474,7 @@ export class AudioTools {
 
   // Audio occlusion (requires C++ plugin)
   async setAudioOcclusion(_params: {
-    enabled: boolean;
+    enabled?: boolean;
     lowPassFilterFrequency?: number;
     volumeAttenuation?: number;
   }) {

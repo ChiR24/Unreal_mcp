@@ -1,5 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
+import type { HandlerArgs, PerformanceArgs } from '../../types/handler-types.js';
 
 // Valid profiling types
 const VALID_PROFILING_TYPES = ['cpu', 'gpu', 'memory', 'renderthread', 'all', 'fps', 'gamethread'];
@@ -8,142 +9,145 @@ const VALID_PROFILING_TYPES = ['cpu', 'gpu', 'memory', 'renderthread', 'all', 'f
 const MIN_SCALABILITY_LEVEL = 0;
 const MAX_SCALABILITY_LEVEL = 4;
 
-export async function handlePerformanceTools(action: string, args: any, tools: ITools) {
+export async function handlePerformanceTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+  const argsTyped = args as PerformanceArgs;
+  const argsRecord = args as Record<string, unknown>;
+  
   switch (action) {
     case 'start_profiling': {
-      const profilingType = args.type ? String(args.type).toLowerCase() : 'all';
+      const profilingType = argsTyped.type ? String(argsTyped.type).toLowerCase() : 'all';
       if (!VALID_PROFILING_TYPES.includes(profilingType)) {
         return {
           success: false,
           error: 'INVALID_PROFILING_TYPE',
-          message: `Invalid profiling type: '${args.type}'. Must be one of: ${VALID_PROFILING_TYPES.join(', ')}`,
+          message: `Invalid profiling type: '${argsTyped.type}'. Must be one of: ${VALID_PROFILING_TYPES.join(', ')}`,
           action: 'start_profiling'
         };
       }
       // Use normalized profilingType to ensure consistency with validation
       return cleanObject(await tools.performanceTools.startProfiling({
         type: profilingType,
-        duration: args.duration
-      }));
+        duration: argsTyped.duration
+      })) as Record<string, unknown>;
     }
     case 'stop_profiling': {
-      return cleanObject(await tools.performanceTools.stopProfiling());
+      return cleanObject(await tools.performanceTools.stopProfiling()) as Record<string, unknown>;
     }
     case 'run_benchmark': {
       return cleanObject(await tools.performanceTools.runBenchmark({
-        duration: args.duration,
-        outputPath: args.outputPath
-      }));
+        duration: argsTyped.duration,
+        outputPath: argsTyped.outputPath
+      })) as Record<string, unknown>;
     }
     case 'show_fps': {
       return cleanObject(await tools.performanceTools.showFPS({
-        enabled: args.enabled !== false,
-        verbose: args.verbose
-      }));
+        enabled: argsTyped.enabled !== false,
+        verbose: argsTyped.verbose
+      })) as Record<string, unknown>;
     }
     case 'show_stats': {
       return cleanObject(await tools.performanceTools.showStats({
-        category: args.category || args.type || 'Unit',
-        enabled: args.enabled !== false
-      }));
+        category: argsTyped.category || argsTyped.type || 'Unit',
+        enabled: argsTyped.enabled !== false
+      })) as Record<string, unknown>;
     }
     case 'set_scalability': {
-      const category = args.category || 'ViewDistance';
-      let level = typeof args.level === 'number' ? args.level : 3;
+      const category = argsTyped.category || 'ViewDistance';
+      let level = typeof argsTyped.level === 'number' ? argsTyped.level : 3;
       // Clamp level to valid range 0-4
       level = Math.max(MIN_SCALABILITY_LEVEL, Math.min(MAX_SCALABILITY_LEVEL, level));
       return cleanObject(await tools.performanceTools.setScalability({
         category,
         level
-      }));
+      })) as Record<string, unknown>;
     }
     case 'set_resolution_scale': {
       return cleanObject(await tools.performanceTools.setResolutionScale({
-        scale: args.scale
-      }));
+        scale: argsTyped.scale
+      })) as Record<string, unknown>;
     }
     case 'set_vsync': {
       return cleanObject(await tools.performanceTools.setVSync({
-        enabled: args.enabled !== false
-      }));
+        enabled: argsTyped.enabled !== false
+      })) as Record<string, unknown>;
     }
     case 'set_frame_rate_limit': {
       return cleanObject(await tools.performanceTools.setFrameRateLimit({
-        maxFPS: args.maxFPS
-      }));
+        maxFPS: argsTyped.maxFPS
+      })) as Record<string, unknown>;
     }
     case 'enable_gpu_timing': {
       return cleanObject(await tools.performanceTools.enableGPUTiming({
-        enabled: args.enabled !== false
-      }));
+        enabled: argsTyped.enabled !== false
+      })) as Record<string, unknown>;
     }
     case 'generate_memory_report': {
       return cleanObject(await tools.performanceTools.generateMemoryReport({
-        detailed: args.detailed,
-        outputPath: args.outputPath
-      }));
+        detailed: argsTyped.detailed,
+        outputPath: argsTyped.outputPath
+      })) as Record<string, unknown>;
     }
     case 'configure_texture_streaming': {
       return cleanObject(await tools.performanceTools.configureTextureStreaming({
-        enabled: args.enabled !== false,
-        poolSize: args.poolSize,
-        boostPlayerLocation: args.boostPlayerLocation
-      }));
+        enabled: argsTyped.enabled !== false,
+        poolSize: argsRecord.poolSize as number | undefined,
+        boostPlayerLocation: argsRecord.boostPlayerLocation as boolean | undefined
+      })) as Record<string, unknown>;
     }
     case 'configure_lod': {
       return cleanObject(await tools.performanceTools.configureLOD({
-        forceLOD: args.forceLOD,
-        lodBias: args.lodBias,
-        distanceScale: args.distanceScale
-      }));
+        forceLOD: argsRecord.forceLOD as number | undefined,
+        lodBias: argsRecord.lodBias as number | undefined,
+        distanceScale: argsRecord.distanceScale as number | undefined
+      })) as Record<string, unknown>;
     }
     case 'apply_baseline_settings': {
       return cleanObject(await tools.performanceTools.applyBaselinePerformanceSettings({
-        distanceScale: args.distanceScale,
-        skeletalBias: args.skeletalBias,
-        vsync: args.vsync,
-        maxFPS: args.maxFPS,
-        hzb: args.hzb
-      }));
+        distanceScale: argsRecord.distanceScale as number | undefined,
+        skeletalBias: argsRecord.skeletalBias as number | undefined,
+        vsync: argsRecord.vsync as boolean | undefined,
+        maxFPS: argsTyped.maxFPS,
+        hzb: argsRecord.hzb as boolean | undefined
+      })) as Record<string, unknown>;
     }
     case 'optimize_draw_calls':
     case 'merge_actors': {
       // If action is merge_actors, force mergeActors param to true
-      const mergeParams = action === 'merge_actors' ? { ...args, mergeActors: true } : args;
+      const mergeParams = action === 'merge_actors' ? { ...argsRecord, mergeActors: true } : argsRecord;
       return cleanObject(await tools.performanceTools.optimizeDrawCalls({
-        enableInstancing: mergeParams.enableInstancing,
-        enableBatching: mergeParams.enableBatching,
-        mergeActors: mergeParams.mergeActors,
-        actors: mergeParams.actors
-      }));
+        enableInstancing: mergeParams.enableInstancing as boolean | undefined,
+        enableBatching: mergeParams.enableBatching as boolean | undefined,
+        mergeActors: mergeParams.mergeActors as boolean | undefined,
+        actors: mergeParams.actors as string[] | undefined
+      })) as Record<string, unknown>;
     }
     case 'configure_occlusion_culling': {
       return cleanObject(await tools.performanceTools.configureOcclusionCulling({
-        enabled: args.enabled !== false,
-        method: args.method,
-        freezeRendering: args.freezeRendering
-      }));
+        enabled: argsTyped.enabled !== false,
+        method: argsRecord.method as string | undefined,
+        freezeRendering: argsRecord.freezeRendering as boolean | undefined
+      })) as Record<string, unknown>;
     }
     case 'optimize_shaders': {
       return cleanObject(await tools.performanceTools.optimizeShaders({
-        compileOnDemand: args.compileOnDemand,
-        cacheShaders: args.cacheShaders,
-        reducePermutations: args.reducePermutations
-      }));
+        compileOnDemand: argsRecord.compileOnDemand as boolean | undefined,
+        cacheShaders: argsRecord.cacheShaders as boolean | undefined,
+        reducePermutations: argsRecord.reducePermutations as boolean | undefined
+      })) as Record<string, unknown>;
     }
     case 'configure_nanite': {
       return cleanObject(await tools.performanceTools.configureNanite({
-        enabled: args.enabled !== false,
-        maxPixelsPerEdge: args.maxPixelsPerEdge,
-        streamingPoolSize: args.streamingPoolSize
-      }));
+        enabled: argsTyped.enabled !== false,
+        maxPixelsPerEdge: argsRecord.maxPixelsPerEdge as number | undefined,
+        streamingPoolSize: argsRecord.streamingPoolSize as number | undefined
+      })) as Record<string, unknown>;
     }
     case 'configure_world_partition': {
       return cleanObject(await tools.performanceTools.configureWorldPartition({
-        enabled: args.enabled !== false,
-        streamingDistance: args.streamingDistance,
-        cellSize: args.cellSize
-      }));
+        enabled: argsTyped.enabled !== false,
+        streamingDistance: argsRecord.streamingDistance as number | undefined,
+        cellSize: argsRecord.cellSize as number | undefined
+      })) as Record<string, unknown>;
     }
     default:
       throw new Error(`Unknown performance action: ${action}`);

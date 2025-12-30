@@ -4,7 +4,8 @@ import dotenv from 'dotenv';
 
 // Suppress dotenv output to avoid corrupting MCP stdout stream
 const originalWrite = process.stdout.write;
-process.stdout.write = function () { return true; } as any;
+ 
+process.stdout.write = function () { return true; } as typeof process.stdout.write;
 try {
   dotenv.config();
 } finally {

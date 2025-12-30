@@ -19,7 +19,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
       );
 
       if (response && response.success !== false) {
-        return response.isInPIE === true || (response.result as any)?.isInPIE === true;
+        return response.isInPIE === true || (response.result as Record<string, unknown> | undefined)?.isInPIE === true;
       }
 
       return false;
@@ -133,9 +133,9 @@ export class EditorTools extends BaseTool implements IEditorTools {
         { action: 'get_camera' },
         { timeoutMs: 3000 }
       );
-      const result: any = resp?.result ?? resp;
-      const loc = result?.location ?? result?.camera?.location;
-      const rot = result?.rotation ?? result?.camera?.rotation;
+      const result = (resp?.result ?? resp) as Record<string, unknown>;
+      const loc = result?.location ?? (result.camera as Record<string, unknown> | undefined)?.location;
+      const rot = result?.rotation ?? (result.camera as Record<string, unknown> | undefined)?.rotation;
       const locArr: [number, number, number] | undefined = Array.isArray(loc) && loc.length === 3 ? [Number(loc[0]) || 0, Number(loc[1]) || 0, Number(loc[2]) || 0] : undefined;
       const rotArr: [number, number, number] | undefined = Array.isArray(rot) && rot.length === 3 ? [Number(rot[0]) || 0, Number(rot[1]) || 0, Number(rot[2]) || 0] : undefined;
       if (resp && resp.success !== false && locArr && rotArr) {
@@ -164,7 +164,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
       locObj.x = Math.max(-MAX_COORD, Math.min(MAX_COORD, locObj.x));
       locObj.y = Math.max(-MAX_COORD, Math.min(MAX_COORD, locObj.y));
       locObj.z = Math.max(-MAX_COORD, Math.min(MAX_COORD, locObj.z));
-      location = locObj as any;
+      location = locObj as { x: number; y: number; z: number };
     }
 
     // Validate rotation if provided
@@ -180,25 +180,27 @@ export class EditorTools extends BaseTool implements IEditorTools {
       rotObj.pitch = ((rotObj.pitch % 360) + 360) % 360;
       rotObj.yaw = ((rotObj.yaw % 360) + 360) % 360;
       rotObj.roll = ((rotObj.roll % 360) + 360) % 360;
-      rotation = rotObj as any;
+      rotation = rotObj as { pitch: number; yaw: number; roll: number };
     }
 
     // Use native control_editor.set_camera when available
     try {
       // Use WASM composeTransform for camera transform calculation
+      const locRecord = location as unknown as Record<string, number> | undefined;
+      const rotRecord = rotation as unknown as Record<string, number> | undefined;
       const locArray: [number, number, number] = location
-        ? [((location as any).x ?? (location as any)[0] ?? 0), ((location as any).y ?? (location as any)[1] ?? 0), ((location as any).z ?? (location as any)[2] ?? 0)]
+        ? [Number(locRecord?.x ?? 0), Number(locRecord?.y ?? 0), Number(locRecord?.z ?? 0)]
         : [0, 0, 0];
       const rotArray: [number, number, number] = rotation
-        ? [((rotation as any).pitch ?? (rotation as any)[0] ?? 0), ((rotation as any).yaw ?? (rotation as any)[1] ?? 0), ((rotation as any).roll ?? (rotation as any)[2] ?? 0)]
+        ? [Number(rotRecord?.pitch ?? 0), Number(rotRecord?.yaw ?? 0), Number(rotRecord?.roll ?? 0)]
         : [0, 0, 0];
       // Compose transform to validate and process camera positioning via WASM
       wasmIntegration.composeTransform(locArray, rotArray, [1, 1, 1]);
 
       const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
         action: 'set_camera',
-        location: location as any,
-        rotation: rotation as any
+        location: location,
+        rotation: rotation
       }, { timeoutMs: 10000 });
       if (resp && resp.success === true) {
         return { success: true, message: resp.message || 'Camera set', location, rotation };

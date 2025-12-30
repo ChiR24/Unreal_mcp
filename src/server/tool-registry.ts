@@ -9,7 +9,7 @@ import { handleConsolidatedToolCall } from '../tools/consolidated-tool-handlers.
 import { responseValidator } from '../utils/response-validator.js';
 import { ErrorHandler } from '../utils/error-handler.js';
 import { cleanObject } from '../utils/safe-json.js';
-import { createElicitationHelper } from '../utils/elicitation.js';
+import { createElicitationHelper, PrimitiveSchema } from '../utils/elicitation.js';
 import { AssetResources } from '../resources/assets.js';
 import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
@@ -114,10 +114,10 @@ export class ToolRegistry {
                     return { success: false as const, error: 'Automation bridge not connected', section: category };
                 }
                 try {
-                    const resp: any = await this.automationBridge.sendAutomationRequest('system_control', {
+                    const resp = await this.automationBridge.sendAutomationRequest('system_control', {
                         action: 'get_project_settings',
                         category
-                    }, { timeoutMs: 30000 });
+                    }, { timeoutMs: 30000 }) as Record<string, unknown>;
 
                     const rawError = (resp?.error || '').toString();
                     const msgLower = (resp?.message || '').toString().toLowerCase();
@@ -196,9 +196,9 @@ export class ToolRegistry {
 
         this.server.setRequestHandler(ListToolsRequestSchema, async () => {
             this.logger.info('Serving consolidated tools');
-            const sanitized = (consolidatedToolDefinitions as any[]).map((t) => {
+            const sanitized = (consolidatedToolDefinitions as Array<Record<string, unknown>>).map((t) => {
                 try {
-                    const copy = JSON.parse(JSON.stringify(t));
+                    const copy = JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
                     delete copy.outputSchema;
                     return copy;
                 } catch (_e) {
@@ -251,12 +251,12 @@ export class ToolRegistry {
 
                 // ... Elicitation logic ...
                 try {
-                    const toolDef: any = (consolidatedToolDefinitions as any[]).find(t => t.name === name);
-                    const inputSchema: any = toolDef?.inputSchema;
-                    const elicitFn: any = (tools as any).elicit;
+                    const toolDef = (consolidatedToolDefinitions as Array<Record<string, unknown>>).find(t => t.name === name) as Record<string, unknown> | undefined;
+                    const inputSchema = toolDef?.inputSchema as Record<string, unknown> | undefined;
+                    const elicitFn = tools.elicit;
                     if (inputSchema && typeof elicitFn === 'function') {
-                        const props = inputSchema.properties || {};
-                        const required: string[] = Array.isArray(inputSchema.required) ? inputSchema.required : [];
+                        const props = (inputSchema.properties || {}) as Record<string, Record<string, unknown>>;
+                        const required: string[] = Array.isArray(inputSchema.required) ? inputSchema.required as string[] : [];
                         const missing = required.filter((k: string) => {
                             const v = (args as Record<string, unknown>)[k];
                             if (v === undefined || v === null) return true;
@@ -264,34 +264,36 @@ export class ToolRegistry {
                             return false;
                         });
 
-                        const primitiveProps: Record<string, unknown> = {};
+                        const primitiveProps: Record<string, PrimitiveSchema> = {};
                         for (const k of missing) {
                             const p = props[k];
                             if (!p || typeof p !== 'object') continue;
                             const t = (p.type || '').toString();
                             const isEnum = Array.isArray(p.enum);
                             if (t === 'string' || t === 'number' || t === 'integer' || t === 'boolean' || isEnum) {
+                                // Build schema with proper type casting
+                                const schemaType = (isEnum ? 'string' : t) as 'string' | 'number' | 'integer' | 'boolean';
                                 primitiveProps[k] = {
-                                    type: t || (isEnum ? 'string' : undefined),
-                                    title: p.title,
-                                    description: p.description,
-                                    enum: p.enum,
-                                    enumNames: p.enumNames,
-                                    minimum: p.minimum,
-                                    maximum: p.maximum,
-                                    minLength: p.minLength,
-                                    maxLength: p.maxLength,
-                                    pattern: p.pattern,
-                                    format: p.format,
-                                    default: p.default
-                                };
+                                    type: schemaType,
+                                    title: typeof p.title === 'string' ? p.title : undefined,
+                                    description: typeof p.description === 'string' ? p.description : undefined,
+                                    enum: Array.isArray(p.enum) ? (p.enum as string[]) : undefined,
+                                    enumNames: Array.isArray(p.enumNames) ? (p.enumNames as string[]) : undefined,
+                                    minimum: typeof p.minimum === 'number' ? p.minimum : undefined,
+                                    maximum: typeof p.maximum === 'number' ? p.maximum : undefined,
+                                    minLength: typeof p.minLength === 'number' ? p.minLength : undefined,
+                                    maxLength: typeof p.maxLength === 'number' ? p.maxLength : undefined,
+                                    pattern: typeof p.pattern === 'string' ? p.pattern : undefined,
+                                    format: typeof p.format === 'string' ? (p.format as 'email' | 'uri' | 'date' | 'date-time') : undefined,
+                                    default: (typeof p.default === 'string' || typeof p.default === 'number' || typeof p.default === 'boolean') ? p.default : undefined
+                                } as PrimitiveSchema;
                             }
                         }
 
                         if (Object.keys(primitiveProps).length > 0) {
-                            const elicitOptions: any = { fallback: async () => ({ ok: false, error: 'missing-params' }) };
-                            if (typeof (tools as any).elicitationTimeoutMs === 'number' && Number.isFinite((tools as any).elicitationTimeoutMs)) {
-                                elicitOptions.timeoutMs = (tools as any).elicitationTimeoutMs;
+                            const elicitOptions: Record<string, unknown> = { fallback: async () => ({ ok: false, error: 'missing-params' }) };
+                            if (typeof tools.elicitationTimeoutMs === 'number' && Number.isFinite(tools.elicitationTimeoutMs)) {
+                                elicitOptions.timeoutMs = tools.elicitationTimeoutMs;
                             }
                             const elicitRes = await elicitFn(
                                 `Provide missing parameters for ${name}`,
@@ -304,23 +306,27 @@ export class ToolRegistry {
                         }
                     }
                 } catch (e) {
-                    this.logger.debug('Generic elicitation prefill skipped', { err: (e as any)?.message || String(e) });
+                    const errObj = e as Record<string, unknown> | null;
+                    this.logger.debug('Generic elicitation prefill skipped', { err: errObj?.message ? String(errObj.message) : String(e) });
                 }
 
                 let result = await handleConsolidatedToolCall(name, args, tools);
                 this.logger.debug(`Tool ${name} returned result`);
                 result = cleanObject(result);
 
-                const explicitSuccess = typeof (result as any)?.success === 'boolean' ? Boolean((result as any).success) : undefined;
+                const resultObj = result as Record<string, unknown> | null;
+                const explicitSuccess = typeof resultObj?.success === 'boolean' ? Boolean(resultObj.success) : undefined;
                 const wrappedResult = await responseValidator.wrapResponse(name, result);
 
                 let wrappedSuccess: boolean | undefined = undefined;
                 try {
-                    const sc: any = (wrappedResult as any).structuredContent;
+                    const wrappedObj = wrappedResult as Record<string, unknown>;
+                    const sc = wrappedObj.structuredContent as Record<string, unknown> | undefined;
                     if (sc && typeof sc.success === 'boolean') wrappedSuccess = Boolean(sc.success);
                 } catch { }
 
-                const isErrorResponse = Boolean((wrappedResult as any)?.isError === true);
+                const wrappedResultObj = wrappedResult as Record<string, unknown>;
+                const isErrorResponse = Boolean(wrappedResultObj?.isError === true);
                 const tentative = explicitSuccess ?? wrappedSuccess;
                 const finalSuccess = tentative === true && !isErrorResponse;
 
@@ -341,11 +347,11 @@ export class ToolRegistry {
                 this.healthMonitor.trackPerformance(startTime, false);
                 const errorResponse = ErrorHandler.createErrorResponse(error, name, { ...args, scope: `tool-call/${name}` });
                 this.logger.error(`Tool execution failed: ${name}`, errorResponse);
-                this.healthMonitor.recordError(errorResponse);
+                this.healthMonitor.recordError(errorResponse as unknown as Record<string, unknown>);
 
-                const sanitizedError = cleanObject(errorResponse);
+                const sanitizedError = cleanObject(errorResponse) as unknown as Record<string, unknown>;
                 try {
-                    (sanitizedError as any).isError = true;
+                    sanitizedError.isError = true;
                 } catch { }
                 return responseValidator.wrapResponse(name, sanitizedError);
             }

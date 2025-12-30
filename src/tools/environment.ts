@@ -191,7 +191,7 @@ export class EnvironmentTools implements IEnvironmentTools {
     }
 
     try {
-      let parsed: any = undefined;
+      let parsed: Record<string, unknown> | undefined = undefined;
       try {
         const contents = await fs.readFile(targetPath, 'utf8');
         try {
@@ -199,8 +199,9 @@ export class EnvironmentTools implements IEnvironmentTools {
         } catch {
           parsed = undefined;
         }
-      } catch (err: any) {
-        if (err && (err.code === 'ENOENT' || err.code === 'ENOTDIR')) {
+      } catch (err: unknown) {
+        const errObj = err as Record<string, unknown> | null;
+        if (errObj && (errObj.code === 'ENOENT' || errObj.code === 'ENOTDIR')) {
           return {
             success: true,
             message: `Environment snapshot file not found at ${targetPath}; import treated as no-op`
@@ -242,10 +243,10 @@ export class EnvironmentTools implements IEnvironmentTools {
       }
 
       const bridge = this.ensureAutomationBridge();
-      const resp: any = await bridge.sendAutomationRequest('build_environment', {
+      const resp = await bridge.sendAutomationRequest('build_environment', {
         action: 'delete',
         names: cleaned
-      }, { timeoutMs: 40000 });
+      }, { timeoutMs: 40000 }) as Record<string, unknown>;
 
       if (!resp || resp.success === false) {
         const result = resp && typeof resp.result === 'object' ? resp.result as Record<string, unknown> : undefined;

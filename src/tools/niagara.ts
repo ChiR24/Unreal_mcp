@@ -18,16 +18,10 @@ export class NiagaraTools {
    * Create Niagara System
    */
   async createSystem(params: {
-    name: string;
+    name?: string;
     savePath?: string;
-    template?: 'Empty' | 'Fountain' | 'Ambient' | 'Projectile' | 'Custom';
-    emitters?: Array<{
-      name: string;
-      spawnRate?: number;
-      lifetime?: number;
-      shape?: 'Point' | 'Sphere' | 'Box' | 'Cylinder' | 'Cone';
-      shapeSize?: [number, number, number];
-    }>;
+    template?: string;  // 'Empty' | 'Fountain' | 'Ambient' | 'Projectile' | 'Custom' - validated by C++
+    emitters?: unknown[];  // Array of emitter configs
   }) {
     try {
       if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
@@ -35,33 +29,36 @@ export class NiagaraTools {
       }
 
       // Process emitter params with WASM
-      if (params.emitters) {
-        for (const emitter of params.emitters) {
-          if (emitter.shapeSize) {
+      if (Array.isArray(params.emitters)) {
+        for (const emitterRaw of params.emitters) {
+          const emitter = emitterRaw as Record<string, unknown> | undefined;
+          if (emitter && Array.isArray(emitter.shapeSize)) {
             const zeroVector: [number, number, number] = [0, 0, 0];
-            const processedSize = wasmIntegration.vectorAdd(zeroVector, emitter.shapeSize);
+            const shapeArr = emitter.shapeSize as [number, number, number];
+            const processedSize = wasmIntegration.vectorAdd(zeroVector, shapeArr);
             log.debug('[WASM] Using vectorAdd for Niagara emitter shape size');
             emitter.shapeSize = [processedSize[0], processedSize[1], processedSize[2]];
           }
         }
       }
 
+      const systemName = params.name ?? 'NiagaraSystem';
       const path = params.savePath || '/Game/Effects/Niagara';
-      const response: any = await this.automationBridge.sendAutomationRequest(
+      const response = await this.automationBridge.sendAutomationRequest(
         'create_niagara_system',
-        { name: params.name, savePath: path, template: params.template },
+        { name: systemName, savePath: path, template: params.template },
         { timeoutMs: 60000 }
-      );
+      ) as Record<string, unknown>;
 
       if (response && response.success !== false) {
-        const result = response.result ?? {};
-        const systemName: string = result.systemName ?? params.name;
-        const systemPath: string = response.path ?? result.systemPath ?? result.path ?? `${path}/${params.name}`;
+        const result = (response.result ?? {}) as Record<string, unknown>;
+        const respSystemName: string = (result.systemName ?? systemName) as string;
+        const systemPath: string = (response.path ?? result.systemPath ?? result.path ?? `${path}/${systemName}`) as string;
         return {
           success: true,
-          systemName,
+          systemName: respSystemName,
           path: systemPath,
-          message: response.message || result.message || `Niagara system ${systemName} created`
+          message: (response.message || result.message || `Niagara system ${respSystemName} created`) as string
         } as const;
       }
 
@@ -77,7 +74,7 @@ export class NiagaraTools {
   }
 
   async createEmitter(params: {
-    name: string;
+    name?: string;
     savePath?: string;
     systemPath?: string;
     template?: string;
@@ -86,17 +83,18 @@ export class NiagaraTools {
       return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'createEmitter requires automation bridge' } as const;
     }
 
+    const emitterName = params.name ?? 'NiagaraEmitter';
     const requestPayload: Record<string, unknown> = {
-      name: params.name,
+      name: emitterName,
       savePath: params.savePath ?? '/Game/Effects/Niagara'
     };
     if (params.systemPath) requestPayload.systemPath = params.systemPath;
     if (params.template) requestPayload.template = params.template;
 
     try {
-      const response: any = await this.automationBridge.sendAutomationRequest('create_niagara_emitter', requestPayload, { timeoutMs: 60000 });
+      const response = await this.automationBridge.sendAutomationRequest('create_niagara_emitter', requestPayload, { timeoutMs: 60000 }) as Record<string, unknown>;
       if (response && response.success !== false) {
-        const result = response.result ?? {};
+        const result = (response.result ?? {}) as Record<string, unknown>;
         return {
           success: true,
           emitterPath: response.emitterPath ?? result.emitterPath ?? result.path,
@@ -156,13 +154,13 @@ export class NiagaraTools {
     if (typeof params.width === 'number') requestPayload.width = params.width;
 
     try {
-      const response: any = await this.automationBridge.sendAutomationRequest('create_niagara_ribbon', requestPayload, { timeoutMs: 60000 });
+      const response = await this.automationBridge.sendAutomationRequest('create_niagara_ribbon', requestPayload, { timeoutMs: 60000 }) as Record<string, unknown>;
       if (response && response.success !== false) {
-        const result = response.result ?? {};
+        const result = (response.result ?? {}) as Record<string, unknown>;
         return {
           success: true,
-          ribbonPath: response.ribbonPath ?? result.ribbonPath ?? result.path,
-          message: response.message || result.message || 'Niagara ribbon created'
+          ribbonPath: (response.ribbonPath ?? result.ribbonPath ?? result.path) as string | undefined,
+          message: ((response.message || result.message || 'Niagara ribbon created') as string)
         } as const;
       }
 
@@ -186,16 +184,16 @@ export class NiagaraTools {
     }
 
     try {
-      const response: any = await this.automationBridge.sendAutomationRequest('cleanup', { filter: params.filter }, { timeoutMs: 60000 });
+      const response = await this.automationBridge.sendAutomationRequest('cleanup', { filter: params.filter }, { timeoutMs: 60000 }) as Record<string, unknown>;
       if (response && response.success !== false) {
-        const result = response.result ?? {};
-        const removedActors: string[] = result.removedActors ?? response.removedActors ?? [];
-        const removedCount = result.removed ?? removedActors.length;
+        const result = (response.result ?? {}) as Record<string, unknown>;
+        const removedActors: string[] = (result.removedActors ?? response.removedActors ?? []) as string[];
+        const removedCount = (result.removed ?? removedActors.length) as number;
         return {
           success: true,
           removed: removedCount,
           removedActors,
-          message: response.message || result.message || `Cleanup completed (removed=${removedCount})`
+          message: ((response.message || result.message || `Cleanup completed (removed=${removedCount})`) as string)
         } as const;
       }
 
@@ -248,26 +246,27 @@ export class NiagaraTools {
     }
 
     try {
-      const resp: any = await this.automationBridge.sendAutomationRequest('manage_niagara_graph', {
+      const resp = await this.automationBridge.sendAutomationRequest('manage_niagara_graph', {
         subAction: 'add_emitter',
         systemName: params.systemName,
         emitterName: params.emitterName,
         emitterType: params.emitterType,
         properties: params.properties
-      });
+      }) as Record<string, unknown>;
 
       if (resp && resp.success !== false) {
+        const result = (resp.result ?? {}) as Record<string, unknown>;
         return {
           success: true,
-          message: resp.message || `Emitter ${params.emitterName} added to ${params.systemName}`,
-          emitterId: resp.result?.emitterId
+          message: (resp.message || `Emitter ${params.emitterName} added to ${params.systemName}`) as string,
+          emitterId: result.emitterId
         };
       }
 
       return {
         success: false,
-        error: resp?.error || 'ADD_EMITTER_FAILED',
-        message: resp?.message || 'Failed to add emitter'
+        error: (resp?.error || 'ADD_EMITTER_FAILED') as string,
+        message: (resp?.message || 'Failed to add emitter') as string
       };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -344,7 +343,7 @@ export class NiagaraTools {
     systemName: string;
     parameterName: string;
     parameterType: 'Float' | 'Vector' | 'Color' | 'Bool' | 'Int';
-    value: any;
+    value: unknown;
     isUserParameter?: boolean;
   }) {
     // Note: This uses 'set_niagara_parameter' top-level action, OR 'manage_niagara_graph' with subAction 'set_parameter'.
@@ -357,19 +356,22 @@ export class NiagaraTools {
     // User requested "implement all missing". I'll stick to adding missing graph methods I just verified.
 
     try {
-      const automationBridge = (this.bridge as any).automationBridge;
+      const automationBridge = (this.bridge as unknown as { automationBridge?: AutomationBridge }).automationBridge;
       if (!automationBridge) {
         return { success: false, error: 'Automation bridge not available' };
       }
-      const resp: any = await automationBridge.sendAutomationRequest('set_niagara_parameter', {
+      const resp = await automationBridge.sendAutomationRequest('set_niagara_parameter', {
         systemName: params.systemName,
         parameterName: params.parameterName,
         parameterType: params.parameterType,
         value: params.value,
         isUserParameter: params.isUserParameter === true
-      });
-      if (resp && resp.success !== false) return { success: true, message: resp.message || `Parameter ${params.parameterName} set on ${params.systemName}`, applied: resp.applied ?? resp.result?.applied } as any;
-      return { success: false, message: resp?.message ?? 'Set parameter failed', error: resp?.error ?? 'SET_PARAMETER_FAILED' } as any;
+      }) as Record<string, unknown>;
+      if (resp && resp.success !== false) {
+        const result = (resp.result ?? {}) as Record<string, unknown>;
+        return { success: true, message: (resp.message || `Parameter ${params.parameterName} set on ${params.systemName}`) as string, applied: resp.applied ?? result.applied };
+      }
+      return { success: false, message: (resp?.message ?? 'Set parameter failed') as string, error: (resp?.error ?? 'SET_PARAMETER_FAILED') as string };
     } catch (err) {
       return { success: false, error: `Failed to set parameter: ${err}` };
     }
@@ -384,7 +386,7 @@ export class NiagaraTools {
     location: [number, number, number] | { x: number, y: number, z: number };
     scale?: number;
     intensity?: number;
-    customParameters?: { [key: string]: any };
+    customParameters?: { [key: string]: unknown };
   }) {
     try {
       // Validate effect type at runtime (inputs can come from JSON)
@@ -462,18 +464,19 @@ export class NiagaraTools {
       // Prefer plugin transport when available
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
         try {
-          const resp: any = await this.automationBridge.sendAutomationRequest('spawn_niagara', {
+          const resp = await this.automationBridge.sendAutomationRequest('spawn_niagara', {
             systemPath: params.systemPath,
             location: [loc.x ?? 0, loc.y ?? 0, loc.z ?? 0],
             rotation: params.rotation,
             scale: params.scale,
             autoDestroy: params.autoDestroy,
             attachToActor: params.attachToActor
-          });
+          }) as Record<string, unknown>;
           if (resp && resp.success !== false) {
-            return { success: true, message: resp.message || 'Niagara effect spawned', actor: resp.actor || resp.result?.actor || resp.result?.actorName } as any;
+            const result = (resp.result ?? {}) as Record<string, unknown>;
+            return { success: true, message: (resp.message || 'Niagara effect spawned') as string, actor: (resp.actor || result.actor || result.actorName) as string | undefined };
           }
-          return { success: false, message: resp?.message ?? 'Spawn failed', error: resp?.error ?? 'SPAWN_FAILED' } as any;
+          return { success: false, message: (resp?.message ?? 'Spawn failed') as string, error: (resp?.error ?? 'SPAWN_FAILED') as string };
         } catch (error) {
           return { success: false, error: `Failed to spawn effect: ${error instanceof Error ? error.message : String(error)}` };
         }

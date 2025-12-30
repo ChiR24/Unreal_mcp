@@ -1,10 +1,26 @@
 import { AutomationBridge } from '../automation/index.js';
 
+// Import tool class types (using import type to avoid circular dependencies)
+import type { MaterialTools } from '../tools/materials.js';
+import type { NiagaraTools } from '../tools/niagara.js';
+import type { AnimationTools } from '../tools/animation.js';
+import type { PhysicsTools } from '../tools/physics.js';
+import type { LightingTools } from '../tools/lighting.js';
+import type { DebugVisualizationTools } from '../tools/debug.js';
+import type { PerformanceTools } from '../tools/performance.js';
+import type { AudioTools } from '../tools/audio.js';
+import type { UITools } from '../tools/ui.js';
+import type { IntrospectionTools } from '../tools/introspection.js';
+import type { EngineTools } from '../tools/engine.js';
+import type { BehaviorTreeTools } from '../tools/behavior-tree.js';
+import type { LogTools } from '../tools/logs.js';
+import type { InputTools } from '../tools/input.js';
+
 export interface IBaseTool {
     getAutomationBridge(): AutomationBridge;
 }
 
-export interface StandardActionResponse<T = any> {
+export interface StandardActionResponse<T = unknown> {
     success: boolean;
     data?: T;
     warnings?: string[];
@@ -98,19 +114,19 @@ export interface ISequenceTools {
 }
 
 export interface IAssetResources {
-    list(directory?: string, recursive?: boolean, limit?: number): Promise<any>;
+    list(directory?: string, recursive?: boolean, limit?: number): Promise<Record<string, unknown>>;
 }
 
 export interface IBlueprintTools {
     createBlueprint(params: { name: string; blueprintType?: string; savePath?: string; parentClass?: string; properties?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
-    modifyConstructionScript(params: { blueprintPath: string; operations: any[]; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    modifyConstructionScript(params: { blueprintPath: string; operations: Array<Record<string, unknown>>; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
     addComponent(params: { blueprintName: string; componentType: string; componentName: string; attachTo?: string; transform?: Record<string, unknown>; properties?: Record<string, unknown>; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
     waitForBlueprint(blueprintRef: string | string[], timeoutMs?: number): Promise<StandardActionResponse>;
     getBlueprint(params: { blueprintName: string; timeoutMs?: number }): Promise<StandardActionResponse>;
     getBlueprintInfo(params: { blueprintPath: string; timeoutMs?: number }): Promise<StandardActionResponse>;
     probeSubobjectDataHandle(opts?: { componentClass?: string }): Promise<StandardActionResponse>;
     setBlueprintDefault(params: { blueprintName: string; propertyName: string; value: unknown }): Promise<StandardActionResponse>;
-    addVariable(params: { blueprintName: string; variableName: string; variableType: string; defaultValue?: any; category?: string; isReplicated?: boolean; isPublic?: boolean; variablePinType?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
+    addVariable(params: { blueprintName: string; variableName: string; variableType: string; defaultValue?: unknown; category?: string; isReplicated?: boolean; isPublic?: boolean; variablePinType?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
     removeVariable(params: { blueprintName: string; variableName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
     renameVariable(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
     addEvent(params: { blueprintName: string; eventType: string; customEventName?: string; parameters?: Array<{ name: string; type: string }>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
@@ -125,7 +141,7 @@ export interface IBlueprintTools {
     removeSCSComponent(params: { blueprintPath: string; componentName: string; timeoutMs?: number }): Promise<StandardActionResponse>;
     reparentSCSComponent(params: { blueprintPath: string; componentName: string; newParent: string; timeoutMs?: number }): Promise<StandardActionResponse>;
     setSCSComponentTransform(params: { blueprintPath: string; componentName: string; location?: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number]; timeoutMs?: number }): Promise<StandardActionResponse>;
-    setSCSComponentProperty(params: { blueprintPath: string; componentName: string; propertyName: string; propertyValue: any; timeoutMs?: number }): Promise<StandardActionResponse>;
+    setSCSComponentProperty(params: { blueprintPath: string; componentName: string; propertyName: string; propertyValue: unknown; timeoutMs?: number }): Promise<StandardActionResponse>;
     addNode(params: { blueprintName: string; nodeType: string; graphName?: string; functionName?: string; variableName?: string; nodeName?: string; eventName?: string; memberClass?: string; posX?: number; posY?: number; timeoutMs?: number }): Promise<StandardActionResponse>;
     connectPins(params: { blueprintName: string; sourceNodeGuid: string; targetNodeGuid: string; sourcePinName?: string; targetPinName?: string; timeoutMs?: number }): Promise<StandardActionResponse>;
 }
@@ -228,23 +244,29 @@ export interface ITools {
     foliageTools: IFoliageTools;
     environmentTools: IEnvironmentTools;
 
-    // Added newly required tools to remove 'any' casting
-    materialTools: any;
-    niagaraTools: any;
-    animationTools: any;
-    physicsTools: any;
-    lightingTools: any;
-    debugTools: any;
-    performanceTools: any;
-    audioTools: any;
-    uiTools: any;
-    introspectionTools: any;
-    visualTools?: any; // Optional as it's being removed
-    engineTools: any;
-    systemTools: any;
-    behaviorTreeTools: any;
-    logTools: any;
+    // Tool class types (imported to replace 'any')
+    materialTools: MaterialTools;
+    niagaraTools: NiagaraTools;
+    animationTools: AnimationTools;
+    physicsTools: PhysicsTools;
+    lightingTools: LightingTools;
+    debugTools: DebugVisualizationTools;
+    performanceTools: PerformanceTools;
+    audioTools: AudioTools;
+    uiTools: UITools;
+    introspectionTools: IntrospectionTools;
+    visualTools?: DebugVisualizationTools;
+    engineTools: EngineTools;
+    systemTools: {
+        executeConsoleCommand: (command: string) => Promise<unknown>;
+        getProjectSettings: (section?: string) => Promise<Record<string, unknown>>;
+    };
+    behaviorTreeTools: BehaviorTreeTools;
+    logTools: LogTools;
+    inputTools?: InputTools;
 
     automationBridge?: AutomationBridge;
-    [key: string]: any;
+    // Index signature allows additional tool properties
+    // Using 'unknown' instead of 'any' for type safety - callers must narrow types when accessing
+    [key: string]: unknown;
 }

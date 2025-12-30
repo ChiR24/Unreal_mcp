@@ -17,7 +17,7 @@ export class PerformanceTools {
 
   // Start profiling
   async startProfiling(params: {
-    type: 'CPU' | 'GPU' | 'Memory' | 'RenderThread' | 'GameThread' | 'All';
+    type: string;
     duration?: number;
   }) {
     if (this.automationBridge) {
@@ -138,7 +138,7 @@ export class PerformanceTools {
 
   // Show performance stats
   async showStats(params: {
-    category: 'Unit' | 'FPS' | 'Memory' | 'Game' | 'Slate' | 'Engine' | 'RHI' | 'Streaming' | 'SceneRendering' | 'Physics' | 'Navigation' | 'Particles' | 'Audio';
+    category: string;
     enabled: boolean;
   }) {
     if (this.automationBridge) {
@@ -162,8 +162,8 @@ export class PerformanceTools {
 
   // Set scalability settings using console commands
   async setScalability(params: {
-    category: 'ViewDistance' | 'AntiAliasing' | 'PostProcessing' | 'PostProcess' | 'Shadows' | 'GlobalIllumination' | 'Reflections' | 'Textures' | 'Effects' | 'Foliage' | 'Shading';
-    level: 0 | 1 | 2 | 3 | 4; // 0=Low, 1=Medium, 2=High, 3=Epic, 4=Cinematic
+    category: string;
+    level: number; // 0=Low, 1=Medium, 2=High, 3=Epic, 4=Cinematic
   }) {
     if (this.automationBridge) {
       try {
@@ -218,7 +218,7 @@ export class PerformanceTools {
 
   // Set resolution scale
   async setResolutionScale(params: {
-    scale: number; // Accepts both percentage (10-200) and multiplier (0.1-2.0)
+    scale?: number; // Accepts both percentage (10-200) and multiplier (0.1-2.0)
   }) {
     // Validate input
     if (params.scale === undefined || params.scale === null || isNaN(params.scale)) {
@@ -281,17 +281,18 @@ export class PerformanceTools {
 
   // Set frame rate limit
   async setFrameRateLimit(params: {
-    maxFPS: number; // 0 for unlimited
+    maxFPS?: number; // 0 for unlimited
   }) {
+    const maxFPS = params.maxFPS ?? 0; // Default to unlimited
     if (this.automationBridge) {
       try {
-        const response = await this.automationBridge.sendAutomationRequest('set_frame_rate_limit', { maxFPS: params.maxFPS });
+        const response = await this.automationBridge.sendAutomationRequest('set_frame_rate_limit', { maxFPS });
         if (response.success) return { success: true, message: 'Max FPS set (bridge)' };
       } catch (_e) {
         // Fallback
       }
     }
-    const command = `t.MaxFPS ${params.maxFPS}`;
+    const command = `t.MaxFPS ${maxFPS}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -474,7 +475,7 @@ export class PerformanceTools {
   // Draw call optimization
   async optimizeDrawCalls(params: {
     enableInstancing?: boolean;
-
+    enableBatching?: boolean;
     mergeActors?: boolean;
     actors?: string[];
   }) {
@@ -493,7 +494,7 @@ export class PerformanceTools {
             };
           }
 
-          const payload: any = {
+          const payload: Record<string, unknown> = {
             enableInstancing: params.enableInstancing,
             mergeActors: params.mergeActors,
             actors: actors
@@ -527,7 +528,7 @@ export class PerformanceTools {
   // Occlusion culling
   async configureOcclusionCulling(params: {
     enabled: boolean;
-    method?: 'Hardware' | 'Software' | 'Hierarchical';
+    method?: string;
     freezeRendering?: boolean;
   }) {
     const commands: string[] = [];

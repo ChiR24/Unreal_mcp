@@ -165,12 +165,12 @@ export function startMetricsServer(options: MetricsServerOptions): http.Server |
     });
 
     server.on('error', (err) => {
-      logger.warn('Metrics server error', err as any);
+      logger.warn('Metrics server error', err);
     });
 
     return server;
   } catch (err) {
-    logger.warn('Failed to start metrics server', err as any);
+    logger.warn('Failed to start metrics server', err);
     return null;
   }
 }

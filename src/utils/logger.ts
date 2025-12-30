@@ -15,21 +15,21 @@ export class Logger {
     return order.indexOf(level) >= order.indexOf(this.level);
   }
 
-  debug(...args: any[]) {
+  debug(...args: unknown[]) {
     if (!this.shouldLog('debug')) return;
     // Write to stderr to avoid corrupting MCP stdout stream
     console.error(`[${this.scope}]`, ...args);
   }
-  info(...args: any[]) {
+  info(...args: unknown[]) {
     if (!this.shouldLog('info')) return;
     // Write to stderr to avoid corrupting MCP stdout stream
     console.error(`[${this.scope}]`, ...args);
   }
-  warn(...args: any[]) {
+  warn(...args: unknown[]) {
     if (!this.shouldLog('warn')) return;
     console.warn(`[${this.scope}]`, ...args);
   }
-  error(...args: any[]) {
+  error(...args: unknown[]) {
     if (this.shouldLog('error')) console.error(`[${this.scope}]`, ...args);
   }
 }

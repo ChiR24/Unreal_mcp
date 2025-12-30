@@ -13,8 +13,36 @@
 
 import { Logger } from '../utils/logger.js';
 
-// Dynamic import for WASM module
-type WASMModule = any;
+// WASM module interface based on wasm-pack generated exports
+interface WASMModule {
+  default: () => Promise<void>;
+  PropertyParser?: new () => {
+    parse_properties: (json: string, maxDepth: number) => unknown;
+  };
+  TransformCalculator?: new () => {
+    composeTransform: (loc: Float32Array, rot: Float32Array, scale: Float32Array) => Float32Array;
+    decomposeMatrix: (matrix: Float32Array) => Float32Array;
+  };
+  Vector?: new (x: number, y: number, z: number) => {
+    x: number;
+    y: number;
+    z: number;
+    add: (other: { x: number; y: number; z: number }) => { x: number; y: number; z: number };
+  };
+  DependencyResolver?: new () => {
+    analyzeDependencies: (assetPath: string, dependencies: string, maxDepth: number) => unknown;
+    calculateDepth: (assetPath: string, dependencies: string, maxDepth: number) => unknown;
+    findCircularDependencies: (dependencies: string, maxDepth: number) => unknown;
+    topologicalSort: (dependencies: string) => unknown;
+  };
+  Utils?: unknown;
+}
+
+// Type for globalThis with optional fetch/Request (Node may not have them)
+type GlobalThisWithFetch = typeof globalThis & {
+  fetch?: typeof fetch;
+  Request?: typeof Request;
+};
 
 interface WASMConfig {
   enabled?: boolean;
@@ -42,9 +70,8 @@ async function ensureNodeFileFetchForWasm(): Promise<void> {
     return;
   }
 
-  const originalFetch = (globalThis as any).fetch as
-    | (typeof fetch)
-    | undefined;
+  const g = globalThis as GlobalThisWithFetch;
+  const originalFetch = g.fetch;
 
   if (typeof originalFetch !== 'function') {
     return;
@@ -53,10 +80,11 @@ async function ensureNodeFileFetchForWasm(): Promise<void> {
   try {
     const fs = await import('node:fs/promises');
     const url = await import('node:url');
-    const readFile = (fs as any).readFile as (path: string) => Promise<Buffer>;
-    const fileURLToPath = (url as any).fileURLToPath as (u: URL | string) => string;
+    
+    const readFile = fs.readFile;
+    const fileURLToPath = url.fileURLToPath;
 
-    const toUrl = (input: any): URL | null => {
+    const toUrl = (input: unknown): URL | null => {
       try {
         if (input instanceof URL) {
           return input;
@@ -66,9 +94,10 @@ async function ensureNodeFileFetchForWasm(): Promise<void> {
           return new URL(input);
         }
         // Handle Request objects if available
-        const RequestCtor = (globalThis as any).Request;
-        if (RequestCtor && input instanceof RequestCtor && typeof input.url === 'string') {
-          return new URL(input.url);
+        const RequestCtor = g.Request;
+        const inputObj = input as Record<string, unknown>;
+        if (RequestCtor && input instanceof RequestCtor && typeof inputObj.url === 'string') {
+          return new URL(inputObj.url);
         }
       } catch {
         // Ignore parse errors and fall through
@@ -76,7 +105,9 @@ async function ensureNodeFileFetchForWasm(): Promise<void> {
       return null;
     };
 
-    (globalThis as any).fetch = (async (input: any, init?: any) => {
+    // Custom fetch that handles file:// URLs for WASM loading.
+    // Returns ArrayBuffer for file:// (non-standard) or delegates to original fetch.
+    const patchedFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response | ArrayBuffer> => {
       try {
         const target = toUrl(input);
         if (target && target.protocol === 'file:') {
@@ -96,8 +127,12 @@ async function ensureNodeFileFetchForWasm(): Promise<void> {
         // Fall through to original fetch if anything goes wrong
       }
 
-      return (originalFetch as any)(input, init);
-    }) as typeof fetch;
+      return originalFetch(input, init);
+    };
+
+    // Assign patched fetch - type assertion needed as we return ArrayBuffer for file:// URLs
+    // which is non-standard but required for wasm-pack's loader in Node.js
+    g.fetch = patchedFetch as typeof fetch;
 
     nodeFileFetchPatched = true;
   } catch {
@@ -193,7 +228,8 @@ export class WASMIntegration {
     } catch (error) {
       this.log.error('Failed to initialize WebAssembly module:', error);
 
-      const code = (error as any)?.code;
+      const errorObj = error as Record<string, unknown> | null;
+      const code = errorObj?.code;
       if (code === 'ERR_MODULE_NOT_FOUND') {
         // The WASM bundle is an optional optimization. When it has not been
         // built, log a single concise warning and then rely on the
@@ -232,7 +268,7 @@ export class WASMIntegration {
   /**
    * Parse properties with WASM optimization and TypeScript fallback
    */
-  async parseProperties(jsonStr: string, options?: { maxDepth?: number }): Promise<any> {
+  async parseProperties(jsonStr: string, options?: { maxDepth?: number }): Promise<unknown> {
     const start = performance.now();
 
     if (!this.isReady()) {
@@ -361,7 +397,7 @@ export class WASMIntegration {
     assetPath: string,
     dependencies: Record<string, string[]>,
     options?: { maxDepth?: number }
-  ): Promise<any> {
+  ): Promise<unknown> {
     const start = performance.now();
 
     if (!this.isReady()) {
@@ -583,7 +619,7 @@ export class WASMIntegration {
 
   // TypeScript fallback implementations
 
-  private fallbackParseProperties(jsonStr: string): any {
+  private fallbackParseProperties(jsonStr: string): unknown {
     try {
       return JSON.parse(jsonStr);
     } catch (error) {
@@ -644,10 +680,10 @@ export class WASMIntegration {
     assetPath: string,
     dependencies: Record<string, string[]>,
     options?: { maxDepth?: number }
-  ): any {
+  ): Record<string, unknown> {
     const maxDepth = options?.maxDepth ?? 100;
     const visited = new Set<string>();
-    const result: any[] = [];
+    const result: Array<{ path: string; dependencies: string[]; depth: number }> = [];
     const queue: Array<{ path: string; depth: number }> = [
       { path: assetPath, depth: 0 }
     ];

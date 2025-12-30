@@ -16,7 +16,8 @@ import {
     AutomationBridgeStatus,
     AutomationBridgeMessage,
     AutomationBridgeResponseMessage,
-    AutomationBridgeEvents
+    AutomationBridgeEvents,
+    QueuedRequestItem
 } from './types.js';
 import { ConnectionManager } from './connection-manager.js';
 import { RequestTracker } from './request-tracker.js';
@@ -61,7 +62,8 @@ export class AutomationBridge extends EventEmitter {
     private lastHandshakeFailure?: { reason: string; at: Date };
     private lastDisconnect?: { code: number; reason: string; at: Date };
     private lastError?: { message: string; at: Date };
-    private queuedRequestItems: Array<{ resolve: (v: any) => void; reject: (e: any) => void; action: string; payload: any; options: any }> = [];
+     
+    private queuedRequestItems: QueuedRequestItem[] = [];
     private connectionPromise?: Promise<void>;
     private connectionLock = false;
 
@@ -444,12 +446,12 @@ export class AutomationBridge extends EventEmitter {
                         };
                         // We map errors to rejects, but we should be careful about which errors.
                         // A socket error might happen during connection.
-                        const onError = (err: any) => {
+                        const onError = (err: unknown) => {
                             cleanup(); reject(err);
                         };
                         // Also listen for handshake failure
-                        const onHandshakeFail = (err: any) => {
-                            cleanup(); reject(new Error(`Handshake failed: ${err.reason}`));
+                        const onHandshakeFail = (err: Record<string, unknown>) => {
+                            cleanup(); reject(new Error(`Handshake failed: ${String(err.reason)}`));
                         };
 
                         const cleanup = () => {
@@ -486,12 +488,13 @@ export class AutomationBridge extends EventEmitter {
                     } finally {
                         if (timeoutId) clearTimeout(timeoutId);
                     }
-                } catch (err: any) {
+                } catch (err: unknown) {
                     this.log.error('Lazy connection failed', err);
                     // We don't throw here immediately, we let the isConnected check fail below 
                     // or throw a specific error.
                     // Actually, if connection failed, we should probably fail the request.
-                    throw new Error(`Failed to establish connection to Unreal Engine: ${err.message}`);
+                    const errObj = err as Record<string, unknown> | null;
+                    throw new Error(`Failed to establish connection to Unreal Engine: ${String(errObj?.message ?? err)}`);
                 }
             } else {
                 throw new Error('Automation bridge disabled');
@@ -508,8 +511,8 @@ export class AutomationBridge extends EventEmitter {
             }
             return new Promise<T>((resolve, reject) => {
                 this.queuedRequestItems.push({
-                    resolve,
-                    reject,
+                    resolve: resolve as (value: unknown) => void,
+                    reject: reject as (reason: unknown) => void,
                     action,
                     payload,
                     options

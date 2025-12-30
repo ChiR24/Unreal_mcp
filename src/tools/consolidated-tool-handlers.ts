@@ -27,7 +27,7 @@ import { handleInputTools } from './handlers/input-handlers.js';
 type NormalizedToolCall = {
   name: string;
   action: string;
-  args: any;
+  args: Record<string, unknown>;
 };
 
 const MATERIAL_GRAPH_ACTION_MAP: Record<string, string> = {
@@ -82,13 +82,13 @@ function isNiagaraGraphAction(action: string): boolean {
 
 function normalizeToolCall(
   name: string,
-  args: any
+  args: Record<string, unknown>
 ): NormalizedToolCall {
   let normalizedName = name;
   let action: string;
 
-  if (args && typeof (args as any).action === 'string') {
-    action = (args as any).action;
+  if (args && typeof args.action === 'string') {
+    action = args.action;
   } else if (normalizedName === 'console_command') {
     normalizedName = 'system_control';
     action = 'console_command';
@@ -119,9 +119,15 @@ function normalizeToolCall(
 
 // Registration of default handlers
 function registerDefaultHandlers() {
+  // Helper to extract action string from args
+  const getAction = (args: Record<string, unknown>): string => {
+    const action = args.action ?? args.subAction;
+    return typeof action === 'string' ? action : requireAction(args);
+  };
+
   // 1. ASSET MANAGER
   toolRegistry.register('manage_asset', async (args, tools) => {
-    const action = args.subAction || args.action || requireAction(args); // Fallback assumption
+    const action = getAction(args);
     // Reroute merged functionality
     if (['create_render_target', 'nanite_rebuild_mesh'].includes(action)) {
       const payload = { ...args, subAction: action };
@@ -140,7 +146,7 @@ function registerDefaultHandlers() {
 
   // 2. BLUEPRINT MANAGER
   toolRegistry.register('manage_blueprint', async (args, tools) => {
-    const action = args.action || requireAction(args);
+    const action = getAction(args);
     if (action === 'get_blueprint') {
       return await handleBlueprintGet(args, tools);
     }
@@ -153,12 +159,12 @@ function registerDefaultHandlers() {
 
   // 3. ACTOR CONTROL
   toolRegistry.register('control_actor', async (args, tools) => {
-    return await handleActorTools(args.action || requireAction(args), args, tools);
+    return await handleActorTools(getAction(args), args, tools);
   });
 
   // 4. EDITOR CONTROL
   toolRegistry.register('control_editor', async (args, tools) => {
-    const action = args.action || requireAction(args);
+    const action = getAction(args);
     if (action === 'simulate_input') {
       const payload = { ...args, subAction: action };
       return cleanObject(await executeAutomationRequest(tools, 'manage_ui', payload, 'Automation bridge not available'));
@@ -168,7 +174,7 @@ function registerDefaultHandlers() {
 
   // 5. LEVEL MANAGER
   toolRegistry.register('manage_level', async (args, tools) => {
-    const action = args.action || requireAction(args);
+    const action = getAction(args);
     if (['load_cells', 'set_datalayer'].includes(action)) {
       const payload = { ...args, subAction: action };
       return cleanObject(await executeAutomationRequest(tools, 'manage_world_partition', payload, 'Automation bridge not available'));
@@ -177,11 +183,11 @@ function registerDefaultHandlers() {
   });
 
   // 6. ANIMATION & PHYSICS
-  toolRegistry.register('animation_physics', async (args, tools) => await handleAnimationTools(args.action || requireAction(args), args, tools));
+  toolRegistry.register('animation_physics', async (args, tools) => await handleAnimationTools(getAction(args), args, tools));
 
   // 7. EFFECTS MANAGER
   toolRegistry.register('manage_effect', async (args, tools) => {
-    const action = args.action || requireAction(args);
+    const action = getAction(args);
     if (isNiagaraGraphAction(action)) {
       // Instance check
       const isInstanceOp = action === 'set_niagara_parameter' && (args.actorName || (args.systemName && !args.assetPath && !args.systemPath));
@@ -195,11 +201,11 @@ function registerDefaultHandlers() {
   });
 
   // 8. ENVIRONMENT BUILDER
-  toolRegistry.register('build_environment', async (args, tools) => await handleEnvironmentTools(args.action || requireAction(args), args, tools));
+  toolRegistry.register('build_environment', async (args, tools) => await handleEnvironmentTools(getAction(args), args, tools));
 
   // 9. SYSTEM CONTROL
   toolRegistry.register('system_control', async (args, tools) => {
-    const action = args.action || requireAction(args);
+    const action = getAction(args);
     if (action === 'console_command') return await handleConsoleCommand(args, tools);
     if (action === 'run_ubt') return await handlePipelineTools(action, args, tools);
 
@@ -213,40 +219,40 @@ function registerDefaultHandlers() {
   });
 
   // 10. SEQUENCER
-  toolRegistry.register('manage_sequence', async (args, tools) => await handleSequenceTools(args.action || requireAction(args), args, tools));
+  toolRegistry.register('manage_sequence', async (args, tools) => await handleSequenceTools(getAction(args), args, tools));
 
   // 11. INTROSPECTION
-  toolRegistry.register('inspect', async (args, tools) => await handleInspectTools(args.action || requireAction(args), args, tools));
+  toolRegistry.register('inspect', async (args, tools) => await handleInspectTools(getAction(args), args, tools));
 
   // 12. AUDIO
-  toolRegistry.register('manage_audio', async (args, tools) => await handleAudioTools(args.action || requireAction(args), args, tools));
+  toolRegistry.register('manage_audio', async (args, tools) => await handleAudioTools(getAction(args), args, tools));
 
   // 13. BEHAVIOR TREE
-  toolRegistry.register('manage_behavior_tree', async (args, tools) => await handleGraphTools('manage_behavior_tree', args.action || requireAction(args), args, tools));
+  toolRegistry.register('manage_behavior_tree', async (args, tools) => await handleGraphTools('manage_behavior_tree', getAction(args), args, tools));
 
   // 14. BLUEPRINT GRAPH DIRECT
-  toolRegistry.register('manage_blueprint_graph', async (args, tools) => await handleGraphTools('manage_blueprint_graph', args.action || requireAction(args), args, tools));
+  toolRegistry.register('manage_blueprint_graph', async (args, tools) => await handleGraphTools('manage_blueprint_graph', getAction(args), args, tools));
 
   // 15. RENDER TOOLS
   toolRegistry.register('manage_render', async (args, tools) => {
-    const action = args.action || requireAction(args);
+    const action = getAction(args);
     return cleanObject(await executeAutomationRequest(tools, 'manage_render', { ...args, subAction: action }, 'Bridge unavailable'));
   });
 
   // 16. WORLD PARTITION
   toolRegistry.register('manage_world_partition', async (args, tools) => {
-    const action = args.action || requireAction(args);
+    const action = getAction(args);
     return cleanObject(await executeAutomationRequest(tools, 'manage_world_partition', { ...args, subAction: action }, 'Bridge unavailable'));
   });
 
   // 17. LIGHTING
-  toolRegistry.register('manage_lighting', async (args, tools) => await handleLightingTools(args.action || requireAction(args), args, tools));
+  toolRegistry.register('manage_lighting', async (args, tools) => await handleLightingTools(getAction(args), args, tools));
 
   // 18. PERFORMANCE
-  toolRegistry.register('manage_performance', async (args, tools) => await handlePerformanceTools(args.action || requireAction(args), args, tools));
+  toolRegistry.register('manage_performance', async (args, tools) => await handlePerformanceTools(getAction(args), args, tools));
 
   // 19. INPUT
-  toolRegistry.register('manage_input', async (args, tools) => await handleInputTools(args.action || requireAction(args), args, tools));
+  toolRegistry.register('manage_input', async (args, tools) => await handleInputTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately
@@ -255,7 +261,7 @@ registerDefaultHandlers();
 // Export the main consolidated tool call handler
 export async function handleConsolidatedToolCall(
   name: string,
-  args: any,
+  args: Record<string, unknown>,
   tools: ITools
 ) {
   const logger = new Logger('ConsolidatedToolHandler');
@@ -283,10 +289,11 @@ export async function handleConsolidatedToolCall(
     // Fallback or Unknown
     return cleanObject({ success: false, error: 'UNKNOWN_TOOL', message: `Unknown consolidated tool: ${name}` });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     const duration = Date.now() - startTime;
-    logger.error(`Failed execution of ${name} after ${duration}ms: ${err?.message || String(err)}`);
-    const errorMessage = err?.message || String(err);
+    const errObj = err as Record<string, unknown> | null;
+    const errorMessage = typeof errObj?.message === 'string' ? errObj.message : String(err);
+    logger.error(`Failed execution of ${name} after ${duration}ms: ${errorMessage}`);
     const lowerError = errorMessage.toString().toLowerCase();
     const isTimeout = lowerError.includes('timeout');
 

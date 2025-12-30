@@ -25,7 +25,7 @@ export class HandshakeHandler extends EventEmitter {
                 }
             }, timeoutMs);
 
-            const onMessage = (data: any) => {
+            const onMessage = (data: Buffer | string) => {
                 let parsed: AutomationBridgeMessage;
                 const text = typeof data === 'string' ? data : data.toString('utf8');
                 try {

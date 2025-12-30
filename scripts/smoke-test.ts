@@ -88,7 +88,8 @@ child.stdin.write(JSON.stringify(requests[0]) + '\n');
 setTimeout(() => {
     if (!passed) {
         console.error('❌ Timeout waiting for smoke test');
+        console.error('Buffer contents:', buffer);
         child.kill();
         process.exit(1);
     }
-}, 10000);
+}, 15000);

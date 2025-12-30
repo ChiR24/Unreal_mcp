@@ -1,17 +1,39 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
+import type { HandlerArgs, SystemArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
-export async function handleSystemTools(action: string, args: any, tools: ITools) {
+/** Response from various operations */
+interface OperationResponse {
+  success?: boolean;
+  error?: string;
+  message?: string;
+  settings?: unknown;
+  data?: unknown;
+  result?: unknown;
+  [key: string]: unknown;
+}
+
+/** Validation result for an asset */
+interface AssetValidationResult {
+  assetPath: string;
+  success?: boolean;
+  error?: string | null;
+  [key: string]: unknown;
+}
+
+export async function handleSystemTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+  const argsTyped = args as SystemArgs;
   const sysAction = String(action || '').toLowerCase();
+  
   switch (sysAction) {
     case 'show_fps':
-      await tools.systemTools.executeConsoleCommand(args.enabled !== false ? 'stat fps' : 'stat fps 0');
-      return { success: true, message: `FPS display ${args.enabled !== false ? 'enabled' : 'disabled'}`, action: 'show_fps' };
+      await tools.systemTools.executeConsoleCommand(argsTyped.enabled !== false ? 'stat fps' : 'stat fps 0');
+      return { success: true, message: `FPS display ${argsTyped.enabled !== false ? 'enabled' : 'disabled'}`, action: 'show_fps' };
     case 'profile': {
-      const rawType = typeof args?.profileType === 'string' ? args.profileType.trim() : '';
+      const rawType = typeof argsTyped.profileType === 'string' ? argsTyped.profileType.trim() : '';
       const profileKey = rawType ? rawType.toLowerCase() : 'cpu';
-      const enabled = args?.enabled !== false;
+      const enabled = argsTyped.enabled !== false;
 
       // Use built-in stat commands that are known to exist in editor builds.
       // "stat unit" is a safe choice for CPU profiling in most configurations.
@@ -30,9 +52,9 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         return {
           success: false,
           error: 'INVALID_PROFILE_TYPE',
-          message: `Unsupported profileType: ${rawType || String(args?.profileType ?? '')}`,
+          message: `Unsupported profileType: ${rawType || String(argsTyped.profileType ?? '')}`,
           action: 'profile',
-          profileType: args?.profileType
+          profileType: argsTyped.profileType
         };
       }
 
@@ -45,8 +67,8 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       };
     }
     case 'show_stats': {
-      const category = typeof args?.category === 'string' ? args.category.trim() : (args?.type || 'Unit');
-      const enabled = args?.enabled !== false;
+      const category = typeof argsTyped.category === 'string' ? argsTyped.category.trim() : 'Unit';
+      const enabled = argsTyped.enabled !== false;
       const cmd = `stat ${category}`;
       await tools.systemTools.executeConsoleCommand(cmd);
       return {
@@ -58,7 +80,7 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       };
     }
     case 'set_quality': {
-      const quality = args.quality || args.level || 'medium'; // handle 'level' as well since test uses it
+      const quality = argsTyped.level ?? 'medium';
       let qVal: number;
       if (typeof quality === 'number') {
         qVal = quality;
@@ -69,7 +91,7 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       // Clamp quality level to valid range 0-4
       qVal = Math.max(0, Math.min(4, qVal));
 
-      const category = String(args.category || 'ViewDistance').toLowerCase();
+      const category = String(argsTyped.category || 'ViewDistance').toLowerCase();
       let cvar = 'sg.ViewDistanceQuality';
 
       if (category.includes('shadow')) cvar = 'sg.ShadowQuality';
@@ -86,14 +108,16 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       return { success: true, message: `${category} quality derived from '${quality}' set to ${qVal} via ${cvar}`, action: 'set_quality' };
     }
     case 'execute_command':
-      return cleanObject(await tools.systemTools.executeConsoleCommand(args.command));
+      return cleanObject(await tools.systemTools.executeConsoleCommand(argsTyped.command ?? '') as Record<string, unknown>);
     case 'create_widget': {
-      const name = typeof args?.name === 'string' ? args.name.trim() : '';
-      const widgetPathRaw = typeof args?.widgetPath === 'string' ? args.widgetPath.trim() : '';
+      const name = typeof argsTyped.name === 'string' ? argsTyped.name.trim() : '';
+      const widgetPathRaw = typeof argsTyped.widgetPath === 'string' ? argsTyped.widgetPath.trim() : '';
 
       // If name is missing but widgetPath is provided, try to extract name from path
       let effectiveName = name || `NewWidget_${Date.now()}`;
-      let effectivePath = typeof args?.savePath === 'string' ? args.savePath.trim() : '';
+      let effectivePath = typeof (argsTyped as Record<string, unknown>).savePath === 'string' 
+        ? ((argsTyped as Record<string, unknown>).savePath as string).trim() 
+        : '';
 
       if (!name && widgetPathRaw) {
         const parts = widgetPathRaw.split('/').filter((p: string) => p.length > 0);
@@ -118,7 +142,7 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       try {
         const res = await tools.uiTools.createWidget({
           name: effectiveName,
-          type: args?.widgetType,
+          type: (argsTyped as Record<string, unknown>).widgetType as string | undefined,
           savePath: effectivePath
         });
 
@@ -137,21 +161,26 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       }
     }
     case 'show_widget': {
-      const widgetId = typeof args?.widgetId === 'string' ? args.widgetId.trim() : '';
+      const widgetId = typeof (argsTyped as Record<string, unknown>).widgetId === 'string' 
+        ? ((argsTyped as Record<string, unknown>).widgetId as string).trim() 
+        : '';
 
       if (widgetId.toLowerCase() === 'notification') {
-        const text = typeof args?.message === 'string' && args.message.trim().length > 0
-          ? args.message
-          : 'Notification';
-        const duration = typeof args?.duration === 'number' ? args.duration : undefined;
+        const message = typeof (argsTyped as Record<string, unknown>).message === 'string'
+          ? ((argsTyped as Record<string, unknown>).message as string).trim()
+          : '';
+        const text = message.length > 0 ? message : 'Notification';
+        const duration = typeof (argsTyped as Record<string, unknown>).duration === 'number' 
+          ? (argsTyped as Record<string, unknown>).duration as number 
+          : undefined;
 
         try {
-          const res = await tools.uiTools.showNotification({ text, duration });
-          const ok = res && (res as any).success !== false;
+          const res = await tools.uiTools.showNotification({ text, duration }) as OperationResponse;
+          const ok = res && res.success !== false;
           if (ok) {
             return {
               success: true,
-              message: (res as any).message || 'Notification shown',
+              message: res.message || 'Notification shown',
               action: 'show_widget',
               widgetId,
               handled: true
@@ -159,8 +188,8 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
           }
           return cleanObject({
             success: false,
-            error: (res as any)?.error || 'NOTIFICATION_FAILED',
-            message: (res as any)?.message || 'Failed to show notification',
+            error: res?.error || 'NOTIFICATION_FAILED',
+            message: res?.message || 'Failed to show notification',
             action: 'show_widget',
             widgetId
           });
@@ -176,7 +205,8 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         }
       }
 
-      const widgetPath = (typeof args?.widgetPath === 'string' ? args.widgetPath.trim() : '') || (typeof args?.name === 'string' ? args.name.trim() : '');
+      const widgetPath = (typeof argsTyped.widgetPath === 'string' ? argsTyped.widgetPath.trim() : '') 
+        || (typeof argsTyped.name === 'string' ? argsTyped.name.trim() : '');
       if (!widgetPath) {
         return {
           success: false,
@@ -190,9 +220,9 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       return cleanObject(await tools.uiTools.showWidget(widgetPath));
     }
     case 'add_widget_child': {
-      const widgetPath = typeof args?.widgetPath === 'string' ? args.widgetPath.trim() : '';
-      const childClass = typeof args?.childClass === 'string' ? args.childClass.trim() : '';
-      const parentName = typeof args?.parentName === 'string' ? args.parentName.trim() : undefined;
+      const widgetPath = typeof argsTyped.widgetPath === 'string' ? argsTyped.widgetPath.trim() : '';
+      const childClass = typeof argsTyped.childClass === 'string' ? argsTyped.childClass.trim() : '';
+      const parentName = typeof argsTyped.parentName === 'string' ? argsTyped.parentName.trim() : undefined;
 
       if (!widgetPath || !childClass) {
         return {
@@ -203,14 +233,12 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         };
       }
 
-      // Use the UITools wrapper. Note: componentName is required by the wrapper but not used by the bridge command for add_widget_child.
-      // We'll pass a dummy name.
       try {
         const res = await tools.uiTools.addWidgetComponent({
           widgetName: widgetPath,
-          componentType: childClass as any, // Cast to any since the type definition in UITools might be restrictive 
-          componentName: 'NewChild', // Dummy name
-          slot: parentName ? { position: [0, 0] } : undefined // Trigger 'parent' logic if needed, though simple map uses 'Root' if slot present
+          componentType: childClass,
+          componentName: 'NewChild',
+          slot: parentName ? { position: [0, 0] } : undefined
         });
         return cleanObject({
           ...res,
@@ -228,11 +256,16 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
     }
     case 'set_cvar': {
       // Accept multiple parameter names: name, cvar, key
-      const rawInput = typeof args?.name === 'string' && args.name.trim().length > 0
-        ? args.name.trim()
-        : (typeof args?.cvar === 'string' ? args.cvar.trim()
-          : (typeof args?.key === 'string' ? args.key.trim()
-            : (typeof args?.command === 'string' ? args.command.trim() : '')));
+      const nameVal = typeof argsTyped.name === 'string' && argsTyped.name.trim().length > 0
+        ? argsTyped.name.trim()
+        : '';
+      const cvarVal = typeof (argsTyped as Record<string, unknown>).cvar === 'string'
+        ? ((argsTyped as Record<string, unknown>).cvar as string).trim()
+        : '';
+      const keyVal = typeof argsTyped.key === 'string' ? argsTyped.key.trim() : '';
+      const cmdVal = typeof argsTyped.command === 'string' ? argsTyped.command.trim() : '';
+      
+      const rawInput = nameVal || cvarVal || keyVal || cmdVal;
 
       // Some callers pass a full "cvar value" command string.
       const tokens = rawInput.split(/\s+/).filter(Boolean);
@@ -247,8 +280,8 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         };
       }
 
-      const value = (args?.value !== undefined && args?.value !== null)
-        ? args.value
+      const value = (argsTyped.value !== undefined && argsTyped.value !== null)
+        ? argsTyped.value
         : (tokens.length > 1 ? tokens.slice(1).join(' ') : '');
       await tools.systemTools.executeConsoleCommand(`${rawName} ${value}`);
       return {
@@ -260,10 +293,10 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       };
     }
     case 'get_project_settings': {
-      const section = typeof args?.category === 'string' && args.category.trim().length > 0
-        ? args.category
-        : args?.section;
-      const resp = await tools.systemTools.getProjectSettings(section);
+      const section = typeof argsTyped.category === 'string' && argsTyped.category.trim().length > 0
+        ? argsTyped.category
+        : argsTyped.section;
+      const resp = await tools.systemTools.getProjectSettings(section) as OperationResponse;
       if (resp && resp.success && (resp.settings || resp.data || resp.result)) {
         return cleanObject({
           success: true,
@@ -275,24 +308,10 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       return cleanObject(resp);
     }
     case 'validate_assets': {
-      const paths: string[] = Array.isArray(args?.paths) ? args.paths : [];
+      const paths: string[] = Array.isArray((argsTyped as Record<string, unknown>).paths) 
+        ? (argsTyped as Record<string, unknown>).paths as string[]
+        : [];
       if (!paths.length) {
-        // If no paths provided, we can either validate everything (too slow) or just return success with a note.
-        // For safety, let's just warn but succeed, or maybe validate /Game/ if we wanted to be bold.
-        // Let's stick to "nothing to validate" but success=true, OR check the args properly. 
-        // If the user INTENDED to validate everything, they should probably say so. 
-        // But to "fix" the issue of empty results, maybe we can assume they want to validate the current open asset? 
-        // No, safer to just return a clear message. 
-        // Actually, let's allow it to start a validation of "/Game" if explicit empty list was NOT passed, but here "paths" is derived.
-        // The issue was "validate_assets" tool call with no args.
-        // Let's check /Game/ by default if nothing specified? That might be immense.
-        // Better: Return success=false to indicate they need to provide paths? 
-        // The prompt asked to "fix" the issue. The issue was "Message: No asset paths provided...". 
-        // Maybe that IS correct behavior? 
-        // Let's make it try to validate the set of open assets if possible? No easy way to get that here.
-        // Let's just update the message to be more helpful or return false.
-        // Actually, I'll update it to validate '/Game/' non-recursively? No.
-        // Let's just return success: false so the user knows they missed an arg.
         return {
           success: false,
           error: 'INVALID_ARGUMENT',
@@ -302,12 +321,23 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         };
       }
 
-      const results: any[] = [];
+      const results: AssetValidationResult[] = [];
       for (const rawPath of paths) {
         const assetPath = typeof rawPath === 'string' ? rawPath : String(rawPath ?? '');
         try {
           const res = await tools.assetTools.validate({ assetPath });
-          results.push({ assetPath, ...res });
+          // Extract error message from potentially complex error object
+          let errorStr: string | null = null;
+          if (res.error) {
+            if (typeof res.error === 'string') {
+              errorStr = res.error;
+            } else if (typeof res.error === 'object' && res.error !== null && 'message' in res.error) {
+              errorStr = String((res.error as { message: string }).message);
+            } else {
+              errorStr = String(res.error);
+            }
+          }
+          results.push({ assetPath, success: res.success, error: errorStr });
         } catch (error) {
           results.push({
             assetPath,
@@ -325,9 +355,15 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       };
     }
     case 'play_sound': {
-      const soundPath = typeof args?.soundPath === 'string' ? args.soundPath.trim() : '';
-      const volume = typeof args?.volume === 'number' ? args.volume : undefined;
-      const pitch = typeof args?.pitch === 'number' ? args.pitch : undefined;
+      const soundPath = typeof (argsTyped as Record<string, unknown>).soundPath === 'string' 
+        ? ((argsTyped as Record<string, unknown>).soundPath as string).trim() 
+        : '';
+      const volume = typeof (argsTyped as Record<string, unknown>).volume === 'number' 
+        ? (argsTyped as Record<string, unknown>).volume as number 
+        : undefined;
+      const pitch = typeof (argsTyped as Record<string, unknown>).pitch === 'number' 
+        ? (argsTyped as Record<string, unknown>).pitch as number 
+        : undefined;
 
       // Volume 0 should behave as a silent, handled no-op
       if (typeof volume === 'number' && volume <= 0) {
@@ -343,7 +379,7 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       }
 
       try {
-        const res = await tools.audioTools.playSound(soundPath, volume, pitch);
+        const res = await tools.audioTools.playSound(soundPath, volume, pitch) as OperationResponse;
         if (!res || res.success === false) {
           const errText = String(res?.error || '').toLowerCase();
           const isMissingAsset = errText.includes('asset_not_found') || errText.includes('asset not found');
@@ -352,7 +388,7 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
             // Attempt fallback to a known engine sound
             const fallbackPath = '/Engine/EditorSounds/Notifications/CompileSuccess_Cue';
             if (soundPath !== fallbackPath) {
-              const fallbackRes = await tools.audioTools.playSound(fallbackPath, volume, pitch);
+              const fallbackRes = await tools.audioTools.playSound(fallbackPath, volume, pitch) as OperationResponse;
               if (fallbackRes.success) {
                 return {
                   success: true,
@@ -415,7 +451,7 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         if (isMissingAsset) {
           const fallbackSound = '/Engine/EditorSounds/Notifications/CompileSuccess_Cue';
           try {
-            const fallbackRes = await tools.audioTools.playSound(fallbackSound, volume, pitch);
+            const fallbackRes = await tools.audioTools.playSound(fallbackSound, volume, pitch) as OperationResponse;
             if (fallbackRes && fallbackRes.success) {
               return {
                 success: true,
@@ -443,8 +479,10 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       }
     }
     case 'screenshot': {
-      const includeMetadata = args?.includeMetadata === true;
-      const filenameArg = typeof args?.filename === 'string' ? args.filename : undefined;
+      const includeMetadata = (argsTyped as Record<string, unknown>).includeMetadata === true;
+      const filenameArg = typeof (argsTyped as Record<string, unknown>).filename === 'string' 
+        ? (argsTyped as Record<string, unknown>).filename as string 
+        : undefined;
 
       if (includeMetadata) {
         const baseName = filenameArg && filenameArg.trim().length > 0
@@ -461,7 +499,7 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
             message: msg,
             filename: baseName,
             includeMetadata: true,
-            metadata: args?.metadata,
+            metadata: (argsTyped as Record<string, unknown>).metadata,
             action: 'screenshot'
           };
         }
@@ -471,7 +509,7 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
           message: `Metadata screenshot captured: ${baseName}`,
           filename: baseName,
           includeMetadata: true,
-          metadata: args?.metadata,
+          metadata: (argsTyped as Record<string, unknown>).metadata,
           action: 'screenshot',
           handled: true
         };
@@ -487,9 +525,10 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         return { width: Number(m[1]), height: Number(m[2]) };
       };
 
-      const parsed = parseResolution(args?.resolution);
-      const width = Number.isFinite(Number(args.width)) ? Number(args.width) : (parsed.width ?? NaN);
-      const height = Number.isFinite(Number(args.height)) ? Number(args.height) : (parsed.height ?? NaN);
+      const parsed = parseResolution(argsTyped.resolution);
+      const argsRecord = argsTyped as Record<string, unknown>;
+      const width = Number.isFinite(Number(argsRecord.width)) ? Number(argsRecord.width) : (parsed.width ?? NaN);
+      const height = Number.isFinite(Number(argsRecord.height)) ? Number(argsRecord.height) : (parsed.height ?? NaN);
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
         return {
           success: false,
@@ -498,7 +537,7 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
           action: 'set_resolution'
         };
       }
-      const windowed = args.windowed !== false; // default to windowed=true
+      const windowed = argsRecord.windowed !== false; // default to windowed=true
       const suffix = windowed ? 'w' : 'f';
       await tools.systemTools.executeConsoleCommand(`r.SetRes ${width}x${height}${suffix}`);
       return {
@@ -515,16 +554,17 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
         return { width: Number(m[1]), height: Number(m[2]) };
       };
 
-      const parsed = parseResolution(args?.resolution);
-      const width = Number.isFinite(Number(args.width)) ? Number(args.width) : (parsed.width ?? NaN);
-      const height = Number.isFinite(Number(args.height)) ? Number(args.height) : (parsed.height ?? NaN);
+      const parsed = parseResolution(argsTyped.resolution);
+      const argsRecord = argsTyped as Record<string, unknown>;
+      const width = Number.isFinite(Number(argsRecord.width)) ? Number(argsRecord.width) : (parsed.width ?? NaN);
+      const height = Number.isFinite(Number(argsRecord.height)) ? Number(argsRecord.height) : (parsed.height ?? NaN);
 
-      const windowed = args.windowed === true || args.enabled === false; // default to fullscreen when omitted, but respect enabled=false (meaning windowed)
+      const windowed = argsRecord.windowed === true || argsTyped.enabled === false;
       const suffix = windowed ? 'w' : 'f';
 
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
         // If only toggling mode and no resolution provided, attempt a mode toggle.
-        if (typeof args?.windowed === 'boolean' || typeof args?.enabled === 'boolean') {
+        if (typeof argsRecord.windowed === 'boolean' || typeof argsTyped.enabled === 'boolean') {
           await tools.systemTools.executeConsoleCommand(`r.FullScreenMode ${windowed ? 1 : 0}`);
           return {
             success: true,
@@ -550,14 +590,15 @@ export async function handleSystemTools(action: string, args: any, tools: ITools
       };
     }
     case 'read_log':
-      return cleanObject(await tools.logTools.readOutputLog(args));
-    default:
+      return cleanObject(await tools.logTools.readOutputLog(args as Record<string, unknown>));
+    default: {
       const res = await executeAutomationRequest(tools, 'system_control', args, 'Automation bridge not available for system control operations');
-      return cleanObject(res);
+      return cleanObject(res) as Record<string, unknown>;
+    }
   }
 }
 
-export async function handleConsoleCommand(args: any, tools: ITools) {
+export async function handleConsoleCommand(args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const rawCommand = typeof args?.command === 'string' ? args.command : '';
   const trimmed = rawCommand.trim();
 
@@ -576,5 +617,5 @@ export async function handleConsoleCommand(args: any, tools: ITools) {
     { ...args, command: trimmed },
     'Automation bridge not available for console command operations'
   );
-  return cleanObject(res);
+  return cleanObject(res) as Record<string, unknown>;
 }

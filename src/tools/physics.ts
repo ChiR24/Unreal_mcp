@@ -38,14 +38,16 @@ export class PhysicsTools {
       });
 
       if (response.success !== false && response.result) {
-        const meshPath = coerceString((response.result as any).meshPath);
+        const resultObj = response.result as Record<string, unknown>;
+        const meshPath = coerceString(resultObj.meshPath);
         if (meshPath) {
           return meshPath;
         }
       }
 
       // Fallback to alternate path
-      const alternate = coerceString((response.result as any)?.alternate);
+      const resultObj = (response.result ?? {}) as Record<string, unknown>;
+      const alternate = coerceString(resultObj.alternate);
       if (alternate) {
         return alternate;
       }
@@ -198,13 +200,13 @@ export class PhysicsTools {
           };
         }
 
-        const result = response.result as any;
+        const result = (response.result ?? {}) as Record<string, unknown>;
         return {
           success: true,
           message: response.message || `Ragdoll physics setup completed for ${sanitizedParams.name}`,
-          path: coerceString(result?.path) ?? coerceString(result?.physicsAssetPath) ?? `${path}/${sanitizedParams.name}`,
-          existingAsset: result?.existingAsset,
-          ...(result || {})
+          path: coerceString(result.path) ?? coerceString(result.physicsAssetPath) ?? `${path}/${sanitizedParams.name}`,
+          existingAsset: result.existingAsset,
+          ...result
         };
       } catch (error) {
         return {
@@ -334,34 +336,21 @@ export class PhysicsTools {
    * Configure Vehicle Physics
    */
   async configureVehicle(params: {
-    vehicleName: string;
-    vehicleType: string;
-    wheels?: Array<{
-      name: string;
-      radius: number;
-      width: number;
-      mass: number;
-      isSteering: boolean;
-      isDriving: boolean;
-    }>;
-    engine?: {
-      maxRPM: number;
-      torqueCurve: Array<[number, number]>;
-    };
-    transmission?: {
-      gears: number[];
-      finalDriveRatio: number;
-    };
+    vehicleName?: string;
+    vehicleType?: string;
+    wheels?: unknown[];  // Array of wheel configs, validated internally
+    engine?: unknown;    // Engine config, validated internally
+    transmission?: unknown;  // Transmission config, validated internally
     pluginDependencies?: string[];
   }) {
     // Plugin check removed as ensurePluginsEnabled is deprecated.
     // Users should ensure required plugins are enabled in the editor.
 
-    const rawParams: any = params as any;
+    const rawParams = params as Record<string, unknown>;
 
     const pluginDeps: string[] | undefined = Array.isArray(params.pluginDependencies) && params.pluginDependencies.length > 0
       ? params.pluginDependencies
-      : (Array.isArray(rawParams.plugins) && rawParams.plugins.length > 0 ? rawParams.plugins : undefined);
+      : (Array.isArray(rawParams.plugins) && (rawParams.plugins as unknown[]).length > 0 ? rawParams.plugins as string[] : undefined);
 
     if (pluginDeps && pluginDeps.length > 0) {
       return {
@@ -386,7 +375,8 @@ export class PhysicsTools {
 
     // Configure wheels when provided
     if (Array.isArray(params.wheels) && params.wheels.length > 0) {
-      for (const wheel of params.wheels) {
+      for (const wheelUnknown of params.wheels) {
+        const wheel = wheelUnknown as Record<string, unknown>;
         commands.push(
           `AddVehicleWheel ${params.vehicleName} ${wheel.name} ${wheel.radius} ${wheel.width} ${wheel.mass}`
         );
@@ -401,9 +391,10 @@ export class PhysicsTools {
     }
 
     // Configure engine (optional). Clamp negative RPMs and tolerate missing torqueCurve.
-    const effectiveEngine = params.engine ?? ((typeof rawParams.maxRPM === 'number' || Array.isArray(rawParams.torqueCurve))
-      ? { maxRPM: rawParams.maxRPM, torqueCurve: rawParams.torqueCurve }
+    const engineUnknown = params.engine ?? ((typeof rawParams.maxRPM === 'number' || Array.isArray(rawParams.torqueCurve))
+      ? { maxRPM: rawParams.maxRPM as number | undefined, torqueCurve: rawParams.torqueCurve as Array<[number, number]> | undefined }
       : undefined);
+    const effectiveEngine = engineUnknown as Record<string, unknown> | undefined;
 
     if (effectiveEngine) {
       let maxRPM = typeof effectiveEngine.maxRPM === 'number' ? effectiveEngine.maxRPM : 0;
@@ -421,10 +412,10 @@ export class PhysicsTools {
         if (Array.isArray(point) && point.length >= 2) {
           rpm = Number(point[0]);
           torque = Number(point[1]);
-        } else if (point && typeof point === 'object') {
-          const anyPoint: any = point;
-          rpm = typeof anyPoint.rpm === 'number' ? anyPoint.rpm : undefined;
-          torque = typeof anyPoint.torque === 'number' ? anyPoint.torque : undefined;
+        } else if (point && typeof point === 'object' && !Array.isArray(point)) {
+          const pointObj = point as Record<string, unknown>;
+          rpm = typeof pointObj.rpm === 'number' ? pointObj.rpm : undefined;
+          torque = typeof pointObj.torque === 'number' ? pointObj.torque : undefined;
         }
 
         if (typeof rpm === 'number' && typeof torque === 'number') {
@@ -435,16 +426,17 @@ export class PhysicsTools {
 
     // Configure transmission
     if (params.transmission) {
-      if (Array.isArray(params.transmission.gears)) {
-        for (let i = 0; i < params.transmission.gears.length; i++) {
+      const trans = params.transmission as Record<string, unknown>;
+      if (Array.isArray(trans.gears)) {
+        for (let i = 0; i < trans.gears.length; i++) {
           commands.push(
-            `SetGearRatio ${params.vehicleName} ${i} ${params.transmission.gears[i]}`
+            `SetGearRatio ${params.vehicleName} ${i} ${trans.gears[i]}`
           );
         }
       }
-      if (typeof params.transmission.finalDriveRatio === 'number') {
+      if (typeof trans.finalDriveRatio === 'number') {
         commands.push(
-          `SetFinalDriveRatio ${params.vehicleName} ${params.transmission.finalDriveRatio}`
+          `SetFinalDriveRatio ${params.vehicleName} ${trans.finalDriveRatio}`
         );
       }
     }
@@ -505,21 +497,21 @@ export class PhysicsTools {
       });
 
       if (response.success === false) {
-        const result = response.result as any;
+        const result = (response.result ?? {}) as Record<string, unknown>;
         return {
           success: false,
           error: response.error || response.message || 'Force application failed',
-          availableActors: result?.available_actors ? coerceStringArray(result.available_actors) : undefined,
-          details: result?.details
+          availableActors: result.available_actors ? coerceStringArray(result.available_actors as unknown[]) : undefined,
+          details: result.details
         };
       }
 
-      const result = response.result as any;
+      const result = (response.result ?? {}) as Record<string, unknown>;
       return {
         success: true,
         message: response.message || `Applied ${params.forceType} to ${params.actorName}`,
-        availableActors: result?.available_actors ? coerceStringArray(result.available_actors) : undefined,
-        ...(result || {})
+        availableActors: result.available_actors ? coerceStringArray(result.available_actors as unknown[]) : undefined,
+        ...result
       };
     } catch (err) {
       return { success: false, error: `Failed to apply force: ${err}` };
