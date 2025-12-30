@@ -303,26 +303,14 @@ jobs:
           git commit -m "$COMMIT_MESSAGE"
           echo "✅ Committed changes"
 
-      - name: Create git tag
-        run: |
-          VERSION="${{ steps.final_version.outputs.version }}"
-          TAG="v$VERSION"
-          
-          # Create annotated tag
-          git tag -a "$TAG" -m "Release $TAG"
-          
-          echo "✅ Created git tag: $TAG"
-
-      - name: Push changes and tag
+      - name: Push changes
         run: |
           BRANCH="${{ github.event.inputs.branch || 'main' }}"
           
-          # Push commit and tag
+          # Push commit only (no tag creation - tags are created manually)
           git push origin "$BRANCH"
-          git push origin "v${{ steps.final_version.outputs.version }}"
           
           echo "✅ Pushed changes to $BRANCH"
-          echo "✅ Pushed tag v${{ steps.final_version.outputs.version }}"
 
       - name: Create Release Summary
         run: |
@@ -353,12 +341,10 @@ jobs:
           git diff --stat HEAD~1 HEAD >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🏷️ Tag Created:" >> $GITHUB_STEP_SUMMARY
-          echo "Tag: \`v$VERSION\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📝 Next Steps:" >> $GITHUB_STEP_SUMMARY
           echo "1. Review the pushed changes" >> $GITHUB_STEP_SUMMARY
           echo "2. Fill in CHANGELOG.md with release notes (if created)" >> $GITHUB_STEP_SUMMARY
-          echo "3. Wait for automated workflows:" >> $GITHUB_STEP_SUMMARY
+          echo "3. Create and push tag manually: \`git tag -a v$VERSION -m 'Release v$VERSION' && git push origin v$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "4. Tag push will trigger automated workflows:" >> $GITHUB_STEP_SUMMARY
           echo "   - \`release.yml\` will trigger automatically on tag push" >> $GITHUB_STEP_SUMMARY
           echo "   - \`publish-mcp.yml\` will trigger automatically on tag push" >> $GITHUB_STEP_SUMMARY
