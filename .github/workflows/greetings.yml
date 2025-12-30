@@ -21,7 +21,7 @@ jobs:
       github.actor != 'github-actions[bot]' &&
       github.actor != github.repository_owner
     steps:
-    - uses: actions/first-interaction@34f15e814fe48ac9312ccf29db4e74fa767cbab7 # v1.3.0
+    - uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d # v3.1.0
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         issue-message: '👋 Thanks for opening this issue! We appreciate your feedback and report. A maintainer will check this out soon.'
