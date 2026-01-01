@@ -77,7 +77,9 @@ export class CommandValidator {
 
         const cmdLower = cmdTrimmed.toLowerCase();
 
-        if (cmdLower === 'py' || cmdLower.startsWith('py ')) {
+        // Check for 'py' followed by any whitespace or end of string
+        // This catches 'py', 'py ', 'py\t', etc. to prevent bypasses
+        if (/^py(?:\s|$)/.test(cmdLower)) {
             throw new Error('Python console commands are blocked from external calls for safety.');
         }
 
