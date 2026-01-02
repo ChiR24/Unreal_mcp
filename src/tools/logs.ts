@@ -73,10 +73,39 @@ export class LogTools {
 
   private async resolveLogPath(override?: string): Promise<string | undefined> {
     if (override && typeof override === 'string' && override.trim()) {
+      // Security: Validate override path
+      const normalized = path.normalize(override);
+      const resolved = path.resolve(normalized);
+
+      // 1. Enforce .log extension
+      if (!resolved.toLowerCase().endsWith('.log')) {
+        this._log.warn(`Security: Blocked attempt to read non-log file: ${resolved}`);
+        return undefined;
+      }
+
+      // 2. Determine allowed root directories
+      const allowedRoots: string[] = [];
+
+      // Allow Saved/Logs relative to CWD
+      allowedRoots.push(path.join(process.cwd(), 'Saved', 'Logs'));
+
+      // Allow Saved/Logs relative to project path if available
+      if (this.env.UE_PROJECT_PATH) {
+        const projectDir = path.dirname(this.env.UE_PROJECT_PATH);
+        allowedRoots.push(path.join(projectDir, 'Saved', 'Logs'));
+      }
+
+      // Check if resolved path starts with any allowed root
+      const isAllowed = allowedRoots.some(root => resolved.startsWith(root));
+      if (!isAllowed) {
+        this._log.warn(`Security: Blocked attempt to read log outside allowed directories: ${resolved}`);
+        return undefined;
+      }
+
       try {
-        const st = await fs.stat(override);
+        const st = await fs.stat(resolved);
         if (st.isFile()) {
-          return this.cacheLogPath(path.resolve(override));
+          return this.cacheLogPath(resolved);
         }
       } catch { }
     }
