@@ -195,13 +195,15 @@ async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITool
         }
         
         if (payload.toNodeId && !payload.targetNodeId) {
-            const targetId = payload.toNodeId as string;
-            payload.targetNodeId = (targetId === 'Root' || targetId === 'root') ? 'Main' : targetId;
+            if (typeof payload.toNodeId === 'string') {
+                payload.targetNodeId = payload.toNodeId.toLowerCase() === 'root' ? 'Main' : payload.toNodeId;
+            }
         }
         
         if (payload.toPin && !payload.inputName) {
-            const pinName = payload.toPin as string;
-            payload.inputName = pinName.replace(/\s+/g, '');
+            if (typeof payload.toPin === 'string') {
+                payload.inputName = payload.toPin.replace(/\s+/g, '');
+            }
         }
     }
 
