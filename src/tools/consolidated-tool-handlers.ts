@@ -36,6 +36,7 @@ import { handleInventoryTools } from './handlers/inventory-handlers.js';
 import { handleInteractionTools } from './handlers/interaction-handlers.js';
 import { handleWidgetAuthoringTools } from './handlers/widget-authoring-handlers.js';
 import { handleNetworkingTools } from './handlers/networking-handlers.js';
+import { handleGameFrameworkTools } from './handlers/game-framework-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -313,6 +314,9 @@ function registerDefaultHandlers() {
 
   // 34. NETWORKING & MULTIPLAYER (Phase 20)
   toolRegistry.register('manage_networking', async (args, tools) => await handleNetworkingTools(getAction(args), args, tools));
+
+  // 35. GAME FRAMEWORK (Phase 21)
+  toolRegistry.register('manage_game_framework', async (args, tools) => await handleGameFrameworkTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

@@ -277,10 +277,36 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 | `configure_client_prediction`, `configure_server_correction` | ✅ Done | Network prediction |
 | `configure_replicated_movement` | ✅ Done | Movement replication |
 
+### Phase 20.5: Audio Authoring (`manage_audio_authoring`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_sound_cue`, `create_metasound` | ✅ Done | Audio asset creation |
+| `create_sound_class`, `create_sound_mix` | ✅ Done | Sound classes/mixes |
+| `create_attenuation_settings` | ✅ Done | Attenuation |
+| `create_dialogue_voice`, `create_dialogue_wave` | ✅ Done | Dialogue system |
+| `add_sound_node`, `connect_sound_nodes` | ✅ Done | Sound cue graphs |
+
+### Phase 21: Game Framework (`manage_game_framework`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_game_mode`, `create_game_state` | ✅ Done | Core game classes |
+| `create_player_controller`, `create_player_state` | ✅ Done | Player classes |
+| `create_game_instance`, `create_hud_class` | ✅ Done | Instance & HUD |
+| `set_default_pawn_class`, `set_player_controller_class` | ✅ Done | Class configuration |
+| `set_game_state_class`, `set_player_state_class` | ✅ Done | State configuration |
+| `configure_game_rules` | ✅ Done | Game rules setup |
+| `setup_match_states`, `configure_round_system` | ✅ Done | Match flow |
+| `configure_team_system`, `configure_scoring_system` | ✅ Done | Teams & scoring |
+| `configure_spawn_system`, `configure_player_start` | ✅ Done | Spawn configuration |
+| `set_respawn_rules`, `configure_spectating` | ✅ Done | Player management |
+| `get_game_framework_info` | ✅ Done | Query game mode info |
+
 ## Next Steps
 
 1. Refine `manage_render` logic (now split).
 2. Enhance test running with real-time result streaming.
 3. Polish dynamic lighting utilities (undo, mobility, pulse, removal).
 4. Extend log subscription for real-time streaming.
-5. Continue implementation of Phases 21-48 per Roadmap.
+5. Continue implementation of Phase 22 (Sessions & Local Multiplayer) per Roadmap.

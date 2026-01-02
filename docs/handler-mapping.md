@@ -928,3 +928,33 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `configure_replicated_movement` | `McpAutomationBridge_NetworkingHandlers.cpp` | `HandleManageNetworkingAction` | Configures movement replication |
 | **Utility** | | | |
 | `get_networking_info` | `McpAutomationBridge_NetworkingHandlers.cpp` | `HandleManageNetworkingAction` | Returns networking configuration |
+
+## 33. Game Framework Manager (`manage_game_framework`) - Phase 21
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Core Class Creation** | | | |
+| `create_game_mode` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Creates GameMode blueprint (AGameModeBase or AGameMode) |
+| `create_game_state` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Creates GameState blueprint |
+| `create_player_controller` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Creates PlayerController blueprint |
+| `create_player_state` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Creates PlayerState blueprint |
+| `create_game_instance` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Creates GameInstance blueprint |
+| `create_hud_class` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Creates HUD blueprint |
+| **Game Mode Configuration** | | | |
+| `set_default_pawn_class` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Sets DefaultPawnClass on GameMode |
+| `set_player_controller_class` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Sets PlayerControllerClass on GameMode |
+| `set_game_state_class` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Sets GameStateClass on GameMode |
+| `set_player_state_class` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Sets PlayerStateClass on GameMode |
+| `configure_game_rules` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Configures game rules (min players, ready up, time limits) |
+| **Match Flow** | | | |
+| `setup_match_states` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Defines match state machine (waiting, warmup, in_progress, etc.) |
+| `configure_round_system` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Configures round-based gameplay |
+| `configure_team_system` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Sets up teams with colors and friendly fire |
+| `configure_scoring_system` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Defines scoring rules and limits |
+| `configure_spawn_system` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Configures spawn selection strategy |
+| **Player Management** | | | |
+| `configure_player_start` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Configures PlayerStart actor properties |
+| `set_respawn_rules` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Sets respawn delay and location rules |
+| `configure_spectating` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Configures spectator mode options |
+| **Utility** | | | |
+| `get_game_framework_info` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Queries GameMode class configuration |

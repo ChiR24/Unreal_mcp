@@ -809,6 +809,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandlePerformanceAction(R, A, P, S);
                   });
+
+  // Phase 21: Game Framework
+  RegisterHandler(TEXT("manage_game_framework"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageGameFrameworkAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

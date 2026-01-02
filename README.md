@@ -206,6 +206,7 @@ ASSET_LIST_TTL_MS=10000
 | `manage_widget_authoring` | UMG widget creation, layout, styling, animations |
 | `manage_networking` | Replication, RPCs, network prediction |
 | `manage_audio_authoring` | MetaSounds, sound classes, attenuation, dialogue |
+| `manage_game_framework` | Game modes, game states, player controllers, match flow |
 
 ### Supported Asset Types
 

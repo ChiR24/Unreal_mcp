@@ -38,6 +38,8 @@ const testCases = [
   { scenario: 'Interaction: Create door actor', toolName: 'manage_interaction', arguments: { action: 'create_door_actor', name: 'BP_TestDoor', path: ADV_TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Widget: Create widget blueprint', toolName: 'manage_widget_authoring', arguments: { action: 'create_widget_blueprint', name: 'WBP_TestWidget', path: ADV_TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Networking: Set property replicated', toolName: 'manage_networking', arguments: { action: 'set_property_replicated', blueprintPath: `${ADV_TEST_FOLDER}/BP_TestCharacter`, propertyName: 'Health', replicated: true }, expected: 'success|not found' },
+  { scenario: 'Game Framework: Create game mode', toolName: 'manage_game_framework', arguments: { action: 'create_game_mode', name: 'GM_Test', path: ADV_TEST_FOLDER }, expected: 'success|already exists' },
+  { scenario: 'Game Framework: Get info', toolName: 'manage_game_framework', arguments: { action: 'get_game_framework_info', gameModeBlueprint: `${ADV_TEST_FOLDER}/GM_Test` }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_Cube' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }

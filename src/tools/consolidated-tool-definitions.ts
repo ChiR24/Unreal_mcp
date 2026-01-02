@@ -5316,6 +5316,175 @@ Supported actions:
         error: { type: 'string' }
       }
     }
+  },
+
+  // ============================================================================
+  // 35. GAME FRAMEWORK MANAGER (Phase 21)
+  // ============================================================================
+  {
+    name: 'manage_game_framework',
+    description: `Complete game mode and session management. Create and configure GameMode, GameState, PlayerController, PlayerState, GameInstance, and HUD Blueprints. Setup match flow, teams, scoring, and player spawning.
+
+Use it when you need to:
+- Create game framework Blueprints (GameMode, GameState, PlayerController, etc.).
+- Configure game mode settings (default pawn, controllers, states).
+- Setup match flow (match states, rounds, teams, scoring).
+- Configure player management (spawning, respawning, spectating).
+
+Supported actions:
+- Core Classes: create_game_mode, create_game_state, create_player_controller, create_player_state, create_game_instance, create_hud_class.
+- Game Mode Config: set_default_pawn_class, set_player_controller_class, set_game_state_class, set_player_state_class, configure_game_rules.
+- Match Flow: setup_match_states, configure_round_system, configure_team_system, configure_scoring_system, configure_spawn_system.
+- Player Management: configure_player_start, set_respawn_rules, configure_spectating.
+- Utility: get_game_framework_info.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Core Classes (6)
+            'create_game_mode', 'create_game_state', 'create_player_controller',
+            'create_player_state', 'create_game_instance', 'create_hud_class',
+            // Game Mode Configuration (5)
+            'set_default_pawn_class', 'set_player_controller_class',
+            'set_game_state_class', 'set_player_state_class', 'configure_game_rules',
+            // Match Flow (5)
+            'setup_match_states', 'configure_round_system', 'configure_team_system',
+            'configure_scoring_system', 'configure_spawn_system',
+            // Player Management (3)
+            'configure_player_start', 'set_respawn_rules', 'configure_spectating',
+            // Utility (1)
+            'get_game_framework_info'
+          ],
+          description: 'Game framework action to perform.'
+        },
+
+        // Asset identification
+        name: { type: 'string', description: 'Name of new blueprint.' },
+        path: { type: 'string', description: 'Directory to create blueprint in (e.g., /Game/Blueprints).' },
+        gameModeBlueprint: { type: 'string', description: 'Path to GameMode blueprint to configure.' },
+        blueprintPath: { type: 'string', description: 'Path to blueprint (alternative to gameModeBlueprint).' },
+        levelPath: { type: 'string', description: 'Path to level for info queries.' },
+
+        // Class references
+        parentClass: { type: 'string', description: 'Parent class for blueprint creation.' },
+        pawnClass: { type: 'string', description: 'Pawn class to use.' },
+        defaultPawnClass: { type: 'string', description: 'Default pawn class for GameMode.' },
+        playerControllerClass: { type: 'string', description: 'PlayerController class path.' },
+        gameStateClass: { type: 'string', description: 'GameState class path.' },
+        playerStateClass: { type: 'string', description: 'PlayerState class path.' },
+        spectatorClass: { type: 'string', description: 'Spectator pawn class.' },
+        hudClass: { type: 'string', description: 'HUD class path.' },
+
+        // Game rules
+        timeLimit: { type: 'number', description: 'Match time limit in seconds (0 = unlimited).' },
+        scoreLimit: { type: 'number', description: 'Score limit to win (0 = unlimited).' },
+        bDelayedStart: { type: 'boolean', description: 'Whether to delay match start.' },
+        startPlayersNeeded: { type: 'number', description: 'Minimum players needed to start.' },
+
+        // Match states
+        states: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', enum: ['waiting', 'warmup', 'in_progress', 'post_match', 'custom'] },
+              duration: { type: 'number', description: 'Duration in seconds (0 = manual transition).' },
+              customName: { type: 'string', description: 'Custom state name if name is "custom".' }
+            }
+          },
+          description: 'Match state definitions.'
+        },
+
+        // Round system
+        numRounds: { type: 'number', description: 'Number of rounds (0 = unlimited).' },
+        roundTime: { type: 'number', description: 'Time per round in seconds.' },
+        intermissionTime: { type: 'number', description: 'Time between rounds in seconds.' },
+
+        // Team system
+        numTeams: { type: 'number', description: 'Number of teams (0 = FFA).' },
+        teamSize: { type: 'number', description: 'Maximum players per team.' },
+        autoBalance: { type: 'boolean', description: 'Enable automatic team balancing.' },
+        friendlyFire: { type: 'boolean', description: 'Enable friendly fire damage.' },
+        teamIndex: { type: 'number', description: 'Team index for PlayerStart.' },
+
+        // Scoring
+        scorePerKill: { type: 'number', description: 'Points awarded per kill.' },
+        scorePerObjective: { type: 'number', description: 'Points awarded per objective.' },
+        scorePerAssist: { type: 'number', description: 'Points awarded per assist.' },
+
+        // Spawn system
+        spawnSelectionMethod: {
+          type: 'string',
+          enum: ['Random', 'RoundRobin', 'FarthestFromEnemies'],
+          description: 'How to select spawn points.'
+        },
+        respawnDelay: { type: 'number', description: 'Delay before respawn in seconds.' },
+        respawnLocation: {
+          type: 'string',
+          enum: ['PlayerStart', 'LastDeath', 'TeamBase'],
+          description: 'Where players respawn.'
+        },
+        respawnConditions: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Conditions for respawn (e.g., "RoundEnd", "Manual").'
+        },
+        usePlayerStarts: { type: 'boolean', description: 'Use PlayerStart actors.' },
+
+        // PlayerStart configuration
+        location: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Spawn location.'
+        },
+        rotation: {
+          type: 'object',
+          properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } },
+          description: 'Spawn rotation.'
+        },
+        bPlayerOnly: { type: 'boolean', description: 'Restrict to players only.' },
+
+        // Spectating
+        allowSpectating: { type: 'boolean', description: 'Allow spectator mode.' },
+        spectatorViewMode: {
+          type: 'string',
+          enum: ['FreeCam', 'ThirdPerson', 'FirstPerson', 'DeathCam'],
+          description: 'Spectator view mode.'
+        },
+
+        // Options
+        save: { type: 'boolean', description: 'Save asset after operation.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        blueprintPath: { type: 'string', description: 'Path to created/modified blueprint.' },
+        gameFrameworkInfo: {
+          type: 'object',
+          properties: {
+            gameModeClass: { type: 'string' },
+            gameStateClass: { type: 'string' },
+            playerControllerClass: { type: 'string' },
+            playerStateClass: { type: 'string' },
+            defaultPawnClass: { type: 'string' },
+            hudClass: { type: 'string' },
+            spectatorClass: { type: 'string' },
+            matchState: { type: 'string' },
+            numTeams: { type: 'number' },
+            timeLimit: { type: 'number' },
+            scoreLimit: { type: 'number' }
+          },
+          description: 'Game framework information (for get_game_framework_info).'
+        },
+        error: { type: 'string' }
+      }
+    }
   }
 ];
 
