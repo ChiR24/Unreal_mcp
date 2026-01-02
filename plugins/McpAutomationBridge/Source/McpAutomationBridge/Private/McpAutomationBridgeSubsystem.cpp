@@ -825,6 +825,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageSessionsAction(R, A, P, S);
                   });
+
+  // Phase 23: Level Structure
+  RegisterHandler(TEXT("manage_level_structure"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageLevelStructureAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

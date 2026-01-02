@@ -5328,7 +5328,7 @@ Supported actions:
   },
 
   // ============================================================================
-  // 35. GAME FRAMEWORK MANAGER (Phase 21)
+  // 33. GAME FRAMEWORK MANAGER (Phase 21)
   // ============================================================================
   {
     name: 'manage_game_framework',
@@ -5497,7 +5497,7 @@ Supported actions:
   },
 
   // ============================================================================
-  // 36. SESSIONS & LOCAL MULTIPLAYER (Phase 22)
+  // 34. SESSIONS & LOCAL MULTIPLAYER (Phase 22)
   // ============================================================================
   {
     name: 'manage_sessions',
@@ -5641,6 +5641,230 @@ Supported actions:
             connectedServerAddress: { type: 'string' }
           },
           description: 'Sessions information (for get_sessions_info).'
+        },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // ============================================================================
+  // 35. LEVEL STRUCTURE (Phase 23)
+  // ============================================================================
+  {
+    name: 'manage_level_structure',
+    description: `Level and world structure management for levels, World Partition, and level instances.
+
+Use it when you need to:
+- Create new levels and sublevels with streaming configuration.
+- Configure World Partition settings including grid size and data layers.
+- Manage HLOD layers and minimap volumes.
+- Work with Level Blueprints (open, add nodes, connect nodes).
+- Create level instances and packed level actors.
+
+Supported actions:
+- Levels: create_level, create_sublevel, configure_level_streaming, set_streaming_distance, configure_level_bounds.
+- World Partition: enable_world_partition, configure_grid_size, create_data_layer, assign_actor_to_data_layer, configure_hlod_layer, create_minimap_volume.
+- Level Blueprint: open_level_blueprint, add_level_blueprint_node, connect_level_blueprint_nodes.
+- Level Instances: create_level_instance, create_packed_level_actor.
+- Utility: get_level_structure_info.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Levels (5)
+            'create_level', 'create_sublevel', 'configure_level_streaming',
+            'set_streaming_distance', 'configure_level_bounds',
+            // World Partition (6)
+            'enable_world_partition', 'configure_grid_size', 'create_data_layer',
+            'assign_actor_to_data_layer', 'configure_hlod_layer', 'create_minimap_volume',
+            // Level Blueprint (3)
+            'open_level_blueprint', 'add_level_blueprint_node', 'connect_level_blueprint_nodes',
+            // Level Instances (2)
+            'create_level_instance', 'create_packed_level_actor',
+            // Utility (1)
+            'get_level_structure_info'
+          ],
+          description: 'Level structure action to perform.'
+        },
+
+        // Level identification
+        levelName: { type: 'string', description: 'Name of the level.' },
+        levelPath: { type: 'string', description: 'Path to the level asset.' },
+        parentLevel: { type: 'string', description: 'Parent level for sublevel creation.' },
+
+        // Level creation
+        templateLevel: { type: 'string', description: 'Template level to copy from.' },
+        bCreateWorldPartition: { type: 'boolean', description: 'Create with World Partition enabled.' },
+
+        // Sublevel configuration
+        sublevelName: { type: 'string', description: 'Name of the sublevel.' },
+        sublevelPath: { type: 'string', description: 'Path to the sublevel asset.' },
+
+        // Level streaming
+        streamingMethod: {
+          type: 'string',
+          enum: ['Blueprint', 'AlwaysLoaded', 'Disabled'],
+          description: 'Level streaming method.'
+        },
+        bShouldBeVisible: { type: 'boolean', description: 'Level should be visible when loaded.' },
+        bShouldBlockOnLoad: { type: 'boolean', description: 'Block game until level is loaded.' },
+        bDisableDistanceStreaming: { type: 'boolean', description: 'Disable distance-based streaming.' },
+
+        // Streaming distance
+        streamingDistance: { type: 'number', description: 'Distance at which level streams in.' },
+        minStreamingDistance: { type: 'number', description: 'Minimum distance for streaming.' },
+
+        // Level bounds
+        boundsOrigin: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Origin of level bounds.'
+        },
+        boundsExtent: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Extent of level bounds.'
+        },
+        bAutoCalculateBounds: { type: 'boolean', description: 'Auto-calculate bounds from content.' },
+
+        // World Partition
+        bEnableWorldPartition: { type: 'boolean', description: 'Enable World Partition for level.' },
+        gridCellSize: { type: 'number', description: 'World Partition grid cell size.' },
+        loadingRange: { type: 'number', description: 'Loading range for grid cells.' },
+
+        // Data layers
+        dataLayerName: { type: 'string', description: 'Name of the data layer.' },
+        dataLayerLabel: { type: 'string', description: 'Display label for the data layer.' },
+        bIsInitiallyVisible: { type: 'boolean', description: 'Data layer initially visible.' },
+        bIsInitiallyLoaded: { type: 'boolean', description: 'Data layer initially loaded.' },
+        dataLayerType: {
+          type: 'string',
+          enum: ['Runtime', 'Editor'],
+          description: 'Type of data layer.'
+        },
+
+        // Actor assignment to data layer
+        actorName: { type: 'string', description: 'Name of actor to assign to data layer.' },
+        actorPath: { type: 'string', description: 'Path to the actor.' },
+
+        // HLOD configuration
+        hlodLayerName: { type: 'string', description: 'Name of the HLOD layer.' },
+        hlodLayerPath: { type: 'string', description: 'Path to the HLOD layer asset.' },
+        bIsSpatiallyLoaded: { type: 'boolean', description: 'HLOD is spatially loaded.' },
+        cellSize: { type: 'number', description: 'HLOD cell size.' },
+        loadingDistance: { type: 'number', description: 'HLOD loading distance.' },
+
+        // Minimap volume
+        volumeName: { type: 'string', description: 'Name of the minimap volume.' },
+        volumeLocation: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Location of the volume.'
+        },
+        volumeExtent: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Extent of the volume.'
+        },
+
+        // Level Blueprint
+        nodeClass: { type: 'string', description: 'Class of node to add to Level Blueprint.' },
+        nodePosition: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }
+          },
+          description: 'Position of node in graph.'
+        },
+        nodeName: { type: 'string', description: 'Name of the node.' },
+
+        // Node connections
+        sourceNodeName: { type: 'string', description: 'Source node for connection.' },
+        sourcePinName: { type: 'string', description: 'Source pin name.' },
+        targetNodeName: { type: 'string', description: 'Target node for connection.' },
+        targetPinName: { type: 'string', description: 'Target pin name.' },
+
+        // Level instances
+        levelInstanceName: { type: 'string', description: 'Name of the level instance.' },
+        levelAssetPath: { type: 'string', description: 'Path to the level asset for instancing.' },
+        instanceLocation: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Location of the level instance.'
+        },
+        instanceRotation: {
+          type: 'object',
+          properties: {
+            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+          },
+          description: 'Rotation of the level instance.'
+        },
+        instanceScale: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Scale of the level instance.'
+        },
+
+        // Packed level actor
+        packedLevelName: { type: 'string', description: 'Name for the packed level actor.' },
+        bPackBlueprints: { type: 'boolean', description: 'Include blueprints in packed level.' },
+        bPackStaticMeshes: { type: 'boolean', description: 'Include static meshes in packed level.' },
+
+        // Save option
+        save: { type: 'boolean', description: 'Save after operation.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        levelPath: { type: 'string', description: 'Path to created/modified level.' },
+        sublevelPath: { type: 'string', description: 'Path to created sublevel.' },
+        dataLayerName: { type: 'string', description: 'Name of created data layer.' },
+        hlodLayerPath: { type: 'string', description: 'Path to created HLOD layer.' },
+        nodeName: { type: 'string', description: 'Name of created blueprint node.' },
+        levelInstanceName: { type: 'string', description: 'Name of created level instance.' },
+        levelStructureInfo: {
+          type: 'object',
+          properties: {
+            currentLevel: { type: 'string' },
+            sublevelCount: { type: 'number' },
+            sublevels: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            worldPartitionEnabled: { type: 'boolean' },
+            gridCellSize: { type: 'number' },
+            dataLayers: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            hlodLayers: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            levelInstances: {
+              type: 'array',
+              items: { type: 'string' }
+            }
+          },
+          description: 'Level structure information (for get_level_structure_info).'
         },
         error: { type: 'string' }
       }

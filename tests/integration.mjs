@@ -2,9 +2,9 @@
 /**
  * Fully Consolidated Integration Test Suite
  *
- * Covers all 34 MCP tools (Phases 1-22):
+ * Covers all 35 MCP tools (Phases 1-23):
  * - Groups 1-8: Original 17 tools
- * - Groups 9-22: Advanced tools (Phases 6-22)
+ * - Groups 9-23: Advanced tools (Phases 6-23)
  *
  * Usage:
  *   node tests/integration.mjs
@@ -43,6 +43,13 @@ const testCases = [
   { scenario: 'Sessions: Configure local session', toolName: 'manage_sessions', arguments: { action: 'configure_local_session_settings', maxPlayers: 4, sessionName: 'TestSession' }, expected: 'success' },
   { scenario: 'Sessions: Configure split screen', toolName: 'manage_sessions', arguments: { action: 'configure_split_screen', enabled: true, splitScreenType: 'TwoPlayer_Horizontal' }, expected: 'success' },
   { scenario: 'Sessions: Get info', toolName: 'manage_sessions', arguments: { action: 'get_sessions_info' }, expected: 'success' },
+  // Phase 23: Level Structure
+  { scenario: 'Level Structure: Get info', toolName: 'manage_level_structure', arguments: { action: 'get_level_structure_info' }, expected: 'success' },
+  { scenario: 'Level Structure: Enable World Partition', toolName: 'manage_level_structure', arguments: { action: 'enable_world_partition', bEnableWorldPartition: true }, expected: 'success' },
+  { scenario: 'Level Structure: Configure grid size', toolName: 'manage_level_structure', arguments: { action: 'configure_grid_size', gridCellSize: 12800, loadingRange: 25600 }, expected: 'success|not enabled' },
+  { scenario: 'Level Structure: Create data layer', toolName: 'manage_level_structure', arguments: { action: 'create_data_layer', dataLayerName: 'TestLayer', dataLayerType: 'Runtime' }, expected: 'success|not available' },
+  { scenario: 'Level Structure: Configure HLOD', toolName: 'manage_level_structure', arguments: { action: 'configure_hlod_layer', hlodLayerName: 'DefaultHLOD', cellSize: 25600 }, expected: 'success' },
+  { scenario: 'Level Structure: Open Level Blueprint', toolName: 'manage_level_structure', arguments: { action: 'open_level_blueprint' }, expected: 'success' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_Cube' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }

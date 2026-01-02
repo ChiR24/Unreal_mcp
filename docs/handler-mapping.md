@@ -984,3 +984,30 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `configure_push_to_talk` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Configures push-to-talk settings |
 | **Utility** | | | |
 | `get_sessions_info` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Returns current session configuration info |
+
+## 35. Level Structure Manager (`manage_level_structure`) - Phase 23
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Levels** | | | |
+| `create_level` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Creates new level asset |
+| `create_sublevel` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Creates sublevel in current world |
+| `configure_level_streaming` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Configures streaming method (Blueprint, AlwaysLoaded, etc.) |
+| `set_streaming_distance` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Sets streaming distance thresholds |
+| `configure_level_bounds` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Sets level bounds for streaming/culling |
+| **World Partition** | | | |
+| `enable_world_partition` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Enables World Partition on level |
+| `configure_grid_size` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Sets World Partition grid cell size |
+| `create_data_layer` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Creates UDataLayerAsset |
+| `assign_actor_to_data_layer` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Assigns actor to data layer |
+| `configure_hlod_layer` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Configures HLOD layer settings |
+| `create_minimap_volume` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Creates minimap bounds volume |
+| **Level Blueprint** | | | |
+| `open_level_blueprint` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Opens Level Blueprint in editor |
+| `add_level_blueprint_node` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Adds node to Level Blueprint |
+| `connect_level_blueprint_nodes` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Connects pins between nodes |
+| **Level Instances** | | | |
+| `create_level_instance` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Creates ALevelInstance actor |
+| `create_packed_level_actor` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Creates APackedLevelActor |
+| **Utility** | | | |
+| `get_level_structure_info` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Returns level structure information |

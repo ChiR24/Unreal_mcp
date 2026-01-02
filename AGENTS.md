@@ -69,3 +69,4 @@ npm test             # UE Integration (Requires Editor)
 ## NOTES
 - **Critical**: Check `.github/workflows` for hallucinated versions (e.g., checkout@v6).
 - **Assets**: Root `Public/` assets should be moved to `docs/assets/`.
+- Always check engine code for help at path X:\Unreal_Engine\UE_5.7\Engine, X:\Unreal_Engine\UE_5.6\Engine, X:\Unreal_Engine\UE_5.3\Engine.

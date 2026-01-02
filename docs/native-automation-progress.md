@@ -324,6 +324,27 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 | `configure_push_to_talk` | ✅ Done | PTT settings |
 | `get_sessions_info` | ✅ Done | Query session info |
 
+### Phase 23: Level Structure (`manage_level_structure`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_level`, `create_sublevel` | ✅ Done | Level asset creation |
+| `configure_level_streaming` | ✅ Done | Streaming method configuration |
+| `set_streaming_distance` | ✅ Done | Distance thresholds |
+| `configure_level_bounds` | ✅ Done | Bounds for streaming/culling |
+| `enable_world_partition` | ✅ Done | World Partition toggle |
+| `configure_grid_size` | ✅ Done | Grid cell size configuration |
+| `create_data_layer` | ✅ Done | UDataLayerAsset creation |
+| `assign_actor_to_data_layer` | ✅ Done | Actor data layer assignment |
+| `configure_hlod_layer` | ✅ Done | HLOD layer settings |
+| `create_minimap_volume` | ✅ Done | Minimap bounds volume |
+| `open_level_blueprint` | ✅ Done | Open Level BP in editor |
+| `add_level_blueprint_node` | ✅ Done | Add node to Level BP |
+| `connect_level_blueprint_nodes` | ✅ Done | Connect BP node pins |
+| `create_level_instance` | ✅ Done | ALevelInstance creation |
+| `create_packed_level_actor` | ✅ Done | APackedLevelActor creation |
+| `get_level_structure_info` | ✅ Done | Query level structure info |
+
 ## Next Steps
 
 1. Refine `manage_render` logic (now split).
@@ -331,4 +352,5 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 3. Polish dynamic lighting utilities (undo, mobility, pulse, removal).
 4. Extend log subscription for real-time streaming.
 5. ~~Continue implementation of Phase 22 (Sessions & Local Multiplayer) per Roadmap.~~ ✅ Done
-6. Continue implementation of Phase 23 (Cinematics) per Roadmap.
+6. ~~Continue implementation of Phase 23 (Level Structure) per Roadmap.~~ ✅ Done
+7. Continue implementation of Phase 24 (Volumes & Zones) per Roadmap.
