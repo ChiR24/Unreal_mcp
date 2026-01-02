@@ -44,6 +44,13 @@ export async function getProjectSetting(projectPath: string, category: string, s
     // category is usually 'Project', 'Engine', 'Game', 'Input', etc.
     const cleanCategory = category.replace(/^Default/, ''); // If caller passed 'DefaultEngine', normalize to 'Engine'
     
+    // Security check: category should not contain path traversal characters
+    // We strictly allow alphanumeric, underscore, and hyphen characters for categories.
+    // Unreal categories are typically "Engine", "Game", "Input", "Editor", "Scalability", etc.
+    if (!/^[a-zA-Z0-9_-]+$/.test(cleanCategory)) {
+        return null;
+    }
+
     const candidates = [
         path.join(dirPath, 'Config', `Default${cleanCategory}.ini`),
         path.join(dirPath, 'Saved', 'Config', 'WindowsEditor', `${cleanCategory}.ini`),
