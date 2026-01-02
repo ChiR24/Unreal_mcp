@@ -406,8 +406,13 @@ export interface GraphArgs extends HandlerArgs {
     linkedTo?: string;
     fromNodeId?: string;
     fromPinName?: string;
+    fromPin?: string;
     toNodeId?: string;
     toPinName?: string;
+    toPin?: string;
+    sourceNodeId?: string;
+    targetNodeId?: string;
+    inputName?: string;
     parentNodeId?: string;
     childNodeId?: string;
     properties?: Record<string, unknown>;
