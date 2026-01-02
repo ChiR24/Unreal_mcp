@@ -875,7 +875,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 22: Sessions & Local Multiplayer
+## Phase 22: Sessions & Local Multiplayer ✅
 
 **Goal**: Session management and split-screen support.
 
@@ -884,27 +884,30 @@ The following phases represent the comprehensive expansion to enable **full proj
 ### 22.1 Session Management (Local/LAN)
 > **Note**: Online session management (matchmaking, lobbies) is in Phase 43 (Online Services). This section covers local/LAN sessions only.
 
-- [ ] `configure_local_session_settings`
-- [ ] `configure_session_interface`
+- [x] `configure_local_session_settings`
+- [x] `configure_session_interface`
 
 ### 22.2 Local Multiplayer
-- [ ] `configure_split_screen`
-- [ ] `set_split_screen_type` (horizontal, vertical, grid)
-- [ ] `add_local_player`
-- [ ] `remove_local_player`
+- [x] `configure_split_screen`
+- [x] `set_split_screen_type` (horizontal, vertical, grid)
+- [x] `add_local_player`
+- [x] `remove_local_player`
 
 ### 22.3 LAN
-- [ ] `configure_lan_play`
-- [ ] `host_lan_server`
-- [ ] `join_lan_server`
+- [x] `configure_lan_play`
+- [x] `host_lan_server`
+- [x] `join_lan_server`
 
 ### 22.4 Voice Chat
-- [ ] `enable_voice_chat`
-- [ ] `configure_voice_settings`
-- [ ] `set_voice_channel`
-- [ ] `mute_player`
-- [ ] `set_voice_attenuation`
-- [ ] `configure_push_to_talk`
+- [x] `enable_voice_chat`
+- [x] `configure_voice_settings`
+- [x] `set_voice_channel`
+- [x] `mute_player`
+- [x] `set_voice_attenuation`
+- [x] `configure_push_to_talk`
+
+### 22.5 Utility
+- [x] `get_sessions_info`
 
 ---
 

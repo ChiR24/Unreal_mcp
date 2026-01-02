@@ -2,9 +2,9 @@
 /**
  * Fully Consolidated Integration Test Suite
  *
- * Covers all 32 MCP tools (Phases 1-20):
+ * Covers all 34 MCP tools (Phases 1-22):
  * - Groups 1-8: Original 17 tools
- * - Groups 9-20: Advanced tools (Phases 6-20)
+ * - Groups 9-22: Advanced tools (Phases 6-22)
  *
  * Usage:
  *   node tests/integration.mjs
@@ -40,6 +40,9 @@ const testCases = [
   { scenario: 'Networking: Set property replicated', toolName: 'manage_networking', arguments: { action: 'set_property_replicated', blueprintPath: `${ADV_TEST_FOLDER}/BP_TestCharacter`, propertyName: 'Health', replicated: true }, expected: 'success|not found' },
   { scenario: 'Game Framework: Create game mode', toolName: 'manage_game_framework', arguments: { action: 'create_game_mode', name: 'GM_Test', path: ADV_TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Game Framework: Get info', toolName: 'manage_game_framework', arguments: { action: 'get_game_framework_info', gameModeBlueprint: `${ADV_TEST_FOLDER}/GM_Test` }, expected: 'success|not found' },
+  { scenario: 'Sessions: Configure local session', toolName: 'manage_sessions', arguments: { action: 'configure_local_session_settings', maxPlayers: 4, sessionName: 'TestSession' }, expected: 'success' },
+  { scenario: 'Sessions: Configure split screen', toolName: 'manage_sessions', arguments: { action: 'configure_split_screen', enabled: true, splitScreenType: 'TwoPlayer_Horizontal' }, expected: 'success' },
+  { scenario: 'Sessions: Get info', toolName: 'manage_sessions', arguments: { action: 'get_sessions_info' }, expected: 'success' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_Cube' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }

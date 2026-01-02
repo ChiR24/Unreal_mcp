@@ -958,3 +958,29 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `configure_spectating` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Configures spectator mode options |
 | **Utility** | | | |
 | `get_game_framework_info` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Queries GameMode class configuration |
+
+## 34. Sessions Manager (`manage_sessions`) - Phase 22
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Session Management** | | | |
+| `configure_local_session_settings` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Configures max players, session name, private/public |
+| `configure_session_interface` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Configures Online Subsystem session interface |
+| **Local Multiplayer** | | | |
+| `configure_split_screen` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Enables/disables split-screen mode |
+| `set_split_screen_type` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Sets split type (horizontal, vertical, quadrant) |
+| `add_local_player` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Adds local player to session |
+| `remove_local_player` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Removes local player from session |
+| **LAN** | | | |
+| `configure_lan_play` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Configures LAN broadcast/discovery settings |
+| `host_lan_server` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Hosts LAN server on specified port |
+| `join_lan_server` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Joins LAN server by IP/port |
+| **Voice Chat** | | | |
+| `enable_voice_chat` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Enables/disables voice chat |
+| `configure_voice_settings` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Configures voice input/output settings |
+| `set_voice_channel` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Sets player voice channel |
+| `mute_player` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Mutes/unmutes specific player |
+| `set_voice_attenuation` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Configures 3D voice attenuation |
+| `configure_push_to_talk` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Configures push-to-talk settings |
+| **Utility** | | | |
+| `get_sessions_info` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Returns current session configuration info |

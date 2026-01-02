@@ -37,6 +37,7 @@ import { handleInteractionTools } from './handlers/interaction-handlers.js';
 import { handleWidgetAuthoringTools } from './handlers/widget-authoring-handlers.js';
 import { handleNetworkingTools } from './handlers/networking-handlers.js';
 import { handleGameFrameworkTools } from './handlers/game-framework-handlers.js';
+import { handleSessionsTools } from './handlers/sessions-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -317,6 +318,9 @@ function registerDefaultHandlers() {
 
   // 35. GAME FRAMEWORK (Phase 21)
   toolRegistry.register('manage_game_framework', async (args, tools) => await handleGameFrameworkTools(getAction(args), args, tools));
+
+  // 36. SESSIONS & LOCAL MULTIPLAYER (Phase 22)
+  toolRegistry.register('manage_sessions', async (args, tools) => await handleSessionsTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

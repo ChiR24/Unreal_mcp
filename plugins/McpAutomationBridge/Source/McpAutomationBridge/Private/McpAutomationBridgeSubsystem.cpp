@@ -817,6 +817,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageGameFrameworkAction(R, A, P, S);
                   });
+
+  // Phase 22: Sessions & Local Multiplayer
+  RegisterHandler(TEXT("manage_sessions"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageSessionsAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

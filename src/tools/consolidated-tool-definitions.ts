@@ -1,7 +1,16 @@
 import { commonSchemas } from './tool-definition-utils.js';
 // Force rebuild timestamp update
 
-export const consolidatedToolDefinitions = [
+/** MCP Tool Definition type for explicit annotation to avoid TS7056 */
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export const consolidatedToolDefinitions: ToolDefinition[] = [
   // 1. ASSET MANAGER
   {
     name: 'manage_asset',
@@ -5481,6 +5490,157 @@ Supported actions:
             scoreLimit: { type: 'number' }
           },
           description: 'Game framework information (for get_game_framework_info).'
+        },
+        error: { type: 'string' }
+      }
+    }
+  },
+
+  // ============================================================================
+  // 36. SESSIONS & LOCAL MULTIPLAYER (Phase 22)
+  // ============================================================================
+  {
+    name: 'manage_sessions',
+    description: `Session management and local multiplayer support for split-screen, LAN play, and voice chat.
+
+Use it when you need to:
+- Configure local session settings and session interfaces.
+- Set up split-screen multiplayer with various layouts.
+- Manage local players (add/remove controllers).
+- Configure LAN play, host and join LAN servers.
+- Set up voice chat with channels, attenuation, and push-to-talk.
+
+Supported actions:
+- Session Management: configure_local_session_settings, configure_session_interface.
+- Local Multiplayer: configure_split_screen, set_split_screen_type, add_local_player, remove_local_player.
+- LAN: configure_lan_play, host_lan_server, join_lan_server.
+- Voice Chat: enable_voice_chat, configure_voice_settings, set_voice_channel, mute_player, set_voice_attenuation, configure_push_to_talk.
+- Utility: get_sessions_info.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Session Management (2)
+            'configure_local_session_settings', 'configure_session_interface',
+            // Local Multiplayer (4)
+            'configure_split_screen', 'set_split_screen_type', 'add_local_player', 'remove_local_player',
+            // LAN (3)
+            'configure_lan_play', 'host_lan_server', 'join_lan_server',
+            // Voice Chat (6)
+            'enable_voice_chat', 'configure_voice_settings', 'set_voice_channel',
+            'mute_player', 'set_voice_attenuation', 'configure_push_to_talk',
+            // Utility (1)
+            'get_sessions_info'
+          ],
+          description: 'Sessions action to perform.'
+        },
+
+        // Session identification
+        sessionName: { type: 'string', description: 'Name of the session.' },
+        sessionId: { type: 'string', description: 'Session ID for existing sessions.' },
+
+        // Local session settings
+        maxPlayers: { type: 'number', description: 'Maximum players allowed in session.' },
+        bIsLANMatch: { type: 'boolean', description: 'Whether this is a LAN match.' },
+        bAllowJoinInProgress: { type: 'boolean', description: 'Allow joining games in progress.' },
+        bAllowInvites: { type: 'boolean', description: 'Allow player invites.' },
+        bUsesPresence: { type: 'boolean', description: 'Use presence for session discovery.' },
+        bUseLobbiesIfAvailable: { type: 'boolean', description: 'Use lobby system if available.' },
+        bShouldAdvertise: { type: 'boolean', description: 'Advertise session publicly.' },
+
+        // Session interface
+        interfaceType: {
+          type: 'string',
+          enum: ['Default', 'LAN', 'Null'],
+          description: 'Type of session interface to use.'
+        },
+
+        // Split-screen configuration
+        enabled: { type: 'boolean', description: 'Enable/disable feature.' },
+        splitScreenType: {
+          type: 'string',
+          enum: ['None', 'TwoPlayer_Horizontal', 'TwoPlayer_Vertical', 'ThreePlayer_FavorTop', 'ThreePlayer_FavorBottom', 'FourPlayer_Grid'],
+          description: 'Split-screen layout type.'
+        },
+
+        // Local player management
+        playerIndex: { type: 'number', description: 'Index of local player.' },
+        controllerId: { type: 'number', description: 'Controller ID to assign.' },
+
+        // LAN settings
+        serverAddress: { type: 'string', description: 'Server IP address to connect to.' },
+        serverPort: { type: 'number', description: 'Server port number.' },
+        serverPassword: { type: 'string', description: 'Server password for protected games.' },
+        serverName: { type: 'string', description: 'Display name for the server.' },
+        mapName: { type: 'string', description: 'Map to load for hosting.' },
+        travelOptions: { type: 'string', description: 'Travel URL options string.' },
+
+        // Voice chat settings
+        voiceEnabled: { type: 'boolean', description: 'Enable/disable voice chat.' },
+        voiceSettings: {
+          type: 'object',
+          properties: {
+            volume: { type: 'number', description: 'Voice volume (0.0 - 1.0).' },
+            noiseGateThreshold: { type: 'number', description: 'Noise gate threshold.' },
+            noiseSuppression: { type: 'boolean', description: 'Enable noise suppression.' },
+            echoCancellation: { type: 'boolean', description: 'Enable echo cancellation.' },
+            sampleRate: { type: 'number', description: 'Audio sample rate in Hz.' }
+          },
+          description: 'Voice processing settings.'
+        },
+        channelName: { type: 'string', description: 'Voice channel name.' },
+        channelType: {
+          type: 'string',
+          enum: ['Team', 'Global', 'Proximity', 'Party'],
+          description: 'Voice channel type.'
+        },
+
+        // Player targeting for voice operations
+        playerName: { type: 'string', description: 'Player name for voice operations.' },
+        targetPlayerId: { type: 'string', description: 'Target player ID.' },
+        muted: { type: 'boolean', description: 'Mute state for player.' },
+
+        // Voice attenuation
+        attenuationRadius: { type: 'number', description: 'Radius for voice attenuation (Proximity chat).' },
+        attenuationFalloff: { type: 'number', description: 'Falloff rate for voice attenuation.' },
+
+        // Push-to-talk
+        pushToTalkEnabled: { type: 'boolean', description: 'Enable push-to-talk mode.' },
+        pushToTalkKey: { type: 'string', description: 'Key binding for push-to-talk.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        sessionId: { type: 'string', description: 'ID of created/modified session.' },
+        sessionName: { type: 'string', description: 'Name of created session.' },
+        playerIndex: { type: 'number', description: 'Index of added local player.' },
+        serverAddress: { type: 'string', description: 'Address of hosted/joined server.' },
+        channelName: { type: 'string', description: 'Voice channel name.' },
+        sessionsInfo: {
+          type: 'object',
+          properties: {
+            currentSessionName: { type: 'string' },
+            isLANMatch: { type: 'boolean' },
+            maxPlayers: { type: 'number' },
+            currentPlayers: { type: 'number' },
+            localPlayerCount: { type: 'number' },
+            splitScreenEnabled: { type: 'boolean' },
+            splitScreenType: { type: 'string' },
+            voiceChatEnabled: { type: 'boolean' },
+            activeVoiceChannels: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            isHosting: { type: 'boolean' },
+            connectedServerAddress: { type: 'string' }
+          },
+          description: 'Sessions information (for get_sessions_info).'
         },
         error: { type: 'string' }
       }

@@ -207,6 +207,7 @@ ASSET_LIST_TTL_MS=10000
 | `manage_networking` | Replication, RPCs, network prediction |
 | `manage_audio_authoring` | MetaSounds, sound classes, attenuation, dialogue |
 | `manage_game_framework` | Game modes, game states, player controllers, match flow |
+| `manage_sessions` | Sessions, split-screen, LAN, voice chat |
 
 ### Supported Asset Types
 

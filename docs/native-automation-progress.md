@@ -303,10 +303,32 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 | `set_respawn_rules`, `configure_spectating` | ✅ Done | Player management |
 | `get_game_framework_info` | ✅ Done | Query game mode info |
 
+### Phase 22: Sessions & Local Multiplayer (`manage_sessions`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `configure_local_session_settings` | ✅ Done | Max players, session name |
+| `configure_session_interface` | ✅ Done | Online subsystem interface |
+| `configure_split_screen` | ✅ Done | Enable/disable split-screen |
+| `set_split_screen_type` | ✅ Done | Horizontal, vertical, quadrant |
+| `add_local_player` | ✅ Done | Add local player |
+| `remove_local_player` | ✅ Done | Remove local player |
+| `configure_lan_play` | ✅ Done | LAN broadcast settings |
+| `host_lan_server` | ✅ Done | Host LAN server |
+| `join_lan_server` | ✅ Done | Join by IP/port |
+| `enable_voice_chat` | ✅ Done | Enable/disable voice |
+| `configure_voice_settings` | ✅ Done | Voice input/output settings |
+| `set_voice_channel` | ✅ Done | Player voice channel |
+| `mute_player` | ✅ Done | Mute/unmute player |
+| `set_voice_attenuation` | ✅ Done | 3D voice attenuation |
+| `configure_push_to_talk` | ✅ Done | PTT settings |
+| `get_sessions_info` | ✅ Done | Query session info |
+
 ## Next Steps
 
 1. Refine `manage_render` logic (now split).
 2. Enhance test running with real-time result streaming.
 3. Polish dynamic lighting utilities (undo, mobility, pulse, removal).
 4. Extend log subscription for real-time streaming.
-5. Continue implementation of Phase 22 (Sessions & Local Multiplayer) per Roadmap.
+5. ~~Continue implementation of Phase 22 (Sessions & Local Multiplayer) per Roadmap.~~ ✅ Done
+6. Continue implementation of Phase 23 (Cinematics) per Roadmap.

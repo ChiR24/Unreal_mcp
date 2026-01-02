@@ -66,3 +66,4 @@ Desktop.ini
 .vscode/settings.json
 .agent/
 plugins/McpAutomationBridge/.clangd
+plugins/McpAutomationBridge/Source/McpAutomationBridge/ue_stubs.h
