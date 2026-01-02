@@ -187,6 +187,24 @@ async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools
 
 async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
     const payload: ProcessedGraphArgs = { ...args, subAction: action };
+
+    // Map blueprint-style parameters to material graph parameters
+    if (action === 'connect_pins' || action === 'connect_nodes') {
+        if (payload.fromNodeId && !payload.sourceNodeId) {
+            payload.sourceNodeId = payload.fromNodeId;
+        }
+        
+        if (payload.toNodeId && !payload.targetNodeId) {
+            const targetId = payload.toNodeId as string;
+            payload.targetNodeId = (targetId === 'Root' || targetId === 'root') ? 'Main' : targetId;
+        }
+        
+        if (payload.toPin && !payload.inputName) {
+            const pinName = payload.toPin as string;
+            payload.inputName = pinName.replace(/\s+/g, '');
+        }
+    }
+
     const res = await executeAutomationRequest(tools, 'manage_material_graph', payload as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
     return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
 }
