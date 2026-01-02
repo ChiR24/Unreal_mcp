@@ -1,6 +1,7 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Misc/ConfigCacheIni.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -1414,7 +1415,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         const TCHAR *Buffer = *PropertyValue;
         // Use UScriptStruct::ImportText (not FStructProperty)
         const TCHAR *ImportResult = StructProp->Struct->ImportText(
-            Buffer, PropAddr, nullptr, PPF_None, GWarn, StructName);
+            Buffer, PropAddr, nullptr, PPF_None, GLog, StructName);
         bSuccess = (ImportResult != nullptr);
         if (!bSuccess) {
           ErrorMessage = FString::Printf(

@@ -558,24 +558,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   FoliageType->RandomYaw = RandomYaw;
   FoliageType->ReapplyDensity = true;
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(FoliageType);
-
-  FString PackageFileName = FPackageName::LongPackageNameToFilename(
-      FullPackagePath, FPackageName::GetAssetPackageExtension());
-  FSavePackageArgs SaveArgs;
-  SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
-  SaveArgs.Error = GError;
-  SaveArgs.SaveFlags = SAVE_NoError;
-  bool bSaved =
-      UPackage::SavePackage(Package, FoliageType, *PackageFileName, SaveArgs);
-
-  if (!bSaved) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Failed to save foliage type asset"),
-                        TEXT("SAVE_FAILED"));
-    return true;
-  }
+  McpSafeAssetSave(FoliageType);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
@@ -880,8 +863,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
                 FoliageTypesProp,
                 FoliageTypesProp->ContainerPtrToValuePtr<void>(Spawner));
             int32 Index = Helper.AddValue();
-            uint8 *RawData = Helper.GetRawPtr(Index);
-
+            void* RawData = Helper.GetRawPtr(Index);
+            McpSafeAssetSave(FT);
             UScriptStruct *Struct = FFoliageTypeObject::StaticStruct();
 
             FObjectProperty *ObjProp = FindFProperty<FObjectProperty>(
@@ -915,8 +898,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
                         TEXT("Failed to spawn volume"), TEXT("SPAWN_FAILED"));
     return true;
   }
-
-  Volume->SetActorLabel(Name);
+  McpSafeAssetSave(Spawner);
   Volume->SetActorScale3D(
       Size / 200.0f); // Volume default size is 200x200x200? No, usually 100.
                       // BrushComponent default is 200.

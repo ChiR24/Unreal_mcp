@@ -120,9 +120,167 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 - `CALL_SUBSYSTEM` added for generic subsystem access.
 - `ADD_WIDGET_TO_VIEWPORT` implemented.
 
+## Advanced Authoring Tools (Phases 7-20)
+
+### Phase 7: Skeleton & Rigging (`manage_skeleton`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `get_skeleton_info`, `list_bones`, `list_sockets` | ✅ Done | Query operations |
+| `create_socket`, `configure_socket`, `create_virtual_bone` | ✅ Done | Native implementation |
+| `create_physics_asset`, `add_physics_body`, `configure_physics_body` | ✅ Done | Physics asset creation |
+| `add_physics_constraint`, `configure_constraint_limits` | ✅ Done | Constraint setup |
+| `bind_cloth_to_skeletal_mesh` | ✅ Done | Uses `UClothingAssetBase::BindToSkeletalMesh()` |
+| `create_morph_target`, `set_morph_target_deltas` | ✅ Done | Morph target authoring |
+
+### Phase 8: Material Authoring (`manage_material_authoring`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_material`, `set_blend_mode`, `set_shading_model` | ✅ Done | Material creation |
+| `add_texture_sample`, `add_scalar_parameter`, `add_vector_parameter` | ✅ Done | Expression nodes |
+| `add_math_node`, `add_fresnel`, `add_noise`, `add_voronoi` | ✅ Done | Math & procedural |
+| `connect_nodes`, `disconnect_nodes` | ✅ Done | Graph connections |
+| `create_material_instance`, `set_*_parameter_value` | ✅ Done | Material instances |
+| `add_landscape_layer` | ✅ Done | Uses `ULandscapeLayerInfoObject` |
+| `configure_layer_blend` | ✅ Guidance | Layer blending via material expressions |
+
+### Phase 9: Texture (`manage_texture`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_noise_texture`, `create_gradient_texture`, `create_pattern_texture` | ✅ Done | Procedural generation |
+| `create_normal_from_height` | ✅ Done | Height-to-normal conversion |
+| `set_compression_settings`, `set_texture_group`, `configure_virtual_texture` | ✅ Done | Texture settings |
+| `get_texture_info` | ✅ Done | Texture properties |
+| `create_ao_from_mesh` | ✅ Placeholder | Real AO baking requires GPU ray tracing |
+| Texture processing (blur, resize, levels) | ⚠️ Stub | Requires GPU processing |
+
+### Phase 10: Animation Authoring (`manage_animation_authoring`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_animation_sequence`, `add_bone_track`, `set_bone_key` | ✅ Done | Keyframe animation |
+| `create_montage`, `add_montage_section`, `add_montage_slot` | ✅ Done | Montage authoring |
+| `create_blend_space_1d`, `create_blend_space_2d`, `add_blend_sample` | ✅ Done | Blend spaces |
+| `create_anim_blueprint`, `add_state_machine`, `add_state`, `add_transition` | ✅ Done | AnimBP state machines |
+| `create_control_rig` | ✅ Done | Uses `UControlRigBlueprintFactory` |
+| `create_ik_rig` | ✅ Done | Uses `UIKRigDefinitionFactory` |
+| `create_ik_retargeter` | ✅ Done | Uses `UIKRetargetFactory` |
+
+### Phase 11: Audio Authoring (`manage_audio_authoring`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_sound_cue`, `add_cue_node`, `connect_cue_nodes` | ✅ Done | Sound Cue graph |
+| `create_metasound`, `add_metasound_node` | ✅ Done | MetaSound authoring |
+| `create_sound_class`, `create_sound_mix` | ✅ Done | Audio classes & mixes |
+| `create_attenuation_settings`, `configure_spatialization` | ✅ Done | 3D audio settings |
+| `create_dialogue_voice`, `create_dialogue_wave` | ✅ Done | Dialogue system |
+
+### Phase 12: Niagara Authoring (`manage_niagara_authoring`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_niagara_system`, `create_niagara_emitter` | ✅ Done | System/emitter creation |
+| `add_spawn_rate_module`, `add_initialize_particle_module` | ✅ Done | Spawn modules |
+| `add_force_module`, `add_velocity_module` | ✅ Done | Physics modules |
+| `add_sprite_renderer_module`, `add_mesh_renderer_module` | ✅ Done | Renderers |
+| `add_user_parameter`, `bind_parameter_to_source` | ✅ Done | Parameter binding |
+| `enable_gpu_simulation`, `add_simulation_stage` | ✅ Done | GPU simulation |
+
+### Phase 13: Gameplay Ability System (`manage_gas`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `add_ability_system_component`, `create_attribute_set` | ✅ Done | GAS setup |
+| `create_gameplay_ability`, `set_ability_costs`, `set_ability_cooldown` | ✅ Done | Ability authoring |
+| `create_gameplay_effect`, `add_effect_modifier` | ✅ Done | Effect creation |
+| `create_gameplay_cue_notify`, `set_cue_effects` | ✅ Done | Gameplay cues |
+
+### Phase 14: Character System (`manage_character`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_character_blueprint`, `configure_capsule_component` | ✅ Done | Character creation |
+| `configure_movement_speeds`, `configure_jump`, `configure_rotation` | ✅ Done | Movement setup |
+| `setup_mantling`, `setup_vaulting`, `setup_climbing` | ✅ Done | Advanced movement |
+| `setup_footstep_system`, `map_surface_to_sound` | ✅ Done | Footstep system |
+
+### Phase 15: Combat System (`manage_combat`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_weapon_blueprint`, `set_weapon_stats` | ✅ Done | Weapon creation |
+| `configure_hitscan`, `configure_projectile` | ✅ Done | Firing modes |
+| `create_projectile_blueprint`, `configure_projectile_homing` | ✅ Done | Projectiles |
+| `create_damage_type`, `setup_hitbox_component` | ✅ Done | Damage system |
+| `configure_combo_system`, `create_hit_pause` | ✅ Done | Melee combat |
+
+### Phase 16: AI System (`manage_ai`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_ai_controller`, `assign_behavior_tree` | ✅ Done | AI controller |
+| `create_blackboard_asset`, `add_blackboard_key` | ✅ Done | Blackboard |
+| `create_eqs_query`, `add_eqs_generator`, `add_eqs_test` | ✅ Done | EQS queries |
+| `add_ai_perception_component`, `configure_sight_config` | ✅ Done | Perception |
+| `create_state_tree`, `add_state_tree_state` | ✅ Done | State Trees (UE5.3+) |
+| `create_smart_object_definition`, `add_smart_object_slot` | ✅ Done | Smart Objects |
+
+### Phase 17: Inventory System (`manage_inventory`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_item_data_asset`, `set_item_properties` | ✅ Done | Item data |
+| `create_inventory_component`, `configure_inventory_slots` | ✅ Done | Inventory component |
+| `create_equipment_component`, `define_equipment_slots` | ✅ Done | Equipment |
+| `create_loot_table`, `add_loot_entry` | ✅ Done | Loot system |
+| `create_crafting_recipe`, `create_crafting_station` | ✅ Done | Crafting |
+
+### Phase 18: Interaction System (`manage_interaction`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_interaction_component`, `configure_interaction_trace` | ✅ Done | Interaction setup |
+| `create_door_actor`, `create_switch_actor`, `create_chest_actor` | ✅ Done | Interactables |
+| `setup_destructible_mesh`, `configure_destruction_effects` | ✅ Done | Destructibles |
+| `create_trigger_actor`, `configure_trigger_events` | ✅ Done | Triggers |
+
+### Phase 19: Widget Authoring (`manage_widget_authoring`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_widget_blueprint`, `set_widget_parent_class` | ✅ Done | Widget creation |
+| `add_canvas_panel`, `add_horizontal_box`, `add_vertical_box` | ✅ Done | Layout containers |
+| `add_grid_panel`, `add_uniform_grid`, `add_wrap_box`, `add_scroll_box` | ✅ Done | Advanced layouts |
+| `add_size_box`, `add_scale_box`, `add_border` | ✅ Done | Sizing containers |
+| `add_text_block`, `add_rich_text_block`, `add_image`, `add_button` | ✅ Done | Common widgets |
+| `add_check_box`, `add_slider`, `add_progress_bar`, `add_text_input` | ✅ Done | Input widgets |
+| `add_combo_box`, `add_spin_box`, `add_list_view`, `add_tree_view` | ✅ Done | Advanced widgets |
+| `set_anchor`, `set_alignment`, `set_position`, `set_size` | ✅ Done | Layout properties |
+| `set_padding`, `set_z_order`, `set_render_transform`, `set_visibility` | ✅ Done | Visual properties |
+| `set_style`, `set_clipping` | ✅ Done | Styling |
+| Property bindings (`bind_text`, `bind_visibility`, etc.) | ✅ Guidance | Requires Blueprint graph |
+| Widget animations | ✅ Guidance | Requires Sequencer/UMG integration |
+| UI templates (main_menu, HUD, etc.) | ✅ Guidance | Composite widgets |
+| `preview_widget` | ✅ Done | Triggers recompile |
+
+### Phase 20: Networking (`manage_networking`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `set_property_replicated`, `set_replication_condition` | ✅ Done | Property replication |
+| `configure_net_update_frequency`, `configure_net_priority` | ✅ Done | Net settings |
+| `create_rpc_function`, `configure_rpc_validation` | ✅ Done | RPC creation |
+| `set_owner`, `set_autonomous_proxy` | ✅ Done | Authority |
+| `configure_client_prediction`, `configure_server_correction` | ✅ Done | Network prediction |
+| `configure_replicated_movement` | ✅ Done | Movement replication |
+
 ## Next Steps
 
 1. Refine `manage_render` logic (now split).
 2. Enhance test running with real-time result streaming.
 3. Polish dynamic lighting utilities (undo, mobility, pulse, removal).
 4. Extend log subscription for real-time streaming.
+5. Continue implementation of Phases 21-48 per Roadmap.

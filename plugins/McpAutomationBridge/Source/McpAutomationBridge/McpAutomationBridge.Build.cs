@@ -11,7 +11,45 @@ public class McpAutomationBridge : ModuleRules
     /// <param name="Target">Build target settings used to determine platform, configuration, and whether editor-only dependencies and feature flags should be enabled.</param>
     public McpAutomationBridge(ReadOnlyTargetRules Target) : base(Target)
     {
-        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+        // ============================================================================
+        // BUILD CONFIGURATION FOR 50+ HANDLER FILES
+        // ============================================================================
+        // Using NoPCHs to avoid "Failed to create virtual memory for PCH" errors
+        // (C3859/C1076) that occur with large modules on systems with limited memory.
+        // 
+        // This trades slightly longer compile times for reliable builds without
+        // requiring system paging file modifications.
+        // ============================================================================
+        
+        // Disable PCH to prevent virtual memory exhaustion on systems with limited RAM
+        // This is the most reliable workaround for C3859/C1076 errors
+        PCHUsage = PCHUsageMode.NoPCHs;
+        
+        // Enable Unity builds to reduce compilation units
+        bUseUnity = true;
+        MinSourceFilesForUnityBuildOverride = 2;
+        
+        // Increase bytes per unity file to combine MORE files into fewer translation units
+        // Default is 384KB; we increase to 2MB to handle our 50+ handler files
+        // This reduces number of compiler invocations, preventing memory exhaustion
+        NumIncludedBytesPerUnityCPPOverride = 2048 * 1024;
+        
+        // Disable Adaptive Unity to prevent files from being excluded from unity builds
+        // bUseAdaptiveUnityBuild was removed in UE 5.7, use reflection to set it safely
+        try
+        {
+            var prop = GetType().GetProperty("bUseAdaptiveUnityBuild");
+            if (prop != null) { prop.SetValue(this, false); }
+        }
+        catch { /* Property doesn't exist in this UE version */ }
+        
+        // bMergeUnityFiles was also removed in UE 5.7
+        try
+        {
+            var prop = GetType().GetProperty("bMergeUnityFiles");
+            if (prop != null) { prop.SetValue(this, true); }
+        }
+        catch { /* Property doesn't exist in this UE version */ }
 
         PublicDependencyModuleNames.AddRange(new string[]
         {
@@ -42,7 +80,9 @@ public class McpAutomationBridge : ModuleRules
                 "AnimGraph","AnimationBlueprintLibrary","Persona","ToolMenus","EditorWidgets","PropertyEditor","LevelEditor",
                 "ControlRig","ControlRigDeveloper","ControlRigEditor","UMG","UMGEditor","ProceduralMeshComponent","MergeActors",
                 "BehaviorTreeEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIModule", "AIGraph",
-                "MeshUtilities", "MaterialUtilities"
+                "MeshUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon",
+                // Phase 6: Geometry Script (GeometryScripting plugin dependency in .uplugin ensures availability)
+                "GeometryCore", "GeometryScriptingCore", "GeometryScriptingEditor", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription"
             });
 
             // Ensure editor builds expose full Blueprint graph editing APIs.

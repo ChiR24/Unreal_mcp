@@ -5687,7 +5687,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
         const TCHAR *Buffer = *PropertyValue;
         // Use UScriptStruct::ImportText (not FStructProperty)
         const TCHAR *Result = StructProp->Struct->ImportText(
-            Buffer, PropAddr, nullptr, PPF_None, GWarn, StructName);
+            Buffer, PropAddr, nullptr, PPF_None, GLog, StructName);
         bSuccess = (Result != nullptr);
         if (!bSuccess) {
           ErrorMessage = FString::Printf(

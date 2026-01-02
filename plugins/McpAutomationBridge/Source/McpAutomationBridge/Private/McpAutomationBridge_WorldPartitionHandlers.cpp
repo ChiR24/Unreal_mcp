@@ -195,7 +195,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
             // Using GetTransientPackage() to avoid cluttering content unless saved.
             // However, DataLayer logic might require it to be rooted or referenced.
             
-            UDataLayerAsset* NewAsset = NewObject<UDataLayerAsset>(GetTransientPackage(), *DataLayerName, RF_Public | RF_Transactional);
+            UDataLayerAsset* NewAsset = NewObject<UDataLayerAsset>(GetTransientPackage(), UDataLayerAsset::StaticClass(), FName(*DataLayerName), RF_Public | RF_Transactional);
             
             if (NewAsset && DataLayerSubsystem)
             {

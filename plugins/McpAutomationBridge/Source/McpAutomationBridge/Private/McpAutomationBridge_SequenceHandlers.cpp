@@ -26,6 +26,7 @@
 #include "AssetToolsModule.h"
 #include "Editor/EditorEngine.h"
 #include "Engine/Selection.h"
+#include "Factories/Factory.h"
 #include "IAssetTools.h"
 #include "LevelSequenceEditorBlueprintLibrary.h"
 #include "Subsystems/AssetEditorSubsystem.h"
@@ -621,7 +622,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(
   Subsystem->SendAutomationResponse(Socket, RequestIdArg, false,
                                     TEXT("Failed to open or play sequence"),
                                     nullptr, TEXT("EXECUTION_ERROR"));
-  return true;
   return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,
@@ -1718,7 +1718,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
               FFrameNumber TickFrame =
                   FFrameRate::TransformTime(FFrameTime(FrameNum), DisplayRate,
                                             TickResolution)
-                      .FloorToFrame();
+                      .GetFrame();
 
               FMovieSceneFloatChannel *Channel =
                   Section->GetChannelProxy()
@@ -1753,7 +1753,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
               FFrameNumber TickFrame =
                   FFrameRate::TransformTime(FFrameTime(FrameNum), DisplayRate,
                                             TickResolution)
-                      .FloorToFrame();
+                      .GetFrame();
 
               FMovieSceneBoolChannel *Channel =
                   Section->GetChannelProxy().GetChannel<FMovieSceneBoolChannel>(

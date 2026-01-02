@@ -402,6 +402,110 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
           }))
         return;
 
+      // Phase 6: Geometry Script
+      if (HandleAndLog(TEXT("HandleGeometryAction"), [&]() {
+            return HandleGeometryAction(RequestId, Action, Payload,
+                                        RequestingSocket);
+          }))
+        return;
+
+      // Phase 7: Skeleton & Rigging
+      if (HandleAndLog(TEXT("HandleManageSkeleton"), [&]() {
+            return HandleManageSkeleton(RequestId, Action, Payload, RequestingSocket);
+          }))
+        return;
+
+      // Phase 8: Material Authoring
+      if (HandleAndLog(TEXT("HandleManageMaterialAuthoringAction"), [&]() {
+            return HandleManageMaterialAuthoringAction(RequestId, Action, Payload,
+                                                        RequestingSocket);
+          }))
+        return;
+
+      // Phase 9: Texture Management
+      if (HandleAndLog(TEXT("HandleManageTextureAction"), [&]() {
+            return HandleManageTextureAction(RequestId, Action, Payload,
+                                             RequestingSocket);
+          }))
+        return;
+
+      // Phase 10: Animation Authoring
+      if (HandleAndLog(TEXT("HandleManageAnimationAuthoringAction"), [&]() {
+            return HandleManageAnimationAuthoringAction(RequestId, Action, Payload,
+                                                         RequestingSocket);
+          }))
+        return;
+
+      // Phase 11: Audio Authoring
+      if (HandleAndLog(TEXT("HandleManageAudioAuthoringAction"), [&]() {
+            return HandleManageAudioAuthoringAction(RequestId, Action, Payload,
+                                                    RequestingSocket);
+          }))
+        return;
+
+      // Phase 12: Niagara Authoring
+      if (HandleAndLog(TEXT("HandleManageNiagaraAuthoringAction"), [&]() {
+            return HandleManageNiagaraAuthoringAction(RequestId, Action, Payload,
+                                                       RequestingSocket);
+          }))
+        return;
+
+      // Phase 13: GAS (Gameplay Ability System)
+      if (HandleAndLog(TEXT("HandleManageGASAction"), [&]() {
+            return HandleManageGASAction(RequestId, Action, Payload,
+                                         RequestingSocket);
+          }))
+        return;
+
+      // Phase 14: Character & Movement System
+      if (HandleAndLog(TEXT("HandleManageCharacterAction"), [&]() {
+            return HandleManageCharacterAction(RequestId, Action, Payload,
+                                               RequestingSocket);
+          }))
+        return;
+
+      // Phase 15: Combat & Weapons System
+      if (HandleAndLog(TEXT("HandleManageCombatAction"), [&]() {
+            return HandleManageCombatAction(RequestId, Action, Payload,
+                                            RequestingSocket);
+          }))
+        return;
+
+      // Phase 16: AI System
+      if (HandleAndLog(TEXT("HandleManageAIAction"), [&]() {
+            return HandleManageAIAction(RequestId, Action, Payload,
+                                        RequestingSocket);
+          }))
+        return;
+
+      // Phase 17: Inventory & Items System
+      if (HandleAndLog(TEXT("HandleManageInventoryAction"), [&]() {
+            return HandleManageInventoryAction(RequestId, Action, Payload,
+                                               RequestingSocket);
+          }))
+        return;
+
+      // Phase 18: Interaction System
+      if (HandleAndLog(TEXT("HandleManageInteractionAction"), [&]() {
+            return HandleManageInteractionAction(RequestId, Action, Payload,
+                                                 RequestingSocket);
+          }))
+        return;
+
+      // Phase 19: Widget Authoring System
+      if (HandleAndLog(TEXT("HandleManageWidgetAuthoringAction"), [&]() {
+            return HandleManageWidgetAuthoringAction(RequestId, Action, Payload,
+                                                     RequestingSocket);
+          }))
+        return;
+
+      // Phase 20: Networking & Multiplayer
+      if (HandleAndLog(TEXT("HandleManageNetworkingAction"), [&]() {
+            return HandleManageNetworkingAction(RequestId, Action, Payload,
+                                                RequestingSocket);
+          }))
+        return;
+
       // 2. Execution & Build / Test Pipeline
       if (HandleAndLog(TEXT("HandlePipelineAction"), [&]() {
             return HandlePipelineAction(RequestId, Action, Payload,

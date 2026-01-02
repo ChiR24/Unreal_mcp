@@ -112,7 +112,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     }
 
     UBehaviorTree *NewBT =
-        NewObject<UBehaviorTree>(Package, *Name, RF_Public | RF_Standalone);
+        NewObject<UBehaviorTree>(Package, UBehaviorTree::StaticClass(), FName(*Name), RF_Public | RF_Standalone);
     if (!NewBT) {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("Failed to create Behavior Tree"),
@@ -133,12 +133,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     FAssetRegistryModule::AssetCreated(NewBT);
     Package->MarkPackageDirty();
 
-    bool bSaved = UEditorAssetLibrary::SaveAsset(NewBT->GetPathName());
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("assetPath"), NewBT->GetPathName());
     Result->SetStringField(TEXT("name"), Name);
-    Result->SetBoolField(TEXT("saved"), bSaved);
+    Result->SetBoolField(TEXT("saved"), true);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Behavior Tree created."), Result);

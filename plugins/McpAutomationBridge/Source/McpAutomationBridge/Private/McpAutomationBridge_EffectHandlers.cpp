@@ -320,20 +320,24 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
 
       UNiagaraSystemFactoryNew *Factory = NewObject<UNiagaraSystemFactoryNew>();
+      if (!Factory) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Failed to create factory"),
+                            TEXT("FACTORY_ERROR"));
+        return true;
+      }
       UNiagaraSystem *NewSystem =
           Cast<UNiagaraSystem>(Factory->FactoryCreateNew(
               UNiagaraSystem::StaticClass(), Package, *Name,
               RF_Public | RF_Standalone, nullptr, nullptr));
 
       if (NewSystem) {
-        FAssetRegistryModule::AssetCreated(NewSystem);
-        Package->MarkPackageDirty();
+        McpSafeAssetSave(NewSystem);
         // Return validity check
         FString AssetPath = NewSystem->GetPathName();
         // If it's something like /Game/Path/Asset.Asset, try to simplify for
         // user convenience But LoadAsset works with the full Object path or
         // Package path. Let's ensure we save it properly.
-        UEditorAssetLibrary::SaveAsset(AssetPath);
 
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);

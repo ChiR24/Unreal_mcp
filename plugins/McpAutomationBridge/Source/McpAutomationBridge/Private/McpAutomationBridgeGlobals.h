@@ -2,6 +2,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Dom/JsonObject.h"
 #include "HAL/CriticalSection.h"
 
 extern TMap<FString,

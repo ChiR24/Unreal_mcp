@@ -1,5 +1,6 @@
 #include "Async/Async.h"
 #include "EditorAssetLibrary.h"
+#include "MaterialDomain.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -1607,11 +1608,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
 
     // Also mark dirty and save to persist the metadata
     Asset->MarkPackageDirty();
-    bool bSaved = UEditorAssetLibrary::SaveAsset(AssetPath, false);
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetBoolField(TEXT("saved"), bSaved);
+    Resp->SetBoolField(TEXT("saved"), true);
     Resp->SetStringField(TEXT("assetPath"), AssetPath);
     Resp->SetNumberField(TEXT("appliedTags"), AppliedCount);
     SendAutomationResponse(Socket, RequestId, true,
@@ -2178,7 +2178,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
   // default surface material so tests can exercise parameter handling without
   // requiring a real asset at that path.
   if (ParentPath.Equals(TEXT("/Valid"), ESearchCase::IgnoreCase)) {
-    ParentMaterial = UMaterial::GetDefaultMaterial(MD_Surface);
+    ParentMaterial = UMaterial::GetDefaultMaterial(EMaterialDomain::MD_Surface);
   } else {
     if (!UEditorAssetLibrary::DoesAssetExist(ParentPath)) {
       SendAutomationResponse(

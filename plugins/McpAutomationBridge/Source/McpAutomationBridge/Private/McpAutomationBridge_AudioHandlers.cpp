@@ -334,7 +334,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       }
     }
 
-    UEditorAssetLibrary::SaveAsset(SoundCue->GetPathName());
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
@@ -508,7 +507,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         }
       }
 
-      UEditorAssetLibrary::SaveAsset(SoundClass->GetPathName());
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("path"), SoundClass->GetPathName());
@@ -568,7 +566,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         }
       }
 
-      UEditorAssetLibrary::SaveAsset(SoundMix->GetPathName());
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("path"), SoundMix->GetPathName());

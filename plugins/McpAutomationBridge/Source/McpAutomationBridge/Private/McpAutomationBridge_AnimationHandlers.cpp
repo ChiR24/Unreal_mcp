@@ -9,6 +9,7 @@
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimationAsset.h"
 #include "Animation/Skeleton.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 
 #if __has_include("Animation/AnimationBlueprintLibrary.h")
@@ -448,6 +449,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         Resp->SetStringField(TEXT("error"), Message);
       } else {
         UAnimBlueprintFactory *Factory = NewObject<UAnimBlueprintFactory>();
+        if (!Factory) {
+          Message = TEXT("Failed to create Animation Blueprint factory");
+          ErrorCode = TEXT("FACTORY_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
         Factory->TargetSkeleton = TargetSkeleton;
 
         // Allow parent class override
@@ -471,11 +477,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           Resp->SetStringField(TEXT("blueprintPath"), NewAsset->GetPathName());
           Resp->SetStringField(TEXT("skeletonPath"),
                                TargetSkeleton->GetPathName());
-          UEditorAssetLibrary::SaveAsset(NewAsset->GetPathName());
         } else {
           Message = TEXT("Failed to create Animation Blueprint asset");
           ErrorCode = TEXT("ASSET_CREATION_FAILED");
           Resp->SetStringField(TEXT("error"), Message);
+        }
         }
       }
     }
@@ -563,7 +569,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 #if MCP_HAS_BLENDSPACE_BASE
               if (UBlendSpaceBase *BlendSpace =
                       Cast<UBlendSpaceBase>(CreatedBlendAsset)) {
-                UEditorAssetLibrary::SaveAsset(BlendSpace->GetPathName());
 
                 bSuccess = true;
                 Message = TEXT("Blend space created successfully");
@@ -578,7 +583,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
                 Resp->SetStringField(TEXT("error"), Message);
               }
 #else
-              UEditorAssetLibrary::SaveAsset(CreatedBlendAsset->GetPathName());
 
               bSuccess = true;
               Message = TEXT("Blend space created (limited configuration)");
@@ -1177,13 +1181,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
               bool bAssignToMesh = false;
               Payload->TryGetBoolField(TEXT("assignToMesh"), bAssignToMesh);
 
-              UEditorAssetLibrary::SaveAsset(PhysicsAsset->GetPathName());
 
               if (bAssignToMesh) {
                 TargetMesh->Modify();
                 TargetMesh->SetPhysicsAsset(PhysicsAsset);
-                TargetMesh->MarkPackageDirty();
-                UEditorAssetLibrary::SaveAsset(TargetMesh->GetPathName());
+                McpSafeAssetSave(TargetMesh);
               }
 
               Resp->SetStringField(TEXT("physicsAssetPath"),
@@ -1315,7 +1317,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
               ErrorCode = TEXT("ASSET_CREATION_FAILED");
               Resp->SetStringField(TEXT("error"), Message);
             } else {
-              UEditorAssetLibrary::SaveAsset(NewAsset->GetPathName());
               Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
               Resp->SetStringField(TEXT("assetType"), AssetTypeString);
               Resp->SetBoolField(TEXT("existingAsset"), false);
@@ -1449,7 +1450,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 
           DestinationSequence->Modify();
           DestinationSequence->SetSkeleton(TargetSkeleton);
-          DestinationSequence->MarkPackageDirty();
+          McpSafeAssetSave(DestinationSequence);
 
           TArray<UAnimSequence *> SourceList;
           SourceList.Add(SourceSequence);
@@ -1463,7 +1464,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
                  TEXT("Animation asset copied (retargeting requires IK Rig "
                       "setup)"));
 
-          UEditorAssetLibrary::SaveAsset(DestinationSequence->GetPathName());
           RetargetedAssets.Add(DestinationSequence->GetPathName());
         }
       }
@@ -1580,7 +1580,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           AnimSeq->Notifies.Add(NewEvent);
 
           AnimSeq->PostEditChange();
-          AnimSeq->MarkPackageDirty();
+          McpSafeAssetSave(AnimSeq);
 
           bSuccess = true;
           Message = FString::Printf(TEXT("Added notify '%s' to %s at %.2fs"),
@@ -1737,7 +1737,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 
             AnimSeq->Notifies.Add(NewEvent);
             AnimSeq->PostEditChange();
-            AnimSeq->MarkPackageDirty();
+            McpSafeAssetSave(AnimSeq);
 
             bSuccess = true;
             Message = FString::Printf(TEXT("Added notify '%s' to %s at %.2fs"),
@@ -2015,7 +2015,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
     return true;
   }
 
-  UEditorAssetLibrary::SaveAsset(AnimBlueprint->GetPathName());
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);

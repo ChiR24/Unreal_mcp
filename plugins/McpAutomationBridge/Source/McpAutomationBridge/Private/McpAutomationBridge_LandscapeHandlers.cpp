@@ -2,6 +2,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Runtime/Launch/Resources/Version.h"
+#include "ScopedTransaction.h"
 
 
 #if WITH_EDITOR
@@ -1125,25 +1126,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(
 
     GrassType->GrassVarieties.Add(Variety);
 
-    Package->MarkPackageDirty();
-    FAssetRegistryModule::AssetCreated(GrassType);
-
-    FString PackageFileName = FPackageName::LongPackageNameToFilename(
-        FullPackagePath, FPackageName::GetAssetPackageExtension());
-    FSavePackageArgs SaveArgs;
-    SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
-    SaveArgs.Error = GError;
-    SaveArgs.SaveFlags = SAVE_NoError;
-    bool bSaved =
-        UPackage::SavePackage(Package, GrassType, *PackageFileName, SaveArgs);
-
-    if (!bSaved) {
-      Subsystem->SendAutomationError(RequestingSocket, RequestId,
-                                     TEXT("Failed to save grass type asset"),
-                                     TEXT("SAVE_FAILED"));
-      return;
-    }
-
+    McpSafeAssetSave(GrassType);
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("asset_path"), GrassType->GetPathName());

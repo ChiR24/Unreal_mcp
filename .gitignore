@@ -65,3 +65,4 @@ Desktop.ini
 .vscode/c_cpp_properties.json
 .vscode/settings.json
 .agent/
+plugins/McpAutomationBridge/.clangd

@@ -108,6 +108,7 @@ Enable via **Edit → Plugins**, then restart the editor:
 | **Level Sequence Editor** | `manage_sequence` operations |
 | **Control Rig** | `animation_physics` operations |
 | **Subobject Data Interface** | Blueprint components (UE 5.7+) |
+| **Geometry Script** | `manage_geometry` operations (procedural mesh) |
 
 ### Step 4: Configure MCP Client
 
@@ -190,6 +191,21 @@ ASSET_LIST_TTL_MS=10000
 | `manage_audio` | Audio Assets & Components |
 | `manage_behavior_tree` | Behavior Tree Graph Editing |
 | `manage_input` | Enhanced Input Actions & Contexts |
+| `manage_geometry` | Procedural mesh creation (Geometry Script) |
+| `manage_skeleton` | Skeleton, sockets, physics assets, cloth binding |
+| `manage_material_authoring` | Material creation, expressions, landscape layers |
+| `manage_texture` | Texture creation, modification, compression settings |
+| `manage_animation_authoring` | AnimBP, Control Rig, IK Rig, IK Retargeter |
+| `manage_niagara_authoring` | Niagara system/emitter creation, modules, parameters |
+| `manage_gas` | Gameplay Ability System: abilities, effects, attributes |
+| `manage_character` | Character creation, movement, advanced locomotion |
+| `manage_combat` | Weapons, projectiles, damage, melee combat |
+| `manage_ai` | AI controllers, EQS, perception, State Trees, Smart Objects |
+| `manage_inventory` | Items, equipment, loot tables, crafting |
+| `manage_interaction` | Interactables, destructibles, triggers |
+| `manage_widget_authoring` | UMG widget creation, layout, styling, animations |
+| `manage_networking` | Replication, RPCs, network prediction |
+| `manage_audio_authoring` | MetaSounds, sound classes, attenuation, dialogue |
 
 ### Supported Asset Types
 
