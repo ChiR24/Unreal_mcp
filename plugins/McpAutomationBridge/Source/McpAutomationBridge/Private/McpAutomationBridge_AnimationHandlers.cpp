@@ -9,6 +9,7 @@
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimationAsset.h"
 #include "Animation/Skeleton.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 
 #if __has_include("Animation/AnimationBlueprintLibrary.h")
@@ -448,6 +449,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         Resp->SetStringField(TEXT("error"), Message);
       } else {
         UAnimBlueprintFactory *Factory = NewObject<UAnimBlueprintFactory>();
+        if (!Factory) {
+          Message = TEXT("Failed to create Animation Blueprint factory");
+          ErrorCode = TEXT("FACTORY_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
         Factory->TargetSkeleton = TargetSkeleton;
 
         // Allow parent class override
@@ -471,11 +477,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           Resp->SetStringField(TEXT("blueprintPath"), NewAsset->GetPathName());
           Resp->SetStringField(TEXT("skeletonPath"),
                                TargetSkeleton->GetPathName());
-          UEditorAssetLibrary::SaveAsset(NewAsset->GetPathName());
         } else {
           Message = TEXT("Failed to create Animation Blueprint asset");
           ErrorCode = TEXT("ASSET_CREATION_FAILED");
           Resp->SetStringField(TEXT("error"), Message);
+        }
         }
       }
     }
@@ -563,7 +569,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 #if MCP_HAS_BLENDSPACE_BASE
               if (UBlendSpaceBase *BlendSpace =
                       Cast<UBlendSpaceBase>(CreatedBlendAsset)) {
-                UEditorAssetLibrary::SaveAsset(BlendSpace->GetPathName());
 
                 bSuccess = true;
                 Message = TEXT("Blend space created successfully");
@@ -578,7 +583,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
                 Resp->SetStringField(TEXT("error"), Message);
               }
 #else
-              UEditorAssetLibrary::SaveAsset(CreatedBlendAsset->GetPathName());
 
               bSuccess = true;
               Message = TEXT("Blend space created (limited configuration)");
@@ -926,7 +930,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
             Message =
                 FString::Printf(TEXT("Vehicle %s configured"), *VehicleName);
             Resp->SetStringField(TEXT("vehicleName"), VehicleName);
-            Resp->SetStringField(TEXT("vehicleType"), *VehicleTypePtr);
+            Resp->SetStringField(TEXT("vehicleType"), FinalVehicleType);
 
             const TArray<TSharedPtr<FJsonValue>> *PluginDeps = nullptr;
             if (Payload->TryGetArrayField(TEXT("pluginDependencies"),
@@ -1177,13 +1181,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
               bool bAssignToMesh = false;
               Payload->TryGetBoolField(TEXT("assignToMesh"), bAssignToMesh);
 
-              UEditorAssetLibrary::SaveAsset(PhysicsAsset->GetPathName());
 
               if (bAssignToMesh) {
                 TargetMesh->Modify();
                 TargetMesh->SetPhysicsAsset(PhysicsAsset);
-                TargetMesh->MarkPackageDirty();
-                UEditorAssetLibrary::SaveAsset(TargetMesh->GetPathName());
+                McpSafeAssetSave(TargetMesh);
               }
 
               Resp->SetStringField(TEXT("physicsAssetPath"),
@@ -1315,7 +1317,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
               ErrorCode = TEXT("ASSET_CREATION_FAILED");
               Resp->SetStringField(TEXT("error"), Message);
             } else {
-              UEditorAssetLibrary::SaveAsset(NewAsset->GetPathName());
               Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
               Resp->SetStringField(TEXT("assetType"), AssetTypeString);
               Resp->SetBoolField(TEXT("existingAsset"), false);
@@ -1449,7 +1450,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 
           DestinationSequence->Modify();
           DestinationSequence->SetSkeleton(TargetSkeleton);
-          DestinationSequence->MarkPackageDirty();
+          McpSafeAssetSave(DestinationSequence);
 
           TArray<UAnimSequence *> SourceList;
           SourceList.Add(SourceSequence);
@@ -1463,7 +1464,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
                  TEXT("Animation asset copied (retargeting requires IK Rig "
                       "setup)"));
 
-          UEditorAssetLibrary::SaveAsset(DestinationSequence->GetPathName());
           RetargetedAssets.Add(DestinationSequence->GetPathName());
         }
       }
@@ -1580,7 +1580,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           AnimSeq->Notifies.Add(NewEvent);
 
           AnimSeq->PostEditChange();
-          AnimSeq->MarkPackageDirty();
+          McpSafeAssetSave(AnimSeq);
 
           bSuccess = true;
           Message = FString::Printf(TEXT("Added notify '%s' to %s at %.2fs"),
@@ -1737,7 +1737,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 
             AnimSeq->Notifies.Add(NewEvent);
             AnimSeq->PostEditChange();
-            AnimSeq->MarkPackageDirty();
+            McpSafeAssetSave(AnimSeq);
 
             bSuccess = true;
             Message = FString::Printf(TEXT("Added notify '%s' to %s at %.2fs"),
@@ -1788,108 +1788,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 #endif
 }
 
-/**
- * @brief Executes a sequence of editor console/automation commands.
- *
- * Executes the provided list of editor commands in order and reports any
- * failure reason.
- *
- * @param Commands Array of command strings to execute; empty or whitespace-only
- * commands are ignored.
- * @param OutErrorMessage On failure, populated with a human-readable
- * description of the error.
- * @return bool `true` if all commands executed successfully, `false` otherwise.
- *
- * @note This function is only available in editor builds; in non-editor builds
- * it returns `false` and sets `OutErrorMessage` to indicate the limitation.
- */
-bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
-    const TArray<FString> &Commands, FString &OutErrorMessage) {
-#if WITH_EDITOR
-  return ExecuteEditorCommandsInternal(Commands, OutErrorMessage);
-#else
-  OutErrorMessage =
-      TEXT("ExecuteEditorCommands is only available in editor builds");
-  return false;
-#endif
-}
-
-#if MCP_HAS_CONTROLRIG_FACTORY
-/**
- * @brief Creates a Control Rig Blueprint asset bound to the specified skeleton.
- *
- * @param AssetName Desired name for the new asset (base name, no package path).
- * @param PackagePath Destination package path where the asset will be created
- * (e.g., /Game/Folder).
- * @param TargetSkeleton Skeleton to bind the created Control Rig to; may be
- * nullptr to create an unbound blueprint.
- * @param OutError Receives a human-readable error message when creation fails;
- * cleared on entry.
- * @return UBlueprint* Pointer to the created Control Rig blueprint on success,
- * `nullptr` on failure (see `OutError` for details).
- */
-UBlueprint *UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
-    const FString &AssetName, const FString &PackagePath,
-    USkeleton *TargetSkeleton, FString &OutError) {
-  OutError.Reset();
-
-  // Dynamic load factory class
-  UClass *FactoryClass = LoadClass<UFactory>(
-      nullptr, TEXT("/Script/ControlRigEditor.ControlRigBlueprintFactory"));
-  if (!FactoryClass) {
-    OutError = TEXT("Failed to load ControlRigBlueprintFactory class");
-    return nullptr;
-  }
-
-  UFactory *Factory = NewObject<UFactory>(GetTransientPackage(), FactoryClass);
-  if (!Factory) {
-    OutError = TEXT("Failed to allocate Control Rig factory");
-    return nullptr;
-  }
-
-  // Set properties via reflection
-  if (FProperty *SkelProp =
-          FactoryClass->FindPropertyByName(TEXT("TargetSkeleton"))) {
-    if (FObjectProperty *ObjProp = CastField<FObjectProperty>(SkelProp)) {
-      ObjProp->SetObjectPropertyValue_InContainer(Factory, TargetSkeleton);
-    }
-  }
-
-  if (FProperty *ParentProp =
-          FactoryClass->FindPropertyByName(TEXT("ParentClass"))) {
-    if (FClassProperty *ClassProp = CastField<FClassProperty>(ParentProp)) {
-      ClassProp->SetObjectPropertyValue_InContainer(
-          Factory, UAnimInstance::StaticClass());
-    }
-  }
-
-  // Dynamic load blueprint class
-  UClass *BlueprintClass = LoadClass<UBlueprint>(
-      nullptr, TEXT("/Script/ControlRigDeveloper.ControlRigBlueprint"));
-  if (!BlueprintClass) {
-    BlueprintClass = LoadClass<UBlueprint>(
-        nullptr, TEXT("/Script/ControlRig.ControlRigBlueprint"));
-  }
-
-  if (!BlueprintClass) {
-    OutError = TEXT("Failed to load ControlRigBlueprint class");
-    return nullptr;
-  }
-
-  FAssetToolsModule &AssetToolsModule =
-      FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
-  UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
-      AssetName, PackagePath, BlueprintClass, Factory);
-  UBlueprint *ControlRigBlueprint = Cast<UBlueprint>(NewAsset);
-
-  if (!ControlRigBlueprint) {
-    OutError = TEXT("Failed to create Control Rig blueprint");
-    return nullptr;
-  }
-
-  return ControlRigBlueprint;
-}
-#endif
+// NOTE: ExecuteEditorCommands and CreateControlRigBlueprint are defined in
+// McpAutomationBridgeSubsystem.cpp - do not duplicate definitions here.
+// The functions are declared in the subsystem header and implemented once
+// to avoid LNK2005 duplicate symbol linker errors.
 
 /**
  * @brief Handles a "create_animation_blueprint" automation request and creates
@@ -2015,7 +1917,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
     return true;
   }
 
-  UEditorAssetLibrary::SaveAsset(AnimBlueprint->GetPathName());
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);

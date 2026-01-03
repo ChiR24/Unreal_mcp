@@ -6,7 +6,35 @@
 #include "EditorSubsystem.h"
 #include "HAL/CriticalSection.h"
 #include "Templates/SharedPointer.h"
+#include "Engine/DataAsset.h"
 #include "McpAutomationBridgeSubsystem.generated.h"
+
+// Forward declare USkeleton to avoid including heavy animation headers
+class USkeleton;
+
+/**
+ * Concrete data asset class for MCP inventory/item operations.
+ * Both UDataAsset and UPrimaryDataAsset are abstract in UE5,
+ * so we need a concrete wrapper that can be instantiated.
+ */
+UCLASS(BlueprintType)
+class MCPAUTOMATIONBRIDGE_API UMcpGenericDataAsset : public UDataAsset
+{
+    GENERATED_BODY()
+
+public:
+    /** Generic name/ID for this data asset */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MCP Data")
+    FString ItemName;
+
+    /** Optional description */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MCP Data")
+    FString Description;
+
+    /** Generic key-value properties for extensibility */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MCP Data")
+    TMap<FString, FString> Properties;
+};
 
 
 UENUM(BlueprintType)
@@ -472,6 +500,171 @@ private:
   bool HandleListBlueprints(const FString &RequestId, const FString &Action,
                             const TSharedPtr<FJsonObject> &Payload,
                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 6: Geometry Script handlers
+  bool HandleGeometryAction(const FString &RequestId, const FString &Action,
+                            const TSharedPtr<FJsonObject> &Payload,
+                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 7: Skeleton & Rigging handlers
+  bool HandleManageSkeleton(const FString &RequestId,
+                            const FString &Action,
+                            const TSharedPtr<FJsonObject> &Payload,
+                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleGetSkeletonInfo(const FString &RequestId,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 7: Sub-handlers for skeleton operations
+  bool HandleListBones(const FString &RequestId,
+                       const TSharedPtr<FJsonObject> &Payload,
+                       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleListSockets(const FString &RequestId,
+                         const TSharedPtr<FJsonObject> &Payload,
+                         TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateSocket(const FString &RequestId,
+                          const TSharedPtr<FJsonObject> &Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleConfigureSocket(const FString &RequestId,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateVirtualBone(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreatePhysicsAsset(const FString &RequestId,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleListPhysicsBodies(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleAddPhysicsBody(const FString &RequestId,
+                            const TSharedPtr<FJsonObject> &Payload,
+                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleConfigurePhysicsBody(const FString &RequestId,
+                                  const TSharedPtr<FJsonObject> &Payload,
+                                  TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleAddPhysicsConstraint(const FString &RequestId,
+                                  const TSharedPtr<FJsonObject> &Payload,
+                                  TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleConfigureConstraintLimits(const FString &RequestId,
+                                       const TSharedPtr<FJsonObject> &Payload,
+                                       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleRenameBone(const FString &RequestId,
+                        const TSharedPtr<FJsonObject> &Payload,
+                        TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleSetBoneTransform(const FString &RequestId,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateMorphTarget(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleSetMorphTargetDeltas(const FString &RequestId,
+                                  const TSharedPtr<FJsonObject> &Payload,
+                                  TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleImportMorphTargets(const FString &RequestId,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleNormalizeWeights(const FString &RequestId,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandlePruneWeights(const FString &RequestId,
+                          const TSharedPtr<FJsonObject> &Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleBindClothToSkeletalMesh(const FString &RequestId,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleAssignClothAssetToMesh(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 8: Material Authoring handlers
+  bool HandleManageMaterialAuthoringAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 9: Texture handlers
+  bool HandleManageTextureAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Internal texture processing helper
+  TSharedPtr<FJsonObject> HandleManageTextureAction(const TSharedPtr<FJsonObject>& Params);
+  // Phase 10: Animation Authoring handlers
+  bool HandleManageAnimationAuthoringAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 11: Audio Authoring handlers
+  bool HandleManageAudioAuthoringAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 12: Niagara Authoring handlers
+  bool HandleManageNiagaraAuthoringAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 13: GAS (Gameplay Ability System) handlers
+  bool HandleManageGASAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 14: Character & Movement handlers
+  bool HandleManageCharacterAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 15: Combat & Weapons handlers
+  bool HandleManageCombatAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 16: AI System handlers
+  bool HandleManageAIAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 17: Inventory & Items System handlers
+  bool HandleManageInventoryAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 18: Interaction System handlers
+  bool HandleManageInteractionAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 19: Widget Authoring System handlers
+  bool HandleManageWidgetAuthoringAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 20: Networking & Multiplayer handlers
+  bool HandleManageNetworkingAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 21: Game Framework handlers
+  bool HandleManageGameFrameworkAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 22: Sessions & Local Multiplayer handlers
+  bool HandleManageSessionsAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 23: Level Structure handlers
+  bool HandleManageLevelStructureAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 24: Volumes & Zones handlers
+  bool HandleManageVolumesAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 25: Navigation System handlers
+  bool HandleManageNavigationAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
   // 2. Execution & Build / Test Pipeline
   bool HandlePipelineAction(const FString &RequestId, const FString &Action,

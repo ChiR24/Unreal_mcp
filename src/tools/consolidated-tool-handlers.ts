@@ -21,6 +21,26 @@ import { handleAudioTools } from './handlers/audio-handlers.js';
 import { handleLightingTools } from './handlers/lighting-handlers.js';
 import { handlePerformanceTools } from './handlers/performance-handlers.js';
 import { handleInputTools } from './handlers/input-handlers.js';
+import { handleGeometryTools } from './handlers/geometry-handlers.js';
+import { handleSkeletonTools } from './handlers/skeleton-handlers.js';
+import { handleMaterialAuthoringTools } from './handlers/material-authoring-handlers.js';
+import { handleTextureTools } from './handlers/texture-handlers.js';
+import { handleAnimationAuthoringTools } from './handlers/animation-authoring-handlers.js';
+import { handleAudioAuthoringTools } from './handlers/audio-authoring-handlers.js';
+import { handleNiagaraAuthoringTools } from './handlers/niagara-authoring-handlers.js';
+import { handleGASTools } from './handlers/gas-handlers.js';
+import { handleCharacterTools } from './handlers/character-handlers.js';
+import { handleCombatTools } from './handlers/combat-handlers.js';
+import { handleAITools } from './handlers/ai-handlers.js';
+import { handleInventoryTools } from './handlers/inventory-handlers.js';
+import { handleInteractionTools } from './handlers/interaction-handlers.js';
+import { handleWidgetAuthoringTools } from './handlers/widget-authoring-handlers.js';
+import { handleNetworkingTools } from './handlers/networking-handlers.js';
+import { handleGameFrameworkTools } from './handlers/game-framework-handlers.js';
+import { handleSessionsTools } from './handlers/sessions-handlers.js';
+import { handleLevelStructureTools } from './handlers/level-structure-handlers.js';
+import { handleVolumeTools } from './handlers/volume-handlers.js';
+import { handleNavigationTools } from './handlers/navigation-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -253,6 +273,66 @@ function registerDefaultHandlers() {
 
   // 19. INPUT
   toolRegistry.register('manage_input', async (args, tools) => await handleInputTools(getAction(args), args, tools));
+
+  // 20. GEOMETRY SCRIPT (Phase 6)
+  toolRegistry.register('manage_geometry', async (args, tools) => await handleGeometryTools(getAction(args), args, tools));
+
+  // 21. SKELETON MANAGER (Phase 7)
+  toolRegistry.register('manage_skeleton', async (args, tools) => await handleSkeletonTools(getAction(args), args, tools));
+
+  // 22. MATERIAL AUTHORING (Phase 8)
+  toolRegistry.register('manage_material_authoring', async (args, tools) => await handleMaterialAuthoringTools(getAction(args), args, tools));
+
+  // 23. TEXTURE MANAGEMENT (Phase 9)
+  toolRegistry.register('manage_texture', async (args, tools) => await handleTextureTools(getAction(args), args, tools));
+
+  // 24. ANIMATION AUTHORING (Phase 10)
+  toolRegistry.register('manage_animation_authoring', async (args, tools) => await handleAnimationAuthoringTools(getAction(args), args, tools));
+
+  // 25. AUDIO AUTHORING (Phase 11)
+  toolRegistry.register('manage_audio_authoring', async (args, tools) => await handleAudioAuthoringTools(getAction(args), args, tools));
+
+  // 26. NIAGARA AUTHORING (Phase 12)
+  toolRegistry.register('manage_niagara_authoring', async (args, tools) => await handleNiagaraAuthoringTools(getAction(args), args, tools));
+
+  // 27. GAS - GAMEPLAY ABILITY SYSTEM (Phase 13)
+  toolRegistry.register('manage_gas', async (args, tools) => await handleGASTools(getAction(args), args, tools));
+
+  // 28. CHARACTER & MOVEMENT SYSTEM (Phase 14)
+  toolRegistry.register('manage_character', async (args, tools) => await handleCharacterTools(getAction(args), args, tools));
+
+  // 29. COMBAT & WEAPONS SYSTEM (Phase 15)
+  toolRegistry.register('manage_combat', async (args, tools) => await handleCombatTools(getAction(args), args, tools));
+
+  // 30. AI SYSTEM (Phase 16)
+  toolRegistry.register('manage_ai', async (args, tools) => await handleAITools(getAction(args), args, tools));
+
+  // 31. INVENTORY & ITEMS SYSTEM (Phase 17)
+  toolRegistry.register('manage_inventory', async (args, tools) => await handleInventoryTools(getAction(args), args, tools));
+
+  // 32. INTERACTION SYSTEM (Phase 18)
+  toolRegistry.register('manage_interaction', async (args, tools) => await handleInteractionTools(getAction(args), args, tools));
+
+  // 33. WIDGET AUTHORING SYSTEM (Phase 19)
+  toolRegistry.register('manage_widget_authoring', async (args, tools) => await handleWidgetAuthoringTools(getAction(args), args, tools));
+
+  // 34. NETWORKING & MULTIPLAYER (Phase 20)
+  toolRegistry.register('manage_networking', async (args, tools) => await handleNetworkingTools(getAction(args), args, tools));
+
+  // 35. GAME FRAMEWORK (Phase 21)
+  toolRegistry.register('manage_game_framework', async (args, tools) => await handleGameFrameworkTools(getAction(args), args, tools));
+
+  // 36. SESSIONS & LOCAL MULTIPLAYER (Phase 22)
+  toolRegistry.register('manage_sessions', async (args, tools) => await handleSessionsTools(getAction(args), args, tools));
+
+  // 37. LEVEL STRUCTURE (Phase 23)
+  toolRegistry.register('manage_level_structure', async (args, tools) => await handleLevelStructureTools(getAction(args), args, tools));
+
+  // 38. VOLUMES & ZONES (Phase 24)
+  toolRegistry.register('manage_volumes', async (args, tools) => await handleVolumeTools(getAction(args), args, tools));
+
+  // 39. NAVIGATION SYSTEM (Phase 25)
+  toolRegistry.register('manage_navigation', async (args, tools) => await handleNavigationTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

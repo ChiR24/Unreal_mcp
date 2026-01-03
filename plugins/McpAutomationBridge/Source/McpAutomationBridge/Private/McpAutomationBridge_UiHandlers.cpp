@@ -11,6 +11,8 @@
 #include "Components/TextBlock.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/GameViewportClient.h"
+#include "Engine/Texture2D.h"
+#include "Framework/Application/SlateApplication.h"
 #include "HAL/FileManager.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
@@ -237,7 +239,6 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
             }
 
             if (bAdded) {
-              UEditorAssetLibrary::SaveAsset(WidgetBP->GetPathName());
               bSuccess = true;
               Message = FString::Printf(TEXT("Added %s to %s"),
                                         *WidgetClass->GetName(),

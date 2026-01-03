@@ -278,30 +278,90 @@ export class AnimationTools {
         ? params.blueprintPath.trim()
         : undefined;
 
-      const key = `StateMachine:${machineName}`;
-      this.trackArtifact(key, {
-        path: blueprintPath,
-        type: 'AnimationStateMachine',
-        metadata: {
-          machineName,
-          states: normalizedStates,
-          transitions: normalizedTransitions
+      // Call C++ bridge to create state machine in the Animation Blueprint
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const payload = cleanObject({
+            subAction: 'add_state_machine',
+            blueprintPath,
+            stateMachineName: machineName
+          });
+
+          const resp = await this.automationBridge.sendAutomationRequest('manage_animation_authoring', payload, { timeoutMs: 60000 });
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
+          const isSuccess = resp && resp.success !== false && !!resultObj;
+
+          if (isSuccess && resultObj) {
+            const key = `StateMachine:${machineName}`;
+            this.trackArtifact(key, {
+              path: blueprintPath,
+              type: 'AnimationStateMachine',
+              metadata: {
+                machineName,
+                states: normalizedStates,
+                transitions: normalizedTransitions
+              }
+            });
+
+            // Add states if provided
+            for (const state of normalizedStates) {
+              await this.automationBridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
+                subAction: 'add_state',
+                blueprintPath,
+                stateMachineName: machineName,
+                stateName: state.name
+              }), { timeoutMs: 30000 });
+            }
+
+            // Add transitions if provided
+            for (const transition of normalizedTransitions) {
+              await this.automationBridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
+                subAction: 'add_transition',
+                blueprintPath,
+                stateMachineName: machineName,
+                fromState: transition.sourceState,
+                toState: transition.targetState,
+                crossfadeDuration: 0.2
+              }), { timeoutMs: 30000 });
+            }
+
+            return {
+              success: true,
+              message: resp.message || `State machine '${machineName}' created in blueprint`,
+              machineName,
+              blueprintPath,
+              states: normalizedStates.length ? normalizedStates : undefined,
+              transitions: normalizedTransitions.length ? normalizedTransitions : undefined
+            };
+          }
+
+          const message = typeof resp?.message === 'string'
+            ? resp.message
+            : (typeof resp?.error === 'string' ? resp.error : 'State machine creation failed');
+          const error = typeof resp?.error === 'string' ? resp.error : message;
+
+          return { success: false, message, error };
+        } catch (err) {
+          const error = String(err);
+          return {
+            success: false,
+            message: `Failed to create state machine: ${error}`,
+            error
+          };
         }
-      });
+      }
 
       return {
-        success: true,
-        message: `State machine '${machineName}' specification recorded`,
-        machineName,
-        blueprintPath,
-        states: normalizedStates.length ? normalizedStates : undefined,
-        transitions: normalizedTransitions.length ? normalizedTransitions : undefined
+        success: false,
+        message: 'Automation bridge not connected for createStateMachine',
+        error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
       };
     } catch (err) {
       const error = String(err);
       return {
         success: false,
-        message: `Failed to record state machine specification: ${error}`,
+        message: `Failed to create state machine: ${error}`,
         error
       };
     }
@@ -469,7 +529,7 @@ export class AnimationTools {
 
   async setupIK(params: {
     actorName?: string;
-    ikBones?: unknown[];  // Array of bone names, coerced to strings internally
+    ikBones?: unknown[];
     enableFootPlacement?: boolean;
   }): Promise<
     | {
@@ -487,28 +547,41 @@ export class AnimationTools {
         ? params.ikBones.map((b) => String(b)).filter((b) => b.trim().length > 0)
         : [];
 
-      const key = `IK:${actorName}`;
-      this.trackArtifact(key, {
-        type: 'IKSetup',
-        metadata: {
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        const resp = await this.automationBridge.sendAutomationRequest('animation_physics', {
+          action: 'setup_ik',
           actorName,
           ikBones,
           enableFootPlacement: params.enableFootPlacement === true
-        }
-      });
+        }, { timeoutMs: 60000 });
 
-      return {
-        success: true,
-        message: `IK setup specification recorded for actor '${actorName}'`,
-        actorName,
-        ikBones: ikBones.length ? ikBones : undefined,
-        enableFootPlacement: params.enableFootPlacement === true ? true : undefined
-      };
+        if (resp && resp.success !== false) {
+          const key = `IK:${actorName}`;
+          this.trackArtifact(key, {
+            type: 'IKSetup',
+            metadata: {
+              actorName,
+              ikBones,
+              enableFootPlacement: params.enableFootPlacement === true
+            }
+          });
+          return {
+            success: true,
+            message: resp.message || `IK setup completed for actor "${actorName}"`,
+            actorName,
+            ikBones: ikBones.length ? ikBones : undefined,
+            enableFootPlacement: params.enableFootPlacement === true ? true : undefined
+          };
+        }
+        return { success: false, message: resp?.message || 'IK setup failed', error: resp?.error || 'BRIDGE_ERROR' };
+      }
+
+      return { success: false, message: 'Automation bridge not connected', error: 'AUTOMATION_BRIDGE_UNAVAILABLE' };
     } catch (err) {
       const error = String(err);
       return {
         success: false,
-        message: `Failed to record IK setup: ${error}`,
+        message: `Failed to setup IK: ${error}`,
         error
       };
     }

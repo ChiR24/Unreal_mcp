@@ -5,6 +5,8 @@
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.7-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
+[![Project Board](https://img.shields.io/badge/Project-Roadmap-blueviolet?logo=github)](https://github.com/users/ChiR24/projects/3)
+[![Discussions](https://img.shields.io/badge/Discussions-Join-brightgreen?logo=github)](https://github.com/ChiR24/Unreal_mcp/discussions)
 
 A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine through a native C++ Automation Bridge plugin. Built with TypeScript, C++, and Rust (WebAssembly).
 
@@ -20,6 +22,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - [GraphQL API](#graphql-api)
 - [Docker](#docker)
 - [Documentation](#documentation)
+- [Community](#community)
 - [Development](#development)
 - [Contributing](#contributing)
 
@@ -108,6 +111,7 @@ Enable via **Edit → Plugins**, then restart the editor:
 | **Level Sequence Editor** | `manage_sequence` operations |
 | **Control Rig** | `animation_physics` operations |
 | **Subobject Data Interface** | Blueprint components (UE 5.7+) |
+| **Geometry Script** | `manage_geometry` operations (procedural mesh) |
 
 ### Step 4: Configure MCP Client
 
@@ -190,6 +194,26 @@ ASSET_LIST_TTL_MS=10000
 | `manage_audio` | Audio Assets & Components |
 | `manage_behavior_tree` | Behavior Tree Graph Editing |
 | `manage_input` | Enhanced Input Actions & Contexts |
+| `manage_geometry` | Procedural mesh creation (Geometry Script) |
+| `manage_skeleton` | Skeleton, sockets, physics assets, cloth binding |
+| `manage_material_authoring` | Material creation, expressions, landscape layers |
+| `manage_texture` | Texture creation, modification, compression settings |
+| `manage_animation_authoring` | AnimBP, Control Rig, IK Rig, IK Retargeter |
+| `manage_niagara_authoring` | Niagara system/emitter creation, modules, parameters |
+| `manage_gas` | Gameplay Ability System: abilities, effects, attributes |
+| `manage_character` | Character creation, movement, advanced locomotion |
+| `manage_combat` | Weapons, projectiles, damage, melee combat |
+| `manage_ai` | AI controllers, EQS, perception, State Trees, Smart Objects |
+| `manage_inventory` | Items, equipment, loot tables, crafting |
+| `manage_interaction` | Interactables, destructibles, triggers |
+| `manage_widget_authoring` | UMG widget creation, layout, styling, animations |
+| `manage_networking` | Replication, RPCs, network prediction |
+| `manage_audio_authoring` | MetaSounds, sound classes, attenuation, dialogue |
+| `manage_game_framework` | Game modes, game states, player controllers, match flow |
+| `manage_sessions` | Sessions, split-screen, LAN, voice chat |
+| `manage_level_structure` | Level creation, sublevels, World Partition, data layers, HLOD |
+| `manage_volumes` | Trigger volumes, blocking, physics, audio, navigation volumes |
+| `manage_navigation` | NavMesh settings, nav modifiers, nav links, smart links, pathfinding |
 
 ### Supported Asset Types
 
@@ -264,6 +288,16 @@ npm run lint        # Run ESLint
 npm run test:unit   # Run unit tests
 npm run test:all    # Run all tests
 ```
+
+---
+
+## Community
+
+| Resource | Description |
+|----------|-------------|
+| [Project Roadmap](https://github.com/users/ChiR24/projects/3) | Track development progress across 47 phases |
+| [Discussions](https://github.com/ChiR24/Unreal_mcp/discussions) | Ask questions, share ideas, get help |
+| [Issues](https://github.com/ChiR24/Unreal_mcp/issues) | Report bugs and request features |
 
 ---
 

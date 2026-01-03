@@ -1,5 +1,7 @@
 // Ensure the subsystem type and bridge socket types are available
 #include "McpAutomationBridgeSubsystem.h"
+#include "Async/TaskGraphInterfaces.h"
+#include "Async/Async.h"
 #include "HAL/PlatformFilemanager.h"
 #include "HAL/PlatformTime.h"
 #include "McpAutomationBridgeGlobals.h"
@@ -11,6 +13,12 @@
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+
+// Editor-only includes for ExecuteEditorCommands
+#if WITH_EDITOR
+#include "Editor.h"
+#include "McpAutomationBridgeHelpers.h"
+#endif
 
 // Define the subsystem log category declared in the public header.
 DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
@@ -141,16 +149,23 @@ bool UMcpAutomationBridgeSubsystem::IsBridgeActive() const {
 /**
  * @brief Determine the bridge's connection state from active sockets.
  *
- * @return EMcpAutomationBridgeState `EMcpAutomationBridgeState::Connected` if
- * one or more active sockets are present,
- * `EMcpAutomationBridgeState::Disconnected` otherwise.
+ * Maps the connection manager's state to the subsystem's bridge state enum.
+ * Returns Connected if active sockets exist, Connecting if a reconnect is
+ * pending, or Disconnected otherwise.
+ *
+ * @return EMcpAutomationBridgeState The current connection state.
  */
 EMcpAutomationBridgeState
 UMcpAutomationBridgeSubsystem::GetBridgeState() const {
-  // Map connection manager state if needed, for now just check if we have
-  // active sockets
-  return IsBridgeActive() ? EMcpAutomationBridgeState::Connected
-                          : EMcpAutomationBridgeState::Disconnected;
+  if (ConnectionManager.IsValid()) {
+    if (ConnectionManager->GetActiveSocketCount() > 0) {
+      return EMcpAutomationBridgeState::Connected;
+    }
+    if (ConnectionManager->IsReconnectPending()) {
+      return EMcpAutomationBridgeState::Connecting;
+    }
+  }
+  return EMcpAutomationBridgeState::Disconnected;
 }
 
 /**
@@ -807,6 +822,46 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandlePerformanceAction(R, A, P, S);
                   });
+
+  // Phase 21: Game Framework
+  RegisterHandler(TEXT("manage_game_framework"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageGameFrameworkAction(R, A, P, S);
+                  });
+
+  // Phase 22: Sessions & Local Multiplayer
+  RegisterHandler(TEXT("manage_sessions"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageSessionsAction(R, A, P, S);
+                  });
+
+  // Phase 23: Level Structure
+  RegisterHandler(TEXT("manage_level_structure"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageLevelStructureAction(R, A, P, S);
+                  });
+
+  // Phase 24: Volumes & Zones
+  RegisterHandler(TEXT("manage_volumes"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageVolumesAction(R, A, P, S);
+                  });
+
+  // Phase 25: Navigation System
+  RegisterHandler(TEXT("manage_navigation"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageNavigationAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the
@@ -844,3 +899,176 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests() {
                              Req.RequestingSocket);
   }
 }
+
+// ============================================================================
+// ExecuteEditorCommands Implementation
+// ============================================================================
+/**
+ * @brief Executes a list of editor console commands sequentially.
+ *
+ * Uses GEditor->Exec() to execute each command in the provided array.
+ * Stops on first failure and returns the error message.
+ *
+ * @param Commands Array of console command strings to execute.
+ * @param OutErrorMessage Error message if any command fails.
+ * @return true if all commands executed successfully, false otherwise.
+ */
+bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
+    const TArray<FString> &Commands, FString &OutErrorMessage) {
+#if WITH_EDITOR
+  // GEditor operations must run on the game thread
+  check(IsInGameThread());
+  
+  if (!GEditor) {
+    OutErrorMessage = TEXT("Editor not available");
+    return false;
+  }
+
+  UWorld *EditorWorld = GEditor->GetEditorWorldContext().World();
+  if (!EditorWorld) {
+    OutErrorMessage = TEXT("Editor world context not available");
+    return false;
+  }
+
+  for (const FString &Command : Commands) {
+    if (Command.IsEmpty()) {
+      continue;
+    }
+
+    // Execute the command via GEditor
+    // Note: GEditor->Exec returns true if the command was handled
+    if (!GEditor->Exec(EditorWorld, *Command)) {
+      OutErrorMessage =
+          FString::Printf(TEXT("Failed to execute command: %s"), *Command);
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("ExecuteEditorCommands: %s"), *OutErrorMessage);
+      return false;
+    }
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("ExecuteEditorCommands: Executed '%s'"), *Command);
+  }
+
+  return true;
+#else
+  OutErrorMessage = TEXT("Editor commands only available in editor builds");
+  return false;
+#endif
+}
+
+// ============================================================================
+// CreateControlRigBlueprint Implementation
+// ============================================================================
+#if MCP_HAS_CONTROLRIG_FACTORY
+// UE 5.7 renamed ControlRigBlueprint.h to ControlRigBlueprintLegacy.h
+#if __has_include("ControlRigBlueprintLegacy.h")
+#include "ControlRigBlueprintLegacy.h"
+#else
+#include "ControlRigBlueprint.h"
+#endif
+#include "ControlRigBlueprintFactory.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+
+/**
+ * @brief Creates a new Control Rig Blueprint asset.
+ *
+ * Uses UControlRigBlueprintFactory to create the asset at the specified
+ * location with the given skeleton as the target.
+ *
+ * @param AssetName Name for the new Control Rig Blueprint.
+ * @param PackagePath Package path where the asset should be created (e.g.,
+ * "/Game/Rigs").
+ * @param TargetSkeleton Skeleton to associate with the Control Rig.
+ * @param OutError Error message if creation fails.
+ * @return Pointer to the created UBlueprint, or nullptr on failure.
+ */
+UBlueprint *UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
+    const FString &AssetName, const FString &PackagePath,
+    USkeleton *TargetSkeleton, FString &OutError) {
+#if WITH_EDITOR
+  if (AssetName.IsEmpty()) {
+    OutError = TEXT("Asset name cannot be empty");
+    return nullptr;
+  }
+
+  if (PackagePath.IsEmpty()) {
+    OutError = TEXT("Package path cannot be empty");
+    return nullptr;
+  }
+
+  // Normalize the package path
+  FString NormalizedPath = PackagePath;
+  NormalizedPath.ReplaceInline(TEXT("/Content"), TEXT("/Game"));
+  NormalizedPath.ReplaceInline(TEXT("\\"), TEXT("/"));
+
+  // Ensure path starts with /Game
+  if (!NormalizedPath.StartsWith(TEXT("/Game"))) {
+    NormalizedPath = TEXT("/Game") / NormalizedPath;
+  }
+
+  // Remove trailing slashes
+  while (NormalizedPath.EndsWith(TEXT("/"))) {
+    NormalizedPath.LeftChopInline(1);
+  }
+
+  // Build full package name
+  FString FullPackageName = NormalizedPath / AssetName;
+
+  // Create the package
+  UPackage *Package = CreatePackage(*FullPackageName);
+  if (!Package) {
+    OutError =
+        FString::Printf(TEXT("Failed to create package: %s"), *FullPackageName);
+    return nullptr;
+  }
+
+  Package->FullyLoad();
+
+  // Create the factory
+  UControlRigBlueprintFactory *Factory =
+      NewObject<UControlRigBlueprintFactory>();
+  if (!Factory) {
+    OutError = TEXT("Failed to create ControlRigBlueprintFactory");
+    return nullptr;
+  }
+
+  // Create the Control Rig Blueprint
+  UControlRigBlueprint *NewBlueprint = Cast<UControlRigBlueprint>(
+      Factory->FactoryCreateNew(UControlRigBlueprint::StaticClass(), Package,
+                                *AssetName, RF_Public | RF_Standalone, nullptr,
+                                GWarn));
+
+  if (!NewBlueprint) {
+    OutError = TEXT("Factory failed to create Control Rig Blueprint");
+    return nullptr;
+  }
+
+  // Set the target skeleton if provided
+  if (TargetSkeleton) {
+    // UControlRigBlueprint uses a preview skeletal mesh, not skeleton directly
+    // Try to find a skeletal mesh that uses this skeleton
+    USkeletalMesh *PreviewMesh = TargetSkeleton->GetPreviewMesh();
+    if (PreviewMesh) {
+      NewBlueprint->SetPreviewMesh(PreviewMesh);
+    }
+  }
+
+  // Notify asset registry
+  FAssetRegistryModule::AssetCreated(NewBlueprint);
+
+  // Mark package dirty for save
+  NewBlueprint->MarkPackageDirty();
+
+  // Use safe asset save (UE 5.7 compatible)
+  McpSafeAssetSave(NewBlueprint);
+
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+         TEXT("Created Control Rig Blueprint: %s"), *FullPackageName);
+
+  return NewBlueprint;
+#else
+  OutError = TEXT("Control Rig creation only available in editor builds");
+  return nullptr;
+#endif
+}
+#endif // MCP_HAS_CONTROLRIG_FACTORY

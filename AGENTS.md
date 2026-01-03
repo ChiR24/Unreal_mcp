@@ -1,121 +1,72 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2025-12-28 13:11:47 UTC
-**Commit:** 800672e
-**Branch:** features
+**Generated:** 2026-01-01 16:15:00 UTC
+**Commit:** 4f1bacc
+**Branch:** adv
 
 ## OVERVIEW
-
-Model Context Protocol (MCP) server for Unreal Engine 5. Dual-process architecture: TS control layer + UE C++ plugin + optional Rust/WASM acceleration.
+MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C++ (Bridge Plugin).
 
 ## STRUCTURE
-
 ```
 ./
-├── src/           # MCP server (TS)
-│   ├── tools/     # 20+ tool implementations
-│   ├── automation/ # WebSocket bridge client
-│   ├── graphql/   # Optional GraphQL server
-│   └── utils/     # Utilities (validation, normalization)
-├── plugins/       # UE plugin (C++)
+├── src/           # TS Server (NodeNext ESM)
+│   ├── automation/ # Bridge Client & Handshake
+│   ├── tools/     # Tool Definitions & Handlers
+│   └── utils/     # Normalization & Security
+├── plugins/       # UE Plugin (C++)
 │   └── McpAutomationBridge/
-│       ├── Source/ # Handlers, subsystem
-│       └── Config/ # UE plugin config
-├── wasm/          # Rust/WASM performance layer
-├── tests/         # Integration tests (.mjs)
-└── docs/          # Documentation
+│       ├── Source/ # Native Handlers & Subsystem
+│       └── Config/ # Plugin Settings
+├── wasm/          # Rust Source (Math/Parsing)
+├── tests/         # Consolidated Integration (.mjs)
+└── scripts/       # Maintenance & CI Helpers
 ```
 
 ## WHERE TO LOOK
-
 | Task | Location | Notes |
 |------|----------|-------|
-| Add MCP tool | `src/tools/` → `src/tools/handlers/` → `consolidated-tool-definitions.ts` | Must also add C++ handler |
-| Add UE handler | `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/*Handlers.cpp` | Route via subsystem |
-| Bridge connection | `src/automation/` | WebSocket client, handshake |
-| Path normalization | `src/utils/normalize.ts` | /Content → /Game conversion |
-| Command validation | `src/utils/command-validator.ts` | Blocks dangerous console commands |
-| Type definitions | `src/types/` | TS types, Zod schemas |
+| Add MCP Tool | `src/tools/` | Schema in `consolidated-tool-definitions.ts` |
+| Add UE Action | `plugins/.../Private/` | Signature in `Subsystem.h`, impl in `*Handlers.cpp` |
+| Fix UE Crashes | `McpAutomationBridgeHelpers.h` | Use `McpSafeAssetSave` for 5.7+ |
+| Path Handling | `src/utils/normalize.ts` | Force `/Game/` prefix |
+| CI Workflows | `.github/workflows/` | Check for future-dated versions (CRITICAL) |
 
 ## CONVENTIONS
+### Dual-Process Flow
+1. **TS (MCP)**: Validates JSON Schema → Executes Tool Handler.
+2. **Bridge (WS)**: TS sends JSON payload → C++ Subsystem dispatches to Game Thread.
+3. **Execution**: C++ handler performs native UE API calls → Returns JSON result.
 
-### Dual-Process Architecture
-- **MCP Server (TS)**: Handles JSON-RPC protocol, tool schemas
-- **Automation Bridge (UE C++)**: WebSocket server on port 8091, executes in game thread
-- **Communication**: JSON payloads over WebSocket (TS → UE)
+### UE 5.7 Safety
+- **NO `UPackage::SavePackage()`**: Causes access violations in 5.7. Use `McpSafeAssetSave`.
+- **SCS Ownership**: Component templates must be created via `SCS->CreateNode()` and `AddNode()`.
+- **`ANY_PACKAGE`**: Deprecated. Use `nullptr` for path lookups.
 
-### TypeScript (NodeNext ESM)
-- Local imports **must** use `.js` extensions: `import { log } from './logger.js'`
-- Order: 1) Node built-ins (`node:*`) 2) Third-party 3) Local
-- Prefer `unknown` over `any`, narrow types
-- Empty `catch {}` allowed only if intentional
+### TypeScript Zero-Any Policy
+- Strictly no `as any` in runtime code. Use `unknown` or interfaces.
+- Colocate unit tests (`.test.ts`) with source.
 
-### Error Handling
-- Normalize all errors: `const err = error instanceof Error ? error : new Error(String(error));`
-- Add context (tool/action/port/path)
-- Use repo logger (`src/utils/logger.ts`) - **never** `console.log` in runtime
-- `console.log` redirected to `stderr` in `src/index.ts` (stdout reserved for JSON-RPC)
-
-### Unreal Plugin (C++)
-- Prefixes: `U*` (UObjects), `A*` (Actors), `F*` (structs), `I*` (interfaces)
-- Use `FJsonObjectConverter` for JSON ↔ UStruct
-- Keep request/response payloads stable
-
-### Testing
-- Unit tests: Vitest (`npm run test:unit`) - no UE required
-- Integration tests: Consolidated suite (`npm test`) - UE Editor + plugin required
-- CI smoke test: `npm run test:smoke` with `MOCK_UNREAL_CONNECTION=true`
-
-## ANTI-PATTERNS (THIS PROJECT)
-
-- **Breaking stdout**: Never write to stdout in runtime (reserved for JSON-RPC)
-- **Empty catches without reason**: Document why errors are swallowed
-- **`as any` / `: any`**: Eliminated from source code - maintain zero `any` policy
-- **Non-null assertions**: Avoid `!` unless proven safe
-- **Skipping C++ handler**: Adding tool without UE side won't work
-- **Path format mismatch**: Always normalize `/Content` to `/Game`
-- **Direct console commands**: Use `UnrealCommandQueue` with throttling
-- **WebSocket size checks**: Must check in **BYTES**, not characters
+## ANTI-PATTERNS
+- **Console Hacks**: Never use `scripts/remove-saveasset.py` (legacy).
+- **Hardcoded Paths**: Avoid `X:\` or `C:\` absolute paths in scripts.
+- **Breaking STDOUT**: Never `console.log` in runtime (JSON-RPC only).
+- **Incomplete Tools**: No "Not Implemented" stubs. 100% TS + C++ coverage required.
 
 ## UNIQUE STYLES
-
-- **Consolidated tools**: `consolidated-tool-definitions.ts` + `consolidated-tool-handlers.ts` centralize all MCP tools
-- **WASM fallback**: Rust compiles to WASM, TS fallback if missing (`WASM_ENABLED=true|false`)
-- **Graceful connection**: Server starts without UE, retries with exponential backoff
-- **Elicitation layer**: ToolRegistry can pause to ask LLM for missing parameters
-- **Docker multi-stage**: builder (node:22-alpine) → production (chainguard/node)
-- **Optional GraphQL**: Disabled by default, enable via `GRAPHQL_ENABLED=true`
+- **Consolidated Tests**: All integration tests reside in `tests/integration.mjs`.
+- **WASM Fallback**: Math-heavy logic uses Rust/WASM with automatic TS fallback.
+- **Mock Mode**: Set `MOCK_UNREAL_CONNECTION=true` for offline CI.
 
 ## COMMANDS
-
 ```bash
-# Build
-npm run build:core      # TS only (fast)
-npm run build            # TS + WASM (optional)
-npm run build:wasm        # WASM only (requires wasm-pack)
-
-# Run
-npm run dev              # ts-node ESM
-npm run start            # compiled JS
-
-# Lint
-npm run lint             # ESLint TS
-npm run lint:cpp         # cpplint C++
-npm run lint:csharp       # dotnet-format C#
-
-# Test
-npm run test:unit        # Vitest, no UE
-npm test                 # Consolidated integration (requires UE)
-npm run test:smoke       # CI smoke test (mock mode)
+npm run build:core   # TS only
+npm run start        # Launch server
+npm run test:unit    # Vitest
+npm test             # UE Integration (Requires Editor)
 ```
 
 ## NOTES
-
-- **Unreal Engine**: 5.0–5.7 supported
-- **Node.js**: 18+ required
-- **Plugin copy**: Copy `plugins/McpAutomationBridge/` to your UE project
-- **Port**: WebSocket server on 8091 (configurable via `MCP_AUTOMATION_PORT`)
-- **Mock mode**: `MOCK_UNREAL_CONNECTION=true` for offline testing (TS side)
-- **Engine code**: Before editing plugin C++, read engine source at `X:\Unreal_Engine\UE_5.6\Engine` or `X:\Unreal_Engine\UE_5.7\Engine`
-- **Handler mapping**: Use `docs/handler-mapping.md` to find TS → C++ routes
-- **Integration tests**: Most fail with `ECONNREFUSED` if UE/plugin not running
+- **Critical**: Check `.github/workflows` for hallucinated versions (e.g., checkout@v6).
+- **Assets**: Root `Public/` assets should be moved to `docs/assets/`.
+- Always check engine code for help at path X:\Unreal_Engine\UE_5.7\Engine, X:\Unreal_Engine\UE_5.6\Engine, X:\Unreal_Engine\UE_5.3\Engine.

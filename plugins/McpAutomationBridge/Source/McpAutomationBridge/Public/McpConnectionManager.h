@@ -31,6 +31,7 @@ public:
 
 	bool IsConnected() const;
 	bool IsBridgeActive() const { return bBridgeAvailable; }
+	bool IsReconnectPending() const { return TimeUntilReconnect > 0.0f; }
 
 	bool SendRawMessage(const FString& Message);
 	void SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode);

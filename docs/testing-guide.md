@@ -2,14 +2,19 @@
 
 ## Overview
 
-This project uses a consolidated integration test suite covering all 17 MCP tools, plus Vitest for unit tests and a CI smoke test for mock-mode validation.
+This project uses consolidated integration test suites covering all MCP tools:
+- **Core Suite** (17 original tools, 44 scenarios)
+- **Advanced Suite** (15 new Phase 6-20 tools, 80 scenarios)
+
+Plus Vitest for unit tests and a CI smoke test for mock-mode validation.
 
 ## Test Commands
 
 | Command | Description | Requires UE? |
 |---------|-------------|--------------|
-| `npm test` | Run consolidated integration suite | Yes |
-| `npm run test:all` | Same as above | Yes |
+| `npm test` | Run core integration suite | Yes |
+| `npm run test:advanced` | Run advanced integration suite (Phases 6-20) | Yes |
+| `npm run test:all` | Run both integration suites | Yes |
 | `npm run test:unit` | Run Vitest unit tests | No |
 | `npm run test:smoke` | CI smoke test (mock mode) | No |
 
@@ -19,10 +24,14 @@ This project uses a consolidated integration test suite covering all 17 MCP tool
 
 ```bash
 # Ensure Unreal Engine is running with MCP Automation Bridge plugin enabled
-npm test
+npm test              # Core suite (44 tests)
+npm run test:advanced # Advanced suite (80 tests)
+npm run test:all      # Both suites (124 tests)
 ```
 
-This runs `tests/integration.mjs`, which covers 44 scenarios across all tool categories:
+### Core Suite (`tests/integration.mjs`)
+
+Covers 44 scenarios across the original 17 tool categories:
 - Infrastructure & Discovery
 - Asset & Material Lifecycle
 - Actor Control & Introspection
@@ -32,13 +41,33 @@ This runs `tests/integration.mjs`, which covers 44 scenarios across all tool cat
 - Cinematics & Audio
 - Operations & Performance
 
+### Advanced Suite (`tests/integration-advanced.mjs`)
+
+Covers 80 scenarios across the 15 new Phase 6-20 tools:
+- Phase 6: Geometry & Mesh Creation (`manage_geometry`)
+- Phase 7: Skeletal Mesh & Rigging (`manage_skeleton`)
+- Phase 8: Advanced Material Authoring (`manage_material_authoring`)
+- Phase 9: Texture Generation (`manage_texture`)
+- Phase 10: Animation Authoring (`manage_animation_authoring`)
+- Phase 11: Audio Authoring (`manage_audio_authoring`)
+- Phase 12: Niagara VFX Authoring (`manage_niagara_authoring`)
+- Phase 13: Gameplay Ability System (`manage_gas`)
+- Phase 14: Character & Movement (`manage_character`)
+- Phase 15: Combat & Weapons (`manage_combat`)
+- Phase 16: AI System - Enhanced (`manage_ai`)
+- Phase 17: Inventory & Items (`manage_inventory`)
+- Phase 18: Interaction System (`manage_interaction`)
+- Phase 19: Widget Authoring (`manage_widget_authoring`)
+- Phase 20: Networking & Multiplayer (`manage_networking`)
+
 ### Test Structure
 
 ```
 tests/
-├── integration.mjs    # Consolidated test suite (44 scenarios)
-├── test-runner.mjs    # Shared test harness
-└── reports/           # JSON test results (gitignored)
+├── integration.mjs          # Core test suite (44 scenarios)
+├── integration-advanced.mjs # Advanced test suite (80 scenarios)
+├── test-runner.mjs          # Shared test harness
+└── reports/                 # JSON test results (gitignored)
 ```
 
 ### Adding New Tests

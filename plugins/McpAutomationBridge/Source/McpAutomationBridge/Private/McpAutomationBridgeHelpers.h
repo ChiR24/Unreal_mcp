@@ -1,6 +1,7 @@
 // Helper utilities for McpAutomationBridgeSubsystem
 #pragma once
 
+#include "AssetRegistry/AssetData.h"
 #include "Containers/ScriptArray.h"
 #include "Containers/StringConv.h"
 #include "CoreMinimal.h"
@@ -262,36 +263,71 @@ static inline FString ResolveAssetPath(const FString &InputPath) {
   }
 
   // 3. Search by name if it's a short name (no slashes)
-  // NOTE: This section is disabled because FARFilter::AssetName is not
-  // available in UE5.7 and iterating all assets is too expensive. Relative
-  // paths are still resolved via /Game/ prepend above.
-  /*
-  FString BaseName = FPaths::GetBaseFilename(InputPath);
-  FAssetRegistryModule &AssetRegistryModule =
-      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-  IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+  // UE 5.7+ compatible: Use GetAssetsByPath + manual name filtering instead of FARFilter::AssetName
+  // PERFORMANCE NOTE: This scans all assets under /Game when given a short name (no slashes).
+  // For large projects, this could be slow if called frequently. Consider caching results
+  // or providing full paths when possible.
+  if (!InputPath.Contains(TEXT("/"))) {
+    FString ShortName = FPaths::GetBaseFilename(InputPath);
+    
+    FAssetRegistryModule &AssetRegistryModule =
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
-  TArray<FAssetData> AssetDataList;
-  FARFilter Filter;
-  // Filter.AssetName = FName(*BaseName); // Compilation Error: AssetName not
-  member of FARFilter
-
-  // AssetRegistry.GetAssets(Filter, AssetDataList);
-
-  if (AssetDataList.Num() == 1) {
-    return AssetDataList[0].PackageName.ToString();
-  }
-
-  if (AssetDataList.Num() > 1) {
-    for (const FAssetData &Data : AssetDataList) {
-      if (Data.PackageName.ToString().StartsWith(TEXT("/Game/"))) {
-        return Data.PackageName.ToString();
+    TArray<FAssetData> FoundAssets;
+    TArray<FAssetData> AllGameAssets;
+    
+    // Use GetAssetsByPath with recursive search - more efficient than GetAllAssets
+    AssetRegistry.GetAssetsByPath(FName(TEXT("/Game")), AllGameAssets, /*bRecursive=*/true);
+    
+    // Filter by name match (case-insensitive)
+    for (const FAssetData &Asset : AllGameAssets) {
+      if (Asset.AssetName.ToString().Equals(ShortName, ESearchCase::IgnoreCase)) {
+        FoundAssets.Add(Asset);
       }
     }
+
+    // Return unique match
+    if (FoundAssets.Num() == 1) {
+      return FoundAssets[0].PackageName.ToString();
+    }
+
+    // Multiple matches - prefer /Game/ assets
+    if (FoundAssets.Num() > 1) {
+      for (const FAssetData &Data : FoundAssets) {
+        if (Data.PackageName.ToString().StartsWith(TEXT("/Game/"))) {
+          return Data.PackageName.ToString();
+        }
+      }
+      // Return first match if none start with /Game/
+      return FoundAssets[0].PackageName.ToString();
+    }
   }
-  */
 
   return FString();
+}
+
+/**
+ * Safe asset saving helper - marks package dirty and notifies asset registry.
+ * DO NOT use UEditorAssetLibrary::SaveAsset() - it triggers modal dialogs that
+ * crash D3D12RHI during automation. Assets will be saved when editor is closed
+ * or user explicitly saves.
+ *
+ * @param Asset The UObject asset to mark dirty.
+ * @returns true if the asset was marked dirty successfully, false otherwise.
+ */
+static inline bool McpSafeAssetSave(UObject* Asset)
+{
+    if (!Asset)
+        return false;
+    
+    // UE 5.7+ Fix: Do not immediately save newly created assets to disk.
+    // Saving immediately causes bulkdata corruption and crashes.
+    // Instead, mark the package dirty and notify the asset registry.
+    Asset->MarkPackageDirty();
+    FAssetRegistryModule::AssetCreated(Asset);
+    
+    return true;
 }
 #endif
 
@@ -664,8 +700,10 @@ ExportPropertyToJsonValue(void *TargetContainer, FProperty *Property) {
           continue;
         }
 
-        // Fallback: stringified placeholder for unsupported inner types
-        Out.Add(MakeShared<FJsonValueString>(TEXT("<unsupported_array_elem>")));
+        // Fallback: Use ExportTextItem_Direct for unsupported inner types
+        FString ElemStr;
+        Inner->ExportTextItem_Direct(ElemStr, ElemPtr, nullptr, nullptr, PPF_None);
+        Out.Add(MakeShared<FJsonValueString>(ElemStr));
       }
     }
     return MakeShared<FJsonValueArray>(Out);
@@ -714,7 +752,10 @@ ExportPropertyToJsonValue(void *TargetContainer, FProperty *Property) {
         MapObj->SetBoolField(KeyStr,
                              (*reinterpret_cast<const uint8 *>(ValuePtr)) != 0);
       } else {
-        MapObj->SetStringField(KeyStr, TEXT("<unsupported_value_type>"));
+        // Use ExportTextItem_Direct for unsupported value types
+        FString ValueStr;
+        ValueProp->ExportTextItem_Direct(ValueStr, ValuePtr, nullptr, nullptr, PPF_None);
+        MapObj->SetStringField(KeyStr, ValueStr);
       }
     }
 
@@ -748,7 +789,10 @@ ExportPropertyToJsonValue(void *TargetContainer, FProperty *Property) {
         Out.Add(MakeShared<FJsonValueNumber>(
             (double)*reinterpret_cast<const float *>(ElemPtr)));
       } else {
-        Out.Add(MakeShared<FJsonValueString>(TEXT("<unsupported_set_elem>")));
+        // Use ExportTextItem_Direct for unsupported set element types
+        FString ElemStr;
+        ElemProp->ExportTextItem_Direct(ElemStr, ElemPtr, nullptr, nullptr, PPF_None);
+        Out.Add(MakeShared<FJsonValueString>(ElemStr));
       }
     }
 
@@ -1404,6 +1448,81 @@ ExtractRotatorField(const TSharedPtr<FJsonObject> &Source,
   return Parsed;
 }
 
+// ============================================================================
+// CONSOLIDATED JSON FIELD ACCESSORS
+// ============================================================================
+// These helpers safely extract values from JSON objects with defaults.
+// Use these instead of duplicating helpers in each handler file.
+// ============================================================================
+
+/**
+ * Safely get a string field from a JSON object with a default value.
+ * @param Obj JSON object to read from (may be null/invalid).
+ * @param Field Name of the string field.
+ * @param Default Value to return if field is missing or Obj is invalid.
+ * @returns The string value or Default.
+ */
+static inline FString GetJsonStringField(const TSharedPtr<FJsonObject>& Obj, const FString& Field, const FString& Default = TEXT(""))
+{
+    FString Value;
+    if (Obj.IsValid() && Obj->TryGetStringField(Field, Value))
+    {
+        return Value;
+    }
+    return Default;
+}
+
+/**
+ * Safely get a number field from a JSON object with a default value.
+ * @param Obj JSON object to read from (may be null/invalid).
+ * @param Field Name of the number field.
+ * @param Default Value to return if field is missing or Obj is invalid.
+ * @returns The number value or Default.
+ */
+static inline double GetJsonNumberField(const TSharedPtr<FJsonObject>& Obj, const FString& Field, double Default = 0.0)
+{
+    double Value = Default;
+    if (Obj.IsValid())
+    {
+        Obj->TryGetNumberField(Field, Value);
+    }
+    return Value;
+}
+
+/**
+ * Safely get a boolean field from a JSON object with a default value.
+ * @param Obj JSON object to read from (may be null/invalid).
+ * @param Field Name of the boolean field.
+ * @param Default Value to return if field is missing or Obj is invalid.
+ * @returns The boolean value or Default.
+ */
+static inline bool GetJsonBoolField(const TSharedPtr<FJsonObject>& Obj, const FString& Field, bool Default = false)
+{
+    bool Value = Default;
+    if (Obj.IsValid())
+    {
+        Obj->TryGetBoolField(Field, Value);
+    }
+    return Value;
+}
+
+/**
+ * Safely get an integer field from a JSON object with a default value.
+ * @param Obj JSON object to read from (may be null/invalid).
+ * @param Field Name of the number field to read as int32.
+ * @param Default Value to return if field is missing or Obj is invalid.
+ * @returns The integer value or Default.
+ */
+static inline int32 GetJsonIntField(const TSharedPtr<FJsonObject>& Obj, const FString& Field, int32 Default = 0)
+{
+    double Value = static_cast<double>(Default);
+    if (Obj.IsValid())
+    {
+        Obj->TryGetNumberField(Field, Value);
+    }
+    return static_cast<int32>(Value);
+}
+
 // Resolve a nested property path (e.g., "Transform.Location.X" or
 // "MyComponent.Intensity"). Returns the final property and target object, or
 // nullptr on failure. OutError is populated with a descriptive error message on
@@ -1594,63 +1713,85 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
     return nullptr;
   }
 
-  UBlueprint *BP = nullptr;
-  if (Req.Contains(TEXT("."))) {
-    if (UEditorAssetLibrary::DoesAssetExist(Req)) {
-      BP = LoadObject<UBlueprint>(nullptr, *Req);
-    }
-    if (BP) {
-      OutNormalized = BP->GetPathName();
-      if (OutNormalized.Contains(TEXT(".")))
-        OutNormalized = OutNormalized.Left(OutNormalized.Find(TEXT(".")));
+  // Build normalized paths
+  FString Path = Req;
+  if (!Path.StartsWith(TEXT("/"))) {
+    Path = TEXT("/Game/") + Path;
+  }
+  
+  FString ObjectPath = Path;
+  FString PackagePath = Path;
+  
+  if (Path.Contains(TEXT("."))) {
+    PackagePath = Path.Left(Path.Find(TEXT(".")));
+  } else {
+    FString AssetName = FPaths::GetBaseFilename(Path);
+    ObjectPath = Path + TEXT(".") + AssetName;
+  }
+  
+  FString AssetName = FPaths::GetBaseFilename(PackagePath);
+
+  // Method 1: FindObject with full object path (fastest for in-memory)
+  if (UBlueprint* BP = FindObject<UBlueprint>(nullptr, *ObjectPath)) {
+    OutNormalized = PackagePath;
+    return BP;
+  }
+
+  // Method 2: Find package first, then find asset within it
+  if (UPackage* Package = FindPackage(nullptr, *PackagePath)) {
+    if (UBlueprint* BP = FindObject<UBlueprint>(Package, *AssetName)) {
+      OutNormalized = PackagePath;
       return BP;
     }
   }
 
-  FString Candidate = Req;
-  if (!Candidate.StartsWith(TEXT("/")))
-    Candidate = FString::Printf(TEXT("/Game/%s"), *Req);
-
-  // Smart detection: duplicate the clean filename only if it's not already
-  // there. This handles inputs like "/Game/Path/Asset.Asset" (idempotent) vs
-  // "/Game/Path/Asset" (append).
-  FString AssetRef = Candidate;
-  const FString CleanName = FPaths::GetCleanFilename(Candidate);
-  // If Candidate does not look like "Package.Asset", append ".Asset"
-  // Note: This check is heuristic; if clean name contains dot, it might assume
-  // it's already properly formatted.
-  if (!Candidate.EndsWith(FString::Printf(TEXT(".%s"), *CleanName))) {
-    AssetRef = FString::Printf(TEXT("%s.%s"), *Candidate, *CleanName);
+  // Method 3: TObjectIterator fallback - iterate all blueprints to find by path
+  // This is slower but guaranteed to find in-memory assets that weren't properly registered
+  for (TObjectIterator<UBlueprint> It; It; ++It) {
+    UBlueprint* BP = *It;
+    if (BP) {
+      FString BPPath = BP->GetPathName();
+      // Match by full object path or package path
+      if (BPPath.Equals(ObjectPath, ESearchCase::IgnoreCase) ||
+          BPPath.Equals(PackagePath, ESearchCase::IgnoreCase) ||
+          BPPath.Equals(Path, ESearchCase::IgnoreCase) ||
+          BPPath.Equals(Req, ESearchCase::IgnoreCase)) {
+        OutNormalized = PackagePath;
+        return BP;
+      }
+      // Also check if the package paths match
+      FString BPPackagePath = BPPath;
+      if (BPPackagePath.Contains(TEXT("."))) {
+        BPPackagePath = BPPackagePath.Left(BPPackagePath.Find(TEXT(".")));
+      }
+      if (BPPackagePath.Equals(PackagePath, ESearchCase::IgnoreCase)) {
+        OutNormalized = PackagePath;
+        return BP;
+      }
+    }
   }
 
-  if (UEditorAssetLibrary::DoesAssetExist(AssetRef)) {
-    BP = LoadObject<UBlueprint>(nullptr, *AssetRef);
-  }
-  if (BP) {
-    OutNormalized = Candidate;
-    return BP;
+  // Method 4: UEditorAssetLibrary existence check + LoadObject
+  if (UEditorAssetLibrary::DoesAssetExist(ObjectPath)) {
+    if (UBlueprint* BP = LoadObject<UBlueprint>(nullptr, *ObjectPath)) {
+      OutNormalized = PackagePath;
+      return BP;
+    }
   }
 
+  // Method 5: Asset Registry lookup
   FAssetRegistryModule &ARM =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
           TEXT("AssetRegistry"));
   FAssetData Found;
   TArray<FAssetData> Results;
-  ARM.Get().GetAssetsByPackageName(FName(*Req), Results);
+  ARM.Get().GetAssetsByPackageName(FName(*PackagePath), Results);
   if (Results.Num() > 0) {
     Found = Results[0];
-  } else {
-    FString Pkg = Req;
-    if (!Pkg.StartsWith(TEXT("/")))
-      Pkg = FString::Printf(TEXT("/Game/%s"), *Req);
-    ARM.Get().GetAssetsByPackageName(FName(*Pkg), Results);
-    if (Results.Num() > 0) {
-      Found = Results[0];
-    }
   }
 
   if (Found.IsValid()) {
-    BP = Cast<UBlueprint>(Found.GetAsset());
+    UBlueprint* BP = Cast<UBlueprint>(Found.GetAsset());
     if (!BP) {
       const FString PathStr = Found.ToSoftObjectPath().ToString();
       BP = LoadObject<UBlueprint>(nullptr, *PathStr);

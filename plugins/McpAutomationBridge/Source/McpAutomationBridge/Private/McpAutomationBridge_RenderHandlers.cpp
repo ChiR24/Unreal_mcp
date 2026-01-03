@@ -47,7 +47,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
         FString FullPath = PackagePath / AssetName;
 
         UPackage* Package = CreatePackage(*FullPath);
-        UTextureRenderTarget2D* RT = NewObject<UTextureRenderTarget2D>(Package, *AssetName, RF_Public | RF_Standalone);
+        UTextureRenderTarget2D* RT = NewObject<UTextureRenderTarget2D>(Package, UTextureRenderTarget2D::StaticClass(), FName(*AssetName), RF_Public | RF_Standalone);
         
         if (RT)
         {

@@ -5,6 +5,7 @@
 
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Engine/ExponentialHeightFog.h"
+#include "Engine/PostProcessVolume.h"
 #include "Engine/TextureCube.h"
 
 #if WITH_EDITOR

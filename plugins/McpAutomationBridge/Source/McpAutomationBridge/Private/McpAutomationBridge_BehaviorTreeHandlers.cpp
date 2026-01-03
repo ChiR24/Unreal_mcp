@@ -112,7 +112,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     }
 
     UBehaviorTree *NewBT =
-        NewObject<UBehaviorTree>(Package, *Name, RF_Public | RF_Standalone);
+        NewObject<UBehaviorTree>(Package, UBehaviorTree::StaticClass(), FName(*Name), RF_Public | RF_Standalone);
     if (!NewBT) {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("Failed to create Behavior Tree"),
@@ -129,11 +129,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     // Create default nodes (Root)
     NewGraph->GetSchema()->CreateDefaultNodesForGraph(*NewGraph);
 
-    // Save the asset
+    // Save the asset using safe helper
     FAssetRegistryModule::AssetCreated(NewBT);
     Package->MarkPackageDirty();
-
-    bool bSaved = UEditorAssetLibrary::SaveAsset(NewBT->GetPathName());
+    bool bSaved = McpSafeAssetSave(NewBT);
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("assetPath"), NewBT->GetPathName());

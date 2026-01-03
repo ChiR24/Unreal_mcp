@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
+class UBlueprint;
+
 class FSCSHandlers {
 public:
 #if WITH_EDITOR

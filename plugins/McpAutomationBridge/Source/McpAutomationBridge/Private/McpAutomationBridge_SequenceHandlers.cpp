@@ -26,6 +26,7 @@
 #include "AssetToolsModule.h"
 #include "Editor/EditorEngine.h"
 #include "Engine/Selection.h"
+#include "Factories/Factory.h"
 #include "IAssetTools.h"
 #include "LevelSequenceEditorBlueprintLibrary.h"
 #include "Subsystems/AssetEditorSubsystem.h"
@@ -212,7 +213,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
         TEXT("LevelSequenceFactoryNew class not found (Module not loaded?)"),
         nullptr, TEXT("FACTORY_NOT_AVAILABLE"));
   }
-  return true;
   return true;
 
 #else
@@ -441,7 +441,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
            "for this sequence type"),
       Resp, TEXT("NOT_IMPLEMENTED"));
   return true;
-  return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,
                          TEXT("sequence_set_properties requires editor build."),
@@ -515,7 +514,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(
          *RequestIdArg);
   Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
                                     TEXT("Sequence opened"), Resp, FString());
-  return true;
   return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,
@@ -621,7 +619,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(
   Subsystem->SendAutomationResponse(Socket, RequestIdArg, false,
                                     TEXT("Failed to open or play sequence"),
                                     nullptr, TEXT("EXECUTION_ERROR"));
-  return true;
   return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,
@@ -1141,12 +1138,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(
             GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()) {
       IAssetEditorInstance *Editor =
           AssetEditorSS->FindEditorForAsset(SeqObj, false);
-      if (Editor && Editor->GetEditorName() == FName("LevelSequenceEditor")) {
-        // We assume it implements ILevelSequenceEditorToolkit if the name
-        // matches
-        ILevelSequenceEditorToolkit *LSEditor =
-            static_cast<ILevelSequenceEditorToolkit *>(Editor);
-        if (LSEditor && LSEditor->GetSequencer().IsValid()) {
+      // ILevelSequenceEditorToolkit inherits from IAssetEditorInstance.
+      // Use static_cast since we verified the toolkit type through FindEditorForAsset.
+      // Note: dynamic_cast doesn't work with /GR- compiler flag in UE 5.7+
+      if (ILevelSequenceEditorToolkit *LSEditor =
+              static_cast<ILevelSequenceEditorToolkit *>(Editor)) {
+        if (LSEditor->GetSequencer().IsValid()) {
           UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
                  TEXT("HandleSequenceSetPlaybackSpeed: Setting speed to %.2f"),
                  Speed);
@@ -1170,7 +1167,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(
       Socket, RequestIdArg, false,
       TEXT("Sequence editor not open or interface unavailable"), nullptr,
       TEXT("EDITOR_NOT_OPEN"));
-  return true;
   return true;
 #else
   SendAutomationResponse(
@@ -1214,7 +1210,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePause(
       Socket, RequestIdArg, false,
       TEXT("Sequence not currently open in editor"), nullptr,
       TEXT("EXECUTION_ERROR"));
-  return true;
   return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,
@@ -1263,7 +1258,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(
       Socket, RequestIdArg, false,
       TEXT("Sequence not currently open in editor"), nullptr,
       TEXT("EXECUTION_ERROR"));
-  return true;
   return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,
@@ -1645,8 +1639,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
               const TSharedPtr<FJsonObject> *RotObj = nullptr;
               if ((*ValueObj)->TryGetObjectField(TEXT("rotation"), RotObj)) {
                 double P, Yaw, R;
-                // 0=Roll(X), 1=Pitch(Y), 2=Yaw(Z) in Transform Track channels
-                // usually. Channels 3, 4, 5.
+                // UMovieScene3DTransformSection channel layout (standard UE order):
+                // Channels 0-2: Location (X, Y, Z)
+                // Channels 3-5: Rotation (Roll, Pitch, Yaw) - corresponds to FRotator order
+                // Channels 6-8: Scale (X, Y, Z)
                 if ((*RotObj)->TryGetNumberField(TEXT("roll"), R)) {
                   Channels[3]->GetData().AddKey(TickFrame,
                                                 FMovieSceneDoubleValue(R));
@@ -1718,7 +1714,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
               FFrameNumber TickFrame =
                   FFrameRate::TransformTime(FFrameTime(FrameNum), DisplayRate,
                                             TickResolution)
-                      .FloorToFrame();
+                      .GetFrame();
 
               FMovieSceneFloatChannel *Channel =
                   Section->GetChannelProxy()
@@ -1753,7 +1749,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
               FFrameNumber TickFrame =
                   FFrameRate::TransformTime(FFrameTime(FrameNum), DisplayRate,
                                             TickResolution)
-                      .FloorToFrame();
+                      .GetFrame();
 
               FMovieSceneBoolChannel *Channel =
                   Section->GetChannelProxy().GetChannel<FMovieSceneBoolChannel>(
@@ -1915,14 +1911,40 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTickResolution(
 
   ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
   if (Sequence && Sequence->GetMovieScene()) {
-    FFrameRate TickResolution;
-    // Simplified parsing
-    if (ResolutionStr.Contains(TEXT("24000")))
-      TickResolution = FFrameRate(24000, 1);
-    else if (ResolutionStr.Contains(TEXT("60000")))
-      TickResolution = FFrameRate(60000, 1);
-    else
-      TickResolution = FFrameRate(24000, 1); // Default
+    // Get current tick resolution as fallback
+    FFrameRate TickResolution = Sequence->GetMovieScene()->GetTickResolution();
+    
+    // Parse user-provided resolution string
+    if (!ResolutionStr.IsEmpty()) {
+      if (ResolutionStr.Contains(TEXT("24000")))
+        TickResolution = FFrameRate(24000, 1);
+      else if (ResolutionStr.Contains(TEXT("60000")))
+        TickResolution = FFrameRate(60000, 1);
+      else if (ResolutionStr.Contains(TEXT("/"))) {
+        // Parse rational format "numerator/denominator"
+        FString NumStr, DenomStr;
+        if (ResolutionStr.Split(TEXT("/"), &NumStr, &DenomStr)) {
+          int32 Num = FCString::Atoi(*NumStr);
+          int32 Denom = FCString::Atoi(*DenomStr);
+          if (Num > 0 && Denom > 0) {
+            TickResolution = FFrameRate(Num, Denom);
+          }
+        }
+      }
+      else if (ResolutionStr.IsNumeric()) {
+        // Parse simple integer format
+        int32 Num = FCString::Atoi(*ResolutionStr);
+        if (Num > 0) {
+          TickResolution = FFrameRate(Num, 1);
+        }
+      }
+      else {
+        // Unrecognized format - log a warning but continue with current resolution
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+               TEXT("HandleSequenceSetTickResolution: Unrecognized resolution format '%s'. Using current resolution."),
+               *ResolutionStr);
+      }
+    }
 
     Sequence->GetMovieScene()->SetTickResolutionDirectly(TickResolution);
     Sequence->GetMovieScene()->Modify();
@@ -2115,9 +2137,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTrackSolo(
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetStringField(TEXT("trackName"), SoloTrack->GetName());
   Resp->SetBoolField(TEXT("solo"), bSolo);
+  Resp->SetStringField(TEXT("note"), TEXT("Solo is simulated by muting all other tracks. Unreal Engine does not have native track solo support."));
   SendAutomationResponse(
       Socket, RequestId, true,
-      bSolo ? TEXT("Track solo enabled") : TEXT("Solo disabled"), Resp);
+      bSolo ? TEXT("Track solo enabled (simulated via muting other tracks)") : TEXT("Solo disabled (all tracks unmuted)"), Resp);
   return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,

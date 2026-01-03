@@ -4,6 +4,7 @@
 
 
 #if WITH_EDITOR
+#include "ContentStreaming.h"
 #include "Editor/UnrealEd/Public/Editor.h"
 #include "EngineUtils.h"
 #include "HAL/FileManager.h"

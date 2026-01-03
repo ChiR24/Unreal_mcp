@@ -106,6 +106,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
   UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
       AssetName, PackagePath, UNiagaraSystem::StaticClass(), Factory);
   UNiagaraSystem *NiagaraSystem = Cast<UNiagaraSystem>(NewAsset);
+  McpSafeAssetSave(NiagaraSystem);
 
   if (!NiagaraSystem) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -114,7 +115,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
     return true;
   }
 
-  UEditorAssetLibrary::SaveAsset(NiagaraSystem->GetPathName());
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
@@ -190,6 +190,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
   UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
       AssetName, PackagePath, UNiagaraEmitter::StaticClass(), Factory);
   UNiagaraEmitter *NiagaraEmitter = Cast<UNiagaraEmitter>(NewAsset);
+  McpSafeAssetSave(NiagaraEmitter);
 
   if (!NiagaraEmitter) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -198,7 +199,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
     return true;
   }
 
-  UEditorAssetLibrary::SaveAsset(NiagaraEmitter->GetPathName());
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
