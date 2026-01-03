@@ -7,6 +7,163 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.9] - 2026-01-03
+
+> [!IMPORTANT]
+> ### 🎮 Major Feature Release
+> This release introduces **15+ new automation tools** with comprehensive handlers for Navigation, Volumes, Level Structure, Sessions, Game Framework, and complete game development systems. ([#53](https://github.com/ChiR24/Unreal_mcp/pull/53))
+
+### 🛡️ Security
+
+<details>
+<summary><b>🔒 Fix Arbitrary File Read in LogTools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/103">#103</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 CRITICAL |
+| **Vulnerability** | Arbitrary file read via `logPath` parameter |
+| **Impact** | Attackers could read any file on the system by manipulating the `logPath` override |
+| **Fix** | Validated that `logPath` ends with `.log` and is within `Saved/Logs` directory |
+
+**Protections Added:**
+- Enforced `.log` extension requirement
+- Restricted to `Saved/Logs` directory (CWD or UE_PROJECT_PATH)
+- Added path traversal and sibling directory attack protection
+
+</details>
+
+### ✨ Added
+
+<details>
+<summary><b>🛠️ New Automation Tools</b></summary>
+
+| Tool | Description |
+|------|-------------|
+| `manage_navigation` | NavMesh configuration, Nav Modifiers, Nav Links, pathfinding control |
+| `manage_volumes` | 18 volume types (Trigger, Blocking, Audio, Physics, Navigation, Streaming) |
+| `manage_level_structure` | World Partition, HLOD, Data Layers, Level Blueprints |
+| `manage_sessions` | Split-screen, LAN play, Voice Chat configuration |
+| `manage_game_framework` | GameMode, GameState, PlayerController, match flow |
+| `manage_skeleton` | Bone manipulation, sockets, physics assets |
+| `manage_material_authoring` | Material expressions, landscape materials |
+| `manage_texture` | Texture creation, compression, virtual texturing |
+| `manage_animation_authoring` | AnimBP, Control Rig, IK Rig, Retargeter |
+| `manage_niagara_authoring` | Niagara systems, modules, parameters |
+| `manage_gas` | Gameplay Ability System (Abilities, Effects, Attributes) |
+| `manage_character` | Character creation, movement, locomotion |
+| `manage_combat` | Weapons, projectiles, damage, melee combat |
+| `manage_ai` | EQS, Perception, State Trees, Smart Objects |
+| `manage_inventory` | Items, equipment, loot tables, crafting |
+| `manage_interaction` | Interactables, destructibles, triggers |
+| `manage_widget_authoring` | UMG widgets, layout, styling |
+| `manage_networking` | Replication, RPCs, network prediction |
+| `manage_audio_authoring` | MetaSounds, sound classes, dialogue |
+
+</details>
+
+### 🔧 Changed
+
+<details>
+<summary><b>Build & Infrastructure Improvements</b></summary>
+
+| Change | Description |
+|--------|-------------|
+| Bounded Directory Search | Replaced unbounded recursive search with bounded depth search (3-4 levels) |
+| Property Management | Enhanced property management across all automation handlers |
+| Connection Manager | Added `IsReconnectPending()` method to McpConnectionManager |
+| State Machine | Improved state machine creation with enhanced error handling |
+
+</details>
+
+### 📊 Statistics
+
+- **New Tools:** 15+
+- **New C++ Handler Files:** 20+
+
+---
+
+## 🏷️ [0.5.8] - 2026-01-02
+
+> [!IMPORTANT]
+> ### 🛡️ Security Release
+> Critical security fix for path traversal vulnerability and material graph parameter improvements.
+
+### 🛡️ Security
+
+<details>
+<summary><b>🔒 Fix Path Traversal in INI Reader</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/48">#48</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 CRITICAL |
+| **Vulnerability** | Path traversal in `getProjectSetting()` |
+| **Impact** | Attackers could access arbitrary files by injecting `../` sequences into the category parameter |
+| **Fix** | Added strict regex validation `^[a-zA-Z0-9_-]+$` to `cleanCategory` in `src/utils/ini-reader.ts` |
+
+</details>
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>Material Graph Parameter Mapping</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/50">#50</a>)</summary>
+
+| Schema Parameter | C++ Handler Expected | Status |
+|------------------|---------------------|--------|
+| `fromNodeId` | `sourceNodeId` | ✅ Auto-mapped |
+| `toNodeId` | `targetNodeId` | ✅ Auto-mapped |
+| `toPin` | `inputName` | ✅ Auto-mapped |
+
+Closes [#49](https://github.com/ChiR24/Unreal_mcp/issues/49)
+
+</details>
+
+---
+
+## 🏷️ [0.5.7] - 2026-01-01
+
+> [!IMPORTANT]
+> ### 🛡️ Security Release
+> Critical security fix for Python execution bypass vulnerability.
+
+### 🛡️ Security
+
+<details>
+<summary><b>🔒 Fix Python Execution Bypass</b> (<code>e16dab0</code>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 CRITICAL |
+| **Vulnerability** | Python execution restriction bypass |
+| **Impact** | Attackers could execute arbitrary Python code by using tabs instead of spaces after the `py` command |
+| **Fix** | Updated `CommandValidator` to use regex `^py(?:\s|$)` which correctly matches `py` followed by any whitespace |
+
+</details>
+
+### 🔧 Changed
+
+<details>
+<summary><b>Release Process Improvements</b></summary>
+
+- Removed automatic git tag creation from release workflow
+- Updated release summary instructions for manual tag management
+
+</details>
+
+### 🔄 Dependencies
+
+<details>
+<summary><b>Package Updates</b></summary>
+
+| Package | Update | Type |
+|---------|--------|------|
+| `zod` | 4.2.1 → 4.3.4 | Minor |
+| `qs` | 6.14.0 → 6.14.1 | Patch (indirect) |
+| `github/codeql-action` | 3.28.1 → 4.31.9 | Major |
+
+</details>
+
+---
+
 ## 🏷️ [0.5.6] - 2025-12-30
 
 > [!IMPORTANT]

@@ -90,8 +90,6 @@ export class LogTools {
       return envLog;
     }
 
-    // TODO: Restore Python path resolution once executePythonWithResult is available in UnrealBridge
-    // Currently relying on UE_PROJECT_PATH or cwd fallback
     const fallback = await this.findLatestLogInDir(path.join(process.cwd(), 'Saved', 'Logs'));
     if (fallback) {
       return fallback;
