@@ -73,10 +73,41 @@ export class LogTools {
 
   private async resolveLogPath(override?: string): Promise<string | undefined> {
     if (override && typeof override === 'string' && override.trim()) {
+      // Security check: Only allow .log files
+      if (!override.toLowerCase().endsWith('.log')) {
+        this._log.warn(`Blocked attempt to read non-log file: ${override}`);
+        return undefined;
+      }
+
+      // Security check: Only allow files within Saved/Logs directory
+      const resolvedPath = path.resolve(override);
+      const allowedDirs = [
+        path.resolve(path.join(process.cwd(), 'Saved', 'Logs'))
+      ];
+
+      // Add project-specific Saved/Logs if available
+      const projectPath = this.env.UE_PROJECT_PATH;
+      if (projectPath) {
+        const projectDir = path.dirname(projectPath);
+        allowedDirs.push(path.resolve(path.join(projectDir, 'Saved', 'Logs')));
+      }
+
+      // Check if path is within allowed directories
+      // We append path.sep to ensure we match directory boundaries (avoid partial matches like /LogsSecrets)
+      // or check if it equals the directory exactly.
+      const isAllowed = allowedDirs.some(dir => {
+        return resolvedPath === dir || resolvedPath.startsWith(dir + path.sep);
+      });
+
+      if (!isAllowed) {
+        this._log.warn(`Blocked attempt to read log from unauthorized location: ${override}`);
+        return undefined;
+      }
+
       try {
         const st = await fs.stat(override);
         if (st.isFile()) {
-          return this.cacheLogPath(path.resolve(override));
+          return this.cacheLogPath(resolvedPath);
         }
       } catch { }
     }
