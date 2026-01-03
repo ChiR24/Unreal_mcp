@@ -188,7 +188,7 @@ public class McpAutomationBridge : ModuleRules
     /// Determines whether a SubobjectData module or plugin exists under the given engine directory.
     /// </summary>
     /// <param name="EngineDir">Absolute path to the engine root directory to inspect.</param>
-    /// <returns>`true` if a SubobjectData directory is found in EngineDir/Source/Runtime/SubobjectData or anywhere under EngineDir/Plugins/Runtime; `false` if not found or if an error occurs.</returns>
+    /// <returns>`true` if a SubobjectData directory is found in EngineDir/Source/Runtime/SubobjectData or in known plugin locations; `false` if not found or if an error occurs.</returns>
     private bool IsSubobjectDataAvailable(string EngineDir)
     {
         try
@@ -199,19 +199,28 @@ public class McpAutomationBridge : ModuleRules
             string RuntimeDir = Path.Combine(EngineDir, "Source", "Runtime", "SubobjectData");
             if (Directory.Exists(RuntimeDir)) return true;
 
-            // Check Plugins
+            // Check Editor module (UE 5.7+)
+            string EditorDir = Path.Combine(EngineDir, "Source", "Editor", "SubobjectDataInterface");
+            if (Directory.Exists(EditorDir)) return true;
+
+            // Check known plugin locations with bounded depth search
             string PluginsDir = Path.Combine(EngineDir, "Plugins");
             if (Directory.Exists(PluginsDir))
             {
-                // Simple check for the folder in Runtime plugins
-                // A full recursive search might be slow, but we can check common locations or do a search
-                // The original code did a recursive search in Plugins/Runtime
-                string PluginsRuntime = Path.Combine(PluginsDir, "Runtime");
-                if (Directory.Exists(PluginsRuntime))
+                // Check common plugin locations first (fast path)
+                string[] KnownPaths = new string[]
                 {
-                     var Found = Directory.GetDirectories(PluginsRuntime, "SubobjectData", SearchOption.AllDirectories);
-                     if (Found.Length > 0) return true;
+                    Path.Combine(PluginsDir, "Runtime", "SubobjectData"),
+                    Path.Combine(PluginsDir, "Editor", "SubobjectData"),
+                    Path.Combine(PluginsDir, "Experimental", "SubobjectData")
+                };
+                foreach (string path in KnownPaths)
+                {
+                    if (Directory.Exists(path)) return true;
                 }
+
+                // Bounded depth search (max 3 levels deep) to avoid slow unbounded recursion
+                if (SearchDirectoryBounded(PluginsDir, "SubobjectData", 3)) return true;
             }
         }
         catch {}
@@ -245,12 +254,39 @@ public class McpAutomationBridge : ModuleRules
                 string ProjPlugins = Path.Combine(ProjectRoot, "Plugins");
                 if (Directory.Exists(ProjPlugins))
                 {
-                    var Found = Directory.GetDirectories(ProjPlugins, "SubobjectData", SearchOption.AllDirectories);
-                    if (Found.Length > 0) return true;
+                    // Use bounded depth search (max 3 levels) to avoid slow unbounded recursion
+                    if (SearchDirectoryBounded(ProjPlugins, "SubobjectData", 3)) return true;
                 }
             }
         }
         catch {}
+        return false;
+    }
+
+    /// <summary>
+    /// Searches for a directory with the given name up to a maximum depth.
+    /// </summary>
+    /// <param name="rootDir">The root directory to start searching from.</param>
+    /// <param name="targetName">The directory name to search for.</param>
+    /// <param name="maxDepth">Maximum depth to search (0 = root only).</param>
+    /// <returns>True if directory is found within the depth limit.</returns>
+    private bool SearchDirectoryBounded(string rootDir, string targetName, int maxDepth)
+    {
+        if (maxDepth < 0 || !Directory.Exists(rootDir)) return false;
+        
+        try
+        {
+            foreach (string subDir in Directory.GetDirectories(rootDir))
+            {
+                string dirName = Path.GetFileName(subDir);
+                if (string.Equals(dirName, targetName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+                
+                if (maxDepth > 0 && SearchDirectoryBounded(subDir, targetName, maxDepth - 1))
+                    return true;
+            }
+        }
+        catch { /* Ignore access denied errors */ }
         return false;
     }
 
@@ -307,18 +343,12 @@ public class McpAutomationBridge : ModuleRules
                     }
                 }
 
-                // Fallback: unbounded recursive search (build-time cost only, not runtime)
-                // Note: Uses SearchOption.AllDirectories which has no depth limit
-                try
+                // Fallback: bounded depth search (max 4 levels) to avoid slow unbounded recursion
+                if (SearchDirectoryBounded(PluginsDir, SearchName, 4))
                 {
-                    var Found = Directory.GetDirectories(PluginsDir, SearchName, SearchOption.AllDirectories);
-                    if (Found.Length > 0)
-                    {
-                        PrivateDependencyModuleNames.Add(ModuleName);
-                        return;
-                    }
+                    PrivateDependencyModuleNames.Add(ModuleName);
+                    return;
                 }
-                catch { /* Ignore search errors */ }
             }
         }
         catch { /* Module not available - this is expected for optional modules */ }
