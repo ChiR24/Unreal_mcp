@@ -1011,3 +1011,34 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `create_packed_level_actor` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Creates APackedLevelActor |
 | **Utility** | | | |
 | `get_level_structure_info` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Returns level structure information |
+
+## 36. Volumes Manager (`manage_volumes`) - Phase 24
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Trigger Volumes** | | | |
+| `create_trigger_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates ATriggerVolume |
+| `create_trigger_box` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates ATriggerBox |
+| `create_trigger_sphere` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates ATriggerSphere |
+| `create_trigger_capsule` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates ATriggerCapsule |
+| **Gameplay Volumes** | | | |
+| `create_blocking_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates ABlockingVolume |
+| `create_kill_z_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates AKillZVolume |
+| `create_pain_causing_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates APainCausingVolume with damage settings |
+| `create_physics_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates APhysicsVolume with gravity/friction |
+| **Audio Volumes** | | | |
+| `create_audio_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates AAudioVolume |
+| `create_reverb_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates AAudioVolume with reverb settings |
+| **Rendering Volumes** | | | |
+| `create_cull_distance_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates ACullDistanceVolume |
+| `create_precomputed_visibility_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates APrecomputedVisibilityVolume |
+| `create_lightmass_importance_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates ALightmassImportanceVolume |
+| **Navigation Volumes** | | | |
+| `create_nav_mesh_bounds_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates ANavMeshBoundsVolume |
+| `create_nav_modifier_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates ANavModifierVolume |
+| `create_camera_blocking_volume` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Creates ACameraBlockingVolume |
+| **Configuration** | | | |
+| `set_volume_extent` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Sets volume brush extent (X, Y, Z) |
+| `set_volume_properties` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Sets volume-specific properties |
+| **Utility** | | | |
+| `get_volumes_info` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Returns volume information |

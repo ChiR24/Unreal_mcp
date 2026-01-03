@@ -2,9 +2,9 @@
 /**
  * Fully Consolidated Integration Test Suite
  *
- * Covers all 35 MCP tools (Phases 1-23):
+ * Covers all 36 MCP tools (Phases 1-24):
  * - Groups 1-8: Original 17 tools
- * - Groups 9-23: Advanced tools (Phases 6-23)
+ * - Groups 9-24: Advanced tools (Phases 6-24)
  *
  * Usage:
  *   node tests/integration.mjs
@@ -50,6 +50,14 @@ const testCases = [
   { scenario: 'Level Structure: Create data layer', toolName: 'manage_level_structure', arguments: { action: 'create_data_layer', dataLayerName: 'TestLayer', dataLayerType: 'Runtime' }, expected: 'success|not available' },
   { scenario: 'Level Structure: Configure HLOD', toolName: 'manage_level_structure', arguments: { action: 'configure_hlod_layer', hlodLayerName: 'DefaultHLOD', cellSize: 25600 }, expected: 'success' },
   { scenario: 'Level Structure: Open Level Blueprint', toolName: 'manage_level_structure', arguments: { action: 'open_level_blueprint' }, expected: 'success' },
+  // Phase 24: Volumes & Zones
+  { scenario: 'Volumes: Create trigger box', toolName: 'manage_volumes', arguments: { action: 'create_trigger_box', volumeName: 'IT_TriggerBox', location: { x: 500, y: 0, z: 100 }, extent: { x: 100, y: 100, z: 100 } }, expected: 'success' },
+  { scenario: 'Volumes: Create blocking volume', toolName: 'manage_volumes', arguments: { action: 'create_blocking_volume', volumeName: 'IT_BlockingVol', location: { x: 600, y: 0, z: 100 }, extent: { x: 200, y: 200, z: 200 } }, expected: 'success' },
+  { scenario: 'Volumes: Create physics volume', toolName: 'manage_volumes', arguments: { action: 'create_physics_volume', volumeName: 'IT_PhysicsVol', location: { x: 700, y: 0, z: 100 }, bWaterVolume: true, fluidFriction: 0.5 }, expected: 'success' },
+  { scenario: 'Volumes: Create audio volume', toolName: 'manage_volumes', arguments: { action: 'create_audio_volume', volumeName: 'IT_AudioVol', location: { x: 800, y: 0, z: 100 }, bEnabled: true }, expected: 'success' },
+  { scenario: 'Volumes: Create nav mesh bounds', toolName: 'manage_volumes', arguments: { action: 'create_nav_mesh_bounds_volume', volumeName: 'IT_NavBoundsVol', location: { x: 0, y: 500, z: 100 }, extent: { x: 2000, y: 2000, z: 500 } }, expected: 'success' },
+  { scenario: 'Volumes: Get volumes info', toolName: 'manage_volumes', arguments: { action: 'get_volumes_info', volumeType: 'Trigger' }, expected: 'success' },
+  { scenario: 'Volumes: Set volume properties', toolName: 'manage_volumes', arguments: { action: 'set_volume_properties', volumeName: 'IT_PhysicsVol', bWaterVolume: false, fluidFriction: 0.3 }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_Cube' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }

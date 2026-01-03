@@ -209,6 +209,7 @@ ASSET_LIST_TTL_MS=10000
 | `manage_game_framework` | Game modes, game states, player controllers, match flow |
 | `manage_sessions` | Sessions, split-screen, LAN, voice chat |
 | `manage_level_structure` | Level creation, sublevels, World Partition, data layers, HLOD |
+| `manage_volumes` | Trigger volumes, blocking, physics, audio, navigation volumes |
 
 ### Supported Asset Types
 

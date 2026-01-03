@@ -542,14 +542,14 @@ export class AnimationTools {
     | { success: false; message: string; error: string }
   > {
     try {
-      const actorName = (params.actorName || "Character").trim();
+      const actorName = (params.actorName || 'Character').trim();
       const ikBones = Array.isArray(params.ikBones)
         ? params.ikBones.map((b) => String(b)).filter((b) => b.trim().length > 0)
         : [];
 
-      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === "function") {
-        const resp = await this.automationBridge.sendAutomationRequest("animation_physics", {
-          action: "setup_ik",
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        const resp = await this.automationBridge.sendAutomationRequest('animation_physics', {
+          action: 'setup_ik',
           actorName,
           ikBones,
           enableFootPlacement: params.enableFootPlacement === true
@@ -558,7 +558,7 @@ export class AnimationTools {
         if (resp && resp.success !== false) {
           const key = `IK:${actorName}`;
           this.trackArtifact(key, {
-            type: "IKSetup",
+            type: 'IKSetup',
             metadata: {
               actorName,
               ikBones,
@@ -573,10 +573,10 @@ export class AnimationTools {
             enableFootPlacement: params.enableFootPlacement === true ? true : undefined
           };
         }
-        return { success: false, message: resp?.message || "IK setup failed", error: resp?.error || "BRIDGE_ERROR" };
+        return { success: false, message: resp?.message || 'IK setup failed', error: resp?.error || 'BRIDGE_ERROR' };
       }
 
-      return { success: false, message: "Automation bridge not connected", error: "AUTOMATION_BRIDGE_UNAVAILABLE" };
+      return { success: false, message: 'Automation bridge not connected', error: 'AUTOMATION_BRIDGE_UNAVAILABLE' };
     } catch (err) {
       const error = String(err);
       return {

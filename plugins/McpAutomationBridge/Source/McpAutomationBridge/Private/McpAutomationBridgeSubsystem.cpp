@@ -846,6 +846,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageLevelStructureAction(R, A, P, S);
                   });
+
+  // Phase 24: Volumes & Zones
+  RegisterHandler(TEXT("manage_volumes"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageVolumesAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

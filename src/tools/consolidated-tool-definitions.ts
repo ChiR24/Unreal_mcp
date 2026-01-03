@@ -5877,6 +5877,189 @@ Supported actions:
         error: { type: 'string' }
       }
     }
+  },
+
+  // 38. VOLUMES & ZONES (Phase 24)
+  {
+    name: 'manage_volumes',
+    description: `Complete volume and trigger system management.
+
+Use it when you need to:
+- create trigger volumes for gameplay events.
+- add blocking volumes, kill zones, or pain-causing areas.
+- configure audio/reverb volumes for sound propagation.
+- set up navigation volumes for AI pathfinding.
+- manage rendering volumes (cull distance, lightmass, visibility).
+
+Supported actions:
+- Trigger Volumes: create_trigger_volume, create_trigger_box, create_trigger_sphere, create_trigger_capsule.
+- Gameplay Volumes: create_blocking_volume, create_kill_z_volume, create_pain_causing_volume, create_physics_volume.
+- Audio Volumes: create_audio_volume, create_reverb_volume.
+- Rendering Volumes: create_cull_distance_volume, create_precomputed_visibility_volume, create_lightmass_importance_volume.
+- Navigation Volumes: create_nav_mesh_bounds_volume, create_nav_modifier_volume, create_camera_blocking_volume.
+- Configuration: set_volume_extent, set_volume_properties.
+- Utility: get_volumes_info.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Trigger Volumes
+            'create_trigger_volume', 'create_trigger_box', 'create_trigger_sphere', 'create_trigger_capsule',
+            // Gameplay Volumes
+            'create_blocking_volume', 'create_kill_z_volume', 'create_pain_causing_volume', 'create_physics_volume',
+            // Audio Volumes
+            'create_audio_volume', 'create_reverb_volume',
+            // Rendering Volumes
+            'create_cull_distance_volume', 'create_precomputed_visibility_volume', 'create_lightmass_importance_volume',
+            // Navigation Volumes
+            'create_nav_mesh_bounds_volume', 'create_nav_modifier_volume', 'create_camera_blocking_volume',
+            // Configuration
+            'set_volume_extent', 'set_volume_properties',
+            // Utility
+            'get_volumes_info'
+          ],
+          description: 'Volume action to perform'
+        },
+
+        // Volume identification
+        volumeName: { type: 'string', description: 'Name for the volume actor.' },
+        volumePath: { type: 'string', description: 'Path to existing volume actor.' },
+
+        // Location and transform
+        location: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'World location for the volume.'
+        },
+        rotation: {
+          type: 'object',
+          properties: {
+            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+          },
+          description: 'Rotation of the volume.'
+        },
+
+        // Volume extent/size
+        extent: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Extent (half-size) of the volume in each axis.'
+        },
+
+        // Trigger shape parameters
+        sphereRadius: { type: 'number', description: 'Radius for sphere trigger volumes.' },
+        capsuleRadius: { type: 'number', description: 'Radius for capsule trigger volumes.' },
+        capsuleHalfHeight: { type: 'number', description: 'Half-height for capsule trigger volumes.' },
+        boxExtent: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Extent for box trigger volumes.'
+        },
+
+        // Pain Causing Volume specific
+        bPainCausing: { type: 'boolean', description: 'Whether the volume causes pain/damage.' },
+        damagePerSec: { type: 'number', description: 'Damage per second for pain volumes.' },
+        damageType: { type: 'string', description: 'Damage type class path for pain volumes.' },
+
+        // Physics Volume specific
+        bWaterVolume: { type: 'boolean', description: 'Whether this is a water volume.' },
+        fluidFriction: { type: 'number', description: 'Fluid friction for physics volumes.' },
+        terminalVelocity: { type: 'number', description: 'Terminal velocity in the volume.' },
+        priority: { type: 'number', description: 'Priority when volumes overlap.' },
+
+        // Audio Volume specific
+        bEnabled: { type: 'boolean', description: 'Whether the audio volume is enabled.' },
+
+        // Reverb Volume specific
+        reverbEffect: { type: 'string', description: 'Reverb effect asset path.' },
+        reverbVolume: { type: 'number', description: 'Volume level for reverb (0.0-1.0).' },
+        fadeTime: { type: 'number', description: 'Fade time for reverb transitions.' },
+
+        // Cull Distance Volume specific
+        cullDistances: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              size: { type: 'number', description: 'Object size threshold.' },
+              cullDistance: { type: 'number', description: 'Distance at which to cull.' }
+            }
+          },
+          description: 'Array of size/distance pairs for cull distance volumes.'
+        },
+
+        // Nav Modifier Volume specific
+        areaClass: { type: 'string', description: 'Navigation area class path.' },
+        bDynamicModifier: { type: 'boolean', description: 'Whether nav modifier updates dynamically.' },
+
+        // Post Process Volume (basic)
+        bUnbound: { type: 'boolean', description: 'Whether post process volume affects entire world.' },
+        blendRadius: { type: 'number', description: 'Blend radius for post process volume.' },
+        blendWeight: { type: 'number', description: 'Blend weight (0.0-1.0) for post process.' },
+
+        // General volume properties
+        properties: {
+          type: 'object',
+          description: 'Additional volume-specific properties as key-value pairs.'
+        },
+
+        // Query parameters
+        filter: { type: 'string', description: 'Filter string for get_volumes_info.' },
+        volumeType: { type: 'string', description: 'Type filter for get_volumes_info (e.g., "Trigger", "Physics").' },
+
+        // Save option
+        save: { type: 'boolean', description: 'Save the level after modification.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        volumeName: { type: 'string', description: 'Name of created/modified volume.' },
+        volumePath: { type: 'string', description: 'Path to created/modified volume.' },
+        volumeClass: { type: 'string', description: 'Class of the volume.' },
+        volumesInfo: {
+          type: 'object',
+          properties: {
+            totalCount: { type: 'number' },
+            volumes: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  class: { type: 'string' },
+                  location: {
+                    type: 'object',
+                    properties: {
+                      x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+                    }
+                  },
+                  extent: {
+                    type: 'object',
+                    properties: {
+                      x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          description: 'Volume information (for get_volumes_info).'
+        },
+        error: { type: 'string' }
+      }
+    }
   }
 ];
 

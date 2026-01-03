@@ -945,34 +945,39 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 24: Volumes & Zones
+## Phase 24: Volumes & Zones ✅
 
 **Goal**: Complete volume and trigger system.
 
 **Tool**: `manage_volumes`
 
+**Status**: All 18 actions fully implemented in TypeScript and C++.
+
 ### 24.1 Trigger Volumes
-- [ ] `create_trigger_volume`
-- [ ] `create_trigger_box`, `create_trigger_sphere`, `create_trigger_capsule`
+- [x] `create_trigger_volume`
+- [x] `create_trigger_box`, `create_trigger_sphere`, `create_trigger_capsule`
 
 ### 24.2 Gameplay Volumes
-- [ ] `create_blocking_volume`
-- [ ] `create_kill_z_volume`
-- [ ] `create_pain_causing_volume`
-- [ ] `create_physics_volume`
-- [ ] `create_audio_volume`, `create_reverb_volume`
-- [ ] `create_cull_distance_volume`
-- [ ] `create_precomputed_visibility_volume`
-- [ ] `create_lightmass_importance_volume`
-- [ ] `create_nav_mesh_bounds_volume`
-- [ ] `create_nav_modifier_volume`
-- [ ] `create_camera_blocking_volume`
+- [x] `create_blocking_volume`
+- [x] `create_kill_z_volume`
+- [x] `create_pain_causing_volume`
+- [x] `create_physics_volume`
+- [x] `create_audio_volume`, `create_reverb_volume`
+- [x] `create_cull_distance_volume`
+- [x] `create_precomputed_visibility_volume`
+- [x] `create_lightmass_importance_volume`
+- [x] `create_nav_mesh_bounds_volume`
+- [x] `create_nav_modifier_volume`
+- [x] `create_camera_blocking_volume`
 
 > **Note**: Post Process Volume configuration is in Phase 29.5 (Post Processing).
 
 ### 24.3 Volume Configuration
-- [ ] `set_volume_extent`
-- [ ] `set_volume_properties`
+- [x] `set_volume_extent`
+- [x] `set_volume_properties`
+
+### 24.4 Utility
+- [x] `get_volumes_info`
 
 ---
 

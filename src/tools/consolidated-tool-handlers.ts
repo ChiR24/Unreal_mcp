@@ -39,6 +39,7 @@ import { handleNetworkingTools } from './handlers/networking-handlers.js';
 import { handleGameFrameworkTools } from './handlers/game-framework-handlers.js';
 import { handleSessionsTools } from './handlers/sessions-handlers.js';
 import { handleLevelStructureTools } from './handlers/level-structure-handlers.js';
+import { handleVolumeTools } from './handlers/volume-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -325,6 +326,9 @@ function registerDefaultHandlers() {
 
   // 37. LEVEL STRUCTURE (Phase 23)
   toolRegistry.register('manage_level_structure', async (args, tools) => await handleLevelStructureTools(getAction(args), args, tools));
+
+  // 38. VOLUMES & ZONES (Phase 24)
+  toolRegistry.register('manage_volumes', async (args, tools) => await handleVolumeTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately
