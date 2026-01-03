@@ -20,6 +20,7 @@
 #include "NiagaraStackEditorData.h"
 #include "NiagaraEmitterHandle.h"
 #include "NiagaraSimulationStageBase.h"
+#include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
 
 // Niagara Data Interfaces
 // UE 5.7+: Data interfaces moved to subfolders or different modules
@@ -319,6 +320,70 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
     // Helper macro to reduce repetition for module additions
     // =========================================================================
 
+    // Helper lambda to add a module script to the Niagara stack
+    // Returns the created UNiagaraNodeFunctionCall or nullptr on failure
+    auto AddModuleToEmitterStack = [](FNiagaraEmitterHandle* Handle, const FString& ModuleScriptPath, ENiagaraScriptUsage TargetUsage, const FString& SuggestedName = FString()) -> UNiagaraNodeFunctionCall*
+    {
+        if (!Handle)
+        {
+            return nullptr;
+        }
+
+        // Get the versioned emitter data
+        FVersionedNiagaraEmitterData* EmitterData = Handle->GetEmitterData();
+        if (!EmitterData)
+        {
+            return nullptr;
+        }
+
+        // Get the graph source
+        UNiagaraScriptSource* ScriptSource = Cast<UNiagaraScriptSource>(EmitterData->GraphSource);
+        if (!ScriptSource || !ScriptSource->NodeGraph)
+        {
+            return nullptr;
+        }
+
+        UNiagaraGraph* Graph = ScriptSource->NodeGraph;
+
+        // Find the output node for the target usage
+        // NOTE: UNiagaraGraph::FindOutputNode is not exported in all UE versions
+        // Use manual iteration through nodes to find the output node
+        UNiagaraNodeOutput* TargetOutput = nullptr;
+        for (UEdGraphNode* Node : Graph->Nodes)
+        {
+            if (UNiagaraNodeOutput* OutputNode = Cast<UNiagaraNodeOutput>(Node))
+            {
+                if (OutputNode->GetUsage() == TargetUsage)
+                {
+                    TargetOutput = OutputNode;
+                    break;
+                }
+            }
+        }
+        if (!TargetOutput)
+        {
+            return nullptr;
+        }
+
+        // Load the module script asset
+        FSoftObjectPath AssetRef(ModuleScriptPath);
+        UNiagaraScript* ModuleScript = Cast<UNiagaraScript>(AssetRef.TryLoad());
+        if (!ModuleScript)
+        {
+            return nullptr;
+        }
+
+        // Add the module to the stack using the Stack Graph Utilities
+        UNiagaraNodeFunctionCall* NewModule = FNiagaraStackGraphUtilities::AddScriptModuleToStack(
+            ModuleScript,
+            *TargetOutput,
+            INDEX_NONE, // Append to end
+            SuggestedName.IsEmpty() ? ModuleScript->GetName() : SuggestedName
+        );
+
+        return NewModule;
+    };
+
     // Helper lambda to find emitter handle
     auto FindEmitterHandle = [&](UNiagaraSystem* System, const FString& TargetEmitter) -> FNiagaraEmitterHandle*
     {
@@ -357,11 +422,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         double SpawnRate = GetNumberField(Payload, TEXT("spawnRate"), 100.0);
 
-        // Note: Direct module addition requires modifying the emitter's scripts.
-        // In Niagara, modules are added through the stack/graph system.
-        // For now, we'll set user-exposed parameters if available.
+        // Add the SpawnRate module to the Emitter Update stage
+        // SpawnRate modules belong in EmitterUpdateScript as they control emission rate over time
+        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+            Handle,
+            TEXT("/Niagara/Modules/Emitter/SpawnRate.SpawnRate"),
+            ENiagaraScriptUsage::EmitterUpdateScript,
+            TEXT("SpawnRate")
+        );
+
+        bool bModuleAdded = (NewModule != nullptr);
         
-        // Set spawn rate via exposed parameters on the system
+        // Also set user-exposed parameters if available
         FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
         FNiagaraVariable SpawnRateVar(FNiagaraTypeDefinition::GetFloatDef(), FName(TEXT("SpawnRate")));
         if (UserStore.FindParameterVariable(SpawnRateVar))
@@ -375,9 +447,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         Result->SetStringField(TEXT("moduleName"), TEXT("SpawnRate"));
+        Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetNumberField(TEXT("spawnRate"), SpawnRate);
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured spawn rate module: %.1f particles/sec"), SpawnRate));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spawn rate module configured."), Result);
+        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added spawn rate module: %.1f particles/sec"), SpawnRate));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spawn rate module added."), Result);
         return true;
     }
 
@@ -396,8 +469,26 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
+        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        if (!Handle)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
+            return true;
+        }
+
         double BurstCount = GetNumberField(Payload, TEXT("burstCount"), 10.0);
         double BurstTime = GetNumberField(Payload, TEXT("burstTime"), 0.0);
+
+        // Add the SpawnBurst_Instantaneous module to the Emitter Spawn stage
+        // Burst modules belong in EmitterSpawnScript for instantaneous spawns
+        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+            Handle,
+            TEXT("/Niagara/Modules/Emitter/SpawnBurst_Instantaneous.SpawnBurst_Instantaneous"),
+            ENiagaraScriptUsage::EmitterSpawnScript,
+            TEXT("SpawnBurst")
+        );
+
+        bool bModuleAdded = (NewModule != nullptr);
 
         if (bSave)
         {
@@ -405,10 +496,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         Result->SetStringField(TEXT("moduleName"), TEXT("SpawnBurst"));
+        Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetNumberField(TEXT("burstCount"), BurstCount);
         Result->SetNumberField(TEXT("burstTime"), BurstTime);
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured spawn burst: %d particles at t=%.2f"), static_cast<int>(BurstCount), BurstTime));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spawn burst module configured."), Result);
+        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added spawn burst module: %d particles at t=%.2f"), static_cast<int>(BurstCount), BurstTime));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spawn burst module added."), Result);
         return true;
     }
 
@@ -427,7 +519,24 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
+        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        if (!Handle)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
+            return true;
+        }
+
         double SpawnPerUnit = GetNumberField(Payload, TEXT("spawnPerUnit"), 1.0);
+
+        // Add the SpawnPerUnit module to the Emitter Update stage
+        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+            Handle,
+            TEXT("/Niagara/Modules/Emitter/SpawnPerUnit.SpawnPerUnit"),
+            ENiagaraScriptUsage::EmitterUpdateScript,
+            TEXT("SpawnPerUnit")
+        );
+
+        bool bModuleAdded = (NewModule != nullptr);
 
         if (bSave)
         {
@@ -435,9 +544,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         Result->SetStringField(TEXT("moduleName"), TEXT("SpawnPerUnit"));
+        Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetNumberField(TEXT("spawnPerUnit"), SpawnPerUnit);
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured spawn per unit: %.1f particles/unit"), SpawnPerUnit));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spawn per unit module configured."), Result);
+        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added spawn per unit module: %.1f particles/unit"), SpawnPerUnit));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spawn per unit module added."), Result);
         return true;
     }
 
@@ -456,8 +566,25 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
+        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        if (!Handle)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
+            return true;
+        }
+
         double Lifetime = GetNumberField(Payload, TEXT("lifetime"), 2.0);
         double Mass = GetNumberField(Payload, TEXT("mass"), 1.0);
+
+        // Add the InitializeParticle module to the Particle Spawn stage
+        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+            Handle,
+            TEXT("/Niagara/Modules/Spawn/Initialization/InitializeParticle.InitializeParticle"),
+            ENiagaraScriptUsage::ParticleSpawnScript,
+            TEXT("InitializeParticle")
+        );
+
+        bool bModuleAdded = (NewModule != nullptr);
 
         if (bSave)
         {
@@ -465,10 +592,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         Result->SetStringField(TEXT("moduleName"), TEXT("InitializeParticle"));
+        Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetNumberField(TEXT("lifetime"), Lifetime);
         Result->SetNumberField(TEXT("mass"), Mass);
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured initialize particle: lifetime=%.2fs, mass=%.2f"), Lifetime, Mass));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Initialize particle module configured."), Result);
+        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added initialize particle module: lifetime=%.2fs, mass=%.2f"), Lifetime, Mass));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Initialize particle module added."), Result);
         return true;
     }
 
@@ -487,14 +615,33 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
+        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        if (!Handle)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
+            return true;
+        }
+
+        // Add the ParticleState module to the Particle Update stage
+        // ParticleState handles age tracking and lifetime evaluation
+        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+            Handle,
+            TEXT("/Niagara/Modules/Update/Lifetime/ParticleState.ParticleState"),
+            ENiagaraScriptUsage::ParticleUpdateScript,
+            TEXT("ParticleState")
+        );
+
+        bool bModuleAdded = (NewModule != nullptr);
+
         if (bSave)
         {
             System->MarkPackageDirty();
         }
 
         Result->SetStringField(TEXT("moduleName"), TEXT("ParticleState"));
-        Result->SetStringField(TEXT("message"), TEXT("Configured particle state module."));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Particle state module configured."), Result);
+        Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
+        Result->SetStringField(TEXT("message"), TEXT("Added particle state module."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Particle state module added."), Result);
         return true;
     }
 
@@ -515,6 +662,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
+        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        if (!Handle)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
+            return true;
+        }
+
         double ForceStrength = GetNumberField(Payload, TEXT("forceStrength"), 980.0);
         
         const TSharedPtr<FJsonObject>* ForceVectorObj;
@@ -524,16 +678,60 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             ForceVector = GetVectorFromJson(*ForceVectorObj);
         }
 
+        // Determine the module path based on force type
+        FString ModulePath;
+        if (ForceType.Equals(TEXT("Gravity"), ESearchCase::IgnoreCase))
+        {
+            ModulePath = TEXT("/Niagara/Modules/Update/Forces/GravityForce.GravityForce");
+        }
+        else if (ForceType.Equals(TEXT("Drag"), ESearchCase::IgnoreCase))
+        {
+            ModulePath = TEXT("/Niagara/Modules/Update/Forces/DragForce.DragForce");
+        }
+        else if (ForceType.Equals(TEXT("Wind"), ESearchCase::IgnoreCase))
+        {
+            ModulePath = TEXT("/Niagara/Modules/Update/Forces/WindForce.WindForce");
+        }
+        else if (ForceType.Equals(TEXT("Curl"), ESearchCase::IgnoreCase) || ForceType.Equals(TEXT("CurlNoise"), ESearchCase::IgnoreCase))
+        {
+            ModulePath = TEXT("/Niagara/Modules/Update/Forces/CurlNoiseForce.CurlNoiseForce");
+        }
+        else if (ForceType.Equals(TEXT("Vortex"), ESearchCase::IgnoreCase))
+        {
+            ModulePath = TEXT("/Niagara/Modules/Update/Forces/VortexForce.VortexForce");
+        }
+        else if (ForceType.Equals(TEXT("PointAttraction"), ESearchCase::IgnoreCase))
+        {
+            ModulePath = TEXT("/Niagara/Modules/Update/Forces/PointAttractionForce.PointAttractionForce");
+        }
+        else
+        {
+            // Default to gravity
+            ModulePath = TEXT("/Niagara/Modules/Update/Forces/GravityForce.GravityForce");
+        }
+
+        // Add the force module to the Particle Update stage
+        // Forces are applied every frame to update particle velocity
+        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+            Handle,
+            ModulePath,
+            ENiagaraScriptUsage::ParticleUpdateScript,
+            FString::Printf(TEXT("%sForce"), *ForceType)
+        );
+
+        bool bModuleAdded = (NewModule != nullptr);
+
         if (bSave)
         {
             System->MarkPackageDirty();
         }
 
         Result->SetStringField(TEXT("moduleName"), FString::Printf(TEXT("Force_%s"), *ForceType));
+        Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetStringField(TEXT("forceType"), ForceType);
         Result->SetNumberField(TEXT("forceStrength"), ForceStrength);
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured %s force module."), *ForceType));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Force module configured."), Result);
+        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s force module."), *ForceType));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Force module added."), Result);
         return true;
     }
 
@@ -552,6 +750,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
+        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        if (!Handle)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
+            return true;
+        }
+
         const TSharedPtr<FJsonObject>* VelObj;
         FVector Velocity = FVector(0, 0, 100);
         if (Payload->TryGetObjectField(TEXT("velocity"), VelObj))
@@ -561,15 +766,43 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         FString VelocityMode = GetStringField(Payload, TEXT("velocityMode"), TEXT("Linear"));
 
+        // Determine the module path based on velocity mode
+        FString ModulePath;
+        if (VelocityMode.Equals(TEXT("Cone"), ESearchCase::IgnoreCase))
+        {
+            ModulePath = TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocityInCone.AddVelocityInCone");
+        }
+        else if (VelocityMode.Equals(TEXT("FromPoint"), ESearchCase::IgnoreCase))
+        {
+            ModulePath = TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocityFromPoint.AddVelocityFromPoint");
+        }
+        else
+        {
+            // Default to AddVelocity (linear)
+            ModulePath = TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocity.AddVelocity");
+        }
+
+        // Add the velocity module to the Particle Spawn stage
+        // Initial velocity is set when particles are spawned
+        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+            Handle,
+            ModulePath,
+            ENiagaraScriptUsage::ParticleSpawnScript,
+            TEXT("AddVelocity")
+        );
+
+        bool bModuleAdded = (NewModule != nullptr);
+
         if (bSave)
         {
             System->MarkPackageDirty();
         }
 
         Result->SetStringField(TEXT("moduleName"), TEXT("Velocity"));
+        Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetStringField(TEXT("velocityMode"), VelocityMode);
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured velocity module: mode=%s"), *VelocityMode));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Velocity module configured."), Result);
+        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added velocity module: mode=%s"), *VelocityMode));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Velocity module added."), Result);
         return true;
     }
 

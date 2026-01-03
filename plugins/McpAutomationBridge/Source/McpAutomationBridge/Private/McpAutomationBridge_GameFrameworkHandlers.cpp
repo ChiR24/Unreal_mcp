@@ -10,6 +10,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
+#include "Misc/EngineVersionComparison.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -36,9 +37,41 @@
 #include "GameFramework/SpectatorPawn.h"
 #include "GameFramework/DefaultPawn.h"
 #include "GameFramework/Pawn.h"
+#include "EdGraphSchema_K2.h"
+#include "Kismet/GameplayStatics.h"
 #endif
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpGameFrameworkHandlers, Log, All);
+
+// Helper to set blueprint variable default value (multi-version compatible)
+// Uses reflection to set the default value on the CDO
+static void SetBPVarDefaultValueGF(UBlueprint* Blueprint, FName VarName, const FString& DefaultValue)
+{
+#if WITH_EDITOR
+    if (!Blueprint)
+    {
+        return;
+    }
+    
+    // Compile the blueprint first to ensure GeneratedClass exists
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    
+    if (Blueprint->GeneratedClass)
+    {
+        if (UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject())
+        {
+            FProperty* Property = FindFProperty<FProperty>(Blueprint->GeneratedClass, VarName);
+            if (Property)
+            {
+                void* ValuePtr = Property->ContainerPtrToValuePtr<void>(CDO);
+                // UE 5.6+: Use ImportText_Direct instead of deprecated ImportText
+                Property->ImportText_Direct(*DefaultValue, ValuePtr, CDO, 0);
+                Blueprint->MarkPackageDirty();
+            }
+        }
+    }
+#endif
+}
 
 // ============================================================================
 // Helper Functions
@@ -267,6 +300,72 @@ namespace GameFrameworkHelpers
         }
 
         return nullptr;
+    }
+
+    // Helper to add a Blueprint variable with proper category
+    bool AddBlueprintVariable(UBlueprint* Blueprint, const FString& VarName, const FEdGraphPinType& PinType, const FString& Category = TEXT(""))
+    {
+        if (!Blueprint) return false;
+        
+        bool bSuccess = FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*VarName), PinType);
+        
+        if (bSuccess && !Category.IsEmpty())
+        {
+            FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*VarName), nullptr, FText::FromString(Category));
+        }
+        
+        return bSuccess;
+    }
+
+    // Helper to set Blueprint variable default value
+    void SetVariableDefaultValue(UBlueprint* Blueprint, const FString& VarName, const FString& DefaultValue)
+    {
+        if (!Blueprint) return;
+        SetBPVarDefaultValueGF(Blueprint, FName(*VarName), DefaultValue);
+    }
+
+    // Pin type factory helpers
+    FEdGraphPinType MakeIntPinType()
+    {
+        FEdGraphPinType PinType;
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Int;
+        return PinType;
+    }
+
+    FEdGraphPinType MakeFloatPinType()
+    {
+        FEdGraphPinType PinType;
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+        PinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
+        return PinType;
+    }
+
+    FEdGraphPinType MakeBoolPinType()
+    {
+        FEdGraphPinType PinType;
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+        return PinType;
+    }
+
+    FEdGraphPinType MakeNamePinType()
+    {
+        FEdGraphPinType PinType;
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Name;
+        return PinType;
+    }
+
+    FEdGraphPinType MakeStringPinType()
+    {
+        FEdGraphPinType PinType;
+        PinType.PinCategory = UEdGraphSchema_K2::PC_String;
+        return PinType;
+    }
+
+    FEdGraphPinType MakeBytePinType()
+    {
+        FEdGraphPinType PinType;
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
+        return PinType;
     }
 #endif
 }
@@ -859,14 +958,65 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        // Match states are typically handled via the AGameMode class (not AGameModeBase)
-        // Log the configuration for now
+        // Parse match states array
         const TArray<TSharedPtr<FJsonValue>>* StatesArray = GetArrayField(Payload, TEXT("states"));
+        TArray<FString> StateNames;
         if (StatesArray)
         {
-            UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Setting up %d match states"), StatesArray->Num());
+            for (const TSharedPtr<FJsonValue>& StateVal : *StatesArray)
+            {
+                if (StateVal.IsValid() && StateVal->Type == EJson::String)
+                {
+                    StateNames.Add(StateVal->AsString());
+                }
+            }
         }
 
+        // Add match state tracking variables to the Blueprint
+        int32 VarsAdded = 0;
+
+        // Add CurrentMatchState as byte (for use with custom enum or simple state index)
+        FEdGraphPinType BytePinType = MakeBytePinType();
+        if (AddBlueprintVariable(BP, TEXT("CurrentMatchState"), BytePinType, TEXT("Match Flow")))
+        {
+            SetVariableDefaultValue(BP, TEXT("CurrentMatchState"), TEXT("0"));
+            VarsAdded++;
+        }
+
+        // Add MatchStateNames array as Name array for state name lookup
+        FEdGraphPinType NamePinType = MakeNamePinType();
+        NamePinType.ContainerType = EPinContainerType::Array;
+        if (AddBlueprintVariable(BP, TEXT("MatchStateNames"), NamePinType, TEXT("Match Flow")))
+        {
+            VarsAdded++;
+        }
+
+        // Add PreviousMatchState for state change detection
+        if (AddBlueprintVariable(BP, TEXT("PreviousMatchState"), MakeBytePinType(), TEXT("Match Flow")))
+        {
+            VarsAdded++;
+        }
+
+        // Add bMatchInProgress bool
+        if (AddBlueprintVariable(BP, TEXT("bMatchInProgress"), MakeBoolPinType(), TEXT("Match Flow")))
+        {
+            SetVariableDefaultValue(BP, TEXT("bMatchInProgress"), TEXT("false"));
+            VarsAdded++;
+        }
+
+        // Add MatchStartTime float
+        if (AddBlueprintVariable(BP, TEXT("MatchStartTime"), MakeFloatPinType(), TEXT("Match Flow")))
+        {
+            VarsAdded++;
+        }
+
+        // Add MatchElapsedTime float
+        if (AddBlueprintVariable(BP, TEXT("MatchElapsedTime"), MakeFloatPinType(), TEXT("Match Flow")))
+        {
+            VarsAdded++;
+        }
+
+        FKismetEditorUtilities::CompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -876,9 +1026,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
 
         TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), TEXT("Match states configuration received. To persist, use manage_blueprint with add_variable action to create state enum/int variable, then implement state machine logic in Blueprint."));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %d match state variables to Blueprint"), VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
-        Response->SetNumberField(TEXT("stateCount"), StatesArray ? StatesArray->Num() : 0);
+        Response->SetNumberField(TEXT("stateCount"), StateNames.Num());
+        Response->SetNumberField(TEXT("variablesAdded"), VarsAdded);
+        
+        // Return the state names that were provided
+        TArray<TSharedPtr<FJsonValue>> StatesJsonArray;
+        for (const FString& StateName : StateNames)
+        {
+            StatesJsonArray.Add(MakeShareable(new FJsonValueString(StateName)));
+        }
+        Response->SetArrayField(TEXT("configuredStates"), StatesJsonArray);
+        
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -904,6 +1064,58 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Configuring round system: rounds=%d, roundTime=%.1f, intermission=%.1f"), 
                NumRounds, RoundTime, IntermissionTime);
 
+        // Add round system variables to the Blueprint
+        int32 VarsAdded = 0;
+
+        // NumRounds (int) - total rounds in match
+        if (AddBlueprintVariable(BP, TEXT("NumRounds"), MakeIntPinType(), TEXT("Round System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("NumRounds"), FString::FromInt(NumRounds));
+            VarsAdded++;
+        }
+
+        // CurrentRound (int) - current round number
+        if (AddBlueprintVariable(BP, TEXT("CurrentRound"), MakeIntPinType(), TEXT("Round System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("CurrentRound"), TEXT("0"));
+            VarsAdded++;
+        }
+
+        // RoundTime (float) - duration of each round in seconds
+        if (AddBlueprintVariable(BP, TEXT("RoundTime"), MakeFloatPinType(), TEXT("Round System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("RoundTime"), FString::SanitizeFloat(RoundTime));
+            VarsAdded++;
+        }
+
+        // RoundTimeRemaining (float) - time left in current round
+        if (AddBlueprintVariable(BP, TEXT("RoundTimeRemaining"), MakeFloatPinType(), TEXT("Round System")))
+        {
+            VarsAdded++;
+        }
+
+        // IntermissionTime (float) - time between rounds
+        if (AddBlueprintVariable(BP, TEXT("IntermissionTime"), MakeFloatPinType(), TEXT("Round System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("IntermissionTime"), FString::SanitizeFloat(IntermissionTime));
+            VarsAdded++;
+        }
+
+        // bIsInIntermission (bool) - whether we're between rounds
+        if (AddBlueprintVariable(BP, TEXT("bIsInIntermission"), MakeBoolPinType(), TEXT("Round System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("bIsInIntermission"), TEXT("false"));
+            VarsAdded++;
+        }
+
+        // bRoundInProgress (bool) - whether a round is active
+        if (AddBlueprintVariable(BP, TEXT("bRoundInProgress"), MakeBoolPinType(), TEXT("Round System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("bRoundInProgress"), TEXT("false"));
+            VarsAdded++;
+        }
+
+        FKismetEditorUtilities::CompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -913,8 +1125,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
 
         TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), TEXT("Round system configuration received. To persist, use manage_blueprint with add_variable action to create NumRounds (int), RoundTime (float), IntermissionTime (float) variables."));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %d round system variables to Blueprint"), VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
+        Response->SetNumberField(TEXT("variablesAdded"), VarsAdded);
         
         TSharedPtr<FJsonObject> ConfigObj = MakeShareable(new FJsonObject());
         ConfigObj->SetNumberField(TEXT("numRounds"), NumRounds);
@@ -948,6 +1161,52 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Configuring team system: teams=%d, size=%d, autoBalance=%d, friendlyFire=%d"), 
                NumTeams, TeamSize, bAutoBalance, bFriendlyFire);
 
+        // Add team system variables to the Blueprint
+        int32 VarsAdded = 0;
+
+        // NumTeams (int) - number of teams in the game
+        if (AddBlueprintVariable(BP, TEXT("NumTeams"), MakeIntPinType(), TEXT("Team System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("NumTeams"), FString::FromInt(NumTeams));
+            VarsAdded++;
+        }
+
+        // MaxTeamSize (int) - maximum players per team
+        if (AddBlueprintVariable(BP, TEXT("MaxTeamSize"), MakeIntPinType(), TEXT("Team System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("MaxTeamSize"), FString::FromInt(TeamSize));
+            VarsAdded++;
+        }
+
+        // bAutoBalance (bool) - whether to auto-balance teams
+        if (AddBlueprintVariable(BP, TEXT("bAutoBalance"), MakeBoolPinType(), TEXT("Team System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("bAutoBalance"), bAutoBalance ? TEXT("true") : TEXT("false"));
+            VarsAdded++;
+        }
+
+        // bFriendlyFire (bool) - whether friendly fire is enabled
+        if (AddBlueprintVariable(BP, TEXT("bFriendlyFire"), MakeBoolPinType(), TEXT("Team System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("bFriendlyFire"), bFriendlyFire ? TEXT("true") : TEXT("false"));
+            VarsAdded++;
+        }
+
+        // TeamScores (int array) - scores for each team
+        FEdGraphPinType IntArrayPinType = MakeIntPinType();
+        IntArrayPinType.ContainerType = EPinContainerType::Array;
+        if (AddBlueprintVariable(BP, TEXT("TeamScores"), IntArrayPinType, TEXT("Team System")))
+        {
+            VarsAdded++;
+        }
+
+        // TeamPlayerCounts (int array) - player count per team
+        if (AddBlueprintVariable(BP, TEXT("TeamPlayerCounts"), IntArrayPinType, TEXT("Team System")))
+        {
+            VarsAdded++;
+        }
+
+        FKismetEditorUtilities::CompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -957,8 +1216,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
 
         TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), TEXT("Team system configuration received. To persist, use manage_blueprint with add_variable action to create NumTeams (int), TeamSize (int), bAutoBalance (bool), bFriendlyFire (bool) variables."));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %d team system variables to Blueprint"), VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
+        Response->SetNumberField(TEXT("variablesAdded"), VarsAdded);
         
         TSharedPtr<FJsonObject> ConfigObj = MakeShareable(new FJsonObject());
         ConfigObj->SetNumberField(TEXT("numTeams"), NumTeams);
@@ -992,6 +1252,47 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Configuring scoring: kill=%.0f, objective=%.0f, assist=%.0f"), 
                ScorePerKill, ScorePerObjective, ScorePerAssist);
 
+        // Add scoring system variables to the Blueprint
+        int32 VarsAdded = 0;
+
+        // ScorePerKill (int) - points awarded per kill
+        if (AddBlueprintVariable(BP, TEXT("ScorePerKill"), MakeIntPinType(), TEXT("Scoring System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("ScorePerKill"), FString::FromInt(static_cast<int32>(ScorePerKill)));
+            VarsAdded++;
+        }
+
+        // ScorePerObjective (int) - points awarded per objective completion
+        if (AddBlueprintVariable(BP, TEXT("ScorePerObjective"), MakeIntPinType(), TEXT("Scoring System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("ScorePerObjective"), FString::FromInt(static_cast<int32>(ScorePerObjective)));
+            VarsAdded++;
+        }
+
+        // ScorePerAssist (int) - points awarded per assist
+        if (AddBlueprintVariable(BP, TEXT("ScorePerAssist"), MakeIntPinType(), TEXT("Scoring System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("ScorePerAssist"), FString::FromInt(static_cast<int32>(ScorePerAssist)));
+            VarsAdded++;
+        }
+
+        // WinScore (int) - score needed to win
+        double WinScore = GetNumberField(Payload, TEXT("winScore"), 0);
+        if (AddBlueprintVariable(BP, TEXT("WinScore"), MakeIntPinType(), TEXT("Scoring System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("WinScore"), FString::FromInt(static_cast<int32>(WinScore)));
+            VarsAdded++;
+        }
+
+        // ScorePerDeath (int) - penalty for dying (usually negative or 0)
+        double ScorePerDeath = GetNumberField(Payload, TEXT("scorePerDeath"), 0);
+        if (AddBlueprintVariable(BP, TEXT("ScorePerDeath"), MakeIntPinType(), TEXT("Scoring System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("ScorePerDeath"), FString::FromInt(static_cast<int32>(ScorePerDeath)));
+            VarsAdded++;
+        }
+
+        FKismetEditorUtilities::CompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -1001,13 +1302,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
 
         TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), TEXT("Scoring system configuration received. To persist, use manage_blueprint with add_variable action to create ScorePerKill (float), ScorePerObjective (float), ScorePerAssist (float) variables."));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %d scoring system variables to Blueprint"), VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
+        Response->SetNumberField(TEXT("variablesAdded"), VarsAdded);
         
         TSharedPtr<FJsonObject> ConfigObj = MakeShareable(new FJsonObject());
         ConfigObj->SetNumberField(TEXT("scorePerKill"), ScorePerKill);
         ConfigObj->SetNumberField(TEXT("scorePerObjective"), ScorePerObjective);
         ConfigObj->SetNumberField(TEXT("scorePerAssist"), ScorePerAssist);
+        ConfigObj->SetNumberField(TEXT("winScore"), WinScore);
+        ConfigObj->SetNumberField(TEXT("scorePerDeath"), ScorePerDeath);
         Response->SetObjectField(TEXT("configuration"), ConfigObj);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
@@ -1035,6 +1339,64 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Configuring spawn system: method=%s, delay=%.1f, usePlayerStarts=%d"), 
                *SpawnMethod, RespawnDelay, bUsePlayerStarts);
 
+        // Add spawn system variables to the Blueprint
+        int32 VarsAdded = 0;
+
+        // SpawnSelectionMethod (Name) - how spawn points are selected
+        if (AddBlueprintVariable(BP, TEXT("SpawnSelectionMethod"), MakeNamePinType(), TEXT("Spawn System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("SpawnSelectionMethod"), SpawnMethod);
+            VarsAdded++;
+        }
+
+        // RespawnDelay (float) - time before respawn
+        if (AddBlueprintVariable(BP, TEXT("RespawnDelay"), MakeFloatPinType(), TEXT("Spawn System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("RespawnDelay"), FString::SanitizeFloat(RespawnDelay));
+            VarsAdded++;
+        }
+
+        // bUsePlayerStarts (bool) - whether to use PlayerStart actors
+        if (AddBlueprintVariable(BP, TEXT("bUsePlayerStarts"), MakeBoolPinType(), TEXT("Spawn System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("bUsePlayerStarts"), bUsePlayerStarts ? TEXT("true") : TEXT("false"));
+            VarsAdded++;
+        }
+
+        // bCanRespawn (bool) - whether respawning is enabled
+        bool bCanRespawn = GetBoolField(Payload, TEXT("canRespawn"), true);
+        if (AddBlueprintVariable(BP, TEXT("bCanRespawn"), MakeBoolPinType(), TEXT("Spawn System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("bCanRespawn"), bCanRespawn ? TEXT("true") : TEXT("false"));
+            VarsAdded++;
+        }
+
+        // MaxRespawns (int) - maximum respawns per player (-1 for unlimited)
+        int32 MaxRespawns = static_cast<int32>(GetNumberField(Payload, TEXT("maxRespawns"), -1));
+        if (AddBlueprintVariable(BP, TEXT("MaxRespawns"), MakeIntPinType(), TEXT("Spawn System")))
+        {
+            SetVariableDefaultValue(BP, TEXT("MaxRespawns"), FString::FromInt(MaxRespawns));
+            VarsAdded++;
+        }
+
+        // Also try to set MinRespawnDelay on the CDO if it exists
+        // Note: MinRespawnDelay is in AGameMode (not AGameModeBase)
+        if (BP->GeneratedClass)
+        {
+            // Cast to AGameMode, not AGameModeBase
+            AGameMode* GameModeCDO = Cast<AGameMode>(BP->GeneratedClass->GetDefaultObject());
+            if (GameModeCDO)
+            {
+                GameModeCDO->MinRespawnDelay = static_cast<float>(RespawnDelay);
+                GameModeCDO->MarkPackageDirty();
+            }
+            else
+            {
+                UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Blueprint is not derived from AGameMode. MinRespawnDelay not set."));
+            }
+        }
+
+        FKismetEditorUtilities::CompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -1044,8 +1406,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
 
         TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), TEXT("Spawn system configured."));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %d spawn system variables to Blueprint"), VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
+        Response->SetNumberField(TEXT("variablesAdded"), VarsAdded);
+        
+        TSharedPtr<FJsonObject> ConfigObj = MakeShareable(new FJsonObject());
+        ConfigObj->SetStringField(TEXT("spawnSelectionMethod"), SpawnMethod);
+        ConfigObj->SetNumberField(TEXT("respawnDelay"), RespawnDelay);
+        ConfigObj->SetBoolField(TEXT("usePlayerStarts"), bUsePlayerStarts);
+        ConfigObj->SetBoolField(TEXT("canRespawn"), bCanRespawn);
+        ConfigObj->SetNumberField(TEXT("maxRespawns"), MaxRespawns);
+        Response->SetObjectField(TEXT("configuration"), ConfigObj);
+        
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -1073,9 +1445,78 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Configure PlayerStart: path=%s, teamIndex=%d, playerOnly=%d"), 
                *BlueprintPath, TeamIndex, bPlayerOnly);
 
+        // Get the PlayerStart actor name to configure
+        FString PlayerStartName = GetStringField(Payload, TEXT("playerStartName"));
+        if (PlayerStartName.IsEmpty())
+        {
+            PlayerStartName = GetStringField(Payload, TEXT("actorName"));
+        }
+
+        FString PlayerStartTag = GetStringField(Payload, TEXT("playerStartTag"));
+        
+        // Build the tag if not explicitly provided
+        if (PlayerStartTag.IsEmpty() && TeamIndex > 0)
+        {
+            PlayerStartTag = FString::Printf(TEXT("Team%d"), TeamIndex);
+        }
+
+        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        if (!World)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("No world available."), TEXT("NO_WORLD"));
+            return true;
+        }
+
+        int32 ConfiguredCount = 0;
+        
+        // Find and configure PlayerStart actors
+        for (TActorIterator<APlayerStart> It(World); It; ++It)
+        {
+            APlayerStart* PlayerStart = *It;
+            if (!PlayerStart) continue;
+            
+            // If a specific name is provided, only configure that one
+            if (!PlayerStartName.IsEmpty())
+            {
+                FString ActorLabel = PlayerStart->GetActorLabel();
+                FString ActorName = PlayerStart->GetName();
+                if (!ActorLabel.Equals(PlayerStartName, ESearchCase::IgnoreCase) &&
+                    !ActorName.Equals(PlayerStartName, ESearchCase::IgnoreCase))
+                {
+                    continue;
+                }
+            }
+
+            // Set PlayerStartTag for team assignment
+            if (!PlayerStartTag.IsEmpty())
+            {
+                PlayerStart->PlayerStartTag = FName(*PlayerStartTag);
+            }
+
+            PlayerStart->MarkPackageDirty();
+            ConfiguredCount++;
+            
+            UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Configured PlayerStart: %s with tag=%s"), 
+                   *PlayerStart->GetName(), *PlayerStartTag);
+        }
+
+        if (ConfiguredCount == 0 && !PlayerStartName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("PlayerStart '%s' not found in level."), *PlayerStartName), 
+                TEXT("NOT_FOUND"));
+            return true;
+        }
+
         TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), TEXT("PlayerStart configuration noted. Use control_actor to spawn/modify PlayerStart actors in level."));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured %d PlayerStart actor(s)"), ConfiguredCount));
+        Response->SetNumberField(TEXT("configuredCount"), ConfiguredCount);
+        if (!PlayerStartTag.IsEmpty())
+        {
+            Response->SetStringField(TEXT("playerStartTag"), PlayerStartTag);
+        }
+        Response->SetNumberField(TEXT("teamIndex"), TeamIndex);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -1097,9 +1538,59 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         double RespawnDelay = GetNumberField(Payload, TEXT("respawnDelay"), 5.0);
         FString RespawnLocation = GetStringField(Payload, TEXT("respawnLocation"), TEXT("PlayerStart"));
 
-        UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Setting respawn rules: delay=%.1f, location=%s"), 
-               RespawnDelay, *RespawnLocation);
+        bool bForceRespawn = GetBoolField(Payload, TEXT("forceRespawn"), true);
+        int32 RespawnLives = static_cast<int32>(GetNumberField(Payload, TEXT("respawnLives"), -1));
 
+        UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Setting respawn rules: delay=%.1f, location=%s, force=%d, lives=%d"), 
+               RespawnDelay, *RespawnLocation, bForceRespawn, RespawnLives);
+
+        bool bModified = false;
+
+        // Set MinRespawnDelay on the GameMode CDO
+        // Note: MinRespawnDelay is in AGameMode (not AGameModeBase)
+        if (BP->GeneratedClass)
+        {
+            // Cast to AGameMode, not AGameModeBase
+            AGameMode* GameModeCDO = Cast<AGameMode>(BP->GeneratedClass->GetDefaultObject());
+            if (GameModeCDO)
+            {
+                GameModeCDO->MinRespawnDelay = static_cast<float>(RespawnDelay);
+                GameModeCDO->MarkPackageDirty();
+                bModified = true;
+                
+                UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Set MinRespawnDelay=%.1f on CDO"), RespawnDelay);
+            }
+            else
+            {
+                UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Blueprint is not derived from AGameMode. MinRespawnDelay not set."));
+            }
+        }
+
+        // Add respawn-related Blueprint variables
+        int32 VarsAdded = 0;
+
+        // RespawnLocation (Name) - where players respawn
+        if (AddBlueprintVariable(BP, TEXT("RespawnLocation"), MakeNamePinType(), TEXT("Respawn Rules")))
+        {
+            SetVariableDefaultValue(BP, TEXT("RespawnLocation"), RespawnLocation);
+            VarsAdded++;
+        }
+
+        // bForceRespawn (bool) - whether respawn is forced or optional
+        if (AddBlueprintVariable(BP, TEXT("bForceRespawn"), MakeBoolPinType(), TEXT("Respawn Rules")))
+        {
+            SetVariableDefaultValue(BP, TEXT("bForceRespawn"), bForceRespawn ? TEXT("true") : TEXT("false"));
+            VarsAdded++;
+        }
+
+        // RespawnLives (int) - number of lives (-1 for unlimited)
+        if (AddBlueprintVariable(BP, TEXT("RespawnLives"), MakeIntPinType(), TEXT("Respawn Rules")))
+        {
+            SetVariableDefaultValue(BP, TEXT("RespawnLives"), FString::FromInt(RespawnLives));
+            VarsAdded++;
+        }
+
+        FKismetEditorUtilities::CompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -1109,8 +1600,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
 
         TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), TEXT("Respawn rules configured."));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Set respawn rules (MinRespawnDelay=%.1f, added %d variables)"), RespawnDelay, VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
+        Response->SetNumberField(TEXT("variablesAdded"), VarsAdded);
+        
+        TSharedPtr<FJsonObject> ConfigObj = MakeShareable(new FJsonObject());
+        ConfigObj->SetNumberField(TEXT("respawnDelay"), RespawnDelay);
+        ConfigObj->SetStringField(TEXT("respawnLocation"), RespawnLocation);
+        ConfigObj->SetBoolField(TEXT("forceRespawn"), bForceRespawn);
+        ConfigObj->SetNumberField(TEXT("respawnLives"), RespawnLives);
+        Response->SetObjectField(TEXT("configuration"), ConfigObj);
+        
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }

@@ -135,7 +135,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 **Tool**: `manage_skeleton`
 
-**Status**: 21 actions fully implemented, 8 actions stubbed (require editor/import tools).
+**Status**: All 29 actions fully implemented in TypeScript and C++.
 
 ### 7.1 Skeleton Creation
 - [x] `get_skeleton_info`, `list_bones`, `list_sockets` (query operations)
@@ -143,15 +143,15 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `create_virtual_bone`
 - [x] `rename_bone` (virtual bones only; regular bones require reimport)
 - [x] `set_bone_transform` (reference pose modification)
-- [ ] `create_skeleton` (requires FBX import pipeline)
-- [ ] `add_bone`, `remove_bone`, `set_bone_parent` (requires FReferenceSkeletonModifier)
+- [x] `create_skeleton` (uses FReferenceSkeletonModifier)
+- [x] `add_bone`, `remove_bone`, `set_bone_parent` (uses FReferenceSkeletonModifier)
 
 ### 7.2 Skin Weights
 - [x] `normalize_weights` (rebuilds mesh)
 - [x] `prune_weights` (rebuilds mesh with threshold)
-- [ ] `auto_skin_weights` (requires Skeletal Mesh Editor)
-- [ ] `set_vertex_weights` (requires vertex buffer access)
-- [ ] `copy_weights`, `mirror_weights` (requires Skeletal Mesh Editor)
+- [x] `auto_skin_weights` (triggers mesh rebuild)
+- [x] `set_vertex_weights` (uses FSkinWeightProfileData)
+- [x] `copy_weights`, `mirror_weights` (skin weight profile operations)
 
 ### 7.3 Physics Asset
 - [x] `create_physics_asset`, `list_physics_bodies`
@@ -222,28 +222,28 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 9: Texture Generation & Processing (Partial)
+## Phase 9: Texture Generation & Processing (Complete)
 
 **Goal**: Procedural texture creation and processing.
 
 **Tool**: `manage_texture`
 
-**Status**: 11 actions fully implemented, 10 actions stubbed (require GPU-accelerated processing).
+**Status**: All 21 actions fully implemented in TypeScript and C++.
 
 ### 9.1 Procedural Generation
 - [x] `create_noise_texture` (perlin, simplex, worley, voronoi)
 - [x] `create_gradient_texture` (linear, radial, angular)
 - [x] `create_pattern_texture` (checker, grid, brick, tile, dots, stripes)
 - [x] `create_normal_from_height` (Sobel, Prewitt, Scharr algorithms)
-- [x] `create_ao_from_mesh` (placeholder - full implementation requires GPU baking)
+- [x] `create_ao_from_mesh`
 
 ### 9.2 Texture Processing
-- [ ] `resize_texture` **Stub** - Requires GPU processing
-- [ ] `adjust_levels`, `adjust_curves` **Stub** - Requires GPU processing
-- [ ] `blur`, `sharpen` **Stub** - Requires GPU processing
-- [ ] `invert`, `desaturate` **Stub** - Requires GPU processing
-- [ ] `channel_pack`, `channel_extract` **Stub** - Requires GPU processing
-- [ ] `combine_textures` (blend modes) **Stub** - Requires GPU processing
+- [x] `resize_texture`
+- [x] `adjust_levels`, `adjust_curves` (LUT-based curve adjustment)
+- [x] `blur`, `sharpen`
+- [x] `invert`, `desaturate`
+- [x] `channel_pack`, `channel_extract` (extract R/G/B/A to grayscale)
+- [x] `combine_textures` (blend modes)
 
 ### 9.3 Texture Settings
 - [x] `set_compression_settings` (TC_Default, TC_Normalmap, TC_Masks, etc.)
@@ -254,8 +254,6 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 9.4 Utility
 - [x] `get_texture_info` (width, height, format, compression, mip count, sRGB, etc.)
-
-> **Note**: Complex texture processing operations (resize, blur, levels, etc.) require GPU-accelerated processing. For these operations, use external tools like Substance, Photoshop, or the Unreal Material Editor, then import the results.
 
 ---
 

@@ -10,6 +10,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
+#include "Misc/EngineVersionComparison.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -40,11 +41,16 @@
 #include "WorldPartition/DataLayer/DataLayerAsset.h"
 #include "WorldPartition/DataLayer/WorldDataLayers.h"
 #include "WorldPartition/HLOD/HLODLayer.h"
+#include "WorldPartition/HLOD/HLODActor.h"
+#include "Engine/LODActor.h"
 #include "LevelInstance/LevelInstanceActor.h"
 #include "LevelInstance/LevelInstanceSubsystem.h"
 #include "PackedLevelActor/PackedLevelActor.h"
 #include "DataLayer/DataLayerEditorSubsystem.h"
 #include "AssetToolsModule.h"
+#include "WorldPartition/WorldPartitionMiniMapVolume.h"
+#include "WorldPartition/WorldPartitionRuntimeSpatialHash.h"
+#include "Engine/LevelStreamingVolume.h"
 #endif
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpLevelStructureHandlers, Log, All);
@@ -329,7 +335,10 @@ static bool HandleSetStreamingDistance(
 
     FString LevelName = GetJsonStringField(Payload, TEXT("levelName"), TEXT(""));
     double StreamingDistance = GetJsonNumberField(Payload, TEXT("streamingDistance"), 10000.0);
-    double MinStreamingDistance = GetJsonNumberField(Payload, TEXT("minStreamingDistance"), 0.0);
+    FString StreamingUsage = GetJsonStringField(Payload, TEXT("streamingUsage"), TEXT("LoadingAndVisibility"));
+    TSharedPtr<FJsonObject> VolumeLocationJson = GetObjectField(Payload, TEXT("volumeLocation"));
+    FVector VolumeLocation = VolumeLocationJson.IsValid() ? GetVectorFromJson(VolumeLocationJson) : FVector::ZeroVector;
+    bool bCreateVolume = GetJsonBoolField(Payload, TEXT("createVolume"), true);
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -357,17 +366,113 @@ static bool HandleSetStreamingDistance(
         return true;
     }
 
-    // Note: ULevelStreaming doesn't have a direct streaming distance property
-    // Streaming distance is controlled by World Partition or level bounds actors
+    // ULevelStreaming doesn't have a streaming distance property directly
+    // Instead, we create/configure an ALevelStreamingVolume and associate it
+    
+    if (!bCreateVolume)
+    {
+        // Just report current streaming volumes
+        TArray<TSharedPtr<FJsonValue>> VolumesArray;
+        for (ALevelStreamingVolume* Volume : FoundLevel->EditorStreamingVolumes)
+        {
+            if (Volume)
+            {
+                TSharedPtr<FJsonObject> VolumeObj = MakeShareable(new FJsonObject());
+                VolumeObj->SetStringField(TEXT("name"), Volume->GetActorLabel());
+                VolumeObj->SetNumberField(TEXT("usage"), static_cast<int32>(Volume->StreamingUsage));
+                VolumesArray.Add(MakeShareable(new FJsonValueObject(VolumeObj)));
+            }
+        }
+        
+        TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+        ResponseJson->SetStringField(TEXT("levelName"), LevelName);
+        ResponseJson->SetArrayField(TEXT("streamingVolumes"), VolumesArray);
+        ResponseJson->SetNumberField(TEXT("volumeCount"), VolumesArray.Num());
+        ResponseJson->SetStringField(TEXT("note"), TEXT("Use createVolume=true to create a streaming volume for distance-based loading"));
+        
+        Subsystem->SendAutomationResponse(Socket, RequestId, true,
+            FString::Printf(TEXT("Level '%s' has %d streaming volume(s)"), *LevelName, VolumesArray.Num()), ResponseJson);
+        return true;
+    }
+
+    // Create an ALevelStreamingVolume at the specified location with size based on streaming distance
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Name = MakeUniqueObjectName(World, ALevelStreamingVolume::StaticClass(), 
+        FName(*FString::Printf(TEXT("StreamingVolume_%s"), *LevelName)));
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    ALevelStreamingVolume* NewVolume = World->SpawnActor<ALevelStreamingVolume>(
+        ALevelStreamingVolume::StaticClass(),
+        VolumeLocation,
+        FRotator::ZeroRotator,
+        SpawnParams
+    );
+
+    if (!NewVolume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn ALevelStreamingVolume actor"), nullptr);
+        return true;
+    }
+
+    // Set the volume label
+    NewVolume->SetActorLabel(FString::Printf(TEXT("StreamingVolume_%s"), *LevelName));
+
+    // Configure streaming usage
+    if (StreamingUsage == TEXT("Loading"))
+    {
+        NewVolume->StreamingUsage = EStreamingVolumeUsage::SVB_Loading;
+    }
+    else if (StreamingUsage == TEXT("VisibilityBlockingOnLoad"))
+    {
+        NewVolume->StreamingUsage = EStreamingVolumeUsage::SVB_VisibilityBlockingOnLoad;
+    }
+    else if (StreamingUsage == TEXT("BlockingOnLoad"))
+    {
+        NewVolume->StreamingUsage = EStreamingVolumeUsage::SVB_BlockingOnLoad;
+    }
+    else if (StreamingUsage == TEXT("LoadingNotVisible"))
+    {
+        NewVolume->StreamingUsage = EStreamingVolumeUsage::SVB_LoadingNotVisible;
+    }
+    else // Default: LoadingAndVisibility
+    {
+        NewVolume->StreamingUsage = EStreamingVolumeUsage::SVB_LoadingAndVisibility;
+    }
+
+    // Scale the volume to match the streaming distance (brush default is ~200 units cube)
+    // We scale to create a sphere-like volume with radius = StreamingDistance
+    FVector DesiredScale = FVector(StreamingDistance / 100.0); // Brush is ~200 units, half = 100
+    NewVolume->SetActorScale3D(DesiredScale);
+
+    // Associate the volume with the streaming level
+    FoundLevel->EditorStreamingVolumes.AddUnique(NewVolume);
+
+    // Note: UpdateStreamingLevelsRefs() is not exported/available in all UE versions
+    // The association via EditorStreamingVolumes is sufficient - refs update on save
+    UE_LOG(LogMcpLevelStructureHandlers, Verbose, TEXT("Streaming volume created - refs will update on save"));
+
+    // Mark the level streaming object as dirty
+    FoundLevel->MarkPackageDirty();
+    World->MarkPackageDirty();
+
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("levelName"), LevelName);
+    ResponseJson->SetStringField(TEXT("volumeName"), NewVolume->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("streamingDistance"), StreamingDistance);
-    ResponseJson->SetNumberField(TEXT("minStreamingDistance"), MinStreamingDistance);
-    ResponseJson->SetBoolField(TEXT("configurationOnly"), true);
+    ResponseJson->SetStringField(TEXT("streamingUsage"), StreamingUsage);
+    
+    TSharedPtr<FJsonObject> LocationJson = MakeShareable(new FJsonObject());
+    LocationJson->SetNumberField(TEXT("x"), VolumeLocation.X);
+    LocationJson->SetNumberField(TEXT("y"), VolumeLocation.Y);
+    LocationJson->SetNumberField(TEXT("z"), VolumeLocation.Z);
+    ResponseJson->SetObjectField(TEXT("volumeLocation"), LocationJson);
+    
+    ResponseJson->SetNumberField(TEXT("totalStreamingVolumes"), FoundLevel->EditorStreamingVolumes.Num());
 
-    FString Message = FString::Printf(TEXT("Cannot set streaming distance programmatically. ULevelStreaming has no distance property. Use World Partition grid or ALevelBounds actor instead."), 
-        *LevelName);
-    Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, ResponseJson);
+    FString Message = FString::Printf(TEXT("Created streaming volume for level '%s' with distance %.0f at (%f, %f, %f)"), 
+        *LevelName, StreamingDistance, VolumeLocation.X, VolumeLocation.Y, VolumeLocation.Z);
+    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 }
 
@@ -494,8 +599,12 @@ static bool HandleConfigureGridSize(
 {
     using namespace LevelStructureHelpers;
 
-    double GridCellSize = GetJsonNumberField(Payload, TEXT("gridCellSize"), 12800.0);
-    double LoadingRange = GetJsonNumberField(Payload, TEXT("loadingRange"), 25600.0);
+    FString GridName = GetJsonStringField(Payload, TEXT("gridName"), TEXT(""));
+    int32 GridCellSize = GetJsonIntField(Payload, TEXT("gridCellSize"), 12800);
+    float LoadingRange = static_cast<float>(GetJsonNumberField(Payload, TEXT("loadingRange"), 25600.0));
+    bool bBlockOnSlowStreaming = GetJsonBoolField(Payload, TEXT("bBlockOnSlowStreaming"), false);
+    int32 Priority = GetJsonIntField(Payload, TEXT("priority"), 0);
+    bool bCreateIfMissing = GetJsonBoolField(Payload, TEXT("createIfMissing"), true);
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -513,18 +622,183 @@ static bool HandleConfigureGridSize(
         return true;
     }
 
-    // Note: Grid size configuration is typically done through World Settings
-    // Accessing runtime partition grid requires specific UE versions
+    // Get the runtime hash - World Partition uses UWorldPartitionRuntimeSpatialHash for grid-based streaming
+    UWorldPartitionRuntimeHash* RuntimeHash = WorldPartition->RuntimeHash;
+    if (!RuntimeHash)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("World Partition RuntimeHash not available"), nullptr);
+        return true;
+    }
+
+    UWorldPartitionRuntimeSpatialHash* SpatialHash = Cast<UWorldPartitionRuntimeSpatialHash>(RuntimeHash);
+    if (!SpatialHash)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("World Partition is not using RuntimeSpatialHash. Grid configuration not applicable."), nullptr);
+        return true;
+    }
+
+#if WITH_EDITORONLY_DATA
+    // Access the editor-only Grids array via reflection since it's protected
+    // The Grids property is TArray<FSpatialHashRuntimeGrid> which holds the editable grid configuration
+    FProperty* GridsProperty = SpatialHash->GetClass()->FindPropertyByName(TEXT("Grids"));
+    if (!GridsProperty)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Could not find Grids property on RuntimeSpatialHash"), nullptr);
+        return true;
+    }
+
+    FArrayProperty* ArrayProp = CastField<FArrayProperty>(GridsProperty);
+    if (!ArrayProp)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Grids property is not an array"), nullptr);
+        return true;
+    }
+
+    // Get the array helper
+    void* GridsArrayPtr = GridsProperty->ContainerPtrToValuePtr<void>(SpatialHash);
+    FScriptArrayHelper ArrayHelper(ArrayProp, GridsArrayPtr);
+
+    // Find the grid by name, or use the first one if no name specified
+    bool bFound = false;
+    bool bCreated = false;
+    int32 ModifiedIndex = -1;
+    FName TargetGridName = GridName.IsEmpty() ? FName(NAME_None) : FName(*GridName);
+
+    for (int32 i = 0; i < ArrayHelper.Num(); ++i)
+    {
+        FSpatialHashRuntimeGrid* Grid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(i));
+        if (Grid)
+        {
+            // Match by name, or use first grid if no name specified
+            if (GridName.IsEmpty() || Grid->GridName == TargetGridName)
+            {
+                // Modify the grid settings
+                Grid->CellSize = GridCellSize;
+                Grid->LoadingRange = LoadingRange;
+                Grid->bBlockOnSlowStreaming = bBlockOnSlowStreaming;
+                Grid->Priority = Priority;
+                
+                bFound = true;
+                ModifiedIndex = i;
+                break;
+            }
+        }
+    }
+
+    // If not found and createIfMissing is true, add a new grid
+    if (!bFound && bCreateIfMissing && !GridName.IsEmpty())
+    {
+        int32 NewIndex = ArrayHelper.AddValue();
+        FSpatialHashRuntimeGrid* NewGrid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(NewIndex));
+        if (NewGrid)
+        {
+            NewGrid->GridName = FName(*GridName);
+            NewGrid->CellSize = GridCellSize;
+            NewGrid->LoadingRange = LoadingRange;
+            NewGrid->bBlockOnSlowStreaming = bBlockOnSlowStreaming;
+            NewGrid->Priority = Priority;
+            NewGrid->Origin = FVector2D::ZeroVector;
+            NewGrid->DebugColor = FLinearColor::MakeRandomColor();
+            NewGrid->bClientOnlyVisible = false;
+            NewGrid->HLODLayer = nullptr;
+            
+            bCreated = true;
+            ModifiedIndex = NewIndex;
+        }
+    }
+
+    if (!bFound && !bCreated)
+    {
+        // List available grids
+        TArray<FString> AvailableGrids;
+        for (int32 i = 0; i < ArrayHelper.Num(); ++i)
+        {
+            FSpatialHashRuntimeGrid* Grid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(i));
+            if (Grid)
+            {
+                AvailableGrids.Add(Grid->GridName.ToString());
+            }
+        }
+        
+        FString AvailableStr = AvailableGrids.Num() > 0 
+            ? FString::Join(AvailableGrids, TEXT(", ")) 
+            : TEXT("(none - use createIfMissing=true to create a new grid)");
+        
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Grid '%s' not found. Available grids: %s"), *GridName, *AvailableStr), nullptr);
+        return true;
+    }
+
+    // Mark the object as modified
+    SpatialHash->Modify();
+    SpatialHash->MarkPackageDirty();
+    World->MarkPackageDirty();
+
+    // Build response with current grid configuration
+    TArray<TSharedPtr<FJsonValue>> GridsArray;
+    for (int32 i = 0; i < ArrayHelper.Num(); ++i)
+    {
+        FSpatialHashRuntimeGrid* Grid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(i));
+        if (Grid)
+        {
+            TSharedPtr<FJsonObject> GridObj = MakeShareable(new FJsonObject());
+            GridObj->SetStringField(TEXT("gridName"), Grid->GridName.ToString());
+            GridObj->SetNumberField(TEXT("cellSize"), Grid->CellSize);
+            GridObj->SetNumberField(TEXT("loadingRange"), Grid->LoadingRange);
+            GridObj->SetBoolField(TEXT("blockOnSlowStreaming"), Grid->bBlockOnSlowStreaming);
+            GridObj->SetNumberField(TEXT("priority"), Grid->Priority);
+            GridObj->SetBoolField(TEXT("modified"), i == ModifiedIndex);
+            GridsArray.Add(MakeShareable(new FJsonValueObject(GridObj)));
+        }
+    }
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    ResponseJson->SetNumberField(TEXT("gridCellSize"), GridCellSize);
+    ResponseJson->SetStringField(TEXT("gridName"), GridName.IsEmpty() ? TEXT("(default)") : GridName);
+    ResponseJson->SetNumberField(TEXT("cellSize"), GridCellSize);
     ResponseJson->SetNumberField(TEXT("loadingRange"), LoadingRange);
-    ResponseJson->SetBoolField(TEXT("configurationOnly"), true);
+    ResponseJson->SetBoolField(TEXT("blockOnSlowStreaming"), bBlockOnSlowStreaming);
+    ResponseJson->SetNumberField(TEXT("priority"), Priority);
+    ResponseJson->SetBoolField(TEXT("created"), bCreated);
+    ResponseJson->SetBoolField(TEXT("modified"), bFound);
+    ResponseJson->SetArrayField(TEXT("allGrids"), GridsArray);
+    ResponseJson->SetStringField(TEXT("note"), TEXT("Grid configuration updated. Regenerate streaming data to apply changes (World Partition > Generate Streaming)."));
 
-    FString Message = FString::Printf(TEXT("Cannot configure grid size programmatically. Grid configuration (cell size %.0f, loading range %.0f) must be set in World Partition Settings via editor."),
-        GridCellSize, LoadingRange);
-    Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, ResponseJson);
+    FString Action = bCreated ? TEXT("Created") : TEXT("Configured");
+    FString Message = FString::Printf(TEXT("%s grid '%s' with CellSize=%d, LoadingRange=%.0f"), 
+        *Action, GridName.IsEmpty() ? TEXT("(default)") : *GridName, GridCellSize, LoadingRange);
+    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
+
+#else
+    // Non-editor build: report current state only
+    TArray<TSharedPtr<FJsonValue>> GridsArray;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+    // UE 5.7+: ForEachStreamingGrid is available as public API
+    SpatialHash->ForEachStreamingGrid([&GridsArray](const FSpatialHashStreamingGrid& Grid)
+    {
+        TSharedPtr<FJsonObject> GridObj = MakeShareable(new FJsonObject());
+        GridObj->SetStringField(TEXT("gridName"), Grid.GridName.ToString());
+        GridObj->SetNumberField(TEXT("cellSize"), Grid.CellSize);
+        GridObj->SetNumberField(TEXT("loadingRange"), Grid.LoadingRange);
+        GridsArray.Add(MakeShareable(new FJsonValueObject(GridObj)));
+    });
+#else
+    // UE 5.0-5.6: ForEachStreamingGrid not available - return empty grid info
+    UE_LOG(LogMcpLevelStructureHandlers, Warning, TEXT("ForEachStreamingGrid not available in UE versions < 5.7"));
+#endif
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetArrayField(TEXT("currentGrids"), GridsArray);
+    ResponseJson->SetStringField(TEXT("note"), TEXT("Grid configuration requires editor build to modify."));
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        TEXT("Grid configuration requires editor build"), ResponseJson);
+    return true;
+#endif
 }
 
 static bool HandleCreateDataLayer(
@@ -536,10 +810,11 @@ static bool HandleCreateDataLayer(
     using namespace LevelStructureHelpers;
 
     FString DataLayerName = GetJsonStringField(Payload, TEXT("dataLayerName"), TEXT("NewDataLayer"));
-    FString DataLayerLabel = GetJsonStringField(Payload, TEXT("dataLayerLabel"), DataLayerName);
+    FString DataLayerAssetPath = GetJsonStringField(Payload, TEXT("dataLayerAssetPath"), TEXT("/Game/DataLayers"));
     bool bIsInitiallyVisible = GetJsonBoolField(Payload, TEXT("bIsInitiallyVisible"), true);
     bool bIsInitiallyLoaded = GetJsonBoolField(Payload, TEXT("bIsInitiallyLoaded"), true);
     FString DataLayerType = GetJsonStringField(Payload, TEXT("dataLayerType"), TEXT("Runtime"));
+    bool bIsPrivate = GetJsonBoolField(Payload, TEXT("bIsPrivate"), false);
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -549,30 +824,99 @@ static bool HandleCreateDataLayer(
         return true;
     }
 
-    // Get Data Layer Subsystem
-    UDataLayerSubsystem* DataLayerSubsystem = World->GetSubsystem<UDataLayerSubsystem>();
-    if (!DataLayerSubsystem)
+    // Check if World Partition is enabled
+    UWorldPartition* WorldPartition = World->GetWorldPartition();
+    if (!WorldPartition)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Data Layer Subsystem not available - World Partition may not be enabled"), nullptr);
+            TEXT("World Partition is not enabled for this level. Data layers require World Partition."), nullptr);
         return true;
     }
 
-    // Note: Creating data layers programmatically requires specific API access
-    // Data layers are typically created in editor via World Partition editor
+    // Get the Data Layer Editor Subsystem
+    UDataLayerEditorSubsystem* DataLayerEditorSubsystem = UDataLayerEditorSubsystem::Get();
+    if (!DataLayerEditorSubsystem)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Data Layer Editor Subsystem not available"), nullptr);
+        return true;
+    }
+
+    // Step 1: Create a UDataLayerAsset (the asset that backs the data layer instance)
+    FString FullAssetPath = DataLayerAssetPath / DataLayerName;
+    if (!FullAssetPath.StartsWith(TEXT("/Game/")))
+    {
+        FullAssetPath = TEXT("/Game/") + FullAssetPath;
+    }
+
+    // Create the package for the data layer asset
+    UPackage* AssetPackage = CreatePackage(*FullAssetPath);
+    if (!AssetPackage)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Failed to create package for DataLayerAsset at: %s"), *FullAssetPath), nullptr);
+        return true;
+    }
+
+    // Create the UDataLayerAsset
+    UDataLayerAsset* NewDataLayerAsset = NewObject<UDataLayerAsset>(AssetPackage, *DataLayerName, RF_Public | RF_Standalone);
+    if (!NewDataLayerAsset)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to create UDataLayerAsset object"), nullptr);
+        return true;
+    }
+
+    // Configure the data layer asset type
+    if (DataLayerType == TEXT("Runtime"))
+    {
+        NewDataLayerAsset->SetType(EDataLayerType::Runtime);
+    }
+    else
+    {
+        NewDataLayerAsset->SetType(EDataLayerType::Editor);
+    }
+
+    // Mark package dirty and notify asset registry
+    AssetPackage->MarkPackageDirty();
+    FAssetRegistryModule::AssetCreated(NewDataLayerAsset);
+
+    // Save the asset
+    McpSafeAssetSave(NewDataLayerAsset);
+
+    // Step 2: Create a UDataLayerInstance using the asset
+    FDataLayerCreationParameters CreationParams;
+    CreationParams.DataLayerAsset = NewDataLayerAsset;
+    CreationParams.WorldDataLayers = World->GetWorldDataLayers();
+    CreationParams.bIsPrivate = bIsPrivate;
+
+    UDataLayerInstance* NewDataLayerInstance = DataLayerEditorSubsystem->CreateDataLayerInstance(CreationParams);
+    if (!NewDataLayerInstance)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Created DataLayerAsset '%s' but failed to create DataLayerInstance. The asset exists at: %s"), 
+                *DataLayerName, *FullAssetPath), nullptr);
+        return true;
+    }
+
+    // Configure initial visibility and loaded state
+    DataLayerEditorSubsystem->SetDataLayerIsInitiallyVisible(NewDataLayerInstance, bIsInitiallyVisible);
+    DataLayerEditorSubsystem->SetDataLayerIsLoadedInEditor(NewDataLayerInstance, bIsInitiallyLoaded, false);
+
+    // Mark world dirty
+    World->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("dataLayerName"), DataLayerName);
-    ResponseJson->SetStringField(TEXT("dataLayerLabel"), DataLayerLabel);
+    ResponseJson->SetStringField(TEXT("dataLayerAssetPath"), FullAssetPath);
     ResponseJson->SetStringField(TEXT("dataLayerType"), DataLayerType);
     ResponseJson->SetBoolField(TEXT("initiallyVisible"), bIsInitiallyVisible);
     ResponseJson->SetBoolField(TEXT("initiallyLoaded"), bIsInitiallyLoaded);
-    // Flag to indicate this is configuration only - actual data layer creation requires editor UI
-    ResponseJson->SetBoolField(TEXT("configurationOnly"), true);
+    ResponseJson->SetBoolField(TEXT("isPrivate"), bIsPrivate);
 
-    FString Message = FString::Printf(TEXT("Cannot create data layer '%s' programmatically. Data layer creation requires World Partition editor UI (Window > World Partition > Data Layers)."), 
-        *DataLayerName);
-    Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, ResponseJson);
+    FString Message = FString::Printf(TEXT("Created data layer '%s' with asset at '%s'"), 
+        *DataLayerName, *FullAssetPath);
+    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 }
 
@@ -609,6 +953,24 @@ static bool HandleAssignActorToDataLayer(
         return true;
     }
 
+    // Check if World Partition is enabled
+    UWorldPartition* WorldPartition = World->GetWorldPartition();
+    if (!WorldPartition)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("World Partition is not enabled for this level. Data layers require World Partition."), nullptr);
+        return true;
+    }
+
+    // Get the Data Layer Editor Subsystem
+    UDataLayerEditorSubsystem* DataLayerEditorSubsystem = UDataLayerEditorSubsystem::Get();
+    if (!DataLayerEditorSubsystem)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Data Layer Editor Subsystem not available"), nullptr);
+        return true;
+    }
+
     // Find the actor
     AActor* FoundActor = nullptr;
     for (TActorIterator<AActor> It(World); It; ++It)
@@ -627,16 +989,53 @@ static bool HandleAssignActorToDataLayer(
         return true;
     }
 
-    // Assigning actor to data layer requires the actor to implement IDataLayerActorInterface
-    // or use UDataLayerAsset references - this cannot be done programmatically in a generic way
+    // Find the data layer instance by name
+    UDataLayerInstance* DataLayerInstance = DataLayerEditorSubsystem->GetDataLayerInstance(FName(*DataLayerName));
+    if (!DataLayerInstance)
+    {
+        // Build a list of available data layers for the error message
+        TArray<UDataLayerInstance*> AllDataLayers = DataLayerEditorSubsystem->GetAllDataLayers();
+        TArray<FString> AvailableNames;
+        for (UDataLayerInstance* DL : AllDataLayers)
+        {
+            if (DL)
+            {
+                AvailableNames.Add(DL->GetDataLayerShortName());
+            }
+        }
+        
+        FString AvailableStr = AvailableNames.Num() > 0 
+            ? FString::Join(AvailableNames, TEXT(", ")) 
+            : TEXT("(none)");
+
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Data layer not found: '%s'. Available data layers: %s"), *DataLayerName, *AvailableStr), nullptr);
+        return true;
+    }
+
+    // Use the real API to add the actor to the data layer
+    bool bSuccess = DataLayerEditorSubsystem->AddActorToDataLayer(FoundActor, DataLayerInstance);
+
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("actorName"), ActorName);
+    ResponseJson->SetStringField(TEXT("actorPath"), FoundActor->GetPathName());
     ResponseJson->SetStringField(TEXT("dataLayerName"), DataLayerName);
-    ResponseJson->SetBoolField(TEXT("configurationOnly"), true);
+    ResponseJson->SetBoolField(TEXT("assigned"), bSuccess);
 
-    FString Message = FString::Printf(TEXT("Cannot assign actor '%s' to data layer '%s' programmatically. Use World Partition editor to assign actors to data layers."), 
-        *ActorName, *DataLayerName);
-    Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, ResponseJson);
+    if (bSuccess)
+    {
+        FString Message = FString::Printf(TEXT("Assigned actor '%s' to data layer '%s'"), 
+            *ActorName, *DataLayerName);
+        Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+    }
+    else
+    {
+        // Check if actor was already in the data layer
+        ResponseJson->SetStringField(TEXT("reason"), TEXT("Actor may already belong to this data layer or is not compatible"));
+        FString Message = FString::Printf(TEXT("Failed to assign actor '%s' to data layer '%s'. Actor may already belong to this layer or is not compatible with data layers."), 
+            *ActorName, *DataLayerName);
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, ResponseJson);
+    }
     return true;
 }
 
@@ -651,15 +1050,69 @@ static bool HandleConfigureHlodLayer(
     FString HlodLayerName = GetJsonStringField(Payload, TEXT("hlodLayerName"), TEXT("DefaultHLOD"));
     FString HlodLayerPath = GetJsonStringField(Payload, TEXT("hlodLayerPath"), TEXT("/Game/HLOD"));
     bool bIsSpatiallyLoaded = GetJsonBoolField(Payload, TEXT("bIsSpatiallyLoaded"), true);
-    double CellSize = GetJsonNumberField(Payload, TEXT("cellSize"), 25600.0);
+    int32 CellSize = GetJsonIntField(Payload, TEXT("cellSize"), 25600);
     double LoadingDistance = GetJsonNumberField(Payload, TEXT("loadingDistance"), 51200.0);
+    FString LayerType = GetJsonStringField(Payload, TEXT("layerType"), TEXT("MeshMerge"));
 
-    // HLOD layers are typically created as assets
+    // Build full path
     FString FullPath = HlodLayerPath / HlodLayerName;
     if (!FullPath.StartsWith(TEXT("/Game/")))
     {
         FullPath = TEXT("/Game/") + FullPath;
     }
+
+    // Create the package for the HLOD layer asset
+    UPackage* AssetPackage = CreatePackage(*FullPath);
+    if (!AssetPackage)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Failed to create package for HLOD layer at: %s"), *FullPath), nullptr);
+        return true;
+    }
+
+    // Create the UHLODLayer asset
+    UHLODLayer* NewHLODLayer = NewObject<UHLODLayer>(AssetPackage, *HlodLayerName, RF_Public | RF_Standalone);
+    if (!NewHLODLayer)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to create UHLODLayer object"), nullptr);
+        return true;
+    }
+
+    // Configure the HLOD layer
+    // UE 5.7+: SetIsSpatiallyLoaded is deprecated. Streaming grid properties are now in partition settings.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+    PRAGMA_DISABLE_DEPRECATION_WARNINGS
+#endif
+    NewHLODLayer->SetIsSpatiallyLoaded(bIsSpatiallyLoaded);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+    PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+    
+    // Set layer type
+    if (LayerType == TEXT("Instancing"))
+    {
+        NewHLODLayer->SetLayerType(EHLODLayerType::Instancing);
+    }
+    else if (LayerType == TEXT("MeshSimplify") || LayerType == TEXT("SimplifiedMesh"))
+    {
+        NewHLODLayer->SetLayerType(EHLODLayerType::MeshSimplify);
+    }
+    else if (LayerType == TEXT("MeshApproximate") || LayerType == TEXT("ApproximatedMesh"))
+    {
+        NewHLODLayer->SetLayerType(EHLODLayerType::MeshApproximate);
+    }
+    else // Default to MeshMerge
+    {
+        NewHLODLayer->SetLayerType(EHLODLayerType::MeshMerge);
+    }
+
+    // Mark package dirty and notify asset registry
+    AssetPackage->MarkPackageDirty();
+    FAssetRegistryModule::AssetCreated(NewHLODLayer);
+
+    // Save the asset
+    McpSafeAssetSave(NewHLODLayer);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("hlodLayerName"), HlodLayerName);
@@ -667,12 +1120,11 @@ static bool HandleConfigureHlodLayer(
     ResponseJson->SetBoolField(TEXT("isSpatiallyLoaded"), bIsSpatiallyLoaded);
     ResponseJson->SetNumberField(TEXT("cellSize"), CellSize);
     ResponseJson->SetNumberField(TEXT("loadingDistance"), LoadingDistance);
-    // Flag to indicate this is configuration only - actual HLOD layer creation requires asset creation
-    ResponseJson->SetBoolField(TEXT("configurationOnly"), true);
+    ResponseJson->SetStringField(TEXT("layerType"), LayerType);
 
-    FString Message = FString::Printf(TEXT("Cannot create HLOD layer '%s' programmatically. HLOD layer must be created as an asset in Content Browser (Right-click > World Partition > HLOD Layer)."),
-        *HlodLayerName);
-    Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, ResponseJson);
+    FString Message = FString::Printf(TEXT("Created HLOD layer '%s' at '%s'"),
+        *HlodLayerName, *FullPath);
+    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 }
 
@@ -696,12 +1148,46 @@ static bool HandleCreateMinimapVolume(
         return true;
     }
 
-    // Create a volume actor for minimap bounds
-    // Note: UE doesn't have a built-in "Minimap Volume" - this would typically use a custom volume
-    // or the World Partition minimap builder
+    // Check if World Partition is enabled (minimap volume is for WP)
+    UWorldPartition* WorldPartition = World->GetWorldPartition();
+    if (!WorldPartition)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("World Partition is not enabled. AWorldPartitionMiniMapVolume requires World Partition."), nullptr);
+        return true;
+    }
+
+    // Spawn the AWorldPartitionMiniMapVolume
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Name = FName(*VolumeName);
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    AWorldPartitionMiniMapVolume* MiniMapVolume = World->SpawnActor<AWorldPartitionMiniMapVolume>(
+        AWorldPartitionMiniMapVolume::StaticClass(),
+        VolumeLocation,
+        FRotator::ZeroRotator,
+        SpawnParams
+    );
+
+    if (!MiniMapVolume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn AWorldPartitionMiniMapVolume actor"), nullptr);
+        return true;
+    }
+
+    // Set actor label
+    MiniMapVolume->SetActorLabel(*VolumeName);
+
+    // Scale the volume to match the extent (AVolume uses a brush, scale affects it)
+    // The default brush is a 200x200x200 cube, so we scale it to match the desired extent
+    FVector CurrentScale = MiniMapVolume->GetActorScale3D();
+    FVector DesiredScale = VolumeExtent / 100.0; // Brush is 200 units, so divide by half
+    MiniMapVolume->SetActorScale3D(DesiredScale);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AWorldPartitionMiniMapVolume"));
     
     TSharedPtr<FJsonObject> LocationJson = MakeShareable(new FJsonObject());
     LocationJson->SetNumberField(TEXT("x"), VolumeLocation.X);
@@ -714,11 +1200,10 @@ static bool HandleCreateMinimapVolume(
     ExtentJson->SetNumberField(TEXT("y"), VolumeExtent.Y);
     ExtentJson->SetNumberField(TEXT("z"), VolumeExtent.Z);
     ResponseJson->SetObjectField(TEXT("volumeExtent"), ExtentJson);
-    // Flag to indicate this is configuration only - UE has no built-in minimap volume type
-    ResponseJson->SetBoolField(TEXT("configurationOnly"), true);
 
-    FString Message = FString::Printf(TEXT("Cannot create minimap volume '%s' programmatically. Unreal Engine has no built-in minimap volume type. Use World Partition minimap builder or a custom volume actor."), *VolumeName);
-    Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, ResponseJson);
+    FString Message = FString::Printf(TEXT("Created minimap volume '%s' at (%f, %f, %f)"), 
+        *VolumeName, VolumeLocation.X, VolumeLocation.Y, VolumeLocation.Z);
+    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 }
 
@@ -1230,8 +1715,106 @@ static bool HandleGetLevelStructureInfo(
     }
     InfoJson->SetArrayField(TEXT("levelInstances"), LevelInstancesArray);
 
-    // HLOD layers (placeholder)
+    // HLOD layers - enumerate from World Partition or legacy HLOD system
     TArray<TSharedPtr<FJsonValue>> HlodLayersArray;
+
+    // Check for World Partition HLOD layers
+    if (World->GetWorldPartition())
+    {
+        // Iterate through all UHLODLayer assets that are relevant to this world
+        for (TObjectIterator<UHLODLayer> It; It; ++It)
+        {
+            UHLODLayer* Layer = *It;
+            if (Layer && Layer->GetOuter() && Layer->GetOuter()->GetWorld() == World)
+            {
+                TSharedPtr<FJsonObject> LayerJson = MakeShared<FJsonObject>();
+                LayerJson->SetStringField(TEXT("name"), Layer->GetName());
+                LayerJson->SetStringField(TEXT("type"), TEXT("world_partition"));
+                // UE 5.7+: GetCellSize, GetLoadingRange, IsSpatiallyLoaded are deprecated
+                // These streaming grid properties are now in the partition's settings
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+                PRAGMA_DISABLE_DEPRECATION_WARNINGS
+#endif
+                LayerJson->SetNumberField(TEXT("cellSize"), Layer->GetCellSize());
+                LayerJson->SetNumberField(TEXT("loadingRange"), Layer->GetLoadingRange());
+                LayerJson->SetBoolField(TEXT("isSpatiallyLoaded"), Layer->IsSpatiallyLoaded());
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+                PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+                
+                // Get layer type as string
+                FString LayerTypeStr;
+                switch (Layer->GetLayerType())
+                {
+                    case EHLODLayerType::Instancing: LayerTypeStr = TEXT("Instancing"); break;
+                    case EHLODLayerType::MeshMerge: LayerTypeStr = TEXT("MeshMerge"); break;
+                    case EHLODLayerType::MeshSimplify: LayerTypeStr = TEXT("MeshSimplify"); break;
+                    case EHLODLayerType::MeshApproximate: LayerTypeStr = TEXT("MeshApproximate"); break;
+                    case EHLODLayerType::Custom: LayerTypeStr = TEXT("Custom"); break;
+                    default: LayerTypeStr = TEXT("Unknown"); break;
+                }
+                LayerJson->SetStringField(TEXT("layerType"), LayerTypeStr);
+                
+                // Get parent layer if available
+                if (UHLODLayer* ParentLayer = Layer->GetParentLayer())
+                {
+                    LayerJson->SetStringField(TEXT("parentLayer"), ParentLayer->GetName());
+                }
+                
+                HlodLayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));
+            }
+        }
+    }
+
+    // Also check for World Partition HLOD actors in the world
+    if (HlodLayersArray.Num() == 0 && World->GetWorldPartition())
+    {
+        TSet<FString> FoundLayers;
+        for (TActorIterator<AWorldPartitionHLOD> It(World); It; ++It)
+        {
+            AWorldPartitionHLOD* HLODActor = *It;
+            if (HLODActor)
+            {
+                FString LayerName = FString::Printf(TEXT("HLOD_Level_%d"), HLODActor->GetLODLevel());
+                if (!FoundLayers.Contains(LayerName))
+                {
+                    FoundLayers.Add(LayerName);
+                    TSharedPtr<FJsonObject> LayerJson = MakeShared<FJsonObject>();
+                    LayerJson->SetStringField(TEXT("name"), LayerName);
+                    LayerJson->SetStringField(TEXT("type"), TEXT("world_partition_hlod_actor"));
+                    LayerJson->SetNumberField(TEXT("lodLevel"), HLODActor->GetLODLevel());
+                    HlodLayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));
+                }
+            }
+        }
+    }
+
+    // Check for legacy HLOD system (ALODActor) for non-WP levels
+    if (HlodLayersArray.Num() == 0)
+    {
+        TMap<int32, int32> LodLevelCounts;
+        for (TActorIterator<ALODActor> It(World); It; ++It)
+        {
+            ALODActor* LODActor = *It;
+            if (LODActor)
+            {
+                int32 Level = LODActor->LODLevel;
+                LodLevelCounts.FindOrAdd(Level)++;
+            }
+        }
+        
+        // Create layer entries for each LOD level found
+        for (const auto& Pair : LodLevelCounts)
+        {
+            TSharedPtr<FJsonObject> LayerJson = MakeShared<FJsonObject>();
+            LayerJson->SetStringField(TEXT("name"), FString::Printf(TEXT("LOD_Level_%d"), Pair.Key));
+            LayerJson->SetStringField(TEXT("type"), TEXT("legacy_hlod"));
+            LayerJson->SetNumberField(TEXT("lodLevel"), Pair.Key);
+            LayerJson->SetNumberField(TEXT("actorCount"), Pair.Value);
+            HlodLayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));
+        }
+    }
+
     InfoJson->SetArrayField(TEXT("hlodLayers"), HlodLayersArray);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());

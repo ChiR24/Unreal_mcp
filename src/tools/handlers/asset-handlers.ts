@@ -285,27 +285,25 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         return ResponseFactory.success(res, 'Thumbnail created successfully');
       }
       case 'set_tags': {
-        try {
-          const params = normalizeArgs(args, [
-            { key: 'assetPath', required: true },
-            { key: 'tags', required: true }
-          ]);
-          const assetPath = extractString(params, 'assetPath');
-          const tags = extractOptionalArray<string>(params, 'tags') ?? [];
-          const res = await tools.assetTools.setTags({ assetPath, tags });
-          return ResponseFactory.success(res, 'Tags set successfully');
-        } catch (err: unknown) {
-          const message = String(err instanceof Error ? err.message : err).toLowerCase();
-          if (
-            message.includes('not_implemented') ||
-            message.includes('not implemented') ||
-            message.includes('unknown action') ||
-            message.includes('unknown subaction')
-          ) {
-            return ResponseFactory.error('NOT_IMPLEMENTED', 'Asset tag writes are not implemented by the automation plugin.');
-          }
-          throw err;
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', required: true },
+          { key: 'tags', required: true }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const tags = extractOptionalArray<string>(params, 'tags') ?? [];
+
+        if (!assetPath) {
+          return ResponseFactory.error('INVALID_ARGUMENT', 'assetPath is required');
         }
+
+        // Note: Array.isArray check is unnecessary - extractOptionalArray always returns an array
+
+        // Forward to C++ automation bridge which uses UEditorAssetLibrary::SetMetadataTag
+        const res = await executeAutomationRequest(tools, 'set_tags', {
+          assetPath,
+          tags
+        });
+        return ResponseFactory.success(res, 'Tags set successfully');
       }
       case 'get_metadata': {
         const params = normalizeArgs(args, [

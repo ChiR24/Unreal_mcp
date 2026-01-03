@@ -277,9 +277,34 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
       // prevent crash: LandscapeEditLayers.cpp confirms this resets init state
       // which is unstable here
 
-      // Note: We bypass feeding ImportHeightData here because doing so via
-      // Import() is what causes the crash in 5.7. A flat empty landscape is
-      // created instead.
+      // UE 5.7 Safe Height Application:
+      // Instead of using Import() which crashes, we apply height data via
+      // FLandscapeEditDataInterface after landscape creation. This bypasses
+      // the problematic Import codepath while still allowing heightmap data.
+      ULandscapeInfo* LandscapeInfo = Landscape->GetLandscapeInfo();
+      if (LandscapeInfo && HeightArray.Num() > 0) {
+        // Register components first to ensure landscape is fully initialized
+        if (Landscape->GetRootComponent() &&
+            !Landscape->GetRootComponent()->IsRegistered()) {
+          Landscape->RegisterAllComponents();
+        }
+
+        // Use FLandscapeEditDataInterface for safe height modification
+        FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo);
+        LandscapeEdit.SetHeightData(
+            InMinX, InMinY,  // Min X, Y
+            InMaxX, InMaxY,  // Max X, Y
+            HeightArray.GetData(),
+            0,     // Stride (0 = use default)
+            true   // Calc normals
+        );
+        LandscapeEdit.Flush();
+
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+               TEXT("HandleCreateLandscape: Applied height data via "
+                    "FLandscapeEditDataInterface (%d vertices)"),
+               HeightArray.Num());
+      }
 
 #else
             // UE 5.6 and older: Use standard Import() workflow
@@ -307,12 +332,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
         // Re-assign material effectively
         Landscape->PostEditChange();
       }
-    }
-
-    // Register components if Import didn't do it (it usually does re-register)
-    if (Landscape->GetRootComponent() &&
-        !Landscape->GetRootComponent()->IsRegistered()) {
-      Landscape->RegisterAllComponents();
     }
 
     // Register components if Import didn't do it (it usually does re-register)

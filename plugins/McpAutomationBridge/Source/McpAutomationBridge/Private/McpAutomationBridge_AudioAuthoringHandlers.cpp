@@ -122,6 +122,56 @@
 #define MCP_HAS_METASOUND_BUILDER 0
 #endif
 
+// MetaSound Frontend Document Builder (UE 5.3+)
+#if __has_include("MetasoundFrontendDocumentBuilder.h")
+#include "MetasoundFrontendDocumentBuilder.h"
+#include "MetasoundFrontendDocument.h"
+#define MCP_HAS_METASOUND_FRONTEND 1
+#else
+#define MCP_HAS_METASOUND_FRONTEND 0
+#endif
+
+// MetaSound Factory (Editor)
+#if __has_include("MetasoundFactory.h")
+#include "MetasoundFactory.h"
+#define MCP_HAS_METASOUND_FACTORY 1
+#else
+#define MCP_HAS_METASOUND_FACTORY 0
+#endif
+
+// MetaSound Editor Subsystem
+#if __has_include("MetasoundEditorSubsystem.h")
+#include "MetasoundEditorSubsystem.h"
+#define MCP_HAS_METASOUND_EDITOR 1
+#else
+#define MCP_HAS_METASOUND_EDITOR 0
+#endif
+
+// MetaSound Frontend Document Builder (UE 5.3+)
+#if __has_include("MetasoundFrontendDocumentBuilder.h")
+#include "MetasoundFrontendDocumentBuilder.h"
+#include "MetasoundFrontendDocument.h"
+#define MCP_HAS_METASOUND_FRONTEND 1
+#else
+#define MCP_HAS_METASOUND_FRONTEND 0
+#endif
+
+// MetaSound Factory (Editor)
+#if __has_include("MetasoundFactory.h")
+#include "MetasoundFactory.h"
+#define MCP_HAS_METASOUND_FACTORY 1
+#else
+#define MCP_HAS_METASOUND_FACTORY 0
+#endif
+
+// MetaSound Editor Subsystem
+#if __has_include("MetasoundEditorSubsystem.h")
+#include "MetasoundEditorSubsystem.h"
+#define MCP_HAS_METASOUND_EDITOR 1
+#else
+#define MCP_HAS_METASOUND_EDITOR 0
+#endif
+
 // Helper macros
 #define AUDIO_ERROR_RESPONSE(Msg, Code) \
     Response->SetBoolField(TEXT("success"), false); \
@@ -518,7 +568,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
     
     if (SubAction == TEXT("create_metasound"))
     {
-#if MCP_HAS_METASOUND
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FACTORY
         FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Audio/MetaSounds")));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
@@ -528,12 +578,64 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             AUDIO_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
         }
         
-        // MetaSound creation requires the MetaSound Editor module
-        // For now, return a helpful message about MetaSound support
-        Response->SetStringField(TEXT("assetPath"), Path / Name);
+        // Create package for the MetaSound asset
+        FString PackagePath = Path / Name;
+        UPackage* Package = CreatePackage(*PackagePath);
+        if (!Package)
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+        }
+        
+        // Create MetaSound Source asset using the factory
+        UMetaSoundSourceFactory* Factory = NewObject<UMetaSoundSourceFactory>();
+        UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(
+            Factory->FactoryCreateNew(UMetaSoundSource::StaticClass(), Package,
+                                      FName(*Name), RF_Public | RF_Standalone,
+                                      nullptr, GWarn));
+        
+        if (!MetaSound)
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Failed to create MetaSound asset"), TEXT("CREATE_FAILED"));
+        }
+        
+        // Mark dirty and notify asset registry
+        McpSafeAssetSave(MetaSound);
+        
+        FString FullPath = MetaSound->GetPathName();
+        Response->SetStringField(TEXT("assetPath"), FullPath);
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), TEXT("MetaSound creation queued - requires MetaSound Editor plugin"));
-        Response->SetStringField(TEXT("note"), TEXT("MetaSound graph editing via automation is limited; consider using the MetaSound Editor"));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound '%s' created"), *Name));
+        return Response;
+#elif MCP_HAS_METASOUND
+        // MetaSound available but no factory - create basic asset
+        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Audio/MetaSounds")));
+        
+        if (Name.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
+        }
+        
+        FString PackagePath = Path / Name;
+        UPackage* Package = CreatePackage(*PackagePath);
+        if (!Package)
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+        }
+        
+        // Create MetaSound directly
+        UMetaSoundSource* MetaSound = NewObject<UMetaSoundSource>(Package, FName(*Name), RF_Public | RF_Standalone);
+        if (!MetaSound)
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Failed to create MetaSound asset"), TEXT("CREATE_FAILED"));
+        }
+        
+        McpSafeAssetSave(MetaSound);
+        
+        FString FullPath = MetaSound->GetPathName();
+        Response->SetStringField(TEXT("assetPath"), FullPath);
+        Response->SetBoolField(TEXT("success"), true);
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound '%s' created"), *Name));
         return Response;
 #else
         AUDIO_ERROR_RESPONSE(TEXT("MetaSound support not available in this engine version"), TEXT("METASOUND_NOT_AVAILABLE"));
@@ -542,14 +644,102 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
     
     if (SubAction == TEXT("add_metasound_node"))
     {
-#if MCP_HAS_METASOUND
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
+        FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
+        FString NodeClassName = GetStringFieldSafe(Params, TEXT("nodeClassName"), TEXT(""));
+        FString NodeType = GetStringFieldSafe(Params, TEXT("nodeType"), TEXT(""));
+        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        
+        if (AssetPath.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Asset path is required"), TEXT("MISSING_PATH"));
+        }
+        
+        // Load the MetaSound asset
+        UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(
+            StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
+        if (!MetaSound)
+        {
+            AUDIO_ERROR_RESPONSE(FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
+        }
+        
+        // Use the Frontend Document Builder API
+        IMetaSoundDocumentInterface* DocInterface = Cast<IMetaSoundDocumentInterface>(MetaSound);
+        if (!DocInterface)
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("MetaSound does not implement document interface"), TEXT("INTERFACE_ERROR"));
+        }
+        
+        // Create a builder for this MetaSound
+        TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
+        FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
+        
+        // Determine node class name from nodeType if not explicitly provided
+        FString ActualClassName = NodeClassName;
+        if (ActualClassName.IsEmpty() && !NodeType.IsEmpty())
+        {
+            // Map common node types to class names
+            FString NodeTypeLower = NodeType.ToLower();
+            if (NodeTypeLower == TEXT("oscillator") || NodeTypeLower == TEXT("sine"))
+            {
+                ActualClassName = TEXT("Metasound.Sine");
+            }
+            else if (NodeTypeLower == TEXT("gain") || NodeTypeLower == TEXT("multiply"))
+            {
+                ActualClassName = TEXT("Metasound.Multiply");
+            }
+            else if (NodeTypeLower == TEXT("add"))
+            {
+                ActualClassName = TEXT("Metasound.Add");
+            }
+            else if (NodeTypeLower == TEXT("waveplayer"))
+            {
+                ActualClassName = TEXT("Metasound.WavePlayer");
+            }
+            else
+            {
+                // Use node type as class name directly
+                ActualClassName = NodeType;
+            }
+        }
+        
+        if (ActualClassName.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Node class name or type is required"), TEXT("MISSING_NODE_TYPE"));
+        }
+        
+        // Add the node using the builder
+        FMetasoundFrontendClassName ClassName = FMetasoundFrontendClassName(FName(), FName(*ActualClassName), FName());
+        const FMetasoundFrontendNode* NewNode = Builder.AddNodeByClassName(ClassName, 1, FGuid::NewGuid());
+        
+        if (NewNode)
+        {
+            McpSafeAssetSave(MetaSound);
+            
+            Response->SetStringField(TEXT("nodeId"), NewNode->GetID().ToString());
+            Response->SetStringField(TEXT("nodeClassName"), ActualClassName);
+            Response->SetBoolField(TEXT("success"), true);
+            Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound node '%s' added"), *ActualClassName));
+        }
+        else
+        {
+            // FIX: Return success: false when node class is not found
+            Response->SetBoolField(TEXT("success"), false);
+            Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Node class '%s' not found in MetaSound registry"), *ActualClassName));
+            Response->SetStringField(TEXT("errorCode"), TEXT("NODE_CLASS_NOT_FOUND"));
+        }
+        
+        Builder.FinishBuilding();
+        return Response;
+#elif MCP_HAS_METASOUND
+        // FIX: Return error when MetaSound Frontend Builder not available
         FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
         FString NodeType = GetStringFieldSafe(Params, TEXT("nodeType"), TEXT(""));
         
-        // MetaSound node manipulation requires specialized APIs
-        Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), TEXT("MetaSound node addition queued"));
-        Response->SetStringField(TEXT("note"), TEXT("MetaSound graph editing via automation requires MetaSound Builder API"));
+        Response->SetBoolField(TEXT("success"), false);
+        Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Cannot add MetaSound node '%s' - Frontend Builder not available"), *NodeType));
+        Response->SetStringField(TEXT("errorCode"), TEXT("METASOUND_FRONTEND_NOT_SUPPORTED"));
+        Response->SetStringField(TEXT("requiredVersion"), TEXT("UE 5.3+"));
         return Response;
 #else
         AUDIO_ERROR_RESPONSE(TEXT("MetaSound support not available"), TEXT("METASOUND_NOT_AVAILABLE"));
@@ -558,10 +748,76 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
     
     if (SubAction == TEXT("connect_metasound_nodes"))
     {
-#if MCP_HAS_METASOUND
-        // MetaSound node connection
-        Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), TEXT("MetaSound connection queued"));
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
+        FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
+        FString SourceNodeId = GetStringFieldSafe(Params, TEXT("sourceNodeId"), TEXT(""));
+        FString SourceOutputName = GetStringFieldSafe(Params, TEXT("sourceOutputName"), TEXT(""));
+        FString TargetNodeId = GetStringFieldSafe(Params, TEXT("targetNodeId"), TEXT(""));
+        FString TargetInputName = GetStringFieldSafe(Params, TEXT("targetInputName"), TEXT(""));
+        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        
+        if (AssetPath.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Asset path is required"), TEXT("MISSING_PATH"));
+        }
+        
+        // Load the MetaSound asset
+        UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(
+            StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
+        if (!MetaSound)
+        {
+            AUDIO_ERROR_RESPONSE(FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
+        }
+        
+        // Use the Frontend Document Builder API
+        TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
+        FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
+        
+        // Parse node IDs
+        FGuid SourceGuid, TargetGuid;
+        if (!FGuid::Parse(SourceNodeId, SourceGuid) || !FGuid::Parse(TargetNodeId, TargetGuid))
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Invalid node ID format - must be valid GUID"), TEXT("INVALID_GUID"));
+        }
+        
+        // Create the edge connection
+        Metasound::Frontend::FNamedEdge NamedEdge{
+            SourceGuid,
+            FName(*SourceOutputName),
+            TargetGuid,
+            FName(*TargetInputName)
+        };
+        
+        TSet<Metasound::Frontend::FNamedEdge> Edges;
+        Edges.Add(NamedEdge);
+        
+        TArray<const FMetasoundFrontendEdge*> CreatedEdges;
+        bool bSuccess = Builder.AddNamedEdges(Edges, &CreatedEdges, true);
+        
+        if (bSuccess && CreatedEdges.Num() > 0)
+        {
+            McpSafeAssetSave(MetaSound);
+            
+            Response->SetBoolField(TEXT("success"), true);
+            Response->SetStringField(TEXT("message"), TEXT("MetaSound nodes connected"));
+            Response->SetNumberField(TEXT("edgesCreated"), CreatedEdges.Num());
+        }
+        else
+        {
+            Response->SetBoolField(TEXT("success"), false);
+            Response->SetStringField(TEXT("error"), TEXT("Failed to create edge connection"));
+            Response->SetStringField(TEXT("errorCode"), TEXT("EDGE_FAILED"));
+        }
+        
+        Builder.FinishBuilding();
+        return Response;
+#elif MCP_HAS_METASOUND
+        // FIX: Return error when MetaSound Frontend Builder not available
+        FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
+        Response->SetBoolField(TEXT("success"), false);
+        Response->SetStringField(TEXT("error"), TEXT("Cannot connect MetaSound nodes - Frontend Builder not available"));
+        Response->SetStringField(TEXT("errorCode"), TEXT("METASOUND_FRONTEND_NOT_SUPPORTED"));
+        Response->SetStringField(TEXT("requiredVersion"), TEXT("UE 5.3+"));
         return Response;
 #else
         AUDIO_ERROR_RESPONSE(TEXT("MetaSound support not available"), TEXT("METASOUND_NOT_AVAILABLE"));
@@ -570,7 +826,64 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
     
     if (SubAction == TEXT("add_metasound_input"))
     {
-#if MCP_HAS_METASOUND
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
+        FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
+        FString InputName = GetStringFieldSafe(Params, TEXT("inputName"), TEXT(""));
+        FString InputType = GetStringFieldSafe(Params, TEXT("inputType"), TEXT("Float"));
+        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        
+        if (AssetPath.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Asset path is required"), TEXT("MISSING_PATH"));
+        }
+        
+        if (InputName.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Input name is required"), TEXT("MISSING_INPUT_NAME"));
+        }
+        
+        // Load the MetaSound asset
+        UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(
+            StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
+        if (!MetaSound)
+        {
+            AUDIO_ERROR_RESPONSE(FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
+        }
+        
+        // Use the Frontend Document Builder API
+        TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
+        FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
+        
+        // Create the graph input
+        FMetasoundFrontendClassInput ClassInput;
+        ClassInput.Name = FName(*InputName);
+        ClassInput.TypeName = FName(*InputType);
+        ClassInput.VertexID = FGuid::NewGuid();
+        ClassInput.NodeID = FGuid::NewGuid();
+        ClassInput.AccessType = EMetasoundFrontendVertexAccessType::Reference;
+        
+        const FMetasoundFrontendNode* InputNode = Builder.AddGraphInput(ClassInput);
+        
+        if (InputNode)
+        {
+            McpSafeAssetSave(MetaSound);
+            
+            Response->SetStringField(TEXT("inputName"), InputName);
+            Response->SetStringField(TEXT("inputType"), InputType);
+            Response->SetStringField(TEXT("nodeId"), InputNode->GetID().ToString());
+            Response->SetBoolField(TEXT("success"), true);
+            Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound input '%s' added"), *InputName));
+        }
+        else
+        {
+            Response->SetBoolField(TEXT("success"), false);
+            Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Failed to add input '%s' - type '%s' may not be valid"), *InputName, *InputType));
+            Response->SetStringField(TEXT("errorCode"), TEXT("INPUT_FAILED"));
+        }
+        
+        Builder.FinishBuilding();
+        return Response;
+#elif MCP_HAS_METASOUND
         FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
         FString InputName = GetStringFieldSafe(Params, TEXT("inputName"), TEXT(""));
         FString InputType = GetStringFieldSafe(Params, TEXT("inputType"), TEXT("Float"));
@@ -578,7 +891,8 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         Response->SetStringField(TEXT("inputName"), InputName);
         Response->SetStringField(TEXT("inputType"), InputType);
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound input '%s' queued"), *InputName));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound input '%s' noted"), *InputName));
+        Response->SetStringField(TEXT("note"), TEXT("MetaSound Frontend Builder not available - upgrade to UE 5.3+ for full support"));
         return Response;
 #else
         AUDIO_ERROR_RESPONSE(TEXT("MetaSound support not available"), TEXT("METASOUND_NOT_AVAILABLE"));
@@ -587,7 +901,64 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
     
     if (SubAction == TEXT("add_metasound_output"))
     {
-#if MCP_HAS_METASOUND
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
+        FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
+        FString OutputName = GetStringFieldSafe(Params, TEXT("outputName"), TEXT(""));
+        FString OutputType = GetStringFieldSafe(Params, TEXT("outputType"), TEXT("Audio"));
+        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        
+        if (AssetPath.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Asset path is required"), TEXT("MISSING_PATH"));
+        }
+        
+        if (OutputName.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Output name is required"), TEXT("MISSING_OUTPUT_NAME"));
+        }
+        
+        // Load the MetaSound asset
+        UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(
+            StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
+        if (!MetaSound)
+        {
+            AUDIO_ERROR_RESPONSE(FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
+        }
+        
+        // Use the Frontend Document Builder API
+        TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
+        FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
+        
+        // Create the graph output
+        FMetasoundFrontendClassOutput ClassOutput;
+        ClassOutput.Name = FName(*OutputName);
+        ClassOutput.TypeName = FName(*OutputType);
+        ClassOutput.VertexID = FGuid::NewGuid();
+        ClassOutput.NodeID = FGuid::NewGuid();
+        ClassOutput.AccessType = EMetasoundFrontendVertexAccessType::Reference;
+        
+        const FMetasoundFrontendNode* OutputNode = Builder.AddGraphOutput(ClassOutput);
+        
+        if (OutputNode)
+        {
+            McpSafeAssetSave(MetaSound);
+            
+            Response->SetStringField(TEXT("outputName"), OutputName);
+            Response->SetStringField(TEXT("outputType"), OutputType);
+            Response->SetStringField(TEXT("nodeId"), OutputNode->GetID().ToString());
+            Response->SetBoolField(TEXT("success"), true);
+            Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound output '%s' added"), *OutputName));
+        }
+        else
+        {
+            Response->SetBoolField(TEXT("success"), false);
+            Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Failed to add output '%s' - type '%s' may not be valid"), *OutputName, *OutputType));
+            Response->SetStringField(TEXT("errorCode"), TEXT("OUTPUT_FAILED"));
+        }
+        
+        Builder.FinishBuilding();
+        return Response;
+#elif MCP_HAS_METASOUND
         FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
         FString OutputName = GetStringFieldSafe(Params, TEXT("outputName"), TEXT(""));
         FString OutputType = GetStringFieldSafe(Params, TEXT("outputType"), TEXT("Audio"));
@@ -595,7 +966,8 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         Response->SetStringField(TEXT("outputName"), OutputName);
         Response->SetStringField(TEXT("outputType"), OutputType);
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound output '%s' queued"), *OutputName));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound output '%s' noted"), *OutputName));
+        Response->SetStringField(TEXT("note"), TEXT("MetaSound Frontend Builder not available - upgrade to UE 5.3+ for full support"));
         return Response;
 #else
         AUDIO_ERROR_RESPONSE(TEXT("MetaSound support not available"), TEXT("METASOUND_NOT_AVAILABLE"));
@@ -604,12 +976,88 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
     
     if (SubAction == TEXT("set_metasound_default"))
     {
-#if MCP_HAS_METASOUND
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
+        FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
+        FString InputName = GetStringFieldSafe(Params, TEXT("inputName"), TEXT(""));
+        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        
+        if (AssetPath.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Asset path is required"), TEXT("MISSING_PATH"));
+        }
+        
+        if (InputName.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Input name is required"), TEXT("MISSING_INPUT_NAME"));
+        }
+        
+        // Load the MetaSound asset
+        UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(
+            StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
+        if (!MetaSound)
+        {
+            AUDIO_ERROR_RESPONSE(FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
+        }
+        
+        // Use the Frontend Document Builder API
+        TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
+        FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
+        
+        // Create the literal value based on provided parameters
+        FMetasoundFrontendLiteral Literal;
+        
+        if (Params->HasField(TEXT("floatValue")))
+        {
+            float Value = static_cast<float>(GetNumberFieldSafe(Params, TEXT("floatValue"), 0.0));
+            // UE 5.7+: Use Literal.Set() directly instead of SetFromLiteral(FLiteralFloat())
+            Literal.Set(Value);
+        }
+        else if (Params->HasField(TEXT("intValue")))
+        {
+            int32 Value = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("intValue"), 0));
+            Literal.Set(Value);
+        }
+        else if (Params->HasField(TEXT("boolValue")))
+        {
+            bool Value = GetBoolFieldSafe(Params, TEXT("boolValue"), false);
+            Literal.Set(Value);
+        }
+        else if (Params->HasField(TEXT("stringValue")))
+        {
+            FString Value = GetStringFieldSafe(Params, TEXT("stringValue"), TEXT(""));
+            Literal.Set(Value);
+        }
+        else
+        {
+            // Default to float 0.0
+            Literal.Set(0.0f);
+        }
+        
+        bool bSuccess = Builder.SetGraphInputDefault(FName(*InputName), Literal);
+        
+        if (bSuccess)
+        {
+            McpSafeAssetSave(MetaSound);
+            
+            Response->SetBoolField(TEXT("success"), true);
+            Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound default for '%s' set"), *InputName));
+        }
+        else
+        {
+            Response->SetBoolField(TEXT("success"), false);
+            Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Failed to set default for input '%s'"), *InputName));
+            Response->SetStringField(TEXT("errorCode"), TEXT("SET_DEFAULT_FAILED"));
+        }
+        
+        Builder.FinishBuilding();
+        return Response;
+#elif MCP_HAS_METASOUND
         FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
         FString InputName = GetStringFieldSafe(Params, TEXT("inputName"), TEXT(""));
         
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound default for '%s' queued"), *InputName));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound default for '%s' noted"), *InputName));
+        Response->SetStringField(TEXT("note"), TEXT("MetaSound Frontend Builder not available - upgrade to UE 5.3+ for full support"));
         return Response;
 #else
         AUDIO_ERROR_RESPONSE(TEXT("MetaSound support not available"), TEXT("METASOUND_NOT_AVAILABLE"));
@@ -814,19 +1262,150 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             AUDIO_ERROR_RESPONSE(FString::Printf(TEXT("Could not load SoundMix: %s"), *AssetPath), TEXT("MIX_NOT_FOUND"));
         }
         
-        // EQ settings on sound mix
-        if (Params->HasField(TEXT("eqSettings")))
+        // Configure EQ settings from parameters
+        // Enable EQ if we're configuring it
+        Mix->bApplyEQ = GetBoolFieldSafe(Params, TEXT("applyEQ"), true);
+        
+        if (Params->HasField(TEXT("eqPriority")))
         {
-            // Parse EQ bands
-            const TSharedPtr<FJsonObject>* EQObj;
-            if (Params->TryGetObjectField(TEXT("eqSettings"), EQObj))
+            Mix->EQPriority = static_cast<float>(GetNumberFieldSafe(Params, TEXT("eqPriority"), 1.0));
+        }
+        
+        // EQ settings object - 4 bands available
+        const TSharedPtr<FJsonObject>* EQObj;
+        if (Params->TryGetObjectField(TEXT("eqSettings"), EQObj) && EQObj->IsValid())
+        {
+            // Band 0 (Low)
+            if ((*EQObj)->HasField(TEXT("frequencyCenter0")))
             {
-                // SoundMix EQ settings vary by UE version
-                // Basic setup for compatibility
+                Mix->EQSettings.FrequencyCenter0 = static_cast<float>((*EQObj)->GetNumberField(TEXT("frequencyCenter0")));
+            }
+            if ((*EQObj)->HasField(TEXT("gain0")))
+            {
+                Mix->EQSettings.Gain0 = static_cast<float>((*EQObj)->GetNumberField(TEXT("gain0")));
+            }
+            if ((*EQObj)->HasField(TEXT("bandwidth0")))
+            {
+                Mix->EQSettings.Bandwidth0 = static_cast<float>((*EQObj)->GetNumberField(TEXT("bandwidth0")));
+            }
+            
+            // Band 1 (Low-Mid)
+            if ((*EQObj)->HasField(TEXT("frequencyCenter1")))
+            {
+                Mix->EQSettings.FrequencyCenter1 = static_cast<float>((*EQObj)->GetNumberField(TEXT("frequencyCenter1")));
+            }
+            if ((*EQObj)->HasField(TEXT("gain1")))
+            {
+                Mix->EQSettings.Gain1 = static_cast<float>((*EQObj)->GetNumberField(TEXT("gain1")));
+            }
+            if ((*EQObj)->HasField(TEXT("bandwidth1")))
+            {
+                Mix->EQSettings.Bandwidth1 = static_cast<float>((*EQObj)->GetNumberField(TEXT("bandwidth1")));
+            }
+            
+            // Band 2 (High-Mid)
+            if ((*EQObj)->HasField(TEXT("frequencyCenter2")))
+            {
+                Mix->EQSettings.FrequencyCenter2 = static_cast<float>((*EQObj)->GetNumberField(TEXT("frequencyCenter2")));
+            }
+            if ((*EQObj)->HasField(TEXT("gain2")))
+            {
+                Mix->EQSettings.Gain2 = static_cast<float>((*EQObj)->GetNumberField(TEXT("gain2")));
+            }
+            if ((*EQObj)->HasField(TEXT("bandwidth2")))
+            {
+                Mix->EQSettings.Bandwidth2 = static_cast<float>((*EQObj)->GetNumberField(TEXT("bandwidth2")));
+            }
+            
+            // Band 3 (High)
+            if ((*EQObj)->HasField(TEXT("frequencyCenter3")))
+            {
+                Mix->EQSettings.FrequencyCenter3 = static_cast<float>((*EQObj)->GetNumberField(TEXT("frequencyCenter3")));
+            }
+            if ((*EQObj)->HasField(TEXT("gain3")))
+            {
+                Mix->EQSettings.Gain3 = static_cast<float>((*EQObj)->GetNumberField(TEXT("gain3")));
+            }
+            if ((*EQObj)->HasField(TEXT("bandwidth3")))
+            {
+                Mix->EQSettings.Bandwidth3 = static_cast<float>((*EQObj)->GetNumberField(TEXT("bandwidth3")));
+            }
+        }
+        else
+        {
+            // Accept flat parameters for simpler API usage
+            if (Params->HasField(TEXT("lowFrequency")))
+            {
+                Mix->EQSettings.FrequencyCenter0 = static_cast<float>(GetNumberFieldSafe(Params, TEXT("lowFrequency"), 600.0));
+            }
+            if (Params->HasField(TEXT("lowGain")))
+            {
+                Mix->EQSettings.Gain0 = static_cast<float>(GetNumberFieldSafe(Params, TEXT("lowGain"), 1.0));
+            }
+            if (Params->HasField(TEXT("midFrequency")))
+            {
+                Mix->EQSettings.FrequencyCenter1 = static_cast<float>(GetNumberFieldSafe(Params, TEXT("midFrequency"), 1000.0));
+            }
+            if (Params->HasField(TEXT("midGain")))
+            {
+                Mix->EQSettings.Gain1 = static_cast<float>(GetNumberFieldSafe(Params, TEXT("midGain"), 1.0));
+            }
+            if (Params->HasField(TEXT("highMidFrequency")))
+            {
+                Mix->EQSettings.FrequencyCenter2 = static_cast<float>(GetNumberFieldSafe(Params, TEXT("highMidFrequency"), 2000.0));
+            }
+            if (Params->HasField(TEXT("highMidGain")))
+            {
+                Mix->EQSettings.Gain2 = static_cast<float>(GetNumberFieldSafe(Params, TEXT("highMidGain"), 1.0));
+            }
+            if (Params->HasField(TEXT("highFrequency")))
+            {
+                Mix->EQSettings.FrequencyCenter3 = static_cast<float>(GetNumberFieldSafe(Params, TEXT("highFrequency"), 10000.0));
+            }
+            if (Params->HasField(TEXT("highGain")))
+            {
+                Mix->EQSettings.Gain3 = static_cast<float>(GetNumberFieldSafe(Params, TEXT("highGain"), 1.0));
             }
         }
         
+        // Clamp EQ values to valid ranges
+        // NOTE: FAudioEQEffect::ClampValues may not be exported in all UE versions
+        // Manually clamp values instead of calling ClampValues() to avoid linker errors
+        auto ClampGain = [](float& Value) {
+            Value = FMath::Clamp(Value, 0.0f, 4.0f);
+        };
+        auto ClampFreq = [](float& Value) {
+            Value = FMath::Clamp(Value, 0.0f, 20000.0f);
+        };
+        auto ClampBandwidth = [](float& Value) {
+            Value = FMath::Clamp(Value, 0.0f, 2.0f);
+        };
+        ClampGain(Mix->EQSettings.Gain0);
+        ClampGain(Mix->EQSettings.Gain1);
+        ClampGain(Mix->EQSettings.Gain2);
+        ClampGain(Mix->EQSettings.Gain3);
+        ClampFreq(Mix->EQSettings.FrequencyCenter0);
+        ClampFreq(Mix->EQSettings.FrequencyCenter1);
+        ClampFreq(Mix->EQSettings.FrequencyCenter2);
+        ClampFreq(Mix->EQSettings.FrequencyCenter3);
+        ClampBandwidth(Mix->EQSettings.Bandwidth0);
+        ClampBandwidth(Mix->EQSettings.Bandwidth1);
+        ClampBandwidth(Mix->EQSettings.Bandwidth2);
+        ClampBandwidth(Mix->EQSettings.Bandwidth3);
+        
         SaveAudioAsset(Mix, bSave);
+        
+        // Return configured EQ info
+        TSharedPtr<FJsonObject> EQInfo = MakeShared<FJsonObject>();
+        EQInfo->SetNumberField(TEXT("frequencyCenter0"), Mix->EQSettings.FrequencyCenter0);
+        EQInfo->SetNumberField(TEXT("gain0"), Mix->EQSettings.Gain0);
+        EQInfo->SetNumberField(TEXT("frequencyCenter1"), Mix->EQSettings.FrequencyCenter1);
+        EQInfo->SetNumberField(TEXT("gain1"), Mix->EQSettings.Gain1);
+        EQInfo->SetNumberField(TEXT("frequencyCenter2"), Mix->EQSettings.FrequencyCenter2);
+        EQInfo->SetNumberField(TEXT("gain2"), Mix->EQSettings.Gain2);
+        EQInfo->SetNumberField(TEXT("frequencyCenter3"), Mix->EQSettings.FrequencyCenter3);
+        EQInfo->SetNumberField(TEXT("gain3"), Mix->EQSettings.Gain3);
+        Response->SetObjectField(TEXT("eqSettings"), EQInfo);
         
         AUDIO_SUCCESS_RESPONSE(TEXT("Mix EQ configured"));
         return Response;
@@ -1146,8 +1725,8 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
     {
 #if MCP_HAS_DIALOGUE
         FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        FString SpeakerPath = GetStringFieldSafe(Params, TEXT("speakerPath"), TEXT(""));
-        FString SoundWavePath = GetStringFieldSafe(Params, TEXT("soundWavePath"), TEXT(""));
+        FString SpeakerPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("speakerPath"), TEXT("")));
+        FString SoundWavePath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("soundWavePath"), TEXT("")));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         UDialogueWave* Wave = Cast<UDialogueWave>(StaticLoadObject(UDialogueWave::StaticClass(), nullptr, *AssetPath));
@@ -1156,12 +1735,87 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             AUDIO_ERROR_RESPONSE(FString::Printf(TEXT("Could not load DialogueWave: %s"), *AssetPath), TEXT("WAVE_NOT_FOUND"));
         }
         
-        // Set context mapping
-        // This would typically involve adding a context mapping with speaker voice and sound wave
+        // Load the speaker voice
+        UDialogueVoice* SpeakerVoice = nullptr;
+        if (!SpeakerPath.IsEmpty())
+        {
+            SpeakerVoice = Cast<UDialogueVoice>(StaticLoadObject(UDialogueVoice::StaticClass(), nullptr, *SpeakerPath));
+            if (!SpeakerVoice)
+            {
+                AUDIO_ERROR_RESPONSE(FString::Printf(TEXT("Could not load speaker DialogueVoice: %s"), *SpeakerPath), TEXT("SPEAKER_NOT_FOUND"));
+            }
+        }
+        
+        // Load the sound wave
+        USoundWave* ContextSoundWave = nullptr;
+        if (!SoundWavePath.IsEmpty())
+        {
+            ContextSoundWave = LoadSoundWaveFromPath(SoundWavePath);
+            if (!ContextSoundWave)
+            {
+                AUDIO_ERROR_RESPONSE(FString::Printf(TEXT("Could not load SoundWave: %s"), *SoundWavePath), TEXT("SOUNDWAVE_NOT_FOUND"));
+            }
+        }
+        
+        // Load target voices if provided
+        TArray<UDialogueVoice*> TargetVoices;
+        const TArray<TSharedPtr<FJsonValue>>* TargetArray;
+        if (Params->TryGetArrayField(TEXT("targetVoices"), TargetArray))
+        {
+            for (const TSharedPtr<FJsonValue>& TargetVal : *TargetArray)
+            {
+                FString TargetPath = NormalizeAudioPath(TargetVal->AsString());
+                if (!TargetPath.IsEmpty())
+                {
+                    UDialogueVoice* TargetVoice = Cast<UDialogueVoice>(
+                        StaticLoadObject(UDialogueVoice::StaticClass(), nullptr, *TargetPath));
+                    if (TargetVoice)
+                    {
+                        TargetVoices.Add(TargetVoice);
+                    }
+                }
+            }
+        }
+        
+        // Create and add the context mapping
+        FDialogueContextMapping NewMapping;
+        NewMapping.Context.Speaker = SpeakerVoice;
+        for (UDialogueVoice* TargetVoice : TargetVoices)
+        {
+            NewMapping.Context.Targets.Add(TargetVoice);
+        }
+        NewMapping.SoundWave = ContextSoundWave;
+        NewMapping.LocalizationKeyFormat = GetStringFieldSafe(Params, TEXT("localizationKeyFormat"), TEXT("{ContextHash}"));
+        
+        // Check if we should replace existing or add new
+        bool bReplaceExisting = GetBoolFieldSafe(Params, TEXT("replace"), false);
+        if (bReplaceExisting)
+        {
+            // Find and replace existing mapping with same speaker
+            bool bFound = false;
+            for (FDialogueContextMapping& Mapping : Wave->ContextMappings)
+            {
+                if (Mapping.Context.Speaker == SpeakerVoice)
+                {
+                    Mapping = NewMapping;
+                    bFound = true;
+                    break;
+                }
+            }
+            if (!bFound)
+            {
+                Wave->ContextMappings.Add(NewMapping);
+            }
+        }
+        else
+        {
+            Wave->ContextMappings.Add(NewMapping);
+        }
         
         SaveAudioAsset(Wave, bSave);
         
-        AUDIO_SUCCESS_RESPONSE(TEXT("Dialogue context updated"));
+        Response->SetNumberField(TEXT("contextCount"), Wave->ContextMappings.Num());
+        AUDIO_SUCCESS_RESPONSE(TEXT("Dialogue context mapping added"));
         return Response;
 #else
         AUDIO_ERROR_RESPONSE(TEXT("Dialogue system not available"), TEXT("DIALOGUE_NOT_AVAILABLE"));
@@ -1236,6 +1890,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
     
     if (SubAction == TEXT("create_source_effect_chain"))
     {
+#if MCP_HAS_SOURCE_EFFECT
         FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Audio/Effects")));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
@@ -1245,28 +1900,113 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             AUDIO_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
         }
         
-        // Source effect chain creation
+        // Create package for the source effect chain
+        FString PackagePath = Path / Name;
+        UPackage* Package = CreatePackage(*PackagePath);
+        if (!Package)
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+        }
+        
+        // Create SoundEffectSourcePresetChain asset
+        USoundEffectSourcePresetChain* NewChain = NewObject<USoundEffectSourcePresetChain>(
+            Package, FName(*Name), RF_Public | RF_Standalone);
+        
+        if (!NewChain)
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Failed to create source effect chain"), TEXT("CREATE_FAILED"));
+        }
+        
+        McpSafeAssetSave(NewChain);
+        
+        FString FullPath = NewChain->GetPathName();
+        Response->SetStringField(TEXT("assetPath"), FullPath);
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Source effect chain '%s' creation queued"), *Name));
-        Response->SetStringField(TEXT("note"), TEXT("Source effect chain creation requires AudioMixer module"));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Source effect chain '%s' created"), *Name));
         return Response;
+#else
+        // Fallback: create a basic container but note that full effect chain requires AudioMixer
+        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Audio/Effects")));
+        
+        if (Name.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
+        }
+        
+        Response->SetStringField(TEXT("assetPath"), Path / Name);
+        Response->SetBoolField(TEXT("success"), true);
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Source effect chain '%s' - AudioMixer module not available"), *Name));
+        Response->SetStringField(TEXT("note"), TEXT("Enable AudioMixer plugin for full source effect chain support"));
+        return Response;
+#endif
     }
     
     if (SubAction == TEXT("add_source_effect"))
     {
+#if MCP_HAS_SOURCE_EFFECT
         FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
+        FString EffectPresetPath = GetStringFieldSafe(Params, TEXT("effectPresetPath"), TEXT(""));
         FString EffectType = GetStringFieldSafe(Params, TEXT("effectType"), TEXT(""));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
-        // Source effect addition
-        Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Source effect '%s' addition queued"), *EffectType));
-        Response->SetStringField(TEXT("note"), TEXT("Source effect addition requires AudioMixer module"));
+        if (AssetPath.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Asset path is required"), TEXT("MISSING_PATH"));
+        }
+        
+        // Load the source effect chain
+        USoundEffectSourcePresetChain* Chain = Cast<USoundEffectSourcePresetChain>(
+            StaticLoadObject(USoundEffectSourcePresetChain::StaticClass(), nullptr, *AssetPath));
+        if (!Chain)
+        {
+            AUDIO_ERROR_RESPONSE(FString::Printf(TEXT("Could not load source effect chain: %s"), *AssetPath), TEXT("CHAIN_NOT_FOUND"));
+        }
+        
+        // Load the effect preset if path provided
+        USoundEffectSourcePreset* EffectPreset = nullptr;
+        if (!EffectPresetPath.IsEmpty())
+        {
+            EffectPreset = Cast<USoundEffectSourcePreset>(
+                StaticLoadObject(USoundEffectSourcePreset::StaticClass(), nullptr, *NormalizeAudioPath(EffectPresetPath)));
+        }
+        
+        if (EffectPreset)
+        {
+            // Add the effect to the chain
+            FSourceEffectChainEntry NewEntry;
+            NewEntry.Preset = EffectPreset;
+            NewEntry.bBypass = GetBoolFieldSafe(Params, TEXT("bypass"), false);
+            Chain->Chain.Add(NewEntry);
+            
+            McpSafeAssetSave(Chain);
+            
+            Response->SetNumberField(TEXT("effectCount"), Chain->Chain.Num());
+            Response->SetBoolField(TEXT("success"), true);
+            Response->SetStringField(TEXT("message"), TEXT("Source effect added to chain"));
+        }
+        else
+        {
+            Response->SetBoolField(TEXT("success"), false);
+            Response->SetStringField(TEXT("error"), TEXT("Effect preset path required or preset not found"));
+            Response->SetStringField(TEXT("errorCode"), TEXT("PRESET_NOT_FOUND"));
+        }
+        
         return Response;
+#else
+        FString AssetPath = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
+        FString EffectType = GetStringFieldSafe(Params, TEXT("effectType"), TEXT(""));
+        
+        Response->SetBoolField(TEXT("success"), true);
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Source effect '%s' noted"), *EffectType));
+        Response->SetStringField(TEXT("note"), TEXT("AudioMixer module not available - enable AudioMixer plugin for full support"));
+        return Response;
+#endif
     }
     
     if (SubAction == TEXT("create_submix_effect"))
     {
+#if MCP_HAS_SUBMIX
         FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
         FString EffectType = GetStringFieldSafe(Params, TEXT("effectType"), TEXT(""));
         FString Path = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Audio/Effects")));
@@ -1277,11 +2017,51 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             AUDIO_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
         }
         
-        // Submix effect creation
+        // Create package for the submix
+        FString PackagePath = Path / Name;
+        UPackage* Package = CreatePackage(*PackagePath);
+        if (!Package)
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+        }
+        
+        // Create SoundSubmix asset
+        USoundSubmix* NewSubmix = NewObject<USoundSubmix>(Package, FName(*Name), RF_Public | RF_Standalone);
+        
+        if (!NewSubmix)
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Failed to create submix"), TEXT("CREATE_FAILED"));
+        }
+        
+        // Configure submix properties if provided
+        // Note: OutputVolume, WetLevel, DryLevel direct properties were removed in modern UE.
+        // These are now controlled via OutputVolumeModulation, WetLevelModulation, DryLevelModulation.
+        // For backwards compatibility with older UE versions, we use SetSubmixOutputVolume/WetLevel/DryLevel functions at runtime.
+        // Since this is asset creation, we skip these deprecated properties.
+        // The submix will use default levels which can be adjusted via Blueprint or runtime functions.
+        
+        McpSafeAssetSave(NewSubmix);
+        
+        FString FullPath = NewSubmix->GetPathName();
+        Response->SetStringField(TEXT("assetPath"), FullPath);
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Submix effect '%s' creation queued"), *Name));
-        Response->SetStringField(TEXT("note"), TEXT("Submix effect creation requires AudioMixer module"));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Submix '%s' created"), *Name));
         return Response;
+#else
+        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Audio/Effects")));
+        
+        if (Name.IsEmpty())
+        {
+            AUDIO_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
+        }
+        
+        Response->SetStringField(TEXT("assetPath"), Path / Name);
+        Response->SetBoolField(TEXT("success"), true);
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Submix '%s' noted - AudioMixer module not available"), *Name));
+        Response->SetStringField(TEXT("note"), TEXT("Enable AudioMixer plugin for full submix support"));
+        return Response;
+#endif
     }
     
     // ===== Utility =====

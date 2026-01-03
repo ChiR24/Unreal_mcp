@@ -28,7 +28,7 @@ function normalizePathFields(args: Record<string, unknown>): Record<string, unkn
   const result = { ...args };
   const pathFields = [
     'levelPath', 'sublevelPath', 'levelAssetPath', 'hlodLayerPath', 'templateLevel',
-    'actorPath', 'parentLevel'
+    'actorPath', 'parentLevel', 'dataLayerAssetPath'
   ];
 
   for (const field of pathFields) {

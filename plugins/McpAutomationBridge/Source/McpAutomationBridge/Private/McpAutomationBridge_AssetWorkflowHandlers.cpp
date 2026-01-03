@@ -4,6 +4,7 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Misc/EngineVersionComparison.h"
 #include "Misc/ScopeExit.h"
 
 #include "HAL/PlatformFilemanager.h"
@@ -99,6 +100,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 #include "AssetToolsModule.h"
 #include "AssetViewUtils.h"
 #include "EditorAssetLibrary.h"
+#include "Engine/StaticMesh.h"
 #include "Factories/MaterialFactoryNew.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "FileHelpers.h"
@@ -111,9 +113,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 #include "Materials/MaterialExpression.h"
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionStaticSwitchParameter.h"
+#include "Materials/MaterialExpressionTextureSample.h"
 #include "Materials/MaterialExpressionTextureSampleParameter2D.h"
 #include "Materials/MaterialExpressionVectorParameter.h"
 #include "Materials/MaterialInstanceConstant.h"
+#include "MaterialShared.h"
 #include "Misc/FileHelper.h"
 #include "ObjectTools.h"
 #include "SourceControlHelpers.h"
@@ -2572,25 +2576,51 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
 
   TSharedPtr<FJsonObject> Stats = MakeShared<FJsonObject>();
 
-  // Basic stats
-  Stats->SetStringField(
-      TEXT("shadingModel"),
-      TEXT("DefaultLit")); // Placeholder, would need to query material model
-  Stats->SetNumberField(TEXT("instructionCount"), 0); // Placeholder
-  Stats->SetNumberField(TEXT("samplerCount"), 0);     // Placeholder
-
-  // Try to get actual stats if possible
-  // Accessing shader map stats is complex and version dependent.
-  // For now, we return success with basic info to satisfy the test which checks
-  // for success. The test expects: { instructionCount: number, samplerCount:
-  // number, shadingModel: string }
-
-  // We can get ShadingModel from the material
+  // Get actual shading model from the material
+  FString ShadingModelStr = TEXT("Unknown");
   if (UMaterial *BaseMat = Material->GetMaterial()) {
-    // Enum to string conversion for shading model
-    // This is just a rough mapping
-    Stats->SetStringField(TEXT("shadingModel"), TEXT("DefaultLit"));
+    FMaterialShadingModelField ShadingModels = BaseMat->GetShadingModels();
+    // Check shading models using HasShadingModel - prioritize common ones
+    if (ShadingModels.HasShadingModel(MSM_Unlit)) {
+      ShadingModelStr = TEXT("Unlit");
+    } else if (ShadingModels.HasShadingModel(MSM_DefaultLit)) {
+      ShadingModelStr = TEXT("DefaultLit");
+    } else if (ShadingModels.HasShadingModel(MSM_Subsurface)) {
+      ShadingModelStr = TEXT("Subsurface");
+    } else if (ShadingModels.HasShadingModel(MSM_SubsurfaceProfile)) {
+      ShadingModelStr = TEXT("SubsurfaceProfile");
+    } else if (ShadingModels.HasShadingModel(MSM_ClearCoat)) {
+      ShadingModelStr = TEXT("ClearCoat");
+    } else if (ShadingModels.HasShadingModel(MSM_TwoSidedFoliage)) {
+      ShadingModelStr = TEXT("TwoSidedFoliage");
+    } else if (ShadingModels.HasShadingModel(MSM_Hair)) {
+      ShadingModelStr = TEXT("Hair");
+    } else if (ShadingModels.HasShadingModel(MSM_Cloth)) {
+      ShadingModelStr = TEXT("Cloth");
+    } else if (ShadingModels.HasShadingModel(MSM_Eye)) {
+      ShadingModelStr = TEXT("Eye");
+    } else if (ShadingModels.HasShadingModel(MSM_PreintegratedSkin)) {
+      ShadingModelStr = TEXT("PreintegratedSkin");
+    }
   }
+  Stats->SetStringField(TEXT("shadingModel"), ShadingModelStr);
+
+  // Get instruction count from material resource
+  // Note: GetMaxNumInstructionsForShader takes FShaderType* in UE 5.6, EShaderFrequency in some earlier versions
+  // Skip this in 5.6 as there's no clean way to get a FShaderType* for the pixel shader
+  int32 InstructionCount = -1; // Not easily available in this UE version
+  Stats->SetNumberField(TEXT("instructionCount"), InstructionCount);
+
+  // Count texture samplers used in the material
+  int32 SamplerCount = 0;
+  if (UMaterial *BaseMat = Material->GetMaterial()) {
+    for (UMaterialExpression *Expr : BaseMat->GetExpressions()) {
+      if (Expr && Expr->IsA<UMaterialExpressionTextureSample>()) {
+        SamplerCount++;
+      }
+    }
+  }
+  Stats->SetNumberField(TEXT("samplerCount"), SamplerCount);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
@@ -2656,7 +2686,29 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
 
         Mesh->Modify();
         Mesh->SetNumSourceModels(NumLODs);
+
+        // Configure LOD reduction settings with progressive reduction
+        for (int32 LODIndex = 1; LODIndex < NumLODs; LODIndex++) {
+          FStaticMeshSourceModel &SourceModel = Mesh->GetSourceModel(LODIndex);
+          FMeshReductionSettings &ReductionSettings =
+              SourceModel.ReductionSettings;
+
+          // Progressive reduction: 50%, 25%, 12.5%...
+          float ReductionPercent =
+              1.0f / FMath::Pow(2.0f, static_cast<float>(LODIndex));
+          ReductionSettings.PercentTriangles = ReductionPercent;
+          ReductionSettings.PercentVertices = ReductionPercent;
+
+          // Enable reduction for this LOD level
+          SourceModel.BuildSettings.bRecomputeNormals = false;
+          SourceModel.BuildSettings.bRecomputeTangents = false;
+          SourceModel.BuildSettings.bUseMikkTSpace = true;
+        }
+
+        // Build the mesh with new LOD settings
+        Mesh->Build();
         Mesh->PostEditChange();
+        McpSafeAssetSave(Mesh);
 
         SuccessCount++;
       }
@@ -2666,7 +2718,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetNumberField(TEXT("processed"), SuccessCount);
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
-                                      TEXT("LOD generation completed (stub)"),
+                                      TEXT("LOD generation completed"),
                                       Resp, FString());
   });
 

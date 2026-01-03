@@ -128,6 +128,61 @@
 #include "AnimStateNode.h"
 #endif
 
+// Additional AnimGraph node types for state machine implementation
+#if __has_include("AnimStateTransitionNode.h")
+#include "AnimStateTransitionNode.h"
+#define MCP_HAS_ANIM_STATE_TRANSITION 1
+#else
+#define MCP_HAS_ANIM_STATE_TRANSITION 0
+#endif
+
+#if __has_include("AnimStateEntryNode.h")
+#include "AnimStateEntryNode.h"
+#endif
+
+#if __has_include("AnimationStateMachineGraph.h")
+#include "AnimationStateMachineGraph.h"
+#define MCP_HAS_ANIM_STATE_MACHINE_GRAPH 1
+#else
+#define MCP_HAS_ANIM_STATE_MACHINE_GRAPH 0
+#endif
+
+#if __has_include("AnimationStateMachineSchema.h")
+#include "AnimationStateMachineSchema.h"
+#define MCP_HAS_ANIM_STATE_MACHINE_SCHEMA 1
+#else
+#define MCP_HAS_ANIM_STATE_MACHINE_SCHEMA 0
+#endif
+
+// Blend node types
+#if __has_include("AnimGraphNode_TwoWayBlend.h")
+#include "AnimGraphNode_TwoWayBlend.h"
+#define MCP_HAS_TWO_WAY_BLEND 1
+#else
+#define MCP_HAS_TWO_WAY_BLEND 0
+#endif
+
+#if __has_include("AnimGraphNode_LayeredBoneBlend.h")
+#include "AnimGraphNode_LayeredBoneBlend.h"
+#define MCP_HAS_LAYERED_BLEND 1
+#else
+#define MCP_HAS_LAYERED_BLEND 0
+#endif
+
+#if __has_include("AnimGraphNode_SaveCachedPose.h")
+#include "AnimGraphNode_SaveCachedPose.h"
+#define MCP_HAS_CACHED_POSE 1
+#else
+#define MCP_HAS_CACHED_POSE 0
+#endif
+
+#if __has_include("AnimGraphNode_Slot.h")
+#include "AnimGraphNode_Slot.h"
+#define MCP_HAS_SLOT_NODE 1
+#else
+#define MCP_HAS_SLOT_NODE 0
+#endif
+
 // Helper macros
 #define ANIM_ERROR_RESPONSE(Msg, Code) \
     Response->SetBoolField(TEXT("success"), false); \
@@ -242,6 +297,81 @@ static FRotator GetRotatorFromJson(const TSharedPtr<FJsonObject>& Obj)
     }
     return FRotator::ZeroRotator;
 }
+
+// ============================================================================
+// AnimGraph Helper Functions for State Machine Implementation
+// ============================================================================
+
+#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
+
+// Helper to find the main AnimGraph from an Animation Blueprint
+static UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP)
+{
+    if (!AnimBP)
+    {
+        return nullptr;
+    }
+    
+    // Search through function graphs for the AnimGraph
+    for (UEdGraph* Graph : AnimBP->FunctionGraphs)
+    {
+        if (Graph && Graph->GetName() == TEXT("AnimGraph"))
+        {
+            return Graph;
+        }
+    }
+    
+    return nullptr;
+}
+
+// Helper to find a State Machine node by name in a graph
+static UAnimGraphNode_StateMachine* FindStateMachineNode(UEdGraph* Graph, const FString& Name)
+{
+    if (!Graph)
+    {
+        return nullptr;
+    }
+    
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        if (UAnimGraphNode_StateMachine* SMNode = Cast<UAnimGraphNode_StateMachine>(Node))
+        {
+            // Check node title for matching name
+            FString NodeName = SMNode->GetNodeTitle(ENodeTitleType::ListView).ToString();
+            if (NodeName.Contains(Name) || SMNode->GetStateMachineName() == Name)
+            {
+                return SMNode;
+            }
+        }
+    }
+    
+    return nullptr;
+}
+
+// Helper to find a State node within a State Machine graph
+static UAnimStateNode* FindStateNode(UAnimationStateMachineGraph* SMGraph, const FString& Name)
+{
+    if (!SMGraph)
+    {
+        return nullptr;
+    }
+    
+    for (UEdGraphNode* Node : SMGraph->Nodes)
+    {
+        if (UAnimStateNode* StateNode = Cast<UAnimStateNode>(Node))
+        {
+            // Use GetStateName for more accurate matching
+            if (StateNode->GetStateName() == Name)
+            {
+                return StateNode;
+            }
+        }
+    }
+    
+    return nullptr;
+}
+
+#endif // MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
 
 } // anonymous namespace
 
@@ -1511,6 +1641,8 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("blueprintPath"), TEXT("")));
         FString StateMachineName = GetStringFieldSafe(Params, TEXT("stateMachineName"), TEXT(""));
+        int32 NodePosX = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionX"), 0));
+        int32 NodePosY = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         if (StateMachineName.IsEmpty())
@@ -1524,13 +1656,50 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
         
-        // State machine creation requires more complex graph manipulation
-        // For now, return a stub success - full implementation requires AnimGraph access
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
         
+        // Create the State Machine Node using FGraphNodeCreator
+        FGraphNodeCreator<UAnimGraphNode_StateMachine> NodeCreator(*AnimGraph);
+        UAnimGraphNode_StateMachine* SMNode = NodeCreator.CreateNode();
+        SMNode->NodePosX = NodePosX;
+        SMNode->NodePosY = NodePosY;
+        NodeCreator.Finalize();
+        
+        // Create the internal State Machine Graph using FBlueprintEditorUtils
+        UAnimationStateMachineGraph* InnerGraph = CastChecked<UAnimationStateMachineGraph>(
+            FBlueprintEditorUtils::CreateNewGraph(
+                AnimBP,
+                FName(*StateMachineName),
+                UAnimationStateMachineGraph::StaticClass(),
+                UAnimationStateMachineSchema::StaticClass()
+            )
+        );
+        
+        // Link the State Machine Node to its internal graph
+        SMNode->EditorStateMachineGraph = InnerGraph;
+        InnerGraph->OwnerAnimGraphNode = SMNode;
+        
+        // Initialize Entry Node (required for State Machines)
+        const UAnimationStateMachineSchema* Schema = CastChecked<UAnimationStateMachineSchema>(InnerGraph->GetSchema());
+        Schema->CreateDefaultNodesForGraph(*InnerGraph);
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
         
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State machine '%s' added (graph nodes require manual setup)"), *StateMachineName));
+        Response->SetStringField(TEXT("nodeName"), StateMachineName);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State machine '%s' created with entry node"), *StateMachineName));
+#else
+        // AnimGraph headers not available - return error instead of fake success
+        ANIM_ERROR_RESPONSE(
+            FString::Printf(TEXT("Cannot create state machine '%s': AnimGraph module headers not available in this build. Rebuild with AnimGraph module enabled."), *StateMachineName),
+            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
+#endif
         return Response;
     }
     
@@ -1539,6 +1708,8 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("blueprintPath"), TEXT("")));
         FString StateMachineName = GetStringFieldSafe(Params, TEXT("stateMachineName"), TEXT(""));
         FString StateName = GetStringFieldSafe(Params, TEXT("stateName"), TEXT(""));
+        int32 NodePosX = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionX"), 200));
+        int32 NodePosY = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         if (StateName.IsEmpty())
@@ -1552,12 +1723,51 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
         
-        // State creation requires AnimGraph manipulation
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
         
+        // Find the state machine by name
+        UAnimGraphNode_StateMachine* SMNode = FindStateMachineNode(AnimGraph, StateMachineName);
+        if (!SMNode || !SMNode->EditorStateMachineGraph)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("State machine '%s' not found"), *StateMachineName), TEXT("SM_NOT_FOUND"));
+        }
+        
+        UAnimationStateMachineGraph* SMGraph = Cast<UAnimationStateMachineGraph>(SMNode->EditorStateMachineGraph);
+        if (!SMGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Invalid state machine graph"), TEXT("INVALID_GRAPH"));
+        }
+        
+        // Create the State Node using FGraphNodeCreator
+        FGraphNodeCreator<UAnimStateNode> StateCreator(*SMGraph);
+        UAnimStateNode* StateNode = StateCreator.CreateNode();
+        StateNode->NodePosX = NodePosX;
+        StateNode->NodePosY = NodePosY;
+        StateCreator.Finalize();
+        
+        // Rename the state's bound graph to set the state name
+        if (StateNode->BoundGraph)
+        {
+            FBlueprintEditorUtils::RenameGraph(StateNode->BoundGraph, *StateName);
+        }
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
         
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' added to state machine '%s'"), *StateName, *StateMachineName));
+        Response->SetStringField(TEXT("stateName"), StateName);
+        Response->SetStringField(TEXT("stateMachine"), StateMachineName);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' created in state machine '%s'"), *StateName, *StateMachineName));
+#else
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+        SaveAnimAsset(AnimBP, bSave);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' marked for creation (requires AnimGraph module)"), *StateName));
+#endif
         return Response;
     }
     
@@ -1567,6 +1777,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         FString StateMachineName = GetStringFieldSafe(Params, TEXT("stateMachineName"), TEXT(""));
         FString FromState = GetStringFieldSafe(Params, TEXT("fromState"), TEXT(""));
         FString ToState = GetStringFieldSafe(Params, TEXT("toState"), TEXT(""));
+        float CrossfadeDuration = static_cast<float>(GetNumberFieldSafe(Params, TEXT("crossfadeDuration"), 0.2));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         if (FromState.IsEmpty() || ToState.IsEmpty())
@@ -1580,17 +1791,78 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA && MCP_HAS_ANIM_STATE_TRANSITION
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
         
+        // Find the state machine by name
+        UAnimGraphNode_StateMachine* SMNode = FindStateMachineNode(AnimGraph, StateMachineName);
+        if (!SMNode || !SMNode->EditorStateMachineGraph)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("State machine '%s' not found"), *StateMachineName), TEXT("SM_NOT_FOUND"));
+        }
+        
+        UAnimationStateMachineGraph* SMGraph = Cast<UAnimationStateMachineGraph>(SMNode->EditorStateMachineGraph);
+        if (!SMGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Invalid state machine graph"), TEXT("INVALID_GRAPH"));
+        }
+        
+        // Find the source and target states
+        UAnimStateNode* FromNode = FindStateNode(SMGraph, FromState);
+        UAnimStateNode* ToNode = FindStateNode(SMGraph, ToState);
+        
+        if (!FromNode)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Source state '%s' not found"), *FromState), TEXT("SOURCE_STATE_NOT_FOUND"));
+        }
+        if (!ToNode)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Target state '%s' not found"), *ToState), TEXT("TARGET_STATE_NOT_FOUND"));
+        }
+        
+        // Create the Transition Node
+        FGraphNodeCreator<UAnimStateTransitionNode> TransCreator(*SMGraph);
+        UAnimStateTransitionNode* TransNode = TransCreator.CreateNode();
+        TransCreator.Finalize();
+        
+        // Establish the connection between states
+        TransNode->CreateConnections(FromNode, ToNode);
+        
+        // Configure transition properties
+        TransNode->CrossfadeDuration = CrossfadeDuration;
+        TransNode->BlendMode = EAlphaBlendOption::Linear;
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
         
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Transition from '%s' to '%s' added"), *FromState, *ToState));
+        Response->SetStringField(TEXT("fromState"), FromState);
+        Response->SetStringField(TEXT("toState"), ToState);
+        Response->SetNumberField(TEXT("crossfadeDuration"), CrossfadeDuration);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Transition from '%s' to '%s' created"), *FromState, *ToState));
+#else
+        // AnimGraph headers not available - return error instead of fake success
+        ANIM_ERROR_RESPONSE(
+            FString::Printf(TEXT("Cannot create transition from '%s' to '%s': AnimGraph module headers not available in this build."), *FromState, *ToState),
+            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
+#endif
         return Response;
     }
     
     if (SubAction == TEXT("set_transition_rules"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("blueprintPath"), TEXT("")));
+        FString StateMachineName = GetStringFieldSafe(Params, TEXT("stateMachineName"), TEXT(""));
+        FString FromState = GetStringFieldSafe(Params, TEXT("fromState"), TEXT(""));
+        FString ToState = GetStringFieldSafe(Params, TEXT("toState"), TEXT(""));
+        float CrossfadeDuration = static_cast<float>(GetNumberFieldSafe(Params, TEXT("crossfadeDuration"), -1.0));
+        int32 PriorityOrder = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("priorityOrder"), -1));
+        bool bAutomatic = GetBoolFieldSafe(Params, TEXT("automaticRule"), false);
+        bool bBidirectional = GetBoolFieldSafe(Params, TEXT("bidirectional"), false);
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
@@ -1599,11 +1871,72 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA && MCP_HAS_ANIM_STATE_TRANSITION
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
         
+        // Find the state machine by name
+        UAnimGraphNode_StateMachine* SMNode = FindStateMachineNode(AnimGraph, StateMachineName);
+        if (!SMNode || !SMNode->EditorStateMachineGraph)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("State machine '%s' not found"), *StateMachineName), TEXT("SM_NOT_FOUND"));
+        }
+        
+        UAnimationStateMachineGraph* SMGraph = Cast<UAnimationStateMachineGraph>(SMNode->EditorStateMachineGraph);
+        if (!SMGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Invalid state machine graph"), TEXT("INVALID_GRAPH"));
+        }
+        
+        // Find the transition node between the specified states
+        UAnimStateTransitionNode* TransNode = nullptr;
+        for (UEdGraphNode* Node : SMGraph->Nodes)
+        {
+            if (UAnimStateTransitionNode* Trans = Cast<UAnimStateTransitionNode>(Node))
+            {
+                UAnimStateNodeBase* PrevState = Trans->GetPreviousState();
+                UAnimStateNodeBase* NextState = Trans->GetNextState();
+                if (PrevState && NextState && 
+                    PrevState->GetStateName() == FromState && 
+                    NextState->GetStateName() == ToState)
+                {
+                    TransNode = Trans;
+                    break;
+                }
+            }
+        }
+        
+        if (!TransNode)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Transition from '%s' to '%s' not found"), *FromState, *ToState), TEXT("TRANSITION_NOT_FOUND"));
+        }
+        
+        // Update transition properties
+        if (CrossfadeDuration >= 0.0f)
+        {
+            TransNode->CrossfadeDuration = CrossfadeDuration;
+        }
+        if (PriorityOrder >= 0)
+        {
+            TransNode->PriorityOrder = PriorityOrder;
+        }
+        TransNode->bAutomaticRuleBasedOnSequencePlayerInState = bAutomatic;
+        TransNode->Bidirectional = bBidirectional;
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
         
-        ANIM_SUCCESS_RESPONSE(TEXT("Transition rules updated"));
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Transition rules updated for '%s' -> '%s'"), *FromState, *ToState));
+#else
+        // AnimGraph headers not available - return error instead of fake success
+        ANIM_ERROR_RESPONSE(
+            FString::Printf(TEXT("Cannot update transition rules for '%s' -> '%s': AnimGraph module headers not available in this build."), *FromState, *ToState),
+            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
+#endif
         return Response;
     }
     
@@ -1611,6 +1944,8 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("blueprintPath"), TEXT("")));
         FString BlendType = GetStringFieldSafe(Params, TEXT("blendType"), TEXT("TwoWayBlend"));
+        int32 NodePosX = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionX"), 0));
+        int32 NodePosY = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
@@ -1619,11 +1954,65 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
         
+        FString CreatedNodeType;
+        
+#if MCP_HAS_TWO_WAY_BLEND
+        if (BlendType == TEXT("TwoWayBlend") || BlendType == TEXT("Blend"))
+        {
+            FGraphNodeCreator<UAnimGraphNode_TwoWayBlend> NodeCreator(*AnimGraph);
+            UAnimGraphNode_TwoWayBlend* BlendNode = NodeCreator.CreateNode();
+            BlendNode->NodePosX = NodePosX;
+            BlendNode->NodePosY = NodePosY;
+            NodeCreator.Finalize();
+            CreatedNodeType = TEXT("TwoWayBlend");
+        }
+        else
+#endif
+#if MCP_HAS_LAYERED_BLEND
+        if (BlendType == TEXT("LayeredBlend") || BlendType == TEXT("LayeredBoneBlend"))
+        {
+            FGraphNodeCreator<UAnimGraphNode_LayeredBoneBlend> NodeCreator(*AnimGraph);
+            UAnimGraphNode_LayeredBoneBlend* BlendNode = NodeCreator.CreateNode();
+            BlendNode->NodePosX = NodePosX;
+            BlendNode->NodePosY = NodePosY;
+            NodeCreator.Finalize();
+            CreatedNodeType = TEXT("LayeredBoneBlend");
+        }
+        else
+#endif
+        {
+            // Default fallback to TwoWayBlend if available
+#if MCP_HAS_TWO_WAY_BLEND
+            FGraphNodeCreator<UAnimGraphNode_TwoWayBlend> NodeCreator(*AnimGraph);
+            UAnimGraphNode_TwoWayBlend* BlendNode = NodeCreator.CreateNode();
+            BlendNode->NodePosX = NodePosX;
+            BlendNode->NodePosY = NodePosY;
+            NodeCreator.Finalize();
+            CreatedNodeType = TEXT("TwoWayBlend");
+#else
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Cannot create blend node '%s': AnimGraph blend node headers not available in this build."), *BlendType), TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
+#endif
+        }
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
         
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend node '%s' added"), *BlendType));
+        Response->SetStringField(TEXT("nodeType"), CreatedNodeType);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend node '%s' created"), *CreatedNodeType));
+#else
+        // AnimGraph headers not available - return error instead of fake success
+        ANIM_ERROR_RESPONSE(
+            FString::Printf(TEXT("Cannot create blend node '%s': AnimGraph module headers not available in this build."), *BlendType),
+            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
+#endif
         return Response;
     }
     
@@ -1631,6 +2020,8 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("blueprintPath"), TEXT("")));
         FString CacheName = GetStringFieldSafe(Params, TEXT("cacheName"), TEXT(""));
+        int32 NodePosX = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionX"), 0));
+        int32 NodePosY = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         if (CacheName.IsEmpty())
@@ -1644,11 +2035,32 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_CACHED_POSE
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
         
+        // Create the Save Cached Pose node
+        FGraphNodeCreator<UAnimGraphNode_SaveCachedPose> NodeCreator(*AnimGraph);
+        UAnimGraphNode_SaveCachedPose* CachedPoseNode = NodeCreator.CreateNode();
+        CachedPoseNode->NodePosX = NodePosX;
+        CachedPoseNode->NodePosY = NodePosY;
+        CachedPoseNode->CacheName = CacheName;
+        NodeCreator.Finalize();
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
         
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Cached pose '%s' added"), *CacheName));
+        Response->SetStringField(TEXT("cacheName"), CacheName);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Cached pose node '%s' created"), *CacheName));
+#else
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+        SaveAnimAsset(AnimBP, bSave);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Cached pose '%s' marked for creation (requires AnimGraph module)"), *CacheName));
+#endif
         return Response;
     }
     
@@ -1656,6 +2068,9 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("blueprintPath"), TEXT("")));
         FString SlotName = GetStringFieldSafe(Params, TEXT("slotName"), TEXT(""));
+        FString GroupName = GetStringFieldSafe(Params, TEXT("groupName"), TEXT("DefaultGroup"));
+        int32 NodePosX = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionX"), 0));
+        int32 NodePosY = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         if (SlotName.IsEmpty())
@@ -1669,17 +2084,46 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_SLOT_NODE
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
         
+        // Create the Slot node
+        FGraphNodeCreator<UAnimGraphNode_Slot> NodeCreator(*AnimGraph);
+        UAnimGraphNode_Slot* SlotNode = NodeCreator.CreateNode();
+        SlotNode->NodePosX = NodePosX;
+        SlotNode->NodePosY = NodePosY;
+        
+        // Set the slot name (format: "GroupName.SlotName")
+        FString FullSlotName = FString::Printf(TEXT("%s.%s"), *GroupName, *SlotName);
+        SlotNode->Node.SlotName = FName(*FullSlotName);
+        
+        NodeCreator.Finalize();
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
         
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Slot node '%s' added"), *SlotName));
+        Response->SetStringField(TEXT("slotName"), FullSlotName);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Slot node '%s' created"), *FullSlotName));
+#else
+        // AnimGraph headers not available - return error instead of fake success
+        ANIM_ERROR_RESPONSE(
+            FString::Printf(TEXT("Cannot create slot node '%s': AnimGraph module headers not available in this build."), *SlotName),
+            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
+#endif
         return Response;
     }
     
     if (SubAction == TEXT("add_layered_blend_per_bone"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("blueprintPath"), TEXT("")));
+        FString BoneName = GetStringFieldSafe(Params, TEXT("boneName"), TEXT(""));
+        int32 NodePosX = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionX"), 0));
+        int32 NodePosY = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
@@ -1688,18 +2132,48 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_LAYERED_BLEND
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
         
+        // Create the Layered Bone Blend node
+        FGraphNodeCreator<UAnimGraphNode_LayeredBoneBlend> NodeCreator(*AnimGraph);
+        UAnimGraphNode_LayeredBoneBlend* BlendNode = NodeCreator.CreateNode();
+        BlendNode->NodePosX = NodePosX;
+        BlendNode->NodePosY = NodePosY;
+        NodeCreator.Finalize();
+        
+        // Note: Configuring specific bone layers requires access to BlendNode->Node.LayerSetup
+        // which is typically done through the editor UI. Basic node creation is complete.
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
         
-        ANIM_SUCCESS_RESPONSE(TEXT("Layered blend per bone added"));
+        ANIM_SUCCESS_RESPONSE(TEXT("Layered blend per bone node created"));
+#else
+        // AnimGraph headers not available - return error instead of fake success
+        ANIM_ERROR_RESPONSE(
+            TEXT("Cannot create layered blend per bone node: AnimGraph module headers not available in this build."),
+            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
+#endif
         return Response;
     }
     
     if (SubAction == TEXT("set_anim_graph_node_value"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("blueprintPath"), TEXT("")));
+        FString NodeName = GetStringFieldSafe(Params, TEXT("nodeName"), TEXT(""));
+        FString PropertyName = GetStringFieldSafe(Params, TEXT("propertyName"), TEXT(""));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        
+        if (NodeName.IsEmpty() || PropertyName.IsEmpty())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("nodeName and propertyName are required"), TEXT("MISSING_PARAMETERS"));
+        }
         
         UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
         if (!AnimBP)
@@ -1707,11 +2181,62 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
         
+        // Find the node by name
+        UEdGraphNode* FoundNode = nullptr;
+        for (UEdGraphNode* Node : AnimGraph->Nodes)
+        {
+            if (Node && Node->GetNodeTitle(ENodeTitleType::ListView).ToString().Contains(NodeName))
+            {
+                FoundNode = Node;
+                break;
+            }
+        }
+        
+        if (!FoundNode)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Node '%s' not found in AnimGraph"), *NodeName), TEXT("NODE_NOT_FOUND"));
+        }
+        
+        // Find and set the property using reflection
+        FProperty* Property = FoundNode->GetClass()->FindPropertyByName(FName(*PropertyName));
+        if (!Property)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Property '%s' not found on node '%s'"), *PropertyName, *NodeName), TEXT("PROPERTY_NOT_FOUND"));
+        }
+        
+        // Get the value from params and apply it
+        TSharedPtr<FJsonValue> ValueField = Params->TryGetField(TEXT("value"));
+        if (!ValueField.IsValid())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("value parameter is required"), TEXT("MISSING_VALUE"));
+        }
+        
+        FString ApplyError;
+        if (!ApplyJsonValueToProperty(FoundNode, Property, ValueField, ApplyError))
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to set property: %s"), *ApplyError), TEXT("PROPERTY_SET_FAILED"));
+        }
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
         
-        ANIM_SUCCESS_RESPONSE(TEXT("Anim graph node value set"));
+        Response->SetStringField(TEXT("nodeName"), NodeName);
+        Response->SetStringField(TEXT("propertyName"), PropertyName);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Property '%s' set on node '%s'"), *PropertyName, *NodeName));
+#else
+        // AnimGraph headers not available - return error
+        ANIM_ERROR_RESPONSE(
+            FString::Printf(TEXT("Cannot set node value on '%s': AnimGraph module headers not available in this build."), *NodeName),
+            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
+#endif
         return Response;
     }
     

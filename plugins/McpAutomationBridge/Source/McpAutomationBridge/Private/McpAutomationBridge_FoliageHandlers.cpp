@@ -616,8 +616,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
         FString::Printf(TEXT("/Game/Foliage/%s"), *FoliageTypePath);
   }
 
-  // Parse transforms -> locations (optional rotation/scale ignored for now)
-  TArray<FVector> Locations;
+  // Parse transforms with full location, rotation, and scale support
+  struct FFoliageTransformData {
+    FVector Location = FVector::ZeroVector;
+    FRotator Rotation = FRotator::ZeroRotator;
+    FVector Scale = FVector::OneVector;
+  };
+  TArray<FFoliageTransformData> ParsedTransforms;
+
   const TArray<TSharedPtr<FJsonValue>> *Transforms = nullptr;
   if (Payload->TryGetArrayField(TEXT("transforms"), Transforms) && Transforms) {
     for (const TSharedPtr<FJsonValue> &V : *Transforms) {
@@ -626,29 +632,75 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
       const TSharedPtr<FJsonObject> *TObj = nullptr;
       if (!V->TryGetObject(TObj) || !TObj)
         continue;
+
+      FFoliageTransformData TransformData;
+
+      // Parse location (object or array format)
       const TSharedPtr<FJsonObject> *LocObj = nullptr;
       if ((*TObj)->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
-        double X = 0, Y = 0, Z = 0;
-        (*LocObj)->TryGetNumberField(TEXT("x"), X);
-        (*LocObj)->TryGetNumberField(TEXT("y"), Y);
-        (*LocObj)->TryGetNumberField(TEXT("z"), Z);
-        Locations.Add(FVector(X, Y, Z));
+        (*LocObj)->TryGetNumberField(TEXT("x"), TransformData.Location.X);
+        (*LocObj)->TryGetNumberField(TEXT("y"), TransformData.Location.Y);
+        (*LocObj)->TryGetNumberField(TEXT("z"), TransformData.Location.Z);
       } else {
         // Accept location as array [x,y,z]
         const TArray<TSharedPtr<FJsonValue>> *LocArr = nullptr;
         if ((*TObj)->TryGetArrayField(TEXT("location"), LocArr) && LocArr &&
             LocArr->Num() >= 3) {
-          double X = (*LocArr)[0]->AsNumber();
-          double Y = (*LocArr)[1]->AsNumber();
-          double Z = (*LocArr)[2]->AsNumber();
-          Locations.Add(FVector(X, Y, Z));
+          TransformData.Location.X = (*LocArr)[0]->AsNumber();
+          TransformData.Location.Y = (*LocArr)[1]->AsNumber();
+          TransformData.Location.Z = (*LocArr)[2]->AsNumber();
+        } else {
+          continue; // Skip transforms without valid location
         }
       }
+
+      // Parse rotation if provided (object format)
+      const TSharedPtr<FJsonObject> *RotObj = nullptr;
+      if ((*TObj)->TryGetObjectField(TEXT("rotation"), RotObj) && RotObj) {
+        double Pitch = 0, Yaw = 0, Roll = 0;
+        (*RotObj)->TryGetNumberField(TEXT("pitch"), Pitch);
+        (*RotObj)->TryGetNumberField(TEXT("yaw"), Yaw);
+        (*RotObj)->TryGetNumberField(TEXT("roll"), Roll);
+        TransformData.Rotation = FRotator(Pitch, Yaw, Roll);
+      } else {
+        // Accept rotation as array [pitch, yaw, roll]
+        const TArray<TSharedPtr<FJsonValue>> *RotArr = nullptr;
+        if ((*TObj)->TryGetArrayField(TEXT("rotation"), RotArr) && RotArr &&
+            RotArr->Num() >= 3) {
+          TransformData.Rotation.Pitch = (*RotArr)[0]->AsNumber();
+          TransformData.Rotation.Yaw = (*RotArr)[1]->AsNumber();
+          TransformData.Rotation.Roll = (*RotArr)[2]->AsNumber();
+        }
+      }
+
+      // Parse scale if provided (object, array, or uniform scalar)
+      const TSharedPtr<FJsonObject> *ScaleObj = nullptr;
+      if ((*TObj)->TryGetObjectField(TEXT("scale"), ScaleObj) && ScaleObj) {
+        (*ScaleObj)->TryGetNumberField(TEXT("x"), TransformData.Scale.X);
+        (*ScaleObj)->TryGetNumberField(TEXT("y"), TransformData.Scale.Y);
+        (*ScaleObj)->TryGetNumberField(TEXT("z"), TransformData.Scale.Z);
+      } else {
+        const TArray<TSharedPtr<FJsonValue>> *ScaleArr = nullptr;
+        if ((*TObj)->TryGetArrayField(TEXT("scale"), ScaleArr) && ScaleArr &&
+            ScaleArr->Num() >= 3) {
+          TransformData.Scale.X = (*ScaleArr)[0]->AsNumber();
+          TransformData.Scale.Y = (*ScaleArr)[1]->AsNumber();
+          TransformData.Scale.Z = (*ScaleArr)[2]->AsNumber();
+        } else {
+          // Check for uniformScale scalar
+          double UniformScale = 1.0;
+          if ((*TObj)->TryGetNumberField(TEXT("uniformScale"), UniformScale)) {
+            TransformData.Scale = FVector(UniformScale);
+          }
+        }
+      }
+
+      ParsedTransforms.Add(TransformData);
     }
   }
 
-  if (Locations.Num() == 0) {
-    // Fallback to 'locations' if provided
+  if (ParsedTransforms.Num() == 0) {
+    // Fallback to 'locations' if provided (legacy support, default rotation/scale)
     const TArray<TSharedPtr<FJsonValue>> *LocationsArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("locations"), LocationsArray) &&
         LocationsArray) {
@@ -656,11 +708,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
         if (Val.IsValid() && Val->Type == EJson::Object) {
           const TSharedPtr<FJsonObject> *Obj = nullptr;
           if (Val->TryGetObject(Obj) && Obj) {
-            double X = 0, Y = 0, Z = 0;
-            (*Obj)->TryGetNumberField(TEXT("x"), X);
-            (*Obj)->TryGetNumberField(TEXT("y"), Y);
-            (*Obj)->TryGetNumberField(TEXT("z"), Z);
-            Locations.Add(FVector(X, Y, Z));
+            FFoliageTransformData TransformData;
+            (*Obj)->TryGetNumberField(TEXT("x"), TransformData.Location.X);
+            (*Obj)->TryGetNumberField(TEXT("y"), TransformData.Location.Y);
+            (*Obj)->TryGetNumberField(TEXT("z"), TransformData.Location.Z);
+            ParsedTransforms.Add(TransformData);
           }
         }
       }
@@ -699,11 +751,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
   }
 
   int32 Added = 0;
-  for (const FVector &Location : Locations) {
+  for (const FFoliageTransformData &TransformData : ParsedTransforms) {
     FFoliageInstance Instance;
-    Instance.Location = Location;
-    Instance.Rotation = FRotator::ZeroRotator;
-    Instance.DrawScale3D = FVector3f(1.0f);
+    Instance.Location = TransformData.Location;
+    Instance.Rotation = TransformData.Rotation;
+    Instance.DrawScale3D = FVector3f(TransformData.Scale);
 
     if (FFoliageInfo *Info = IFA->FindInfo(FoliageType)) {
       Info->AddInstance(FoliageType, Instance, nullptr);
@@ -899,10 +951,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
     return true;
   }
   McpSafeAssetSave(Spawner);
-  Volume->SetActorScale3D(
-      Size / 200.0f); // Volume default size is 200x200x200? No, usually 100.
-                      // BrushComponent default is 200.
-  // Let's assume standard brush size.
+  // AProceduralFoliageVolume uses ABrush with default extent of 100 units (half-size)
+  // Scale = desired_size / (default_brush_extent * 2) = desired_size / 200
+  // For a 1000x1000x1000 volume with Size=(1000,1000,1000), scale = 5.0
+  Volume->SetActorScale3D(Size / 200.0f);
 
   if (UProceduralFoliageComponent *ProcComp = Volume->ProceduralComponent) {
     ProcComp->FoliageSpawner = Spawner;

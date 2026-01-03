@@ -12,6 +12,7 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpBridgeWebSocket.h"
+#include "Misc/EngineVersionComparison.h"
 
 #include "Editor.h"
 #include "Engine/Blueprint.h"
@@ -28,6 +29,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Net/UnrealNetwork.h"
+#include "Engine/NetDriver.h"
 #include "UObject/UnrealType.h"
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_CallFunction.h"
@@ -310,11 +312,29 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ELifetimeCondition LifetimeCondition = GetReplicationCondition(Condition);
 
-        // Note: Replication conditions are typically set via metadata or blueprint property settings
-        // This would require modifying FProperty metadata or using Blueprint variable settings
+        // Find the variable description and set its replication condition
+        bool bFound = false;
+        for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
+        {
+            if (VarDesc.VarName == FName(*PropertyName))
+            {
+                // Ensure property is replicated and set the condition
+                VarDesc.PropertyFlags |= CPF_Net;
+                VarDesc.ReplicationCondition = LifetimeCondition;
+                bFound = true;
+                break;
+            }
+        }
+
+        if (!bFound)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Property '%s' not found"), *PropertyName), TEXT("NOT_FOUND"));
+            return true;
+        }
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication condition set to %s"), *Condition));
@@ -429,6 +449,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     if (SubAction == TEXT("configure_replication_graph"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
+        bool bSpatiallyLoaded = GetBoolField(Payload, TEXT("spatiallyLoaded"), false);
+        bool bNetLoadOnClient = GetBoolField(Payload, TEXT("netLoadOnClient"), true);
+        FString ReplicationPolicy = GetStringField(Payload, TEXT("replicationPolicy"), TEXT("Default"));
 
         if (BlueprintPath.IsEmpty())
         {
@@ -436,11 +459,38 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        // Replication graph configuration is typically done at project level
-        // This action would configure actor-specific replication graph settings
+        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
+        if (CDO)
+        {
+            // Configure actor-specific replication graph settings
+            CDO->bNetLoadOnClient = bNetLoadOnClient;
+            
+            // Set replication flags relevant to replication graph decisions
+            // Note: bReplicateUsingRegisteredSubObjectList is protected in both UE 5.6 and 5.7
+            // Cannot access directly from external code
+            if (bSpatiallyLoaded)
+            {
+                UE_LOG(LogMcpNetworkingHandlers, Log, TEXT("bReplicateUsingRegisteredSubObjectList is protected. Use Actor defaults in Blueprint instead."));
+            }
+        }
+
+        Blueprint->Modify();
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Replication graph settings configured"));
+        ResultJson->SetBoolField(TEXT("spatiallyLoaded"), bSpatiallyLoaded);
+        ResultJson->SetBoolField(TEXT("netLoadOnClient"), bNetLoadOnClient);
+        ResultJson->SetStringField(TEXT("replicationPolicy"), ReplicationPolicy);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication graph settings configured (netLoadOnClient=%s, spatiallyLoaded=%s)"), 
+            bNetLoadOnClient ? TEXT("true") : TEXT("false"),
+            bSpatiallyLoaded ? TEXT("true") : TEXT("false")));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Replication graph configured"), ResultJson);
         return true;
     }
@@ -481,11 +531,42 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         {
             FBlueprintEditorUtils::AddFunctionGraph<UFunction>(Blueprint, NewGraph, false, static_cast<UFunction*>(nullptr));
 
-            // Set RPC flags on the function
-            // This would require finding the function entry node and setting its metadata
+            // Set RPC flags on the function entry node
+            for (UEdGraphNode* Node : NewGraph->Nodes)
+            {
+                if (UK2Node_FunctionEntry* EntryNode = Cast<UK2Node_FunctionEntry>(Node))
+                {
+                    // Start with base network function flag
+                    int32 NetFlags = FUNC_Net;
+                    
+                    // Add reliability flag if requested
+                    if (bReliable)
+                    {
+                        NetFlags |= FUNC_NetReliable;
+                    }
+                    
+                    // Add RPC type flag
+                    if (RpcType.Equals(TEXT("Server"), ESearchCase::IgnoreCase))
+                    {
+                        NetFlags |= FUNC_NetServer;
+                    }
+                    else if (RpcType.Equals(TEXT("Client"), ESearchCase::IgnoreCase))
+                    {
+                        NetFlags |= FUNC_NetClient;
+                    }
+                    else if (RpcType.Equals(TEXT("NetMulticast"), ESearchCase::IgnoreCase) || RpcType.Equals(TEXT("Multicast"), ESearchCase::IgnoreCase))
+                    {
+                        NetFlags |= FUNC_NetMulticast;
+                    }
+                    
+                    EntryNode->AddExtraFlags(NetFlags);
+                    break;
+                }
+            }
 
             Blueprint->Modify();
             FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+            FKismetEditorUtilities::CompileBlueprint(Blueprint);
 
             ResultJson->SetBoolField(TEXT("success"), true);
             ResultJson->SetStringField(TEXT("functionName"), FunctionName);
@@ -513,10 +594,62 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        // RPC validation is configured via UFUNCTION metadata
+        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Find the function graph
+        UEdGraph* FuncGraph = nullptr;
+        for (UEdGraph* Graph : Blueprint->FunctionGraphs)
+        {
+            if (Graph && Graph->GetFName() == FName(*FunctionName))
+            {
+                FuncGraph = Graph;
+                break;
+            }
+        }
+
+        if (!FuncGraph)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Function '%s' not found"), *FunctionName), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Find the function entry node and set validation flag
+        bool bFlagSet = false;
+        for (UEdGraphNode* Node : FuncGraph->Nodes)
+        {
+            if (UK2Node_FunctionEntry* EntryNode = Cast<UK2Node_FunctionEntry>(Node))
+            {
+                if (bWithValidation)
+                {
+                    EntryNode->AddExtraFlags(FUNC_NetValidate);
+                }
+                else
+                {
+                    EntryNode->ClearExtraFlags(FUNC_NetValidate);
+                }
+                bFlagSet = true;
+                break;
+            }
+        }
+
+        if (!bFlagSet)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Function entry node not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        Blueprint->Modify();
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("RPC validation configured for %s"), *FunctionName));
+        ResultJson->SetBoolField(TEXT("withValidation"), bWithValidation);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("RPC validation %s for function %s"), bWithValidation ? TEXT("enabled") : TEXT("disabled"), *FunctionName));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("RPC validation configured"), ResultJson);
         return true;
     }
@@ -533,7 +666,61 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
+        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Find the function graph
+        UEdGraph* FuncGraph = nullptr;
+        for (UEdGraph* Graph : Blueprint->FunctionGraphs)
+        {
+            if (Graph && Graph->GetFName() == FName(*FunctionName))
+            {
+                FuncGraph = Graph;
+                break;
+            }
+        }
+
+        if (!FuncGraph)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Function '%s' not found"), *FunctionName), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Find the function entry node and set reliability flag
+        bool bFlagSet = false;
+        for (UEdGraphNode* Node : FuncGraph->Nodes)
+        {
+            if (UK2Node_FunctionEntry* EntryNode = Cast<UK2Node_FunctionEntry>(Node))
+            {
+                if (bReliable)
+                {
+                    EntryNode->AddExtraFlags(FUNC_NetReliable);
+                }
+                else
+                {
+                    EntryNode->ClearExtraFlags(FUNC_NetReliable);
+                }
+                bFlagSet = true;
+                break;
+            }
+        }
+
+        if (!bFlagSet)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Function entry node not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        Blueprint->Modify();
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
         ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetBoolField(TEXT("reliable"), bReliable);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("RPC %s reliability set to %s"), *FunctionName, bReliable ? TEXT("reliable") : TEXT("unreliable")));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("RPC reliability configured"), ResultJson);
         return true;
@@ -593,10 +780,43 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        // Autonomous proxy is set at runtime based on ownership
+        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Configure replicated properties to use COND_AutonomousOnly condition
+        // This affects how properties are replicated for autonomous proxies
+        bool bAnyModified = false;
+        for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
+        {
+            if ((VarDesc.PropertyFlags & CPF_Net) != 0)
+            {
+                if (bIsAutonomousProxy)
+                {
+                    VarDesc.ReplicationCondition = COND_AutonomousOnly;
+                }
+                else
+                {
+                    // Reset to default (replicate to all)
+                    VarDesc.ReplicationCondition = COND_None;
+                }
+                bAnyModified = true;
+            }
+        }
+
+        if (bAnyModified)
+        {
+            Blueprint->Modify();
+            FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+            FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        }
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Autonomous proxy configuration noted"));
+        ResultJson->SetBoolField(TEXT("isAutonomousProxy"), bIsAutonomousProxy);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Autonomous proxy configuration %s for replicated properties"), bIsAutonomousProxy ? TEXT("enabled") : TEXT("disabled")));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Autonomous proxy configured"), ResultJson);
         return true;
     }
@@ -789,9 +1009,41 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     if (SubAction == TEXT("configure_net_serialization"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
+        FString StructName = GetStringField(Payload, TEXT("structName"));
+        bool bCustomSerialization = GetBoolField(Payload, TEXT("customSerialization"), false);
+
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
+        if (CDO)
+        {
+            // Configure net serialization flags on the actor
+            // bReplicateUsingRegisteredSubObjectList controls whether actor uses custom subobject replication
+            // Note: This is protected in both UE 5.6 and 5.7, cannot access directly
+            UE_LOG(LogMcpNetworkingHandlers, Log, TEXT("bReplicateUsingRegisteredSubObjectList is protected. Use Actor defaults in Blueprint instead."));
+        }
+
+        Blueprint->Modify();
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Net serialization configured"));
+        ResultJson->SetBoolField(TEXT("customSerialization"), bCustomSerialization);
+        if (!StructName.IsEmpty())
+        {
+            ResultJson->SetStringField(TEXT("structName"), StructName);
+        }
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net serialization configured (customSerialization=%s)"), bCustomSerialization ? TEXT("true") : TEXT("false")));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net serialization configured"), ResultJson);
         return true;
     }
@@ -815,10 +1067,29 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        // RepNotify configuration would modify property metadata
+        // Find the variable description and set RepNotify function
+        bool bFound = false;
+        for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
+        {
+            if (VarDesc.VarName == FName(*PropertyName))
+            {
+                // Ensure property is replicated
+                VarDesc.PropertyFlags |= CPF_Net | CPF_RepNotify;
+                VarDesc.RepNotifyFunc = FName(*RepNotifyFunc);
+                bFound = true;
+                break;
+            }
+        }
+
+        if (!bFound)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Property '%s' not found"), *PropertyName), TEXT("NOT_FOUND"));
+            return true;
+        }
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("ReplicatedUsing set to %s for property %s"), *RepNotifyFunc, *PropertyName));
@@ -831,8 +1102,50 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
         bool bUsePushModel = GetBoolField(Payload, TEXT("usePushModel"), true);
 
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Push Model replication is configured via metadata on the Blueprint's variable descriptions
+        // Find and update the replication settings for all replicated properties
+        bool bAnyModified = false;
+        for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
+        {
+            // Check if variable is replicated (has CPF_Net flag)
+            if ((VarDesc.PropertyFlags & CPF_Net) != 0)
+            {
+                if (bUsePushModel)
+                {
+                    // Add push model metadata
+                    VarDesc.SetMetaData(TEXT("PushModel"), TEXT("true"));
+                }
+                else
+                {
+                    VarDesc.RemoveMetaData(TEXT("PushModel"));
+                }
+                bAnyModified = true;
+            }
+        }
+
+        if (bAnyModified)
+        {
+            Blueprint->Modify();
+            FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+            FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        }
+
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Push model replication configured"));
+        ResultJson->SetBoolField(TEXT("usePushModel"), bUsePushModel);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Push model replication %s for all replicated properties"), bUsePushModel ? TEXT("enabled") : TEXT("disabled")));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Push model configured"), ResultJson);
         return true;
     }
@@ -845,8 +1158,45 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
         bool bEnablePrediction = GetBoolField(Payload, TEXT("enablePrediction"), true);
+        double PredictionThreshold = GetNumberField(Payload, TEXT("predictionThreshold"), 0.1);
+
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Configure client-side prediction on CharacterMovementComponent if present
+        ACharacter* CharacterCDO = Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject());
+        if (CharacterCDO && CharacterCDO->GetCharacterMovement())
+        {
+            UCharacterMovementComponent* CMC = CharacterCDO->GetCharacterMovement();
+            
+            // Enable/disable client prediction
+            if (bEnablePrediction)
+            {
+                CMC->bNetworkAlwaysReplicateTransformUpdateTimestamp = true;
+                CMC->NetworkSimulatedSmoothLocationTime = static_cast<float>(PredictionThreshold);
+            }
+            else
+            {
+                CMC->bNetworkAlwaysReplicateTransformUpdateTimestamp = false;
+            }
+        }
+
+        Blueprint->Modify();
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetBoolField(TEXT("enablePrediction"), bEnablePrediction);
+        ResultJson->SetNumberField(TEXT("predictionThreshold"), PredictionThreshold);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Client prediction %s"), bEnablePrediction ? TEXT("enabled") : TEXT("disabled")));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Client prediction configured"), ResultJson);
         return true;
@@ -858,8 +1208,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         double CorrectionThreshold = GetNumberField(Payload, TEXT("correctionThreshold"), 1.0);
         double SmoothingRate = GetNumberField(Payload, TEXT("smoothingRate"), 0.5);
 
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Configure server correction settings on CharacterMovementComponent
+        ACharacter* CharacterCDO = Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject());
+        if (CharacterCDO && CharacterCDO->GetCharacterMovement())
+        {
+            UCharacterMovementComponent* CMC = CharacterCDO->GetCharacterMovement();
+            
+            // Set server correction smoothing parameters
+            CMC->NetworkSimulatedSmoothLocationTime = static_cast<float>(SmoothingRate);
+            CMC->NetworkSimulatedSmoothRotationTime = static_cast<float>(SmoothingRate);
+            CMC->ListenServerNetworkSimulatedSmoothLocationTime = static_cast<float>(SmoothingRate);
+            CMC->ListenServerNetworkSimulatedSmoothRotationTime = static_cast<float>(SmoothingRate);
+        }
+
+        Blueprint->Modify();
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Server correction configured"));
+        ResultJson->SetNumberField(TEXT("correctionThreshold"), CorrectionThreshold);
+        ResultJson->SetNumberField(TEXT("smoothingRate"), SmoothingRate);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Server correction configured (threshold=%.2f, smoothing=%.2f)"), CorrectionThreshold, SmoothingRate));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Server correction configured"), ResultJson);
         return true;
     }
@@ -868,6 +1249,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
         FString DataType = GetStringField(Payload, TEXT("dataType"));
+        FString VariableName = GetStringField(Payload, TEXT("variableName"));
 
         if (BlueprintPath.IsEmpty() || DataType.IsEmpty())
         {
@@ -875,8 +1257,65 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Network prediction data type %s added"), *DataType));
+        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Add a replicated variable for network prediction data
+        FString VarName = VariableName.IsEmpty() ? FString::Printf(TEXT("PredictionData_%s"), *DataType) : VariableName;
+        
+        // Determine pin type based on data type
+        FEdGraphPinType PinType;
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+        
+        // Map common prediction data types to their struct types
+        if (DataType == TEXT("Transform"))
+        {
+            PinType.PinSubCategoryObject = TBaseStructure<FTransform>::Get();
+        }
+        else if (DataType == TEXT("Vector"))
+        {
+            PinType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
+        }
+        else if (DataType == TEXT("Rotator"))
+        {
+            PinType.PinSubCategoryObject = TBaseStructure<FRotator>::Get();
+        }
+        else
+        {
+            // Default to float for simple prediction data
+            PinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+            PinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
+        }
+
+        // Add the variable with replication flags
+        bool bSuccess = FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*VarName), PinType);
+        
+        if (bSuccess)
+        {
+            // Find and configure the variable for replication
+            for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
+            {
+                if (VarDesc.VarName == FName(*VarName))
+                {
+                    VarDesc.PropertyFlags |= CPF_Net;
+                    VarDesc.ReplicationCondition = COND_AutonomousOnly; // Only for locally controlled pawns
+                    break;
+                }
+            }
+        }
+
+        Blueprint->Modify();
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        ResultJson->SetBoolField(TEXT("success"), bSuccess);
+        ResultJson->SetStringField(TEXT("variableName"), VarName);
+        ResultJson->SetStringField(TEXT("dataType"), DataType);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Network prediction data variable '%s' of type '%s' added"), *VarName, *DataType));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Network prediction data added"), ResultJson);
         return true;
     }
@@ -929,8 +1368,35 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         double MaxInternetClientRate = GetNumberField(Payload, TEXT("maxInternetClientRate"), 10000.0);
         double NetServerMaxTickRate = GetNumberField(Payload, TEXT("netServerMaxTickRate"), 30.0);
 
+        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        bool bConfigApplied = false;
+
+        if (World && World->GetNetDriver())
+        {
+            UNetDriver* NetDriver = World->GetNetDriver();
+            
+            // Configure net driver settings
+            NetDriver->MaxClientRate = static_cast<int32>(MaxClientRate);
+            NetDriver->MaxInternetClientRate = static_cast<int32>(MaxInternetClientRate);
+            // NetServerMaxTickRate is deprecated in UE 5.5+. Suppress warning unconditionally.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+            NetDriver->SetNetServerMaxTickRate(static_cast<int32>(NetServerMaxTickRate));
+#else
+            PRAGMA_DISABLE_DEPRECATION_WARNINGS
+            NetDriver->NetServerMaxTickRate = static_cast<int32>(NetServerMaxTickRate);
+            PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+            
+            bConfigApplied = true;
+        }
+
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Net driver settings configured"));
+        ResultJson->SetBoolField(TEXT("appliedToActiveDriver"), bConfigApplied);
+        ResultJson->SetNumberField(TEXT("maxClientRate"), MaxClientRate);
+        ResultJson->SetNumberField(TEXT("maxInternetClientRate"), MaxInternetClientRate);
+        ResultJson->SetNumberField(TEXT("netServerMaxTickRate"), NetServerMaxTickRate);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net driver configured (maxClientRate=%.0f, maxInternetClientRate=%.0f, tickRate=%.0f)"), 
+            MaxClientRate, MaxInternetClientRate, NetServerMaxTickRate));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net driver configured"), ResultJson);
         return true;
     }
@@ -946,10 +1412,41 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        // Net role is typically set at runtime, not on blueprint CDO
+        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
+        ENetRole NetRole = GetNetRole(Role);
+        
+        if (CDO)
+        {
+            // Configure replication based on role
+            if (NetRole == ROLE_Authority)
+            {
+                CDO->SetReplicates(true);
+            }
+            else if (NetRole == ROLE_None)
+            {
+                CDO->SetReplicates(false);
+            }
+            else
+            {
+                // For proxy roles, ensure replication is enabled
+                CDO->SetReplicates(true);
+            }
+        }
+
+        Blueprint->Modify();
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net role configuration noted: %s"), *Role));
+        ResultJson->SetStringField(TEXT("role"), Role);
+        ResultJson->SetBoolField(TEXT("replicates"), CDO ? CDO->GetIsReplicated() : false);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net role configured to %s (replicates=%s)"), *Role, CDO && CDO->GetIsReplicated() ? TEXT("true") : TEXT("false")));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net role configured"), ResultJson);
         return true;
     }

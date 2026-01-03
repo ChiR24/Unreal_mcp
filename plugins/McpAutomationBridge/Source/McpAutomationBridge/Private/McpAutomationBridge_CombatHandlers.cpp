@@ -26,11 +26,13 @@
 #include "Components/SphereComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/SceneComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/SkeletalMesh.h"
 #include "Particles/ParticleSystem.h"
 #include "Sound/SoundCue.h"
 #include "Materials/Material.h"
+#include "Animation/AnimMontage.h"
 #include "NiagaraSystem.h"
 #include "NiagaraComponent.h"
 #endif
@@ -139,6 +141,72 @@ static FVector GetVectorFromJsonCombat(const TSharedPtr<FJsonObject>& Obj)
         GetNumberFieldCombat(Obj, TEXT("z"), 0.0)
     );
 }
+
+// Helper to add a Blueprint variable with a specific type
+static bool AddBlueprintVariable(UBlueprint* Blueprint, const FName& VarName, const FEdGraphPinType& PinType)
+{
+    if (!Blueprint)
+    {
+        return false;
+    }
+    
+    // Check if variable already exists
+    for (const FBPVariableDescription& Var : Blueprint->NewVariables)
+    {
+        if (Var.VarName == VarName)
+        {
+            return true; // Already exists
+        }
+    }
+    
+    FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarName, PinType);
+    return true;
+}
+
+// Helper to create pin types
+static FEdGraphPinType MakeIntPinType()
+{
+    FEdGraphPinType PinType;
+    PinType.PinCategory = UEdGraphSchema_K2::PC_Int;
+    return PinType;
+}
+
+static FEdGraphPinType MakeFloatPinType()
+{
+    FEdGraphPinType PinType;
+    PinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+    PinType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
+    return PinType;
+}
+
+static FEdGraphPinType MakeBoolPinType()
+{
+    FEdGraphPinType PinType;
+    PinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+    return PinType;
+}
+
+static FEdGraphPinType MakeStringPinType()
+{
+    FEdGraphPinType PinType;
+    PinType.PinCategory = UEdGraphSchema_K2::PC_String;
+    return PinType;
+}
+
+static FEdGraphPinType MakeNamePinType()
+{
+    FEdGraphPinType PinType;
+    PinType.PinCategory = UEdGraphSchema_K2::PC_Name;
+    return PinType;
+}
+
+static FEdGraphPinType MakeObjectPinType(UClass* ObjectClass)
+{
+    FEdGraphPinType PinType;
+    PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+    PinType.PinSubCategoryObject = ObjectClass;
+    return PinType;
+}
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
@@ -217,38 +285,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double Spread = GetNumberFieldCombat(Payload, TEXT("spread"), 2.0);
 
         // Apply weapon stats as Blueprint variables using FBlueprintEditorUtils
-        // Add float variables for each stat
-        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("BaseDamage"), FEdGraphPinType(UEdGraphSchema_K2::PC_Float, NAME_None, nullptr, EPinContainerType::None, false, FEdGraphTerminalType()));
-        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("FireRate"), FEdGraphPinType(UEdGraphSchema_K2::PC_Float, NAME_None, nullptr, EPinContainerType::None, false, FEdGraphTerminalType()));
-        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("Range"), FEdGraphPinType(UEdGraphSchema_K2::PC_Float, NAME_None, nullptr, EPinContainerType::None, false, FEdGraphTerminalType()));
-        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("Spread"), FEdGraphPinType(UEdGraphSchema_K2::PC_Float, NAME_None, nullptr, EPinContainerType::None, false, FEdGraphTerminalType()));
+        AddBlueprintVariable(Blueprint, TEXT("BaseDamage"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("FireRate"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("Range"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("Spread"), MakeFloatPinType());
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
         
         // Set default values for the variables using CDO
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
-            if (AActor* CDO = Cast<AActor>(BPGC->GetDefaultObject()))
+            if (UObject* CDO = BPGC->GetDefaultObject())
             {
                 // Set via reflection
-                if (FFloatProperty* DamageProp = FindFProperty<FFloatProperty>(BPGC, TEXT("BaseDamage")))
+                if (FDoubleProperty* DamageProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("BaseDamage")))
                 {
-                    DamageProp->SetPropertyValue_InContainer(CDO, static_cast<float>(BaseDamage));
+                    DamageProp->SetPropertyValue_InContainer(CDO, BaseDamage);
                 }
-                if (FFloatProperty* RateProp = FindFProperty<FFloatProperty>(BPGC, TEXT("FireRate")))
+                if (FDoubleProperty* RateProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("FireRate")))
                 {
-                    RateProp->SetPropertyValue_InContainer(CDO, static_cast<float>(FireRate));
+                    RateProp->SetPropertyValue_InContainer(CDO, FireRate);
                 }
-                if (FFloatProperty* RangeProp = FindFProperty<FFloatProperty>(BPGC, TEXT("Range")))
+                if (FDoubleProperty* RangeProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("Range")))
                 {
-                    RangeProp->SetPropertyValue_InContainer(CDO, static_cast<float>(Range));
+                    RangeProp->SetPropertyValue_InContainer(CDO, Range);
                 }
-                if (FFloatProperty* SpreadProp = FindFProperty<FFloatProperty>(BPGC, TEXT("Spread")))
+                if (FDoubleProperty* SpreadProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("Spread")))
                 {
-                    SpreadProp->SetPropertyValue_InContainer(CDO, static_cast<float>(Spread));
+                    SpreadProp->SetPropertyValue_InContainer(CDO, Spread);
                 }
             }
         }
 
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -319,12 +388,32 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             return true;
         }
 
-        // Socket configuration is typically done on the skeletal mesh itself
-        // Here we store socket references for use in gameplay
+        // Add socket name variables to Blueprint
         FString MuzzleSocket = GetStringFieldCombat(Payload, TEXT("muzzleSocketName"), TEXT("Muzzle"));
         FString EjectionSocket = GetStringFieldCombat(Payload, TEXT("ejectionSocketName"), TEXT("ShellEject"));
 
+        AddBlueprintVariable(Blueprint, TEXT("MuzzleSocketName"), MakeNamePinType());
+        AddBlueprintVariable(Blueprint, TEXT("EjectionSocketName"), MakeNamePinType());
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set default values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FNameProperty* MuzzleProp = FindFProperty<FNameProperty>(BPGC, TEXT("MuzzleSocketName")))
+                {
+                    MuzzleProp->SetPropertyValue_InContainer(CDO, FName(*MuzzleSocket));
+                }
+                if (FNameProperty* EjectProp = FindFProperty<FNameProperty>(BPGC, TEXT("EjectionSocketName")))
+                {
+                    EjectProp->SetPropertyValue_InContainer(CDO, FName(*EjectionSocket));
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -357,7 +446,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double Range = GetNumberFieldCombat(Payload, TEXT("range"), 10000.0);
         double Spread = GetNumberFieldCombat(Payload, TEXT("spread"), 2.0);
 
+        // Add/update variables
+        AddBlueprintVariable(Blueprint, TEXT("BaseDamage"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("FireRate"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("Range"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("Spread"), MakeFloatPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values via CDO
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* DamageProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("BaseDamage")))
+                {
+                    DamageProp->SetPropertyValue_InContainer(CDO, BaseDamage);
+                }
+                if (FDoubleProperty* RateProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("FireRate")))
+                {
+                    RateProp->SetPropertyValue_InContainer(CDO, FireRate);
+                }
+                if (FDoubleProperty* RangeProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("Range")))
+                {
+                    RangeProp->SetPropertyValue_InContainer(CDO, Range);
+                }
+                if (FDoubleProperty* SpreadProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("Spread")))
+                {
+                    SpreadProp->SetPropertyValue_InContainer(CDO, Spread);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -395,7 +516,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString TraceChannel = GetStringFieldCombat(Payload, TEXT("traceChannel"), TEXT("Visibility"));
         double Range = GetNumberFieldCombat(Payload, TEXT("range"), 10000.0);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("bIsHitscan"), MakeBoolPinType());
+        AddBlueprintVariable(Blueprint, TEXT("TraceChannel"), MakeNamePinType());
+        AddBlueprintVariable(Blueprint, TEXT("HitscanRange"), MakeFloatPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FBoolProperty* HitscanProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsHitscan")))
+                {
+                    HitscanProp->SetPropertyValue_InContainer(CDO, HitscanEnabled);
+                }
+                if (FNameProperty* ChannelProp = FindFProperty<FNameProperty>(BPGC, TEXT("TraceChannel")))
+                {
+                    ChannelProp->SetPropertyValue_InContainer(CDO, FName(*TraceChannel));
+                }
+                if (FDoubleProperty* RangeProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HitscanRange")))
+                {
+                    RangeProp->SetPropertyValue_InContainer(CDO, Range);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -427,7 +575,29 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString ProjectileClass = GetStringFieldCombat(Payload, TEXT("projectileClass"));
         double ProjectileSpeed = GetNumberFieldCombat(Payload, TEXT("projectileSpeed"), 5000.0);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("ProjectileClassPath"), MakeStringPinType());
+        AddBlueprintVariable(Blueprint, TEXT("ProjectileSpeed"), MakeFloatPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FStrProperty* ClassProp = FindFProperty<FStrProperty>(BPGC, TEXT("ProjectileClassPath")))
+                {
+                    ClassProp->SetPropertyValue_InContainer(CDO, ProjectileClass);
+                }
+                if (FDoubleProperty* SpeedProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ProjectileSpeed")))
+                {
+                    SpeedProp->SetPropertyValue_InContainer(CDO, ProjectileSpeed);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -459,7 +629,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double SpreadIncrease = GetNumberFieldCombat(Payload, TEXT("spreadIncrease"), 0.5);
         double SpreadRecovery = GetNumberFieldCombat(Payload, TEXT("spreadRecovery"), 2.0);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("SpreadPatternType"), MakeStringPinType());
+        AddBlueprintVariable(Blueprint, TEXT("SpreadIncreasePerShot"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("SpreadRecoveryRate"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("CurrentSpread"), MakeFloatPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FStrProperty* PatternProp = FindFProperty<FStrProperty>(BPGC, TEXT("SpreadPatternType")))
+                {
+                    PatternProp->SetPropertyValue_InContainer(CDO, PatternType);
+                }
+                if (FDoubleProperty* IncreaseProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("SpreadIncreasePerShot")))
+                {
+                    IncreaseProp->SetPropertyValue_InContainer(CDO, SpreadIncrease);
+                }
+                if (FDoubleProperty* RecoveryProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("SpreadRecoveryRate")))
+                {
+                    RecoveryProp->SetPropertyValue_InContainer(CDO, SpreadRecovery);
+                }
+                if (FDoubleProperty* CurrentProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("CurrentSpread")))
+                {
+                    CurrentProp->SetPropertyValue_InContainer(CDO, 0.0);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -492,7 +694,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double RecoilYaw = GetNumberFieldCombat(Payload, TEXT("recoilYaw"), 0.3);
         double RecoilRecovery = GetNumberFieldCombat(Payload, TEXT("recoilRecovery"), 5.0);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("RecoilPitch"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("RecoilYaw"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("RecoilRecoverySpeed"), MakeFloatPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* PitchProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("RecoilPitch")))
+                {
+                    PitchProp->SetPropertyValue_InContainer(CDO, RecoilPitch);
+                }
+                if (FDoubleProperty* YawProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("RecoilYaw")))
+                {
+                    YawProp->SetPropertyValue_InContainer(CDO, RecoilYaw);
+                }
+                if (FDoubleProperty* RecoveryProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("RecoilRecoverySpeed")))
+                {
+                    RecoveryProp->SetPropertyValue_InContainer(CDO, RecoilRecovery);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -526,7 +755,44 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double AdsSpeed = GetNumberFieldCombat(Payload, TEXT("adsSpeed"), 0.2);
         double AdsSpreadMultiplier = GetNumberFieldCombat(Payload, TEXT("adsSpreadMultiplier"), 0.5);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("bADSEnabled"), MakeBoolPinType());
+        AddBlueprintVariable(Blueprint, TEXT("ADSFieldOfView"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("ADSTransitionSpeed"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("ADSSpreadMultiplier"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bIsAiming"), MakeBoolPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FBoolProperty* EnabledProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bADSEnabled")))
+                {
+                    EnabledProp->SetPropertyValue_InContainer(CDO, AdsEnabled);
+                }
+                if (FDoubleProperty* FovProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ADSFieldOfView")))
+                {
+                    FovProp->SetPropertyValue_InContainer(CDO, AdsFov);
+                }
+                if (FDoubleProperty* SpeedProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ADSTransitionSpeed")))
+                {
+                    SpeedProp->SetPropertyValue_InContainer(CDO, AdsSpeed);
+                }
+                if (FDoubleProperty* MultProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ADSSpreadMultiplier")))
+                {
+                    MultProp->SetPropertyValue_InContainer(CDO, AdsSpreadMultiplier);
+                }
+                if (FBoolProperty* AimingProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsAiming")))
+                {
+                    AimingProp->SetPropertyValue_InContainer(CDO, false);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -800,7 +1066,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double CriticalMultiplier = GetNumberFieldCombat(Payload, TEXT("criticalMultiplier"), 2.0);
         double HeadshotMultiplier = GetNumberFieldCombat(Payload, TEXT("headshotMultiplier"), 2.5);
 
+        // Add damage-related variables
+        AddBlueprintVariable(Blueprint, TEXT("DamageImpulse"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("CriticalMultiplier"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("HeadshotMultiplier"), MakeFloatPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* ImpulseProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("DamageImpulse")))
+                {
+                    ImpulseProp->SetPropertyValue_InContainer(CDO, DamageImpulse);
+                }
+                if (FDoubleProperty* CritProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("CriticalMultiplier")))
+                {
+                    CritProp->SetPropertyValue_InContainer(CDO, CriticalMultiplier);
+                }
+                if (FDoubleProperty* HeadProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HeadshotMultiplier")))
+                {
+                    HeadProp->SetPropertyValue_InContainer(CDO, HeadshotMultiplier);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -881,7 +1174,29 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             }
         }
 
+        // Add hitbox metadata variables
+        AddBlueprintVariable(Blueprint, TEXT("bIsHeadshotZone"), MakeBoolPinType());
+        AddBlueprintVariable(Blueprint, TEXT("HitboxDamageMultiplier"), MakeFloatPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FBoolProperty* HeadProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsHeadshotZone")))
+                {
+                    HeadProp->SetPropertyValue_InContainer(CDO, IsDamageZoneHead);
+                }
+                if (FDoubleProperty* MultProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HitboxDamageMultiplier")))
+                {
+                    MultProp->SetPropertyValue_InContainer(CDO, DamageMultiplier);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -918,15 +1233,73 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double ReloadTime = GetNumberFieldCombat(Payload, TEXT("reloadTime"), 2.0);
         FString ReloadAnimPath = GetStringFieldCombat(Payload, TEXT("reloadAnimationPath"));
 
+        // Add integer variable: MagazineSize
+        AddBlueprintVariable(Blueprint, TEXT("MagazineSize"), MakeIntPinType());
+        // Add integer variable: CurrentAmmo (starts at MagazineSize)
+        AddBlueprintVariable(Blueprint, TEXT("CurrentAmmo"), MakeIntPinType());
+        // Add float variable: ReloadTime
+        AddBlueprintVariable(Blueprint, TEXT("ReloadTime"), MakeFloatPinType());
+        // Add bool variable: bIsReloading
+        AddBlueprintVariable(Blueprint, TEXT("bIsReloading"), MakeBoolPinType());
+
+        // Add object variable: ReloadAnimation (UAnimMontage*)
+        bool bReloadAnimLoaded = false;
+        if (!ReloadAnimPath.IsEmpty())
+        {
+            UAnimMontage* ReloadAnim = LoadObject<UAnimMontage>(nullptr, *ReloadAnimPath);
+            if (ReloadAnim)
+            {
+                AddBlueprintVariable(Blueprint, TEXT("ReloadAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
+                bReloadAnimLoaded = true;
+            }
+        }
+
+        // Mark modified and compile
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set default values via CDO after compile
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FIntProperty* MagProp = FindFProperty<FIntProperty>(BPGC, TEXT("MagazineSize")))
+                {
+                    MagProp->SetPropertyValue_InContainer(CDO, MagazineSize);
+                }
+                if (FIntProperty* AmmoProp = FindFProperty<FIntProperty>(BPGC, TEXT("CurrentAmmo")))
+                {
+                    AmmoProp->SetPropertyValue_InContainer(CDO, MagazineSize); // Start full
+                }
+                if (FDoubleProperty* ReloadProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ReloadTime")))
+                {
+                    ReloadProp->SetPropertyValue_InContainer(CDO, ReloadTime);
+                }
+                if (FBoolProperty* ReloadingProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsReloading")))
+                {
+                    ReloadingProp->SetPropertyValue_InContainer(CDO, false);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("magazineSize"), MagazineSize);
+        Result->SetNumberField(TEXT("currentAmmo"), MagazineSize);
         Result->SetNumberField(TEXT("reloadTime"), ReloadTime);
+        Result->SetBoolField(TEXT("reloadAnimationLoaded"), bReloadAnimLoaded);
         
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Reload system configured."), Result);
+        TArray<TSharedPtr<FJsonValue>> VarsAdded;
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("MagazineSize"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("CurrentAmmo"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("ReloadTime"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bIsReloading"))));
+        if (bReloadAnimLoaded) VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("ReloadAnimation"))));
+        Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Reload system configured with Blueprint variables."), Result);
         return true;
     }
 
@@ -949,8 +1322,47 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString AmmoType = GetStringFieldCombat(Payload, TEXT("ammoType"), TEXT("Default"));
         int32 MaxAmmo = static_cast<int32>(GetNumberFieldCombat(Payload, TEXT("maxAmmo"), 150));
         int32 StartingAmmo = static_cast<int32>(GetNumberFieldCombat(Payload, TEXT("startingAmmo"), 60));
+        int32 AmmoPerShot = static_cast<int32>(GetNumberFieldCombat(Payload, TEXT("ammoPerShot"), 1));
+        bool bInfiniteAmmo = GetBoolFieldCombat(Payload, TEXT("infiniteAmmo"), false);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("MaxAmmo"), MakeIntPinType());
+        AddBlueprintVariable(Blueprint, TEXT("CurrentTotalAmmo"), MakeIntPinType());
+        AddBlueprintVariable(Blueprint, TEXT("AmmoPerShot"), MakeIntPinType());
+        AddBlueprintVariable(Blueprint, TEXT("AmmoType"), MakeStringPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bInfiniteAmmo"), MakeBoolPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FIntProperty* MaxProp = FindFProperty<FIntProperty>(BPGC, TEXT("MaxAmmo")))
+                {
+                    MaxProp->SetPropertyValue_InContainer(CDO, MaxAmmo);
+                }
+                if (FIntProperty* CurrentProp = FindFProperty<FIntProperty>(BPGC, TEXT("CurrentTotalAmmo")))
+                {
+                    CurrentProp->SetPropertyValue_InContainer(CDO, StartingAmmo);
+                }
+                if (FIntProperty* PerShotProp = FindFProperty<FIntProperty>(BPGC, TEXT("AmmoPerShot")))
+                {
+                    PerShotProp->SetPropertyValue_InContainer(CDO, AmmoPerShot);
+                }
+                if (FStrProperty* TypeProp = FindFProperty<FStrProperty>(BPGC, TEXT("AmmoType")))
+                {
+                    TypeProp->SetPropertyValue_InContainer(CDO, AmmoType);
+                }
+                if (FBoolProperty* InfiniteProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bInfiniteAmmo")))
+                {
+                    InfiniteProp->SetPropertyValue_InContainer(CDO, bInfiniteAmmo);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -958,8 +1370,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetStringField(TEXT("ammoType"), AmmoType);
         Result->SetNumberField(TEXT("maxAmmo"), MaxAmmo);
         Result->SetNumberField(TEXT("startingAmmo"), StartingAmmo);
+        Result->SetNumberField(TEXT("ammoPerShot"), AmmoPerShot);
+        Result->SetBoolField(TEXT("infiniteAmmo"), bInfiniteAmmo);
         
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ammo system configured."), Result);
+        TArray<TSharedPtr<FJsonValue>> VarsAdded;
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("MaxAmmo"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("CurrentTotalAmmo"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("AmmoPerShot"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("AmmoType"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bInfiniteAmmo"))));
+        Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ammo system configured with Blueprint variables."), Result);
         return true;
     }
 
@@ -979,25 +1401,58 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             return true;
         }
 
-        // Parse attachment slots
+        // Parse attachment slots and create actual SceneComponent attach points
         const TArray<TSharedPtr<FJsonValue>>* AttachmentSlotsArray;
         TArray<FString> SlotNames;
+        TArray<FString> CreatedComponents;
+        
         if (Payload->TryGetArrayField(TEXT("attachmentSlots"), AttachmentSlotsArray))
         {
-            for (const auto& SlotValue : *AttachmentSlotsArray)
+            USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
+            if (SCS)
             {
-                if (SlotValue->Type == EJson::Object)
+                for (const auto& SlotValue : *AttachmentSlotsArray)
                 {
-                    auto SlotObj = SlotValue->AsObject();
-                    FString SlotName = GetStringFieldCombat(SlotObj, TEXT("slotName"));
-                    if (!SlotName.IsEmpty())
+                    if (SlotValue->Type == EJson::Object)
                     {
-                        SlotNames.Add(SlotName);
+                        auto SlotObj = SlotValue->AsObject();
+                        FString SlotName = GetStringFieldCombat(SlotObj, TEXT("slotName"));
+                        FString SlotType = GetStringFieldCombat(SlotObj, TEXT("slotType"), TEXT("Optic"));
+                        
+                        if (!SlotName.IsEmpty())
+                        {
+                            SlotNames.Add(SlotName);
+                            
+                            // Create actual SceneComponent as attachment point
+                            FString ComponentName = FString::Printf(TEXT("AttachPoint_%s"), *SlotName);
+                            USceneComponent* AttachPoint = GetOrCreateSCSComponent<USceneComponent>(Blueprint, ComponentName, TEXT("WeaponMesh"));
+                            if (AttachPoint)
+                            {
+                                CreatedComponents.Add(ComponentName);
+                            }
+                        }
+                    }
+                    else if (SlotValue->Type == EJson::String)
+                    {
+                        // Simple string slot name
+                        FString SlotName = SlotValue->AsString();
+                        if (!SlotName.IsEmpty())
+                        {
+                            SlotNames.Add(SlotName);
+                            
+                            FString ComponentName = FString::Printf(TEXT("AttachPoint_%s"), *SlotName);
+                            USceneComponent* AttachPoint = GetOrCreateSCSComponent<USceneComponent>(Blueprint, ComponentName, TEXT("WeaponMesh"));
+                            if (AttachPoint)
+                            {
+                                CreatedComponents.Add(ComponentName);
+                            }
+                        }
                     }
                 }
             }
         }
 
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
@@ -1011,7 +1466,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         }
         Result->SetArrayField(TEXT("attachmentSlots"), SlotsJsonArray);
         
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attachment system configured."), Result);
+        TArray<TSharedPtr<FJsonValue>> ComponentsJsonArray;
+        for (const FString& Comp : CreatedComponents)
+        {
+            ComponentsJsonArray.Add(MakeShareable(new FJsonValueString(Comp)));
+        }
+        Result->SetArrayField(TEXT("componentsCreated"), ComponentsJsonArray);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attachment system configured with SceneComponent attach points."), Result);
         return true;
     }
 
@@ -1033,16 +1495,83 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         double SwitchInTime = GetNumberFieldCombat(Payload, TEXT("switchInTime"), 0.3);
         double SwitchOutTime = GetNumberFieldCombat(Payload, TEXT("switchOutTime"), 0.2);
+        FString EquipAnimPath = GetStringFieldCombat(Payload, TEXT("equipAnimationPath"));
+        FString UnequipAnimPath = GetStringFieldCombat(Payload, TEXT("unequipAnimationPath"));
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("SwitchInTime"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("SwitchOutTime"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bIsSwitching"), MakeBoolPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bIsEquipped"), MakeBoolPinType());
+
+        // Add animation references if provided
+        bool bEquipAnimLoaded = false;
+        bool bUnequipAnimLoaded = false;
+        if (!EquipAnimPath.IsEmpty())
+        {
+            UAnimMontage* EquipAnim = LoadObject<UAnimMontage>(nullptr, *EquipAnimPath);
+            if (EquipAnim)
+            {
+                AddBlueprintVariable(Blueprint, TEXT("EquipAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
+                bEquipAnimLoaded = true;
+            }
+        }
+        if (!UnequipAnimPath.IsEmpty())
+        {
+            UAnimMontage* UnequipAnim = LoadObject<UAnimMontage>(nullptr, *UnequipAnimPath);
+            if (UnequipAnim)
+            {
+                AddBlueprintVariable(Blueprint, TEXT("UnequipAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
+                bUnequipAnimLoaded = true;
+            }
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* InProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("SwitchInTime")))
+                {
+                    InProp->SetPropertyValue_InContainer(CDO, SwitchInTime);
+                }
+                if (FDoubleProperty* OutProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("SwitchOutTime")))
+                {
+                    OutProp->SetPropertyValue_InContainer(CDO, SwitchOutTime);
+                }
+                if (FBoolProperty* SwitchingProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsSwitching")))
+                {
+                    SwitchingProp->SetPropertyValue_InContainer(CDO, false);
+                }
+                if (FBoolProperty* EquippedProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsEquipped")))
+                {
+                    EquippedProp->SetPropertyValue_InContainer(CDO, false);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("switchInTime"), SwitchInTime);
         Result->SetNumberField(TEXT("switchOutTime"), SwitchOutTime);
+        Result->SetBoolField(TEXT("equipAnimationLoaded"), bEquipAnimLoaded);
+        Result->SetBoolField(TEXT("unequipAnimationLoaded"), bUnequipAnimLoaded);
         
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon switching configured."), Result);
+        TArray<TSharedPtr<FJsonValue>> VarsAdded;
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("SwitchInTime"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("SwitchOutTime"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bIsSwitching"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bIsEquipped"))));
+        if (bEquipAnimLoaded) VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("EquipAnimation"))));
+        if (bUnequipAnimLoaded) VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("UnequipAnimation"))));
+        Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon switching configured with Blueprint variables."), Result);
         return true;
     }
 
@@ -1070,13 +1599,73 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double Scale = GetNumberFieldCombat(Payload, TEXT("muzzleFlashScale"), 1.0);
         FString SoundPath = GetStringFieldCombat(Payload, TEXT("muzzleSoundPath"));
 
+        // Add variables for muzzle flash config
+        AddBlueprintVariable(Blueprint, TEXT("MuzzleFlashParticlePath"), MakeStringPinType());
+        AddBlueprintVariable(Blueprint, TEXT("MuzzleFlashScale"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("MuzzleSoundPath"), MakeStringPinType());
+
+        // Load and add object references if paths are valid
+        bool bParticleLoaded = false;
+        bool bSoundLoaded = false;
+        if (!ParticlePath.IsEmpty())
+        {
+            UNiagaraSystem* NiagaraSystem = LoadObject<UNiagaraSystem>(nullptr, *ParticlePath);
+            if (NiagaraSystem)
+            {
+                AddBlueprintVariable(Blueprint, TEXT("MuzzleFlashNiagara"), MakeObjectPinType(UNiagaraSystem::StaticClass()));
+                bParticleLoaded = true;
+            }
+            else
+            {
+                UParticleSystem* ParticleSystem = LoadObject<UParticleSystem>(nullptr, *ParticlePath);
+                if (ParticleSystem)
+                {
+                    AddBlueprintVariable(Blueprint, TEXT("MuzzleFlashParticle"), MakeObjectPinType(UParticleSystem::StaticClass()));
+                    bParticleLoaded = true;
+                }
+            }
+        }
+        if (!SoundPath.IsEmpty())
+        {
+            USoundCue* SoundCue = LoadObject<USoundCue>(nullptr, *SoundPath);
+            if (SoundCue)
+            {
+                AddBlueprintVariable(Blueprint, TEXT("MuzzleSound"), MakeObjectPinType(USoundCue::StaticClass()));
+                bSoundLoaded = true;
+            }
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FStrProperty* PathProp = FindFProperty<FStrProperty>(BPGC, TEXT("MuzzleFlashParticlePath")))
+                {
+                    PathProp->SetPropertyValue_InContainer(CDO, ParticlePath);
+                }
+                if (FDoubleProperty* ScaleProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("MuzzleFlashScale")))
+                {
+                    ScaleProp->SetPropertyValue_InContainer(CDO, Scale);
+                }
+                if (FStrProperty* SoundProp = FindFProperty<FStrProperty>(BPGC, TEXT("MuzzleSoundPath")))
+                {
+                    SoundProp->SetPropertyValue_InContainer(CDO, SoundPath);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("particlePath"), ParticlePath);
         Result->SetNumberField(TEXT("scale"), Scale);
+        Result->SetBoolField(TEXT("particleLoaded"), bParticleLoaded);
+        Result->SetBoolField(TEXT("soundLoaded"), bSoundLoaded);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Muzzle flash configured."), Result);
         return true;
@@ -1101,7 +1690,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString TracerPath = GetStringFieldCombat(Payload, TEXT("tracerParticlePath"));
         double TracerSpeed = GetNumberFieldCombat(Payload, TEXT("tracerSpeed"), 10000.0);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("TracerParticlePath"), MakeStringPinType());
+        AddBlueprintVariable(Blueprint, TEXT("TracerSpeed"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bUseTracers"), MakeBoolPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FStrProperty* PathProp = FindFProperty<FStrProperty>(BPGC, TEXT("TracerParticlePath")))
+                {
+                    PathProp->SetPropertyValue_InContainer(CDO, TracerPath);
+                }
+                if (FDoubleProperty* SpeedProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("TracerSpeed")))
+                {
+                    SpeedProp->SetPropertyValue_InContainer(CDO, TracerSpeed);
+                }
+                if (FBoolProperty* UseProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bUseTracers")))
+                {
+                    UseProp->SetPropertyValue_InContainer(CDO, !TracerPath.IsEmpty());
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1133,7 +1749,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString SoundPath = GetStringFieldCombat(Payload, TEXT("impactSoundPath"));
         FString DecalPath = GetStringFieldCombat(Payload, TEXT("impactDecalPath"));
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("ImpactParticlePath"), MakeStringPinType());
+        AddBlueprintVariable(Blueprint, TEXT("ImpactSoundPath"), MakeStringPinType());
+        AddBlueprintVariable(Blueprint, TEXT("ImpactDecalPath"), MakeStringPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FStrProperty* ParticleProp = FindFProperty<FStrProperty>(BPGC, TEXT("ImpactParticlePath")))
+                {
+                    ParticleProp->SetPropertyValue_InContainer(CDO, ParticlePath);
+                }
+                if (FStrProperty* SoundProp = FindFProperty<FStrProperty>(BPGC, TEXT("ImpactSoundPath")))
+                {
+                    SoundProp->SetPropertyValue_InContainer(CDO, SoundPath);
+                }
+                if (FStrProperty* DecalProp = FindFProperty<FStrProperty>(BPGC, TEXT("ImpactDecalPath")))
+                {
+                    DecalProp->SetPropertyValue_InContainer(CDO, DecalPath);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1166,7 +1809,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double EjectionForce = GetNumberFieldCombat(Payload, TEXT("shellEjectionForce"), 300.0);
         double ShellLifespan = GetNumberFieldCombat(Payload, TEXT("shellLifespan"), 5.0);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("ShellMeshPath"), MakeStringPinType());
+        AddBlueprintVariable(Blueprint, TEXT("ShellEjectionForce"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("ShellLifespan"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bEjectShells"), MakeBoolPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FStrProperty* MeshProp = FindFProperty<FStrProperty>(BPGC, TEXT("ShellMeshPath")))
+                {
+                    MeshProp->SetPropertyValue_InContainer(CDO, ShellMeshPath);
+                }
+                if (FDoubleProperty* ForceProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ShellEjectionForce")))
+                {
+                    ForceProp->SetPropertyValue_InContainer(CDO, EjectionForce);
+                }
+                if (FDoubleProperty* LifespanProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ShellLifespan")))
+                {
+                    LifespanProp->SetPropertyValue_InContainer(CDO, ShellLifespan);
+                }
+                if (FBoolProperty* EjectProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bEjectShells")))
+                {
+                    EjectProp->SetPropertyValue_InContainer(CDO, !ShellMeshPath.IsEmpty());
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1203,7 +1878,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString TraceEndSocket = GetStringFieldCombat(Payload, TEXT("meleeTraceEndSocket"), TEXT("WeaponTip"));
         double TraceRadius = GetNumberFieldCombat(Payload, TEXT("meleeTraceRadius"), 10.0);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("MeleeTraceStartSocket"), MakeNamePinType());
+        AddBlueprintVariable(Blueprint, TEXT("MeleeTraceEndSocket"), MakeNamePinType());
+        AddBlueprintVariable(Blueprint, TEXT("MeleeTraceRadius"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bIsTracing"), MakeBoolPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FNameProperty* StartProp = FindFProperty<FNameProperty>(BPGC, TEXT("MeleeTraceStartSocket")))
+                {
+                    StartProp->SetPropertyValue_InContainer(CDO, FName(*TraceStartSocket));
+                }
+                if (FNameProperty* EndProp = FindFProperty<FNameProperty>(BPGC, TEXT("MeleeTraceEndSocket")))
+                {
+                    EndProp->SetPropertyValue_InContainer(CDO, FName(*TraceEndSocket));
+                }
+                if (FDoubleProperty* RadiusProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("MeleeTraceRadius")))
+                {
+                    RadiusProp->SetPropertyValue_InContainer(CDO, TraceRadius);
+                }
+                if (FBoolProperty* TracingProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsTracing")))
+                {
+                    TracingProp->SetPropertyValue_InContainer(CDO, false);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1235,7 +1942,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double ComboWindowTime = GetNumberFieldCombat(Payload, TEXT("comboWindowTime"), 0.5);
         int32 MaxComboCount = static_cast<int32>(GetNumberFieldCombat(Payload, TEXT("maxComboCount"), 3));
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("ComboWindowTime"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("MaxComboCount"), MakeIntPinType());
+        AddBlueprintVariable(Blueprint, TEXT("CurrentComboIndex"), MakeIntPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bInComboWindow"), MakeBoolPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* WindowProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ComboWindowTime")))
+                {
+                    WindowProp->SetPropertyValue_InContainer(CDO, ComboWindowTime);
+                }
+                if (FIntProperty* MaxProp = FindFProperty<FIntProperty>(BPGC, TEXT("MaxComboCount")))
+                {
+                    MaxProp->SetPropertyValue_InContainer(CDO, MaxComboCount);
+                }
+                if (FIntProperty* IndexProp = FindFProperty<FIntProperty>(BPGC, TEXT("CurrentComboIndex")))
+                {
+                    IndexProp->SetPropertyValue_InContainer(CDO, 0);
+                }
+                if (FBoolProperty* InWindowProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bInComboWindow")))
+                {
+                    InWindowProp->SetPropertyValue_InContainer(CDO, false);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1266,7 +2005,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double HitPauseDuration = GetNumberFieldCombat(Payload, TEXT("hitPauseDuration"), 0.05);
         double TimeDilation = GetNumberFieldCombat(Payload, TEXT("hitPauseTimeDilation"), 0.1);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("HitPauseDuration"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("HitPauseTimeDilation"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bEnableHitPause"), MakeBoolPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* DurationProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HitPauseDuration")))
+                {
+                    DurationProp->SetPropertyValue_InContainer(CDO, HitPauseDuration);
+                }
+                if (FDoubleProperty* DilationProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HitPauseTimeDilation")))
+                {
+                    DilationProp->SetPropertyValue_InContainer(CDO, TimeDilation);
+                }
+                if (FBoolProperty* EnableProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bEnableHitPause")))
+                {
+                    EnableProp->SetPropertyValue_InContainer(CDO, true);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1297,13 +2063,53 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString HitReactionMontage = GetStringFieldCombat(Payload, TEXT("hitReactionMontage"));
         double StunTime = GetNumberFieldCombat(Payload, TEXT("hitReactionStunTime"), 0.5);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("HitReactionMontagePath"), MakeStringPinType());
+        AddBlueprintVariable(Blueprint, TEXT("HitReactionStunTime"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bIsStunned"), MakeBoolPinType());
+
+        // Load animation if path provided
+        bool bAnimLoaded = false;
+        if (!HitReactionMontage.IsEmpty())
+        {
+            UAnimMontage* Montage = LoadObject<UAnimMontage>(nullptr, *HitReactionMontage);
+            if (Montage)
+            {
+                AddBlueprintVariable(Blueprint, TEXT("HitReactionMontage"), MakeObjectPinType(UAnimMontage::StaticClass()));
+                bAnimLoaded = true;
+            }
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FStrProperty* PathProp = FindFProperty<FStrProperty>(BPGC, TEXT("HitReactionMontagePath")))
+                {
+                    PathProp->SetPropertyValue_InContainer(CDO, HitReactionMontage);
+                }
+                if (FDoubleProperty* StunProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HitReactionStunTime")))
+                {
+                    StunProp->SetPropertyValue_InContainer(CDO, StunTime);
+                }
+                if (FBoolProperty* StunnedProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsStunned")))
+                {
+                    StunnedProp->SetPropertyValue_InContainer(CDO, false);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("hitReactionMontage"), HitReactionMontage);
         Result->SetNumberField(TEXT("stunTime"), StunTime);
+        Result->SetBoolField(TEXT("animationLoaded"), bAnimLoaded);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hit reaction configured."), Result);
         return true;
@@ -1331,7 +2137,61 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double BlockDamageReduction = GetNumberFieldCombat(Payload, TEXT("blockDamageReduction"), 0.8);
         double BlockStaminaCost = GetNumberFieldCombat(Payload, TEXT("blockStaminaCost"), 10.0);
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("ParryWindowStart"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("ParryWindowEnd"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("BlockDamageReduction"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("BlockStaminaCost"), MakeFloatPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bIsBlocking"), MakeBoolPinType());
+        AddBlueprintVariable(Blueprint, TEXT("bIsInParryWindow"), MakeBoolPinType());
+
+        // Load parry animation if path provided
+        bool bAnimLoaded = false;
+        if (!ParryAnimPath.IsEmpty())
+        {
+            UAnimMontage* Montage = LoadObject<UAnimMontage>(nullptr, *ParryAnimPath);
+            if (Montage)
+            {
+                AddBlueprintVariable(Blueprint, TEXT("ParryAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
+                bAnimLoaded = true;
+            }
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* StartProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ParryWindowStart")))
+                {
+                    StartProp->SetPropertyValue_InContainer(CDO, ParryWindowStart);
+                }
+                if (FDoubleProperty* EndProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ParryWindowEnd")))
+                {
+                    EndProp->SetPropertyValue_InContainer(CDO, ParryWindowEnd);
+                }
+                if (FDoubleProperty* ReductionProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("BlockDamageReduction")))
+                {
+                    ReductionProp->SetPropertyValue_InContainer(CDO, BlockDamageReduction);
+                }
+                if (FDoubleProperty* CostProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("BlockStaminaCost")))
+                {
+                    CostProp->SetPropertyValue_InContainer(CDO, BlockStaminaCost);
+                }
+                if (FBoolProperty* BlockingProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsBlocking")))
+                {
+                    BlockingProp->SetPropertyValue_InContainer(CDO, false);
+                }
+                if (FBoolProperty* ParryProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsInParryWindow")))
+                {
+                    ParryProp->SetPropertyValue_InContainer(CDO, false);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1340,6 +2200,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetNumberField(TEXT("parryWindowEnd"), ParryWindowEnd);
         Result->SetNumberField(TEXT("blockDamageReduction"), BlockDamageReduction);
         Result->SetNumberField(TEXT("blockStaminaCost"), BlockStaminaCost);
+        Result->SetBoolField(TEXT("parryAnimationLoaded"), bAnimLoaded);
+        
+        TArray<TSharedPtr<FJsonValue>> VarsAdded;
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("ParryWindowStart"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("ParryWindowEnd"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("BlockDamageReduction"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("BlockStaminaCost"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bIsBlocking"))));
+        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bIsInParryWindow"))));
+        if (bAnimLoaded) VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("ParryAnimation"))));
+        Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Parry and block system configured."), Result);
         return true;
@@ -1365,7 +2236,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString TrailStartSocket = GetStringFieldCombat(Payload, TEXT("weaponTrailStartSocket"), TEXT("WeaponBase"));
         FString TrailEndSocket = GetStringFieldCombat(Payload, TEXT("weaponTrailEndSocket"), TEXT("WeaponTip"));
 
+        // Add variables
+        AddBlueprintVariable(Blueprint, TEXT("WeaponTrailParticlePath"), MakeStringPinType());
+        AddBlueprintVariable(Blueprint, TEXT("WeaponTrailStartSocket"), MakeNamePinType());
+        AddBlueprintVariable(Blueprint, TEXT("WeaponTrailEndSocket"), MakeNamePinType());
+        AddBlueprintVariable(Blueprint, TEXT("bShowWeaponTrail"), MakeBoolPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        // Set values
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FStrProperty* PathProp = FindFProperty<FStrProperty>(BPGC, TEXT("WeaponTrailParticlePath")))
+                {
+                    PathProp->SetPropertyValue_InContainer(CDO, TrailParticlePath);
+                }
+                if (FNameProperty* StartProp = FindFProperty<FNameProperty>(BPGC, TEXT("WeaponTrailStartSocket")))
+                {
+                    StartProp->SetPropertyValue_InContainer(CDO, FName(*TrailStartSocket));
+                }
+                if (FNameProperty* EndProp = FindFProperty<FNameProperty>(BPGC, TEXT("WeaponTrailEndSocket")))
+                {
+                    EndProp->SetPropertyValue_InContainer(CDO, FName(*TrailEndSocket));
+                }
+                if (FBoolProperty* ShowProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bShowWeaponTrail")))
+                {
+                    ShowProp->SetPropertyValue_InContainer(CDO, !TrailParticlePath.IsEmpty());
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1406,6 +2309,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         bool HasWeaponMesh = false;
         bool HasProjectileMovement = false;
         bool HasCollision = false;
+        TArray<TSharedPtr<FJsonValue>> ComponentList;
         
         if (Blueprint->SimpleConstructionScript)
         {
@@ -1413,6 +2317,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             {
                 if (Node && Node->ComponentTemplate)
                 {
+                    ComponentList.Add(MakeShareable(new FJsonValueString(Node->GetVariableName().ToString())));
+                    
                     if (Node->ComponentTemplate->IsA<UStaticMeshComponent>() ||
                         Node->ComponentTemplate->IsA<USkeletalMeshComponent>())
                     {
@@ -1435,6 +2341,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Info->SetBoolField(TEXT("hasWeaponMesh"), HasWeaponMesh);
         Info->SetBoolField(TEXT("hasProjectileMovement"), HasProjectileMovement);
         Info->SetBoolField(TEXT("hasCollision"), HasCollision);
+        Info->SetArrayField(TEXT("components"), ComponentList);
+        
+        // List Blueprint variables
+        TArray<TSharedPtr<FJsonValue>> VariableList;
+        for (const FBPVariableDescription& Var : Blueprint->NewVariables)
+        {
+            VariableList.Add(MakeShareable(new FJsonValueString(Var.VarName.ToString())));
+        }
+        Info->SetArrayField(TEXT("variables"), VariableList);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetObjectField(TEXT("combatInfo"), Info);

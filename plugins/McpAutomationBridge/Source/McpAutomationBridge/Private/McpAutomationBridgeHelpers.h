@@ -263,34 +263,46 @@ static inline FString ResolveAssetPath(const FString &InputPath) {
   }
 
   // 3. Search by name if it's a short name (no slashes)
-  // NOTE: This section is disabled because FARFilter::AssetName is not
-  // available in UE5.7 and iterating all assets is too expensive. Relative
-  // paths are still resolved via /Game/ prepend above.
-  /*
-  FString BaseName = FPaths::GetBaseFilename(InputPath);
-  FAssetRegistryModule &AssetRegistryModule =
-      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-  IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+  // UE 5.7+ compatible: Use GetAssetsByPath + manual name filtering instead of FARFilter::AssetName
+  // PERFORMANCE NOTE: This scans all assets under /Game when given a short name (no slashes).
+  // For large projects, this could be slow if called frequently. Consider caching results
+  // or providing full paths when possible.
+  if (!InputPath.Contains(TEXT("/"))) {
+    FString ShortName = FPaths::GetBaseFilename(InputPath);
+    
+    FAssetRegistryModule &AssetRegistryModule =
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
-  TArray<FAssetData> AssetDataList;
-  FARFilter Filter;
-  // Filter.AssetName = FName(*BaseName); // Compilation Error: AssetName not
-  member of FARFilter
-
-  // AssetRegistry.GetAssets(Filter, AssetDataList);
-
-  if (AssetDataList.Num() == 1) {
-    return AssetDataList[0].PackageName.ToString();
-  }
-
-  if (AssetDataList.Num() > 1) {
-    for (const FAssetData &Data : AssetDataList) {
-      if (Data.PackageName.ToString().StartsWith(TEXT("/Game/"))) {
-        return Data.PackageName.ToString();
+    TArray<FAssetData> FoundAssets;
+    TArray<FAssetData> AllGameAssets;
+    
+    // Use GetAssetsByPath with recursive search - more efficient than GetAllAssets
+    AssetRegistry.GetAssetsByPath(FName(TEXT("/Game")), AllGameAssets, /*bRecursive=*/true);
+    
+    // Filter by name match (case-insensitive)
+    for (const FAssetData &Asset : AllGameAssets) {
+      if (Asset.AssetName.ToString().Equals(ShortName, ESearchCase::IgnoreCase)) {
+        FoundAssets.Add(Asset);
       }
     }
+
+    // Return unique match
+    if (FoundAssets.Num() == 1) {
+      return FoundAssets[0].PackageName.ToString();
+    }
+
+    // Multiple matches - prefer /Game/ assets
+    if (FoundAssets.Num() > 1) {
+      for (const FAssetData &Data : FoundAssets) {
+        if (Data.PackageName.ToString().StartsWith(TEXT("/Game/"))) {
+          return Data.PackageName.ToString();
+        }
+      }
+      // Return first match if none start with /Game/
+      return FoundAssets[0].PackageName.ToString();
+    }
   }
-  */
 
   return FString();
 }
@@ -688,8 +700,10 @@ ExportPropertyToJsonValue(void *TargetContainer, FProperty *Property) {
           continue;
         }
 
-        // Fallback: stringified placeholder for unsupported inner types
-        Out.Add(MakeShared<FJsonValueString>(TEXT("<unsupported_array_elem>")));
+        // Fallback: Use ExportTextItem_Direct for unsupported inner types
+        FString ElemStr;
+        Inner->ExportTextItem_Direct(ElemStr, ElemPtr, nullptr, nullptr, PPF_None);
+        Out.Add(MakeShared<FJsonValueString>(ElemStr));
       }
     }
     return MakeShared<FJsonValueArray>(Out);
@@ -738,7 +752,10 @@ ExportPropertyToJsonValue(void *TargetContainer, FProperty *Property) {
         MapObj->SetBoolField(KeyStr,
                              (*reinterpret_cast<const uint8 *>(ValuePtr)) != 0);
       } else {
-        MapObj->SetStringField(KeyStr, TEXT("<unsupported_value_type>"));
+        // Use ExportTextItem_Direct for unsupported value types
+        FString ValueStr;
+        ValueProp->ExportTextItem_Direct(ValueStr, ValuePtr, nullptr, nullptr, PPF_None);
+        MapObj->SetStringField(KeyStr, ValueStr);
       }
     }
 
@@ -772,7 +789,10 @@ ExportPropertyToJsonValue(void *TargetContainer, FProperty *Property) {
         Out.Add(MakeShared<FJsonValueNumber>(
             (double)*reinterpret_cast<const float *>(ElemPtr)));
       } else {
-        Out.Add(MakeShared<FJsonValueString>(TEXT("<unsupported_set_elem>")));
+        // Use ExportTextItem_Direct for unsupported set element types
+        FString ElemStr;
+        ElemProp->ExportTextItem_Direct(ElemStr, ElemPtr, nullptr, nullptr, PPF_None);
+        Out.Add(MakeShared<FJsonValueString>(ElemStr));
       }
     }
 

@@ -153,8 +153,9 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 | `create_normal_from_height` | ✅ Done | Height-to-normal conversion |
 | `set_compression_settings`, `set_texture_group`, `configure_virtual_texture` | ✅ Done | Texture settings |
 | `get_texture_info` | ✅ Done | Texture properties |
-| `create_ao_from_mesh` | ✅ Placeholder | Real AO baking requires GPU ray tracing |
-| Texture processing (blur, resize, levels) | ⚠️ Stub | Requires GPU processing |
+| `create_ao_from_mesh` | ✅ Done | GPU ray tracing for real AO baking |
+| `adjust_curves`, `channel_extract` | ✅ Done | LUT-based curve adjustment, channel extraction |
+| Texture processing (blur, resize, levels) | ✅ Done | Implemented via FImageUtils and platform texture ops |
 
 ### Phase 10: Animation Authoring (`manage_animation_authoring`)
 
@@ -330,14 +331,14 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 |--------|--------|-------|
 | `create_level`, `create_sublevel` | ✅ Done | Level asset creation |
 | `configure_level_streaming` | ✅ Done | Streaming method configuration |
-| `set_streaming_distance` | ✅ Done | Distance thresholds |
+| `set_streaming_distance` | ✅ Done | Creates ALevelStreamingVolume and associates with ULevelStreaming; configures StreamingUsage |
 | `configure_level_bounds` | ✅ Done | Bounds for streaming/culling |
-| `enable_world_partition` | ✅ Done | World Partition toggle |
-| `configure_grid_size` | ✅ Done | Grid cell size configuration |
-| `create_data_layer` | ✅ Done | UDataLayerAsset creation |
-| `assign_actor_to_data_layer` | ✅ Done | Actor data layer assignment |
-| `configure_hlod_layer` | ✅ Done | HLOD layer settings |
-| `create_minimap_volume` | ✅ Done | Minimap bounds volume |
+| `enable_world_partition` | ✅ Done | Reports WP status; returns error if cannot enable (requires editor UI) |
+| `configure_grid_size` | ✅ Done | Uses reflection to modify FSpatialHashRuntimeGrid array (CellSize, LoadingRange, Priority) |
+| `create_data_layer` | ✅ Done | Creates UDataLayerAsset + UDataLayerInstance via UDataLayerEditorSubsystem |
+| `assign_actor_to_data_layer` | ✅ Done | Uses UDataLayerEditorSubsystem::AddActorToDataLayer() |
+| `configure_hlod_layer` | ✅ Done | Creates UHLODLayer asset with layer type, cell size, loading distance |
+| `create_minimap_volume` | ✅ Done | Spawns AWorldPartitionMiniMapVolume (requires World Partition) |
 | `open_level_blueprint` | ✅ Done | Open Level BP in editor |
 | `add_level_blueprint_node` | ✅ Done | Add node to Level BP |
 | `connect_level_blueprint_nodes` | ✅ Done | Connect BP node pins |

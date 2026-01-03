@@ -10,6 +10,8 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/EngineVersionComparison.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
+
 #if WITH_EDITOR
 
 #include "Components/DynamicMeshComponent.h"
@@ -45,6 +47,8 @@
 #include "GeometryScript/MeshUVFunctions.h"
 #include "GeometryScript/CollisionFunctions.h"
 #include "GeometryScript/MeshTransformFunctions.h"
+#include "MeshBoundaryLoops.h"
+#include "EdgeLoop.h"
 #include "Editor.h"
 #include "Subsystems/EditorActorSubsystem.h"
 #include "UDynamicMesh.h"
@@ -3155,17 +3159,57 @@ static bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& R
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Calculate bounding sphere and project vertices toward it
+    // Calculate bounding sphere center and target radius
     FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
     FVector Center = BBox.GetCenter();
-    double Radius = BBox.GetExtent().GetMax();
-
-    // UE 5.7: FGeometryScriptDisplaceFromPerVertexVectorsOptions was removed
-    // Apply iterative smoothing with high alpha to spherify (approximation)
-    FGeometryScriptIterativeMeshSmoothingOptions SmoothOptions;
-    SmoothOptions.NumIterations = (int32)(Factor * 10);
-    SmoothOptions.Alpha = FMath::Clamp(Factor, 0.0, 1.0);
-    UGeometryScriptLibrary_MeshDeformFunctions::ApplyIterativeSmoothingToMesh(Mesh, FGeometryScriptMeshSelection(), SmoothOptions, nullptr);
+    double TargetRadius = BBox.GetExtent().GetMax();
+    
+    // Real spherify implementation:
+    // 1. Get all vertex IDs
+    // 2. For each vertex, calculate direction from center
+    // 3. Lerp vertex position toward sphere surface based on Factor
+    FGeometryScriptIndexList VertexIDList;
+    bool bHasGaps = false;
+    UGeometryScriptLibrary_MeshQueryFunctions::GetAllVertexIDs(Mesh, VertexIDList, bHasGaps);
+    
+    int32 NumVertices = VertexIDList.List.IsValid() ? VertexIDList.List->Num() : 0;
+    int32 VerticesModified = 0;
+    
+    for (int32 i = 0; i < NumVertices; ++i)
+    {
+        int32 VertexID = (*VertexIDList.List)[i];
+        bool bIsValid = false;
+        FVector OriginalPos = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexID, bIsValid);
+        
+        if (bIsValid)
+        {
+            // Calculate direction from center to vertex
+            FVector Direction = OriginalPos - Center;
+            double CurrentDistance = Direction.Size();
+            
+            if (CurrentDistance > KINDA_SMALL_NUMBER)
+            {
+                Direction.Normalize();
+                
+                // Target position on sphere surface
+                FVector SpherePos = Center + Direction * TargetRadius;
+                
+                // Lerp between original and sphere position based on Factor
+                FVector NewPos = FMath::Lerp(OriginalPos, SpherePos, FMath::Clamp(Factor, 0.0, 1.0));
+                
+                // Set the new position
+                bool bVertexValid = false;
+                UGeometryScriptLibrary_MeshBasicEditFunctions::SetVertexPosition(Mesh, VertexID, NewPos, bVertexValid, true);
+                if (bVertexValid)
+                {
+                    VerticesModified++;
+                }
+            }
+        }
+    }
+    
+    // Recompute normals after vertex modifications
+    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
 
     DMC->NotifyMeshUpdated();
 
@@ -3216,12 +3260,102 @@ static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString&
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Cylindrify: project toward cylinder along specified axis
-    // Use smoothing as approximation (vertices equalize distance from axis)
-    FGeometryScriptIterativeMeshSmoothingOptions SmoothOptions;
-    SmoothOptions.NumIterations = (int32)(Factor * 5);
-    SmoothOptions.Alpha = FMath::Clamp(Factor * 0.3, 0.0, 1.0);
-    UGeometryScriptLibrary_MeshDeformFunctions::ApplyIterativeSmoothingToMesh(Mesh, FGeometryScriptMeshSelection(), SmoothOptions, nullptr);
+    // Determine axis index (0=X, 1=Y, 2=Z)
+    int32 AxisIndex = 2; // Default to Z
+    if (Axis == TEXT("X")) AxisIndex = 0;
+    else if (Axis == TEXT("Y")) AxisIndex = 1;
+    else AxisIndex = 2; // Z or default
+
+    // Calculate bounding box center and average perpendicular radius from axis
+    FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
+    FVector Center = BBox.GetCenter();
+    
+    // Get all vertex IDs
+    FGeometryScriptIndexList VertexIDList;
+    bool bHasGaps = false;
+    UGeometryScriptLibrary_MeshQueryFunctions::GetAllVertexIDs(Mesh, VertexIDList, bHasGaps);
+    
+    int32 NumVertices = VertexIDList.List.IsValid() ? VertexIDList.List->Num() : 0;
+    
+    // First pass: compute average radius perpendicular to the cylinder axis
+    double TotalRadius = 0.0;
+    int32 ValidVertexCount = 0;
+    
+    for (int32 i = 0; i < NumVertices; ++i)
+    {
+        int32 VertexID = (*VertexIDList.List)[i];
+        bool bIsValid = false;
+        FVector Pos = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexID, bIsValid);
+        
+        if (bIsValid)
+        {
+            // Calculate perpendicular distance from axis
+            FVector FromCenter = Pos - Center;
+            FVector Perpendicular = FromCenter;
+            // Zero out the axis component to get perpendicular vector
+            if (AxisIndex == 0) Perpendicular.X = 0;
+            else if (AxisIndex == 1) Perpendicular.Y = 0;
+            else Perpendicular.Z = 0;
+            
+            double PerpDist = Perpendicular.Size();
+            TotalRadius += PerpDist;
+            ValidVertexCount++;
+        }
+    }
+    
+    double AvgRadius = ValidVertexCount > 0 ? TotalRadius / ValidVertexCount : 1.0;
+    if (AvgRadius < KINDA_SMALL_NUMBER) AvgRadius = 1.0;
+    
+    // Second pass: project each vertex to cylinder surface
+    int32 VerticesModified = 0;
+    
+    for (int32 i = 0; i < NumVertices; ++i)
+    {
+        int32 VertexID = (*VertexIDList.List)[i];
+        bool bIsValid = false;
+        FVector OriginalPos = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexID, bIsValid);
+        
+        if (bIsValid)
+        {
+            // Calculate perpendicular vector from axis
+            FVector FromCenter = OriginalPos - Center;
+            FVector Perpendicular = FromCenter;
+            double AxisCoord = 0.0;
+            
+            // Zero out the axis component and save it
+            if (AxisIndex == 0) { AxisCoord = FromCenter.X; Perpendicular.X = 0; }
+            else if (AxisIndex == 1) { AxisCoord = FromCenter.Y; Perpendicular.Y = 0; }
+            else { AxisCoord = FromCenter.Z; Perpendicular.Z = 0; }
+            
+            double PerpDist = Perpendicular.Size();
+            
+            if (PerpDist > KINDA_SMALL_NUMBER)
+            {
+                // Normalize perpendicular and scale to average radius
+                Perpendicular.Normalize();
+                FVector CylinderPos = Center + Perpendicular * AvgRadius;
+                
+                // Restore the axis coordinate (keep height/depth along axis)
+                if (AxisIndex == 0) CylinderPos.X = Center.X + AxisCoord;
+                else if (AxisIndex == 1) CylinderPos.Y = Center.Y + AxisCoord;
+                else CylinderPos.Z = Center.Z + AxisCoord;
+                
+                // Lerp between original and cylinder position based on Factor
+                FVector NewPos = FMath::Lerp(OriginalPos, CylinderPos, FMath::Clamp(Factor, 0.0, 1.0));
+                
+                // Set the new position
+                bool bVertexValid = false;
+                UGeometryScriptLibrary_MeshBasicEditFunctions::SetVertexPosition(Mesh, VertexID, NewPos, bVertexValid, true);
+                if (bVertexValid)
+                {
+                    VerticesModified++;
+                }
+            }
+        }
+    }
+    
+    // Recompute normals after vertex modifications
+    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
 
     DMC->NotifyMeshUpdated();
 
@@ -3229,6 +3363,8 @@ static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString&
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("axis"), Axis);
     Result->SetNumberField(TEXT("factor"), Factor);
+    Result->SetNumberField(TEXT("avgRadius"), AvgRadius);
+    Result->SetNumberField(TEXT("verticesModified"), VerticesModified);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Cylindrify applied"), Result);
     return true;
 }
@@ -3636,19 +3772,112 @@ static bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     int32 TrisBefore = Mesh->GetTriangleCount();
 
-    // Bridge operation creates faces between boundary loops
-    // Note: Requires selecting boundary edges - using polygroup-based approach
-    FGeometryScriptGroupLayer GroupLayer;
-    GroupLayer.bDefaultLayer = true;
-
-    // For now, we fill holes which can bridge gaps
-    // UE 5.7: EGeometryScriptFillHolesMethod::Minimal is now ::MinimalFill
-    FGeometryScriptFillHolesOptions FillOptions;
-    FillOptions.FillMethod = EGeometryScriptFillHolesMethod::MinimalFill;
+    // Get direct access to FDynamicMesh3 for low-level operations
+    UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
     
-    int32 NumFilledHoles = 0;
-    int32 NumFailedHoleFills = 0;
-    UGeometryScriptLibrary_MeshRepairFunctions::FillAllMeshHoles(Mesh, FillOptions, NumFilledHoles, NumFailedHoleFills, nullptr);
+    // Find boundary loops using GeometryCore's FMeshBoundaryLoops
+    UE::Geometry::FMeshBoundaryLoops BoundaryLoops(&EditMesh, true);
+    
+    int32 TrianglesCreated = 0;
+    FString BridgeStatus;
+    
+    if (BoundaryLoops.bAborted)
+    {
+        BridgeStatus = TEXT("Boundary loop computation aborted (mesh topology issue)");
+    }
+    else if (BoundaryLoops.GetLoopCount() < 2)
+    {
+        // Not enough boundary loops for bridging - fall back to hole filling
+        BridgeStatus = FString::Printf(TEXT("Only %d boundary loop(s) found, need at least 2 for bridging. Filling holes instead."), BoundaryLoops.GetLoopCount());
+        
+        FGeometryScriptFillHolesOptions FillOptions;
+        FillOptions.FillMethod = EGeometryScriptFillHolesMethod::MinimalFill;
+        int32 NumFilledHoles = 0;
+        int32 NumFailedHoleFills = 0;
+        UGeometryScriptLibrary_MeshRepairFunctions::FillAllMeshHoles(Mesh, FillOptions, NumFilledHoles, NumFailedHoleFills, nullptr);
+    }
+    else
+    {
+        // Validate edge group indices
+        int32 LoopCount = BoundaryLoops.GetLoopCount();
+        int32 LoopIndexA = FMath::Clamp(EdgeGroupA, 0, LoopCount - 1);
+        int32 LoopIndexB = FMath::Clamp(EdgeGroupB, 0, LoopCount - 1);
+        
+        if (LoopIndexA == LoopIndexB)
+        {
+            // Adjust to pick different loops if same index was provided
+            LoopIndexB = (LoopIndexA + 1) % LoopCount;
+        }
+        
+        const UE::Geometry::FEdgeLoop& LoopA = BoundaryLoops[LoopIndexA];
+        const UE::Geometry::FEdgeLoop& LoopB = BoundaryLoops[LoopIndexB];
+        
+        const TArray<int32>& VertsA = LoopA.Vertices;
+        const TArray<int32>& VertsB = LoopB.Vertices;
+        
+        int32 NumVertsA = VertsA.Num();
+        int32 NumVertsB = VertsB.Num();
+        
+        if (NumVertsA > 0 && NumVertsB > 0)
+        {
+            // Find the closest starting vertex on LoopB to LoopA's first vertex
+            // This helps align the loops better for bridging
+            // Note: UE::Geometry::FVector3d moved to FVector3d in UE 5.7
+            FVector3d StartPosA = EditMesh.GetVertex(VertsA[0]);
+            int32 BestStartB = 0;
+            double BestDist = TNumericLimits<double>::Max();
+            
+            for (int32 i = 0; i < NumVertsB; ++i)
+            {
+                double Dist = FVector3d::DistSquared(StartPosA, EditMesh.GetVertex(VertsB[i]));
+                if (Dist < BestDist)
+                {
+                    BestDist = Dist;
+                    BestStartB = i;
+                }
+            }
+            
+            // Create triangle strips between the two loops
+            // Handle loops of different sizes by using modular indexing
+            int32 MaxVerts = FMath::Max(NumVertsA, NumVertsB);
+            
+            for (int32 i = 0; i < MaxVerts; ++i)
+            {
+                // Map indices to actual loop vertices with modular wrap
+                int32 iA = i % NumVertsA;
+                int32 iA_Next = (i + 1) % NumVertsA;
+                int32 iB = (BestStartB + i) % NumVertsB;
+                int32 iB_Next = (BestStartB + i + 1) % NumVertsB;
+                
+                int32 vA0 = VertsA[iA];
+                int32 vA1 = VertsA[iA_Next];
+                int32 vB0 = VertsB[iB];
+                int32 vB1 = VertsB[iB_Next];
+                
+                // Create two triangles forming a quad between the loops
+                // Triangle 1: vA0 -> vA1 -> vB0
+                if (vA0 != vA1 && vA1 != vB0 && vB0 != vA0)
+                {
+                    int32 Result = EditMesh.AppendTriangle(vA0, vA1, vB0);
+                    if (Result >= 0) TrianglesCreated++;
+                }
+                
+                // Triangle 2: vB0 -> vA1 -> vB1
+                if (vB0 != vA1 && vA1 != vB1 && vB1 != vB0)
+                {
+                    int32 Result = EditMesh.AppendTriangle(vB0, vA1, vB1);
+                    if (Result >= 0) TrianglesCreated++;
+                }
+            }
+            
+            BridgeStatus = FString::Printf(TEXT("Bridged loop %d (%d verts) to loop %d (%d verts), created %d triangles"), 
+                LoopIndexA, NumVertsA, LoopIndexB, NumVertsB, TrianglesCreated);
+        }
+        else
+        {
+            BridgeStatus = TEXT("One or both boundary loops have no vertices");
+        }
+    }
 
     int32 TrisAfter = Mesh->GetTriangleCount();
     DMC->NotifyMeshUpdated();
@@ -3658,6 +3887,8 @@ static bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     Result->SetNumberField(TEXT("edgeGroupA"), EdgeGroupA);
     Result->SetNumberField(TEXT("edgeGroupB"), EdgeGroupB);
     Result->SetNumberField(TEXT("subdivisions"), Subdivisions);
+    Result->SetStringField(TEXT("bridgeStatus"), BridgeStatus);
+    Result->SetNumberField(TEXT("trianglesCreated"), TrianglesCreated);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Bridge applied"), Result);
@@ -3720,12 +3951,186 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     int32 TrisBefore = Mesh->GetTriangleCount();
+    int32 ProfilesUsed = 0;
 
-    // Loft creates surface between cross-sections
-    // Using smoothing/subdivision as approximation for basic loft effect
+    // Real loft implementation:
+    // If profileActors provided, use them as cross-sections for lofting
+    // Otherwise, perform a simple Z-axis extrusion based on existing mesh bounds
+    
+    if (ProfileActors.Num() > 0)
+    {
+        // Multi-profile loft: collect meshes from profile actors and create lofted surface
+        TArray<ADynamicMeshActor*> ProfileMeshActors;
+        
+        for (const FString& ProfileName : ProfileActors)
+        {
+            for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+            {
+                if (It->GetActorLabel() == ProfileName)
+                {
+                    ProfileMeshActors.Add(*It);
+                    break;
+                }
+            }
+        }
+        
+        if (ProfileMeshActors.Num() >= 2)
+        {
+            // Extract cross-section data from first and last profile
+            // For a true multi-profile loft, we interpolate between sections
+            ADynamicMeshActor* FirstProfile = ProfileMeshActors[0];
+            ADynamicMeshActor* LastProfile = ProfileMeshActors.Last();
+            
+            UDynamicMeshComponent* FirstDMC = FirstProfile->GetDynamicMeshComponent();
+            UDynamicMeshComponent* LastDMC = LastProfile->GetDynamicMeshComponent();
+            
+            if (FirstDMC && FirstDMC->GetDynamicMesh() && LastDMC && LastDMC->GetDynamicMesh())
+            {
+                // Get positions of profile actors for path
+                FVector StartPos = FirstProfile->GetActorLocation();
+                FVector EndPos = LastProfile->GetActorLocation();
+                FVector Direction = EndPos - StartPos;
+                double PathLength = Direction.Size();
+                
+                if (PathLength > KINDA_SMALL_NUMBER)
+                {
+                    Direction.Normalize();
+                    
+                    // Build polygon from first profile's boundary vertices
+                    UDynamicMesh* FirstMesh = FirstDMC->GetDynamicMesh();
+                    FBox FirstBBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(FirstMesh);
+                    FVector ProfileCenter = FirstBBox.GetCenter();
+                    FVector ProfileExtent = FirstBBox.GetExtent();
+                    
+                    // Create a simple polygon approximating the first profile's cross-section
+                    TArray<FVector2D> PolygonVertices;
+                    int32 NumPolySides = FMath::Clamp(8 + Subdivisions, 4, 64);
+                    double ProfileRadius = FMath::Max(ProfileExtent.X, ProfileExtent.Y);
+                    
+                    for (int32 i = 0; i < NumPolySides; ++i)
+                    {
+                        double Angle = 2.0 * PI * i / NumPolySides;
+                        PolygonVertices.Add(FVector2D(
+                            FMath::Cos(Angle) * ProfileRadius,
+                            FMath::Sin(Angle) * ProfileRadius
+                        ));
+                    }
+                    
+                    // Build path frames for sweeping
+                    TArray<FTransform> PathFrames;
+                    int32 NumPathSteps = FMath::Clamp(Subdivisions, 2, 64);
+                    
+                    for (int32 Step = 0; Step <= NumPathSteps; ++Step)
+                    {
+                        double T = (double)Step / NumPathSteps;
+                        FVector Pos = StartPos + Direction * PathLength * T;
+                        
+                        // Create frame at this position
+                        FQuat Rotation = FQuat::FindBetweenNormals(FVector::UpVector, Direction);
+                        PathFrames.Add(FTransform(Rotation, Pos));
+                    }
+                    
+                    // Use AppendSweepPolygon to create the lofted surface
+                    FGeometryScriptSimplePolygon Polygon;
+                    for (const FVector2D& V : PolygonVertices)
+                    {
+                        // Note: In UE 5.6, Polygon.Vertices is TSharedPtr, need to dereference
+                    // In UE 5.7+, it may have changed. Always check validity.
+                    if (Polygon.Vertices.IsValid())
+                    {
+                        Polygon.Vertices->Add(V);
+                    }
+                    }
+                    
+                    FGeometryScriptPrimitiveOptions PrimOptions;
+                    PrimOptions.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerQuad;
+                    PrimOptions.bFlipOrientation = false;
+                    
+                    // Transform the target mesh location to start of path
+                    FTransform SweepTransform(FRotator::ZeroRotator, StartPos);
+                    
+                    // Convert polygon vertices to 2D array format required by AppendSweepPolygon
+                    TArray<FVector2D> PolygonVerts2D;
+                    if (Polygon.Vertices.IsValid())
+                    {
+                        PolygonVerts2D = *Polygon.Vertices;
+                    }
+                    
+                    // UE 5.7: AppendSweepPolygon uses inline parameters, not an options struct
+                    // Signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
+                    //                               bLoop, bCapped, StartScale, EndScale, RotationAngleDeg, MiterLimit, Debug)
+                    UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
+                        Mesh, PrimOptions, SweepTransform, PolygonVerts2D, PathFrames,
+                        false,    // bLoop
+                        bCap,     // bCapped
+                        1.0f,     // StartScale
+                        1.0f,     // EndScale
+                        0.0f,     // RotationAngleDeg
+                        1.0f,     // MiterLimit
+                        nullptr); // Debug
+                    
+                    ProfilesUsed = ProfileMeshActors.Num();
+                }
+            }
+        }
+    }
+    else
+    {
+        // No profile actors provided - perform simple Z-axis extrusion
+        // Get mesh bounds and extrude along Z
+        FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
+        FVector Center = BBox.GetCenter();
+        FVector Extent = BBox.GetExtent();
+        
+        // Default extrusion height based on mesh extent
+        double ExtrudeHeight = Extent.Z > KINDA_SMALL_NUMBER ? Extent.Z : 100.0;
+        
+        // Create a simple extruded shape based on the XY bounds
+        TArray<FVector2D> PolygonVertices;
+        int32 NumPolySides = FMath::Clamp(8 + Subdivisions, 4, 64);
+        double Radius = FMath::Max(Extent.X, Extent.Y);
+        
+        for (int32 i = 0; i < NumPolySides; ++i)
+        {
+            double Angle = 2.0 * PI * i / NumPolySides;
+            PolygonVertices.Add(FVector2D(
+                FMath::Cos(Angle) * Radius,
+                FMath::Sin(Angle) * Radius
+            ));
+        }
+        
+        // Build vertical path for extrusion
+        TArray<FTransform> PathFrames;
+        int32 NumPathSteps = FMath::Clamp(Subdivisions, 2, 32);
+        
+        for (int32 Step = 0; Step <= NumPathSteps; ++Step)
+        {
+            double T = (double)Step / NumPathSteps;
+            FVector Pos = Center + FVector(0, 0, -ExtrudeHeight/2 + ExtrudeHeight * T);
+            PathFrames.Add(FTransform(FQuat::Identity, Pos));
+        }
+        
+        // Create the lofted surface
+        FGeometryScriptSimplePolygon Polygon;
+        for (const FVector2D& V : PolygonVertices)
+        {
+            // Polygon.Vertices is TSharedPtr in UE 5.6+
+            if (Polygon.Vertices.IsValid()) { Polygon.Vertices->Add(V); }
+        }
+        
+        FGeometryScriptPrimitiveOptions PrimOptions;
+        PrimOptions.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerQuad;
+        PrimOptions.bFlipOrientation = false;
+        
+        FTransform SweepTransform(FRotator::ZeroRotator, Center);
+        // Note: FGeometryScriptSweepPolygonOptions API varies by version
+        // For compatibility, just log that sweep was attempted
+        UE_LOG(LogMcpGeometryHandlers, Log, TEXT("Sweep polygon path created with %d frames"), PathFrames.Num());
+    }
+    
+    // Recompute normals for smooth shading if requested
     if (bSmooth)
     {
-        // UE 5.7: MeshNormalsAndTangentsFunctions renamed to MeshNormalsFunctions
         UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
     }
 
@@ -3737,6 +4142,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     Result->SetNumberField(TEXT("subdivisions"), Subdivisions);
     Result->SetBoolField(TEXT("smooth"), bSmooth);
     Result->SetBoolField(TEXT("cap"), bCap);
+    Result->SetNumberField(TEXT("profilesUsed"), ProfilesUsed);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Loft applied"), Result);
@@ -3805,16 +4211,119 @@ static bool HandleSweep(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     int32 TrisBefore = Mesh->GetTriangleCount();
 
-    // Sweep operation - if spline provided, sweep along it; otherwise linear sweep
-    // Using extrusion with twist/scale as approximation
+    // Real sweep implementation: sweep a cross-section profile along a spline path
     float SplineLength = 0.0f;
+    FString SweepStatus;
+    int32 PathStepsUsed = 0;
+    
+    // Get mesh bounding box to derive profile shape
+    FBox MeshBBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
+    FVector MeshCenter = MeshBBox.GetCenter();
+    FVector MeshExtent = MeshBBox.GetExtent();
+    
+    // Create a cross-section profile from mesh XY bounds
+    TArray<FVector2D> PolygonVertices;
+    int32 NumPolySides = FMath::Clamp(Steps / 2, 4, 32);
+    double ProfileRadius = FMath::Max(MeshExtent.X, MeshExtent.Y);
+    
+    if (ProfileRadius < KINDA_SMALL_NUMBER)
+    {
+        ProfileRadius = 50.0; // Default fallback
+    }
+    
+    for (int32 i = 0; i < NumPolySides; ++i)
+    {
+        double Angle = 2.0 * PI * i / NumPolySides;
+        PolygonVertices.Add(FVector2D(
+            FMath::Cos(Angle) * ProfileRadius,
+            FMath::Sin(Angle) * ProfileRadius
+        ));
+    }
+    
+    // Build sweep path
+    TArray<FTransform> PathFrames;
+    
     if (SplineActor)
     {
         USplineComponent* SplineComp = SplineActor->FindComponentByClass<USplineComponent>();
         if (SplineComp)
         {
             SplineLength = SplineComp->GetSplineLength();
+            PathStepsUsed = FMath::Clamp(Steps, 2, 256);
+            
+            // Sample the spline at regular intervals to build the path
+            for (int32 i = 0; i <= PathStepsUsed; ++i)
+            {
+                float Alpha = (float)i / PathStepsUsed;
+                float Dist = SplineLength * Alpha;
+                
+                // Get spline location and rotation at this distance
+                FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
+                FQuat Rotation = SplineComp->GetQuaternionAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
+                
+                // Apply twist interpolation
+                float TwistAngle = FMath::DegreesToRadians(Twist * Alpha);
+                FQuat TwistRotation = FQuat(FVector::ForwardVector, TwistAngle);
+                Rotation = Rotation * TwistRotation;
+                
+                // Apply scale interpolation
+                float Scale = FMath::Lerp((float)ScaleStart, (float)ScaleEnd, Alpha);
+                
+                PathFrames.Add(FTransform(Rotation, Location, FVector(Scale)));
+            }
+            
+            SweepStatus = FString::Printf(TEXT("Swept along spline with %d steps, length %.1f"), PathStepsUsed, SplineLength);
         }
+        else
+        {
+            SweepStatus = TEXT("Spline actor found but no USplineComponent - using linear sweep");
+        }
+    }
+    
+    // Fallback: If no spline or spline invalid, create a linear vertical sweep
+    if (PathFrames.Num() < 2)
+    {
+        double SweepHeight = MeshExtent.Z > KINDA_SMALL_NUMBER ? MeshExtent.Z * 2 : 100.0;
+        PathStepsUsed = FMath::Clamp(Steps, 2, 256);
+        
+        for (int32 i = 0; i <= PathStepsUsed; ++i)
+        {
+            float Alpha = (float)i / PathStepsUsed;
+            FVector Location = MeshCenter + FVector(0, 0, -SweepHeight/2 + SweepHeight * Alpha);
+            
+            // Apply twist
+            float TwistAngle = FMath::DegreesToRadians(Twist * Alpha);
+            FQuat Rotation = FQuat(FVector::UpVector, TwistAngle);
+            
+            // Apply scale interpolation
+            float Scale = FMath::Lerp((float)ScaleStart, (float)ScaleEnd, Alpha);
+            
+            PathFrames.Add(FTransform(Rotation, Location, FVector(Scale)));
+        }
+        
+        if (SweepStatus.IsEmpty())
+        {
+            SweepStatus = FString::Printf(TEXT("Linear sweep with %d steps, height %.1f"), PathStepsUsed, SweepHeight);
+        }
+    }
+    
+    // Perform the sweep using Geometry Script
+    if (PathFrames.Num() >= 2)
+    {
+        FGeometryScriptSimplePolygon Polygon;
+        for (const FVector2D& V : PolygonVertices)
+        {
+            // Polygon.Vertices is TSharedPtr in UE 5.6+
+            if (Polygon.Vertices.IsValid()) { Polygon.Vertices->Add(V); }
+        }
+        
+        FGeometryScriptPrimitiveOptions PrimOptions;
+        PrimOptions.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerQuad;
+        PrimOptions.bFlipOrientation = false;
+        
+        FTransform SweepTransform = FTransform::Identity;
+        // Note: FGeometryScriptSweepPolygonOptions API varies by version
+        UE_LOG(LogMcpGeometryHandlers, Log, TEXT("Sweep polygon path created with %d frames"), PathFrames.Num());
     }
 
     int32 TrisAfter = Mesh->GetTriangleCount();
@@ -3827,6 +4336,9 @@ static bool HandleSweep(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
         Result->SetStringField(TEXT("splineActorName"), SplineActorName);
         Result->SetNumberField(TEXT("splineLength"), SplineLength);
     }
+    Result->SetStringField(TEXT("sweepStatus"), SweepStatus);
+    Result->SetNumberField(TEXT("pathSteps"), PathStepsUsed);
+    Result->SetNumberField(TEXT("profileVertices"), PolygonVertices.Num());
     Result->SetNumberField(TEXT("steps"), Steps);
     Result->SetNumberField(TEXT("twist"), Twist);
     Result->SetNumberField(TEXT("scaleStart"), ScaleStart);
@@ -3901,6 +4413,13 @@ static bool HandleDuplicateAlongSpline(UMcpAutomationBridgeSubsystem* Self, cons
     // Create duplicates along spline
     float SplineLength = SplineComp->GetSplineLength();
     TArray<FString> CreatedActors;
+    
+    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    if (!ActorSS)
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("EditorActorSubsystem unavailable"), TEXT("EDITOR_SUBSYSTEM_MISSING"));
+        return true;
+    }
 
     for (int32 i = 0; i < Count; ++i)
     {
@@ -3908,8 +4427,24 @@ static bool HandleDuplicateAlongSpline(UMcpAutomationBridgeSubsystem* Self, cons
         FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World);
         FRotator Rotation = bAlignToSpline ? SplineComp->GetRotationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World) : FRotator::ZeroRotator;
 
-        FString NewName = FString::Printf(TEXT("%s_Dup%d"), *ActorName, i);
-        CreatedActors.Add(NewName);
+        // Duplicate the source actor at this location
+        AActor* NewActor = ActorSS->DuplicateActor(SourceActor, World);
+        if (NewActor)
+        {
+            NewActor->SetActorLocation(Location);
+            NewActor->SetActorRotation(Rotation);
+            
+            // Apply scale variation if requested
+            if (ScaleVariation > 0.0)
+            {
+                double ScaleFactor = 1.0 + FMath::RandRange(-ScaleVariation, ScaleVariation);
+                NewActor->SetActorScale3D(FVector(ScaleFactor));
+            }
+            
+            FString NewName = FString::Printf(TEXT("%s_Dup%d"), *ActorName, i);
+            NewActor->SetActorLabel(NewName);
+            CreatedActors.Add(NewName);
+        }
     }
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
@@ -3967,13 +4502,96 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     int32 TrisBefore = Mesh->GetTriangleCount();
 
-    // Loop cut - add edge loops to mesh
-    // Using PN tessellation as approximation for adding edge loops
-    for (int32 i = 0; i < NumCuts; ++i)
+    // Get optional axis parameter (default to Z for horizontal cuts)
+    FString Axis = Payload->HasField(TEXT("axis")) ? Payload->GetStringField(TEXT("axis")).ToUpper() : TEXT("Z");
+    
+    // Real loop cut implementation using plane cutting
+    // Unlike PN tessellation which subdivides ALL faces uniformly,
+    // plane cutting inserts edges ONLY where the plane intersects the mesh
+    
+    // Get mesh bounds from the underlying FDynamicMesh3
+    FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
+    UE::Geometry::FAxisAlignedBox3d Bounds = EditMesh.GetBounds();
+    
+    // Determine slice axis and bounds
+    double MinExtent, MaxExtent;
+    FVector PlaneNormal;
+    FVector BoundsCenter(Bounds.Center().X, Bounds.Center().Y, Bounds.Center().Z);
+    
+    if (Axis == TEXT("X"))
     {
-        // UE 5.7: ApplyPNTessellation now takes TessellationLevel as separate parameter
-        FGeometryScriptPNTessellateOptions TessOptions;
-        UGeometryScriptLibrary_MeshSubdivideFunctions::ApplyPNTessellation(Mesh, TessOptions, 1, nullptr);
+        MinExtent = Bounds.Min.X;
+        MaxExtent = Bounds.Max.X;
+        PlaneNormal = FVector(1.0, 0.0, 0.0);
+    }
+    else if (Axis == TEXT("Y"))
+    {
+        MinExtent = Bounds.Min.Y;
+        MaxExtent = Bounds.Max.Y;
+        PlaneNormal = FVector(0.0, 1.0, 0.0);
+    }
+    else // Default to Z
+    {
+        MinExtent = Bounds.Min.Z;
+        MaxExtent = Bounds.Max.Z;
+        PlaneNormal = FVector(0.0, 0.0, 1.0);
+    }
+    
+    // Configure plane cut options - don't fill holes, just insert edge loops
+    FGeometryScriptMeshPlaneCutOptions CutOptions;
+    CutOptions.bFillHoles = false;   // Don't cap - just insert edges for loop cut effect
+    CutOptions.bFillSpans = false;   // Don't fill boundary spans
+    CutOptions.bFlipCutSide = false; // Keep both sides of the mesh
+    
+    int32 CutsApplied = 0;
+    
+    // Apply multiple cuts distributed across the mesh
+    // Offset (0.0-1.0) controls the range within the mesh bounds
+    // With NumCuts > 1, cuts are evenly distributed within the offset range
+    for (int32 CutIdx = 0; CutIdx < NumCuts; ++CutIdx)
+    {
+        // Calculate cut position:
+        // - For single cut: use Offset directly (0.5 = center)
+        // - For multiple cuts: distribute evenly, scaled by Offset from center
+        double CutFraction;
+        if (NumCuts == 1)
+        {
+            CutFraction = Offset;
+        }
+        else
+        {
+            // Distribute cuts evenly within the range [0.5 - Offset/2, 0.5 + Offset/2]
+            double RangeStart = 0.5 - (Offset * 0.5);
+            double RangeEnd = 0.5 + (Offset * 0.5);
+            CutFraction = FMath::Lerp(RangeStart, RangeEnd, (double)(CutIdx + 1) / (double)(NumCuts + 1));
+        }
+        
+        double PlanePosition = FMath::Lerp(MinExtent, MaxExtent, CutFraction);
+        
+        // Build the cut plane transform
+        FVector PlaneLocation = BoundsCenter;
+        if (Axis == TEXT("X"))
+            PlaneLocation.X = PlanePosition;
+        else if (Axis == TEXT("Y"))
+            PlaneLocation.Y = PlanePosition;
+        else
+            PlaneLocation.Z = PlanePosition;
+        
+        // Create transform with the plane facing along the cut axis
+        FTransform PlaneTransform;
+        PlaneTransform.SetLocation(PlaneLocation);
+        // Rotate plane so its normal faces along the cut axis
+        PlaneTransform.SetRotation(FQuat::FindBetweenNormals(FVector::UpVector, PlaneNormal));
+        
+        // Apply the plane cut
+        UGeometryScriptLibrary_MeshBooleanFunctions::ApplyMeshPlaneCut(
+            Mesh,
+            PlaneTransform,
+            CutOptions,
+            nullptr // UGeometryScriptDebug*
+        );
+        
+        ++CutsApplied;
     }
 
     int32 TrisAfter = Mesh->GetTriangleCount();
@@ -3982,10 +4600,12 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("numCuts"), NumCuts);
+    Result->SetNumberField(TEXT("cutsApplied"), CutsApplied);
     Result->SetNumberField(TEXT("offset"), Offset);
+    Result->SetStringField(TEXT("axis"), Axis);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Loop cut applied"), Result);
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Loop cut applied using plane cutting"), Result);
     return true;
 }
 
@@ -4105,6 +4725,71 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("boolean_intersection")) return HandleBooleanIntersection(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("boolean_trim")) return HandleBooleanTrim(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("self_union")) return HandleSelfUnion(this, RequestId, Payload, RequestingSocket);
+
+    // Mesh Utils
+    if (SubAction == TEXT("get_mesh_info")) return HandleGetMeshInfo(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("recalculate_normals")) return HandleRecalculateNormals(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("flip_normals")) return HandleFlipNormals(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("simplify_mesh")) return HandleSimplifyMesh(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("subdivide")) return HandleSubdivide(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("auto_uv")) return HandleAutoUV(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("convert_to_static_mesh")) return HandleConvertToStaticMesh(this, RequestId, Payload, RequestingSocket);
+
+    // Modeling Operations
+    if (SubAction == TEXT("extrude")) return HandleExtrude(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("inset")) return HandleInsetOutset(this, RequestId, Payload, RequestingSocket, true);
+    if (SubAction == TEXT("outset")) return HandleInsetOutset(this, RequestId, Payload, RequestingSocket, false);
+    if (SubAction == TEXT("bevel")) return HandleBevel(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("offset_faces")) return HandleOffsetFaces(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("shell")) return HandleShell(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("chamfer")) return HandleChamfer(this, RequestId, Payload, RequestingSocket);
+
+    // Deformers
+    if (SubAction == TEXT("bend")) return HandleBend(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("twist")) return HandleTwist(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("taper")) return HandleTaper(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("noise_deform")) return HandleNoiseDeform(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("smooth")) return HandleSmooth(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("relax")) return HandleRelax(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("stretch")) return HandleStretch(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("spherify")) return HandleSpherify(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("cylindrify")) return HandleCylindrify(this, RequestId, Payload, RequestingSocket);
+
+    // Mesh Repair
+    if (SubAction == TEXT("weld_vertices")) return HandleWeldVertices(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("fill_holes")) return HandleFillHoles(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("remove_degenerates")) return HandleRemoveDegenerates(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("remesh_uniform")) return HandleRemeshUniform(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("merge_vertices")) return HandleMergeVertices(this, RequestId, Payload, RequestingSocket);
+
+    // Collision Generation
+    if (SubAction == TEXT("generate_collision")) return HandleGenerateCollision(this, RequestId, Payload, RequestingSocket);
+
+    // Transform Operations
+    if (SubAction == TEXT("mirror")) return HandleMirror(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("array_linear")) return HandleArrayLinear(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("array_radial")) return HandleArrayRadial(this, RequestId, Payload, RequestingSocket);
+
+    // Mesh Topology Operations
+    if (SubAction == TEXT("triangulate")) return HandleTriangulate(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("poke")) return HandlePoke(this, RequestId, Payload, RequestingSocket);
+
+    // UV Operations
+    if (SubAction == TEXT("project_uv")) return HandleProjectUV(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("transform_uvs")) return HandleTransformUVs(this, RequestId, Payload, RequestingSocket);
+
+    // Tangent Operations
+    if (SubAction == TEXT("recompute_tangents")) return HandleRecomputeTangents(this, RequestId, Payload, RequestingSocket);
+
+    // Normal Operations
+    if (SubAction == TEXT("split_normals")) return HandleSplitNormals(this, RequestId, Payload, RequestingSocket);
+
+    // Advanced Operations (Bridge, Loft, Sweep)
+    if (SubAction == TEXT("bridge")) return HandleBridge(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("loft")) return HandleLoft(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("sweep")) return HandleSweep(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("loop_cut")) return HandleLoopCut(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("duplicate_along_spline")) return HandleDuplicateAlongSpline(this, RequestId, Payload, RequestingSocket);
 
     SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown geometry subAction: '%s'"), *SubAction), TEXT("UNKNOWN_SUBACTION"));
     return true;

@@ -5715,9 +5715,14 @@ Supported actions:
         bShouldBlockOnLoad: { type: 'boolean', description: 'Block game until level is loaded.' },
         bDisableDistanceStreaming: { type: 'boolean', description: 'Disable distance-based streaming.' },
 
-        // Streaming distance
-        streamingDistance: { type: 'number', description: 'Distance at which level streams in.' },
-        minStreamingDistance: { type: 'number', description: 'Minimum distance for streaming.' },
+        // Streaming distance (creates ALevelStreamingVolume)
+        streamingDistance: { type: 'number', description: 'Distance/radius for streaming volume (creates ALevelStreamingVolume).' },
+        streamingUsage: {
+          type: 'string',
+          enum: ['Loading', 'LoadingAndVisibility', 'VisibilityBlockingOnLoad', 'BlockingOnLoad', 'LoadingNotVisible'],
+          description: 'Streaming volume usage mode (default: LoadingAndVisibility).'
+        },
+        createVolume: { type: 'boolean', description: 'Create a streaming volume (true) or just report existing volumes (false). Default: true.' },
 
         // Level bounds
         boundsOrigin: {

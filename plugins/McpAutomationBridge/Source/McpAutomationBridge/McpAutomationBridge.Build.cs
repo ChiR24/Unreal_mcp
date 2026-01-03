@@ -54,7 +54,7 @@ public class McpAutomationBridge : ModuleRules
         PublicDependencyModuleNames.AddRange(new string[]
         {
             "Core","CoreUObject","Engine","Json","JsonUtilities",
-            "LevelSequence", "MovieScene", "MovieSceneTracks"
+            "LevelSequence", "MovieScene", "MovieSceneTracks", "GameplayTags"
         });
 
         if (Target.bBuildEditor)
@@ -71,7 +71,10 @@ public class McpAutomationBridge : ModuleRules
                 "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings","EngineSettings",
                 "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph",
                 "Kismet","KismetCompiler","AssetRegistry","AssetTools","MaterialEditor","SourceControl",
-                "AudioEditor", "DataValidation", "NiagaraEditor"
+                "AudioEditor", "DataValidation", "NiagaraEditor",
+                // Phase 24: GAS, Audio, and missing module dependencies
+                "GameplayAbilities",  // Required for UAttributeSet, UGameplayEffect, UGameplayAbility, etc.
+                "AudioMixer"          // Required for FAudioEQEffect::ClampValues
             });
 
             PrivateDependencyModuleNames.AddRange(new string[]
@@ -85,14 +88,36 @@ public class McpAutomationBridge : ModuleRules
                 "GeometryCore", "GeometryScriptingCore", "GeometryScriptingEditor", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription"
             });
 
+            // --- Feature Detection Logic ---
+
+            string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
+
+            // Phase 11: MetaSound modules (conditional - may not be available in all UE versions)
+            TryAddConditionalModule(Target, EngineDir, "MetasoundEngine", "MetasoundEngine");
+            TryAddConditionalModule(Target, EngineDir, "MetasoundFrontend", "MetasoundFrontend");
+            TryAddConditionalModule(Target, EngineDir, "MetasoundEditor", "MetasoundEditor");
+
+            // Phase 16: AI Systems - StateTree, SmartObjects, MassAI (conditional based on plugin availability)
+            // These modules may not be available in all UE versions or plugin configurations
+            TryAddConditionalModule(Target, EngineDir, "StateTreeModule", "StateTreeModule");
+            TryAddConditionalModule(Target, EngineDir, "StateTreeEditorModule", "StateTreeEditorModule");
+            TryAddConditionalModule(Target, EngineDir, "SmartObjectsModule", "SmartObjectsModule");
+            TryAddConditionalModule(Target, EngineDir, "SmartObjectsEditorModule", "SmartObjectsEditorModule");
+            TryAddConditionalModule(Target, EngineDir, "MassEntity", "MassEntity");
+            TryAddConditionalModule(Target, EngineDir, "MassSpawner", "MassSpawner");
+            TryAddConditionalModule(Target, EngineDir, "MassActors", "MassActors");
+
+            // Phase 22: Voice Chat and Online Subsystem (conditional - for sessions handlers)
+            // VoiceChat module is from the VoiceChat plugin
+            TryAddConditionalModule(Target, EngineDir, "VoiceChat", "VoiceChat");
+            // OnlineSubsystem provides IOnlineVoice for muting
+            TryAddConditionalModule(Target, EngineDir, "OnlineSubsystem", "OnlineSubsystem");
+            TryAddConditionalModule(Target, EngineDir, "OnlineSubsystemUtils", "OnlineSubsystemUtils");
+
             // Ensure editor builds expose full Blueprint graph editing APIs.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=1");
 
-            // --- Feature Detection Logic ---
-
-            string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
-            
             // 1. SubobjectData Detection
             // UE 5.7 renamed/moved this to SubobjectDataInterface in Editor/
             bool bHasSubobjectDataInterface = Directory.Exists(Path.Combine(EngineDir, "Source", "Editor", "SubobjectDataInterface"));
@@ -225,5 +250,75 @@ public class McpAutomationBridge : ModuleRules
         }
         catch {}
         return false;
+    }
+
+    /// <summary>
+    /// Conditionally adds a module dependency if it exists in the engine or plugins directories.
+    /// Used for optional AI modules that may not be available in all UE versions (StateTree, SmartObjects, MassEntity).
+    /// </summary>
+    /// <param name="Target">Build target settings.</param>
+    /// <param name="EngineDir">Absolute path to the engine root directory.</param>
+    /// <param name="ModuleName">The module name to add to dependencies if found.</param>
+    /// <param name="SearchName">The directory name to search for in engine/plugin paths.</param>
+    private void TryAddConditionalModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName)
+    {
+        try
+        {
+            // Check Runtime modules
+            string RuntimePath = Path.Combine(EngineDir, "Source", "Runtime", SearchName);
+            if (Directory.Exists(RuntimePath))
+            {
+                PrivateDependencyModuleNames.Add(ModuleName);
+                return;
+            }
+
+            // Check Editor modules
+            string EditorPath = Path.Combine(EngineDir, "Source", "Editor", SearchName);
+            if (Directory.Exists(EditorPath))
+            {
+                PrivateDependencyModuleNames.Add(ModuleName);
+                return;
+            }
+
+            // Check Plugins directory
+            string PluginsDir = Path.Combine(EngineDir, "Plugins");
+            if (Directory.Exists(PluginsDir))
+            {
+                // Check common plugin locations
+                string[] SearchPaths = new string[]
+                {
+                    Path.Combine(PluginsDir, "AI", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", SearchName),
+                    Path.Combine(PluginsDir, "Experimental", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "MassEntity", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "MassGameplay", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "SmartObjects", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "StateTree", "Source", SearchName)
+                };
+
+                foreach (string SearchPath in SearchPaths)
+                {
+                    if (Directory.Exists(SearchPath))
+                    {
+                        PrivateDependencyModuleNames.Add(ModuleName);
+                        return;
+                    }
+                }
+
+                // Fallback: unbounded recursive search (build-time cost only, not runtime)
+                // Note: Uses SearchOption.AllDirectories which has no depth limit
+                try
+                {
+                    var Found = Directory.GetDirectories(PluginsDir, SearchName, SearchOption.AllDirectories);
+                    if (Found.Length > 0)
+                    {
+                        PrivateDependencyModuleNames.Add(ModuleName);
+                        return;
+                    }
+                }
+                catch { /* Ignore search errors */ }
+            }
+        }
+        catch { /* Module not available - this is expected for optional modules */ }
     }
 }
