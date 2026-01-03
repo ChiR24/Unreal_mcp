@@ -346,6 +346,41 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 | `create_packed_level_actor` | ✅ Done | APackedLevelActor creation |
 | `get_level_structure_info` | ✅ Done | Query level structure info |
 
+### Phase 24: Volumes & Zones (`manage_volumes`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| `create_trigger_volume`, `create_trigger_box`, `create_trigger_sphere`, `create_trigger_capsule` | ✅ Done | Trigger volumes |
+| `create_blocking_volume`, `create_kill_z_volume` | ✅ Done | Gameplay volumes |
+| `create_pain_causing_volume`, `create_physics_volume` | ✅ Done | Physics/damage volumes |
+| `create_audio_volume`, `create_reverb_volume` | ✅ Done | Audio volumes |
+| `create_cull_distance_volume`, `create_precomputed_visibility_volume` | ✅ Done | Rendering volumes |
+| `create_lightmass_importance_volume` | ✅ Done | Lighting volumes |
+| `create_nav_mesh_bounds_volume`, `create_nav_modifier_volume` | ✅ Done | Navigation volumes |
+| `create_camera_blocking_volume` | ✅ Done | Camera volumes |
+| `set_volume_extent`, `set_volume_properties`, `get_volumes_info` | ✅ Done | Configuration & utility |
+
+### Phase 25: Navigation System (`manage_navigation`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| **NavMesh Configuration** | | |
+| `configure_nav_mesh_settings` | ✅ Done | Sets TileSizeUU, MinRegionArea, NavMeshResolutionParams (UE 5.7+) |
+| `set_nav_agent_properties` | ✅ Done | Sets AgentRadius, AgentHeight, AgentMaxSlope, AgentMaxStepHeight |
+| `rebuild_navigation` | ✅ Done | Calls `NavSys->Build()` |
+| **Nav Modifiers** | | |
+| `create_nav_modifier_component` | ✅ Done | Creates UNavModifierComponent via SCS |
+| `set_nav_area_class` | ✅ Done | Sets area class on modifier component |
+| `configure_nav_area_cost` | ✅ Done | Configures DefaultCost on area CDO |
+| **Nav Links** | | |
+| `create_nav_link_proxy` | ✅ Done | Spawns ANavLinkProxy with PointLinks |
+| `configure_nav_link` | ✅ Done | Updates link start/end points, direction, snap radius |
+| `set_nav_link_type` | ✅ Done | Toggles bSmartLinkIsRelevant |
+| `create_smart_link` | ✅ Done | Spawns NavLinkProxy with smart link enabled |
+| `configure_smart_link_behavior` | ✅ Done | Configures UNavLinkCustomComponent (area classes, broadcast, obstacles) |
+| **Utility** | | |
+| `get_navigation_info` | ✅ Done | Returns NavMesh stats, agent properties, link/volume counts |
+
 ## Next Steps
 
 1. Refine `manage_render` logic (now split).
@@ -354,4 +389,6 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 4. Extend log subscription for real-time streaming.
 5. ~~Continue implementation of Phase 22 (Sessions & Local Multiplayer) per Roadmap.~~ ✅ Done
 6. ~~Continue implementation of Phase 23 (Level Structure) per Roadmap.~~ ✅ Done
-7. Continue implementation of Phase 24 (Volumes & Zones) per Roadmap.
+7. ~~Continue implementation of Phase 24 (Volumes & Zones) per Roadmap.~~ ✅ Done
+8. ~~Continue implementation of Phase 25 (Navigation System) per Roadmap.~~ ✅ Done
+9. Continue implementation of Phase 26 (Spline System) per Roadmap.

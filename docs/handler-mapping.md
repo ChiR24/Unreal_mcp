@@ -1042,3 +1042,24 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `set_volume_properties` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Sets volume-specific properties |
 | **Utility** | | | |
 | `get_volumes_info` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Returns volume information |
+
+## 37. Navigation Manager (`manage_navigation`) - Phase 25
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **NavMesh Configuration** | | | |
+| `configure_nav_mesh_settings` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Sets TileSizeUU, MinRegionArea, NavMeshResolutionParams (UE 5.7+) |
+| `set_nav_agent_properties` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Sets AgentRadius, AgentHeight, AgentMaxSlope |
+| `rebuild_navigation` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Triggers NavSys->Build() |
+| **Nav Modifiers** | | | |
+| `create_nav_modifier_component` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Creates UNavModifierComponent via SCS |
+| `set_nav_area_class` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Sets area class on modifier component |
+| `configure_nav_area_cost` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Configures DefaultCost on area CDO |
+| **Nav Links** | | | |
+| `create_nav_link_proxy` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Spawns ANavLinkProxy with FNavigationLink |
+| `configure_nav_link` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Updates link start/end, direction, snap radius |
+| `set_nav_link_type` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Toggles bSmartLinkIsRelevant (simple/smart) |
+| `create_smart_link` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Spawns NavLinkProxy with smart link enabled |
+| `configure_smart_link_behavior` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Configures UNavLinkCustomComponent settings |
+| **Utility** | | | |
+| `get_navigation_info` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Returns NavMesh stats, agent properties, link counts |

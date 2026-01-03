@@ -6060,6 +6060,186 @@ Supported actions:
         error: { type: 'string' }
       }
     }
+  },
+
+  // Phase 25: Navigation System
+  {
+    name: 'manage_navigation',
+    description: `Navigation system management for NavMesh and pathfinding.
+
+Use it when you need to:
+- configure NavMesh generation settings (cell size, tile size, region parameters).
+- set navigation agent properties (radius, height, step height, max slope).
+- rebuild the navigation mesh after level changes.
+- create nav modifier components to change area behavior.
+- set up nav links for connecting disjoint navmesh areas.
+- configure smart links for dynamic AI navigation.
+
+Actions:
+- NavMesh: configure_nav_mesh_settings, set_nav_agent_properties, rebuild_navigation
+- Nav Modifiers: create_nav_modifier_component, set_nav_area_class, configure_nav_area_cost
+- Nav Links: create_nav_link_proxy, configure_nav_link, set_nav_link_type, create_smart_link, configure_smart_link_behavior
+- Utility: get_navigation_info`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // NavMesh
+            'configure_nav_mesh_settings', 'set_nav_agent_properties', 'rebuild_navigation',
+            // Nav Modifiers
+            'create_nav_modifier_component', 'set_nav_area_class', 'configure_nav_area_cost',
+            // Nav Links
+            'create_nav_link_proxy', 'configure_nav_link', 'set_nav_link_type',
+            'create_smart_link', 'configure_smart_link_behavior',
+            // Utility
+            'get_navigation_info'
+          ],
+          description: 'Navigation action to perform'
+        },
+
+        // NavMesh identification
+        navMeshPath: { type: 'string', description: 'Path to NavMesh data asset.' },
+        actorName: { type: 'string', description: 'Name of nav link proxy or actor.' },
+        actorPath: { type: 'string', description: 'Path to existing actor.' },
+        blueprintPath: { type: 'string', description: 'Path to Blueprint for component addition.' },
+
+        // Nav agent properties (ARecastNavMesh)
+        agentRadius: { type: 'number', description: 'Navigation agent radius (default: 35).' },
+        agentHeight: { type: 'number', description: 'Navigation agent height (default: 144).' },
+        agentStepHeight: { type: 'number', description: 'Maximum step height agent can climb (default: 35).' },
+        agentMaxSlope: { type: 'number', description: 'Maximum slope angle in degrees (default: 44).' },
+
+        // NavMesh generation settings (FNavMeshResolutionParam)
+        cellSize: { type: 'number', description: 'NavMesh cell size (default: 19).' },
+        cellHeight: { type: 'number', description: 'NavMesh cell height (default: 10).' },
+        tileSizeUU: { type: 'number', description: 'NavMesh tile size in UU (default: 1000).' },
+        minRegionArea: { type: 'number', description: 'Minimum region area to keep.' },
+        mergeRegionSize: { type: 'number', description: 'Region merge threshold.' },
+        maxSimplificationError: { type: 'number', description: 'Edge simplification error.' },
+
+        // Nav modifier component (UNavModifierComponent)
+        componentName: { type: 'string', description: 'Name for nav modifier component.' },
+        areaClass: { type: 'string', description: 'Nav area class path (e.g., /Script/NavigationSystem.NavArea_Obstacle).' },
+        areaClassToReplace: { type: 'string', description: 'Area class to replace (optional modifier behavior).' },
+        failsafeExtent: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Failsafe extent for nav modifier when actor has no collision.'
+        },
+        bIncludeAgentHeight: { type: 'boolean', description: 'Expand lower bounds by agent height.' },
+
+        // Nav area cost configuration
+        areaCost: { type: 'number', description: 'Pathfinding cost multiplier for area (1.0 = normal).' },
+        fixedAreaEnteringCost: { type: 'number', description: 'Fixed cost added when entering the area.' },
+
+        // Nav link configuration (ANavLinkProxy, FNavigationLink)
+        linkName: { type: 'string', description: 'Name for navigation link.' },
+        startPoint: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Start point of navigation link (relative to actor).'
+        },
+        endPoint: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'End point of navigation link (relative to actor).'
+        },
+        direction: {
+          type: 'string',
+          enum: ['BothWays', 'LeftToRight', 'RightToLeft'],
+          description: 'Link traversal direction.'
+        },
+        snapRadius: { type: 'number', description: 'Snap radius for link endpoints (default: 30).' },
+        linkEnabled: { type: 'boolean', description: 'Whether the link is enabled.' },
+
+        // Smart link configuration (UNavLinkCustomComponent)
+        linkType: {
+          type: 'string',
+          enum: ['simple', 'smart'],
+          description: 'Type of navigation link.'
+        },
+        bSmartLinkIsRelevant: { type: 'boolean', description: 'Toggle smart link relevancy.' },
+        enabledAreaClass: { type: 'string', description: 'Area class when smart link is enabled.' },
+        disabledAreaClass: { type: 'string', description: 'Area class when smart link is disabled.' },
+        broadcastRadius: { type: 'number', description: 'Radius for state change broadcast.' },
+        broadcastInterval: { type: 'number', description: 'Interval for state change broadcast (0 = single).' },
+
+        // Obstacle configuration
+        bCreateBoxObstacle: { type: 'boolean', description: 'Add box obstacle during nav generation.' },
+        obstacleOffset: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Offset of simple box obstacle.'
+        },
+        obstacleExtent: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Extent of simple box obstacle.'
+        },
+        obstacleAreaClass: { type: 'string', description: 'Area class for box obstacle.' },
+
+        // Location and transform
+        location: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'World location for nav link proxy.'
+        },
+        rotation: {
+          type: 'object',
+          properties: {
+            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+          },
+          description: 'Rotation for nav link proxy.'
+        },
+
+        // Query parameters
+        filter: { type: 'string', description: 'Filter for get_navigation_info query.' },
+
+        // Save option
+        save: { type: 'boolean', description: 'Save the level/asset after modification.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        actorName: { type: 'string', description: 'Name of created/modified actor.' },
+        componentName: { type: 'string', description: 'Name of created component.' },
+        navMeshInfo: {
+          type: 'object',
+          properties: {
+            agentRadius: { type: 'number' },
+            agentHeight: { type: 'number' },
+            agentStepHeight: { type: 'number' },
+            agentMaxSlope: { type: 'number' },
+            cellSize: { type: 'number' },
+            cellHeight: { type: 'number' },
+            tileSizeUU: { type: 'number' },
+            tileCount: { type: 'number' },
+            boundsVolumes: { type: 'number' },
+            navLinkCount: { type: 'number' }
+          },
+          description: 'Navigation system information.'
+        },
+        error: { type: 'string' }
+      }
+    }
   }
 ];
 

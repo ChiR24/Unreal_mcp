@@ -40,6 +40,7 @@ import { handleGameFrameworkTools } from './handlers/game-framework-handlers.js'
 import { handleSessionsTools } from './handlers/sessions-handlers.js';
 import { handleLevelStructureTools } from './handlers/level-structure-handlers.js';
 import { handleVolumeTools } from './handlers/volume-handlers.js';
+import { handleNavigationTools } from './handlers/navigation-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -329,6 +330,9 @@ function registerDefaultHandlers() {
 
   // 38. VOLUMES & ZONES (Phase 24)
   toolRegistry.register('manage_volumes', async (args, tools) => await handleVolumeTools(getAction(args), args, tools));
+
+  // 39. NAVIGATION SYSTEM (Phase 25)
+  toolRegistry.register('manage_navigation', async (args, tools) => await handleNavigationTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

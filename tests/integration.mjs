@@ -58,6 +58,13 @@ const testCases = [
   { scenario: 'Volumes: Create nav mesh bounds', toolName: 'manage_volumes', arguments: { action: 'create_nav_mesh_bounds_volume', volumeName: 'IT_NavBoundsVol', location: { x: 0, y: 500, z: 100 }, extent: { x: 2000, y: 2000, z: 500 } }, expected: 'success' },
   { scenario: 'Volumes: Get volumes info', toolName: 'manage_volumes', arguments: { action: 'get_volumes_info', volumeType: 'Trigger' }, expected: 'success' },
   { scenario: 'Volumes: Set volume properties', toolName: 'manage_volumes', arguments: { action: 'set_volume_properties', volumeName: 'IT_PhysicsVol', bWaterVolume: false, fluidFriction: 0.3 }, expected: 'success|not found' },
+  // Phase 25: Navigation System
+  { scenario: 'Navigation: Get navigation info', toolName: 'manage_navigation', arguments: { action: 'get_navigation_info' }, expected: 'success' },
+  { scenario: 'Navigation: Set nav agent properties', toolName: 'manage_navigation', arguments: { action: 'set_nav_agent_properties', agentRadius: 35, agentHeight: 144, agentStepHeight: 35 }, expected: 'success' },
+  { scenario: 'Navigation: Configure nav mesh settings', toolName: 'manage_navigation', arguments: { action: 'configure_nav_mesh_settings', cellSize: 19, cellHeight: 10, tileSizeUU: 1000 }, expected: 'success' },
+  { scenario: 'Navigation: Create nav link proxy', toolName: 'manage_navigation', arguments: { action: 'create_nav_link_proxy', actorName: 'IT_NavLink', location: { x: 0, y: 0, z: 100 }, startPoint: { x: -100, y: 0, z: 0 }, endPoint: { x: 100, y: 0, z: 0 }, direction: 'BothWays' }, expected: 'success' },
+  { scenario: 'Navigation: Configure nav link', toolName: 'manage_navigation', arguments: { action: 'configure_nav_link', actorName: 'IT_NavLink', snapRadius: 30 }, expected: 'success|not found' },
+  { scenario: 'Navigation: Set nav link type', toolName: 'manage_navigation', arguments: { action: 'set_nav_link_type', actorName: 'IT_NavLink', linkType: 'smart' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_Cube' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }

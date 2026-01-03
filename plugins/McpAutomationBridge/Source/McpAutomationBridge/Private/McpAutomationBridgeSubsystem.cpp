@@ -854,6 +854,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageVolumesAction(R, A, P, S);
                   });
+
+  // Phase 25: Navigation System
+  RegisterHandler(TEXT("manage_navigation"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageNavigationAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the
