@@ -930,7 +930,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
             Message =
                 FString::Printf(TEXT("Vehicle %s configured"), *VehicleName);
             Resp->SetStringField(TEXT("vehicleName"), VehicleName);
-            Resp->SetStringField(TEXT("vehicleType"), *VehicleTypePtr);
+            Resp->SetStringField(TEXT("vehicleType"), FinalVehicleType);
 
             const TArray<TSharedPtr<FJsonValue>> *PluginDeps = nullptr;
             if (Payload->TryGetArrayField(TEXT("pluginDependencies"),

@@ -1481,20 +1481,20 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             Atten->Attenuation.FalloffDistance = static_cast<float>(GetNumberFieldSafe(Params, TEXT("falloffDistance"), 3600.0));
         }
         
-        FString FunctionType = GetStringFieldSafe(Params, TEXT("distanceAlgorithm"), TEXT("linear"));
-        if (FunctionType.ToLower() == TEXT("linear"))
+        FString FunctionType = GetStringFieldSafe(Params, TEXT("distanceAlgorithm"), TEXT("linear")).ToLower();
+        if (FunctionType == TEXT("linear"))
         {
             Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Linear;
         }
-        else if (FunctionType.ToLower() == TEXT("logarithmic"))
+        else if (FunctionType == TEXT("logarithmic"))
         {
             Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Logarithmic;
         }
-        else if (FunctionType.ToLower() == TEXT("inverse"))
+        else if (FunctionType == TEXT("inverse"))
         {
             Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Inverse;
         }
-        else if (FunctionType.ToLower() == TEXT("naturalSound"))
+        else if (FunctionType == TEXT("naturalsound"))
         {
             Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound;
         }

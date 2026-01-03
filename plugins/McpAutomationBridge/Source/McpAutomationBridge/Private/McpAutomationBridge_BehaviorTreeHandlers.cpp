@@ -129,15 +129,15 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     // Create default nodes (Root)
     NewGraph->GetSchema()->CreateDefaultNodesForGraph(*NewGraph);
 
-    // Save the asset
+    // Save the asset using safe helper
     FAssetRegistryModule::AssetCreated(NewBT);
     Package->MarkPackageDirty();
-
+    bool bSaved = McpSafeAssetSave(NewBT);
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("assetPath"), NewBT->GetPathName());
     Result->SetStringField(TEXT("name"), Name);
-    Result->SetBoolField(TEXT("saved"), true);
+    Result->SetBoolField(TEXT("saved"), bSaved);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Behavior Tree created."), Result);

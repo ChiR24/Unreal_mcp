@@ -412,11 +412,64 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
-        Controller->MarkPackageDirty();
+        // Set default Blackboard property on the generated class CDO using reflection
+        // The Blueprint can call UseBlackboard() in BeginPlay with this asset reference
+        if (Controller->GeneratedClass)
+        {
+            if (AAIController* CDO = Cast<AAIController>(Controller->GeneratedClass->GetDefaultObject()))
+            {
+                // Use reflection to find and set Blackboard-related properties
+                bool bPropertySet = false;
+                
+                // Try to find a UBlackboardData* property on the CDO
+                for (TFieldIterator<FObjectProperty> PropIt(Controller->GeneratedClass); PropIt; ++PropIt)
+                {
+                    FObjectProperty* ObjProp = *PropIt;
+                    if (ObjProp && ObjProp->PropertyClass && ObjProp->PropertyClass->IsChildOf(UBlackboardData::StaticClass()))
+                    {
+                        // Found a BlackboardData property - set it
+                        ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(CDO), BB);
+                        bPropertySet = true;
+                        Result->SetStringField(TEXT("propertyName"), ObjProp->GetName());
+                        break;
+                    }
+                }
+                
+                // If no existing property found, add a Blueprint variable for the Blackboard reference
+                if (!bPropertySet)
+                {
+                    // Add a Blueprint variable to store the BlackboardData reference
+                    FEdGraphPinType PinType;
+                    PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+                    PinType.PinSubCategoryObject = UBlackboardData::StaticClass();
+                    
+                    const FName VarName = TEXT("DefaultBlackboard");
+                    if (FBlueprintEditorUtils::AddMemberVariable(Controller, VarName, PinType))
+                    {
+                        // Set the default value for the variable
+                        FProperty* NewProp = Controller->GeneratedClass->FindPropertyByName(VarName);
+                        if (FObjectProperty* ObjProp = CastField<FObjectProperty>(NewProp))
+                        {
+                            ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(CDO), BB);
+                            bPropertySet = true;
+                        }
+                    }
+                    Result->SetStringField(TEXT("propertyName"), VarName.ToString());
+                }
+                
+                Result->SetBoolField(TEXT("propertyAssigned"), bPropertySet);
+                Result->SetStringField(TEXT("message"), bPropertySet 
+                    ? TEXT("Blackboard property assigned on CDO (call UseBlackboard in BeginPlay with this asset)") 
+                    : TEXT("Blackboard reference registered (call UseBlackboard in BeginPlay with this asset)"));
+            }
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Controller);
+        bool bSaved = McpSafeAssetSave(Controller);
+        Result->SetBoolField(TEXT("saved"), bSaved);
         Result->SetStringField(TEXT("controllerPath"), ControllerPath);
         Result->SetStringField(TEXT("blackboardPath"), BlackboardPath);
-        Result->SetStringField(TEXT("message"), TEXT("Blackboard assigned"));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard assigned"), Result);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard reference set"), Result);
         return true;
     }
 

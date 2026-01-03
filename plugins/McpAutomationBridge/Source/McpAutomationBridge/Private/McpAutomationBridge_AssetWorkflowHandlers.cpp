@@ -1610,12 +1610,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
       AppliedCount++;
     }
 
-    // Also mark dirty and save to persist the metadata
+    // Mark dirty so the asset can be saved later
     Asset->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetBoolField(TEXT("saved"), true);
+    Resp->SetBoolField(TEXT("markedDirty"), true);
     Resp->SetStringField(TEXT("assetPath"), AssetPath);
     Resp->SetNumberField(TEXT("appliedTags"), AppliedCount);
     SendAutomationResponse(Socket, RequestId, true,

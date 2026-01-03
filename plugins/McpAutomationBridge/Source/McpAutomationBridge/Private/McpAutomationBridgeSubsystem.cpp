@@ -908,6 +908,9 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests() {
 bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
     const TArray<FString> &Commands, FString &OutErrorMessage) {
 #if WITH_EDITOR
+  // GEditor operations must run on the game thread
+  check(IsInGameThread());
+  
   if (!GEditor) {
     OutErrorMessage = TEXT("Editor not available");
     return false;
