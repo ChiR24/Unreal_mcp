@@ -4468,5 +4468,244 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         error: commonSchemas.stringProp
       }
     }
+  },
+  {
+    name: 'manage_pcg',
+    category: 'world',
+    description: 'Create and manage PCG (Procedural Content Generation) graphs, nodes, samplers, filters, and spawners. Execute graphs and configure partition settings.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'create_pcg_graph', 'create_pcg_subgraph', 'add_pcg_node',
+            'connect_pcg_pins', 'set_pcg_node_settings',
+            'add_landscape_data_node', 'add_spline_data_node', 'add_volume_data_node',
+            'add_actor_data_node', 'add_texture_data_node',
+            'add_surface_sampler', 'add_mesh_sampler', 'add_spline_sampler', 'add_volume_sampler',
+            'add_bounds_modifier', 'add_density_filter', 'add_height_filter', 'add_slope_filter',
+            'add_distance_filter', 'add_bounds_filter', 'add_self_pruning',
+            'add_transform_points', 'add_project_to_surface', 'add_copy_points', 'add_merge_points',
+            'add_static_mesh_spawner', 'add_actor_spawner', 'add_spline_spawner',
+            'execute_pcg_graph', 'set_pcg_partition_grid_size',
+            'get_pcg_info'
+          ],
+          description: 'PCG action to perform'
+        },
+        graphName: { type: 'string', description: 'Name for new PCG graph asset.' },
+        graphPath: commonSchemas.assetPath,
+        subgraphPath: commonSchemas.assetPath,
+        nodeName: { type: 'string', description: 'Name or ID of PCG node.' },
+        nodeId: { type: 'string', description: 'Unique ID of PCG node.' },
+        nodeClass: { type: 'string', description: 'Class of PCG node to create (e.g., UPCGSurfaceSamplerSettings).' },
+        settingsClass: { type: 'string', description: 'Settings class for node.' },
+        nodePosition: {
+          type: 'object',
+          properties: {
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp
+          },
+          description: 'Position of node in graph editor.'
+        },
+        sourceNodeId: { type: 'string', description: 'Source node ID for pin connection.' },
+        sourcePinName: { type: 'string', description: 'Source pin name for connection.' },
+        targetNodeId: { type: 'string', description: 'Target node ID for pin connection.' },
+        targetPinName: { type: 'string', description: 'Target pin name for connection.' },
+        settings: {
+          type: 'object',
+          description: 'Node settings as key-value pairs.'
+        },
+        samplerType: {
+          type: 'string',
+          enum: ['Surface', 'Mesh', 'Spline', 'Volume'],
+          description: 'Type of sampler to create.'
+        },
+        pointsPerSquaredMeter: { type: 'number', description: 'Point density for surface sampler.' },
+        looseness: { type: 'number', description: 'Looseness value for sampler (0-1).' },
+        pointExtents: {
+          type: 'object',
+          properties: {
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
+          },
+          description: 'Point extents for sampler.'
+        },
+        unbounded: { type: 'boolean', description: 'Whether sampler is unbounded.' },
+        filterType: {
+          type: 'string',
+          enum: ['Density', 'Height', 'Slope', 'Distance', 'Bounds', 'SelfPruning'],
+          description: 'Type of filter to create.'
+        },
+        minValue: { type: 'number', description: 'Minimum value for filter.' },
+        maxValue: { type: 'number', description: 'Maximum value for filter.' },
+        invert: { type: 'boolean', description: 'Invert filter results.' },
+        minHeight: { type: 'number', description: 'Minimum height for height filter.' },
+        maxHeight: { type: 'number', description: 'Maximum height for height filter.' },
+        minSlope: { type: 'number', description: 'Minimum slope angle (degrees) for slope filter.' },
+        maxSlope: { type: 'number', description: 'Maximum slope angle (degrees) for slope filter.' },
+        distanceMin: { type: 'number', description: 'Minimum distance for distance filter.' },
+        distanceMax: { type: 'number', description: 'Maximum distance for distance filter.' },
+        boundsMin: {
+          type: 'object',
+          properties: {
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
+          },
+          description: 'Minimum bounds for bounds filter/modifier.'
+        },
+        boundsMax: {
+          type: 'object',
+          properties: {
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
+          },
+          description: 'Maximum bounds for bounds filter/modifier.'
+        },
+        pruningRadius: { type: 'number', description: 'Radius for self-pruning.' },
+        pruningType: {
+          type: 'string',
+          enum: ['Random', 'LargestRemoved', 'SmallestRemoved'],
+          description: 'Pruning type for self-pruning.'
+        },
+        offsetMin: {
+          type: 'object',
+          properties: {
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
+          },
+          description: 'Minimum offset for transform.'
+        },
+        offsetMax: {
+          type: 'object',
+          properties: {
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
+          },
+          description: 'Maximum offset for transform.'
+        },
+        rotationMin: {
+          type: 'object',
+          properties: {
+            pitch: commonSchemas.numberProp, yaw: commonSchemas.numberProp, roll: commonSchemas.numberProp
+          },
+          description: 'Minimum rotation for transform.'
+        },
+        rotationMax: {
+          type: 'object',
+          properties: {
+            pitch: commonSchemas.numberProp, yaw: commonSchemas.numberProp, roll: commonSchemas.numberProp
+          },
+          description: 'Maximum rotation for transform.'
+        },
+        scaleMin: {
+          type: 'object',
+          properties: {
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
+          },
+          description: 'Minimum scale for transform.'
+        },
+        scaleMax: {
+          type: 'object',
+          properties: {
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
+          },
+          description: 'Maximum scale for transform.'
+        },
+        bAbsoluteOffset: { type: 'boolean', description: 'Use absolute offset values.' },
+        bAbsoluteRotation: { type: 'boolean', description: 'Use absolute rotation values.' },
+        bAbsoluteScale: { type: 'boolean', description: 'Use absolute scale values.' },
+        spawnerType: {
+          type: 'string',
+          enum: ['StaticMesh', 'Actor', 'Spline'],
+          description: 'Type of spawner to create.'
+        },
+        meshPath: commonSchemas.meshPath,
+        meshPaths: {
+          type: 'array',
+          items: commonSchemas.stringProp,
+          description: 'Array of mesh paths for spawner.'
+        },
+        actorClass: { type: 'string', description: 'Actor class path for actor spawner.' },
+        splineActorClass: { type: 'string', description: 'Spline actor class for spline spawner.' },
+        meshWeights: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              meshPath: commonSchemas.stringProp,
+              weight: commonSchemas.numberProp
+            }
+          },
+          description: 'Weighted mesh selection for spawner.'
+        },
+        spawnOption: {
+          type: 'string',
+          enum: ['CollapseActors', 'MergePCGOnly', 'NoMerging'],
+          description: 'Actor spawn option.'
+        },
+        actorName: commonSchemas.actorName,
+        componentName: commonSchemas.componentName,
+        bForce: { type: 'boolean', description: 'Force graph execution.' },
+        partitionGridSize: { type: 'number', description: 'Partition grid size for World Partition.' },
+        inputTag: { type: 'string', description: 'Input tag for data node.' },
+        landscapeActor: { type: 'string', description: 'Landscape actor name for landscape data node.' },
+        splineActor: { type: 'string', description: 'Spline actor name for spline data node.' },
+        volumeActor: { type: 'string', description: 'Volume actor name for volume data node.' },
+        actorPath: commonSchemas.actorPath,
+        texturePath: commonSchemas.texturePath,
+        filter: commonSchemas.filter,
+        includeNodes: { type: 'boolean', description: 'Include node details in get_pcg_info.' },
+        includeConnections: { type: 'boolean', description: 'Include connection details in get_pcg_info.' },
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        graphPath: commonSchemas.assetPath,
+        nodeId: { type: 'string', description: 'Created/modified node ID.' },
+        nodeName: { type: 'string', description: 'Created/modified node name.' },
+        connectionId: { type: 'string', description: 'Created connection ID.' },
+        pcgInfo: {
+          type: 'object',
+          properties: {
+            graphPath: commonSchemas.stringProp,
+            nodeCount: commonSchemas.numberProp,
+            inputNodes: commonSchemas.arrayOfStrings,
+            outputNodes: commonSchemas.arrayOfStrings,
+            nodes: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: commonSchemas.stringProp,
+                  name: commonSchemas.stringProp,
+                  class: commonSchemas.stringProp,
+                  position: {
+                    type: 'object',
+                    properties: {
+                      x: commonSchemas.numberProp,
+                      y: commonSchemas.numberProp
+                    }
+                  }
+                }
+              }
+            },
+            connections: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  sourceNode: commonSchemas.stringProp,
+                  sourcePin: commonSchemas.stringProp,
+                  targetNode: commonSchemas.stringProp,
+                  targetPin: commonSchemas.stringProp
+                }
+              }
+            }
+          },
+          description: 'PCG graph information (for get_pcg_info).'
+        },
+        error: commonSchemas.stringProp
+      }
+    }
   }
 ];

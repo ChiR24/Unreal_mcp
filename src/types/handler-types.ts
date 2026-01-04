@@ -750,6 +750,109 @@ export interface NavigationArgs extends HandlerArgs {
     save?: boolean;
 }
 
+// ============================================================================
+// PCG Framework Types (Phase 27)
+// ============================================================================
+
+/**
+ * PCG Node types for graph management
+ */
+export type PCGNodeType = 
+  | 'surface_sampler' | 'mesh_sampler' | 'spline_sampler' | 'volume_sampler'
+  | 'static_mesh_spawner' | 'actor_spawner' | 'spline_spawner'
+  | 'landscape_data' | 'spline_data' | 'volume_data' | 'actor_data' | 'texture_data'
+  | 'bounds_modifier' | 'density_filter' | 'height_filter' | 'slope_filter'
+  | 'distance_filter' | 'bounds_filter' | 'self_pruning'
+  | 'transform_points' | 'project_to_surface' | 'copy_points' | 'merge_points';
+
+/**
+ * Arguments for manage_pcg tool (Phase 27)
+ * 
+ * Covers:
+ * - Graph Management: create_pcg_graph, create_pcg_subgraph, add_pcg_node, connect_pcg_pins, set_pcg_node_settings
+ * - Input Nodes: add_landscape_data_node, add_spline_data_node, add_volume_data_node, add_actor_data_node, add_texture_data_node
+ * - Point Operations: samplers, filters, modifiers, transforms
+ * - Spawning: static_mesh_spawner, actor_spawner, spline_spawner
+ * - Execution: execute_pcg_graph, set_pcg_partition_grid_size
+ */
+export interface PCGArgs extends HandlerArgs {
+    // Graph identification
+    graphPath?: string;
+    graphName?: string;
+    subgraphPath?: string;
+    
+    // Node identification
+    nodeId?: string;
+    nodeName?: string;
+    nodeType?: PCGNodeType | string;
+    
+    // Pin connections
+    sourceNodeId?: string;
+    sourcePin?: string;
+    targetNodeId?: string;
+    targetPin?: string;
+    
+    // Graph positioning
+    nodeX?: number;
+    nodeY?: number;
+    
+    // Node settings (generic object for different node types)
+    settings?: Record<string, unknown>;
+    
+    // Input node specific
+    actorPath?: string;
+    landscapePath?: string;
+    splinePath?: string;
+    volumePath?: string;
+    texturePath?: string;
+    
+    // Sampler settings
+    pointsPerSquareMeter?: number;
+    looseness?: number;
+    minDistance?: number;
+    maxDistance?: number;
+    seed?: number;
+    
+    // Filter settings
+    minHeight?: number;
+    maxHeight?: number;
+    minSlope?: number;
+    maxSlope?: number;
+    densityThreshold?: number;
+    
+    // Bounds settings
+    boundsMin?: Vector3;
+    boundsMax?: Vector3;
+    
+    // Transform settings
+    location?: Vector3;
+    rotation?: Rotator;
+    scale?: Vector3;
+    bInheritActorScale?: boolean;
+    
+    // Spawner settings
+    meshPath?: string;
+    actorClass?: string;
+    spawnedActorTag?: string;
+    bUseRandomRotation?: boolean;
+    bAlignToNormal?: boolean;
+    
+    // Execution settings
+    bForceGenerate?: boolean;
+    bGenerateAtRuntime?: boolean;
+    partitionGridSize?: number;
+    
+    // Component for execution
+    componentName?: string;
+    ownerActorName?: string;
+    
+    // Query parameters
+    filter?: string;
+    
+    // Save option
+    save?: boolean;
+}
+
 
 // ============================================================================
 // Sessions & Local Multiplayer Types (Phase 22)
@@ -1165,4 +1268,137 @@ export interface VolumesArgs extends HandlerArgs {
     // Save option
     save?: boolean;
 }
+
+// ============================================================================
+// PCG Framework Types (Phase 27)
+// ============================================================================
+
+/**
+ * PCG node types for samplers
+ */
+export type PCGSamplerType = 'Surface' | 'Mesh' | 'Spline' | 'Volume';
+
+/**
+ * PCG spawner types
+ */
+export type PCGSpawnerType = 'StaticMesh' | 'Actor' | 'Spline';
+
+/**
+ * Arguments for manage_pcg tool (Phase 27)
+ * 
+ * Covers:
+ * - Graph Management: create_pcg_graph, create_pcg_subgraph, add_pcg_node, connect_pcg_pins, set_pcg_node_settings
+ * - Input Nodes: add_landscape_data_node, add_spline_data_node, add_volume_data_node, add_actor_data_node, add_texture_data_node
+ * - Point Operations: samplers, filters, transforms
+ * - Spawning: add_static_mesh_spawner, add_actor_spawner, add_spline_spawner
+ * - Execution: execute_pcg_graph, set_pcg_partition_grid_size
+ * - Utility: get_pcg_info
+ */
+export interface PCGArgs extends HandlerArgs {
+    // Graph identification
+    graphName?: string;
+    graphPath?: string;
+    subgraphPath?: string;
+    
+    // Node identification
+    nodeName?: string;
+    nodeId?: string;
+    nodeClass?: string;
+    settingsClass?: string;
+    
+    // Node positioning (in graph editor)
+    nodePosition?: { x: number; y: number };
+    
+    // Pin connections
+    sourceNodeId?: string;
+    sourcePinName?: string;
+    targetNodeId?: string;
+    targetPinName?: string;
+    
+    // Node settings (generic key-value)
+    settings?: Record<string, unknown>;
+    
+    // Sampler settings
+    samplerType?: PCGSamplerType;
+    pointsPerSquaredMeter?: number;
+    looseness?: number;
+    pointExtents?: Vector3;
+    unbounded?: boolean;
+    
+    // Filter settings
+    filterType?: 'Density' | 'Height' | 'Slope' | 'Distance' | 'Bounds' | 'SelfPruning';
+    minValue?: number;
+    maxValue?: number;
+    invert?: boolean;
+    
+    // Height/Slope filter
+    minHeight?: number;
+    maxHeight?: number;
+    minSlope?: number;
+    maxSlope?: number;
+    
+    // Distance filter
+    distanceMin?: number;
+    distanceMax?: number;
+    
+    // Bounds filter/modifier
+    boundsMin?: Vector3;
+    boundsMax?: Vector3;
+    
+    // Self pruning
+    pruningRadius?: number;
+    pruningType?: 'Random' | 'LargestRemoved' | 'SmallestRemoved';
+    
+    // Transform settings
+    offsetMin?: Vector3;
+    offsetMax?: Vector3;
+    rotationMin?: Rotator;
+    rotationMax?: Rotator;
+    scaleMin?: Vector3;
+    scaleMax?: Vector3;
+    bAbsoluteOffset?: boolean;
+    bAbsoluteRotation?: boolean;
+    bAbsoluteScale?: boolean;
+    
+    // Spawner settings
+    spawnerType?: PCGSpawnerType;
+    meshPath?: string;
+    meshPaths?: string[];
+    actorClass?: string;
+    splineActorClass?: string;
+    
+    // Mesh spawner weights (for weighted random selection)
+    meshWeights?: Array<{
+        meshPath: string;
+        weight: number;
+    }>;
+    
+    // Actor spawner options
+    spawnOption?: 'CollapseActors' | 'MergePCGOnly' | 'NoMerging';
+    
+    // Execution settings
+    actorName?: string;
+    componentName?: string;
+    bForce?: boolean;
+    
+    // Partition grid
+    partitionGridSize?: number;
+    
+    // Input data node settings
+    inputTag?: string;
+    landscapeActor?: string;
+    splineActor?: string;
+    volumeActor?: string;
+    actorPath?: string;
+    texturePath?: string;
+    
+    // Query parameters
+    filter?: string;
+    includeNodes?: boolean;
+    includeConnections?: boolean;
+    
+    // Save option
+    save?: boolean;
+}
+
 

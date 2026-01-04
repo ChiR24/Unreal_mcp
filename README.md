@@ -112,6 +112,7 @@ Enable via **Edit → Plugins**, then restart the editor:
 | **Control Rig** | `animation_physics` operations |
 | **Subobject Data Interface** | Blueprint components (UE 5.7+) |
 | **Geometry Script** | `manage_geometry` operations (procedural mesh) |
+| **PCG** | `manage_pcg` operations (procedural content generation) |
 
 ### Step 4: Configure MCP Client
 
@@ -210,6 +211,8 @@ ASSET_LIST_TTL_MS=10000
 | `manage_level_structure` | Level creation, sublevels, World Partition, data layers, HLOD |
 | `manage_volumes` | Trigger volumes, blocking, physics, audio, navigation volumes |
 | `manage_navigation` | NavMesh settings, nav modifiers, nav links, smart links, pathfinding |
+| `manage_splines` | Spline creation, spline meshes, mesh scattering, road/river/fence templates |
+| `manage_pcg` | PCG graphs, samplers, filters, spawners, procedural content generation |
 
 ### Supported Asset Types
 

@@ -424,4 +424,55 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 7. ~~Continue implementation of Phase 24 (Volumes & Zones) per Roadmap.~~ ✅ Done
 8. ~~Continue implementation of Phase 25 (Navigation System) per Roadmap.~~ ✅ Done
 9. ~~Continue implementation of Phase 26 (Spline System) per Roadmap.~~ ✅ Done
-10. Continue implementation of Phase 27 (PCG Framework) per Roadmap.
+10. ~~Continue implementation of Phase 27 (PCG Framework) per Roadmap.~~ ✅ Done
+11. Continue implementation of Phase 28 (Environment Systems) per Roadmap.
+
+---
+
+## Phase 27: PCG Framework - Implementation Details
+
+**Status**: ✅ Complete (31 actions)
+
+**File**: `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_PCGHandlers.cpp`
+
+| Action | Status | Description |
+|--------|--------|-------------|
+| **Graph Management** | | |
+| `create_pcg_graph` | ✅ Done | Creates new PCG graph asset |
+| `create_pcg_subgraph` | ✅ Done | Creates embedded subgraph in parent |
+| `add_pcg_node` | ✅ Done | Adds node by settings class name |
+| `connect_pcg_pins` | ✅ Done | Connects node pins via AddEdge |
+| `set_pcg_node_settings` | ✅ Done | Modifies node properties via reflection |
+| **Input Nodes** | | |
+| `add_landscape_data_node` | ✅ Done | Adds landscape data input |
+| `add_spline_data_node` | ✅ Done | Adds spline data input |
+| `add_volume_data_node` | ✅ Done | Adds volume data input |
+| `add_actor_data_node` | ✅ Done | Adds actor data with mode selection |
+| `add_texture_data_node` | ✅ Done | Adds texture/mesh data input |
+| **Samplers** | | |
+| `add_surface_sampler` | ✅ Done | Surface sampling with density settings |
+| `add_mesh_sampler` | ✅ Done | Mesh-based point sampling |
+| `add_spline_sampler` | ✅ Done | Spline sampling with dimension/mode |
+| `add_volume_sampler` | ✅ Done | Volume voxel sampling |
+| **Filters & Modifiers** | | |
+| `add_bounds_modifier` | ✅ Done | Modifies point extents |
+| `add_density_filter` | ✅ Done | Filters by density range |
+| `add_height_filter` | ✅ Done | Filters by Position.Z attribute |
+| `add_slope_filter` | ✅ Done | Filters by Normal.Z attribute |
+| `add_distance_filter` | ✅ Done | Filters by index/distance |
+| `add_bounds_filter` | ✅ Done | Filters by bounds attribute |
+| `add_self_pruning` | ✅ Done | Removes overlapping points |
+| **Transform Operations** | | |
+| `add_transform_points` | ✅ Done | Offset, rotation, scale with ranges |
+| `add_project_to_surface` | ✅ Done | Projects points to surface |
+| `add_copy_points` | ✅ Done | Duplicates points |
+| `add_merge_points` | ✅ Done | Merges point sets |
+| **Spawners** | | |
+| `add_static_mesh_spawner` | ✅ Done | Spawns static meshes at points |
+| `add_actor_spawner` | ✅ Done | Spawns actors with options |
+| `add_spline_spawner` | ✅ Done | Spawns along splines |
+| **Execution** | | |
+| `execute_pcg_graph` | ✅ Done | Triggers PCG generation on actor |
+| `set_pcg_partition_grid_size` | ✅ Done | Configures HiGen partition grid |
+| **Utility** | | |
+| `get_pcg_info` | ✅ Done | Lists graphs or returns detailed info |

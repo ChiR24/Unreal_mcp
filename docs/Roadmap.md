@@ -1110,44 +1110,49 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 27: PCG Framework
+## Phase 27: PCG Framework (Complete)
 
 **Goal**: Complete procedural content generation.
 
 **Tool**: `manage_pcg`
 
+**Status**: All 31 actions fully implemented in TypeScript and C++.
+
 ### 27.1 Graph Management
-- [ ] `create_pcg_graph`, `create_pcg_subgraph`
-- [ ] `add_pcg_node`
-- [ ] `connect_pcg_pins`
-- [ ] `set_pcg_node_settings`
+- [x] `create_pcg_graph`, `create_pcg_subgraph`
+- [x] `add_pcg_node`
+- [x] `connect_pcg_pins`
+- [x] `set_pcg_node_settings`
 
 ### 27.2 Input Nodes
-- [ ] `add_landscape_data_node`
-- [ ] `add_spline_data_node`
-- [ ] `add_volume_data_node`
-- [ ] `add_actor_data_node`
-- [ ] `add_texture_data_node`
+- [x] `add_landscape_data_node`
+- [x] `add_spline_data_node`
+- [x] `add_volume_data_node`
+- [x] `add_actor_data_node`
+- [x] `add_texture_data_node`
 
 ### 27.3 Point Operations
-- [ ] `add_surface_sampler`, `add_mesh_sampler`
-- [ ] `add_spline_sampler`, `add_volume_sampler`
-- [ ] `add_bounds_modifier`
-- [ ] `add_density_filter`, `add_height_filter`
-- [ ] `add_slope_filter`, `add_distance_filter`
-- [ ] `add_bounds_filter`, `add_self_pruning`
-- [ ] `add_transform_points`
-- [ ] `add_project_to_surface`
-- [ ] `add_copy_points`, `add_merge_points`
+- [x] `add_surface_sampler`, `add_mesh_sampler`
+- [x] `add_spline_sampler`, `add_volume_sampler`
+- [x] `add_bounds_modifier`
+- [x] `add_density_filter`, `add_height_filter`
+- [x] `add_slope_filter`, `add_distance_filter`
+- [x] `add_bounds_filter`, `add_self_pruning`
+- [x] `add_transform_points`
+- [x] `add_project_to_surface`
+- [x] `add_copy_points`, `add_merge_points`
 
 ### 27.4 Spawning
-- [ ] `add_static_mesh_spawner`
-- [ ] `add_actor_spawner`
-- [ ] `add_spline_spawner`
+- [x] `add_static_mesh_spawner`
+- [x] `add_actor_spawner`
+- [x] `add_spline_spawner`
 
 ### 27.5 Execution
-- [ ] `execute_pcg_graph`
-- [ ] `set_pcg_partition_grid_size`
+- [x] `execute_pcg_graph`
+- [x] `set_pcg_partition_grid_size`
+
+### 27.6 Utility
+- [x] `get_pcg_info`
 
 ---
 

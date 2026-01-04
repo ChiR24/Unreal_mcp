@@ -116,6 +116,10 @@ public class McpAutomationBridge : ModuleRules
             TryAddConditionalModule(Target, EngineDir, "OnlineSubsystem", "OnlineSubsystem");
             TryAddConditionalModule(Target, EngineDir, "OnlineSubsystemUtils", "OnlineSubsystemUtils");
 
+            // Phase 27: PCG Framework (conditional - requires PCG plugin)
+            TryAddConditionalModule(Target, EngineDir, "PCG", "PCG");
+            TryAddConditionalModule(Target, EngineDir, "PCGEditor", "PCGEditor");
+
             // Ensure editor builds expose full Blueprint graph editing APIs.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=1");

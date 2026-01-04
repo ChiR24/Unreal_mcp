@@ -862,6 +862,22 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageNavigationAction(R, A, P, S);
                   });
+
+  // Phase 26: Spline System
+  RegisterHandler(TEXT("manage_splines"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageSplinesAction(R, A, P, S);
+                  });
+
+  // Phase 27: PCG Framework
+  RegisterHandler(TEXT("manage_pcg"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManagePCGAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the
