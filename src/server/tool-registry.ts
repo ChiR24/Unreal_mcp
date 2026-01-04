@@ -41,7 +41,7 @@ import { getProjectSetting } from '../utils/ini-reader.js';
 
 export class ToolRegistry {
     private defaultElicitationTimeoutMs = 60000;
-    private currentCategories: string[] = ['core'];
+    private currentCategories: string[] = ['all'];
 
     constructor(
         private server: Server,
@@ -59,7 +59,7 @@ export class ToolRegistry {
         const action = args.action as string;
         if (action === 'set_categories') {
             const newCats = Array.isArray(args.categories) ? args.categories as string[] : [];
-            this.currentCategories = newCats.length > 0 ? newCats : ['core'];
+            this.currentCategories = newCats.length > 0 ? newCats : ['all'];
             this.logger.info(`MCP Categories updated to: ${this.currentCategories.join(', ')}`);
             
             // Trigger list_changed notification
