@@ -79,7 +79,7 @@ export async function handleSplineTools(
 
   switch (action) {
     // ========================================================================
-    // Spline Creation (6 actions)
+    // Spline Creation (8 actions)
     // ========================================================================
     case 'create_spline_actor':
       return sendRequest('create_spline_actor');

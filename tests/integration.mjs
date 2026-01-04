@@ -66,10 +66,10 @@ const testCases = [
   { scenario: 'Navigation: Configure nav link', toolName: 'manage_navigation', arguments: { action: 'configure_nav_link', actorName: 'IT_NavLink', snapRadius: 30 }, expected: 'success|not found' },
   { scenario: 'Navigation: Set nav link type', toolName: 'manage_navigation', arguments: { action: 'set_nav_link_type', actorName: 'IT_NavLink', linkType: 'smart' }, expected: 'success|not found' },
   // Phase 26: Spline System
-  { scenario: 'Splines: Create spline actor', toolName: 'manage_splines', arguments: { action: 'create_spline_actor', actorName: 'IT_SplineActor', location: { x: 0, y: 0, z: 100 }, closedLoop: false }, expected: 'success' },
+  { scenario: 'Splines: Create spline actor', toolName: 'manage_splines', arguments: { action: 'create_spline_actor', actorName: 'IT_SplineActor', location: { x: 0, y: 0, z: 100 }, bClosedLoop: false }, expected: 'success' },
   { scenario: 'Splines: Add spline point', toolName: 'manage_splines', arguments: { action: 'add_spline_point', actorName: 'IT_SplineActor', position: { x: 500, y: 0, z: 100 } }, expected: 'success|not found' },
   { scenario: 'Splines: Set spline point position', toolName: 'manage_splines', arguments: { action: 'set_spline_point_position', actorName: 'IT_SplineActor', pointIndex: 1, position: { x: 600, y: 100, z: 150 } }, expected: 'success|not found' },
-  { scenario: 'Splines: Set spline type', toolName: 'manage_splines', arguments: { action: 'set_spline_type', actorName: 'IT_SplineActor', splineType: 'Linear' }, expected: 'success|not found' },
+  { scenario: 'Splines: Set spline type', toolName: 'manage_splines', arguments: { action: 'set_spline_type', actorName: 'IT_SplineActor', splineType: 'linear' }, expected: 'success|not found' },
   { scenario: 'Splines: Create road spline', toolName: 'manage_splines', arguments: { action: 'create_road_spline', actorName: 'IT_RoadSpline', location: { x: 1000, y: 0, z: 0 }, width: 400 }, expected: 'success' },
   { scenario: 'Splines: Get splines info', toolName: 'manage_splines', arguments: { action: 'get_splines_info' }, expected: 'success' },
   { scenario: 'Splines: Get specific spline info', toolName: 'manage_splines', arguments: { action: 'get_splines_info', actorName: 'IT_SplineActor' }, expected: 'success|not found' },

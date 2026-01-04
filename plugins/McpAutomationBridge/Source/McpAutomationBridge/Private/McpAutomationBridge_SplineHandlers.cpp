@@ -147,14 +147,15 @@ static USplineComponent* FindSplineComponent(AActor* Actor, const FString& Compo
     return SplineComponents[0];
 }
 
-// Helper to parse spline point type
+// Helper to parse spline point type (case-insensitive)
 static ESplinePointType::Type ParseSplinePointType(const FString& TypeStr)
 {
-    if (TypeStr == TEXT("Linear")) return ESplinePointType::Linear;
-    if (TypeStr == TEXT("Curve")) return ESplinePointType::Curve;
-    if (TypeStr == TEXT("Constant")) return ESplinePointType::Constant;
-    if (TypeStr == TEXT("CurveClamped")) return ESplinePointType::CurveClamped;
-    if (TypeStr == TEXT("CurveCustomTangent")) return ESplinePointType::CurveCustomTangent;
+    FString LowerStr = TypeStr.ToLower();
+    if (LowerStr == TEXT("linear")) return ESplinePointType::Linear;
+    if (LowerStr == TEXT("curve")) return ESplinePointType::Curve;
+    if (LowerStr == TEXT("constant")) return ESplinePointType::Constant;
+    if (LowerStr == TEXT("curveclamped")) return ESplinePointType::CurveClamped;
+    if (LowerStr == TEXT("curvecustomtangent")) return ESplinePointType::CurveCustomTangent;
     return ESplinePointType::Curve; // Default
 }
 
@@ -185,7 +186,7 @@ static bool HandleCreateSplineActor(
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT("SplineActor"));
     FVector Location = GetJsonVectorField(Payload, TEXT("location"));
     FRotator Rotation = GetJsonRotatorField(Payload, TEXT("rotation"));
-    bool bClosedLoop = GetJsonBoolField(Payload, TEXT("closedLoop"), false);
+    bool bClosedLoop = GetJsonBoolField(Payload, TEXT("bClosedLoop"), false);
     FString SplineType = GetJsonStringField(Payload, TEXT("splineType"), TEXT("Curve"));
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
@@ -237,9 +238,13 @@ static bool HandleCreateSplineActor(
     }
     SplineComp->UpdateSpline();
 
-    // Parse initial points if provided
-    const TArray<TSharedPtr<FJsonValue>>* PointsArray;
-    if (Payload->TryGetArrayField(TEXT("initialPoints"), PointsArray))
+    // Parse initial points if provided (accept both 'points' and 'initialPoints' field names)
+    const TArray<TSharedPtr<FJsonValue>>* PointsArray = nullptr;
+    if (!Payload->TryGetArrayField(TEXT("points"), PointsArray))
+    {
+        Payload->TryGetArrayField(TEXT("initialPoints"), PointsArray);
+    }
+    if (PointsArray)
     {
         SplineComp->ClearSplinePoints(false);
         for (int32 i = 0; i < PointsArray->Num(); i++)
@@ -537,7 +542,7 @@ static bool HandleSetSplinePointRotation(
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
-    FRotator Rotation = GetJsonRotatorField(Payload, TEXT("rotation"));
+    FRotator Rotation = GetJsonRotatorField(Payload, TEXT("pointRotation"));
 
     if (ActorName.IsEmpty())
     {
@@ -598,7 +603,7 @@ static bool HandleSetSplinePointScale(
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
-    FVector Scale = GetJsonVectorField(Payload, TEXT("scale"), FVector::OneVector);
+    FVector Scale = GetJsonVectorField(Payload, TEXT("pointScale"), FVector::OneVector);
 
     if (ActorName.IsEmpty())
     {
@@ -1074,7 +1079,7 @@ static bool HandleScatterMeshesAlongSpline(
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
     double Spacing = GetJsonNumberField(Payload, TEXT("spacing"), 100.0);
-    bool bAlignToSpline = GetJsonBoolField(Payload, TEXT("alignToSpline"), true);
+    bool bAlignToSpline = GetJsonBoolField(Payload, TEXT("bAlignToSpline"), true);
 
     if (ActorName.IsEmpty() || MeshPath.IsEmpty())
     {
