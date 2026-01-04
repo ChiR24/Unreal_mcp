@@ -14,22 +14,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   // 1. ASSET MANAGER
   {
     name: 'manage_asset',
-    description: `Comprehensive asset management suite. Handles import/export, basic file operations, dependency analysis, source control, and specialized graph editing (Materials, Behavior Trees).
-
-Use it when you need to:
-- manage asset lifecycle (import, duplicate, rename, delete).
-- organize project structure (folders, redirects).
-- analyze dependencies or fix reference issues.
-- edit Material graphs or Behavior Trees.
-- generate basic assets like Materials, Textures, or Blueprints (via asset creation).
-
-Supported actions:
-- Core: list, import, duplicate, rename, move, delete, delete_assets, create_folder, search_assets.
-- Utils: get_dependencies, get_source_control_state, analyze_graph, create_thumbnail, set_tags, get_metadata, set_metadata, validate, fixup_redirectors, find_by_tag, generate_report.
-- Creation: create_material, create_material_instance, create_render_target.
-- Rendering: nanite_rebuild_mesh.
-- Material Graph: add_material_node, connect_material_pins, remove_material_node, break_material_connections, get_material_node_details.
-- Behavior Tree: add_bt_node, connect_bt_nodes, remove_bt_node, break_bt_connections, set_bt_node_properties.`,
+    description: 'Create, import, duplicate, rename, delete assets. Edit Material graphs and instances. Analyze dependencies.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -139,19 +124,7 @@ Supported actions:
   // 2. BLUEPRINT MANAGER
   {
     name: 'manage_blueprint',
-    description: `Blueprint authoring and editing tool.
-
-Use it when you need to:
-- create new Blueprints.
-- inspect existing Blueprints (get_blueprint).
-- modify the component hierarchy (SCS).
-- edit the Blueprint graph (nodes, pins, properties).
-
-Supported actions:
-- Lifecycle: create, get_blueprint.
-- Components (SCS): add_component, set_default, modify_scs, get_scs, add_scs_component, remove_scs_component, reparent_scs_component, set_scs_transform, set_scs_property.
-- Helpers: ensure_exists, probe_handle, add_variable, add_function, add_event, add_construction_script, set_variable_metadata, set_metadata.
-- Graph: create_node, delete_node, connect_pins, break_pin_links, set_node_property, create_reroute_node, get_node_details, get_graph_details, get_pin_details.`,
+    description: 'Create Blueprints, add SCS components (mesh, collision, camera), and manipulate graph nodes.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -236,15 +209,7 @@ Supported actions:
   // 3. ACTOR CONTROL
   {
     name: 'control_actor',
-    description: `Viewport actor manipulation.
-
-Use it when you need to:
-- spawn, destroy, or duplicate actors.
-- move/rotate/scale actors.
-- modify actor components or tags.
-- apply physics forces.
-
-Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, apply_force, set_transform, get_transform, set_visibility, add_component, set_component_properties, get_components, add_tag, remove_tag, find_by_tag, find_by_name, list, set_blueprint_variables, create_snapshot, attach, detach.`,
+    description: 'Spawn actors, set transforms, enable physics, add components, manage tags, and attach actors.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -308,16 +273,7 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
   // 4. EDITOR CONTROL
   {
     name: 'control_editor',
-    description: `Editor session control.
-
-Use it when you need to:
-- control PIE (Play In Editor).
-- move the viewport camera.
-- execute console commands (legacy).
-- take screenshots/bookmarks.
-- simulate input (UI).
-
-Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, possess, set_camera, set_camera_position, set_camera_fov, set_view_mode, set_viewport_resolution, console_command, screenshot, step_frame, start_recording, stop_recording, create_bookmark, jump_to_bookmark, set_preferences, set_viewport_realtime, open_asset, simulate_input.`,
+    description: 'Start/stop PIE, control viewport camera, run console commands, take screenshots, simulate input.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -363,15 +319,7 @@ Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, p
   // 5. LEVEL MANAGER
   {
     name: 'manage_level',
-    description: `Level and World Partition management.
-
-Use it when you need to:
-- load/save levels.
-- manage streaming levels.
-- build lighting.
-- load world partition cells or toggle data layers.
-
-Supported actions: load, save, stream, create_level, create_light, build_lighting, set_metadata, load_cells, set_datalayer, export_level, import_level, list_levels, get_summary, delete, validate_level.`,
+    description: 'Load/save levels, configure streaming, manage World Partition cells, and build lighting.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -428,14 +376,7 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
   // 6. ANIMATION & PHYSICS
   {
     name: 'animation_physics',
-    description: `Animation and Physics tools.
-
-Use it when you need to:
-- create Animation Blueprints, Montages, or Blend Spaces.
-- setup Ragdolls or Physics Assets.
-- configure vehicles.
-
-Supported actions: create_animation_bp, play_montage, setup_ragdoll, configure_vehicle, create_blend_space, create_state_machine, setup_ik, create_procedural_anim, create_blend_tree, setup_retargeting, setup_physics_simulation, cleanup.`,
+    description: 'Create Animation BPs, Montages, Blend Spaces, IK rigs, ragdolls, and vehicles (wheeled/hover/flying).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -476,18 +417,7 @@ Supported actions: create_animation_bp, play_montage, setup_ragdoll, configure_v
   // 7. EFFECTS MANAGER (Niagara & Particles)
   {
     name: 'manage_effect',
-    description: `Effects management (Niagara, Particles, Debug Shapes).
-
-Use it when you need to:
-- spawn effects or debug shapes.
-- create/edit Niagara systems and emitters.
-- edit Niagara graphs (modules, pins).
-
-Supported actions: 
-- Spawning: particle, niagara, debug_shape, spawn_niagara, create_dynamic_light.
-- Asset Creation: create_niagara_system, create_niagara_emitter.
-- Graph: add_niagara_module, connect_niagara_pins, remove_niagara_node, set_niagara_parameter.
-- Utils: clear_debug_shapes, cleanup.`,
+    description: 'Spawn Niagara/Cascade particles, draw debug shapes, and edit VFX node graphs.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -538,14 +468,7 @@ Supported actions:
   // 8. ENVIRONMENT BUILDER
   {
     name: 'build_environment',
-    description: `Environment creation (Landscape, Foliage).
-
-Use it when you need to:
-- create/sculpt landscapes.
-- paint foliage.
-- procedural generation.
-
-Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_procedural_terrain, create_procedural_foliage, add_foliage_instances, get_foliage_instances, remove_foliage.`,
+    description: 'Create/sculpt landscapes, paint foliage, and generate procedural terrain/biomes.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -639,25 +562,7 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
   // 9. SYSTEM CONTROL
   {
     name: 'system_control',
-    description: `System-level control.
-
-Use it when you need to:
-- profiling & performance (stat commands).
-- quality settings.
-- run external tools (UBT, Tests).
-- manage logs/insights.
-- execute arbitrary console commands.
-- set/get CVars and project settings.
-- validate assets.
-
-Supported actions: 
-- Core: profile, show_fps, set_quality, screenshot, set_resolution, set_fullscreen, execute_command, console_command.
-- CVars: set_cvar.
-- Settings: get_project_settings, validate_assets.
-- Pipeline: run_ubt, run_tests.
-- Debug/Logs: subscribe, spawn_category, start_session.
-- Render: lumen_update_scene.
-- UI: play_sound, create_widget, show_widget.`,
+    description: 'Run profiling, set quality/CVars, execute console commands, run UBT, and manage widgets.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -721,22 +626,7 @@ Supported actions:
   // 10. SEQUENCER
   {
     name: 'manage_sequence',
-    description: `Sequencer (Cinematics) management.
-
-Use it when you need to:
-- create/edit level sequences.
-- add tracks (camera, actors, audio, events).
-- keyframe properties.
-- manage sequence playback and settings.
-
-Supported actions:
-- Lifecycle: create, open, duplicate, rename, delete, list.
-- Bindings: add_camera, add_actor, add_actors, remove_actors, get_bindings, add_spawnable_from_class.
-- Playback: play, pause, stop, set_playback_speed.
-- Keyframes: add_keyframe.
-- Properties: get_properties, set_properties, get_metadata, set_metadata.
-- Tracks: add_track, add_section, list_tracks, remove_track, set_track_muted, set_track_solo, set_track_locked.
-- Settings: set_display_rate, set_tick_resolution, set_work_range, set_view_range.`,
+    description: 'Edit Level Sequences: add tracks, bind actors, set keyframes, control playback, and record camera.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -808,18 +698,7 @@ Supported actions:
   // 11. INPUT MANAGEMENT
   {
     name: 'manage_input',
-    description: `Enhanced Input management.
-
-Use it when you need to:
-- create Input Actions (IA_*)
-- create Input Mapping Contexts (IMC_*)
-- bind keys to actions in a mapping context.
-
-Supported actions:
-- create_input_action: Create a UInputAction asset.
-- create_input_mapping_context: Create a UInputMappingContext asset.
-- add_mapping: Add a key mapping to a context.
-- remove_mapping: Remove a mapping from a context.`,
+    description: 'Create Input Actions and Mapping Contexts. Add key/gamepad bindings with modifiers and triggers.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -854,20 +733,7 @@ Supported actions:
   // 12. INTROSPECTION (INSPECT)
   {
     name: 'inspect',
-    description: `Low-level object inspection and property manipulation.
-
-Use it when you need to:
-- read/write properties of any UObject or component.
-- list objects/components.
-- manage actor tags and snapshots.
-- find objects by class or tag.
-
-Supported actions:
-- Object: inspect_object, inspect_class, list_objects, find_by_class, delete_object, export.
-- Properties: get_property, set_property, get_component_property, set_component_property.
-- Components: get_components, get_bounding_box.
-- Tags: add_tag, find_by_tag, get_metadata.
-- Snapshots: create_snapshot, restore_snapshot.`,
+    description: 'Inspect any UObject: read/write properties, list components, export snapshots, and query class info.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -915,19 +781,7 @@ Supported actions:
   // 12. AUDIO MANAGER
   {
     name: 'manage_audio',
-    description: `Audio asset and component management.
-
-Use it when you need to:
-- create sound cues/mixes.
-- play sounds (3D/2D).
-- control audio components.
-
-Supported actions:
-- Assets: create_sound_cue, create_sound_mix, create_sound_class, create_reverb_zone, create_ambient_sound.
-- Playback: play_sound_at_location, play_sound_2d, play_sound_attached, spawn_sound_at_location.
-- Components: create_audio_component, fade_sound, fade_sound_in, fade_sound_out.
-- Mixes: push_sound_mix, pop_sound_mix, set_sound_mix_class_override, clear_sound_mix_class_override, set_base_sound_mix.
-- Global: enable_audio_analysis, set_doppler_effect, set_audio_occlusion, set_sound_attenuation.`,
+    description: 'Play/stop sounds, add audio components, configure mixes, attenuation, and spatial audio.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -995,15 +849,7 @@ Supported actions:
   // 13. BEHAVIOR TREE
   {
     name: 'manage_behavior_tree',
-    description: `Behavior Tree editing tool.
-
-Use it when you need to:
-- create new Behavior Tree assets.
-- add nodes (Sequence, Selector, Tasks).
-- connect nodes.
-- set properties.
-
-Supported actions: create, add_node, connect_nodes, remove_node, break_connections, set_node_properties.`,
+    description: 'Create Behavior Trees, add task/decorator/service nodes, and configure node properties.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1041,16 +887,7 @@ Supported actions: create, add_node, connect_nodes, remove_node, break_connectio
   // 14. BLUEPRINT GRAPH DIRECT
   {
     name: 'manage_blueprint_graph',
-    description: `Direct Blueprint Graph manipulation.
-
-Use it when you need to:
-- add nodes (Function, Variable, Event, Macro).
-- connect/disconnect pins.
-- create reroute nodes.
-- set node properties.
-- get node/graph details.
-
-Supported actions: create_node, delete_node, connect_pins, break_pin_links, set_node_property, create_reroute_node, get_node_details, get_graph_details, get_pin_details.`,
+    description: 'Add Blueprint graph nodes (functions, events, variables), connect pins, and set property values.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1090,19 +927,7 @@ Supported actions: create_node, delete_node, connect_pins, break_pin_links, set_
   // 15. LIGHTING MANAGER
   {
     name: 'manage_lighting',
-    description: `Lighting and Rendering configuration.
-
-Use it when you need to:
-- spawn and configure lights (Directional, Point, Spot, Rect, Sky).
-- configure Global Illumination (Lumen, Lightmass) and Shadows.
-- setup Volumetric Fog and Atmosphere.
-- build lighting (bake).
-- set exposure and post-process settings.
-
-Supported actions: 
-- Spawning: spawn_light, create_light, spawn_sky_light, create_sky_light, ensure_single_sky_light, create_lightmass_volume, create_lighting_enabled_level, create_dynamic_light.
-- Configuration: setup_global_illumination, configure_shadows, set_exposure, set_ambient_occlusion, setup_volumetric_fog.
-- Building: build_lighting.`,
+    description: 'Spawn lights (point, spot, rect, sky), configure GI, shadows, volumetric fog, and build lighting.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1191,19 +1016,7 @@ Supported actions:
   // 16. PERFORMANCE MANAGER
   {
     name: 'manage_performance',
-    description: `Performance profiling and optimization.
-
-Use it when you need to:
-- profiling (CPU, GPU, Memory, RenderThread).
-- optimize content (LODs, texture streaming, draw calls).
-- benchmark the scene.
-- configure rendering features (Nanite, Lumen, World Partition).
-
-Supported actions: 
-- Profiling: start_profiling, stop_profiling, run_benchmark, show_fps, show_stats, generate_memory_report.
-- Settings: set_scalability, set_resolution_scale, set_vsync, set_frame_rate_limit, enable_gpu_timing.
-- Optimization: configure_texture_streaming, configure_lod, apply_baseline_settings, optimize_draw_calls, merge_actors, configure_occlusion_culling, optimize_shaders.
-- Features: configure_nanite, configure_world_partition.`,
+    description: 'Run profiling/benchmarks, configure scalability, LOD, Nanite, and optimization settings.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1269,38 +1082,7 @@ Supported actions:
   // 17. GEOMETRY MANAGER (Phase 6 - Geometry Script)
   {
     name: 'manage_geometry',
-    description: `Geometry Script mesh creation and manipulation via DynamicMeshActor.
-
-Use it when you need to:
-- create primitive meshes (box, sphere, cylinder, cone, capsule, torus, plane, disc, stairs, ring, arch, pipe, ramp).
-- perform boolean operations (union, subtract, intersection).
-- apply modeling operations (extrude, inset, outset, bevel, offset_faces, shell, revolve, chamfer).
-- apply deformers (bend, twist, taper, noise_deform, smooth, relax, stretch, spherify, cylindrify).
-- apply topology operations (triangulate, poke).
-- apply transforms (mirror, array_linear, array_radial).
-- process meshes (simplify_mesh, subdivide, remesh_uniform, merge_vertices).
-- repair meshes (weld_vertices, fill_holes, remove_degenerates).
-- manipulate UVs (auto_uv, project_uv, transform_uvs).
-- manipulate normals/tangents (recalculate_normals, flip_normals, recompute_tangents).
-- generate collision shapes (convex, box, sphere, capsule, decomposition).
-- convert dynamic meshes to static mesh assets.
-
-Supported actions:
-- Primitives (basic): create_box, create_sphere, create_cylinder, create_cone, create_capsule, create_torus, create_plane, create_disc.
-- Primitives (additional): create_stairs, create_spiral_stairs, create_ring, create_arch, create_pipe, create_ramp.
-- Booleans: boolean_union, boolean_subtract, boolean_intersection, boolean_trim, self_union.
-- Modeling: extrude, inset, outset, bevel, offset_faces, shell, revolve, chamfer, extrude_along_spline, bridge, loft, sweep, duplicate_along_spline, loop_cut, edge_split, quadrangulate.
-- Deformers: bend, twist, taper, noise_deform, smooth, relax, stretch, spherify, cylindrify.
-- Topology: triangulate, poke.
-- Transform: mirror, array_linear, array_radial.
-- Mesh Processing: simplify_mesh, subdivide, remesh_uniform, merge_vertices, remesh_voxel.
-- Mesh Repair: weld_vertices, fill_holes, remove_degenerates.
-- UVs: auto_uv, project_uv (box, planar, cylindrical), transform_uvs, unwrap_uv, pack_uv_islands.
-- Normals/Tangents: recalculate_normals, flip_normals, recompute_tangents.
-- Collision: generate_collision (types: convex, convex_decomposition, box, sphere, capsule), generate_complex_collision, simplify_collision.
-- LOD: generate_lods, set_lod_settings, set_lod_screen_sizes, convert_to_nanite.
-- Export: convert_to_static_mesh.
-- Utils: get_mesh_info.`,
+    description: 'Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1465,24 +1247,7 @@ Supported actions:
   // 18. SKELETON MANAGER (Phase 7 - Skeletal Mesh & Rigging)
   {
     name: 'manage_skeleton',
-    description: `Skeletal mesh rigging and physics asset management.
-
-Use it when you need to:
-- create and modify skeletons (add/remove/rename bones).
-- manage sockets for attachment points.
-- create and configure physics assets for ragdolls.
-- setup skin weights for mesh deformation.
-- create and manage morph targets for facial animation.
-- configure cloth binding to skeletal meshes.
-
-Supported actions:
-- Skeleton: create_skeleton, add_bone, remove_bone, rename_bone, set_bone_transform, set_bone_parent, create_virtual_bone.
-- Sockets: create_socket, configure_socket.
-- Skin Weights: auto_skin_weights, set_vertex_weights, normalize_weights, prune_weights, copy_weights, mirror_weights.
-- Physics Asset: create_physics_asset, add_physics_body, configure_physics_body, add_physics_constraint, configure_constraint_limits.
-- Cloth: bind_cloth_to_skeletal_mesh, assign_cloth_asset_to_mesh.
-- Morph Targets: create_morph_target, set_morph_target_deltas, import_morph_targets.
-- Utils: get_skeleton_info, list_bones, list_sockets, list_physics_bodies.`,
+    description: 'Edit skeletal meshes: add sockets, configure physics assets, set skin weights, and create morph targets.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1616,25 +1381,7 @@ Supported actions:
   // 19. MATERIAL AUTHORING (Phase 8 - Advanced Material Creation)
   {
     name: 'manage_material_authoring',
-    description: `Advanced material creation and shader authoring.
-
-Use it when you need to:
-- create materials with specific blend modes, shading models, and domains.
-- add material expressions (textures, parameters, math nodes, etc.).
-- connect and disconnect material nodes.
-- create material functions and use them in materials.
-- create material instances and set parameter values.
-- create specialized materials (landscape, decal, post-process).
-- compile materials and get material info.
-
-Supported actions:
-- Material Creation: create_material, set_blend_mode, set_shading_model, set_material_domain.
-- Expressions: add_texture_sample, add_texture_coordinate, add_scalar_parameter, add_vector_parameter, add_static_switch_parameter, add_math_node, add_world_position, add_vertex_normal, add_pixel_depth, add_fresnel, add_reflection_vector, add_panner, add_rotator, add_noise, add_voronoi, add_if, add_switch, add_custom_expression.
-- Connections: connect_nodes, disconnect_nodes.
-- Functions: create_material_function, add_function_input, add_function_output, use_material_function.
-- Instances: create_material_instance, set_scalar_parameter_value, set_vector_parameter_value, set_texture_parameter_value.
-- Specialized: create_landscape_material, create_decal_material, create_post_process_material, add_landscape_layer, configure_layer_blend.
-- Utils: compile_material, get_material_info.`,
+    description: 'Create materials with expressions, parameters, functions, instances, and landscape blend layers.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1757,22 +1504,7 @@ Supported actions:
   // 20. TEXTURE MANAGEMENT (Phase 9 - Texture Generation & Processing)
   {
     name: 'manage_texture',
-    description: `Procedural texture creation, processing, and settings management.
-
-Use it when you need to:
-- create procedural textures (noise, gradients, patterns).
-- convert height maps to normal maps.
-- bake ambient occlusion from meshes.
-- resize, blur, sharpen, or adjust textures.
-- pack or extract texture channels.
-- combine textures with blend modes.
-- configure texture compression, LOD, and streaming settings.
-
-Supported actions:
-- Procedural Generation: create_noise_texture, create_gradient_texture, create_pattern_texture, create_normal_from_height, create_ao_from_mesh.
-- Processing: resize_texture, adjust_levels, adjust_curves, blur, sharpen, invert, desaturate, channel_pack, channel_extract, combine_textures.
-- Settings: set_compression_settings, set_texture_group, set_lod_bias, configure_virtual_texture, set_streaming_priority.
-- Utility: get_texture_info.`,
+    description: 'Create procedural textures, process images, bake normal/AO maps, and set compression settings.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1951,7 +1683,7 @@ Supported actions:
   // ============================================================================
   {
     name: 'manage_animation_authoring',
-    description: 'Complete animation system authoring from keyframes to state machines. Create and edit Animation Sequences, Montages, Blend Spaces, Animation Blueprints, Control Rigs, and IK Retargeting.',
+    description: 'Create Animation Sequences, Montages, Blend Spaces, Animation BPs, Control Rigs, and IK Retargeters.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2154,24 +1886,7 @@ Supported actions:
   // ============================================================================
   {
     name: 'manage_audio_authoring',
-    description: `Complete audio system authoring including MetaSounds and advanced Sound Cue editing. Create and edit Sound Cues with complex node graphs, MetaSounds for procedural audio, Sound Classes and Mixes, Attenuation Settings, Dialogue systems, and Audio Effects.
-
-Use it when you need to:
-- Create complex Sound Cues with multiple nodes (wave players, mixers, modulators, etc.)
-- Build MetaSound graphs for procedural/generative audio
-- Configure Sound Classes hierarchies and Sound Mixes
-- Set up advanced attenuation and spatialization settings
-- Create dialogue voice assets and dialogue waves
-- Configure reverb effects and source effect chains
-
-Supported actions:
-- Sound Cues: create_sound_cue, add_cue_node, connect_cue_nodes, set_cue_attenuation, set_cue_concurrency.
-- MetaSounds: create_metasound, add_metasound_node, connect_metasound_nodes, add_metasound_input, add_metasound_output, set_metasound_default.
-- Classes & Mixes: create_sound_class, set_class_properties, set_class_parent, create_sound_mix, add_mix_modifier, configure_mix_eq.
-- Attenuation: create_attenuation_settings, configure_distance_attenuation, configure_spatialization, configure_occlusion, configure_reverb_send.
-- Dialogue: create_dialogue_voice, create_dialogue_wave, set_dialogue_context.
-- Effects: create_reverb_effect, create_source_effect_chain, add_source_effect, create_submix_effect.
-- Utility: get_audio_info.`,
+    description: 'Create Sound Cues, MetaSounds, sound classes/mixes, attenuation settings, and dialogue systems.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2467,31 +2182,7 @@ Supported actions:
   // ============================================================================
   {
     name: 'manage_niagara_authoring',
-    description: `Complete Niagara VFX system authoring for creating particle effects, simulations, and visual effects. Create and edit Niagara Systems, Emitters, add modules from the module library, configure parameters and data interfaces, set up events and GPU simulation.
-
-Use it when you need to:
-- Create new Niagara Systems and Emitters from scratch
-- Add spawn, initialize, update, and render modules to emitters
-- Configure forces, velocities, sizes, colors, and other particle behaviors
-- Set up skeletal mesh, static mesh, spline, and audio data interfaces
-- Configure events for inter-emitter communication
-- Enable GPU simulation for high particle counts
-- Add sprite, mesh, ribbon, and light renderers
-
-Supported actions:
-- Systems & Emitters: create_niagara_system, create_niagara_emitter, add_emitter_to_system, set_emitter_properties.
-- Spawn Modules: add_spawn_rate_module, add_spawn_burst_module, add_spawn_per_unit_module.
-- Particle Modules: add_initialize_particle_module, add_particle_state_module.
-- Forces: add_force_module (gravity, drag, vortex, point_attraction, curl_noise).
-- Motion: add_velocity_module, add_acceleration_module.
-- Appearance: add_size_module, add_color_module.
-- Renderers: add_sprite_renderer_module, add_mesh_renderer_module, add_ribbon_renderer_module, add_light_renderer_module.
-- Behavior: add_collision_module, add_kill_particles_module, add_camera_offset_module.
-- Parameters: add_user_parameter, set_parameter_value, bind_parameter_to_source.
-- Data Interfaces: add_skeletal_mesh_data_interface, add_static_mesh_data_interface, add_spline_data_interface, add_audio_spectrum_data_interface, add_collision_query_data_interface.
-- Events: add_event_generator, add_event_receiver, configure_event_payload.
-- GPU: enable_gpu_simulation, add_simulation_stage.
-- Utility: get_niagara_info, validate_niagara_system.`,
+    description: 'Create and edit Niagara VFX systems, emitters, modules, spawn/force/render settings, and GPU particle simulation.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2894,22 +2585,7 @@ Supported actions:
   // ============================================================================
   {
     name: 'manage_gas',
-    description: `Complete Gameplay Ability System (GAS) implementation for abilities, effects, and attributes. Create and configure Ability System Components, Attribute Sets, Gameplay Abilities, Gameplay Effects, and Gameplay Cues.
-
-Use it when you need to:
-- Add Ability System Components to character Blueprints
-- Create Attribute Sets with custom attributes (health, mana, stamina, etc.)
-- Create Gameplay Abilities with costs, cooldowns, and targeting
-- Create Gameplay Effects for buffs, debuffs, and damage
-- Set up Gameplay Cues for visual/audio feedback
-- Configure ability activation and instancing policies
-
-Supported actions:
-- Components & Attributes: add_ability_system_component, configure_asc, create_attribute_set, add_attribute, set_attribute_base_value, set_attribute_clamping.
-- Gameplay Abilities: create_gameplay_ability, set_ability_tags, set_ability_costs, set_ability_cooldown, set_ability_targeting, add_ability_task, set_activation_policy, set_instancing_policy.
-- Gameplay Effects: create_gameplay_effect, set_effect_duration, add_effect_modifier, set_modifier_magnitude, add_effect_execution_calculation, add_effect_cue, set_effect_stacking, set_effect_tags.
-- Gameplay Cues: create_gameplay_cue_notify, configure_cue_trigger, set_cue_effects, add_tag_to_asset.
-- Utility: get_gas_info.`,
+    description: 'Configure Gameplay Ability System: create abilities, effects, attribute sets, gameplay cues, costs, and cooldowns.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3204,20 +2880,7 @@ Supported actions:
   // ============================================================================
   {
     name: 'manage_character',
-    description: `Complete character setup with advanced movement capabilities. Create character blueprints, configure movement components, and set up advanced movement systems.
-
-Use it when you need to:
-- Create new character blueprints with capsule, mesh, and camera components
-- Configure movement speeds, jumping, and rotation settings
-- Set up advanced movement like mantling, vaulting, climbing, sliding, wall running
-- Implement footstep systems with surface-based sounds and effects
-
-Supported actions:
-- Character Creation: create_character_blueprint, configure_capsule_component, configure_mesh_component, configure_camera_component.
-- Movement Component: configure_movement_speeds, configure_jump, configure_rotation, add_custom_movement_mode, configure_nav_movement.
-- Advanced Movement: setup_mantling, setup_vaulting, setup_climbing, setup_sliding, setup_wall_running, setup_grappling.
-- Footsteps System: setup_footstep_system, map_surface_to_sound, configure_footstep_fx.
-- Utility: get_character_info.`,
+    description: 'Create character Blueprints with capsule, mesh, camera. Configure movement speeds, jumping, advanced locomotion (mantle, climb, slide).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3428,26 +3091,7 @@ Supported actions:
   // 26. COMBAT & WEAPONS SYSTEM (Phase 15)
   {
     name: 'manage_combat',
-    description: `Complete combat and weapons system management. Handles weapon creation, firing modes, projectiles, damage systems, and melee combat.
-
-Use it when you need to:
-- Create weapon blueprints with mesh, sockets, and stats
-- Configure firing modes (hitscan, projectile, spread, recoil, ADS)
-- Create and configure projectiles with movement, collision, homing
-- Set up damage types and hit detection systems
-- Implement weapon features (reload, ammo, attachments, switching)
-- Configure weapon effects (muzzle flash, tracers, impact, shells)
-- Create melee combat systems (traces, combos, hitstop, parry, block)
-
-Supported actions:
-- Weapon Base: create_weapon_blueprint, configure_weapon_mesh, configure_weapon_sockets, set_weapon_stats
-- Firing Modes: configure_hitscan, configure_projectile, configure_spread_pattern, configure_recoil_pattern, configure_aim_down_sights
-- Projectiles: create_projectile_blueprint, configure_projectile_movement, configure_projectile_collision, configure_projectile_homing
-- Damage System: create_damage_type, configure_damage_execution, setup_hitbox_component
-- Weapon Features: setup_reload_system, setup_ammo_system, setup_attachment_system, setup_weapon_switching
-- Effects: configure_muzzle_flash, configure_tracer, configure_impact_effects, configure_shell_ejection
-- Melee Combat: create_melee_trace, configure_combo_system, create_hit_pause, configure_hit_reaction, setup_parry_block_system, configure_weapon_trails
-- Utility: get_combat_info`,
+    description: 'Create weapons with hitscan/projectile firing, configure damage types, hitboxes, reload, and melee combat (combos, parry, block).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3650,28 +3294,7 @@ Supported actions:
   // 27. AI SYSTEM (Phase 16)
   {
     name: 'manage_ai',
-    description: `Complete AI system management. Handles AI controllers, blackboards, behavior trees, EQS, perception, state trees, smart objects, and mass AI.
-
-Use it when you need to:
-- Create AI controllers with behavior tree and blackboard assignments
-- Create and configure blackboard assets with keys of various types
-- Build behavior trees with composite nodes, tasks, decorators, and services
-- Create Environment Query System (EQS) queries with generators, contexts, and tests
-- Set up AI perception with sight, hearing, damage sensing, and team affiliation
-- Create State Trees (UE5.3+) as behavior tree alternatives
-- Configure Smart Objects for contextual AI interactions
-- Set up Mass AI for crowd simulation
-
-Supported actions:
-- AI Controller: create_ai_controller, assign_behavior_tree, assign_blackboard
-- Blackboard: create_blackboard_asset, add_blackboard_key, set_key_instance_synced
-- Behavior Tree: create_behavior_tree, add_composite_node, add_task_node, add_decorator, add_service, configure_bt_node
-- EQS: create_eqs_query, add_eqs_generator, add_eqs_context, add_eqs_test, configure_test_scoring
-- Perception: add_ai_perception_component, configure_sight_config, configure_hearing_config, configure_damage_sense_config, set_perception_team
-- State Trees: create_state_tree, add_state_tree_state, add_state_tree_transition, configure_state_tree_task
-- Smart Objects: create_smart_object_definition, add_smart_object_slot, configure_slot_behavior, add_smart_object_component
-- Mass AI: create_mass_entity_config, configure_mass_entity, add_mass_spawner
-- Utility: get_ai_info`,
+    description: 'Create AI controllers, blackboards, behavior trees. Configure EQS queries, perception (sight/hearing), State Trees, and Smart Objects.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3960,24 +3583,7 @@ Supported actions:
   // ============================================================================
   {
     name: 'manage_inventory',
-    description: `Complete inventory and items system implementation for data assets, inventory components, pickups, equipment, loot, and crafting.
-
-Use it when you need to:
-- Create item data assets with properties (name, description, icon, mesh, stack size, weight, rarity)
-- Add inventory components to Blueprints with configurable slots
-- Create pickup actors with interaction and respawn settings
-- Set up equipment systems with slots and stat modifiers
-- Create loot tables with weighted drops and quality tiers
-- Implement crafting systems with recipes and workbenches
-
-Supported actions:
-- Data Assets: create_item_data_asset, set_item_properties, create_item_category, assign_item_category.
-- Inventory Component: create_inventory_component, configure_inventory_slots, add_inventory_functions, configure_inventory_events, set_inventory_replication.
-- Pickups: create_pickup_actor, configure_pickup_interaction, configure_pickup_respawn, configure_pickup_effects.
-- Equipment: create_equipment_component, define_equipment_slots, configure_equipment_effects, add_equipment_functions, configure_equipment_visuals.
-- Loot System: create_loot_table, add_loot_entry, configure_loot_drop, set_loot_quality_tiers.
-- Crafting: create_crafting_recipe, configure_recipe_requirements, create_crafting_station, add_crafting_component.
-- Utility: get_inventory_info.`,
+    description: 'Create item data assets, inventory components, pickup actors, equipment slots, loot tables, and crafting recipes.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -4280,46 +3886,7 @@ Supported actions:
   // ============================================================================
   {
     name: 'manage_interaction',
-    description: `Complete interaction framework for creating interactive objects and systems in Unreal Engine.
-
-CAPABILITIES:
-- Interaction Component: Create and configure interaction systems with traces and widgets
-- Interactables: Create doors, switches, chests, levers with full functionality
-- Destructibles: Set up destructible meshes with damage levels and effects
-- Triggers: Create and configure trigger volumes with events and filters
-
-ACTIONS:
-Interaction Component:
-- create_interaction_component: Add interaction component to blueprint
-- configure_interaction_trace: Set up line/sphere/box traces for detection
-- configure_interaction_widget: Configure UI prompts and widgets
-- add_interaction_events: Add OnInteractionStart, OnInteractionEnd events
-
-Interactables:
-- create_interactable_interface: Create IInteractable interface
-- create_door_actor: Create door with pivot rotation and animation
-- configure_door_properties: Set open angle, time, locked state, sounds
-- create_switch_actor: Create button/lever/pressure plate
-- configure_switch_properties: Set toggle, one-shot, target actors
-- create_chest_actor: Create container with loot integration
-- configure_chest_properties: Set loot table, locked state, respawn
-- create_lever_actor: Create lever with rotation/translation
-
-Destructibles:
-- setup_destructible_mesh: Set up GeometryCollection destruction
-- configure_destruction_levels: Configure damage thresholds and states
-- configure_destruction_effects: Set destroy sound, particle, debris
-- configure_destruction_damage: Set health, damage multipliers
-- add_destruction_component: Add destruction management component
-
-Triggers:
-- create_trigger_actor: Create trigger volume (box, sphere, capsule)
-- configure_trigger_events: Set enter, exit, stay events
-- configure_trigger_filter: Filter by class, tag, interface
-- configure_trigger_response: Set once, repeatable, toggle response
-
-Utility:
-- get_interaction_info: Query interaction system info`,
+    description: 'Create interactive objects: doors, switches, chests, levers. Set up destructible meshes and trigger volumes.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -4519,98 +4086,7 @@ Utility:
   // ============================================================================
   {
     name: 'manage_widget_authoring',
-    description: `Complete UMG widget authoring capabilities for creating and configuring UI systems in Unreal Engine.
-
-CAPABILITIES:
-- Widget Creation: Create widget blueprints with custom parent classes
-- Layout Panels: Canvas, horizontal/vertical boxes, overlays, grids, scroll boxes
-- Common Widgets: Text, images, buttons, sliders, checkboxes, input fields
-- Layout & Styling: Anchors, alignment, padding, transforms, visibility
-- Bindings & Events: Property bindings, click/hover/value change events
-- Widget Animations: Animation tracks, keyframes, looping
-- UI Templates: Main menus, pause menus, HUDs, inventory screens
-
-ACTIONS:
-Widget Creation:
-- create_widget_blueprint: Create new UUserWidget blueprint
-- set_widget_parent_class: Set parent class for widget
-
-Layout Panels:
-- add_canvas_panel: Add canvas panel container
-- add_horizontal_box: Add horizontal layout box
-- add_vertical_box: Add vertical layout box
-- add_overlay: Add overlay container
-- add_grid_panel: Add grid panel container
-- add_uniform_grid: Add uniform grid panel
-- add_wrap_box: Add wrap box container
-- add_scroll_box: Add scrollable container
-- add_size_box: Add size constraint box
-- add_scale_box: Add scaling container
-- add_border: Add border container
-
-Common Widgets:
-- add_text_block: Add text display widget
-- add_rich_text_block: Add rich text with styling
-- add_image: Add image widget
-- add_button: Add clickable button
-- add_check_box: Add checkbox widget
-- add_slider: Add slider widget
-- add_progress_bar: Add progress bar
-- add_text_input: Add text input field
-- add_combo_box: Add dropdown combo box
-- add_spin_box: Add numeric spinner
-- add_list_view: Add list view widget
-- add_tree_view: Add tree view widget
-
-Layout & Styling:
-- set_anchor: Set widget anchors
-- set_alignment: Set widget alignment
-- set_position: Set widget position
-- set_size: Set widget size
-- set_padding: Set widget padding
-- set_z_order: Set widget z-order
-- set_render_transform: Set render transform
-- set_visibility: Set widget visibility
-- set_style: Set widget styling
-- set_clipping: Set widget clipping mode
-
-Bindings & Events:
-- create_property_binding: Create property binding function
-- bind_text: Bind text to variable/function
-- bind_visibility: Bind visibility
-- bind_color: Bind color and opacity
-- bind_enabled: Bind enabled state
-- bind_on_clicked: Bind click event
-- bind_on_hovered: Bind hover events
-- bind_on_value_changed: Bind value change event
-
-Widget Animations:
-- create_widget_animation: Create animation
-- add_animation_track: Add animation track
-- add_animation_keyframe: Add keyframe
-- set_animation_loop: Configure looping
-
-UI Templates:
-- create_main_menu: Create main menu template
-- create_pause_menu: Create pause menu template
-- create_settings_menu: Create settings menu
-- create_loading_screen: Create loading screen
-- create_hud_widget: Create HUD template
-- add_health_bar: Add health bar element
-- add_ammo_counter: Add ammo counter
-- add_minimap: Add minimap element
-- add_crosshair: Add crosshair element
-- add_compass: Add compass element
-- add_interaction_prompt: Add interaction prompt
-- add_objective_tracker: Add objective tracker
-- add_damage_indicator: Add damage indicator
-- create_inventory_ui: Create inventory UI
-- create_dialog_widget: Create dialog widget
-- create_radial_menu: Create radial menu
-
-Utility:
-- get_widget_info: Query widget information
-- preview_widget: Preview widget in designer`,
+    description: 'Create UMG widgets: buttons, text, images, sliders. Configure layouts, bindings, animations. Build HUDs and menus.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -5053,25 +4529,7 @@ Utility:
   // ============================================================================
   {
     name: 'manage_networking',
-    description: `Complete networking and replication system for multiplayer games.
-
-Use it when you need to:
-- configure property replication and conditions.
-- create RPC functions (Server, Client, NetMulticast).
-- manage authority and ownership.
-- configure network relevancy and culling.
-- set up network prediction and movement replication.
-- query networking information.
-
-Supported actions:
-- Replication: set_property_replicated, set_replication_condition, configure_net_update_frequency, configure_net_priority, set_net_dormancy, configure_replication_graph.
-- RPCs: create_rpc_function, configure_rpc_validation, set_rpc_reliability.
-- Authority & Ownership: set_owner, set_autonomous_proxy, check_has_authority, check_is_locally_controlled.
-- Network Relevancy: configure_net_cull_distance, set_always_relevant, set_only_relevant_to_owner.
-- Net Serialization: configure_net_serialization, set_replicated_using, configure_push_model.
-- Network Prediction: configure_client_prediction, configure_server_correction, add_network_prediction_data, configure_movement_prediction.
-- Connection & Session: configure_net_driver, set_net_role, configure_replicated_movement.
-- Utility: get_networking_info.`,
+    description: 'Configure multiplayer: property replication, RPCs (Server/Client/Multicast), authority, relevancy, and network prediction.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -5335,20 +4793,7 @@ Supported actions:
   // ============================================================================
   {
     name: 'manage_game_framework',
-    description: `Complete game mode and session management. Create and configure GameMode, GameState, PlayerController, PlayerState, GameInstance, and HUD Blueprints. Setup match flow, teams, scoring, and player spawning.
-
-Use it when you need to:
-- Create game framework Blueprints (GameMode, GameState, PlayerController, etc.).
-- Configure game mode settings (default pawn, controllers, states).
-- Setup match flow (match states, rounds, teams, scoring).
-- Configure player management (spawning, respawning, spectating).
-
-Supported actions:
-- Core Classes: create_game_mode, create_game_state, create_player_controller, create_player_state, create_game_instance, create_hud_class.
-- Game Mode Config: set_default_pawn_class, set_player_controller_class, set_game_state_class, set_player_state_class, configure_game_rules.
-- Match Flow: setup_match_states, configure_round_system, configure_team_system, configure_scoring_system, configure_spawn_system.
-- Player Management: configure_player_start, set_respawn_rules, configure_spectating.
-- Utility: get_game_framework_info.`,
+    description: 'Create GameMode, GameState, PlayerController, PlayerState Blueprints. Configure match flow, teams, scoring, and spawning.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -5504,21 +4949,7 @@ Supported actions:
   // ============================================================================
   {
     name: 'manage_sessions',
-    description: `Session management and local multiplayer support for split-screen, LAN play, and voice chat.
-
-Use it when you need to:
-- Configure local session settings and session interfaces.
-- Set up split-screen multiplayer with various layouts.
-- Manage local players (add/remove controllers).
-- Configure LAN play, host and join LAN servers.
-- Set up voice chat with channels, attenuation, and push-to-talk.
-
-Supported actions:
-- Session Management: configure_local_session_settings, configure_session_interface.
-- Local Multiplayer: configure_split_screen, set_split_screen_type, add_local_player, remove_local_player.
-- LAN: configure_lan_play, host_lan_server, join_lan_server.
-- Voice Chat: enable_voice_chat, configure_voice_settings, set_voice_channel, mute_player, set_voice_attenuation, configure_push_to_talk.
-- Utility: get_sessions_info.`,
+    description: 'Configure local multiplayer: split-screen layouts, LAN hosting/joining, voice chat channels, and push-to-talk.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -5655,21 +5086,7 @@ Supported actions:
   // ============================================================================
   {
     name: 'manage_level_structure',
-    description: `Level and world structure management for levels, World Partition, and level instances.
-
-Use it when you need to:
-- Create new levels and sublevels with streaming configuration.
-- Configure World Partition settings including grid size and data layers.
-- Manage HLOD layers and minimap volumes.
-- Work with Level Blueprints (open, add nodes, connect nodes).
-- Create level instances and packed level actors.
-
-Supported actions:
-- Levels: create_level, create_sublevel, configure_level_streaming, set_streaming_distance, configure_level_bounds.
-- World Partition: enable_world_partition, configure_grid_size, create_data_layer, assign_actor_to_data_layer, configure_hlod_layer, create_minimap_volume.
-- Level Blueprint: open_level_blueprint, add_level_blueprint_node, connect_level_blueprint_nodes.
-- Level Instances: create_level_instance, create_packed_level_actor.
-- Utility: get_level_structure_info.`,
+    description: 'Create levels and sublevels. Configure World Partition, streaming, data layers, HLOD, and level instances.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -5882,23 +5299,7 @@ Supported actions:
   // 38. VOLUMES & ZONES (Phase 24)
   {
     name: 'manage_volumes',
-    description: `Complete volume and trigger system management.
-
-Use it when you need to:
-- create trigger volumes for gameplay events.
-- add blocking volumes, kill zones, or pain-causing areas.
-- configure audio/reverb volumes for sound propagation.
-- set up navigation volumes for AI pathfinding.
-- manage rendering volumes (cull distance, lightmass, visibility).
-
-Supported actions:
-- Trigger Volumes: create_trigger_volume, create_trigger_box, create_trigger_sphere, create_trigger_capsule.
-- Gameplay Volumes: create_blocking_volume, create_kill_z_volume, create_pain_causing_volume, create_physics_volume.
-- Audio Volumes: create_audio_volume, create_reverb_volume.
-- Rendering Volumes: create_cull_distance_volume, create_precomputed_visibility_volume, create_lightmass_importance_volume.
-- Navigation Volumes: create_nav_mesh_bounds_volume, create_nav_modifier_volume, create_camera_blocking_volume.
-- Configuration: set_volume_extent, set_volume_properties.
-- Utility: get_volumes_info.`,
+    description: 'Create volumes: trigger, blocking, kill zone, physics, audio/reverb, nav mesh bounds, and rendering (cull distance, lightmass).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -6065,21 +5466,7 @@ Supported actions:
   // Phase 25: Navigation System
   {
     name: 'manage_navigation',
-    description: `Navigation system management for NavMesh and pathfinding.
-
-Use it when you need to:
-- configure NavMesh generation settings (cell size, tile size, region parameters).
-- set navigation agent properties (radius, height, step height, max slope).
-- rebuild the navigation mesh after level changes.
-- create nav modifier components to change area behavior.
-- set up nav links for connecting disjoint navmesh areas.
-- configure smart links for dynamic AI navigation.
-
-Actions:
-- NavMesh: configure_nav_mesh_settings, set_nav_agent_properties, rebuild_navigation
-- Nav Modifiers: create_nav_modifier_component, set_nav_area_class, configure_nav_area_cost
-- Nav Links: create_nav_link_proxy, configure_nav_link, set_nav_link_type, create_smart_link, configure_smart_link_behavior
-- Utility: get_navigation_info`,
+    description: 'Configure NavMesh: agent radius/height, cell size, rebuild. Create nav modifiers, nav links, and smart links for AI pathfinding.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -6245,22 +5632,7 @@ Actions:
   // Phase 26: Spline System
   {
     name: 'manage_splines',
-    description: `Spline-based content creation and management system.
-
-Use it when you need to:
-- create spline actors with configurable points and curves.
-- add, remove, or modify spline points (position, tangents, rotation, scale).
-- set spline types (linear, curve, constant, clamped_curve, custom_tangent).
-- create spline mesh components that deform meshes along the spline.
-- scatter meshes along splines with configurable spacing and randomization.
-- use quick templates for roads, rivers, fences, walls, cables, or pipes.
-
-Actions:
-- Spline Creation: create_spline_actor, add_spline_point, remove_spline_point, set_spline_point_position, set_spline_point_tangents, set_spline_point_rotation, set_spline_point_scale, set_spline_type
-- Spline Mesh: create_spline_mesh_component, set_spline_mesh_asset, configure_spline_mesh_axis, set_spline_mesh_material
-- Spline Mesh Array: scatter_meshes_along_spline, configure_mesh_spacing, configure_mesh_randomization
-- Quick Templates: create_road_spline, create_river_spline, create_fence_spline, create_wall_spline, create_cable_spline, create_pipe_spline
-- Utility: get_splines_info`,
+    description: 'Create spline actors, add/modify points, attach meshes along splines. Use templates for roads, rivers, fences, cables.',
     inputSchema: {
       type: 'object',
       properties: {
