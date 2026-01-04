@@ -1,250 +1,183 @@
 import { commonSchemas } from './tool-definition-utils.js';
-// Force rebuild timestamp update
-
 /** MCP Tool Definition type for explicit annotation to avoid TS7056 */
 export interface ToolDefinition {
+  category?: 'core' | 'world' | 'authoring' | 'gameplay' | 'utility';
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
   outputSchema?: Record<string, unknown>;
   [key: string]: unknown;
 }
-
 export const consolidatedToolDefinitions: ToolDefinition[] = [
-  // 1. ASSET MANAGER
+  {
+    name: 'manage_pipeline',
+    description: 'Filter visible tools by category. Actions: list_categories (show available), set_categories (enable specific), get_status (current state). Categories: core, world, authoring, gameplay, utility, all.',
+    category: 'core',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['set_categories', 'list_categories', 'get_status'], description: 'list_categories: show available. set_categories: enable categories. get_status: current state.' },
+        categories: { type: 'array', items: commonSchemas.stringProp, description: 'Categories: core, world, authoring, gameplay, utility, all' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        categories: { type: 'array', items: commonSchemas.stringProp }
+      }
+    }
+  },
   {
     name: 'manage_asset',
-    description: `Comprehensive asset management suite. Handles import/export, basic file operations, dependency analysis, source control, and specialized graph editing (Materials, Behavior Trees).
-
-Use it when you need to:
-- manage asset lifecycle (import, duplicate, rename, delete).
-- organize project structure (folders, redirects).
-- analyze dependencies or fix reference issues.
-- edit Material graphs or Behavior Trees.
-- generate basic assets like Materials, Textures, or Blueprints (via asset creation).
-
-Supported actions:
-- Core: list, import, duplicate, rename, move, delete, delete_assets, create_folder, search_assets.
-- Utils: get_dependencies, get_source_control_state, analyze_graph, create_thumbnail, set_tags, get_metadata, set_metadata, validate, fixup_redirectors, find_by_tag, generate_report.
-- Creation: create_material, create_material_instance, create_render_target.
-- Rendering: nanite_rebuild_mesh.
-- Material Graph: add_material_node, connect_material_pins, remove_material_node, break_material_connections, get_material_node_details.
-- Behavior Tree: add_bt_node, connect_bt_nodes, remove_bt_node, break_bt_connections, set_bt_node_properties.`,
+    category: 'core',
+    description: 'Create, import, duplicate, rename, delete assets. Edit Material graphs and instances. Analyze dependencies.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Core
             'list', 'import', 'duplicate', 'rename', 'move', 'delete', 'delete_asset', 'delete_assets', 'create_folder', 'search_assets',
-            // Utils
             'get_dependencies', 'get_source_control_state', 'analyze_graph', 'get_asset_graph', 'create_thumbnail', 'set_tags', 'get_metadata', 'set_metadata', 'validate', 'fixup_redirectors', 'find_by_tag', 'generate_report',
-            // Creation
             'create_material', 'create_material_instance', 'create_render_target', 'generate_lods', 'add_material_parameter', 'list_instances', 'reset_instance_parameters', 'exists', 'get_material_stats',
-            // Rendering
             'nanite_rebuild_mesh',
-            // Material Graph
             'add_material_node', 'connect_material_pins', 'remove_material_node', 'break_material_connections', 'get_material_node_details', 'rebuild_material'
           ],
           description: 'Action to perform'
         },
-        // -- Common --
-        assetPath: { type: 'string', description: 'Target asset path (e.g., "/Game/MyAsset").' },
-
-        // -- List/Search --
-        directory: { type: 'string', description: 'Directory path to list.' },
-        classNames: { type: 'array', items: { type: 'string' }, description: 'Class names filter.' },
-        packagePaths: { type: 'array', items: { type: 'string' }, description: 'Package paths to search.' },
-        recursivePaths: { type: 'boolean' },
-        recursiveClasses: { type: 'boolean' },
-        limit: { type: 'number' },
-
-        // -- Import --
-        sourcePath: { type: 'string', description: 'Source file path on disk.' },
-        destinationPath: { type: 'string', description: 'Destination content path.' },
-
-        // -- Operations --
-        assetPaths: { type: 'array', items: { type: 'string' }, description: 'Batch asset paths.' },
-        lodCount: { type: 'number', description: 'Number of LODs to generate.' },
-        reductionSettings: { type: 'object', description: 'LOD reduction settings.' },
-        nodeName: { type: 'string', description: 'Variable name or Function name, depending on node type' },
-        eventName: { type: 'string', description: 'For Event nodes (e.g. ReceiveBeginPlay) or CustomEvent nodes' },
-        memberClass: { type: 'string', description: 'For Event nodes, the class defining the event (optional)' },
-        posX: { type: 'number' },
-        newName: { type: 'string', description: 'New name for rename/duplicate.' },
-        overwrite: { type: 'boolean' },
-        save: { type: 'boolean' },
-        fixupRedirectors: { type: 'boolean' },
-        directoryPath: { type: 'string' },
-
-        // -- Material/Instance Creation --
-        name: { type: 'string', description: 'Name of new asset.' },
-        path: { type: 'string', description: 'Directory to create asset in.' },
-        parentMaterial: { type: 'string', description: 'Parent material for instances.' },
-        parameters: { type: 'object', description: 'Material instance parameters.' },
-
-        // -- Render Target --
-        width: { type: 'number' },
-        height: { type: 'number' },
-        format: { type: 'string' },
-
-        // -- Nanite --
-        meshPath: { type: 'string' },
-
-        // -- Metadata/Tags --
-        tag: { type: 'string' },
-        metadata: { type: 'object' },
-
-        // -- Graph Editing (Material/BT) --
-        graphName: { type: 'string' },
-        nodeType: { type: 'string' },
-        nodeId: { type: 'string' },
-        sourceNodeId: { type: 'string', description: 'Source node ID for material connections' },
-        targetNodeId: { type: 'string', description: 'Target node ID, or "Main" for material root' },
-        inputName: { type: 'string', description: 'Input pin name (e.g., "BaseColor", "Roughness")' },
-        fromNodeId: { type: 'string', description: '[Deprecated] Use sourceNodeId. Source node ID' },
-        fromPin: { type: 'string', description: 'Source pin name' },
-        toNodeId: { type: 'string', description: '[Deprecated] Use targetNodeId. Target node ID' },
-        toPin: { type: 'string', description: '[Deprecated] Use inputName. Target pin name' },
-        parameterName: { type: 'string' },
-        value: { description: 'Property value (number, string, etc).' },
-        x: { type: 'number' },
-        y: { type: 'number' },
-        comment: { type: 'string' },
-        parentNodeId: { type: 'string' },
-        childNodeId: { type: 'string' },
-
-        // -- Analyze --
-        maxDepth: { type: 'number' }
+        assetPath: commonSchemas.assetPath,
+        directory: commonSchemas.directoryPath,
+        classNames: commonSchemas.arrayOfStrings,
+        packagePaths: commonSchemas.arrayOfStrings,
+        recursivePaths: commonSchemas.booleanProp,
+        recursiveClasses: commonSchemas.booleanProp,
+        limit: commonSchemas.numberProp,
+        sourcePath: commonSchemas.sourcePath,
+        destinationPath: commonSchemas.destinationPath,
+        assetPaths: commonSchemas.arrayOfStrings,
+        lodCount: commonSchemas.numberProp,
+        reductionSettings: commonSchemas.objectProp,
+        nodeName: commonSchemas.name,
+        eventName: commonSchemas.eventName,
+        memberClass: commonSchemas.stringProp,
+        posX: commonSchemas.numberProp,
+        newName: commonSchemas.newName,
+        overwrite: commonSchemas.overwrite,
+        save: commonSchemas.save,
+        fixupRedirectors: commonSchemas.booleanProp,
+        directoryPath: commonSchemas.directoryPath,
+        name: commonSchemas.name,
+        path: commonSchemas.directoryPath,
+        parentMaterial: commonSchemas.materialPath,
+        parameters: commonSchemas.objectProp,
+        width: commonSchemas.numberProp,
+        height: commonSchemas.numberProp,
+        format: commonSchemas.stringProp,
+        meshPath: commonSchemas.meshPath,
+        tag: commonSchemas.tagName,
+        metadata: commonSchemas.objectProp,
+        graphName: commonSchemas.graphName,
+        nodeType: commonSchemas.stringProp,
+        nodeId: commonSchemas.nodeId,
+        sourceNodeId: commonSchemas.sourceNodeId,
+        targetNodeId: commonSchemas.targetNodeId,
+        inputName: commonSchemas.pinName,
+        fromNodeId: commonSchemas.sourceNodeId,
+        fromPin: commonSchemas.sourcePin,
+        toNodeId: commonSchemas.targetNodeId,
+        toPin: commonSchemas.targetPin,
+        parameterName: commonSchemas.parameterName,
+        value: commonSchemas.value,
+        x: commonSchemas.numberProp,
+        y: commonSchemas.numberProp,
+        comment: commonSchemas.stringProp,
+        parentNodeId: commonSchemas.nodeId,
+        childNodeId: commonSchemas.nodeId,
+        maxDepth: commonSchemas.numberProp
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        assets: { type: 'array', items: { type: 'object' } },
-        paths: { type: 'array', items: { type: 'string' } },
-        path: { type: 'string' },
-        error: { type: 'string' },
-        // Graph results
-        nodeId: { type: 'string' },
-        details: { type: 'object' }
+        ...commonSchemas.outputBase,
+        assets: commonSchemas.arrayOfObjects,
+        paths: commonSchemas.arrayOfStrings,
+        path: commonSchemas.stringProp,
+        nodeId: commonSchemas.nodeId,
+        details: commonSchemas.objectProp
       }
     }
   },
-
-  // 2. BLUEPRINT MANAGER
   {
     name: 'manage_blueprint',
-    description: `Blueprint authoring and editing tool.
-
-Use it when you need to:
-- create new Blueprints.
-- inspect existing Blueprints (get_blueprint).
-- modify the component hierarchy (SCS).
-- edit the Blueprint graph (nodes, pins, properties).
-
-Supported actions:
-- Lifecycle: create, get_blueprint.
-- Components (SCS): add_component, set_default, modify_scs, get_scs, add_scs_component, remove_scs_component, reparent_scs_component, set_scs_transform, set_scs_property.
-- Helpers: ensure_exists, probe_handle, add_variable, add_function, add_event, add_construction_script, set_variable_metadata, set_metadata.
-- Graph: create_node, delete_node, connect_pins, break_pin_links, set_node_property, create_reroute_node, get_node_details, get_graph_details, get_pin_details.`,
+    category: 'authoring',
+    description: 'Create Blueprints, add SCS components (mesh, collision, camera), and manipulate graph nodes.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Lifecycle
             'create', 'get_blueprint', 'get', 'compile',
-            // SCS
             'add_component', 'set_default', 'modify_scs', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property',
-            // Helpers
             'ensure_exists', 'probe_handle', 'add_variable', 'remove_variable', 'rename_variable', 'add_function', 'add_event', 'remove_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
-            // Graph
-            'create_node', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details'
+            'create_node', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
+            'list_node_types', 'set_pin_default_value'
           ],
           description: 'Blueprint action'
         },
-        // -- Identifiers --
-        name: { type: 'string', description: 'Blueprint name.' },
-        blueprintPath: { type: 'string', description: 'Blueprint asset path.' },
-
-        // -- Create --
-        blueprintType: { type: 'string', description: 'Parent class (e.g., Actor).' },
-        savePath: { type: 'string' },
-
-        // -- Components --
-        componentType: { type: 'string' },
-        componentName: { type: 'string' },
-        componentClass: { type: 'string' },
-        attachTo: { type: 'string' },
-        newParent: { type: 'string' },
-
-        // -- Properties/Defaults --
-        propertyName: { type: 'string' },
-        variableName: { type: 'string', description: 'Name of the variable.' },
-        oldName: { type: 'string' },
-        newName: { type: 'string' },
-        value: { description: 'Value to set.' },
-        metadata: { type: 'object' },
-        properties: { type: 'object', description: 'Initial CDO properties for new blueprints.' },
-
-        // -- Graph Editing --
-        graphName: { type: 'string' },
-        nodeType: { type: 'string' },
-        nodeId: { type: 'string' },
-        pinName: { type: 'string' },
-        linkedTo: { type: 'string' },
-        memberName: { type: 'string' },
-        x: { type: 'number' },
-        y: { type: 'number' },
-
-        // -- SCS Transform --
-        location: { type: 'array', items: { type: 'number' } },
-        rotation: { type: 'array', items: { type: 'number' } },
-        scale: { type: 'array', items: { type: 'number' } },
-
-        // -- Batch Operations --
-        operations: { type: 'array', items: { type: 'object' } },
-        compile: { type: 'boolean' },
-        save: { type: 'boolean' },
-
-        // -- Events --
-        eventType: { type: 'string', description: 'Event type (e.g. "BeginPlay", "Tick", "custom").' },
-        customEventName: { type: 'string', description: 'Name for custom event.' },
-        parameters: { type: 'array', items: { type: 'object' }, description: 'Parameters for the event.' }
+        name: commonSchemas.name,
+        blueprintPath: commonSchemas.blueprintPath,
+        blueprintType: commonSchemas.parentClass,
+        savePath: commonSchemas.savePath,
+        componentType: commonSchemas.stringProp,
+        componentName: commonSchemas.componentName,
+        componentClass: commonSchemas.stringProp,
+        attachTo: commonSchemas.stringProp,
+        newParent: commonSchemas.stringProp,
+        propertyName: commonSchemas.propertyName,
+        variableName: commonSchemas.variableName,
+        oldName: commonSchemas.stringProp,
+        newName: commonSchemas.newName,
+        value: commonSchemas.value,
+        metadata: commonSchemas.objectProp,
+        properties: commonSchemas.objectProp,
+        graphName: commonSchemas.graphName,
+        nodeType: commonSchemas.stringProp,
+        nodeId: commonSchemas.nodeId,
+        pinName: commonSchemas.pinName,
+        linkedTo: commonSchemas.stringProp,
+        memberName: commonSchemas.stringProp,
+        x: commonSchemas.numberProp,
+        y: commonSchemas.numberProp,
+        location: commonSchemas.arrayOfNumbers,
+        rotation: commonSchemas.arrayOfNumbers,
+        scale: commonSchemas.arrayOfNumbers,
+        operations: commonSchemas.arrayOfObjects,
+        compile: commonSchemas.compile,
+        save: commonSchemas.save,
+        eventType: commonSchemas.stringProp,
+        customEventName: commonSchemas.eventName,
+        parameters: commonSchemas.arrayOfObjects
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        blueprintPath: { type: 'string' },
-        message: { type: 'string' },
-        error: { type: 'string' },
-        // Snapshot data
-        blueprint: { type: 'object' }
+        ...commonSchemas.outputBase,
+        blueprintPath: commonSchemas.blueprintPath,
+        blueprint: commonSchemas.objectProp
       }
     }
   },
-
-  // 3. ACTOR CONTROL
   {
     name: 'control_actor',
-    description: `Viewport actor manipulation.
-
-Use it when you need to:
-- spawn, destroy, or duplicate actors.
-- move/rotate/scale actors.
-- modify actor components or tags.
-- apply physics forces.
-
-Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, apply_force, set_transform, get_transform, set_visibility, add_component, set_component_properties, get_components, add_tag, remove_tag, find_by_tag, find_by_name, list, set_blueprint_variables, create_snapshot, attach, detach.`,
+    category: 'core',
+    description: 'Spawn actors, set transforms, enable physics, add components, manage tags, and attach actors.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -257,67 +190,54 @@ Supported actions: spawn, spawn_blueprint, delete, delete_by_tag, duplicate, app
             'add_tag', 'remove_tag', 'find_by_tag', 'find_by_name', 'list', 'set_blueprint_variables',
             'create_snapshot', 'attach', 'detach'
           ],
-          description: 'Action to perform'
+          description: 'Action'
         },
-        actorName: { type: 'string' },
-        childActor: { type: 'string', description: 'Name of the child actor (alias for actorName in detach, or specific child for attach).' },
-        parentActor: { type: 'string' },
-        classPath: { type: 'string' },
-        meshPath: { type: 'string' },
-        blueprintPath: { type: 'string' },
+        actorName: commonSchemas.actorName,
+        childActor: commonSchemas.childActorName,
+        parentActor: commonSchemas.parentActorName,
+        classPath: commonSchemas.assetPath,
+        meshPath: commonSchemas.meshPath,
+        blueprintPath: commonSchemas.blueprintPath,
         location: commonSchemas.location,
         rotation: commonSchemas.rotation,
         scale: commonSchemas.scale,
         force: commonSchemas.vector3,
-        componentType: { type: 'string' },
-        componentName: { type: 'string' },
-        properties: { type: 'object' },
-        visible: { type: 'boolean' },
-        newName: { type: 'string' },
-        tag: { type: 'string' },
-        variables: { type: 'object' },
-        snapshotName: { type: 'string' }
+        componentType: commonSchemas.stringProp,
+        componentName: commonSchemas.componentName,
+        properties: commonSchemas.objectProp,
+        visible: commonSchemas.visible,
+        newName: commonSchemas.newName,
+        tag: commonSchemas.tagName,
+        variables: commonSchemas.objectProp,
+        snapshotName: commonSchemas.stringProp
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        actor: { type: 'string' },
-        actorPath: { type: 'string' },
-        message: { type: 'string' },
+        ...commonSchemas.outputWithActor,
         components: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
-              name: { type: 'string' },
-              class: { type: 'string' },
-              relativeLocation: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
-              relativeRotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } } },
-              relativeScale: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
+              name: commonSchemas.stringProp,
+              class: commonSchemas.stringProp,
+              relativeLocation: commonSchemas.location,
+              relativeRotation: commonSchemas.rotation,
+              relativeScale: commonSchemas.scale
             }
           }
         },
-        data: { type: 'object' }
+        data: commonSchemas.objectProp
       }
     }
   },
-
-  // 4. EDITOR CONTROL
   {
     name: 'control_editor',
-    description: `Editor session control.
-
-Use it when you need to:
-- control PIE (Play In Editor).
-- move the viewport camera.
-- execute console commands (legacy).
-- take screenshots/bookmarks.
-- simulate input (UI).
-
-Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, possess, set_camera, set_camera_position, set_camera_fov, set_view_mode, set_viewport_resolution, console_command, screenshot, step_frame, start_recording, stop_recording, create_bookmark, jump_to_bookmark, set_preferences, set_viewport_realtime, open_asset, simulate_input.`,
+    category: 'core',
+    description: 'Start/stop PIE, control viewport camera, run console commands, take screenshots, simulate input.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -334,19 +254,18 @@ Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, p
         },
         location: commonSchemas.location,
         rotation: commonSchemas.rotation,
-        viewMode: { type: 'string' },
-        enabled: { type: 'boolean', description: 'For set_viewport_realtime.' },
-        speed: { type: 'number' },
-        filename: { type: 'string' },
-        fov: { type: 'number' },
-        width: { type: 'number' },
-        height: { type: 'number' },
-        command: { type: 'string' },
-        steps: { type: 'integer' },
-        bookmarkName: { type: 'string' },
-        assetPath: { type: 'string' },
-        // Simulate Input
-        keyName: { type: 'string' },
+        viewMode: commonSchemas.stringProp,
+        enabled: commonSchemas.enabled,
+        speed: commonSchemas.numberProp,
+        filename: commonSchemas.stringProp,
+        fov: commonSchemas.numberProp,
+        width: commonSchemas.numberProp,
+        height: commonSchemas.numberProp,
+        command: commonSchemas.stringProp,
+        steps: commonSchemas.integerProp,
+        bookmarkName: commonSchemas.stringProp,
+        assetPath: commonSchemas.assetPath,
+        keyName: commonSchemas.stringProp,
         eventType: { type: 'string', enum: ['KeyDown', 'KeyUp', 'Both'] }
       },
       required: ['action']
@@ -354,24 +273,14 @@ Supported actions: play, stop, stop_pie, pause, resume, set_game_speed, eject, p
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' }
+        ...commonSchemas.outputBase
       }
     }
   },
-
-  // 5. LEVEL MANAGER
   {
     name: 'manage_level',
-    description: `Level and World Partition management.
-
-Use it when you need to:
-- load/save levels.
-- manage streaming levels.
-- build lighting.
-- load world partition cells or toggle data layers.
-
-Supported actions: load, save, stream, create_level, create_light, build_lighting, set_metadata, load_cells, set_datalayer, export_level, import_level, list_levels, get_summary, delete, validate_level.`,
+    category: 'core',
+    description: 'Load/save levels, configure streaming, manage World Partition cells, and build lighting.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -385,32 +294,27 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
           ],
           description: 'Action'
         },
-        levelPath: { type: 'string', description: 'Required for load/save actions and get_summary.' },
-        levelName: { type: 'string' },
-        streaming: { type: 'boolean' },
-        shouldBeLoaded: { type: 'boolean' },
-        shouldBeVisible: { type: 'boolean' },
-        // Lighting
+        levelPath: commonSchemas.levelPath,
+        levelName: commonSchemas.stringProp,
+        streaming: commonSchemas.booleanProp,
+        shouldBeLoaded: commonSchemas.booleanProp,
+        shouldBeVisible: commonSchemas.booleanProp,
         lightType: { type: 'string', enum: ['Directional', 'Point', 'Spot', 'Rect'] },
         location: commonSchemas.location,
-        intensity: { type: 'number' },
-        quality: { type: 'string' },
-        // World Partition
-        min: { type: 'array', items: { type: 'number' } },
-        max: { type: 'array', items: { type: 'number' } },
-        dataLayerLabel: { type: 'string' },
-        dataLayerState: { type: 'string' },
-        recursive: { type: 'boolean' },
-        // Export/Import
-        exportPath: { type: 'string' },
-        packagePath: { type: 'string' },
-        destinationPath: { type: 'string' },
-        note: { type: 'string' },
-        // Delete
-        levelPaths: { type: 'array', items: { type: 'string' } },
-        // Sublevel
-        subLevelPath: { type: 'string' },
-        parentLevel: { type: 'string' },
+        intensity: commonSchemas.numberProp,
+        quality: commonSchemas.stringProp,
+        min: commonSchemas.arrayOfNumbers,
+        max: commonSchemas.arrayOfNumbers,
+        dataLayerLabel: commonSchemas.stringProp,
+        dataLayerState: commonSchemas.stringProp,
+        recursive: commonSchemas.recursive,
+        exportPath: commonSchemas.outputPath,
+        packagePath: commonSchemas.assetPath,
+        destinationPath: commonSchemas.destinationPath,
+        note: commonSchemas.stringProp,
+        levelPaths: commonSchemas.arrayOfStrings,
+        subLevelPath: commonSchemas.levelPath,
+        parentLevel: commonSchemas.stringProp,
         streamingMethod: { type: 'string', enum: ['Blueprint', 'AlwaysLoaded'] }
       },
       required: ['action']
@@ -418,134 +322,301 @@ Supported actions: load, save, stream, create_level, create_light, build_lightin
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        data: { type: 'object' }
+        ...commonSchemas.outputBase,
+        data: commonSchemas.objectProp
       }
     }
   },
-
-  // 6. ANIMATION & PHYSICS
   {
     name: 'animation_physics',
-    description: `Animation and Physics tools.
-
-Use it when you need to:
-- create Animation Blueprints, Montages, or Blend Spaces.
-- setup Ragdolls or Physics Assets.
-- configure vehicles.
-
-Supported actions: create_animation_bp, play_montage, setup_ragdoll, configure_vehicle, create_blend_space, create_state_machine, setup_ik, create_procedural_anim, create_blend_tree, setup_retargeting, setup_physics_simulation, cleanup.`,
+    category: 'utility',
+    description: 'Create Animation BPs, Montages, Blend Spaces, IK rigs, ragdolls, vehicles, and author animation sequences/curves.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
+            // Runtime animation & physics
             'create_animation_bp', 'play_montage', 'setup_ragdoll', 'activate_ragdoll', 'configure_vehicle',
             'create_blend_space', 'create_state_machine', 'setup_ik', 'create_procedural_anim',
             'create_blend_tree', 'setup_retargeting', 'setup_physics_simulation', 'cleanup',
-            'create_animation_asset', 'add_notify'
+            'create_animation_asset', 'add_notify',
+            // Animation authoring (merged from manage_animation_authoring)
+            'create_animation_sequence', 'set_sequence_length', 'add_bone_track', 'set_bone_key', 'set_curve_key',
+            'add_notify_state', 'add_sync_marker', 'set_root_motion_settings', 'set_additive_settings',
+            'create_montage', 'add_montage_section', 'add_montage_slot', 'set_section_timing',
+            'add_montage_notify', 'set_blend_in', 'set_blend_out', 'link_sections',
+            'create_blend_space_1d', 'create_blend_space_2d', 'add_blend_sample', 'set_axis_settings', 'set_interpolation_settings',
+            'create_aim_offset', 'add_aim_offset_sample',
+            'create_anim_blueprint', 'add_state_machine', 'add_state', 'add_transition', 'set_transition_rules',
+            'add_blend_node', 'add_cached_pose', 'add_slot_node', 'add_layered_blend_per_bone', 'set_anim_graph_node_value',
+            'create_control_rig', 'add_control', 'add_rig_unit', 'connect_rig_elements', 'create_pose_library',
+            'create_ik_rig', 'add_ik_chain', 'create_ik_retargeter', 'set_retarget_chain_mapping',
+            'get_animation_info'
           ],
           description: 'Action'
         },
-        name: { type: 'string' },
-        actorName: { type: 'string' },
-        skeletonPath: { type: 'string' },
-        montagePath: { type: 'string' },
-        animationPath: { type: 'string' },
-        playRate: { type: 'number' },
-        physicsAssetName: { type: 'string' },
-        meshPath: { type: 'string' },
-        vehicleName: { type: 'string' },
-        vehicleType: { type: 'string' },
-        // ... (omitting detailed vehicle/IK schema for brevity, keeping core structure)
-        savePath: { type: 'string' }
+        name: commonSchemas.name,
+        actorName: commonSchemas.actorName,
+        skeletonPath: commonSchemas.skeletonPath,
+        montagePath: commonSchemas.animationPath,
+        animationPath: commonSchemas.animationPath,
+        playRate: commonSchemas.numberProp,
+        physicsAssetName: commonSchemas.stringProp,
+        meshPath: commonSchemas.meshPath,
+        vehicleName: commonSchemas.stringProp,
+        vehicleType: commonSchemas.stringProp,
+        savePath: commonSchemas.savePath,
+        // Authoring properties (merged from manage_animation_authoring)
+        path: commonSchemas.directoryPathForCreation,
+        assetPath: commonSchemas.assetPath,
+        skeletalMeshPath: commonSchemas.skeletalMeshPath,
+        blueprintPath: commonSchemas.blueprintPath,
+        save: commonSchemas.save,
+        numFrames: commonSchemas.numFrames,
+        frameRate: commonSchemas.frameRate,
+        boneName: commonSchemas.boneName,
+        frame: commonSchemas.frame,
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+        scale: commonSchemas.scale,
+        curveName: commonSchemas.curveName,
+        value: commonSchemas.numberProp,
+        createIfMissing: commonSchemas.booleanProp,
+        notifyClass: commonSchemas.notifyClass,
+        notifyName: commonSchemas.notifyName,
+        trackIndex: commonSchemas.trackIndex,
+        startFrame: commonSchemas.startFrame,
+        endFrame: commonSchemas.endFrame,
+        markerName: commonSchemas.markerName,
+        enableRootMotion: commonSchemas.booleanProp,
+        rootMotionRootLock: commonSchemas.stringProp,
+        forceRootLock: commonSchemas.booleanProp,
+        additiveAnimType: commonSchemas.stringProp,
+        basePoseType: commonSchemas.stringProp,
+        basePoseAnimation: commonSchemas.stringProp,
+        basePoseFrame: commonSchemas.numberProp,
+        slotName: commonSchemas.slotName,
+        sectionName: commonSchemas.sectionName,
+        startTime: commonSchemas.startTime,
+        length: commonSchemas.numberProp,
+        time: commonSchemas.numberProp,
+        blendTime: commonSchemas.blendTime,
+        blendOption: commonSchemas.stringProp,
+        fromSection: commonSchemas.fromSection,
+        toSection: commonSchemas.toSection,
+        axisName: commonSchemas.axisName,
+        axisMin: commonSchemas.minValue,
+        axisMax: commonSchemas.maxValue,
+        horizontalAxisName: commonSchemas.horizontalAxisName,
+        horizontalMin: commonSchemas.numberProp,
+        horizontalMax: commonSchemas.numberProp,
+        verticalAxisName: commonSchemas.verticalAxisName,
+        verticalMin: commonSchemas.numberProp,
+        verticalMax: commonSchemas.numberProp,
+        sampleValue: commonSchemas.value,
+        axis: commonSchemas.stringProp,
+        minValue: commonSchemas.numberProp,
+        maxValue: commonSchemas.numberProp,
+        gridDivisions: commonSchemas.numberProp,
+        interpolationType: commonSchemas.stringProp,
+        targetWeightInterpolationSpeed: commonSchemas.numberProp,
+        yaw: commonSchemas.numberProp,
+        pitch: commonSchemas.numberProp,
+        parentClass: commonSchemas.parentClass,
+        stateMachineName: commonSchemas.stateMachineName,
+        stateName: commonSchemas.stateName,
+        isEntryState: commonSchemas.booleanProp,
+        fromState: commonSchemas.stringProp,
+        toState: commonSchemas.stringProp,
+        blendLogicType: commonSchemas.stringProp,
+        automaticTriggerRule: commonSchemas.stringProp,
+        automaticTriggerTime: commonSchemas.numberProp,
+        blendType: commonSchemas.stringProp,
+        nodeName: commonSchemas.nodeName,
+        x: commonSchemas.nodeX,
+        y: commonSchemas.nodeY,
+        cacheName: commonSchemas.cacheName,
+        layerSetup: commonSchemas.arrayOfObjects,
+        propertyName: commonSchemas.propertyName,
+        controlName: commonSchemas.controlName,
+        controlType: commonSchemas.stringProp,
+        parentBone: commonSchemas.parentBone,
+        parentControl: commonSchemas.parentControl,
+        unitType: commonSchemas.stringProp,
+        unitName: commonSchemas.unitName,
+        settings: commonSchemas.objectProp,
+        sourceElement: commonSchemas.sourceElement,
+        sourcePin: commonSchemas.sourcePin,
+        targetElement: commonSchemas.targetElement,
+        targetPin: commonSchemas.targetPin,
+        chainName: commonSchemas.chainName,
+        startBone: commonSchemas.startBone,
+        endBone: commonSchemas.endBone,
+        goal: commonSchemas.goal,
+        sourceIKRigPath: commonSchemas.sourceIKRigPath,
+        targetIKRigPath: commonSchemas.targetIKRigPath,
+        sourceChain: commonSchemas.sourceChain,
+        targetChain: commonSchemas.targetChain
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' }
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
+        animationInfo: commonSchemas.objectProp
       }
     }
   },
-
-  // 7. EFFECTS MANAGER (Niagara & Particles)
   {
     name: 'manage_effect',
-    description: `Effects management (Niagara, Particles, Debug Shapes).
-
-Use it when you need to:
-- spawn effects or debug shapes.
-- create/edit Niagara systems and emitters.
-- edit Niagara graphs (modules, pins).
-
-Supported actions: 
-- Spawning: particle, niagara, debug_shape, spawn_niagara, create_dynamic_light.
-- Asset Creation: create_niagara_system, create_niagara_emitter.
-- Graph: add_niagara_module, connect_niagara_pins, remove_niagara_node, set_niagara_parameter.
-- Utils: clear_debug_shapes, cleanup.`,
+    category: 'utility',
+    description: 'Spawn Niagara/Cascade particles, draw debug shapes, edit VFX node graphs, and author Niagara systems/emitters.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
+            // Runtime VFX control
             'particle', 'niagara', 'debug_shape', 'spawn_niagara', 'create_dynamic_light',
             'create_niagara_system', 'create_niagara_emitter',
             'create_volumetric_fog', 'create_particle_trail', 'create_environment_effect', 'create_impact_effect', 'create_niagara_ribbon',
             'activate', 'activate_effect', 'deactivate', 'reset', 'advance_simulation',
             'add_niagara_module', 'connect_niagara_pins', 'remove_niagara_node', 'set_niagara_parameter',
-            'clear_debug_shapes', 'cleanup', 'list_debug_shapes'
+            'clear_debug_shapes', 'cleanup', 'list_debug_shapes',
+            // Niagara authoring (merged from manage_niagara_authoring)
+            'add_emitter_to_system', 'set_emitter_properties',
+            'add_spawn_rate_module', 'add_spawn_burst_module', 'add_spawn_per_unit_module',
+            'add_initialize_particle_module', 'add_particle_state_module',
+            'add_force_module', 'add_velocity_module', 'add_acceleration_module',
+            'add_size_module', 'add_color_module',
+            'add_sprite_renderer_module', 'add_mesh_renderer_module', 'add_ribbon_renderer_module', 'add_light_renderer_module',
+            'add_collision_module', 'add_kill_particles_module', 'add_camera_offset_module',
+            'add_user_parameter', 'set_parameter_value', 'bind_parameter_to_source',
+            'add_skeletal_mesh_data_interface', 'add_static_mesh_data_interface', 'add_spline_data_interface',
+            'add_audio_spectrum_data_interface', 'add_collision_query_data_interface',
+            'add_event_generator', 'add_event_receiver', 'configure_event_payload',
+            'enable_gpu_simulation', 'add_simulation_stage',
+            'get_niagara_info', 'validate_niagara_system'
           ],
           description: 'Action'
         },
-        name: { type: 'string' },
-        systemName: { type: 'string' },
-        systemPath: { type: 'string', description: 'Required for spawning Niagara effects (spawn_niagara, create_volumetric_fog, etc) and most graph operations.' },
-        preset: { type: 'string', description: 'Required for particle action. Path to particle system asset.' },
+        name: commonSchemas.name,
+        systemName: commonSchemas.stringProp,
+        systemPath: commonSchemas.niagaraPath,
+        preset: { type: 'string', description: 'Path to particle system asset.' },
         location: commonSchemas.location,
-        scale: { type: 'number' },
+        scale: commonSchemas.numberProp,
         shape: { type: 'string', description: 'Supported: sphere, box, cylinder, line, cone, capsule, arrow, plane' },
-        size: { type: 'number' },
-        color: { type: 'array', items: { type: 'number' } },
-        // Graph
-        modulePath: { type: 'string' },
-        emitterName: { type: 'string' },
-        pinName: { type: 'string' },
-        linkedTo: { type: 'string' },
-        parameterName: { type: 'string' },
-        parameterType: { type: 'string', description: 'Float, Vector, Color, Bool, etc.' },
-        type: { type: 'string', description: 'Alias for parameterType' },
-        value: { description: 'Value.' },
-        // Cleanup
-        filter: { type: 'string', description: 'Filter for cleanup action. Required.' }
+        size: commonSchemas.numberProp,
+        color: commonSchemas.color,
+        modulePath: commonSchemas.assetPath,
+        emitterName: commonSchemas.stringProp,
+        pinName: commonSchemas.pinName,
+        linkedTo: commonSchemas.stringProp,
+        parameterName: commonSchemas.parameterName,
+        parameterType: commonSchemas.stringProp,
+        type: commonSchemas.stringProp,
+        value: commonSchemas.value,
+        filter: commonSchemas.filter,
+        // Authoring properties (merged from manage_niagara_authoring)
+        path: commonSchemas.directoryPathForCreation,
+        assetPath: commonSchemas.assetPath,
+        emitterPath: commonSchemas.emitterPath,
+        save: commonSchemas.save,
+        emitterProperties: commonSchemas.objectProp,
+        spawnRate: commonSchemas.numberProp,
+        burstCount: commonSchemas.numberProp,
+        burstTime: commonSchemas.numberProp,
+        burstInterval: commonSchemas.numberProp,
+        spawnPerUnit: commonSchemas.numberProp,
+        lifetime: commonSchemas.numberProp,
+        lifetimeMin: commonSchemas.numberProp,
+        lifetimeMax: commonSchemas.numberProp,
+        mass: commonSchemas.numberProp,
+        spriteSize: commonSchemas.objectProp,
+        meshScale: commonSchemas.objectProp,
+        forceType: commonSchemas.stringProp,
+        forceStrength: commonSchemas.numberProp,
+        forceVector: commonSchemas.objectProp,
+        dragCoefficient: commonSchemas.numberProp,
+        velocity: commonSchemas.objectProp,
+        velocityMin: commonSchemas.objectProp,
+        velocityMax: commonSchemas.objectProp,
+        acceleration: commonSchemas.objectProp,
+        velocityMode: commonSchemas.stringProp,
+        sizeMode: commonSchemas.stringProp,
+        uniformSize: commonSchemas.numberProp,
+        sizeScale: commonSchemas.objectProp,
+        sizeCurve: commonSchemas.arrayOfObjects,
+        colorMin: commonSchemas.objectProp,
+        colorMax: commonSchemas.objectProp,
+        colorMode: commonSchemas.stringProp,
+        colorCurve: commonSchemas.arrayOfObjects,
+        materialPath: commonSchemas.materialPath,
+        meshPath: commonSchemas.meshPath,
+        sortMode: commonSchemas.stringProp,
+        alignment: commonSchemas.stringProp,
+        facingMode: commonSchemas.stringProp,
+        ribbonWidth: commonSchemas.numberProp,
+        ribbonTwist: commonSchemas.numberProp,
+        ribbonFacingMode: commonSchemas.stringProp,
+        tessellationFactor: commonSchemas.numberProp,
+        lightRadius: commonSchemas.numberProp,
+        lightIntensity: commonSchemas.numberProp,
+        lightColor: commonSchemas.objectProp,
+        volumetricScattering: commonSchemas.numberProp,
+        lightExponent: commonSchemas.numberProp,
+        affectsTranslucency: commonSchemas.booleanProp,
+        collisionMode: commonSchemas.stringProp,
+        restitution: commonSchemas.numberProp,
+        friction: commonSchemas.numberProp,
+        radiusScale: commonSchemas.numberProp,
+        dieOnCollision: commonSchemas.booleanProp,
+        killCondition: commonSchemas.stringProp,
+        killBox: commonSchemas.objectProp,
+        invertKillZone: commonSchemas.booleanProp,
+        cameraOffset: commonSchemas.numberProp,
+        cameraOffsetMode: commonSchemas.stringProp,
+        parameterValue: commonSchemas.value,
+        sourceBinding: commonSchemas.stringProp,
+        skeletalMeshPath: commonSchemas.skeletalMeshPath,
+        staticMeshPath: commonSchemas.meshAssetPath,
+        useWholeSkeletonOrBones: commonSchemas.stringProp,
+        specificBones: commonSchemas.arrayOfStrings,
+        samplingMode: commonSchemas.stringProp,
+        eventName: commonSchemas.eventName,
+        eventPayload: commonSchemas.arrayOfObjects,
+        spawnOnEvent: commonSchemas.booleanProp,
+        eventSpawnCount: commonSchemas.numberProp,
+        gpuEnabled: commonSchemas.booleanProp,
+        fixedBoundsEnabled: commonSchemas.booleanProp,
+        deterministicEnabled: commonSchemas.booleanProp,
+        stageName: commonSchemas.stageName,
+        stageIterationSource: commonSchemas.stringProp
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' }
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
+        emitterName: commonSchemas.stringProp,
+        moduleName: commonSchemas.stringProp,
+        niagaraInfo: commonSchemas.objectProp,
+        validationResult: commonSchemas.objectProp
       }
     }
   },
-
-  // 8. ENVIRONMENT BUILDER
   {
     name: 'build_environment',
-    description: `Environment creation (Landscape, Foliage).
-
-Use it when you need to:
-- create/sculpt landscapes.
-- paint foliage.
-- procedural generation.
-
-Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_procedural_terrain, create_procedural_foliage, add_foliage_instances, get_foliage_instances, remove_foliage.`,
+    category: 'world',
+    description: 'Create/sculpt landscapes, paint foliage, and generate procedural terrain/biomes.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -560,46 +631,39 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
           ],
           description: 'Action'
         },
-        // Common
-        name: { type: 'string', description: 'Name of landscape, foliage type, or procedural volume.' },
-        landscapeName: { type: 'string' },
-        heightData: { type: 'array', items: { type: 'number' } },
-        minX: { type: 'number' },
-        minY: { type: 'number' },
-        maxX: { type: 'number' },
-        maxY: { type: 'number' },
-        updateNormals: { type: 'boolean' },
+        name: commonSchemas.name,
+        landscapeName: commonSchemas.stringProp,
+        heightData: commonSchemas.arrayOfNumbers,
+        minX: commonSchemas.numberProp,
+        minY: commonSchemas.numberProp,
+        maxX: commonSchemas.numberProp,
+        maxY: commonSchemas.numberProp,
+        updateNormals: commonSchemas.booleanProp,
         location: commonSchemas.location,
         rotation: commonSchemas.rotation,
         scale: commonSchemas.scale,
-
-        // Landscape
-        sizeX: { type: 'number' },
-        sizeY: { type: 'number' },
-        sectionSize: { type: 'number' },
-        sectionsPerComponent: { type: 'number' },
-        componentCount: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } } },
-        materialPath: { type: 'string' },
-
-        // Sculpt/Paint
-        tool: { type: 'string' },
-        radius: { type: 'number' },
-        strength: { type: 'number' },
-        falloff: { type: 'number' },
-        brushSize: { type: 'number' },
-        layerName: { type: 'string', description: 'Required for paint_landscape.' },
-        eraseMode: { type: 'boolean' },
-
-        // Foliage
-        foliageType: { type: 'string', description: 'Required for add_foliage_instances, paint_foliage.' },
-        foliageTypePath: { type: 'string' },
-        meshPath: { type: 'string' },
-        density: { type: 'number' },
-        minScale: { type: 'number' },
-        maxScale: { type: 'number' },
-        cullDistance: { type: 'number' },
-        alignToNormal: { type: 'boolean' },
-        randomYaw: { type: 'boolean' },
+        sizeX: commonSchemas.numberProp,
+        sizeY: commonSchemas.numberProp,
+        sectionSize: commonSchemas.numberProp,
+        sectionsPerComponent: commonSchemas.numberProp,
+        componentCount: commonSchemas.vector2,
+        materialPath: commonSchemas.materialPath,
+        tool: commonSchemas.stringProp,
+        radius: commonSchemas.numberProp,
+        strength: commonSchemas.numberProp,
+        falloff: commonSchemas.numberProp,
+        brushSize: commonSchemas.numberProp,
+        layerName: commonSchemas.stringProp,
+        eraseMode: commonSchemas.booleanProp,
+        foliageType: commonSchemas.stringProp,
+        foliageTypePath: commonSchemas.assetPath,
+        meshPath: commonSchemas.meshPath,
+        density: commonSchemas.numberProp,
+        minScale: commonSchemas.numberProp,
+        maxScale: commonSchemas.numberProp,
+        cullDistance: commonSchemas.numberProp,
+        alignToNormal: commonSchemas.booleanProp,
+        randomYaw: commonSchemas.booleanProp,
         locations: { type: 'array', items: commonSchemas.location },
         transforms: {
           type: 'array',
@@ -613,51 +677,27 @@ Supported actions: create_landscape, sculpt, add_foliage, paint_foliage, create_
           }
         },
         position: commonSchemas.location,
-
-        // Procedural
-        bounds: { type: 'object' },
-        volumeName: { type: 'string' },
-        seed: { type: 'number' },
-        foliageTypes: { type: 'array', items: { type: 'object' } },
-
-        // General
-        path: { type: 'string' },
-        filename: { type: 'string' },
-        assetPaths: { type: 'array', items: { type: 'string' } }
+        bounds: commonSchemas.objectProp,
+        volumeName: commonSchemas.stringProp,
+        seed: commonSchemas.numberProp,
+        foliageTypes: commonSchemas.arrayOfObjects,
+        path: commonSchemas.directoryPath,
+        filename: commonSchemas.stringProp,
+        assetPaths: commonSchemas.arrayOfStrings
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' }
+        ...commonSchemas.outputBase
       }
     }
   },
-
-  // 9. SYSTEM CONTROL
   {
     name: 'system_control',
-    description: `System-level control.
-
-Use it when you need to:
-- profiling & performance (stat commands).
-- quality settings.
-- run external tools (UBT, Tests).
-- manage logs/insights.
-- execute arbitrary console commands.
-- set/get CVars and project settings.
-- validate assets.
-
-Supported actions: 
-- Core: profile, show_fps, set_quality, screenshot, set_resolution, set_fullscreen, execute_command, console_command.
-- CVars: set_cvar.
-- Settings: get_project_settings, validate_assets.
-- Pipeline: run_ubt, run_tests.
-- Debug/Logs: subscribe, spawn_category, start_session.
-- Render: lumen_update_scene.
-- UI: play_sound, create_widget, show_widget.`,
+    category: 'core',
+    description: 'Run profiling, set quality/CVars, execute console commands, run UBT, and manage widgets.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -667,76 +707,45 @@ Supported actions:
             'profile', 'show_fps', 'set_quality', 'screenshot', 'set_resolution', 'set_fullscreen', 'execute_command', 'console_command',
             'run_ubt', 'run_tests', 'subscribe', 'unsubscribe', 'spawn_category', 'start_session', 'lumen_update_scene',
             'play_sound', 'create_widget', 'show_widget', 'add_widget_child',
-            // Added missing actions
             'set_cvar', 'get_project_settings', 'validate_assets',
             'set_project_setting'
           ],
           description: 'Action'
         },
-        // Profile/Quality
-        profileType: { type: 'string' },
-        category: { type: 'string' },
-        level: { type: 'number' },
-        enabled: { type: 'boolean' },
-        resolution: { type: 'string', description: 'Resolution string (e.g. "1920x1080").' },
-
-        // Commands
-        command: { type: 'string' },
-
-        // UBT
-        target: { type: 'string' },
-        platform: { type: 'string' },
-        configuration: { type: 'string' },
-        arguments: { type: 'string' },
-
-        // Tests
-        filter: { type: 'string' },
-
-        // Insights
-        channels: { type: 'string' },
-
-        // UI Widget Management
-        widgetPath: { type: 'string', description: 'Path to the widget blueprint (for add_widget_child).' },
-        childClass: { type: 'string', description: 'Class of the child widget to add (e.g. /Script/UMG.Button).' },
-        parentName: { type: 'string', description: 'Name of the parent widget to add to (optional).' },
-
-        // Project Settings
-        section: { type: 'string', description: 'Config section (e.g. /Script/EngineSettings.GeneralProjectSettings).' },
-        key: { type: 'string', description: 'Config key (e.g. ProjectID).' },
-        value: { type: 'string', description: 'Config value.' },
-        configName: { type: 'string', description: 'Config file name (Game, Engine, Input, etc.). Defaults to Game.' }
+        profileType: commonSchemas.stringProp,
+        category: commonSchemas.stringProp,
+        level: commonSchemas.numberProp,
+        enabled: commonSchemas.enabled,
+        resolution: commonSchemas.resolution,
+        command: commonSchemas.stringProp,
+        target: commonSchemas.stringProp,
+        platform: commonSchemas.stringProp,
+        configuration: commonSchemas.stringProp,
+        arguments: commonSchemas.stringProp,
+        filter: commonSchemas.stringProp,
+        channels: commonSchemas.stringProp,
+        widgetPath: commonSchemas.widgetPath,
+        childClass: commonSchemas.stringProp,
+        parentName: commonSchemas.stringProp,
+        section: commonSchemas.stringProp,
+        key: commonSchemas.stringProp,
+        value: commonSchemas.stringProp,
+        configName: commonSchemas.stringProp
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        output: { type: 'string' }
+        ...commonSchemas.outputBase,
+        output: commonSchemas.stringProp
       }
     }
   },
-
-  // 10. SEQUENCER
   {
     name: 'manage_sequence',
-    description: `Sequencer (Cinematics) management.
-
-Use it when you need to:
-- create/edit level sequences.
-- add tracks (camera, actors, audio, events).
-- keyframe properties.
-- manage sequence playback and settings.
-
-Supported actions:
-- Lifecycle: create, open, duplicate, rename, delete, list.
-- Bindings: add_camera, add_actor, add_actors, remove_actors, get_bindings, add_spawnable_from_class.
-- Playback: play, pause, stop, set_playback_speed.
-- Keyframes: add_keyframe.
-- Properties: get_properties, set_properties, get_metadata, set_metadata.
-- Tracks: add_track, add_section, list_tracks, remove_track, set_track_muted, set_track_solo, set_track_locked.
-- Settings: set_display_rate, set_tick_resolution, set_work_range, set_view_range.`,
+    category: 'utility',
+    description: 'Edit Level Sequences: add tracks, bind actors, set keyframes, control playback, and record camera.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -745,7 +754,6 @@ Supported actions:
           enum: [
             'create', 'open', 'add_camera', 'add_actor', 'add_actors', 'remove_actors',
             'get_bindings', 'play', 'pause', 'stop', 'set_playback_speed', 'add_keyframe',
-            // Added missing sequence actions
             'get_properties', 'set_properties', 'duplicate', 'rename', 'delete', 'list', 'get_metadata', 'set_metadata',
             'add_spawnable_from_class', 'add_track', 'add_section', 'set_display_rate', 'set_tick_resolution',
             'set_work_range', 'set_view_range', 'set_track_muted', 'set_track_solo', 'set_track_locked',
@@ -753,73 +761,51 @@ Supported actions:
           ],
           description: 'Action'
         },
-        name: { type: 'string', description: 'Sequence name for creation.' },
-        path: { type: 'string', description: 'Sequence asset path.' },
-        actorName: { type: 'string', description: 'Actor name for binding.' },
-        actorNames: { type: 'array', items: { type: 'string' }, description: 'Multiple actor names.' },
-        frame: { type: 'number', description: 'Frame number for keyframes.' },
-        value: { type: 'object', description: 'Value for keyframes.' },
-        property: { type: 'string', description: 'Property name for keyframes.' },
-        // Duplicate/Rename
-        destinationPath: { type: 'string', description: 'Destination path for duplicate.' },
-        newName: { type: 'string', description: 'New name for rename/duplicate.' },
-        overwrite: { type: 'boolean', description: 'Overwrite existing on duplicate.' },
-        // Playback
-        speed: { type: 'number', description: 'Playback speed multiplier.' },
-        startTime: { type: 'number', description: 'Start time for playback.' },
-        loopMode: { type: 'string', description: 'Loop mode for playback.' },
-        // Spawnable
-        className: { type: 'string', description: 'Class name for spawnables.' },
-        spawnable: { type: 'boolean', description: 'Create as spawnable.' },
-        // Track management
-        trackType: { type: 'string', description: 'Track type (Animation, Transform, Audio, Event).' },
-        trackName: { type: 'string', description: 'Track name for track operations.' },
-        muted: { type: 'boolean', description: 'Mute state for set_track_muted.' },
-        solo: { type: 'boolean', description: 'Solo state for set_track_solo.' },
-        locked: { type: 'boolean', description: 'Lock state for set_track_locked.' },
-        // Section
-        assetPath: { type: 'string', description: 'Asset path for section content.' },
-        startFrame: { type: 'number', description: 'Section start frame.' },
-        endFrame: { type: 'number', description: 'Section end frame.' },
-        // Display settings
-        frameRate: { type: 'string', description: 'Display frame rate (e.g., "30fps").' },
-        resolution: { type: 'string', description: 'Tick resolution (e.g., "24000fps").' },
-        // Work/View range
-        start: { type: 'number', description: 'Range start.' },
-        end: { type: 'number', description: 'Range end.' },
-        // Properties
-        lengthInFrames: { type: 'number', description: 'Sequence length in frames.' },
-        playbackStart: { type: 'number', description: 'Playback start frame.' },
-        playbackEnd: { type: 'number', description: 'Playback end frame.' },
-        // Metadata
-        metadata: { type: 'object', description: 'Metadata object.' }
+        name: commonSchemas.name,
+        path: commonSchemas.assetPath,
+        actorName: commonSchemas.actorName,
+        actorNames: commonSchemas.arrayOfStrings,
+        frame: commonSchemas.numberProp,
+        value: commonSchemas.objectProp,
+        property: commonSchemas.propertyName,
+        destinationPath: commonSchemas.destinationPath,
+        newName: commonSchemas.newName,
+        overwrite: commonSchemas.overwrite,
+        speed: commonSchemas.numberProp,
+        startTime: commonSchemas.numberProp,
+        loopMode: commonSchemas.stringProp,
+        className: commonSchemas.stringProp,
+        spawnable: commonSchemas.booleanProp,
+        trackType: commonSchemas.stringProp,
+        trackName: commonSchemas.stringProp,
+        muted: commonSchemas.booleanProp,
+        solo: commonSchemas.booleanProp,
+        locked: commonSchemas.booleanProp,
+        assetPath: commonSchemas.assetPath,
+        startFrame: commonSchemas.numberProp,
+        endFrame: commonSchemas.numberProp,
+        frameRate: commonSchemas.stringProp,
+        resolution: commonSchemas.stringProp,
+        start: commonSchemas.numberProp,
+        end: commonSchemas.numberProp,
+        lengthInFrames: commonSchemas.numberProp,
+        playbackStart: commonSchemas.numberProp,
+        playbackEnd: commonSchemas.numberProp,
+        metadata: commonSchemas.objectProp
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' }
+        ...commonSchemas.outputBase
       }
     }
   },
-
-  // 11. INPUT MANAGEMENT
   {
     name: 'manage_input',
-    description: `Enhanced Input management.
-
-Use it when you need to:
-- create Input Actions (IA_*)
-- create Input Mapping Contexts (IMC_*)
-- bind keys to actions in a mapping context.
-
-Supported actions:
-- create_input_action: Create a UInputAction asset.
-- create_input_mapping_context: Create a UInputMappingContext asset.
-- add_mapping: Add a key mapping to a context.
-- remove_mapping: Remove a mapping from a context.`,
+    category: 'utility',
+    description: 'Create Input Actions and Mapping Contexts. Add key/gamepad bindings with modifiers and triggers.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -833,41 +819,26 @@ Supported actions:
           ],
           description: 'Action to perform'
         },
-        name: { type: 'string', description: 'Name of the asset (for creation).' },
-        path: { type: 'string', description: 'Path to save the asset (e.g. /Game/Input).' },
-        contextPath: { type: 'string', description: 'Path to the Input Mapping Context.' },
-        actionPath: { type: 'string', description: 'Path to the Input Action.' },
-        key: { type: 'string', description: 'Key name (e.g. "SpaceBar", "W", "Gamepad_FaceButton_Bottom").' }
+        name: commonSchemas.name,
+        path: commonSchemas.directoryPath,
+        contextPath: commonSchemas.assetPath,
+        actionPath: commonSchemas.assetPath,
+        key: commonSchemas.stringProp
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        assetPath: { type: 'string' }
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath
       }
     }
   },
-
-  // 12. INTROSPECTION (INSPECT)
   {
     name: 'inspect',
-    description: `Low-level object inspection and property manipulation.
-
-Use it when you need to:
-- read/write properties of any UObject or component.
-- list objects/components.
-- manage actor tags and snapshots.
-- find objects by class or tag.
-
-Supported actions:
-- Object: inspect_object, inspect_class, list_objects, find_by_class, delete_object, export.
-- Properties: get_property, set_property, get_component_property, set_component_property.
-- Components: get_components, get_bounding_box.
-- Tags: add_tag, find_by_tag, get_metadata.
-- Snapshots: create_snapshot, restore_snapshot.`,
+    category: 'core',
+    description: 'Inspect any UObject: read/write properties, list components, export snapshots, and query class info.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -875,135 +846,150 @@ Supported actions:
           type: 'string',
           enum: [
             'inspect_object', 'set_property', 'get_property', 'get_components', 'inspect_class', 'list_objects',
-            // Added missing inspect actions
             'get_component_property', 'set_component_property', 'get_metadata', 'add_tag', 'find_by_tag',
             'create_snapshot', 'restore_snapshot', 'export', 'delete_object', 'find_by_class', 'get_bounding_box'
           ],
           description: 'Action'
         },
-        objectPath: { type: 'string', description: 'UObject path to inspect/modify.' },
-        propertyName: { type: 'string', description: 'Property name to get/set.' },
-        propertyPath: { type: 'string', description: 'Alternate property path parameter.' },
-        value: { description: 'Value to set.' },
-        // Actor/Component identifiers
-        actorName: { type: 'string', description: 'Actor name (required for snapshots, export, and component resolution).' },
-        name: { type: 'string', description: 'Object name (alternative to objectPath).' },
-        componentName: { type: 'string', description: 'Component name for component property access.' },
-        // Search/Filter
-        className: { type: 'string', description: 'Class name for find_by_class.' },
-        classPath: { type: 'string', description: 'Class path (alternative to className).' },
-        tag: { type: 'string', description: 'Tag for add_tag/find_by_tag.' },
-        filter: { type: 'string', description: 'Filter for list_objects.' },
-        // Snapshots
-        snapshotName: { type: 'string', description: 'Snapshot name for create/restore.' },
-        // Export
-        destinationPath: { type: 'string', description: 'Export destination path.' },
-        outputPath: { type: 'string', description: 'Alternative export path.' },
-        format: { type: 'string', description: 'Export format (e.g., JSON).' }
+        objectPath: commonSchemas.assetPath,
+        propertyName: commonSchemas.propertyName,
+        propertyPath: commonSchemas.stringProp,
+        value: commonSchemas.value,
+        actorName: commonSchemas.actorName,
+        name: commonSchemas.name,
+        componentName: commonSchemas.componentName,
+        className: commonSchemas.stringProp,
+        classPath: commonSchemas.assetPath,
+        tag: commonSchemas.tagName,
+        filter: commonSchemas.stringProp,
+        snapshotName: commonSchemas.stringProp,
+        destinationPath: commonSchemas.destinationPath,
+        outputPath: commonSchemas.outputPath,
+        format: commonSchemas.stringProp
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        value: { description: 'Property value.' }
+        ...commonSchemas.outputBase,
+        value: commonSchemas.value
       }
     }
   },
-
-  // 12. AUDIO MANAGER
   {
     name: 'manage_audio',
-    description: `Audio asset and component management.
-
-Use it when you need to:
-- create sound cues/mixes.
-- play sounds (3D/2D).
-- control audio components.
-
-Supported actions:
-- Assets: create_sound_cue, create_sound_mix, create_sound_class, create_reverb_zone, create_ambient_sound.
-- Playback: play_sound_at_location, play_sound_2d, play_sound_attached, spawn_sound_at_location.
-- Components: create_audio_component, fade_sound, fade_sound_in, fade_sound_out.
-- Mixes: push_sound_mix, pop_sound_mix, set_sound_mix_class_override, clear_sound_mix_class_override, set_base_sound_mix.
-- Global: enable_audio_analysis, set_doppler_effect, set_audio_occlusion, set_sound_attenuation.`,
+    category: 'utility',
+    description: 'Play/stop sounds, add audio components, configure mixes, attenuation, spatial audio, and author Sound Cues/MetaSounds.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
+            // Runtime audio control
             'create_sound_cue', 'play_sound_at_location', 'play_sound_2d', 'create_audio_component',
             'create_sound_mix', 'push_sound_mix', 'pop_sound_mix',
             'set_sound_mix_class_override', 'clear_sound_mix_class_override', 'set_base_sound_mix',
             'prime_sound', 'play_sound_attached', 'spawn_sound_at_location',
             'fade_sound_in', 'fade_sound_out', 'create_ambient_sound',
-            // Added missing actions
             'create_sound_class', 'set_sound_attenuation', 'create_reverb_zone',
-            'enable_audio_analysis', 'fade_sound', 'set_doppler_effect', 'set_audio_occlusion'
+            'enable_audio_analysis', 'fade_sound', 'set_doppler_effect', 'set_audio_occlusion',
+            // Sound Cue authoring (merged from manage_audio_authoring)
+            'add_cue_node', 'connect_cue_nodes', 'set_cue_attenuation', 'set_cue_concurrency',
+            // MetaSound authoring
+            'create_metasound', 'add_metasound_node', 'connect_metasound_nodes',
+            'add_metasound_input', 'add_metasound_output', 'set_metasound_default',
+            // Sound class/mix authoring
+            'set_class_properties', 'set_class_parent', 'add_mix_modifier', 'configure_mix_eq',
+            // Attenuation authoring
+            'create_attenuation_settings', 'configure_distance_attenuation',
+            'configure_spatialization', 'configure_occlusion', 'configure_reverb_send',
+            // Dialogue system
+            'create_dialogue_voice', 'create_dialogue_wave', 'set_dialogue_context',
+            // Effects
+            'create_reverb_effect', 'create_source_effect_chain', 'add_source_effect', 'create_submix_effect',
+            // Utility
+            'get_audio_info'
           ],
           description: 'Action'
         },
-        name: { type: 'string' },
-        soundPath: { type: 'string', description: 'Required for create_sound_cue, play_sound_*, create_audio_component, create_ambient_sound.' },
+        name: commonSchemas.name,
+        soundPath: commonSchemas.soundPath,
         location: commonSchemas.location,
         rotation: commonSchemas.rotation,
-        volume: { type: 'number' },
-        pitch: { type: 'number' },
-        startTime: { type: 'number' },
-        attenuationPath: { type: 'string' },
-        concurrencyPath: { type: 'string' },
-        mixName: { type: 'string' },
-        soundClassName: { type: 'string' },
-        fadeInTime: { type: 'number' },
-        fadeOutTime: { type: 'number' },
-        fadeTime: { type: 'number' },
-        targetVolume: { type: 'number' },
-        attachPointName: { type: 'string' },
-        actorName: { type: 'string' },
-        componentName: { type: 'string' },
-        // Added missing parameters
-        parentClass: { type: 'string' },
-        properties: { type: 'object' },
-        innerRadius: { type: 'number' },
-        falloffDistance: { type: 'number' },
-        attenuationShape: { type: 'string' },
-        falloffMode: { type: 'string' },
-        reverbEffect: { type: 'string' },
+        volume: commonSchemas.numberProp,
+        pitch: commonSchemas.numberProp,
+        startTime: commonSchemas.numberProp,
+        attenuationPath: commonSchemas.assetPath,
+        concurrencyPath: commonSchemas.assetPath,
+        mixName: commonSchemas.stringProp,
+        soundClassName: commonSchemas.stringProp,
+        fadeInTime: commonSchemas.numberProp,
+        fadeOutTime: commonSchemas.numberProp,
+        fadeTime: commonSchemas.numberProp,
+        targetVolume: commonSchemas.numberProp,
+        attachPointName: commonSchemas.socketName,
+        actorName: commonSchemas.actorName,
+        componentName: commonSchemas.componentName,
+        parentClass: commonSchemas.stringProp,
+        properties: commonSchemas.objectProp,
+        innerRadius: commonSchemas.numberProp,
+        falloffDistance: commonSchemas.numberProp,
+        attenuationShape: commonSchemas.stringProp,
+        falloffMode: commonSchemas.stringProp,
+        reverbEffect: commonSchemas.stringProp,
         size: commonSchemas.scale,
-        fftSize: { type: 'number' },
-        outputType: { type: 'string' },
-        soundName: { type: 'string' },
-        fadeType: { type: 'string' },
-        scale: { type: 'number' },
-        lowPassFilterFrequency: { type: 'number' },
-        volumeAttenuation: { type: 'number' },
-        enabled: { type: 'boolean' }
+        fftSize: commonSchemas.numberProp,
+        outputType: commonSchemas.stringProp,
+        soundName: commonSchemas.stringProp,
+        fadeType: commonSchemas.stringProp,
+        scale: commonSchemas.numberProp,
+        lowPassFilterFrequency: commonSchemas.numberProp,
+        volumeAttenuation: commonSchemas.numberProp,
+        enabled: commonSchemas.enabled,
+        // Authoring properties (merged from manage_audio_authoring)
+        path: commonSchemas.directoryPathForCreation,
+        assetPath: commonSchemas.assetPath,
+        save: commonSchemas.save,
+        wavePath: commonSchemas.wavePath,
+        nodeType: commonSchemas.stringProp,
+        nodeId: commonSchemas.nodeId,
+        sourceNodeId: commonSchemas.sourceNodeId,
+        targetNodeId: commonSchemas.targetNodeId,
+        outputPin: commonSchemas.numberProp,
+        inputPin: commonSchemas.numberProp,
+        looping: commonSchemas.looping,
+        x: commonSchemas.numberProp,
+        y: commonSchemas.numberProp,
+        metasoundType: commonSchemas.stringProp,
+        inputName: commonSchemas.inputName,
+        inputType: commonSchemas.stringProp,
+        outputName: commonSchemas.outputName,
+        sourceNode: commonSchemas.sourceNode,
+        sourcePin: commonSchemas.sourcePin,
+        targetNode: commonSchemas.targetNode,
+        targetPin: commonSchemas.targetPin,
+        defaultValue: commonSchemas.value,
+        metasoundNodeType: commonSchemas.stringProp,
+        soundClassPath: commonSchemas.soundClassPath,
+        parentClassPath: commonSchemas.parentClassPath
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' }
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
+        nodeId: commonSchemas.nodeId
       }
     }
   },
-
-  // 13. BEHAVIOR TREE
   {
     name: 'manage_behavior_tree',
-    description: `Behavior Tree editing tool.
-
-Use it when you need to:
-- create new Behavior Tree assets.
-- add nodes (Sequence, Selector, Tasks).
-- connect nodes.
-- set properties.
-
-Supported actions: create, add_node, connect_nodes, remove_node, break_connections, set_node_properties.`,
+    category: 'utility',
+    description: 'Create Behavior Trees, add task/decorator/service nodes, and configure node properties.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1012,97 +998,32 @@ Supported actions: create, add_node, connect_nodes, remove_node, break_connectio
           enum: ['create', 'add_node', 'connect_nodes', 'remove_node', 'break_connections', 'set_node_properties'],
           description: 'Action'
         },
-        // For create action
-        name: { type: 'string', description: 'Name of the new Behavior Tree asset' },
-        savePath: { type: 'string', description: 'Path to save the new Behavior Tree (e.g., /Game/AI)' },
-        // Existing params
-        assetPath: { type: 'string' },
-        nodeType: { type: 'string' },
-        nodeId: { type: 'string' },
-        parentNodeId: { type: 'string' },
-        childNodeId: { type: 'string' },
-        x: { type: 'number' },
-        y: { type: 'number' },
-        comment: { type: 'string' },
-        properties: { type: 'object' }
+        name: commonSchemas.name,
+        savePath: commonSchemas.savePath,
+        assetPath: commonSchemas.assetPath,
+        nodeType: commonSchemas.stringProp,
+        nodeId: commonSchemas.nodeId,
+        parentNodeId: commonSchemas.nodeId,
+        childNodeId: commonSchemas.nodeId,
+        x: commonSchemas.numberProp,
+        y: commonSchemas.numberProp,
+        comment: commonSchemas.stringProp,
+        properties: commonSchemas.objectProp
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        nodeId: { type: 'string' }
+        ...commonSchemas.outputWithNodeId
       }
     }
   },
-
-  // 14. BLUEPRINT GRAPH DIRECT
-  {
-    name: 'manage_blueprint_graph',
-    description: `Direct Blueprint Graph manipulation.
-
-Use it when you need to:
-- add nodes (Function, Variable, Event, Macro).
-- connect/disconnect pins.
-- create reroute nodes.
-- set node properties.
-- get node/graph details.
-
-Supported actions: create_node, delete_node, connect_pins, break_pin_links, set_node_property, create_reroute_node, get_node_details, get_graph_details, get_pin_details.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            'create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property',
-            'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
-            'list_node_types', 'set_pin_default_value'
-          ],
-          description: 'Action'
-        },
-        blueprintPath: { type: 'string' },
-        graphName: { type: 'string' },
-        nodeType: { type: 'string' },
-        nodeId: { type: 'string' },
-        pinName: { type: 'string' },
-        linkedTo: { type: 'string' },
-        memberName: { type: 'string' },
-        x: { type: 'number' },
-        y: { type: 'number' },
-        propertyName: { type: 'string' },
-        value: { description: 'Value.' }
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        nodeId: { type: 'string' },
-        details: { type: 'object' }
-      }
-    }
-  },
-
-  // 15. LIGHTING MANAGER
+  // [MERGED] manage_blueprint_graph actions now in manage_blueprint (Phase 53: Strategic Tool Merging)
   {
     name: 'manage_lighting',
-    description: `Lighting and Rendering configuration.
-
-Use it when you need to:
-- spawn and configure lights (Directional, Point, Spot, Rect, Sky).
-- configure Global Illumination (Lumen, Lightmass) and Shadows.
-- setup Volumetric Fog and Atmosphere.
-- build lighting (bake).
-- set exposure and post-process settings.
-
-Supported actions: 
-- Spawning: spawn_light, create_light, spawn_sky_light, create_sky_light, ensure_single_sky_light, create_lightmass_volume, create_lighting_enabled_level, create_dynamic_light.
-- Configuration: setup_global_illumination, configure_shadows, set_exposure, set_ambient_occlusion, setup_volumetric_fog.
-- Building: build_lighting.`,
+    category: 'world',
+    description: 'Spawn lights (point, spot, rect, sky), configure GI, shadows, volumetric fog, and build lighting.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1116,64 +1037,45 @@ Supported actions:
           ],
           description: 'Action'
         },
-        // Common
-        name: { type: 'string' },
+        name: commonSchemas.name,
         location: commonSchemas.location,
         rotation: commonSchemas.rotation,
-
-        // Light Properties
         lightType: { type: 'string', enum: ['Directional', 'Point', 'Spot', 'Rect'] },
-        intensity: { type: 'number' },
-        color: { type: 'array', items: { type: 'number' } },
-        castShadows: { type: 'boolean' },
+        intensity: commonSchemas.numberProp,
+        color: commonSchemas.color,
+        castShadows: commonSchemas.booleanProp,
         useAsAtmosphereSunLight: { type: 'boolean', description: 'For Directional Lights, use as Atmosphere Sun Light.' },
-        temperature: { type: 'number' },
-        radius: { type: 'number' },
-        falloffExponent: { type: 'number' },
-        innerCone: { type: 'number' },
-        outerCone: { type: 'number' },
-        width: { type: 'number' },
-        height: { type: 'number' },
-
-        // Sky Light
+        temperature: commonSchemas.numberProp,
+        radius: commonSchemas.numberProp,
+        falloffExponent: commonSchemas.numberProp,
+        innerCone: commonSchemas.numberProp,
+        outerCone: commonSchemas.numberProp,
+        width: commonSchemas.numberProp,
+        height: commonSchemas.numberProp,
         sourceType: { type: 'string', enum: ['CapturedScene', 'SpecifiedCubemap'] },
-        cubemapPath: { type: 'string' },
-        recapture: { type: 'boolean' },
-
-        // Global Illumination
+        cubemapPath: commonSchemas.texturePath,
+        recapture: commonSchemas.booleanProp,
         method: { type: 'string', enum: ['Lightmass', 'LumenGI', 'ScreenSpace', 'None'] },
-        quality: { type: 'string' }, // 'Low' | 'Medium' | 'High' | 'Epic' | 'Preview' | 'Production'
-        indirectLightingIntensity: { type: 'number' },
-        bounces: { type: 'number' },
-
-        // Shadows
-        shadowQuality: { type: 'string' },
-        cascadedShadows: { type: 'boolean' },
-        shadowDistance: { type: 'number' },
-        contactShadows: { type: 'boolean' },
-        rayTracedShadows: { type: 'boolean' },
-
-        // Exposure / Post Process
-        compensationValue: { type: 'number' },
-        minBrightness: { type: 'number' },
-        maxBrightness: { type: 'number' },
-        enabled: { type: 'boolean' },
-
-        // Volumetric Fog
-        density: { type: 'number' },
-        scatteringIntensity: { type: 'number' },
-        fogHeight: { type: 'number' },
-
-        // Building
-        buildOnlySelected: { type: 'boolean' },
-        buildReflectionCaptures: { type: 'boolean' },
-
-        // Level
-        levelName: { type: 'string' },
-        copyActors: { type: 'boolean' },
-        useTemplate: { type: 'boolean' },
-
-        // Volume
+        quality: commonSchemas.stringProp,
+        indirectLightingIntensity: commonSchemas.numberProp,
+        bounces: commonSchemas.numberProp,
+        shadowQuality: commonSchemas.stringProp,
+        cascadedShadows: commonSchemas.booleanProp,
+        shadowDistance: commonSchemas.numberProp,
+        contactShadows: commonSchemas.booleanProp,
+        rayTracedShadows: commonSchemas.booleanProp,
+        compensationValue: commonSchemas.numberProp,
+        minBrightness: commonSchemas.numberProp,
+        maxBrightness: commonSchemas.numberProp,
+        enabled: commonSchemas.enabled,
+        density: commonSchemas.numberProp,
+        scatteringIntensity: commonSchemas.numberProp,
+        fogHeight: commonSchemas.numberProp,
+        buildOnlySelected: commonSchemas.booleanProp,
+        buildReflectionCaptures: commonSchemas.booleanProp,
+        levelName: commonSchemas.stringProp,
+        copyActors: commonSchemas.booleanProp,
+        useTemplate: commonSchemas.booleanProp,
         size: commonSchemas.scale
       },
       required: ['action']
@@ -1181,29 +1083,15 @@ Supported actions:
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        actorName: { type: 'string' }
+        ...commonSchemas.outputBase,
+        actorName: commonSchemas.actorName
       }
     }
   },
-
-  // 16. PERFORMANCE MANAGER
   {
     name: 'manage_performance',
-    description: `Performance profiling and optimization.
-
-Use it when you need to:
-- profiling (CPU, GPU, Memory, RenderThread).
-- optimize content (LODs, texture streaming, draw calls).
-- benchmark the scene.
-- configure rendering features (Nanite, Lumen, World Partition).
-
-Supported actions: 
-- Profiling: start_profiling, stop_profiling, run_benchmark, show_fps, show_stats, generate_memory_report.
-- Settings: set_scalability, set_resolution_scale, set_vsync, set_frame_rate_limit, enable_gpu_timing.
-- Optimization: configure_texture_streaming, configure_lod, apply_baseline_settings, optimize_draw_calls, merge_actors, configure_occlusion_culling, optimize_shaders.
-- Features: configure_nanite, configure_world_partition.`,
+    category: 'utility',
+    description: 'Run profiling/benchmarks, configure scalability, LOD, Nanite, and optimization settings.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1217,147 +1105,88 @@ Supported actions:
           ],
           description: 'Action'
         },
-        // Profiling
         type: { type: 'string', enum: ['CPU', 'GPU', 'Memory', 'RenderThread', 'GameThread', 'All'] },
-        duration: { type: 'number' },
-        outputPath: { type: 'string' },
-        detailed: { type: 'boolean' },
-        category: { type: 'string' },
-
-        // Settings
-        level: { type: 'number' },
-        scale: { type: 'number' },
-        enabled: { type: 'boolean' },
-        maxFPS: { type: 'number' },
-        verbose: { type: 'boolean' },
-
-        // Optimization
-        poolSize: { type: 'number' },
-        boostPlayerLocation: { type: 'boolean' },
-        forceLOD: { type: 'number' },
-        lodBias: { type: 'number' },
-        distanceScale: { type: 'number' },
-        skeletalBias: { type: 'number' },
-        hzb: { type: 'boolean' },
-        enableInstancing: { type: 'boolean' },
-        enableBatching: { type: 'boolean' },
-        mergeActors: { type: 'boolean' },
-        actors: { type: 'array', items: { type: 'string' } },
-        freezeRendering: { type: 'boolean' },
-        compileOnDemand: { type: 'boolean' },
-        cacheShaders: { type: 'boolean' },
-        reducePermutations: { type: 'boolean' },
-
-        // Features
-        maxPixelsPerEdge: { type: 'number' },
-        streamingPoolSize: { type: 'number' },
-        streamingDistance: { type: 'number' },
-        cellSize: { type: 'number' }
+        duration: commonSchemas.numberProp,
+        outputPath: commonSchemas.outputPath,
+        detailed: commonSchemas.booleanProp,
+        category: commonSchemas.stringProp,
+        level: commonSchemas.numberProp,
+        scale: commonSchemas.numberProp,
+        enabled: commonSchemas.enabled,
+        maxFPS: commonSchemas.numberProp,
+        verbose: commonSchemas.booleanProp,
+        poolSize: commonSchemas.numberProp,
+        boostPlayerLocation: commonSchemas.booleanProp,
+        forceLOD: commonSchemas.numberProp,
+        lodBias: commonSchemas.numberProp,
+        distanceScale: commonSchemas.numberProp,
+        skeletalBias: commonSchemas.numberProp,
+        hzb: commonSchemas.booleanProp,
+        enableInstancing: commonSchemas.booleanProp,
+        enableBatching: commonSchemas.booleanProp,
+        mergeActors: commonSchemas.booleanProp,
+        actors: commonSchemas.arrayOfStrings,
+        freezeRendering: commonSchemas.booleanProp,
+        compileOnDemand: commonSchemas.booleanProp,
+        cacheShaders: commonSchemas.booleanProp,
+        reducePermutations: commonSchemas.booleanProp,
+        maxPixelsPerEdge: commonSchemas.numberProp,
+        streamingPoolSize: commonSchemas.numberProp,
+        streamingDistance: commonSchemas.numberProp,
+        cellSize: commonSchemas.numberProp
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        params: { type: 'object' }
+        ...commonSchemas.outputBase,
+        params: commonSchemas.objectProp
       }
     }
   },
-
-  // 17. GEOMETRY MANAGER (Phase 6 - Geometry Script)
   {
     name: 'manage_geometry',
-    description: `Geometry Script mesh creation and manipulation via DynamicMeshActor.
-
-Use it when you need to:
-- create primitive meshes (box, sphere, cylinder, cone, capsule, torus, plane, disc, stairs, ring, arch, pipe, ramp).
-- perform boolean operations (union, subtract, intersection).
-- apply modeling operations (extrude, inset, outset, bevel, offset_faces, shell, revolve, chamfer).
-- apply deformers (bend, twist, taper, noise_deform, smooth, relax, stretch, spherify, cylindrify).
-- apply topology operations (triangulate, poke).
-- apply transforms (mirror, array_linear, array_radial).
-- process meshes (simplify_mesh, subdivide, remesh_uniform, merge_vertices).
-- repair meshes (weld_vertices, fill_holes, remove_degenerates).
-- manipulate UVs (auto_uv, project_uv, transform_uvs).
-- manipulate normals/tangents (recalculate_normals, flip_normals, recompute_tangents).
-- generate collision shapes (convex, box, sphere, capsule, decomposition).
-- convert dynamic meshes to static mesh assets.
-
-Supported actions:
-- Primitives (basic): create_box, create_sphere, create_cylinder, create_cone, create_capsule, create_torus, create_plane, create_disc.
-- Primitives (additional): create_stairs, create_spiral_stairs, create_ring, create_arch, create_pipe, create_ramp.
-- Booleans: boolean_union, boolean_subtract, boolean_intersection, boolean_trim, self_union.
-- Modeling: extrude, inset, outset, bevel, offset_faces, shell, revolve, chamfer, extrude_along_spline, bridge, loft, sweep, duplicate_along_spline, loop_cut, edge_split, quadrangulate.
-- Deformers: bend, twist, taper, noise_deform, smooth, relax, stretch, spherify, cylindrify.
-- Topology: triangulate, poke.
-- Transform: mirror, array_linear, array_radial.
-- Mesh Processing: simplify_mesh, subdivide, remesh_uniform, merge_vertices, remesh_voxel.
-- Mesh Repair: weld_vertices, fill_holes, remove_degenerates.
-- UVs: auto_uv, project_uv (box, planar, cylindrical), transform_uvs, unwrap_uv, pack_uv_islands.
-- Normals/Tangents: recalculate_normals, flip_normals, recompute_tangents.
-- Collision: generate_collision (types: convex, convex_decomposition, box, sphere, capsule), generate_complex_collision, simplify_collision.
-- LOD: generate_lods, set_lod_settings, set_lod_screen_sizes, convert_to_nanite.
-- Export: convert_to_static_mesh.
-- Utils: get_mesh_info.`,
+    category: 'world',
+    description: 'Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Primitives (basic)
             'create_box', 'create_sphere', 'create_cylinder', 'create_cone', 'create_capsule',
             'create_torus', 'create_plane', 'create_disc',
-            // Primitives (additional)
             'create_stairs', 'create_spiral_stairs', 'create_ring',
             'create_arch', 'create_pipe', 'create_ramp',
-            // Booleans
             'boolean_union', 'boolean_subtract', 'boolean_intersection',
             'boolean_trim', 'self_union',
-            // Modeling operations
             'extrude', 'inset', 'outset', 'bevel', 'offset_faces', 'shell', 'revolve', 'chamfer',
             'extrude_along_spline', 'bridge', 'loft', 'sweep',
             'duplicate_along_spline', 'loop_cut', 'edge_split', 'quadrangulate',
-            // Deformers
             'bend', 'twist', 'taper', 'noise_deform', 'smooth', 'relax',
             'stretch', 'spherify', 'cylindrify',
-            // Topology operations
             'triangulate', 'poke',
-            // Transform operations
             'mirror', 'array_linear', 'array_radial',
-            // Mesh processing
             'simplify_mesh', 'subdivide', 'remesh_uniform', 'merge_vertices', 'remesh_voxel',
-            // Mesh repair
             'weld_vertices', 'fill_holes', 'remove_degenerates',
-            // UVs
             'auto_uv', 'project_uv', 'transform_uvs', 'unwrap_uv', 'pack_uv_islands',
-            // Normals/Tangents
             'recalculate_normals', 'flip_normals', 'recompute_tangents',
-            // Collision
             'generate_collision', 'generate_complex_collision', 'simplify_collision',
-            // LOD operations
             'generate_lods', 'set_lod_settings', 'set_lod_screen_sizes', 'convert_to_nanite',
-            // Export/Convert
             'convert_to_static_mesh',
-            // Utils
             'get_mesh_info'
           ],
           description: 'Geometry action to perform'
         },
-
-        // -- Target Identification --
-        meshPath: { type: 'string', description: 'Path to target static mesh asset (e.g., /Game/Meshes/MyMesh).' },
+        meshPath: commonSchemas.meshPath,
         targetMeshPath: { type: 'string', description: 'Path to second mesh for boolean operations.' },
-        outputPath: { type: 'string', description: 'Path for output mesh asset.' },
-        actorName: { type: 'string', description: 'Name of actor in level (for dynamic mesh operations).' },
-
-        // -- Primitive Dimensions --
-        width: { type: 'number', description: 'Width dimension (X axis).' },
-        height: { type: 'number', description: 'Height dimension (Z axis).' },
-        depth: { type: 'number', description: 'Depth dimension (Y axis).' },
-        radius: { type: 'number', description: 'Radius for sphere, cylinder, capsule, torus, disc.' },
+        outputPath: commonSchemas.outputPath,
+        actorName: commonSchemas.actorName,
+        width: commonSchemas.width,
+        height: commonSchemas.height,
+        depth: commonSchemas.depth,
+        radius: commonSchemas.radius,
         innerRadius: { type: 'number', description: 'Inner radius for torus.' },
         numSides: { type: 'number', description: 'Number of sides for cylinder, cone, etc.' },
         numRings: { type: 'number', description: 'Number of rings for sphere, torus.' },
@@ -1366,73 +1195,53 @@ Supported actions:
         stepHeight: { type: 'number', description: 'Height of each stair step.' },
         stepDepth: { type: 'number', description: 'Depth of each stair step.' },
         numTurns: { type: 'number', description: 'Number of turns for spiral.' },
-
-        // -- Segments/Subdivisions --
         widthSegments: { type: 'number', description: 'Segments along width.' },
         heightSegments: { type: 'number', description: 'Segments along height.' },
         depthSegments: { type: 'number', description: 'Segments along depth.' },
         radialSegments: { type: 'number', description: 'Radial segments for circular shapes.' },
-
-        // -- Transform --
-        location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'World location.' },
-        rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, description: 'Rotation.' },
-        scale: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Scale.' },
-
-        // -- Modeling Operations --
-        distance: { type: 'number', description: 'Extrude distance or offset amount.' },
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+        scale: commonSchemas.scale,
+        distance: commonSchemas.distance,
         amount: { type: 'number', description: 'Generic amount for operations (bevel size, inset distance, etc.).' },
         segments: { type: 'number', description: 'Number of segments for bevel, subdivide.' },
-        angle: { type: 'number', description: 'Angle in degrees for bend, twist operations.' },
+        angle: commonSchemas.angle,
         axis: { type: 'string', enum: ['X', 'Y', 'Z'], description: 'Axis for deformation operations.' },
-        strength: { type: 'number', description: 'Strength/intensity for deformers.' },
+        strength: commonSchemas.strength,
         iterations: { type: 'number', description: 'Number of iterations for smooth, remesh.' },
         targetTriangleCount: { type: 'number', description: 'Target triangle count for simplification.' },
         targetEdgeLength: { type: 'number', description: 'Target edge length for remeshing.' },
         weldDistance: { type: 'number', description: 'Distance threshold for vertex welding.' },
-
-        // -- Selection (for face/edge/vertex operations) --
-        faceIndices: { type: 'array', items: { type: 'number' }, description: 'Array of face indices.' },
-        edgeIndices: { type: 'array', items: { type: 'number' }, description: 'Array of edge indices.' },
-        vertexIndices: { type: 'array', items: { type: 'number' }, description: 'Array of vertex indices.' },
-        selectionBox: { type: 'object', properties: { min: { type: 'object' }, max: { type: 'object' } }, description: 'Bounding box for selection.' },
-
-        // -- UV Parameters --
+        faceIndices: { type: 'array', items: commonSchemas.numberProp, description: 'Array of face indices.' },
+        edgeIndices: { type: 'array', items: commonSchemas.numberProp, description: 'Array of edge indices.' },
+        vertexIndices: { type: 'array', items: commonSchemas.numberProp, description: 'Array of vertex indices.' },
+        selectionBox: { type: 'object', properties: { min: commonSchemas.objectProp, max: commonSchemas.objectProp }, description: 'Bounding box for selection.' },
         uvChannel: { type: 'number', description: 'UV channel index (0-7).' },
-        uvScale: { type: 'object', properties: { u: { type: 'number' }, v: { type: 'number' } }, description: 'UV scale.' },
-        uvOffset: { type: 'object', properties: { u: { type: 'number' }, v: { type: 'number' } }, description: 'UV offset.' },
+        uvScale: { type: 'object', properties: { u: commonSchemas.numberProp, v: commonSchemas.numberProp }, description: 'UV scale.' },
+        uvOffset: { type: 'object', properties: { u: commonSchemas.numberProp, v: commonSchemas.numberProp }, description: 'UV offset.' },
         projectionDirection: { type: 'string', enum: ['X', 'Y', 'Z', 'Auto'], description: 'Projection direction for UV.' },
-
-        // -- Normals --
         hardEdgeAngle: { type: 'number', description: 'Angle threshold for hard edges (degrees).' },
         computeWeightedNormals: { type: 'boolean', description: 'Use area-weighted normals.' },
         smoothingGroupId: { type: 'number', description: 'Smoothing group ID.' },
-
-        // -- Collision --
         collisionType: { type: 'string', enum: ['Default', 'Simple', 'Complex', 'UseComplexAsSimple', 'UseSimpleAsComplex'], description: 'Collision complexity type.' },
         hullCount: { type: 'number', description: 'Number of convex hulls for decomposition.' },
         hullPrecision: { type: 'number', description: 'Precision for convex hull generation (0-1).' },
         maxVerticesPerHull: { type: 'number', description: 'Maximum vertices per convex hull.' },
-
-        // -- LOD Parameters --
         lodCount: { type: 'number', description: 'Number of LOD levels to generate.' },
         lodIndex: { type: 'number', description: 'Specific LOD index to configure.' },
         reductionPercent: { type: 'number', description: 'Percent of triangles to reduce per LOD.' },
         screenSize: { type: 'number', description: 'Screen size threshold for LOD switching.' },
-        screenSizes: { type: 'array', items: { type: 'number' }, description: 'Array of screen sizes for each LOD.' },
+        screenSizes: { type: 'array', items: commonSchemas.numberProp, description: 'Array of screen sizes for each LOD.' },
         preserveBorders: { type: 'boolean', description: 'Preserve mesh borders during LOD generation.' },
         preserveUVs: { type: 'boolean', description: 'Preserve UV seams during LOD generation.' },
-
-        // -- Export --
         exportFormat: { type: 'string', enum: ['FBX', 'OBJ', 'glTF', 'USD'], description: 'Export file format.' },
-        exportPath: { type: 'string', description: 'File system path for export.' },
+        exportPath: commonSchemas.exportPath,
         includeNormals: { type: 'boolean', description: 'Include normals in export.' },
         includeUVs: { type: 'boolean', description: 'Include UVs in export.' },
         includeTangents: { type: 'boolean', description: 'Include tangents in export.' },
-
-        // -- Options --
         createAsset: { type: 'boolean', description: 'Create as persistent asset.' },
-        overwrite: { type: 'boolean', description: 'Overwrite existing asset.' },
-        save: { type: 'boolean', description: 'Save asset after operation.' },
+        overwrite: commonSchemas.overwrite,
+        save: commonSchemas.save,
         enableNanite: { type: 'boolean', description: 'Enable Nanite for the output mesh.' }
       },
       required: ['action']
@@ -1440,127 +1249,87 @@ Supported actions:
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        meshPath: { type: 'string', description: 'Path to created/modified mesh.' },
-        actorName: { type: 'string', description: 'Name of spawned actor (if applicable).' },
+        ...commonSchemas.outputBase,
+        meshPath: commonSchemas.meshPath,
+        actorName: commonSchemas.actorName,
         meshInfo: {
           type: 'object',
           properties: {
-            vertexCount: { type: 'number' },
-            triangleCount: { type: 'number' },
-            uvChannels: { type: 'number' },
-            hasNormals: { type: 'boolean' },
-            hasTangents: { type: 'boolean' },
-            boundingBox: { type: 'object' },
-            lodCount: { type: 'number' }
-          },
-          description: 'Mesh statistics (for get_mesh_info).'
+            vertexCount: commonSchemas.numberProp,
+            triangleCount: commonSchemas.numberProp,
+            uvChannels: commonSchemas.numberProp,
+            hasNormals: commonSchemas.booleanProp,
+            hasTangents: commonSchemas.booleanProp,
+            boundingBox: commonSchemas.objectProp,
+            lodCount: commonSchemas.numberProp
+          }
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // 18. SKELETON MANAGER (Phase 7 - Skeletal Mesh & Rigging)
   {
     name: 'manage_skeleton',
-    description: `Skeletal mesh rigging and physics asset management.
-
-Use it when you need to:
-- create and modify skeletons (add/remove/rename bones).
-- manage sockets for attachment points.
-- create and configure physics assets for ragdolls.
-- setup skin weights for mesh deformation.
-- create and manage morph targets for facial animation.
-- configure cloth binding to skeletal meshes.
-
-Supported actions:
-- Skeleton: create_skeleton, add_bone, remove_bone, rename_bone, set_bone_transform, set_bone_parent, create_virtual_bone.
-- Sockets: create_socket, configure_socket.
-- Skin Weights: auto_skin_weights, set_vertex_weights, normalize_weights, prune_weights, copy_weights, mirror_weights.
-- Physics Asset: create_physics_asset, add_physics_body, configure_physics_body, add_physics_constraint, configure_constraint_limits.
-- Cloth: bind_cloth_to_skeletal_mesh, assign_cloth_asset_to_mesh.
-- Morph Targets: create_morph_target, set_morph_target_deltas, import_morph_targets.
-- Utils: get_skeleton_info, list_bones, list_sockets, list_physics_bodies.`,
+    category: 'authoring',
+    description: 'Edit skeletal meshes: add sockets, configure physics assets, set skin weights, and create morph targets.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // 7.1 Skeleton Creation
             'create_skeleton', 'add_bone', 'remove_bone', 'rename_bone',
             'set_bone_transform', 'set_bone_parent',
             'create_virtual_bone',
             'create_socket', 'configure_socket',
-            // 7.2 Skin Weights
             'auto_skin_weights', 'set_vertex_weights',
             'normalize_weights', 'prune_weights',
             'copy_weights', 'mirror_weights',
-            // 7.3 Physics Asset
             'create_physics_asset',
             'add_physics_body', 'configure_physics_body',
             'add_physics_constraint', 'configure_constraint_limits',
-            // 7.4 Cloth Setup
             'bind_cloth_to_skeletal_mesh', 'assign_cloth_asset_to_mesh',
-            // 7.5 Morph Targets
             'create_morph_target', 'set_morph_target_deltas', 'import_morph_targets',
-            // Utils
             'get_skeleton_info', 'list_bones', 'list_sockets', 'list_physics_bodies'
           ],
           description: 'Skeleton action to perform'
         },
-
-        // -- Asset Identification --
-        skeletonPath: { type: 'string', description: 'Path to skeleton asset (e.g., /Game/Characters/MySkeleton).' },
-        skeletalMeshPath: { type: 'string', description: 'Path to skeletal mesh asset.' },
-        physicsAssetPath: { type: 'string', description: 'Path to physics asset.' },
+        skeletonPath: commonSchemas.skeletonPath,
+        skeletalMeshPath: commonSchemas.skeletalMeshPath,
+        physicsAssetPath: commonSchemas.physicsAssetPath,
         morphTargetPath: { type: 'string', description: 'Path to morph target or FBX file for import.' },
-        clothAssetPath: { type: 'string', description: 'Path to cloth asset.' },
-        outputPath: { type: 'string', description: 'Path for output asset creation.' },
-
-        // -- Bone Parameters --
-        boneName: { type: 'string', description: 'Name of the bone to create/modify.' },
-        newBoneName: { type: 'string', description: 'New name for rename_bone action.' },
-        parentBoneName: { type: 'string', description: 'Parent bone name for hierarchy.' },
-        sourceBoneName: { type: 'string', description: 'Source bone for virtual bone.' },
-        targetBoneName: { type: 'string', description: 'Target bone for virtual bone.' },
+        clothAssetPath: commonSchemas.clothAssetPath,
+        outputPath: commonSchemas.outputPath,
+        boneName: commonSchemas.boneName,
+        newBoneName: commonSchemas.newName,
+        parentBoneName: commonSchemas.parentBoneName,
+        sourceBoneName: commonSchemas.sourceBoneName,
+        targetBoneName: commonSchemas.targetBoneName,
         boneIndex: { type: 'number', description: 'Bone index for operations.' },
-
-        // -- Transform --
-        location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Position in world or local space.' },
-        rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, description: 'Rotation in degrees.' },
-        scale: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Scale factor.' },
-
-        // -- Socket Parameters --
-        socketName: { type: 'string', description: 'Name of the socket.' },
-        attachBoneName: { type: 'string', description: 'Bone to attach socket to.' },
-        relativeLocation: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Socket offset from bone.' },
-        relativeRotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, description: 'Socket rotation offset.' },
-        relativeScale: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Socket scale.' },
-
-        // -- Skin Weight Parameters --
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+        scale: commonSchemas.scale,
+        socketName: commonSchemas.socketName,
+        attachBoneName: commonSchemas.attachBoneName,
+        relativeLocation: commonSchemas.location,
+        relativeRotation: commonSchemas.rotation,
+        relativeScale: commonSchemas.scale,
         vertexIndex: { type: 'number', description: 'Vertex index for weight operations.' },
-        vertexIndices: { type: 'array', items: { type: 'number' }, description: 'Array of vertex indices.' },
-        weights: { type: 'array', items: { type: 'object' }, description: 'Array of {boneIndex, weight} pairs.' },
+        vertexIndices: { type: 'array', items: commonSchemas.numberProp, description: 'Array of vertex indices.' },
+        weights: { type: 'array', items: commonSchemas.objectProp, description: 'Array of {boneIndex, weight} pairs.' },
         threshold: { type: 'number', description: 'Weight threshold for pruning (0-1).' },
         mirrorAxis: { type: 'string', enum: ['X', 'Y', 'Z'], description: 'Axis for weight mirroring.' },
         mirrorTable: { type: 'object', description: 'Bone name mapping for mirroring.' },
-
-        // -- Physics Asset Parameters --
         bodyType: { type: 'string', enum: ['Capsule', 'Sphere', 'Box', 'Convex', 'Sphyl'], description: 'Physics body shape type.' },
-        bodyName: { type: 'string', description: 'Name of the physics body.' },
-        mass: { type: 'number', description: 'Body mass in kg.' },
+        bodyName: commonSchemas.bodyName,
+        mass: commonSchemas.mass,
         linearDamping: { type: 'number', description: 'Linear damping factor.' },
         angularDamping: { type: 'number', description: 'Angular damping factor.' },
         collisionEnabled: { type: 'boolean', description: 'Enable collision for this body.' },
         simulatePhysics: { type: 'boolean', description: 'Enable physics simulation.' },
-
-        // -- Constraint Parameters --
-        constraintName: { type: 'string', description: 'Name of the physics constraint.' },
-        bodyA: { type: 'string', description: 'First body for constraint.' },
-        bodyB: { type: 'string', description: 'Second body for constraint.' },
+        constraintName: commonSchemas.constraintName,
+        bodyA: commonSchemas.bodyA,
+        bodyB: commonSchemas.bodyB,
         limits: {
           type: 'object',
           properties: {
@@ -1573,239 +1342,151 @@ Supported actions:
           },
           description: 'Constraint angular limits.'
         },
-
-        // -- Morph Target Parameters --
-        morphTargetName: { type: 'string', description: 'Name of the morph target.' },
-        deltas: { type: 'array', items: { type: 'object' }, description: 'Array of {vertexIndex, delta} for morph target.' },
-
-        // -- Cloth Parameters --
+        morphTargetName: commonSchemas.morphTargetName,
+        deltas: { type: 'array', items: commonSchemas.objectProp, description: 'Array of {vertexIndex, delta} for morph target.' },
         paintValue: { type: 'number', description: 'Cloth weight paint value (0-1).' },
-
-        // -- Options --
-        save: { type: 'boolean', description: 'Save asset after operation.' },
-        overwrite: { type: 'boolean', description: 'Overwrite existing asset.' }
+        save: commonSchemas.save,
+        overwrite: commonSchemas.overwrite
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        skeletonPath: { type: 'string', description: 'Path to created/modified skeleton.' },
-        physicsAssetPath: { type: 'string', description: 'Path to created physics asset.' },
-        socketName: { type: 'string', description: 'Name of created socket.' },
+        ...commonSchemas.outputBase,
+        skeletonPath: commonSchemas.skeletonPath,
+        physicsAssetPath: commonSchemas.assetPath,
+        socketName: commonSchemas.socketName,
         boneInfo: {
           type: 'object',
           properties: {
-            name: { type: 'string' },
-            index: { type: 'number' },
-            parentName: { type: 'string' },
-            parentIndex: { type: 'number' }
-          },
-          description: 'Bone information.'
+            name: commonSchemas.stringProp,
+            index: commonSchemas.numberProp,
+            parentName: commonSchemas.stringProp,
+            parentIndex: commonSchemas.numberProp
+          }
         },
-        bones: { type: 'array', items: { type: 'object' }, description: 'List of bones (for list_bones).' },
-        sockets: { type: 'array', items: { type: 'object' }, description: 'List of sockets (for list_sockets).' },
-        physicsBodies: { type: 'array', items: { type: 'object' }, description: 'List of physics bodies.' },
-        error: { type: 'string' }
+        bones: commonSchemas.arrayOfObjects,
+        sockets: commonSchemas.arrayOfObjects,
+        physicsBodies: commonSchemas.arrayOfObjects,
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // 19. MATERIAL AUTHORING (Phase 8 - Advanced Material Creation)
   {
     name: 'manage_material_authoring',
-    description: `Advanced material creation and shader authoring.
-
-Use it when you need to:
-- create materials with specific blend modes, shading models, and domains.
-- add material expressions (textures, parameters, math nodes, etc.).
-- connect and disconnect material nodes.
-- create material functions and use them in materials.
-- create material instances and set parameter values.
-- create specialized materials (landscape, decal, post-process).
-- compile materials and get material info.
-
-Supported actions:
-- Material Creation: create_material, set_blend_mode, set_shading_model, set_material_domain.
-- Expressions: add_texture_sample, add_texture_coordinate, add_scalar_parameter, add_vector_parameter, add_static_switch_parameter, add_math_node, add_world_position, add_vertex_normal, add_pixel_depth, add_fresnel, add_reflection_vector, add_panner, add_rotator, add_noise, add_voronoi, add_if, add_switch, add_custom_expression.
-- Connections: connect_nodes, disconnect_nodes.
-- Functions: create_material_function, add_function_input, add_function_output, use_material_function.
-- Instances: create_material_instance, set_scalar_parameter_value, set_vector_parameter_value, set_texture_parameter_value.
-- Specialized: create_landscape_material, create_decal_material, create_post_process_material, add_landscape_layer, configure_layer_blend.
-- Utils: compile_material, get_material_info.`,
+    category: 'authoring',
+    description: 'Create materials with expressions, parameters, functions, instances, and landscape blend layers.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Material Creation
             'create_material', 'set_blend_mode', 'set_shading_model', 'set_material_domain',
-            // Expressions
             'add_texture_sample', 'add_texture_coordinate', 'add_scalar_parameter', 'add_vector_parameter',
             'add_static_switch_parameter', 'add_math_node', 'add_world_position', 'add_vertex_normal',
             'add_pixel_depth', 'add_fresnel', 'add_reflection_vector', 'add_panner', 'add_rotator',
             'add_noise', 'add_voronoi', 'add_if', 'add_switch', 'add_custom_expression',
-            // Connections
             'connect_nodes', 'disconnect_nodes',
-            // Functions
             'create_material_function', 'add_function_input', 'add_function_output', 'use_material_function',
-            // Instances
             'create_material_instance', 'set_scalar_parameter_value', 'set_vector_parameter_value', 'set_texture_parameter_value',
-            // Specialized
             'create_landscape_material', 'create_decal_material', 'create_post_process_material',
             'add_landscape_layer', 'configure_layer_blend',
-            // Utils
             'compile_material', 'get_material_info'
           ],
           description: 'Material authoring action to perform'
         },
-
-        // -- Asset Identification --
-        assetPath: { type: 'string', description: 'Path to material asset (e.g., /Game/Materials/MyMaterial).' },
-        name: { type: 'string', description: 'Name of new material or function.' },
-        path: { type: 'string', description: 'Directory to create asset in (e.g., /Game/Materials).' },
-
-        // -- Material Properties --
+        assetPath: commonSchemas.assetPath,
+        name: commonSchemas.name,
+        path: commonSchemas.directoryPathForCreation,
         materialDomain: { type: 'string', enum: ['Surface', 'DeferredDecal', 'LightFunction', 'Volume', 'PostProcess', 'UI'], description: 'Material domain type.' },
         blendMode: { type: 'string', enum: ['Opaque', 'Masked', 'Translucent', 'Additive', 'Modulate', 'AlphaComposite', 'AlphaHoldout'], description: 'Blend mode.' },
         shadingModel: { type: 'string', enum: ['DefaultLit', 'Unlit', 'Subsurface', 'SubsurfaceProfile', 'PreintegratedSkin', 'ClearCoat', 'Hair', 'Cloth', 'Eye', 'TwoSidedFoliage', 'ThinTranslucent'], description: 'Shading model.' },
         twoSided: { type: 'boolean', description: 'Enable two-sided rendering.' },
-
-        // -- Node Positioning --
-        x: { type: 'number', description: 'Node X position in material graph.' },
-        y: { type: 'number', description: 'Node Y position in material graph.' },
-
-        // -- Texture Sample --
-        texturePath: { type: 'string', description: 'Path to texture asset for sampling.' },
+        x: commonSchemas.nodeX,
+        y: commonSchemas.nodeY,
+        texturePath: commonSchemas.texturePath,
         samplerType: { type: 'string', enum: ['Color', 'LinearColor', 'Normal', 'Masks', 'Alpha', 'VirtualColor', 'VirtualNormal'], description: 'Texture sampler type.' },
-
-        // -- Texture Coordinate --
         coordinateIndex: { type: 'number', description: 'UV channel index (0-7).' },
         uTiling: { type: 'number', description: 'U tiling factor.' },
         vTiling: { type: 'number', description: 'V tiling factor.' },
-
-        // -- Parameters --
-        parameterName: { type: 'string', description: 'Name of the parameter.' },
+        parameterName: commonSchemas.parameterName,
         defaultValue: { description: 'Default value for parameter (number for scalar, object for vector, bool for switch).' },
-        group: { type: 'string', description: 'Parameter group name.' },
+        group: commonSchemas.group,
         value: { description: 'Value to set (number, vector object, or texture path).' },
-
-        // -- Math Node --
         operation: { type: 'string', enum: ['Add', 'Subtract', 'Multiply', 'Divide', 'Lerp', 'Clamp', 'Power', 'SquareRoot', 'Abs', 'Floor', 'Ceil', 'Frac', 'Sine', 'Cosine', 'Saturate', 'OneMinus', 'Min', 'Max', 'Dot', 'Cross', 'Normalize', 'Append'], description: 'Math operation type.' },
         constA: { type: 'number', description: 'Constant A input value.' },
         constB: { type: 'number', description: 'Constant B input value.' },
-
-        // -- Custom Expression --
-        code: { type: 'string', description: 'HLSL code for custom expression.' },
+        code: commonSchemas.code,
         outputType: { type: 'string', enum: ['Float1', 'Float2', 'Float3', 'Float4', 'MaterialAttributes'], description: 'Output type of custom expression.' },
         description: { type: 'string', description: 'Description for custom expression or function.' },
-
-        // -- Node Connections --
         sourceNodeId: { type: 'string', description: 'Source node ID for connection.' },
         sourcePin: { type: 'string', description: 'Source pin name (output).' },
         targetNodeId: { type: 'string', description: 'Target node ID for connection.' },
         targetPin: { type: 'string', description: 'Target pin name (input).' },
-        nodeId: { type: 'string', description: 'Node ID for disconnect operations.' },
-        pinName: { type: 'string', description: 'Pin name for disconnect operations.' },
-
-        // -- Material Function --
-        functionPath: { type: 'string', description: 'Path to material function asset.' },
+        nodeId: commonSchemas.nodeId,
+        pinName: commonSchemas.pinName,
+        functionPath: commonSchemas.functionPath,
         exposeToLibrary: { type: 'boolean', description: 'Expose function to material library.' },
-        inputName: { type: 'string', description: 'Name of function input/output.' },
+        inputName: commonSchemas.inputName,
         inputType: { type: 'string', enum: ['Float1', 'Float2', 'Float3', 'Float4', 'Texture2D', 'TextureCube', 'Bool', 'MaterialAttributes'], description: 'Type of function input/output.' },
-
-        // -- Material Instance --
         parentMaterial: { type: 'string', description: 'Path to parent material for instances.' },
-
-        // -- Landscape Material --
-        layerName: { type: 'string', description: 'Landscape layer name.' },
+        layerName: commonSchemas.layerName,
         blendType: { type: 'string', enum: ['LB_WeightBlend', 'LB_AlphaBlend', 'LB_HeightBlend'], description: 'Landscape layer blend type.' },
-        layers: { type: 'array', items: { type: 'object' }, description: 'Array of layer configurations for layer blend.' },
-
-        // -- Options --
-        save: { type: 'boolean', description: 'Save asset after operation.' }
+        layers: { type: 'array', items: commonSchemas.objectProp, description: 'Array of layer configurations for layer blend.' },
+        save: commonSchemas.save
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        assetPath: { type: 'string', description: 'Path to created/modified material.' },
-        nodeId: { type: 'string', description: 'ID of created node.' },
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
+        nodeId: commonSchemas.nodeId,
         materialInfo: {
           type: 'object',
           properties: {
-            domain: { type: 'string' },
-            blendMode: { type: 'string' },
-            shadingModel: { type: 'string' },
-            twoSided: { type: 'boolean' },
-            nodeCount: { type: 'number' },
-            parameters: { type: 'array', items: { type: 'object' } }
-          },
-          description: 'Material information (for get_material_info).'
+            domain: commonSchemas.stringProp,
+            blendMode: commonSchemas.stringProp,
+            shadingModel: commonSchemas.stringProp,
+            twoSided: commonSchemas.booleanProp,
+            nodeCount: commonSchemas.numberProp,
+            parameters: commonSchemas.arrayOfObjects
+          }
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // 20. TEXTURE MANAGEMENT (Phase 9 - Texture Generation & Processing)
   {
     name: 'manage_texture',
-    description: `Procedural texture creation, processing, and settings management.
-
-Use it when you need to:
-- create procedural textures (noise, gradients, patterns).
-- convert height maps to normal maps.
-- bake ambient occlusion from meshes.
-- resize, blur, sharpen, or adjust textures.
-- pack or extract texture channels.
-- combine textures with blend modes.
-- configure texture compression, LOD, and streaming settings.
-
-Supported actions:
-- Procedural Generation: create_noise_texture, create_gradient_texture, create_pattern_texture, create_normal_from_height, create_ao_from_mesh.
-- Processing: resize_texture, adjust_levels, adjust_curves, blur, sharpen, invert, desaturate, channel_pack, channel_extract, combine_textures.
-- Settings: set_compression_settings, set_texture_group, set_lod_bias, configure_virtual_texture, set_streaming_priority.
-- Utility: get_texture_info.`,
+    category: 'authoring',
+    description: 'Create procedural textures, process images, bake normal/AO maps, and set compression settings.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Procedural Generation
             'create_noise_texture', 'create_gradient_texture', 'create_pattern_texture',
             'create_normal_from_height', 'create_ao_from_mesh',
-            // Processing
             'resize_texture', 'adjust_levels', 'adjust_curves', 'blur', 'sharpen',
             'invert', 'desaturate', 'channel_pack', 'channel_extract', 'combine_textures',
-            // Settings
             'set_compression_settings', 'set_texture_group', 'set_lod_bias',
             'configure_virtual_texture', 'set_streaming_priority',
-            // Utility
             'get_texture_info'
           ],
           description: 'Texture action to perform'
         },
-
-        // -- Asset Identification --
-        assetPath: { type: 'string', description: 'Path to texture asset (e.g., /Game/Textures/MyTexture).' },
-        name: { type: 'string', description: 'Name of new texture to create.' },
-        path: { type: 'string', description: 'Directory to create texture in (e.g., /Game/Textures).' },
-
-        // -- Dimensions --
-        width: { type: 'number', description: 'Texture width in pixels.' },
-        height: { type: 'number', description: 'Texture height in pixels.' },
+        assetPath: commonSchemas.assetPath,
+        name: commonSchemas.name,
+        path: commonSchemas.directoryPathForCreation,
+        width: commonSchemas.width,
+        height: commonSchemas.height,
         newWidth: { type: 'number', description: 'New width for resize operation.' },
         newHeight: { type: 'number', description: 'New height for resize operation.' },
-
-        // -- Noise Parameters --
         noiseType: { type: 'string', enum: ['Perlin', 'Simplex', 'Worley', 'Voronoi'], description: 'Type of noise to generate.' },
         scale: { type: 'number', description: 'Noise scale/frequency.' },
         octaves: { type: 'number', description: 'Number of noise octaves for FBM.' },
@@ -1813,18 +1494,14 @@ Supported actions:
         lacunarity: { type: 'number', description: 'Frequency multiplier per octave.' },
         seed: { type: 'number', description: 'Random seed for procedural generation.' },
         seamless: { type: 'boolean', description: 'Generate seamless/tileable texture.' },
-
-        // -- Gradient Parameters --
         gradientType: { type: 'string', enum: ['Linear', 'Radial', 'Angular'], description: 'Type of gradient.' },
         startColor: { type: 'object', description: 'Start color {r, g, b, a}.' },
         endColor: { type: 'object', description: 'End color {r, g, b, a}.' },
-        angle: { type: 'number', description: 'Rotation angle in degrees.' },
+        angle: commonSchemas.angle,
         centerX: { type: 'number', description: 'Center X position (0-1) for radial gradient.' },
         centerY: { type: 'number', description: 'Center Y position (0-1) for radial gradient.' },
-        radius: { type: 'number', description: 'Radius for radial gradient (0-1).' },
-        colorStops: { type: 'array', items: { type: 'object' }, description: 'Array of {position, color} for multi-color gradients.' },
-
-        // -- Pattern Parameters --
+        radius: commonSchemas.radius,
+        colorStops: { type: 'array', items: commonSchemas.objectProp, description: 'Array of {position, color} for multi-color gradients.' },
         patternType: { type: 'string', enum: ['Checker', 'Grid', 'Brick', 'Tile', 'Dots', 'Stripes'], description: 'Type of pattern.' },
         primaryColor: { type: 'object', description: 'Primary pattern color {r, g, b, a}.' },
         secondaryColor: { type: 'object', description: 'Secondary pattern color {r, g, b, a}.' },
@@ -1833,45 +1510,31 @@ Supported actions:
         lineWidth: { type: 'number', description: 'Line width for grid/stripes (0-1).' },
         brickRatio: { type: 'number', description: 'Width/height ratio for brick pattern.' },
         offset: { type: 'number', description: 'Brick offset ratio (0-1).' },
-
-        // -- Normal Map Generation --
         sourceTexture: { type: 'string', description: 'Source height map texture path.' },
-        strength: { type: 'number', description: 'Normal map strength/intensity.' },
+        strength: commonSchemas.strength,
         algorithm: { type: 'string', enum: ['Sobel', 'Prewitt', 'Scharr'], description: 'Normal calculation algorithm.' },
         flipY: { type: 'boolean', description: 'Flip green channel for DirectX/OpenGL compatibility.' },
-
-        // -- AO Baking --
-        meshPath: { type: 'string', description: 'Path to mesh for AO baking.' },
+        meshPath: commonSchemas.meshPath,
         samples: { type: 'number', description: 'Number of AO samples.' },
         rayDistance: { type: 'number', description: 'Maximum ray distance for AO.' },
         bias: { type: 'number', description: 'AO bias to prevent self-occlusion.' },
         uvChannel: { type: 'number', description: 'UV channel to use for baking.' },
-
-        // -- Resize Parameters --
         filterMethod: { type: 'string', enum: ['Nearest', 'Bilinear', 'Bicubic', 'Lanczos'], description: 'Resize filter method.' },
         preserveAspect: { type: 'boolean', description: 'Preserve aspect ratio when resizing.' },
-        outputPath: { type: 'string', description: 'Output path (defaults to overwrite source).' },
-
-        // -- Levels/Curves --
+        outputPath: commonSchemas.outputPath,
         inputBlackPoint: { type: 'number', description: 'Input black point (0-1).' },
         inputWhitePoint: { type: 'number', description: 'Input white point (0-1).' },
         gamma: { type: 'number', description: 'Gamma correction value.' },
         outputBlackPoint: { type: 'number', description: 'Output black point (0-1).' },
         outputWhitePoint: { type: 'number', description: 'Output white point (0-1).' },
-        curvePoints: { type: 'array', items: { type: 'object' }, description: 'Array of {x, y} curve control points.' },
-
-        // -- Blur/Sharpen --
+        curvePoints: { type: 'array', items: commonSchemas.objectProp, description: 'Array of {x, y} curve control points.' },
         blurType: { type: 'string', enum: ['Gaussian', 'Box', 'Radial'], description: 'Type of blur.' },
         sharpenType: { type: 'string', enum: ['UnsharpMask', 'Laplacian'], description: 'Type of sharpening.' },
-
-        // -- Channel Operations --
         channel: { type: 'string', enum: ['All', 'Red', 'Green', 'Blue', 'Alpha'], description: 'Target channel.' },
         invertAlpha: { type: 'boolean', description: 'Whether to invert alpha channel.' },
         amount: { type: 'number', description: 'Effect amount (0-1 for desaturate).' },
         method: { type: 'string', enum: ['Luminance', 'Average', 'Lightness'], description: 'Desaturation method.' },
         outputAsGrayscale: { type: 'boolean', description: 'Output extracted channel as grayscale.' },
-
-        // -- Channel Pack Sources --
         redChannel: { type: 'string', description: 'Source texture for red channel.' },
         greenChannel: { type: 'string', description: 'Source texture for green channel.' },
         blueChannel: { type: 'string', description: 'Source texture for blue channel.' },
@@ -1880,15 +1543,11 @@ Supported actions:
         greenSourceChannel: { type: 'string', enum: ['Red', 'Green', 'Blue', 'Alpha'], description: 'Which channel to use from green source.' },
         blueSourceChannel: { type: 'string', enum: ['Red', 'Green', 'Blue', 'Alpha'], description: 'Which channel to use from blue source.' },
         alphaSourceChannel: { type: 'string', enum: ['Red', 'Green', 'Blue', 'Alpha'], description: 'Which channel to use from alpha source.' },
-
-        // -- Combine Textures --
         baseTexture: { type: 'string', description: 'Base texture path for combining.' },
         blendTexture: { type: 'string', description: 'Blend texture path for combining.' },
         blendMode: { type: 'string', enum: ['Multiply', 'Add', 'Subtract', 'Screen', 'Overlay', 'SoftLight', 'HardLight', 'Difference', 'Normal'], description: 'Blend mode for combining textures.' },
         opacity: { type: 'number', description: 'Blend opacity (0-1).' },
         maskTexture: { type: 'string', description: 'Optional mask texture for blending.' },
-
-        // -- Compression Settings --
         compressionSettings: {
           type: 'string',
           enum: ['TC_Default', 'TC_Normalmap', 'TC_Masks', 'TC_Grayscale', 'TC_Displacementmap',
@@ -1896,1034 +1555,64 @@ Supported actions:
                  'TC_DistanceFieldFont', 'TC_HDR_Compressed', 'TC_BC7'],
           description: 'Texture compression setting.'
         },
-
-        // -- Texture Group --
         textureGroup: {
           type: 'string',
           description: 'Texture group (TEXTUREGROUP_World, TEXTUREGROUP_Character, TEXTUREGROUP_UI, etc.).'
         },
-
-        // -- LOD and Streaming --
         lodBias: { type: 'number', description: 'LOD bias (-2 to 4, lower = higher quality).' },
         virtualTextureStreaming: { type: 'boolean', description: 'Enable virtual texture streaming.' },
         tileSize: { type: 'number', description: 'Virtual texture tile size (32, 64, 128, 256, 512, 1024).' },
         tileBorderSize: { type: 'number', description: 'Virtual texture tile border size.' },
         neverStream: { type: 'boolean', description: 'Disable texture streaming.' },
         streamingPriority: { type: 'number', description: 'Streaming priority (-1 to 1, lower = higher priority).' },
-
-        // -- HDR --
         hdr: { type: 'boolean', description: 'Create HDR texture (16-bit float).' },
-
-        // -- Options --
-        save: { type: 'boolean', description: 'Save asset after operation.' }
+        save: commonSchemas.save
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        assetPath: { type: 'string', description: 'Path to created/modified texture.' },
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
         textureInfo: {
           type: 'object',
           properties: {
-            width: { type: 'number' },
-            height: { type: 'number' },
-            format: { type: 'string' },
-            compression: { type: 'string' },
-            textureGroup: { type: 'string' },
-            mipCount: { type: 'number' },
-            sRGB: { type: 'boolean' },
-            hasAlpha: { type: 'boolean' },
-            virtualTextureStreaming: { type: 'boolean' },
-            neverStream: { type: 'boolean' }
-          },
-          description: 'Texture information (for get_texture_info).'
+            width: commonSchemas.numberProp,
+            height: commonSchemas.numberProp,
+            format: commonSchemas.stringProp,
+            compression: commonSchemas.stringProp,
+            textureGroup: commonSchemas.stringProp,
+            mipCount: commonSchemas.numberProp,
+            sRGB: commonSchemas.booleanProp,
+            hasAlpha: commonSchemas.booleanProp,
+            virtualTextureStreaming: commonSchemas.booleanProp,
+            neverStream: commonSchemas.booleanProp
+          }
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // ============================================================================
-  // 21. Animation Authoring (Phase 10)
-  // ============================================================================
-  {
-    name: 'manage_animation_authoring',
-    description: 'Complete animation system authoring from keyframes to state machines. Create and edit Animation Sequences, Montages, Blend Spaces, Animation Blueprints, Control Rigs, and IK Retargeting.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            // Animation Sequences (10)
-            'create_animation_sequence',
-            'set_sequence_length',
-            'add_bone_track',
-            'set_bone_key',
-            'set_curve_key',
-            'add_notify',
-            'add_notify_state',
-            'add_sync_marker',
-            'set_root_motion_settings',
-            'set_additive_settings',
-            // Animation Montages (8)
-            'create_montage',
-            'add_montage_section',
-            'add_montage_slot',
-            'set_section_timing',
-            'add_montage_notify',
-            'set_blend_in',
-            'set_blend_out',
-            'link_sections',
-            // Blend Spaces (7)
-            'create_blend_space_1d',
-            'create_blend_space_2d',
-            'add_blend_sample',
-            'set_axis_settings',
-            'set_interpolation_settings',
-            'create_aim_offset',
-            'add_aim_offset_sample',
-            // Animation Blueprints (10)
-            'create_anim_blueprint',
-            'add_state_machine',
-            'add_state',
-            'add_transition',
-            'set_transition_rules',
-            'add_blend_node',
-            'add_cached_pose',
-            'add_slot_node',
-            'add_layered_blend_per_bone',
-            'set_anim_graph_node_value',
-            // Control Rig (5)
-            'create_control_rig',
-            'add_control',
-            'add_rig_unit',
-            'connect_rig_elements',
-            'create_pose_library',
-            // Retargeting (4)
-            'create_ik_rig',
-            'add_ik_chain',
-            'create_ik_retargeter',
-            'set_retarget_chain_mapping',
-            // Utility (1)
-            'get_animation_info'
-          ],
-          description: 'Animation authoring action to perform.'
-        },
-        // Common parameters
-        name: { type: 'string', description: 'Asset name for creation.' },
-        path: { type: 'string', description: 'Directory path for asset creation.' },
-        assetPath: { type: 'string', description: 'Path to existing animation asset.' },
-        skeletonPath: { type: 'string', description: 'Path to skeleton asset.' },
-        skeletalMeshPath: { type: 'string', description: 'Path to skeletal mesh asset.' },
-        blueprintPath: { type: 'string', description: 'Path to animation blueprint.' },
-        save: { type: 'boolean', description: 'Save asset after modification.' },
-
-        // Animation Sequence parameters
-        numFrames: { type: 'number', description: 'Number of frames in sequence.' },
-        frameRate: { type: 'number', description: 'Frames per second.' },
-        boneName: { type: 'string', description: 'Name of bone for track/key.' },
-        frame: { type: 'number', description: 'Frame number for keyframe.' },
-        location: { type: 'object', description: 'Location {x, y, z}.' },
-        rotation: { type: 'object', description: 'Rotation {pitch, yaw, roll} or quaternion {x, y, z, w}.' },
-        scale: { type: 'object', description: 'Scale {x, y, z}.' },
-        curveName: { type: 'string', description: 'Name of animation curve.' },
-        value: { type: 'number', description: 'Curve/property value.' },
-        createIfMissing: { type: 'boolean', description: 'Create curve if it does not exist.' },
-        notifyClass: { type: 'string', description: 'Notify class name (e.g., AnimNotify_PlaySound).' },
-        notifyName: { type: 'string', description: 'Optional custom notify name.' },
-        trackIndex: { type: 'number', description: 'Notify track index.' },
-        startFrame: { type: 'number', description: 'Start frame for notify state.' },
-        endFrame: { type: 'number', description: 'End frame for notify state.' },
-        markerName: { type: 'string', description: 'Sync marker name.' },
-        enableRootMotion: { type: 'boolean', description: 'Enable root motion.' },
-        rootMotionRootLock: { type: 'string', enum: ['RefPose', 'AnimFirstFrame', 'Zero'], description: 'Root motion lock mode.' },
-        forceRootLock: { type: 'boolean', description: 'Force root lock.' },
-        additiveAnimType: { type: 'string', enum: ['NoAdditive', 'LocalSpaceAdditive', 'MeshSpaceAdditive'], description: 'Additive animation type.' },
-        basePoseType: { type: 'string', enum: ['RefPose', 'AnimationFrame', 'AnimationScaled'], description: 'Base pose type for additive.' },
-        basePoseAnimation: { type: 'string', description: 'Base pose animation path.' },
-        basePoseFrame: { type: 'number', description: 'Base pose frame number.' },
-
-        // Montage parameters
-        slotName: { type: 'string', description: 'Slot name (e.g., DefaultSlot).' },
-        sectionName: { type: 'string', description: 'Montage section name.' },
-        startTime: { type: 'number', description: 'Start time in seconds.' },
-        animationPath: { type: 'string', description: 'Path to animation asset.' },
-        length: { type: 'number', description: 'Section length in seconds.' },
-        time: { type: 'number', description: 'Time position in seconds.' },
-        blendTime: { type: 'number', description: 'Blend duration in seconds.' },
-        blendOption: { type: 'string', enum: ['Linear', 'Cubic', 'HermiteCubic', 'Sinusoidal', 'QuadraticInOut', 'CubicInOut', 'QuarticInOut', 'QuinticInOut', 'CircularIn', 'CircularOut', 'CircularInOut', 'ExpIn', 'ExpOut', 'ExpInOut'], description: 'Blend curve option.' },
-        fromSection: { type: 'string', description: 'Source section name for linking.' },
-        toSection: { type: 'string', description: 'Target section name for linking.' },
-
-        // Blend Space parameters
-        axisName: { type: 'string', description: 'Axis name (e.g., Speed, Direction).' },
-        axisMin: { type: 'number', description: 'Axis minimum value.' },
-        axisMax: { type: 'number', description: 'Axis maximum value.' },
-        horizontalAxisName: { type: 'string', description: 'Horizontal axis name for 2D blend space.' },
-        horizontalMin: { type: 'number', description: 'Horizontal axis minimum.' },
-        horizontalMax: { type: 'number', description: 'Horizontal axis maximum.' },
-        verticalAxisName: { type: 'string', description: 'Vertical axis name for 2D blend space.' },
-        verticalMin: { type: 'number', description: 'Vertical axis minimum.' },
-        verticalMax: { type: 'number', description: 'Vertical axis maximum.' },
-        sampleValue: { type: ['number', 'object'], description: 'Sample value (number for 1D, {x, y} for 2D).' },
-        axis: { type: 'string', enum: ['Horizontal', 'Vertical', 'X'], description: 'Axis to configure.' },
-        minValue: { type: 'number', description: 'Axis minimum value.' },
-        maxValue: { type: 'number', description: 'Axis maximum value.' },
-        gridDivisions: { type: 'number', description: 'Number of grid divisions.' },
-        interpolationType: { type: 'string', enum: ['Lerp', 'Cubic'], description: 'Blend interpolation type.' },
-        targetWeightInterpolationSpeed: { type: 'number', description: 'Weight interpolation speed.' },
-        yaw: { type: 'number', description: 'Yaw angle for aim offset.' },
-        pitch: { type: 'number', description: 'Pitch angle for aim offset.' },
-
-        // Animation Blueprint parameters
-        parentClass: { type: 'string', description: 'Parent class (e.g., AnimInstance).' },
-        stateMachineName: { type: 'string', description: 'State machine name.' },
-        stateName: { type: 'string', description: 'State name.' },
-        isEntryState: { type: 'boolean', description: 'Mark as entry state.' },
-        fromState: { type: 'string', description: 'Source state for transition.' },
-        toState: { type: 'string', description: 'Target state for transition.' },
-        blendLogicType: { type: 'string', enum: ['StandardBlend', 'Inertialization', 'Custom'], description: 'Transition blend logic type.' },
-        automaticTriggerRule: { type: 'string', enum: ['TimeRemaining', 'FractionRemaining', 'None'], description: 'Automatic transition trigger rule.' },
-        automaticTriggerTime: { type: 'number', description: 'Time/fraction for automatic trigger.' },
-        blendType: { type: 'string', enum: ['TwoWayBlend', 'BlendByBool', 'BlendPosesByBool', 'BlendByInt', 'LayeredBlendPerBone', 'MakeDynamicAdditive', 'ApplyAdditive'], description: 'Blend node type.' },
-        nodeName: { type: 'string', description: 'Node name.' },
-        x: { type: 'number', description: 'Node X position.' },
-        y: { type: 'number', description: 'Node Y position.' },
-        cacheName: { type: 'string', description: 'Cached pose name.' },
-        layerSetup: { type: 'array', items: { type: 'object' }, description: 'Layer setup for layered blend per bone.' },
-        propertyName: { type: 'string', description: 'Property name to set.' },
-
-        // Control Rig parameters
-        controlName: { type: 'string', description: 'Control name.' },
-        controlType: { type: 'string', enum: ['Transform', 'Bool', 'Float', 'Integer', 'Vector2D', 'EulerTransform'], description: 'Control type.' },
-        parentBone: { type: 'string', description: 'Parent bone for control.' },
-        parentControl: { type: 'string', description: 'Parent control for hierarchy.' },
-        unitType: { type: 'string', enum: ['FKIK', 'Aim', 'BasicIK', 'TwoBoneIK', 'FABRIK', 'SplineIK', 'LimbIK'], description: 'Rig unit type.' },
-        unitName: { type: 'string', description: 'Rig unit name.' },
-        settings: { type: 'object', description: 'Unit-specific settings.' },
-        sourceElement: { type: 'string', description: 'Source element for connection.' },
-        sourcePin: { type: 'string', description: 'Source pin name.' },
-        targetElement: { type: 'string', description: 'Target element for connection.' },
-        targetPin: { type: 'string', description: 'Target pin name.' },
-
-        // IK Retargeting parameters
-        chainName: { type: 'string', description: 'IK chain name.' },
-        startBone: { type: 'string', description: 'Start bone of IK chain.' },
-        endBone: { type: 'string', description: 'End bone of IK chain.' },
-        goal: { type: 'string', description: 'IK goal name.' },
-        sourceIKRigPath: { type: 'string', description: 'Source IK rig path for retargeter.' },
-        targetIKRigPath: { type: 'string', description: 'Target IK rig path for retargeter.' },
-        sourceChain: { type: 'string', description: 'Source chain name for mapping.' },
-        targetChain: { type: 'string', description: 'Target chain name for mapping.' }
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        assetPath: { type: 'string', description: 'Path to created/modified asset.' },
-        animationInfo: {
-          type: 'object',
-          properties: {
-            assetType: { type: 'string' },
-            skeletonPath: { type: 'string' },
-            duration: { type: 'number' },
-            numFrames: { type: 'number' },
-            frameRate: { type: 'number' },
-            numBoneTracks: { type: 'number' },
-            numCurves: { type: 'number' },
-            numNotifies: { type: 'number' },
-            isAdditive: { type: 'boolean' },
-            hasRootMotion: { type: 'boolean' }
-          },
-          description: 'Animation asset information (for get_animation_info).'
-        },
-        error: { type: 'string' }
-      }
-    }
-  },
-
-  // ============================================================================
-  // 22. Audio Authoring (Phase 11)
-  // ============================================================================
-  {
-    name: 'manage_audio_authoring',
-    description: `Complete audio system authoring including MetaSounds and advanced Sound Cue editing. Create and edit Sound Cues with complex node graphs, MetaSounds for procedural audio, Sound Classes and Mixes, Attenuation Settings, Dialogue systems, and Audio Effects.
-
-Use it when you need to:
-- Create complex Sound Cues with multiple nodes (wave players, mixers, modulators, etc.)
-- Build MetaSound graphs for procedural/generative audio
-- Configure Sound Classes hierarchies and Sound Mixes
-- Set up advanced attenuation and spatialization settings
-- Create dialogue voice assets and dialogue waves
-- Configure reverb effects and source effect chains
-
-Supported actions:
-- Sound Cues: create_sound_cue, add_cue_node, connect_cue_nodes, set_cue_attenuation, set_cue_concurrency.
-- MetaSounds: create_metasound, add_metasound_node, connect_metasound_nodes, add_metasound_input, add_metasound_output, set_metasound_default.
-- Classes & Mixes: create_sound_class, set_class_properties, set_class_parent, create_sound_mix, add_mix_modifier, configure_mix_eq.
-- Attenuation: create_attenuation_settings, configure_distance_attenuation, configure_spatialization, configure_occlusion, configure_reverb_send.
-- Dialogue: create_dialogue_voice, create_dialogue_wave, set_dialogue_context.
-- Effects: create_reverb_effect, create_source_effect_chain, add_source_effect, create_submix_effect.
-- Utility: get_audio_info.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            // Sound Cues (5)
-            'create_sound_cue',
-            'add_cue_node',
-            'connect_cue_nodes',
-            'set_cue_attenuation',
-            'set_cue_concurrency',
-            // MetaSounds (6)
-            'create_metasound',
-            'add_metasound_node',
-            'connect_metasound_nodes',
-            'add_metasound_input',
-            'add_metasound_output',
-            'set_metasound_default',
-            // Sound Classes & Mixes (6)
-            'create_sound_class',
-            'set_class_properties',
-            'set_class_parent',
-            'create_sound_mix',
-            'add_mix_modifier',
-            'configure_mix_eq',
-            // Attenuation & Spatialization (5)
-            'create_attenuation_settings',
-            'configure_distance_attenuation',
-            'configure_spatialization',
-            'configure_occlusion',
-            'configure_reverb_send',
-            // Dialogue System (3)
-            'create_dialogue_voice',
-            'create_dialogue_wave',
-            'set_dialogue_context',
-            // Effects (4)
-            'create_reverb_effect',
-            'create_source_effect_chain',
-            'add_source_effect',
-            'create_submix_effect',
-            // Utility (1)
-            'get_audio_info'
-          ],
-          description: 'Audio authoring action to perform.'
-        },
-        // Common parameters
-        name: { type: 'string', description: 'Asset name for creation.' },
-        path: { type: 'string', description: 'Directory path for asset creation.' },
-        assetPath: { type: 'string', description: 'Path to existing audio asset.' },
-        save: { type: 'boolean', description: 'Save asset after modification.' },
-
-        // Sound Cue parameters
-        wavePath: { type: 'string', description: 'Path to SoundWave asset.' },
-        nodeType: {
-          type: 'string',
-          enum: [
-            'WavePlayer', 'Mixer', 'Random', 'Modulator', 'Attenuation', 'Looping',
-            'Concatenator', 'Delay', 'Doppler', 'Enveloper', 'Crossfade', 'Switch',
-            'MatineeControlled', 'GroupControl', 'OscillatorSound', 'QualityLevel'
-          ],
-          description: 'Sound Cue node type to add.'
-        },
-        nodeId: { type: 'string', description: 'Node ID for reference.' },
-        sourceNodeId: { type: 'string', description: 'Source node ID for connection.' },
-        targetNodeId: { type: 'string', description: 'Target node ID for connection.' },
-        outputPin: { type: 'number', description: 'Output pin index.' },
-        inputPin: { type: 'number', description: 'Input pin index.' },
-        attenuationPath: { type: 'string', description: 'Path to SoundAttenuation asset.' },
-        concurrencyPath: { type: 'string', description: 'Path to SoundConcurrency asset.' },
-        looping: { type: 'boolean', description: 'Enable looping.' },
-        volume: { type: 'number', description: 'Volume multiplier (0.0 - 1.0).' },
-        pitch: { type: 'number', description: 'Pitch multiplier.' },
-        x: { type: 'number', description: 'Node X position in graph.' },
-        y: { type: 'number', description: 'Node Y position in graph.' },
-
-        // MetaSound parameters
-        metasoundType: {
-          type: 'string',
-          enum: ['Source', 'Patch'],
-          description: 'MetaSound type (Source for playable, Patch for reusable).'
-        },
-        inputName: { type: 'string', description: 'MetaSound input name.' },
-        inputType: {
-          type: 'string',
-          enum: ['Audio', 'Float', 'Int', 'Bool', 'String', 'Trigger', 'Time'],
-          description: 'MetaSound input data type.'
-        },
-        outputName: { type: 'string', description: 'MetaSound output name.' },
-        outputType: {
-          type: 'string',
-          enum: ['Audio', 'Float', 'Int', 'Bool', 'String', 'Trigger'],
-          description: 'MetaSound output data type.'
-        },
-        sourceNode: { type: 'string', description: 'Source node name for MetaSound connection.' },
-        sourcePin: { type: 'string', description: 'Source pin name for MetaSound connection.' },
-        targetNode: { type: 'string', description: 'Target node name for MetaSound connection.' },
-        targetPin: { type: 'string', description: 'Target pin name for MetaSound connection.' },
-        defaultValue: { description: 'Default value for input (type depends on inputType).' },
-        metasoundNodeType: {
-          type: 'string',
-          description: 'MetaSound node type (e.g., Audio:Multiply, Generators:Sine, Filters:BiQuad).'
-        },
-
-        // Sound Class parameters
-        soundClassPath: { type: 'string', description: 'Path to SoundClass asset.' },
-        parentClassPath: { type: 'string', description: 'Parent SoundClass path.' },
-        properties: {
-          type: 'object',
-          properties: {
-            volume: { type: 'number' },
-            pitch: { type: 'number' },
-            lowPassFilterFrequency: { type: 'number' },
-            attenuationDistanceScale: { type: 'number' },
-            sendLevel: { type: 'number' },
-            occlusionFilterFrequency: { type: 'number' },
-            voiceCenterChannelVolume: { type: 'number' },
-            radioFilterVolume: { type: 'number' },
-            radioFilterVolumeThreshold: { type: 'number' },
-            defaultVolume: { type: 'number' },
-            default2DReverbSendAmount: { type: 'number' }
-          },
-          description: 'Sound class property values.'
-        },
-
-        // Sound Mix parameters
-        classAdjusters: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              soundClass: { type: 'string' },
-              volumeAdjuster: { type: 'number' },
-              pitchAdjuster: { type: 'number' },
-              applyToChildren: { type: 'boolean' },
-              fadeInTime: { type: 'number' },
-              fadeOutTime: { type: 'number' }
-            }
-          },
-          description: 'Array of sound class adjusters for the mix.'
-        },
-        eq: {
-          type: 'object',
-          properties: {
-            lowFrequency: { type: 'number' },
-            lowFrequencyGain: { type: 'number' },
-            midFrequency1: { type: 'number' },
-            midFrequency1Gain: { type: 'number' },
-            midFrequency2: { type: 'number' },
-            midFrequency2Gain: { type: 'number' },
-            midFrequency3: { type: 'number' },
-            midFrequency3Gain: { type: 'number' },
-            highFrequency: { type: 'number' },
-            highFrequencyGain: { type: 'number' }
-          },
-          description: 'EQ settings for sound mix.'
-        },
-
-        // Attenuation parameters
-        attenuationFunction: {
-          type: 'string',
-          enum: ['Linear', 'Logarithmic', 'Inverse', 'LogReverse', 'NaturalSound', 'Custom'],
-          description: 'Distance attenuation function.'
-        },
-        innerRadius: { type: 'number', description: 'Inner radius (full volume).' },
-        falloffDistance: { type: 'number', description: 'Distance over which attenuation occurs.' },
-        dbAttenuationAtMax: { type: 'number', description: 'Attenuation in dB at max distance.' },
-        attenuationShape: {
-          type: 'string',
-          enum: ['Sphere', 'Capsule', 'Box', 'Cone'],
-          description: 'Shape of attenuation zone.'
-        },
-        spatializationAlgorithm: {
-          type: 'string',
-          enum: ['Panning', 'Binaural', 'Plugin'],
-          description: 'Spatialization algorithm.'
-        },
-        enableOcclusion: { type: 'boolean', description: 'Enable occlusion.' },
-        occlusionLowPassFilterFrequency: { type: 'number', description: 'Low pass filter frequency when occluded.' },
-        occlusionVolumeAttenuation: { type: 'number', description: 'Volume attenuation when occluded.' },
-        occlusionInterpolationTime: { type: 'number', description: 'Occlusion interpolation time.' },
-        reverbSendMethod: {
-          type: 'string',
-          enum: ['Linear', 'CustomCurve', 'Manual'],
-          description: 'Method for reverb send.'
-        },
-        reverbSendLevel: { type: 'number', description: 'Reverb send level (0.0 - 1.0).' },
-        reverbWetLevel: { type: 'number', description: 'Reverb wet level.' },
-
-        // Dialogue parameters
-        dialogueVoice: {
-          type: 'object',
-          properties: {
-            gender: { type: 'string', enum: ['Neutral', 'Male', 'Female'] },
-            plurality: { type: 'string', enum: ['Singular', 'Plural'] }
-          },
-          description: 'Dialogue voice characteristics.'
-        },
-        speakerPath: { type: 'string', description: 'Path to DialogueVoice asset for speaker.' },
-        targetPaths: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Array of DialogueVoice paths for targets.'
-        },
-        dialogueContext: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              speaker: { type: 'string' },
-              targets: { type: 'array', items: { type: 'string' } },
-              wave: { type: 'string' }
-            }
-          },
-          description: 'Dialogue context mappings.'
-        },
-
-        // Reverb Effect parameters
-        reverbSettings: {
-          type: 'object',
-          properties: {
-            density: { type: 'number' },
-            diffusion: { type: 'number' },
-            gain: { type: 'number' },
-            gainHF: { type: 'number' },
-            decayTime: { type: 'number' },
-            decayHFRatio: { type: 'number' },
-            reflectionsGain: { type: 'number' },
-            reflectionsDelay: { type: 'number' },
-            lateReverbGain: { type: 'number' },
-            lateReverbDelay: { type: 'number' },
-            airAbsorptionGainHF: { type: 'number' },
-            roomRolloffFactor: { type: 'number' }
-          },
-          description: 'Reverb effect settings.'
-        },
-
-        // Source Effect parameters
-        effectType: {
-          type: 'string',
-          enum: [
-            'Filter', 'EQ', 'Chorus', 'Dynamics', 'Envelope', 'Flanger', 'Folding',
-            'LPF', 'HPF', 'Panner', 'Phaser', 'RingModulation', 'Stereo', 'Delay',
-            'BitCrusher', 'Convolution', 'Distortion', 'Limiter', 'Parametric'
-          ],
-          description: 'Source effect type to add.'
-        },
-        effectPreset: { type: 'string', description: 'Path to effect preset asset.' },
-        bypassWhenSilent: { type: 'boolean', description: 'Bypass effect when silent.' },
-
-        // Submix Effect parameters
-        submixEffectType: {
-          type: 'string',
-          enum: [
-            'Reverb', 'EQ', 'Dynamics', 'SubmixDelay', 'SubmixFilter', 'StereoDelay',
-            'Flanger', 'Phaser', 'Limiter', 'Distortion', 'Chorus', 'Convolution'
-          ],
-          description: 'Submix effect type.'
-        }
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        assetPath: { type: 'string', description: 'Path to created/modified audio asset.' },
-        nodeId: { type: 'string', description: 'ID of created node.' },
-        audioInfo: {
-          type: 'object',
-          properties: {
-            assetType: { type: 'string' },
-            duration: { type: 'number' },
-            sampleRate: { type: 'number' },
-            numChannels: { type: 'number' },
-            nodeCount: { type: 'number' },
-            inputCount: { type: 'number' },
-            outputCount: { type: 'number' },
-            soundClass: { type: 'string' },
-            attenuation: { type: 'string' },
-            concurrency: { type: 'string' }
-          },
-          description: 'Audio asset information (for get_audio_info).'
-        },
-        error: { type: 'string' }
-      }
-    }
-  },
-
-  // ============================================================================
-  // 23. Niagara Authoring (Phase 12)
-  // ============================================================================
-  {
-    name: 'manage_niagara_authoring',
-    description: `Complete Niagara VFX system authoring for creating particle effects, simulations, and visual effects. Create and edit Niagara Systems, Emitters, add modules from the module library, configure parameters and data interfaces, set up events and GPU simulation.
-
-Use it when you need to:
-- Create new Niagara Systems and Emitters from scratch
-- Add spawn, initialize, update, and render modules to emitters
-- Configure forces, velocities, sizes, colors, and other particle behaviors
-- Set up skeletal mesh, static mesh, spline, and audio data interfaces
-- Configure events for inter-emitter communication
-- Enable GPU simulation for high particle counts
-- Add sprite, mesh, ribbon, and light renderers
-
-Supported actions:
-- Systems & Emitters: create_niagara_system, create_niagara_emitter, add_emitter_to_system, set_emitter_properties.
-- Spawn Modules: add_spawn_rate_module, add_spawn_burst_module, add_spawn_per_unit_module.
-- Particle Modules: add_initialize_particle_module, add_particle_state_module.
-- Forces: add_force_module (gravity, drag, vortex, point_attraction, curl_noise).
-- Motion: add_velocity_module, add_acceleration_module.
-- Appearance: add_size_module, add_color_module.
-- Renderers: add_sprite_renderer_module, add_mesh_renderer_module, add_ribbon_renderer_module, add_light_renderer_module.
-- Behavior: add_collision_module, add_kill_particles_module, add_camera_offset_module.
-- Parameters: add_user_parameter, set_parameter_value, bind_parameter_to_source.
-- Data Interfaces: add_skeletal_mesh_data_interface, add_static_mesh_data_interface, add_spline_data_interface, add_audio_spectrum_data_interface, add_collision_query_data_interface.
-- Events: add_event_generator, add_event_receiver, configure_event_payload.
-- GPU: enable_gpu_simulation, add_simulation_stage.
-- Utility: get_niagara_info, validate_niagara_system.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            // Systems & Emitters (4)
-            'create_niagara_system',
-            'create_niagara_emitter',
-            'add_emitter_to_system',
-            'set_emitter_properties',
-            // Spawn Modules (3)
-            'add_spawn_rate_module',
-            'add_spawn_burst_module',
-            'add_spawn_per_unit_module',
-            // Particle Modules (2)
-            'add_initialize_particle_module',
-            'add_particle_state_module',
-            // Force Module (1)
-            'add_force_module',
-            // Motion Modules (2)
-            'add_velocity_module',
-            'add_acceleration_module',
-            // Appearance Modules (2)
-            'add_size_module',
-            'add_color_module',
-            // Renderer Modules (4)
-            'add_sprite_renderer_module',
-            'add_mesh_renderer_module',
-            'add_ribbon_renderer_module',
-            'add_light_renderer_module',
-            // Behavior Modules (3)
-            'add_collision_module',
-            'add_kill_particles_module',
-            'add_camera_offset_module',
-            // Parameters (3)
-            'add_user_parameter',
-            'set_parameter_value',
-            'bind_parameter_to_source',
-            // Data Interfaces (5)
-            'add_skeletal_mesh_data_interface',
-            'add_static_mesh_data_interface',
-            'add_spline_data_interface',
-            'add_audio_spectrum_data_interface',
-            'add_collision_query_data_interface',
-            // Events (3)
-            'add_event_generator',
-            'add_event_receiver',
-            'configure_event_payload',
-            // GPU (2)
-            'enable_gpu_simulation',
-            'add_simulation_stage',
-            // Utility (2)
-            'get_niagara_info',
-            'validate_niagara_system'
-          ],
-          description: 'Niagara authoring action to perform.'
-        },
-        // Common parameters
-        name: { type: 'string', description: 'Asset name for creation.' },
-        path: { type: 'string', description: 'Directory path for asset creation.' },
-        assetPath: { type: 'string', description: 'Path to existing Niagara asset.' },
-        systemPath: { type: 'string', description: 'Path to Niagara System asset.' },
-        emitterPath: { type: 'string', description: 'Path to Niagara Emitter asset.' },
-        emitterName: { type: 'string', description: 'Name of emitter within the system.' },
-        save: { type: 'boolean', description: 'Save asset after modification.' },
-
-        // Emitter properties
-        emitterProperties: {
-          type: 'object',
-          properties: {
-            enabled: { type: 'boolean', description: 'Enable/disable emitter.' },
-            localSpace: { type: 'boolean', description: 'Simulate in local space.' },
-            deterministic: { type: 'boolean', description: 'Use deterministic random.' },
-            randomSeed: { type: 'number', description: 'Random seed for deterministic simulation.' },
-            simulationTarget: { type: 'string', enum: ['CPUSim', 'GPUComputeSim'], description: 'Simulation target.' },
-            scalabilityMode: { type: 'string', enum: ['Self', 'System'], description: 'Scalability mode.' },
-            fixedBounds: { type: 'boolean', description: 'Use fixed bounds.' },
-            bounds: {
-              type: 'object',
-              properties: {
-                min: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
-                max: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
-              }
-            }
-          },
-          description: 'Emitter property values.'
-        },
-
-        // Spawn parameters
-        spawnRate: { type: 'number', description: 'Particles per second for spawn rate module.' },
-        burstCount: { type: 'number', description: 'Number of particles for burst spawn.' },
-        burstTime: { type: 'number', description: 'Time at which burst occurs.' },
-        burstInterval: { type: 'number', description: 'Interval between bursts (0 for single burst).' },
-        spawnPerUnit: { type: 'number', description: 'Particles spawned per unit distance.' },
-
-        // Initialize particle parameters
-        lifetime: { type: 'number', description: 'Particle lifetime in seconds.' },
-        lifetimeMin: { type: 'number', description: 'Minimum lifetime for random range.' },
-        lifetimeMax: { type: 'number', description: 'Maximum lifetime for random range.' },
-        mass: { type: 'number', description: 'Particle mass.' },
-        spriteSize: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' } },
-          description: 'Sprite size {x, y}.'
-        },
-        spriteSizeMin: { type: 'object', description: 'Minimum sprite size for random range.' },
-        spriteSizeMax: { type: 'object', description: 'Maximum sprite size for random range.' },
-        meshScale: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Mesh scale {x, y, z}.'
-        },
-
-        // Force module parameters
-        forceType: {
-          type: 'string',
-          enum: ['Gravity', 'Drag', 'Vortex', 'PointAttraction', 'CurlNoise', 'Wind', 'LinearForce'],
-          description: 'Type of force to apply.'
-        },
-        forceStrength: { type: 'number', description: 'Force strength/magnitude.' },
-        forceVector: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Force direction vector.'
-        },
-        dragCoefficient: { type: 'number', description: 'Drag coefficient.' },
-        vortexAxis: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Vortex rotation axis.'
-        },
-        attractorPosition: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Position of point attractor.'
-        },
-        attractorRadius: { type: 'number', description: 'Attractor influence radius.' },
-        killRadius: { type: 'number', description: 'Radius at which particles are killed.' },
-        noiseFrequency: { type: 'number', description: 'Curl noise frequency.' },
-        noiseStrength: { type: 'number', description: 'Curl noise strength.' },
-
-        // Velocity/Acceleration parameters
-        velocity: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Initial velocity vector.'
-        },
-        velocityMin: { type: 'object', description: 'Minimum velocity for random range.' },
-        velocityMax: { type: 'object', description: 'Maximum velocity for random range.' },
-        acceleration: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Acceleration vector.'
-        },
-        velocityMode: {
-          type: 'string',
-          enum: ['Linear', 'FromPoint', 'InCone'],
-          description: 'Velocity initialization mode.'
-        },
-        coneAngle: { type: 'number', description: 'Cone angle for InCone velocity mode.' },
-
-        // Size module parameters
-        sizeMode: {
-          type: 'string',
-          enum: ['Uniform', 'NonUniform', 'ByLifetime'],
-          description: 'Size calculation mode.'
-        },
-        uniformSize: { type: 'number', description: 'Uniform size value.' },
-        sizeScale: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Size scale multiplier.'
-        },
-        sizeCurve: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: { time: { type: 'number' }, value: { type: 'number' } }
-          },
-          description: 'Size over lifetime curve points.'
-        },
-
-        // Color module parameters
-        color: {
-          type: 'object',
-          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } },
-          description: 'Particle color {r, g, b, a} (0-1 range).'
-        },
-        colorMin: { type: 'object', description: 'Minimum color for random range.' },
-        colorMax: { type: 'object', description: 'Maximum color for random range.' },
-        colorMode: {
-          type: 'string',
-          enum: ['Direct', 'ByLifetime', 'BySpeed', 'ByAttribute'],
-          description: 'Color calculation mode.'
-        },
-        colorCurve: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              time: { type: 'number' },
-              color: { type: 'object', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } } }
-            }
-          },
-          description: 'Color over lifetime curve points.'
-        },
-
-        // Renderer parameters
-        materialPath: { type: 'string', description: 'Path to material for renderer.' },
-        meshPath: { type: 'string', description: 'Path to static mesh for mesh renderer.' },
-        sortMode: {
-          type: 'string',
-          enum: ['None', 'ViewDepth', 'ViewDistance', 'CustomAscending', 'CustomDescending'],
-          description: 'Particle sort mode.'
-        },
-        subImageIndex: { type: 'number', description: 'Sub-image index for flipbook materials.' },
-        alignment: {
-          type: 'string',
-          enum: ['Unaligned', 'VelocityAligned', 'CustomAlignment'],
-          description: 'Sprite alignment mode.'
-        },
-        facingMode: {
-          type: 'string',
-          enum: ['FaceCamera', 'FaceCameraPlane', 'CustomFacing', 'FaceCameraPosition', 'FaceCameraDistanceBlend'],
-          description: 'Sprite facing mode.'
-        },
-
-        // Ribbon parameters
-        ribbonWidth: { type: 'number', description: 'Ribbon width.' },
-        ribbonTwist: { type: 'number', description: 'Ribbon twist amount.' },
-        ribbonFacingMode: {
-          type: 'string',
-          enum: ['Screen', 'Custom', 'CustomSideVector'],
-          description: 'Ribbon facing mode.'
-        },
-        tessellationFactor: { type: 'number', description: 'Ribbon tessellation factor.' },
-
-        // Light renderer parameters
-        lightRadius: { type: 'number', description: 'Light radius.' },
-        lightIntensity: { type: 'number', description: 'Light intensity.' },
-        lightColor: {
-          type: 'object',
-          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } },
-          description: 'Light color.'
-        },
-        volumetricScattering: { type: 'number', description: 'Volumetric scattering intensity.' },
-        lightExponent: { type: 'number', description: 'Light falloff exponent.' },
-        affectsTranslucency: { type: 'boolean', description: 'Light affects translucent materials.' },
-
-        // Collision parameters
-        collisionMode: {
-          type: 'string',
-          enum: ['None', 'SceneDepth', 'DistanceField', 'AnalyticPlane'],
-          description: 'Collision detection mode.'
-        },
-        restitution: { type: 'number', description: 'Collision restitution (bounciness).' },
-        friction: { type: 'number', description: 'Collision friction.' },
-        radiusScale: { type: 'number', description: 'Collision radius scale.' },
-        dieOnCollision: { type: 'boolean', description: 'Kill particle on collision.' },
-
-        // Kill particles parameters
-        killCondition: {
-          type: 'string',
-          enum: ['Age', 'Box', 'Sphere', 'Plane', 'Custom'],
-          description: 'Kill condition type.'
-        },
-        killBox: {
-          type: 'object',
-          properties: {
-            min: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
-            max: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
-          },
-          description: 'Kill volume box bounds.'
-        },
-        invertKillZone: { type: 'boolean', description: 'Kill particles outside the zone instead of inside.' },
-
-        // Camera offset parameters
-        cameraOffset: { type: 'number', description: 'Camera offset distance.' },
-        cameraOffsetMode: {
-          type: 'string',
-          enum: ['Absolute', 'Relative'],
-          description: 'Camera offset mode.'
-        },
-
-        // Parameter settings
-        parameterName: { type: 'string', description: 'Name of user parameter.' },
-        parameterType: {
-          type: 'string',
-          enum: ['Float', 'Int', 'Bool', 'Vector', 'LinearColor', 'Texture', 'StaticMesh', 'SkeletalMesh', 'Object'],
-          description: 'Parameter data type.'
-        },
-        parameterValue: { description: 'Parameter value (type depends on parameterType).' },
-        sourceBinding: { type: 'string', description: 'Source binding path for parameter binding.' },
-
-        // Data interface parameters
-        skeletalMeshPath: { type: 'string', description: 'Path to skeletal mesh asset.' },
-        staticMeshPath: { type: 'string', description: 'Path to static mesh asset.' },
-        useWholeSkeletonOrBones: {
-          type: 'string',
-          enum: ['WholeSkeleton', 'SpecificBones'],
-          description: 'Skeletal mesh sampling mode.'
-        },
-        specificBones: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'List of specific bone names to sample.'
-        },
-        samplingMode: {
-          type: 'string',
-          enum: ['Vertices', 'Triangles', 'Bones', 'Sockets'],
-          description: 'Mesh sampling mode.'
-        },
-
-        // Event parameters
-        eventName: { type: 'string', description: 'Event name for generator/receiver.' },
-        eventPayload: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              name: { type: 'string' },
-              type: { type: 'string', enum: ['Float', 'Int', 'Bool', 'Vector', 'LinearColor'] }
-            }
-          },
-          description: 'Event payload attribute definitions.'
-        },
-        spawnOnEvent: { type: 'boolean', description: 'Spawn particles when event received.' },
-        eventSpawnCount: { type: 'number', description: 'Number of particles to spawn per event.' },
-
-        // GPU simulation parameters
-        gpuEnabled: { type: 'boolean', description: 'Enable GPU simulation.' },
-        fixedBoundsEnabled: { type: 'boolean', description: 'Use fixed bounds for GPU sim.' },
-        deterministicEnabled: { type: 'boolean', description: 'Enable deterministic simulation.' },
-        stageName: { type: 'string', description: 'Simulation stage name.' },
-        stageIterationSource: {
-          type: 'string',
-          enum: ['Particles', 'DataInterface', 'None'],
-          description: 'Simulation stage iteration source.'
-        }
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        assetPath: { type: 'string', description: 'Path to created/modified Niagara asset.' },
-        emitterName: { type: 'string', description: 'Name of added/modified emitter.' },
-        moduleName: { type: 'string', description: 'Name of added module.' },
-        parameterName: { type: 'string', description: 'Name of added/modified parameter.' },
-        niagaraInfo: {
-          type: 'object',
-          properties: {
-            assetType: { type: 'string', enum: ['System', 'Emitter'] },
-            emitterCount: { type: 'number' },
-            emitters: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  name: { type: 'string' },
-                  enabled: { type: 'boolean' },
-                  simulationTarget: { type: 'string' },
-                  moduleCount: { type: 'number' }
-                }
-              }
-            },
-            userParameterCount: { type: 'number' },
-            userParameters: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: { name: { type: 'string' }, type: { type: 'string' } }
-              }
-            },
-            hasGPUEmitters: { type: 'boolean' },
-            isValid: { type: 'boolean' },
-            validationErrors: { type: 'array', items: { type: 'string' } }
-          },
-          description: 'Niagara asset information (for get_niagara_info).'
-        },
-        validationResult: {
-          type: 'object',
-          properties: {
-            isValid: { type: 'boolean' },
-            errors: { type: 'array', items: { type: 'string' } },
-            warnings: { type: 'array', items: { type: 'string' } }
-          },
-          description: 'Validation result (for validate_niagara_system).'
-        },
-        error: { type: 'string' }
-      }
-    }
-  },
-
-  // ============================================================================
-  // 24. Gameplay Ability System (Phase 13)
-  // ============================================================================
+  // [MERGED] manage_animation_authoring actions now in animation_physics (Phase 53: Strategic Tool Merging)
+  // [MERGED] manage_audio_authoring actions now in manage_audio (Phase 53: Strategic Tool Merging)
+  // [MERGED] manage_niagara_authoring actions now in manage_effect (Phase 53: Strategic Tool Merging)
   {
     name: 'manage_gas',
-    description: `Complete Gameplay Ability System (GAS) implementation for abilities, effects, and attributes. Create and configure Ability System Components, Attribute Sets, Gameplay Abilities, Gameplay Effects, and Gameplay Cues.
-
-Use it when you need to:
-- Add Ability System Components to character Blueprints
-- Create Attribute Sets with custom attributes (health, mana, stamina, etc.)
-- Create Gameplay Abilities with costs, cooldowns, and targeting
-- Create Gameplay Effects for buffs, debuffs, and damage
-- Set up Gameplay Cues for visual/audio feedback
-- Configure ability activation and instancing policies
-
-Supported actions:
-- Components & Attributes: add_ability_system_component, configure_asc, create_attribute_set, add_attribute, set_attribute_base_value, set_attribute_clamping.
-- Gameplay Abilities: create_gameplay_ability, set_ability_tags, set_ability_costs, set_ability_cooldown, set_ability_targeting, add_ability_task, set_activation_policy, set_instancing_policy.
-- Gameplay Effects: create_gameplay_effect, set_effect_duration, add_effect_modifier, set_modifier_magnitude, add_effect_execution_calculation, add_effect_cue, set_effect_stacking, set_effect_tags.
-- Gameplay Cues: create_gameplay_cue_notify, configure_cue_trigger, set_cue_effects, add_tag_to_asset.
-- Utility: get_gas_info.`,
+    category: 'gameplay',
+    description: 'Create Gameplay Abilities, Effects, Attribute Sets, and Gameplay Cues for ability systems.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Components & Attributes (6)
             'add_ability_system_component',
             'configure_asc',
             'create_attribute_set',
             'add_attribute',
             'set_attribute_base_value',
             'set_attribute_clamping',
-            // Gameplay Abilities (8)
             'create_gameplay_ability',
             'set_ability_tags',
             'set_ability_costs',
@@ -2932,7 +1621,6 @@ Supported actions:
             'add_ability_task',
             'set_activation_policy',
             'set_instancing_policy',
-            // Gameplay Effects (8)
             'create_gameplay_effect',
             'set_effect_duration',
             'add_effect_modifier',
@@ -2941,24 +1629,19 @@ Supported actions:
             'add_effect_cue',
             'set_effect_stacking',
             'set_effect_tags',
-            // Gameplay Cues (4)
             'create_gameplay_cue_notify',
             'configure_cue_trigger',
             'set_cue_effects',
             'add_tag_to_asset',
-            // Utility (1)
             'get_gas_info'
           ],
           description: 'GAS action to perform.'
         },
-        // Common parameters
-        name: { type: 'string', description: 'Asset name for creation.' },
-        path: { type: 'string', description: 'Directory path for asset creation.' },
-        assetPath: { type: 'string', description: 'Path to existing asset.' },
-        blueprintPath: { type: 'string', description: 'Path to Blueprint asset.' },
-        save: { type: 'boolean', description: 'Save asset after modification.' },
-
-        // Ability System Component parameters
+        name: commonSchemas.assetNameForCreation,
+        path: commonSchemas.directoryPathForCreation,
+        assetPath: commonSchemas.assetPath,
+        blueprintPath: commonSchemas.blueprintPath,
+        save: commonSchemas.save,
         replicationMode: {
           type: 'string',
           enum: ['Full', 'Minimal', 'Mixed'],
@@ -2966,10 +1649,8 @@ Supported actions:
         },
         ownerActor: { type: 'string', description: 'Owner actor class for ASC.' },
         avatarActor: { type: 'string', description: 'Avatar actor class for ASC.' },
-
-        // Attribute Set parameters
         attributeSetPath: { type: 'string', description: 'Path to Attribute Set asset.' },
-        attributeName: { type: 'string', description: 'Name of the attribute.' },
+        attributeName: commonSchemas.attributeName,
         attributeType: {
           type: 'string',
           enum: ['Health', 'MaxHealth', 'Mana', 'MaxMana', 'Stamina', 'MaxStamina', 'Damage', 'Armor', 'AttackPower', 'MoveSpeed', 'Custom'],
@@ -2983,51 +1664,43 @@ Supported actions:
           enum: ['None', 'Min', 'Max', 'MinMax'],
           description: 'Attribute clamping mode.'
         },
-
-        // Gameplay Ability parameters
-        abilityPath: { type: 'string', description: 'Path to Gameplay Ability asset.' },
-        parentClass: { type: 'string', description: 'Parent class for ability.' },
+        abilityPath: commonSchemas.abilityPath,
+        parentClass: commonSchemas.parentClass,
         abilityTags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Gameplay tags for this ability.'
         },
         cancelAbilitiesWithTag: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Tags of abilities to cancel when this activates.'
         },
         blockAbilitiesWithTag: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Tags of abilities blocked while this is active.'
         },
         activationRequiredTags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Tags required to activate this ability.'
         },
         activationBlockedTags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Tags that block activation of this ability.'
         },
-
-        // Ability Costs
         costEffectPath: { type: 'string', description: 'Path to cost Gameplay Effect.' },
         costAttribute: { type: 'string', description: 'Attribute used for cost (e.g., Mana).' },
         costMagnitude: { type: 'number', description: 'Cost magnitude.' },
-
-        // Ability Cooldown
         cooldownEffectPath: { type: 'string', description: 'Path to cooldown Gameplay Effect.' },
         cooldownDuration: { type: 'number', description: 'Cooldown duration in seconds.' },
         cooldownTags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Tags applied during cooldown.'
         },
-
-        // Ability Targeting
         targetingMode: {
           type: 'string',
           enum: ['None', 'SingleTarget', 'AOE', 'Directional', 'Ground', 'ActorPlacement'],
@@ -3035,8 +1708,6 @@ Supported actions:
         },
         targetRange: { type: 'number', description: 'Maximum targeting range.' },
         aoeRadius: { type: 'number', description: 'Area of effect radius.' },
-
-        // Ability Tasks
         taskType: {
           type: 'string',
           enum: ['WaitDelay', 'WaitInputPress', 'WaitInputRelease', 'WaitGameplayEvent', 'WaitTargetData', 'WaitConfirmCancel', 'PlayMontageAndWait', 'ApplyRootMotionConstantForce', 'WaitMovementModeChange'],
@@ -3046,8 +1717,6 @@ Supported actions:
           type: 'object',
           description: 'Task-specific settings.'
         },
-
-        // Activation/Instancing Policies
         activationPolicy: {
           type: 'string',
           enum: ['OnInputPressed', 'WhileInputActive', 'OnSpawn', 'OnGiven'],
@@ -3058,18 +1727,14 @@ Supported actions:
           enum: ['NonInstanced', 'InstancedPerActor', 'InstancedPerExecution'],
           description: 'How the ability is instanced.'
         },
-
-        // Gameplay Effect parameters
-        effectPath: { type: 'string', description: 'Path to Gameplay Effect asset.' },
+        effectPath: commonSchemas.effectPath,
         durationType: {
           type: 'string',
           enum: ['Instant', 'Infinite', 'HasDuration'],
           description: 'Effect duration type.'
         },
-        duration: { type: 'number', description: 'Duration in seconds (for HasDuration).' },
+        duration: commonSchemas.duration,
         period: { type: 'number', description: 'Period for periodic effects.' },
-
-        // Effect Modifiers
         modifierOperation: {
           type: 'string',
           enum: ['Add', 'Multiply', 'Divide', 'Override'],
@@ -3087,15 +1752,9 @@ Supported actions:
         postMultiplyAdditiveValue: { type: 'number', description: 'Value added after multiplication.' },
         sourceAttribute: { type: 'string', description: 'Source attribute for attribute-based calculation.' },
         targetAttribute: { type: 'string', description: 'Target attribute for modifier.' },
-
-        // Execution Calculation
         calculationClass: { type: 'string', description: 'UGameplayEffectExecutionCalculation class path.' },
-
-        // Effect Cues
         cueTag: { type: 'string', description: 'Gameplay Cue tag (e.g., GameplayCue.Damage.Fire).' },
         cuePath: { type: 'string', description: 'Path to Gameplay Cue asset.' },
-
-        // Effect Stacking
         stackingType: {
           type: 'string',
           enum: ['None', 'AggregateBySource', 'AggregateByTarget'],
@@ -3117,30 +1776,26 @@ Supported actions:
           enum: ['ClearEntireStack', 'RemoveSingleStackAndRefreshDuration', 'RefreshDuration'],
           description: 'What happens when stack expires.'
         },
-
-        // Effect Tags
         grantedTags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Tags granted while effect is active.'
         },
         applicationRequiredTags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Tags required to apply this effect.'
         },
         removalTags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Tags that cause effect removal.'
         },
         immunityTags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Tags that block this effect.'
         },
-
-        // Gameplay Cue parameters
         cueType: {
           type: 'string',
           enum: ['Static', 'Actor'],
@@ -3151,238 +1806,166 @@ Supported actions:
           enum: ['OnActive', 'WhileActive', 'Executed', 'OnRemove'],
           description: 'When the cue triggers.'
         },
-
-        // Cue Effects
-        particleSystemPath: { type: 'string', description: 'Path to Niagara/Cascade particle system.' },
-        soundPath: { type: 'string', description: 'Path to sound cue/wave.' },
-        cameraShakePath: { type: 'string', description: 'Path to camera shake asset.' },
-        decalPath: { type: 'string', description: 'Path to decal material.' },
-
-        // Tag parameters
-        tagName: { type: 'string', description: 'Gameplay tag name to add.' }
+        particleSystemPath: commonSchemas.particleSystemPath,
+        soundPath: commonSchemas.soundPath,
+        cameraShakePath: commonSchemas.cameraShakePath,
+        decalPath: commonSchemas.decalPath,
+        tagName: commonSchemas.tagName,
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        assetPath: { type: 'string', description: 'Path to created/modified asset.' },
-        componentName: { type: 'string', description: 'Name of added component.' },
-        attributeName: { type: 'string', description: 'Name of added/modified attribute.' },
-        modifierIndex: { type: 'number', description: 'Index of added modifier.' },
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
+        componentName: commonSchemas.componentName,
+        attributeName: commonSchemas.stringProp,
+        modifierIndex: commonSchemas.numberProp,
         gasInfo: {
           type: 'object',
           properties: {
             assetType: { type: 'string', enum: ['AttributeSet', 'GameplayAbility', 'GameplayEffect', 'GameplayCue'] },
-            attributes: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  name: { type: 'string' },
-                  baseValue: { type: 'number' },
-                  currentValue: { type: 'number' }
-                }
-              }
-            },
-            abilityTags: { type: 'array', items: { type: 'string' } },
-            effectDuration: { type: 'string' },
-            modifierCount: { type: 'number' },
-            cueType: { type: 'string' }
-          },
-          description: 'GAS asset information (for get_gas_info).'
+            attributes: commonSchemas.arrayOfObjects,
+            abilityTags: commonSchemas.arrayOfStrings,
+            effectDuration: commonSchemas.stringProp,
+            modifierCount: commonSchemas.numberProp,
+            cueType: commonSchemas.stringProp
+          }
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // ============================================================================
-  // 25. Character & Movement System (Phase 14)
-  // ============================================================================
   {
     name: 'manage_character',
-    description: `Complete character setup with advanced movement capabilities. Create character blueprints, configure movement components, and set up advanced movement systems.
-
-Use it when you need to:
-- Create new character blueprints with capsule, mesh, and camera components
-- Configure movement speeds, jumping, and rotation settings
-- Set up advanced movement like mantling, vaulting, climbing, sliding, wall running
-- Implement footstep systems with surface-based sounds and effects
-
-Supported actions:
-- Character Creation: create_character_blueprint, configure_capsule_component, configure_mesh_component, configure_camera_component.
-- Movement Component: configure_movement_speeds, configure_jump, configure_rotation, add_custom_movement_mode, configure_nav_movement.
-- Advanced Movement: setup_mantling, setup_vaulting, setup_climbing, setup_sliding, setup_wall_running, setup_grappling.
-- Footsteps System: setup_footstep_system, map_surface_to_sound, configure_footstep_fx.
-- Utility: get_character_info.`,
+    category: 'gameplay',
+    description: 'Create Character Blueprints with movement, locomotion, and animation state machines.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Character Creation (4)
             'create_character_blueprint',
             'configure_capsule_component',
             'configure_mesh_component',
             'configure_camera_component',
-            // Movement Component (5)
             'configure_movement_speeds',
             'configure_jump',
             'configure_rotation',
             'add_custom_movement_mode',
             'configure_nav_movement',
-            // Advanced Movement (6)
             'setup_mantling',
             'setup_vaulting',
             'setup_climbing',
             'setup_sliding',
             'setup_wall_running',
             'setup_grappling',
-            // Footsteps System (3)
             'setup_footstep_system',
             'map_surface_to_sound',
             'configure_footstep_fx',
-            // Utility (1)
             'get_character_info'
           ],
           description: 'Character action to perform.'
         },
-        // Common parameters
-        name: { type: 'string', description: 'Asset name for creation.' },
-        path: { type: 'string', description: 'Directory path for asset creation.' },
-        blueprintPath: { type: 'string', description: 'Path to Character Blueprint.' },
-        save: { type: 'boolean', description: 'Save asset after modification.' },
-
-        // Character Creation parameters
+        name: commonSchemas.assetNameForCreation,
+        path: commonSchemas.directoryPathForCreation,
+        blueprintPath: commonSchemas.blueprintPath,
+        save: commonSchemas.save,
         parentClass: {
           type: 'string',
           enum: ['Character', 'ACharacter', 'PlayerCharacter', 'AICharacter'],
           description: 'Parent class for character blueprint.'
         },
-        skeletalMeshPath: { type: 'string', description: 'Path to skeletal mesh for character.' },
-        animBlueprintPath: { type: 'string', description: 'Path to animation blueprint.' },
-
-        // Capsule Component
-        capsuleRadius: { type: 'number', description: 'Capsule collision radius.' },
-        capsuleHalfHeight: { type: 'number', description: 'Capsule collision half height.' },
-
-        // Mesh Component
+        skeletalMeshPath: commonSchemas.skeletalMeshPath,
+        animBlueprintPath: commonSchemas.animBlueprintPath,
+        capsuleRadius: commonSchemas.numberProp,
+        capsuleHalfHeight: commonSchemas.numberProp,
         meshOffset: {
           type: 'object',
           properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-            z: { type: 'number' }
+            x: commonSchemas.numberProp,
+            y: commonSchemas.numberProp,
+            z: commonSchemas.numberProp
           },
           description: 'Mesh location offset.'
         },
         meshRotation: {
           type: 'object',
           properties: {
-            pitch: { type: 'number' },
-            yaw: { type: 'number' },
-            roll: { type: 'number' }
+            pitch: commonSchemas.numberProp,
+            yaw: commonSchemas.numberProp,
+            roll: commonSchemas.numberProp
           },
           description: 'Mesh rotation offset.'
         },
-
-        // Camera Component
-        cameraSocketName: { type: 'string', description: 'Socket to attach camera to.' },
+        cameraSocketName: commonSchemas.cameraSocketName,
         cameraOffset: {
           type: 'object',
           properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-            z: { type: 'number' }
+            x: commonSchemas.numberProp,
+            y: commonSchemas.numberProp,
+            z: commonSchemas.numberProp
           },
           description: 'Camera location offset.'
         },
         cameraUsePawnControlRotation: { type: 'boolean', description: 'Camera follows controller rotation.' },
-        springArmLength: { type: 'number', description: 'Spring arm length for third-person.' },
+        springArmLength: commonSchemas.numberProp,
         springArmLagEnabled: { type: 'boolean', description: 'Enable camera lag.' },
         springArmLagSpeed: { type: 'number', description: 'Camera lag speed.' },
-
-        // Movement Speeds
-        walkSpeed: { type: 'number', description: 'Walking speed.' },
-        runSpeed: { type: 'number', description: 'Running/jogging speed.' },
-        sprintSpeed: { type: 'number', description: 'Sprinting speed.' },
-        crouchSpeed: { type: 'number', description: 'Crouching speed.' },
-        swimSpeed: { type: 'number', description: 'Swimming speed.' },
-        flySpeed: { type: 'number', description: 'Flying speed.' },
-        acceleration: { type: 'number', description: 'Ground acceleration.' },
-        deceleration: { type: 'number', description: 'Braking deceleration.' },
-        groundFriction: { type: 'number', description: 'Ground friction coefficient.' },
-
-        // Jump Configuration
-        jumpHeight: { type: 'number', description: 'Jump Z velocity.' },
-        airControl: { type: 'number', description: 'Air control amount (0-1).' },
+        walkSpeed: commonSchemas.numberProp,
+        runSpeed: commonSchemas.numberProp,
+        sprintSpeed: commonSchemas.numberProp,
+        crouchSpeed: commonSchemas.numberProp,
+        swimSpeed: commonSchemas.numberProp,
+        flySpeed: commonSchemas.numberProp,
+        acceleration: commonSchemas.numberProp,
+        deceleration: commonSchemas.numberProp,
+        groundFriction: commonSchemas.numberProp,
+        jumpHeight: commonSchemas.numberProp,
+        airControl: commonSchemas.numberProp,
         doubleJumpEnabled: { type: 'boolean', description: 'Enable double jump.' },
-        maxJumpCount: { type: 'number', description: 'Maximum jumps allowed.' },
+        maxJumpCount: commonSchemas.numberProp,
         jumpHoldTime: { type: 'number', description: 'Max hold time for variable jump.' },
-        gravityScale: { type: 'number', description: 'Gravity multiplier.' },
+        gravityScale: commonSchemas.numberProp,
         fallingLateralFriction: { type: 'number', description: 'Air friction.' },
-
-        // Rotation Configuration
         orientToMovement: { type: 'boolean', description: 'Orient rotation to movement direction.' },
         useControllerRotationYaw: { type: 'boolean', description: 'Use controller yaw rotation.' },
         useControllerRotationPitch: { type: 'boolean', description: 'Use controller pitch rotation.' },
         useControllerRotationRoll: { type: 'boolean', description: 'Use controller roll rotation.' },
-        rotationRate: { type: 'number', description: 'Character rotation rate (degrees/sec).' },
-
-        // Custom Movement Mode
+        rotationRate: commonSchemas.numberProp,
         modeName: { type: 'string', description: 'Name for custom movement mode.' },
         modeId: { type: 'number', description: 'Custom movement mode ID.' },
-
-        // Nav Movement
-        navAgentRadius: { type: 'number', description: 'Navigation agent radius.' },
-        navAgentHeight: { type: 'number', description: 'Navigation agent height.' },
+        navAgentRadius: commonSchemas.numberProp,
+        navAgentHeight: commonSchemas.numberProp,
         avoidanceEnabled: { type: 'boolean', description: 'Enable AI avoidance.' },
         pathFollowingEnabled: { type: 'boolean', description: 'Enable path following.' },
-
-        // Advanced Movement - Mantling
         mantleHeight: { type: 'number', description: 'Maximum mantle height.' },
         mantleReachDistance: { type: 'number', description: 'Forward reach for mantle check.' },
         mantleAnimationPath: { type: 'string', description: 'Path to mantle animation montage.' },
-
-        // Advanced Movement - Vaulting
         vaultHeight: { type: 'number', description: 'Maximum vault obstacle height.' },
         vaultDepth: { type: 'number', description: 'Obstacle depth to check.' },
         vaultAnimationPath: { type: 'string', description: 'Path to vault animation montage.' },
-
-        // Advanced Movement - Climbing
-        climbSpeed: { type: 'number', description: 'Climbing movement speed.' },
+        climbSpeed: commonSchemas.numberProp,
         climbableTag: { type: 'string', description: 'Tag for climbable surfaces.' },
         climbAnimationPath: { type: 'string', description: 'Path to climb animation.' },
-
-        // Advanced Movement - Sliding
-        slideSpeed: { type: 'number', description: 'Sliding speed.' },
-        slideDuration: { type: 'number', description: 'Slide duration.' },
-        slideCooldown: { type: 'number', description: 'Cooldown between slides.' },
+        slideSpeed: commonSchemas.numberProp,
+        slideDuration: commonSchemas.numberProp,
+        slideCooldown: commonSchemas.numberProp,
         slideAnimationPath: { type: 'string', description: 'Path to slide animation.' },
-
-        // Advanced Movement - Wall Running
         wallRunSpeed: { type: 'number', description: 'Wall running speed.' },
         wallRunDuration: { type: 'number', description: 'Maximum wall run duration.' },
         wallRunGravityScale: { type: 'number', description: 'Gravity during wall run.' },
         wallRunAnimationPath: { type: 'string', description: 'Path to wall run animation.' },
-
-        // Advanced Movement - Grappling
         grappleRange: { type: 'number', description: 'Maximum grapple distance.' },
         grappleSpeed: { type: 'number', description: 'Grapple pull speed.' },
         grappleTargetTag: { type: 'string', description: 'Tag for grapple targets.' },
         grappleCablePath: { type: 'string', description: 'Path to cable mesh/material.' },
-
-        // Footstep System
         footstepEnabled: { type: 'boolean', description: 'Enable footstep system.' },
         footstepSocketLeft: { type: 'string', description: 'Left foot socket name.' },
         footstepSocketRight: { type: 'string', description: 'Right foot socket name.' },
         footstepTraceDistance: { type: 'number', description: 'Ground trace distance.' },
-
-        // Surface Mapping
         surfaceType: {
           type: 'string',
           enum: ['Default', 'Concrete', 'Grass', 'Dirt', 'Metal', 'Wood', 'Water', 'Snow', 'Sand', 'Gravel', 'Custom'],
@@ -3397,109 +1980,71 @@ Supported actions:
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        blueprintPath: { type: 'string', description: 'Path to created/modified blueprint.' },
-        componentName: { type: 'string', description: 'Name of configured component.' },
-        modeName: { type: 'string', description: 'Name of added movement mode.' },
+        ...commonSchemas.outputBase,
+        blueprintPath: commonSchemas.blueprintPath,
+        componentName: commonSchemas.componentName,
+        modeName: commonSchemas.stringProp,
         characterInfo: {
           type: 'object',
           properties: {
-            capsuleRadius: { type: 'number' },
-            capsuleHalfHeight: { type: 'number' },
-            walkSpeed: { type: 'number' },
-            jumpZVelocity: { type: 'number' },
-            airControl: { type: 'number' },
-            orientToMovement: { type: 'boolean' },
-            hasSpringArm: { type: 'boolean' },
-            hasCamera: { type: 'boolean' },
-            customMovementModes: {
-              type: 'array',
-              items: { type: 'string' }
-            }
-          },
-          description: 'Character configuration info (for get_character_info).'
+            capsuleRadius: commonSchemas.numberProp,
+            capsuleHalfHeight: commonSchemas.numberProp,
+            walkSpeed: commonSchemas.numberProp,
+            jumpZVelocity: commonSchemas.numberProp,
+            airControl: commonSchemas.numberProp,
+            orientToMovement: commonSchemas.booleanProp,
+            hasSpringArm: commonSchemas.booleanProp,
+            hasCamera: commonSchemas.booleanProp,
+            customMovementModes: commonSchemas.arrayOfStrings
+          }
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // 26. COMBAT & WEAPONS SYSTEM (Phase 15)
   {
     name: 'manage_combat',
-    description: `Complete combat and weapons system management. Handles weapon creation, firing modes, projectiles, damage systems, and melee combat.
-
-Use it when you need to:
-- Create weapon blueprints with mesh, sockets, and stats
-- Configure firing modes (hitscan, projectile, spread, recoil, ADS)
-- Create and configure projectiles with movement, collision, homing
-- Set up damage types and hit detection systems
-- Implement weapon features (reload, ammo, attachments, switching)
-- Configure weapon effects (muzzle flash, tracers, impact, shells)
-- Create melee combat systems (traces, combos, hitstop, parry, block)
-
-Supported actions:
-- Weapon Base: create_weapon_blueprint, configure_weapon_mesh, configure_weapon_sockets, set_weapon_stats
-- Firing Modes: configure_hitscan, configure_projectile, configure_spread_pattern, configure_recoil_pattern, configure_aim_down_sights
-- Projectiles: create_projectile_blueprint, configure_projectile_movement, configure_projectile_collision, configure_projectile_homing
-- Damage System: create_damage_type, configure_damage_execution, setup_hitbox_component
-- Weapon Features: setup_reload_system, setup_ammo_system, setup_attachment_system, setup_weapon_switching
-- Effects: configure_muzzle_flash, configure_tracer, configure_impact_effects, configure_shell_ejection
-- Melee Combat: create_melee_trace, configure_combo_system, create_hit_pause, configure_hit_reaction, setup_parry_block_system, configure_weapon_trails
-- Utility: get_combat_info`,
+    category: 'gameplay',
+    description: 'Create weapons with hitscan/projectile firing, configure damage types, hitboxes, reload, and melee combat (combos, parry, block).',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Weapon Base
             'create_weapon_blueprint', 'configure_weapon_mesh', 'configure_weapon_sockets', 'set_weapon_stats',
-            // Firing Modes
             'configure_hitscan', 'configure_projectile', 'configure_spread_pattern', 'configure_recoil_pattern', 'configure_aim_down_sights',
-            // Projectiles
             'create_projectile_blueprint', 'configure_projectile_movement', 'configure_projectile_collision', 'configure_projectile_homing',
-            // Damage System
             'create_damage_type', 'configure_damage_execution', 'setup_hitbox_component',
-            // Weapon Features
             'setup_reload_system', 'setup_ammo_system', 'setup_attachment_system', 'setup_weapon_switching',
-            // Effects
             'configure_muzzle_flash', 'configure_tracer', 'configure_impact_effects', 'configure_shell_ejection',
-            // Melee Combat
             'create_melee_trace', 'configure_combo_system', 'create_hit_pause', 'configure_hit_reaction', 'setup_parry_block_system', 'configure_weapon_trails',
-            // Utility
             'get_combat_info'
           ],
           description: 'Combat action to perform'
         },
-        // Common parameters
-        blueprintPath: { type: 'string', description: 'Path to weapon/projectile blueprint.' },
-        name: { type: 'string', description: 'Name for new weapon/projectile/damage type.' },
-        path: { type: 'string', description: 'Directory path for asset creation.' },
-
-        // Weapon Base
+        blueprintPath: commonSchemas.blueprintPath,
+        name: commonSchemas.name,
+        path: commonSchemas.directoryPathForCreation,
         weaponMeshPath: { type: 'string', description: 'Path to weapon static/skeletal mesh.' },
-        muzzleSocketName: { type: 'string', description: 'Socket name for muzzle (default: Muzzle).' },
-        ejectionSocketName: { type: 'string', description: 'Socket name for shell ejection.' },
+        muzzleSocketName: commonSchemas.muzzleSocketName,
+        ejectionSocketName: commonSchemas.ejectionSocketName,
         attachmentSocketNames: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'List of attachment socket names.'
         },
-        baseDamage: { type: 'number', description: 'Base damage per hit.' },
-        fireRate: { type: 'number', description: 'Rounds per minute.' },
-        range: { type: 'number', description: 'Maximum effective range.' },
-        spread: { type: 'number', description: 'Bullet spread in degrees.' },
-
-        // Firing Modes
+        baseDamage: commonSchemas.numberProp,
+        fireRate: commonSchemas.numberProp,
+        range: commonSchemas.numberProp,
+        spread: commonSchemas.numberProp,
         hitscanEnabled: { type: 'boolean', description: 'Enable hitscan firing.' },
         traceChannel: {
           type: 'string',
           enum: ['Visibility', 'Camera', 'Weapon', 'Custom'],
           description: 'Trace channel for hitscan.'
         },
-        projectileClass: { type: 'string', description: 'Projectile class to spawn.' },
+        projectileClass: commonSchemas.projectileClass,
         spreadPattern: {
           type: 'string',
           enum: ['Random', 'Fixed', 'FixedWithRandom', 'Shotgun'],
@@ -3514,20 +2059,16 @@ Supported actions:
         adsFov: { type: 'number', description: 'FOV when aiming.' },
         adsSpeed: { type: 'number', description: 'Time to aim down sights.' },
         adsSpreadMultiplier: { type: 'number', description: 'Spread multiplier when aiming.' },
-
-        // Projectile
-        projectileSpeed: { type: 'number', description: 'Initial projectile speed.' },
-        projectileGravityScale: { type: 'number', description: 'Gravity scale (0 = no gravity).' },
-        projectileLifespan: { type: 'number', description: 'Projectile lifetime in seconds.' },
+        projectileSpeed: commonSchemas.numberProp,
+        projectileGravityScale: commonSchemas.numberProp,
+        projectileLifespan: commonSchemas.numberProp,
         projectileMeshPath: { type: 'string', description: 'Path to projectile mesh.' },
-        collisionRadius: { type: 'number', description: 'Projectile collision sphere radius.' },
+        collisionRadius: commonSchemas.numberProp,
         bounceEnabled: { type: 'boolean', description: 'Enable projectile bouncing.' },
         bounceVelocityRatio: { type: 'number', description: 'Velocity retained on bounce (0-1).' },
         homingEnabled: { type: 'boolean', description: 'Enable homing behavior.' },
         homingAcceleration: { type: 'number', description: 'Homing turn rate.' },
         homingTargetTag: { type: 'string', description: 'Tag for homing targets.' },
-
-        // Damage System
         damageTypeName: { type: 'string', description: 'Name for damage type.' },
         damageCategory: {
           type: 'string',
@@ -3546,30 +2087,28 @@ Supported actions:
         hitboxSize: {
           type: 'object',
           properties: {
-            radius: { type: 'number' },
-            halfHeight: { type: 'number' },
-            extent: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
+            radius: commonSchemas.numberProp,
+            halfHeight: commonSchemas.numberProp,
+            extent: commonSchemas.extent
           },
           description: 'Hitbox dimensions.'
         },
         isDamageZoneHead: { type: 'boolean', description: 'Mark as headshot zone.' },
         damageMultiplier: { type: 'number', description: 'Damage multiplier for this hitbox.' },
-
-        // Weapon Features
-        magazineSize: { type: 'number', description: 'Magazine capacity.' },
-        reloadTime: { type: 'number', description: 'Reload duration in seconds.' },
+        magazineSize: commonSchemas.numberProp,
+        reloadTime: commonSchemas.numberProp,
         reloadAnimationPath: { type: 'string', description: 'Path to reload animation.' },
         ammoType: { type: 'string', description: 'Ammo type identifier.' },
-        maxAmmo: { type: 'number', description: 'Maximum reserve ammo.' },
-        startingAmmo: { type: 'number', description: 'Starting reserve ammo.' },
+        maxAmmo: commonSchemas.numberProp,
+        startingAmmo: commonSchemas.numberProp,
         attachmentSlots: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
-              slotName: { type: 'string' },
-              socketName: { type: 'string' },
-              allowedTypes: { type: 'array', items: { type: 'string' } }
+              slotName: commonSchemas.stringProp,
+              socketName: commonSchemas.stringProp,
+              allowedTypes: commonSchemas.arrayOfStrings
             }
           },
           description: 'Attachment slot definitions.'
@@ -3578,8 +2117,6 @@ Supported actions:
         switchOutTime: { type: 'number', description: 'Time to unequip weapon.' },
         switchInAnimationPath: { type: 'string', description: 'Path to equip animation.' },
         switchOutAnimationPath: { type: 'string', description: 'Path to unequip animation.' },
-
-        // Effects
         muzzleFlashParticlePath: { type: 'string', description: 'Path to muzzle flash particle.' },
         muzzleFlashScale: { type: 'number', description: 'Muzzle flash scale.' },
         muzzleSoundPath: { type: 'string', description: 'Path to firing sound.' },
@@ -3591,8 +2128,6 @@ Supported actions:
         shellMeshPath: { type: 'string', description: 'Path to shell casing mesh.' },
         shellEjectionForce: { type: 'number', description: 'Shell ejection impulse.' },
         shellLifespan: { type: 'number', description: 'Shell casing lifetime.' },
-
-        // Melee Combat
         meleeTraceStartSocket: { type: 'string', description: 'Socket for trace start.' },
         meleeTraceEndSocket: { type: 'string', description: 'Socket for trace end.' },
         meleeTraceRadius: { type: 'number', description: 'Sphere trace radius.' },
@@ -3601,7 +2136,7 @@ Supported actions:
         maxComboCount: { type: 'number', description: 'Maximum combo length.' },
         comboAnimations: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Paths to combo attack animations.'
         },
         hitPauseDuration: { type: 'number', description: 'Hitstop duration in seconds.' },
@@ -3622,102 +2157,63 @@ Supported actions:
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        blueprintPath: { type: 'string', description: 'Path to created/modified blueprint.' },
-        damageTypePath: { type: 'string', description: 'Path to created damage type.' },
+        ...commonSchemas.outputBase,
+        blueprintPath: commonSchemas.blueprintPath,
+        damageTypePath: commonSchemas.stringProp,
         combatInfo: {
           type: 'object',
           properties: {
-            weaponType: { type: 'string' },
-            firingMode: { type: 'string' },
-            baseDamage: { type: 'number' },
-            fireRate: { type: 'number' },
-            magazineSize: { type: 'number' },
-            hasADS: { type: 'boolean' },
-            hasReload: { type: 'boolean' },
-            isMelee: { type: 'boolean' },
-            comboCount: { type: 'number' },
-            attachmentSlots: { type: 'array', items: { type: 'string' } }
+            weaponType: commonSchemas.stringProp,
+            firingMode: commonSchemas.stringProp,
+            baseDamage: commonSchemas.numberProp,
+            fireRate: commonSchemas.numberProp,
+            magazineSize: commonSchemas.numberProp,
+            hasADS: commonSchemas.booleanProp,
+            hasReload: commonSchemas.booleanProp,
+            isMelee: commonSchemas.booleanProp,
+            comboCount: commonSchemas.numberProp,
+            attachmentSlots: commonSchemas.arrayOfStrings
           },
           description: 'Combat configuration info (for get_combat_info).'
-        },
-        error: { type: 'string' }
+        }
       }
     }
   },
-
-  // 27. AI SYSTEM (Phase 16)
   {
     name: 'manage_ai',
-    description: `Complete AI system management. Handles AI controllers, blackboards, behavior trees, EQS, perception, state trees, smart objects, and mass AI.
-
-Use it when you need to:
-- Create AI controllers with behavior tree and blackboard assignments
-- Create and configure blackboard assets with keys of various types
-- Build behavior trees with composite nodes, tasks, decorators, and services
-- Create Environment Query System (EQS) queries with generators, contexts, and tests
-- Set up AI perception with sight, hearing, damage sensing, and team affiliation
-- Create State Trees (UE5.3+) as behavior tree alternatives
-- Configure Smart Objects for contextual AI interactions
-- Set up Mass AI for crowd simulation
-
-Supported actions:
-- AI Controller: create_ai_controller, assign_behavior_tree, assign_blackboard
-- Blackboard: create_blackboard_asset, add_blackboard_key, set_key_instance_synced
-- Behavior Tree: create_behavior_tree, add_composite_node, add_task_node, add_decorator, add_service, configure_bt_node
-- EQS: create_eqs_query, add_eqs_generator, add_eqs_context, add_eqs_test, configure_test_scoring
-- Perception: add_ai_perception_component, configure_sight_config, configure_hearing_config, configure_damage_sense_config, set_perception_team
-- State Trees: create_state_tree, add_state_tree_state, add_state_tree_transition, configure_state_tree_task
-- Smart Objects: create_smart_object_definition, add_smart_object_slot, configure_slot_behavior, add_smart_object_component
-- Mass AI: create_mass_entity_config, configure_mass_entity, add_mass_spawner
-- Utility: get_ai_info`,
+    category: 'gameplay',
+    description: 'Create AI Controllers, configure Behavior Trees, Blackboards, EQS queries, and perception systems.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // AI Controller
             'create_ai_controller', 'assign_behavior_tree', 'assign_blackboard',
-            // Blackboard
             'create_blackboard_asset', 'add_blackboard_key', 'set_key_instance_synced',
-            // Behavior Tree
             'create_behavior_tree', 'add_composite_node', 'add_task_node', 'add_decorator', 'add_service', 'configure_bt_node',
-            // EQS
             'create_eqs_query', 'add_eqs_generator', 'add_eqs_context', 'add_eqs_test', 'configure_test_scoring',
-            // Perception
             'add_ai_perception_component', 'configure_sight_config', 'configure_hearing_config', 'configure_damage_sense_config', 'set_perception_team',
-            // State Trees
             'create_state_tree', 'add_state_tree_state', 'add_state_tree_transition', 'configure_state_tree_task',
-            // Smart Objects
             'create_smart_object_definition', 'add_smart_object_slot', 'configure_slot_behavior', 'add_smart_object_component',
-            // Mass AI
             'create_mass_entity_config', 'configure_mass_entity', 'add_mass_spawner',
-            // Utility
             'get_ai_info'
           ],
           description: 'AI action to perform'
         },
-
-        // Common parameters
-        name: { type: 'string', description: 'Name for new AI asset.' },
-        path: { type: 'string', description: 'Directory path for asset creation.' },
-        blueprintPath: { type: 'string', description: 'Path to blueprint for component additions.' },
-
-        // AI Controller
-        controllerPath: { type: 'string', description: 'Path to AI controller blueprint.' },
-        behaviorTreePath: { type: 'string', description: 'Path to behavior tree asset.' },
-        blackboardPath: { type: 'string', description: 'Path to blackboard asset.' },
+        name: commonSchemas.name,
+        path: commonSchemas.directoryPathForCreation,
+        blueprintPath: commonSchemas.blueprintPath,
+        controllerPath: commonSchemas.controllerPath,
+        behaviorTreePath: commonSchemas.behaviorTreePath,
+        blackboardPath: commonSchemas.blackboardPath,
         parentClass: {
           type: 'string',
           enum: ['AAIController', 'APlayerController'],
           description: 'Parent class for AI controller (default: AAIController).'
         },
         autoRunBehaviorTree: { type: 'boolean', description: 'Start behavior tree automatically on possess.' },
-
-        // Blackboard Keys
-        keyName: { type: 'string', description: 'Blackboard key name.' },
+        keyName: commonSchemas.keyName,
         keyType: {
           type: 'string',
           enum: ['Bool', 'Int', 'Float', 'Vector', 'Rotator', 'Object', 'Class', 'Enum', 'Name', 'String'],
@@ -3726,8 +2222,6 @@ Supported actions:
         isInstanceSynced: { type: 'boolean', description: 'Sync key across instances.' },
         baseObjectClass: { type: 'string', description: 'Base class for Object/Class keys.' },
         enumClass: { type: 'string', description: 'Enum class for Enum keys.' },
-
-        // Behavior Tree Nodes
         compositeType: {
           type: 'string',
           enum: ['Selector', 'Sequence', 'Parallel', 'SimpleParallel'],
@@ -3756,8 +2250,8 @@ Supported actions:
           enum: ['DefaultFocus', 'RunEQS', 'Custom'],
           description: 'Service node type.'
         },
-        parentNodeId: { type: 'string', description: 'Parent node ID to attach new node to.' },
-        nodeId: { type: 'string', description: 'Node ID for configuration.' },
+        parentNodeId: commonSchemas.nodeId,
+        nodeId: commonSchemas.nodeId,
         nodeProperties: {
           type: 'object',
           additionalProperties: true,
@@ -3766,9 +2260,7 @@ Supported actions:
         customTaskClass: { type: 'string', description: 'Custom task class path for Custom task type.' },
         customDecoratorClass: { type: 'string', description: 'Custom decorator class path.' },
         customServiceClass: { type: 'string', description: 'Custom service class path.' },
-
-        // EQS
-        queryPath: { type: 'string', description: 'Path to EQS query asset.' },
+        queryPath: commonSchemas.queryPath,
         generatorType: {
           type: 'string',
           enum: ['ActorsOfClass', 'CurrentLocation', 'Donut', 'OnCircle', 'PathingGrid', 'SimpleGrid', 'Composite', 'Custom'],
@@ -3787,13 +2279,13 @@ Supported actions:
         generatorSettings: {
           type: 'object',
           properties: {
-            searchRadius: { type: 'number' },
-            searchCenter: { type: 'string' },
-            actorClass: { type: 'string' },
-            gridSize: { type: 'number' },
-            spacesBetween: { type: 'number' },
-            innerRadius: { type: 'number' },
-            outerRadius: { type: 'number' }
+            searchRadius: commonSchemas.numberProp,
+            searchCenter: commonSchemas.stringProp,
+            actorClass: commonSchemas.stringProp,
+            gridSize: commonSchemas.numberProp,
+            spacesBetween: commonSchemas.numberProp,
+            innerRadius: commonSchemas.numberProp,
+            outerRadius: commonSchemas.numberProp
           },
           description: 'Generator-specific settings.'
         },
@@ -3801,33 +2293,31 @@ Supported actions:
           type: 'object',
           properties: {
             scoringEquation: { type: 'string', enum: ['Linear', 'Square', 'InverseLinear', 'Constant'] },
-            clampMin: { type: 'number' },
-            clampMax: { type: 'number' },
+            clampMin: commonSchemas.numberProp,
+            clampMax: commonSchemas.numberProp,
             filterType: { type: 'string', enum: ['Minimum', 'Maximum', 'Range'] },
-            floatMin: { type: 'number' },
-            floatMax: { type: 'number' }
+            floatMin: commonSchemas.numberProp,
+            floatMax: commonSchemas.numberProp
           },
           description: 'Test scoring and filter settings.'
         },
         testIndex: { type: 'number', description: 'Index of test to configure.' },
-
-        // Perception
         sightConfig: {
           type: 'object',
           properties: {
-            sightRadius: { type: 'number' },
-            loseSightRadius: { type: 'number' },
-            peripheralVisionAngle: { type: 'number' },
-            pointOfViewBackwardOffset: { type: 'number' },
-            nearClippingRadius: { type: 'number' },
-            autoSuccessRange: { type: 'number' },
-            maxAge: { type: 'number' },
+            sightRadius: commonSchemas.numberProp,
+            loseSightRadius: commonSchemas.numberProp,
+            peripheralVisionAngle: commonSchemas.numberProp,
+            pointOfViewBackwardOffset: commonSchemas.numberProp,
+            nearClippingRadius: commonSchemas.numberProp,
+            autoSuccessRange: commonSchemas.numberProp,
+            maxAge: commonSchemas.numberProp,
             detectionByAffiliation: {
               type: 'object',
               properties: {
-                enemies: { type: 'boolean' },
-                neutrals: { type: 'boolean' },
-                friendlies: { type: 'boolean' }
+                enemies: commonSchemas.booleanProp,
+                neutrals: commonSchemas.booleanProp,
+                friendlies: commonSchemas.booleanProp
               }
             }
           },
@@ -3836,17 +2326,17 @@ Supported actions:
         hearingConfig: {
           type: 'object',
           properties: {
-            hearingRange: { type: 'number' },
-            loSHearingRange: { type: 'number' },
-            detectFriendly: { type: 'boolean' },
-            maxAge: { type: 'number' }
+            hearingRange: commonSchemas.numberProp,
+            loSHearingRange: commonSchemas.numberProp,
+            detectFriendly: commonSchemas.booleanProp,
+            maxAge: commonSchemas.numberProp
           },
           description: 'AI hearing sense configuration.'
         },
         damageConfig: {
           type: 'object',
           properties: {
-            maxAge: { type: 'number' }
+            maxAge: commonSchemas.numberProp
           },
           description: 'AI damage sense configuration.'
         },
@@ -3856,61 +2346,55 @@ Supported actions:
           enum: ['Sight', 'Hearing', 'Damage', 'Touch', 'None'],
           description: 'Dominant sense for perception prioritization.'
         },
-
-        // State Trees (UE5.3+)
-        stateTreePath: { type: 'string', description: 'Path to State Tree asset.' },
-        stateName: { type: 'string', description: 'Name of state to add/configure.' },
-        fromState: { type: 'string', description: 'Source state for transition.' },
-        toState: { type: 'string', description: 'Target state for transition.' },
+        stateTreePath: commonSchemas.stateTreePath,
+        stateName: commonSchemas.stateName,
+        fromState: commonSchemas.fromState,
+        toState: commonSchemas.toState,
         transitionCondition: { type: 'string', description: 'Condition expression for transition.' },
         stateTaskClass: { type: 'string', description: 'Task class for state.' },
         stateEvaluatorClass: { type: 'string', description: 'Evaluator class for state.' },
-
-        // Smart Objects
-        definitionPath: { type: 'string', description: 'Path to Smart Object Definition asset.' },
+        definitionPath: commonSchemas.definitionPath,
         slotIndex: { type: 'number', description: 'Index of slot to configure.' },
         slotOffset: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          properties: commonSchemas.vector3.properties,
           description: 'Local offset for slot.'
         },
         slotRotation: {
           type: 'object',
-          properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } },
+          properties: commonSchemas.rotation.properties,
           description: 'Local rotation for slot.'
         },
         slotBehaviorDefinition: { type: 'string', description: 'Gameplay behavior definition for slot.' },
         slotActivityTags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Activity tags for the slot.'
         },
         slotUserTags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Required user tags for slot.'
         },
         slotEnabled: { type: 'boolean', description: 'Whether slot is enabled.' },
-
-        // Mass AI
-        configPath: { type: 'string', description: 'Path to Mass Entity Config asset.' },
+        configPath: commonSchemas.configPath,
         massTraits: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'List of Mass traits to add.'
         },
         massProcessors: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'List of Mass processors to configure.'
         },
         spawnerSettings: {
           type: 'object',
           properties: {
-            entityCount: { type: 'number' },
-            spawnRadius: { type: 'number' },
-            entityConfig: { type: 'string' },
-            spawnOnBeginPlay: { type: 'boolean' }
+            entityCount: commonSchemas.numberProp,
+            spawnRadius: commonSchemas.numberProp,
+            entityConfig: commonSchemas.stringProp,
+            spawnOnBeginPlay: commonSchemas.booleanProp
           },
           description: 'Mass spawner configuration.'
         }
@@ -3920,132 +2404,101 @@ Supported actions:
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        assetPath: { type: 'string', description: 'Path to created/modified asset.' },
-        controllerPath: { type: 'string', description: 'Path to created AI controller.' },
-        behaviorTreePath: { type: 'string', description: 'Path to created behavior tree.' },
-        blackboardPath: { type: 'string', description: 'Path to created blackboard.' },
-        queryPath: { type: 'string', description: 'Path to created EQS query.' },
-        stateTreePath: { type: 'string', description: 'Path to created state tree.' },
-        definitionPath: { type: 'string', description: 'Path to created smart object definition.' },
-        configPath: { type: 'string', description: 'Path to created mass entity config.' },
-        nodeId: { type: 'string', description: 'ID of created BT/StateTree node.' },
-        keyIndex: { type: 'number', description: 'Index of added blackboard key.' },
-        testIndex: { type: 'number', description: 'Index of added EQS test.' },
-        slotIndex: { type: 'number', description: 'Index of added smart object slot.' },
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
+        controllerPath: commonSchemas.stringProp,
+        behaviorTreePath: commonSchemas.stringProp,
+        blackboardPath: commonSchemas.stringProp,
+        queryPath: commonSchemas.stringProp,
+        stateTreePath: commonSchemas.stringProp,
+        definitionPath: commonSchemas.stringProp,
+        configPath: commonSchemas.stringProp,
+        nodeId: commonSchemas.nodeId,
+        keyIndex: commonSchemas.integerProp,
+        testIndex: commonSchemas.integerProp,
+        slotIndex: commonSchemas.integerProp,
         aiInfo: {
           type: 'object',
           properties: {
-            controllerClass: { type: 'string' },
-            assignedBehaviorTree: { type: 'string' },
-            assignedBlackboard: { type: 'string' },
-            blackboardKeys: { type: 'array', items: { type: 'object' } },
-            btNodeCount: { type: 'number' },
-            perceptionSenses: { type: 'array', items: { type: 'string' } },
-            teamId: { type: 'number' },
-            stateTreeStates: { type: 'array', items: { type: 'string' } },
-            smartObjectSlots: { type: 'number' },
-            massTraits: { type: 'array', items: { type: 'string' } }
+            controllerClass: commonSchemas.stringProp,
+            assignedBehaviorTree: commonSchemas.stringProp,
+            assignedBlackboard: commonSchemas.stringProp,
+            blackboardKeys: commonSchemas.arrayOfObjects,
+            btNodeCount: commonSchemas.integerProp,
+            perceptionSenses: commonSchemas.arrayOfStrings,
+            teamId: commonSchemas.integerProp,
+            stateTreeStates: commonSchemas.arrayOfStrings,
+            smartObjectSlots: commonSchemas.numberProp,
+            massTraits: commonSchemas.arrayOfStrings
           },
           description: 'AI configuration info (for get_ai_info).'
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // ============================================================================
-  // 28. Inventory & Items System (Phase 17)
-  // ============================================================================
   {
     name: 'manage_inventory',
-    description: `Complete inventory and items system implementation for data assets, inventory components, pickups, equipment, loot, and crafting.
-
-Use it when you need to:
-- Create item data assets with properties (name, description, icon, mesh, stack size, weight, rarity)
-- Add inventory components to Blueprints with configurable slots
-- Create pickup actors with interaction and respawn settings
-- Set up equipment systems with slots and stat modifiers
-- Create loot tables with weighted drops and quality tiers
-- Implement crafting systems with recipes and workbenches
-
-Supported actions:
-- Data Assets: create_item_data_asset, set_item_properties, create_item_category, assign_item_category.
-- Inventory Component: create_inventory_component, configure_inventory_slots, add_inventory_functions, configure_inventory_events, set_inventory_replication.
-- Pickups: create_pickup_actor, configure_pickup_interaction, configure_pickup_respawn, configure_pickup_effects.
-- Equipment: create_equipment_component, define_equipment_slots, configure_equipment_effects, add_equipment_functions, configure_equipment_visuals.
-- Loot System: create_loot_table, add_loot_entry, configure_loot_drop, set_loot_quality_tiers.
-- Crafting: create_crafting_recipe, configure_recipe_requirements, create_crafting_station, add_crafting_component.
-- Utility: get_inventory_info.`,
+    category: 'gameplay',
+    description: 'Create item data assets, inventory components, world pickups, loot tables, and crafting recipes.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Data Assets (4)
             'create_item_data_asset',
             'set_item_properties',
             'create_item_category',
             'assign_item_category',
-            // Inventory Component (5)
             'create_inventory_component',
             'configure_inventory_slots',
             'add_inventory_functions',
             'configure_inventory_events',
             'set_inventory_replication',
-            // Pickups (4)
             'create_pickup_actor',
             'configure_pickup_interaction',
             'configure_pickup_respawn',
             'configure_pickup_effects',
-            // Equipment (5)
             'create_equipment_component',
             'define_equipment_slots',
             'configure_equipment_effects',
             'add_equipment_functions',
             'configure_equipment_visuals',
-            // Loot System (4)
             'create_loot_table',
             'add_loot_entry',
             'configure_loot_drop',
             'set_loot_quality_tiers',
-            // Crafting (4)
             'create_crafting_recipe',
             'configure_recipe_requirements',
             'create_crafting_station',
             'add_crafting_component',
-            // Utility (1)
             'get_inventory_info'
           ],
           description: 'Inventory action to perform.'
         },
-        // Common parameters
-        name: { type: 'string', description: 'Asset name for creation.' },
-        path: { type: 'string', description: 'Directory path for asset creation.' },
-        folder: { type: 'string', description: 'Content folder for asset.' },
-        save: { type: 'boolean', description: 'Save asset after modification.' },
-        blueprintPath: { type: 'string', description: 'Path to Blueprint asset.' },
-
-        // Item Data Asset parameters
-        itemPath: { type: 'string', description: 'Path to item data asset.' },
-        parentClass: { type: 'string', description: 'Parent class for data asset.' },
-        displayName: { type: 'string', description: 'Display name for item.' },
-        description: { type: 'string', description: 'Item description.' },
-        icon: { type: 'string', description: 'Path to icon texture.' },
-        mesh: { type: 'string', description: 'Path to static/skeletal mesh.' },
-        stackSize: { type: 'number', description: 'Maximum stack size (1 for non-stackable).' },
-        weight: { type: 'number', description: 'Item weight for inventory capacity.' },
+        name: commonSchemas.assetNameForCreation,
+        path: commonSchemas.directoryPathForCreation,
+        folder: commonSchemas.directoryPath,
+        save: commonSchemas.save,
+        blueprintPath: commonSchemas.blueprintPath,
+        itemPath: commonSchemas.itemDataPath,
+        parentClass: commonSchemas.parentClass,
+        displayName: commonSchemas.stringProp,
+        description: commonSchemas.stringProp,
+        icon: commonSchemas.iconPath,
+        mesh: commonSchemas.meshAssetPath,
+        stackSize: commonSchemas.numberProp,
+        weight: commonSchemas.numberProp,
         rarity: {
           type: 'string',
           enum: ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Custom'],
           description: 'Item rarity tier.'
         },
-        value: { type: 'number', description: 'Base item value/price.' },
+        value: commonSchemas.numberProp,
         tags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Gameplay tags for item categorization.'
         },
         customProperties: {
@@ -4053,25 +2506,21 @@ Supported actions:
           additionalProperties: true,
           description: 'Custom key-value properties for item.'
         },
-
-        // Item Category parameters
         categoryPath: { type: 'string', description: 'Path to item category asset.' },
         parentCategory: { type: 'string', description: 'Parent category path.' },
         categoryIcon: { type: 'string', description: 'Icon texture for category.' },
-
-        // Inventory Component parameters
-        componentName: { type: 'string', description: 'Name for the component.' },
-        slotCount: { type: 'number', description: 'Number of inventory slots.' },
+        componentName: commonSchemas.componentName,
+        slotCount: commonSchemas.numberProp,
         slotSize: {
           type: 'object',
-          properties: { width: { type: 'number' }, height: { type: 'number' } },
+          properties: { width: commonSchemas.numberProp, height: commonSchemas.numberProp },
           description: 'Size of each slot (for grid inventory).'
         },
-        maxWeight: { type: 'number', description: 'Maximum weight capacity.' },
+        maxWeight: commonSchemas.numberProp,
         allowStacking: { type: 'boolean', description: 'Allow items to stack.' },
         slotCategories: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Allowed item categories per slot.'
         },
         slotRestrictions: {
@@ -4079,24 +2528,22 @@ Supported actions:
           items: {
             type: 'object',
             properties: {
-              slotIndex: { type: 'number' },
-              allowedCategories: { type: 'array', items: { type: 'string' } },
-              restrictedCategories: { type: 'array', items: { type: 'string' } }
+              slotIndex: commonSchemas.numberProp,
+              allowedCategories: commonSchemas.arrayOfStrings,
+              restrictedCategories: commonSchemas.arrayOfStrings
             }
           },
           description: 'Per-slot category restrictions.'
         },
-        replicated: { type: 'boolean', description: 'Enable network replication.' },
+        replicated: commonSchemas.replicated,
         replicationCondition: {
           type: 'string',
           enum: ['None', 'OwnerOnly', 'SkipOwner', 'SimulatedOnly', 'AutonomousOnly', 'Custom'],
           description: 'Replication condition for inventory.'
         },
-
-        // Pickup parameters
         pickupPath: { type: 'string', description: 'Path to pickup actor Blueprint.' },
-        meshPath: { type: 'string', description: 'Path to mesh for pickup.' },
-        itemDataPath: { type: 'string', description: 'Path to item data asset.' },
+        meshPath: commonSchemas.meshPath,
+        itemDataPath: commonSchemas.itemDataPath,
         interactionRadius: { type: 'number', description: 'Radius for pickup interaction.' },
         interactionType: {
           type: 'string',
@@ -4104,27 +2551,25 @@ Supported actions:
           description: 'How player picks up item.'
         },
         interactionKey: { type: 'string', description: 'Input action for pickup (if type is Key/Hold).' },
-        prompt: { type: 'string', description: 'Interaction prompt text.' },
+        prompt: commonSchemas.prompt,
         highlightMaterial: { type: 'string', description: 'Material for highlight effect.' },
-        respawnable: { type: 'boolean', description: 'Whether pickup respawns.' },
-        respawnTime: { type: 'number', description: 'Time in seconds to respawn.' },
+        respawnable: commonSchemas.booleanProp,
+        respawnTime: commonSchemas.respawnTime,
         respawnEffect: { type: 'string', description: 'Niagara effect for respawn.' },
         pickupSound: { type: 'string', description: 'Sound cue for pickup.' },
         pickupParticle: { type: 'string', description: 'Particle effect on pickup.' },
         bobbing: { type: 'boolean', description: 'Enable bobbing animation.' },
         rotation: { type: 'boolean', description: 'Enable rotation animation.' },
         glowEffect: { type: 'boolean', description: 'Enable glow effect.' },
-
-        // Equipment parameters
         slots: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
-              name: { type: 'string' },
-              socketName: { type: 'string' },
-              allowedCategories: { type: 'array', items: { type: 'string' } },
-              restrictedCategories: { type: 'array', items: { type: 'string' } }
+              name: commonSchemas.stringProp,
+              socketName: commonSchemas.stringProp,
+              allowedCategories: commonSchemas.arrayOfStrings,
+              restrictedCategories: commonSchemas.arrayOfStrings
             }
           },
           description: 'Equipment slot definitions.'
@@ -4134,46 +2579,44 @@ Supported actions:
           items: {
             type: 'object',
             properties: {
-              attribute: { type: 'string' },
+              attribute: commonSchemas.stringProp,
               operation: { type: 'string', enum: ['Add', 'Multiply', 'Override'] },
-              value: { type: 'number' }
+              value: commonSchemas.numberProp
             }
           },
           description: 'Stat modifiers when equipped.'
         },
         abilityGrants: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Gameplay abilities granted when equipped.'
         },
         passiveEffects: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Passive gameplay effects when equipped.'
         },
         attachToSocket: { type: 'boolean', description: 'Attach mesh to socket when equipped.' },
         meshComponent: { type: 'string', description: 'Component name for equipment mesh.' },
         animationOverrides: {
           type: 'object',
-          additionalProperties: { type: 'string' },
+          additionalProperties: commonSchemas.stringProp,
           description: 'Animation overrides (slot -> anim asset).'
         },
-
-        // Loot Table parameters
-        lootTablePath: { type: 'string', description: 'Path to loot table asset.' },
+        lootTablePath: commonSchemas.lootTablePath,
         lootWeight: { type: 'number', description: 'Weight for drop chance calculation.' },
         minQuantity: { type: 'number', description: 'Minimum drop quantity.' },
         maxQuantity: { type: 'number', description: 'Maximum drop quantity.' },
         conditions: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Conditions for loot entry (gameplay tag expressions).'
         },
         actorPath: { type: 'string', description: 'Path to actor Blueprint for loot drop.' },
         dropCount: { type: 'number', description: 'Number of drops to roll.' },
         guaranteedDrops: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Item paths that always drop.'
         },
         dropRadius: { type: 'number', description: 'Radius for scattered drops.' },
@@ -4183,20 +2626,18 @@ Supported actions:
           items: {
             type: 'object',
             properties: {
-              name: { type: 'string' },
+              name: commonSchemas.stringProp,
               color: {
                 type: 'object',
-                properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } }
+                properties: commonSchemas.colorObject.properties
               },
-              dropWeight: { type: 'number' },
-              statMultiplier: { type: 'number' }
+              dropWeight: commonSchemas.numberProp,
+              statMultiplier: commonSchemas.numberProp
             }
           },
           description: 'Quality tier definitions.'
         },
-
-        // Crafting parameters
-        recipePath: { type: 'string', description: 'Path to crafting recipe asset.' },
+        recipePath: commonSchemas.recipePath,
         outputItemPath: { type: 'string', description: 'Path to item produced by recipe.' },
         outputQuantity: { type: 'number', description: 'Quantity produced.' },
         ingredients: {
@@ -4204,8 +2645,8 @@ Supported actions:
           items: {
             type: 'object',
             properties: {
-              itemPath: { type: 'string' },
-              quantity: { type: 'number' }
+              itemPath: commonSchemas.stringProp,
+              quantity: commonSchemas.numberProp
             }
           },
           description: 'Required ingredients with quantities.'
@@ -4214,18 +2655,18 @@ Supported actions:
         requiredLevel: { type: 'number', description: 'Required player level.' },
         requiredSkills: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Required skill tags.'
         },
         requiredStation: { type: 'string', description: 'Required crafting station type.' },
         unlockConditions: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Conditions to unlock recipe.'
         },
         recipes: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Recipe paths for crafting station.'
         },
         stationType: { type: 'string', description: 'Type of crafting station.' }
@@ -4235,18 +2676,17 @@ Supported actions:
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        assetPath: { type: 'string', description: 'Path to created/modified asset.' },
-        itemPath: { type: 'string', description: 'Path to created item data asset.' },
-        categoryPath: { type: 'string', description: 'Path to created category.' },
-        pickupPath: { type: 'string', description: 'Path to created pickup actor.' },
-        lootTablePath: { type: 'string', description: 'Path to created loot table.' },
-        recipePath: { type: 'string', description: 'Path to created recipe.' },
-        stationPath: { type: 'string', description: 'Path to created crafting station.' },
-        componentAdded: { type: 'boolean', description: 'Whether component was added.' },
-        slotCount: { type: 'number', description: 'Number of slots configured.' },
-        entryIndex: { type: 'number', description: 'Index of added loot entry.' },
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
+        itemPath: commonSchemas.stringProp,
+        categoryPath: commonSchemas.stringProp,
+        pickupPath: commonSchemas.stringProp,
+        lootTablePath: commonSchemas.stringProp,
+        recipePath: commonSchemas.stringProp,
+        stationPath: commonSchemas.stringProp,
+        componentAdded: commonSchemas.booleanProp,
+        slotCount: commonSchemas.integerProp,
+        entryIndex: commonSchemas.integerProp,
         inventoryInfo: {
           type: 'object',
           properties: {
@@ -4254,84 +2694,40 @@ Supported actions:
             itemProperties: {
               type: 'object',
               properties: {
-                displayName: { type: 'string' },
-                stackSize: { type: 'number' },
-                weight: { type: 'number' },
-                rarity: { type: 'string' },
-                value: { type: 'number' }
+                displayName: commonSchemas.stringProp,
+                stackSize: commonSchemas.integerProp,
+                weight: commonSchemas.numberProp,
+                rarity: commonSchemas.stringProp,
+                value: commonSchemas.numberProp
               }
             },
-            inventorySlots: { type: 'number' },
-            maxWeight: { type: 'number' },
-            equipmentSlots: { type: 'array', items: { type: 'string' } },
-            lootEntries: { type: 'number' },
-            recipeIngredients: { type: 'array', items: { type: 'object' } },
-            craftTime: { type: 'number' }
+            inventorySlots: commonSchemas.numberProp,
+            maxWeight: commonSchemas.numberProp,
+            equipmentSlots: commonSchemas.arrayOfStrings,
+            lootEntries: commonSchemas.numberProp,
+            recipeIngredients: commonSchemas.arrayOfObjects,
+            craftTime: commonSchemas.numberProp
           },
           description: 'Inventory system info (for get_inventory_info).'
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // ============================================================================
-  // PHASE 18: INTERACTION SYSTEM
-  // ============================================================================
   {
     name: 'manage_interaction',
-    description: `Complete interaction framework for creating interactive objects and systems in Unreal Engine.
-
-CAPABILITIES:
-- Interaction Component: Create and configure interaction systems with traces and widgets
-- Interactables: Create doors, switches, chests, levers with full functionality
-- Destructibles: Set up destructible meshes with damage levels and effects
-- Triggers: Create and configure trigger volumes with events and filters
-
-ACTIONS:
-Interaction Component:
-- create_interaction_component: Add interaction component to blueprint
-- configure_interaction_trace: Set up line/sphere/box traces for detection
-- configure_interaction_widget: Configure UI prompts and widgets
-- add_interaction_events: Add OnInteractionStart, OnInteractionEnd events
-
-Interactables:
-- create_interactable_interface: Create IInteractable interface
-- create_door_actor: Create door with pivot rotation and animation
-- configure_door_properties: Set open angle, time, locked state, sounds
-- create_switch_actor: Create button/lever/pressure plate
-- configure_switch_properties: Set toggle, one-shot, target actors
-- create_chest_actor: Create container with loot integration
-- configure_chest_properties: Set loot table, locked state, respawn
-- create_lever_actor: Create lever with rotation/translation
-
-Destructibles:
-- setup_destructible_mesh: Set up GeometryCollection destruction
-- configure_destruction_levels: Configure damage thresholds and states
-- configure_destruction_effects: Set destroy sound, particle, debris
-- configure_destruction_damage: Set health, damage multipliers
-- add_destruction_component: Add destruction management component
-
-Triggers:
-- create_trigger_actor: Create trigger volume (box, sphere, capsule)
-- configure_trigger_events: Set enter, exit, stay events
-- configure_trigger_filter: Filter by class, tag, interface
-- configure_trigger_response: Set once, repeatable, toggle response
-
-Utility:
-- get_interaction_info: Query interaction system info`,
+    category: 'gameplay',
+    description: 'Create interactive objects: doors, switches, chests, levers. Set up destructible meshes and trigger volumes.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Interaction Component
             'create_interaction_component',
             'configure_interaction_trace',
             'configure_interaction_widget',
             'add_interaction_events',
-            // Interactables
             'create_interactable_interface',
             'create_door_actor',
             'configure_door_properties',
@@ -4340,65 +2736,55 @@ Utility:
             'create_chest_actor',
             'configure_chest_properties',
             'create_lever_actor',
-            // Destructibles
             'setup_destructible_mesh',
             'configure_destruction_levels',
             'configure_destruction_effects',
             'configure_destruction_damage',
             'add_destruction_component',
-            // Triggers
             'create_trigger_actor',
             'configure_trigger_events',
             'configure_trigger_filter',
             'configure_trigger_response',
-            // Utility
             'get_interaction_info'
           ],
           description: 'The interaction action to perform.'
         },
-        // Common parameters
-        name: { type: 'string', description: 'Name for created asset/actor.' },
-        folder: { type: 'string', description: 'Folder path for created asset.' },
-        blueprintPath: { type: 'string', description: 'Path to target blueprint.' },
-        actorName: { type: 'string', description: 'Name of target actor in level.' },
-        componentName: { type: 'string', description: 'Name for added component.' },
-
-        // Interaction Component parameters
+        name: commonSchemas.name,
+        folder: commonSchemas.directoryPath,
+        blueprintPath: commonSchemas.blueprintPath,
+        actorName: commonSchemas.actorName,
+        componentName: commonSchemas.componentName,
         traceType: { type: 'string', enum: ['line', 'sphere', 'box'], description: 'Type of interaction trace.' },
-        traceChannel: { type: 'string', description: 'Collision channel for trace.' },
-        traceDistance: { type: 'number', description: 'Maximum trace distance.' },
-        traceRadius: { type: 'number', description: 'Radius for sphere/box trace.' },
-        traceFrequency: { type: 'number', description: 'Trace update frequency (per second).' },
-        widgetClass: { type: 'string', description: 'Widget class for interaction prompt.' },
+        traceChannel: commonSchemas.traceChannel,
+        traceDistance: commonSchemas.traceDistance,
+        traceRadius: commonSchemas.traceRadius,
+        traceFrequency: commonSchemas.traceFrequency,
+        widgetClass: commonSchemas.widgetClass,
         widgetOffset: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          properties: commonSchemas.vector3.properties,
           description: 'Widget offset from actor.'
         },
         showOnHover: { type: 'boolean', description: 'Show widget when hovering.' },
         showPromptText: { type: 'boolean', description: 'Show interaction prompt text.' },
         promptTextFormat: { type: 'string', description: 'Format string for prompt (e.g., "Press {Key} to {Action}").' },
-
-        // Door parameters
         doorPath: { type: 'string', description: 'Path to door actor blueprint.' },
-        meshPath: { type: 'string', description: 'Path to static/skeletal mesh.' },
+        meshPath: commonSchemas.meshPath,
         openAngle: { type: 'number', description: 'Door open rotation angle in degrees.' },
         openTime: { type: 'number', description: 'Time to open/close door in seconds.' },
         openDirection: { type: 'string', enum: ['push', 'pull', 'auto'], description: 'Door open direction.' },
         pivotOffset: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          properties: commonSchemas.vector3.properties,
           description: 'Offset for door pivot point.'
         },
-        locked: { type: 'boolean', description: 'Whether door/chest is locked.' },
+        locked: commonSchemas.locked,
         keyItemPath: { type: 'string', description: 'Item required to unlock.' },
         openSound: { type: 'string', description: 'Sound to play on open.' },
         closeSound: { type: 'string', description: 'Sound to play on close.' },
         autoClose: { type: 'boolean', description: 'Automatically close after opening.' },
         autoCloseDelay: { type: 'number', description: 'Delay before auto-close in seconds.' },
         requiresKey: { type: 'boolean', description: 'Whether interaction requires a key item.' },
-
-        // Switch parameters
         switchPath: { type: 'string', description: 'Path to switch actor blueprint.' },
         switchType: { type: 'string', enum: ['button', 'lever', 'pressure_plate', 'toggle'], description: 'Type of switch.' },
         toggleable: { type: 'boolean', description: 'Whether switch can be toggled.' },
@@ -4408,23 +2794,17 @@ Utility:
         deactivateSound: { type: 'string', description: 'Sound on deactivation.' },
         targetActors: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Actors affected by this switch.'
         },
-
-        // Chest parameters
         chestPath: { type: 'string', description: 'Path to chest actor blueprint.' },
         lidMeshPath: { type: 'string', description: 'Path to lid mesh.' },
-        lootTablePath: { type: 'string', description: 'Path to loot table for contents.' },
-        respawnable: { type: 'boolean', description: 'Whether chest respawns contents.' },
-        respawnTime: { type: 'number', description: 'Time to respawn contents in seconds.' },
-
-        // Lever parameters
+        lootTablePath: commonSchemas.lootTablePath,
+        respawnable: commonSchemas.booleanProp,
+        respawnTime: commonSchemas.respawnTime,
         leverType: { type: 'string', enum: ['rotate', 'translate'], description: 'Lever movement type.' },
         moveDistance: { type: 'number', description: 'Distance for translation lever.' },
         moveTime: { type: 'number', description: 'Time for lever movement.' },
-
-        // Destructible parameters
         fractureMode: { type: 'string', enum: ['voronoi', 'uniform', 'radial', 'custom'], description: 'Fracture pattern type.' },
         fracturePieces: { type: 'number', description: 'Number of fracture pieces.' },
         enablePhysics: { type: 'boolean', description: 'Enable physics on destruction.' },
@@ -4433,10 +2813,10 @@ Utility:
           items: {
             type: 'object',
             properties: {
-              damageThreshold: { type: 'number' },
-              meshIndex: { type: 'number' },
-              enablePhysics: { type: 'boolean' },
-              removeAfterTime: { type: 'number' }
+              damageThreshold: commonSchemas.numberProp,
+              meshIndex: commonSchemas.numberProp,
+              enablePhysics: commonSchemas.booleanProp,
+              removeAfterTime: commonSchemas.numberProp
             }
           },
           description: 'Destruction level definitions.'
@@ -4448,19 +2828,17 @@ Utility:
         maxHealth: { type: 'number', description: 'Maximum health before destruction.' },
         damageThresholds: {
           type: 'array',
-          items: { type: 'number' },
+          items: commonSchemas.numberProp,
           description: 'Damage thresholds for destruction levels.'
         },
         impactDamageMultiplier: { type: 'number', description: 'Multiplier for impact damage.' },
         radialDamageMultiplier: { type: 'number', description: 'Multiplier for radial damage.' },
         autoDestroy: { type: 'boolean', description: 'Automatically destroy at zero health.' },
-
-        // Trigger parameters
         triggerPath: { type: 'string', description: 'Path to trigger actor blueprint.' },
         triggerShape: { type: 'string', enum: ['box', 'sphere', 'capsule'], description: 'Shape of trigger volume.' },
         size: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          properties: commonSchemas.vector3.properties,
           description: 'Size of trigger volume.'
         },
         filterByTag: { type: 'string', description: 'Actor tag filter for trigger.' },
@@ -4468,12 +2846,12 @@ Utility:
         filterByInterface: { type: 'string', description: 'Interface filter for trigger.' },
         ignoreClasses: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Classes to ignore in trigger.'
         },
         ignoreTags: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Tags to ignore in trigger.'
         },
         onEnterEvent: { type: 'string', description: 'Event dispatcher name for enter.' },
@@ -4481,7 +2859,7 @@ Utility:
         onStayEvent: { type: 'string', description: 'Event dispatcher name for stay.' },
         stayInterval: { type: 'number', description: 'Interval for stay events in seconds.' },
         responseType: { type: 'string', enum: ['once', 'repeatable', 'toggle'], description: 'How trigger responds.' },
-        cooldown: { type: 'number', description: 'Cooldown between activations in seconds.' },
+        cooldown: commonSchemas.cooldown,
         maxActivations: { type: 'number', description: 'Maximum number of activations (0 = unlimited).' }
       },
       required: ['action']
@@ -4489,138 +2867,42 @@ Utility:
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        assetPath: { type: 'string', description: 'Path to created/modified asset.' },
-        blueprintPath: { type: 'string', description: 'Path to created blueprint.' },
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        assetPath: commonSchemas.assetPath,
+        blueprintPath: commonSchemas.blueprintPath,
         interfacePath: { type: 'string', description: 'Path to created interface.' },
         componentAdded: { type: 'boolean', description: 'Whether component was added.' },
         interactionInfo: {
           type: 'object',
           properties: {
             assetType: { type: 'string', enum: ['Door', 'Switch', 'Chest', 'Lever', 'Trigger', 'Destructible', 'Component'] },
-            isLocked: { type: 'boolean' },
-            isOpen: { type: 'boolean' },
-            health: { type: 'number' },
-            maxHealth: { type: 'number' },
-            interactionEnabled: { type: 'boolean' },
-            triggerShape: { type: 'string' },
-            destructionLevel: { type: 'number' }
+            isLocked: commonSchemas.booleanProp,
+            isOpen: commonSchemas.booleanProp,
+            health: commonSchemas.numberProp,
+            maxHealth: commonSchemas.numberProp,
+            interactionEnabled: commonSchemas.booleanProp,
+            triggerShape: commonSchemas.stringProp,
+            destructionLevel: commonSchemas.numberProp
           },
           description: 'Interaction system info (for get_interaction_info).'
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // ============================================================================
-  // PHASE 19: COMPLETE UI/UX SYSTEM
-  // ============================================================================
   {
     name: 'manage_widget_authoring',
-    description: `Complete UMG widget authoring capabilities for creating and configuring UI systems in Unreal Engine.
-
-CAPABILITIES:
-- Widget Creation: Create widget blueprints with custom parent classes
-- Layout Panels: Canvas, horizontal/vertical boxes, overlays, grids, scroll boxes
-- Common Widgets: Text, images, buttons, sliders, checkboxes, input fields
-- Layout & Styling: Anchors, alignment, padding, transforms, visibility
-- Bindings & Events: Property bindings, click/hover/value change events
-- Widget Animations: Animation tracks, keyframes, looping
-- UI Templates: Main menus, pause menus, HUDs, inventory screens
-
-ACTIONS:
-Widget Creation:
-- create_widget_blueprint: Create new UUserWidget blueprint
-- set_widget_parent_class: Set parent class for widget
-
-Layout Panels:
-- add_canvas_panel: Add canvas panel container
-- add_horizontal_box: Add horizontal layout box
-- add_vertical_box: Add vertical layout box
-- add_overlay: Add overlay container
-- add_grid_panel: Add grid panel container
-- add_uniform_grid: Add uniform grid panel
-- add_wrap_box: Add wrap box container
-- add_scroll_box: Add scrollable container
-- add_size_box: Add size constraint box
-- add_scale_box: Add scaling container
-- add_border: Add border container
-
-Common Widgets:
-- add_text_block: Add text display widget
-- add_rich_text_block: Add rich text with styling
-- add_image: Add image widget
-- add_button: Add clickable button
-- add_check_box: Add checkbox widget
-- add_slider: Add slider widget
-- add_progress_bar: Add progress bar
-- add_text_input: Add text input field
-- add_combo_box: Add dropdown combo box
-- add_spin_box: Add numeric spinner
-- add_list_view: Add list view widget
-- add_tree_view: Add tree view widget
-
-Layout & Styling:
-- set_anchor: Set widget anchors
-- set_alignment: Set widget alignment
-- set_position: Set widget position
-- set_size: Set widget size
-- set_padding: Set widget padding
-- set_z_order: Set widget z-order
-- set_render_transform: Set render transform
-- set_visibility: Set widget visibility
-- set_style: Set widget styling
-- set_clipping: Set widget clipping mode
-
-Bindings & Events:
-- create_property_binding: Create property binding function
-- bind_text: Bind text to variable/function
-- bind_visibility: Bind visibility
-- bind_color: Bind color and opacity
-- bind_enabled: Bind enabled state
-- bind_on_clicked: Bind click event
-- bind_on_hovered: Bind hover events
-- bind_on_value_changed: Bind value change event
-
-Widget Animations:
-- create_widget_animation: Create animation
-- add_animation_track: Add animation track
-- add_animation_keyframe: Add keyframe
-- set_animation_loop: Configure looping
-
-UI Templates:
-- create_main_menu: Create main menu template
-- create_pause_menu: Create pause menu template
-- create_settings_menu: Create settings menu
-- create_loading_screen: Create loading screen
-- create_hud_widget: Create HUD template
-- add_health_bar: Add health bar element
-- add_ammo_counter: Add ammo counter
-- add_minimap: Add minimap element
-- add_crosshair: Add crosshair element
-- add_compass: Add compass element
-- add_interaction_prompt: Add interaction prompt
-- add_objective_tracker: Add objective tracker
-- add_damage_indicator: Add damage indicator
-- create_inventory_ui: Create inventory UI
-- create_dialog_widget: Create dialog widget
-- create_radial_menu: Create radial menu
-
-Utility:
-- get_widget_info: Query widget information
-- preview_widget: Preview widget in designer`,
+    category: 'utility',
+    description: 'Create UMG widgets: buttons, text, images, sliders. Configure layouts, bindings, animations. Build HUDs and menus.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Widget Creation
             'create_widget_blueprint',
             'set_widget_parent_class',
-            // Layout Panels
             'add_canvas_panel',
             'add_horizontal_box',
             'add_vertical_box',
@@ -4632,7 +2914,6 @@ Utility:
             'add_size_box',
             'add_scale_box',
             'add_border',
-            // Common Widgets
             'add_text_block',
             'add_rich_text_block',
             'add_image',
@@ -4645,7 +2926,6 @@ Utility:
             'add_spin_box',
             'add_list_view',
             'add_tree_view',
-            // Layout & Styling
             'set_anchor',
             'set_alignment',
             'set_position',
@@ -4656,7 +2936,6 @@ Utility:
             'set_visibility',
             'set_style',
             'set_clipping',
-            // Bindings & Events
             'create_property_binding',
             'bind_text',
             'bind_visibility',
@@ -4665,12 +2944,10 @@ Utility:
             'bind_on_clicked',
             'bind_on_hovered',
             'bind_on_value_changed',
-            // Widget Animations
             'create_widget_animation',
             'add_animation_track',
             'add_animation_keyframe',
             'set_animation_loop',
-            // UI Templates
             'create_main_menu',
             'create_pause_menu',
             'create_settings_menu',
@@ -4687,34 +2964,30 @@ Utility:
             'create_inventory_ui',
             'create_dialog_widget',
             'create_radial_menu',
-            // Utility
             'get_widget_info',
             'preview_widget'
           ],
           description: 'The widget authoring action to perform.'
         },
-        // Common parameters
-        name: { type: 'string', description: 'Name for created widget/asset.' },
-        folder: { type: 'string', description: 'Folder path for created asset.' },
-        widgetPath: { type: 'string', description: 'Path to target widget blueprint.' },
-        slotName: { type: 'string', description: 'Name of widget slot to target.' },
+        name: commonSchemas.name,
+        folder: commonSchemas.directoryPath,
+        widgetPath: commonSchemas.widgetPath,
+        slotName: commonSchemas.slotName,
         parentSlot: { type: 'string', description: 'Parent slot to add widget to.' },
-        parentClass: { type: 'string', description: 'Parent class for widget.' },
-
-        // Layout properties
+        parentClass: commonSchemas.parentClass,
         anchorMin: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          properties: commonSchemas.vector2.properties,
           description: 'Minimum anchor point (0-1).'
         },
         anchorMax: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          properties: commonSchemas.vector2.properties,
           description: 'Maximum anchor point (0-1).'
         },
         alignment: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          properties: commonSchemas.vector2.properties,
           description: 'Widget alignment (0-1).'
         },
         alignmentX: { type: 'number', description: 'Horizontal alignment (0-1).' },
@@ -4729,27 +3002,25 @@ Utility:
         right: { type: 'number', description: 'Right padding.' },
         bottom: { type: 'number', description: 'Bottom padding.' },
         zOrder: { type: 'number', description: 'Z-order for canvas slot.' },
-
-        // Transform properties
         translation: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          properties: commonSchemas.vector2.properties,
           description: 'Render translation.'
         },
         scale: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          properties: commonSchemas.vector2.properties,
           description: 'Render scale.'
         },
         shear: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          properties: commonSchemas.vector2.properties,
           description: 'Render shear.'
         },
-        angle: { type: 'number', description: 'Rotation angle in degrees.' },
+        angle: commonSchemas.angle,
         pivot: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          properties: commonSchemas.vector2.properties,
           description: 'Rotation/scale pivot.'
         },
         visibility: {
@@ -4762,14 +3033,12 @@ Utility:
           enum: ['Inherit', 'ClipToBounds', 'ClipToBoundsWithoutIntersecting', 'ClipToBoundsAlways', 'OnDemand'],
           description: 'Widget clipping mode.'
         },
-
-        // Widget properties
-        text: { type: 'string', description: 'Text content.' },
+        text: commonSchemas.text,
         font: { type: 'string', description: 'Font asset path.' },
         fontSize: { type: 'number', description: 'Font size.' },
         colorAndOpacity: {
           type: 'object',
-          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } },
+          properties: commonSchemas.colorObject.properties,
           description: 'Color and opacity (0-1 values).'
         },
         justification: {
@@ -4778,10 +3047,10 @@ Utility:
           description: 'Text justification.'
         },
         autoWrap: { type: 'boolean', description: 'Enable text auto-wrap.' },
-        texturePath: { type: 'string', description: 'Texture/image asset path.' },
+        texturePath: commonSchemas.texturePath,
         brushSize: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          properties: commonSchemas.vector2.properties,
           description: 'Brush/image size.'
         },
         brushTiling: {
@@ -4792,14 +3061,14 @@ Utility:
         isEnabled: { type: 'boolean', description: 'Widget enabled state.' },
         isChecked: { type: 'boolean', description: 'Checkbox checked state.' },
         value: { type: 'number', description: 'Slider/spinbox value.' },
-        minValue: { type: 'number', description: 'Minimum value.' },
-        maxValue: { type: 'number', description: 'Maximum value.' },
+        minValue: commonSchemas.minValue,
+        maxValue: commonSchemas.maxValue,
         stepSize: { type: 'number', description: 'Value step size.' },
         delta: { type: 'number', description: 'Spinbox increment.' },
         percent: { type: 'number', description: 'Progress bar percentage (0-1).' },
         fillColorAndOpacity: {
           type: 'object',
-          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } },
+          properties: commonSchemas.colorObject.properties,
           description: 'Fill color for progress bar.'
         },
         barFillType: {
@@ -4813,7 +3082,7 @@ Utility:
         isPassword: { type: 'boolean', description: 'Password masking.' },
         options: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Combo box options.'
         },
         selectedOption: { type: 'string', description: 'Selected combo box option.' },
@@ -4834,8 +3103,6 @@ Utility:
           description: 'Scroll bar visibility.'
         },
         alwaysShowScrollbar: { type: 'boolean', description: 'Always show scrollbar.' },
-
-        // Grid/layout panel properties
         columnCount: { type: 'number', description: 'Number of columns.' },
         rowCount: { type: 'number', description: 'Number of rows.' },
         slotPadding: { type: 'number', description: 'Padding between slots.' },
@@ -4861,7 +3128,7 @@ Utility:
         userSpecifiedScale: { type: 'number', description: 'User specified scale value.' },
         brushColor: {
           type: 'object',
-          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } },
+          properties: commonSchemas.colorObject.properties,
           description: 'Border brush color.'
         },
         padding: { type: 'number', description: 'Uniform padding.' },
@@ -4875,28 +3142,22 @@ Utility:
           enum: ['Fill', 'Top', 'Center', 'Bottom'],
           description: 'Vertical alignment.'
         },
-
-        // Styling properties
         color: {
           type: 'object',
-          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } },
+          properties: commonSchemas.colorObject.properties,
           description: 'Widget color.'
         },
         opacity: { type: 'number', description: 'Widget opacity (0-1).' },
         brush: { type: 'string', description: 'Brush asset path.' },
         backgroundImage: { type: 'string', description: 'Background image path.' },
         style: { type: 'string', description: 'Style preset name.' },
-
-        // Binding properties
-        propertyName: { type: 'string', description: 'Property to bind.' },
+        propertyName: commonSchemas.propertyName,
         bindingType: { type: 'string', enum: ['function', 'variable'], description: 'Binding type.' },
         bindingSource: { type: 'string', description: 'Variable or function name to bind to.' },
-        functionName: { type: 'string', description: 'Function to call on event.' },
+        functionName: commonSchemas.functionName,
         onHoveredFunction: { type: 'string', description: 'Function to call on hover.' },
         onUnhoveredFunction: { type: 'string', description: 'Function to call on unhover.' },
-
-        // Animation properties
-        animationName: { type: 'string', description: 'Name of widget animation.' },
+        animationName: commonSchemas.animationName,
         length: { type: 'number', description: 'Animation length in seconds.' },
         trackType: {
           type: 'string',
@@ -4915,8 +3176,6 @@ Utility:
           enum: ['forward', 'reverse', 'pingpong'],
           description: 'Animation play mode.'
         },
-
-        // Template properties
         includePlayButton: { type: 'boolean', description: 'Include play button in menu.' },
         includeSettingsButton: { type: 'boolean', description: 'Include settings button.' },
         includeQuitButton: { type: 'boolean', description: 'Include quit button.' },
@@ -4935,11 +3194,9 @@ Utility:
         titleText: { type: 'string', description: 'Menu title text.' },
         elements: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'HUD elements to include.'
         },
-
-        // HUD element properties
         barStyle: {
           type: 'string',
           enum: ['simple', 'segmented', 'radial'],
@@ -4948,7 +3205,7 @@ Utility:
         showNumbers: { type: 'boolean', description: 'Show numeric values.' },
         barColor: {
           type: 'object',
-          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } },
+          properties: commonSchemas.colorObject.properties,
           description: 'Bar color.'
         },
         ammoStyle: {
@@ -4986,10 +3243,10 @@ Utility:
           enum: ['directional', 'vignette', 'both'],
           description: 'Damage indicator style.'
         },
-        fadeTime: { type: 'number', description: 'Fade time in seconds.' },
+        fadeTime: commonSchemas.fadeTime,
         gridSize: {
           type: 'object',
-          properties: { columns: { type: 'number' }, rows: { type: 'number' } },
+          properties: { columns: commonSchemas.numberProp, rows: commonSchemas.numberProp },
           description: 'Inventory grid size.'
         },
         slotSize: { type: 'number', description: 'Inventory slot size.' },
@@ -5007,8 +3264,6 @@ Utility:
         outerRadius: { type: 'number', description: 'Outer radius of radial menu.' },
         showIcons: { type: 'boolean', description: 'Show icons in radial menu.' },
         showLabels: { type: 'boolean', description: 'Show labels in radial menu.' },
-
-        // Preview properties
         previewSize: {
           type: 'string',
           enum: ['1080p', '720p', 'mobile', 'custom'],
@@ -5022,107 +3277,74 @@ Utility:
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        widgetPath: { type: 'string', description: 'Path to created/modified widget.' },
-        slotName: { type: 'string', description: 'Name of created slot.' },
-        animationName: { type: 'string', description: 'Name of created animation.' },
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        widgetPath: commonSchemas.widgetPath,
+        slotName: commonSchemas.slotName,
+        animationName: commonSchemas.animationName,
         trackIndex: { type: 'number', description: 'Index of created track.' },
         keyframeIndex: { type: 'number', description: 'Index of created keyframe.' },
         bindingCreated: { type: 'boolean', description: 'Whether binding was created.' },
         widgetInfo: {
           type: 'object',
           properties: {
-            widgetClass: { type: 'string' },
-            parentClass: { type: 'string' },
-            slots: { type: 'array', items: { type: 'string' } },
-            animations: { type: 'array', items: { type: 'string' } },
-            variables: { type: 'array', items: { type: 'string' } },
-            functions: { type: 'array', items: { type: 'string' } },
-            eventDispatchers: { type: 'array', items: { type: 'string' } }
+            widgetClass: commonSchemas.stringProp,
+            parentClass: commonSchemas.stringProp,
+            slots: commonSchemas.arrayOfStrings,
+            animations: commonSchemas.arrayOfStrings,
+            variables: commonSchemas.arrayOfStrings,
+            functions: commonSchemas.arrayOfStrings,
+            eventDispatchers: commonSchemas.arrayOfStrings
           },
           description: 'Widget info (for get_widget_info).'
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // ============================================================================
-  // 34. Networking & Multiplayer (Phase 20)
-  // ============================================================================
   {
     name: 'manage_networking',
-    description: `Complete networking and replication system for multiplayer games.
-
-Use it when you need to:
-- configure property replication and conditions.
-- create RPC functions (Server, Client, NetMulticast).
-- manage authority and ownership.
-- configure network relevancy and culling.
-- set up network prediction and movement replication.
-- query networking information.
-
-Supported actions:
-- Replication: set_property_replicated, set_replication_condition, configure_net_update_frequency, configure_net_priority, set_net_dormancy, configure_replication_graph.
-- RPCs: create_rpc_function, configure_rpc_validation, set_rpc_reliability.
-- Authority & Ownership: set_owner, set_autonomous_proxy, check_has_authority, check_is_locally_controlled.
-- Network Relevancy: configure_net_cull_distance, set_always_relevant, set_only_relevant_to_owner.
-- Net Serialization: configure_net_serialization, set_replicated_using, configure_push_model.
-- Network Prediction: configure_client_prediction, configure_server_correction, add_network_prediction_data, configure_movement_prediction.
-- Connection & Session: configure_net_driver, set_net_role, configure_replicated_movement.
-- Utility: get_networking_info.`,
+    category: 'utility',
+    description: 'Configure multiplayer: property replication, RPCs (Server/Client/Multicast), authority, relevancy, and network prediction.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Replication (6)
             'set_property_replicated',
             'set_replication_condition',
             'configure_net_update_frequency',
             'configure_net_priority',
             'set_net_dormancy',
             'configure_replication_graph',
-            // RPCs (3)
             'create_rpc_function',
             'configure_rpc_validation',
             'set_rpc_reliability',
-            // Authority & Ownership (4)
             'set_owner',
             'set_autonomous_proxy',
             'check_has_authority',
             'check_is_locally_controlled',
-            // Network Relevancy (3)
             'configure_net_cull_distance',
             'set_always_relevant',
             'set_only_relevant_to_owner',
-            // Net Serialization (3)
             'configure_net_serialization',
             'set_replicated_using',
             'configure_push_model',
-            // Network Prediction (4)
             'configure_client_prediction',
             'configure_server_correction',
             'add_network_prediction_data',
             'configure_movement_prediction',
-            // Connection & Session (3)
             'configure_net_driver',
             'set_net_role',
             'configure_replicated_movement',
-            // Utility (1)
             'get_networking_info'
           ],
           description: 'Networking action to perform'
         },
-
-        // -- Asset/Actor Identification --
-        blueprintPath: { type: 'string', description: 'Path to blueprint asset (e.g., /Game/Blueprints/BP_MyActor).' },
-        actorName: { type: 'string', description: 'Name of runtime actor in level.' },
-
-        // -- Property Replication --
-        propertyName: { type: 'string', description: 'Name of property to configure.' },
+        blueprintPath: commonSchemas.blueprintPath,
+        actorName: commonSchemas.actorName,
+        propertyName: commonSchemas.propertyName,
         replicated: { type: 'boolean', description: 'Whether property should be replicated.' },
         condition: {
           type: 'string',
@@ -5145,16 +3367,10 @@ Supported actions:
           ],
           description: 'Replication condition.'
         },
-        repNotifyFunc: { type: 'string', description: 'RepNotify function name for ReplicatedUsing.' },
-
-        // -- Net Update Frequency --
+        repNotifyFunc: commonSchemas.repNotifyFunc,
         netUpdateFrequency: { type: 'number', description: 'How often actor replicates (Hz, default 100).' },
         minNetUpdateFrequency: { type: 'number', description: 'Minimum update frequency when idle (Hz, default 2).' },
-
-        // -- Net Priority --
         netPriority: { type: 'number', description: 'Network priority for bandwidth (default 1.0).' },
-
-        // -- Net Dormancy --
         dormancy: {
           type: 'string',
           enum: [
@@ -5166,58 +3382,44 @@ Supported actions:
           ],
           description: 'Net dormancy mode.'
         },
-
-        // -- Replication Graph --
-        nodeClass: { type: 'string', description: 'Custom replication graph node class.' },
+        nodeClass: commonSchemas.nodeClass,
         spatialBias: { type: 'number', description: 'Spatial bias for replication graph.' },
         defaultSettingsClass: { type: 'string', description: 'Default replication settings class.' },
-
-        // -- RPC Creation --
-        functionName: { type: 'string', description: 'Name of RPC function.' },
+        functionName: commonSchemas.functionName,
         rpcType: {
           type: 'string',
           enum: ['Server', 'Client', 'NetMulticast'],
           description: 'Type of RPC.'
         },
-        reliable: { type: 'boolean', description: 'Whether RPC is reliable.' },
+        reliable: commonSchemas.reliable,
         parameters: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
-              name: { type: 'string' },
-              type: { type: 'string' }
+              name: commonSchemas.stringProp,
+              type: commonSchemas.stringProp
             }
           },
           description: 'RPC function parameters.'
         },
         returnType: { type: 'string', description: 'RPC return type (usually void).' },
-
-        // -- RPC Validation --
         validationFunctionName: { type: 'string', description: 'Name of validation function.' },
         withValidation: { type: 'boolean', description: 'Enable RPC validation.' },
-
-        // -- Authority & Ownership --
         ownerActorName: { type: 'string', description: 'Name of owner actor (null to clear).' },
         isAutonomousProxy: { type: 'boolean', description: 'Configure as autonomous proxy.' },
-
-        // -- Network Relevancy --
         netCullDistanceSquared: { type: 'number', description: 'Network cull distance squared.' },
         useOwnerNetRelevancy: { type: 'boolean', description: 'Use owner relevancy.' },
         alwaysRelevant: { type: 'boolean', description: 'Always relevant to all clients.' },
         onlyRelevantToOwner: { type: 'boolean', description: 'Only relevant to owner.' },
-
-        // -- Net Serialization --
         structName: { type: 'string', description: 'Name of struct for custom serialization.' },
         useNetSerialize: { type: 'boolean', description: 'Use custom NetSerialize.' },
         usePushModel: { type: 'boolean', description: 'Use push-model replication.' },
         propertyNames: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Properties for push model.'
         },
-
-        // -- Network Prediction --
         enablePrediction: { type: 'boolean', description: 'Enable client-side prediction.' },
         predictionKey: { type: 'string', description: 'Prediction key identifier.' },
         correctionThreshold: { type: 'number', description: 'Server correction threshold.' },
@@ -5232,14 +3434,12 @@ Supported actions:
           items: {
             type: 'object',
             properties: {
-              name: { type: 'string' },
-              type: { type: 'string' }
+              name: commonSchemas.stringProp,
+              type: commonSchemas.stringProp
             }
           },
           description: 'Predicted properties.'
         },
-
-        // -- Movement Prediction --
         networkSmoothingMode: {
           type: 'string',
           enum: ['Disabled', 'Linear', 'Exponential'],
@@ -5247,20 +3447,14 @@ Supported actions:
         },
         networkMaxSmoothUpdateDistance: { type: 'number', description: 'Max smooth update distance.' },
         networkNoSmoothUpdateDistance: { type: 'number', description: 'No smooth update distance.' },
-
-        // -- Net Driver --
         maxClientRate: { type: 'number', description: 'Max client rate.' },
         maxInternetClientRate: { type: 'number', description: 'Max internet client rate.' },
         netServerMaxTickRate: { type: 'number', description: 'Server max tick rate.' },
-
-        // -- Net Role --
         role: {
           type: 'string',
           enum: ['ROLE_None', 'ROLE_SimulatedProxy', 'ROLE_AutonomousProxy', 'ROLE_Authority'],
           description: 'Net role.'
         },
-
-        // -- Replicated Movement --
         replicateMovement: { type: 'boolean', description: 'Replicate movement.' },
         replicatedMovementMode: {
           type: 'string',
@@ -5272,18 +3466,16 @@ Supported actions:
           enum: ['RoundWholeNumber', 'RoundOneDecimal', 'RoundTwoDecimals'],
           description: 'Location quantization level.'
         },
-
-        // -- Options --
-        save: { type: 'boolean', description: 'Save asset after operation.' }
+        save: commonSchemas.save
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        blueprintPath: { type: 'string', description: 'Path to modified blueprint.' },
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        blueprintPath: commonSchemas.blueprintPath,
         functionName: { type: 'string', description: 'Created RPC function name.' },
         hasAuthority: { type: 'boolean', description: 'Authority check result.' },
         isLocallyControlled: { type: 'boolean', description: 'Local control check result.' },
@@ -5292,22 +3484,22 @@ Supported actions:
         networkingInfo: {
           type: 'object',
           properties: {
-            bReplicates: { type: 'boolean' },
-            bAlwaysRelevant: { type: 'boolean' },
-            bOnlyRelevantToOwner: { type: 'boolean' },
-            netUpdateFrequency: { type: 'number' },
-            minNetUpdateFrequency: { type: 'number' },
-            netPriority: { type: 'number' },
-            netDormancy: { type: 'string' },
-            netCullDistanceSquared: { type: 'number' },
+            bReplicates: commonSchemas.booleanProp,
+            bAlwaysRelevant: commonSchemas.booleanProp,
+            bOnlyRelevantToOwner: commonSchemas.booleanProp,
+            netUpdateFrequency: commonSchemas.numberProp,
+            minNetUpdateFrequency: commonSchemas.numberProp,
+            netPriority: commonSchemas.numberProp,
+            netDormancy: commonSchemas.stringProp,
+            netCullDistanceSquared: commonSchemas.numberProp,
             replicatedProperties: {
               type: 'array',
               items: {
                 type: 'object',
                 properties: {
-                  name: { type: 'string' },
-                  condition: { type: 'string' },
-                  repNotifyFunc: { type: 'string' }
+                  name: commonSchemas.stringProp,
+                  condition: commonSchemas.stringProp,
+                  repNotifyFunc: commonSchemas.stringProp
                 }
               }
             },
@@ -5316,71 +3508,46 @@ Supported actions:
               items: {
                 type: 'object',
                 properties: {
-                  name: { type: 'string' },
-                  type: { type: 'string' },
-                  reliable: { type: 'boolean' }
+                  name: commonSchemas.stringProp,
+                  type: commonSchemas.stringProp,
+                  reliable: commonSchemas.booleanProp
                 }
               }
             }
           },
           description: 'Networking info (for get_networking_info).'
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // ============================================================================
-  // 33. GAME FRAMEWORK MANAGER (Phase 21)
-  // ============================================================================
   {
     name: 'manage_game_framework',
-    description: `Complete game mode and session management. Create and configure GameMode, GameState, PlayerController, PlayerState, GameInstance, and HUD Blueprints. Setup match flow, teams, scoring, and player spawning.
-
-Use it when you need to:
-- Create game framework Blueprints (GameMode, GameState, PlayerController, etc.).
-- Configure game mode settings (default pawn, controllers, states).
-- Setup match flow (match states, rounds, teams, scoring).
-- Configure player management (spawning, respawning, spectating).
-
-Supported actions:
-- Core Classes: create_game_mode, create_game_state, create_player_controller, create_player_state, create_game_instance, create_hud_class.
-- Game Mode Config: set_default_pawn_class, set_player_controller_class, set_game_state_class, set_player_state_class, configure_game_rules.
-- Match Flow: setup_match_states, configure_round_system, configure_team_system, configure_scoring_system, configure_spawn_system.
-- Player Management: configure_player_start, set_respawn_rules, configure_spectating.
-- Utility: get_game_framework_info.`,
+    category: 'utility',
+    description: 'Create GameMode, GameState, PlayerController, PlayerState Blueprints. Configure match flow, teams, scoring, and spawning.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Core Classes (6)
             'create_game_mode', 'create_game_state', 'create_player_controller',
             'create_player_state', 'create_game_instance', 'create_hud_class',
-            // Game Mode Configuration (5)
             'set_default_pawn_class', 'set_player_controller_class',
             'set_game_state_class', 'set_player_state_class', 'configure_game_rules',
-            // Match Flow (5)
             'setup_match_states', 'configure_round_system', 'configure_team_system',
             'configure_scoring_system', 'configure_spawn_system',
-            // Player Management (3)
             'configure_player_start', 'set_respawn_rules', 'configure_spectating',
-            // Utility (1)
             'get_game_framework_info'
           ],
           description: 'Game framework action to perform.'
         },
-
-        // Asset identification
-        name: { type: 'string', description: 'Name of new blueprint.' },
-        path: { type: 'string', description: 'Directory to create blueprint in (e.g., /Game/Blueprints).' },
+        name: commonSchemas.name,
+        path: commonSchemas.directoryPathForCreation,
         gameModeBlueprint: { type: 'string', description: 'Path to GameMode blueprint to configure.' },
-        blueprintPath: { type: 'string', description: 'Path to blueprint (alternative to gameModeBlueprint).' },
-        levelPath: { type: 'string', description: 'Path to level for info queries.' },
-
-        // Class references
-        parentClass: { type: 'string', description: 'Parent class for blueprint creation.' },
+        blueprintPath: commonSchemas.blueprintPath,
+        levelPath: commonSchemas.levelPath,
+        parentClass: commonSchemas.parentClass,
         pawnClass: { type: 'string', description: 'Pawn class to use.' },
         defaultPawnClass: { type: 'string', description: 'Default pawn class for GameMode.' },
         playerControllerClass: { type: 'string', description: 'PlayerController class path.' },
@@ -5388,51 +3555,39 @@ Supported actions:
         playerStateClass: { type: 'string', description: 'PlayerState class path.' },
         spectatorClass: { type: 'string', description: 'Spectator pawn class.' },
         hudClass: { type: 'string', description: 'HUD class path.' },
-
-        // Game rules
-        timeLimit: { type: 'number', description: 'Match time limit in seconds (0 = unlimited).' },
-        scoreLimit: { type: 'number', description: 'Score limit to win (0 = unlimited).' },
+        timeLimit: commonSchemas.numberProp,
+        scoreLimit: commonSchemas.numberProp,
         bDelayedStart: { type: 'boolean', description: 'Whether to delay match start.' },
-        startPlayersNeeded: { type: 'number', description: 'Minimum players needed to start.' },
-
-        // Match states
+        startPlayersNeeded: commonSchemas.numberProp,
         states: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
               name: { type: 'string', enum: ['waiting', 'warmup', 'in_progress', 'post_match', 'custom'] },
-              duration: { type: 'number', description: 'Duration in seconds (0 = manual transition).' },
+              duration: commonSchemas.duration,
               customName: { type: 'string', description: 'Custom state name if name is "custom".' }
             }
           },
           description: 'Match state definitions.'
         },
-
-        // Round system
-        numRounds: { type: 'number', description: 'Number of rounds (0 = unlimited).' },
-        roundTime: { type: 'number', description: 'Time per round in seconds.' },
-        intermissionTime: { type: 'number', description: 'Time between rounds in seconds.' },
-
-        // Team system
-        numTeams: { type: 'number', description: 'Number of teams (0 = FFA).' },
-        teamSize: { type: 'number', description: 'Maximum players per team.' },
+        numRounds: commonSchemas.numberProp,
+        roundTime: commonSchemas.numberProp,
+        intermissionTime: commonSchemas.numberProp,
+        numTeams: commonSchemas.numberProp,
+        teamSize: commonSchemas.numberProp,
         autoBalance: { type: 'boolean', description: 'Enable automatic team balancing.' },
         friendlyFire: { type: 'boolean', description: 'Enable friendly fire damage.' },
         teamIndex: { type: 'number', description: 'Team index for PlayerStart.' },
-
-        // Scoring
         scorePerKill: { type: 'number', description: 'Points awarded per kill.' },
         scorePerObjective: { type: 'number', description: 'Points awarded per objective.' },
         scorePerAssist: { type: 'number', description: 'Points awarded per assist.' },
-
-        // Spawn system
         spawnSelectionMethod: {
           type: 'string',
           enum: ['Random', 'RoundRobin', 'FarthestFromEnemies'],
           description: 'How to select spawn points.'
         },
-        respawnDelay: { type: 'number', description: 'Delay before respawn in seconds.' },
+        respawnDelay: commonSchemas.numberProp,
         respawnLocation: {
           type: 'string',
           enum: ['PlayerStart', 'LastDeath', 'TeamBase'],
@@ -5440,147 +3595,105 @@ Supported actions:
         },
         respawnConditions: {
           type: 'array',
-          items: { type: 'string' },
+          items: commonSchemas.stringProp,
           description: 'Conditions for respawn (e.g., "RoundEnd", "Manual").'
         },
         usePlayerStarts: { type: 'boolean', description: 'Use PlayerStart actors.' },
-
-        // PlayerStart configuration
         location: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          properties: commonSchemas.vector3.properties,
           description: 'Spawn location.'
         },
         rotation: {
           type: 'object',
-          properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } },
+          properties: commonSchemas.rotation.properties,
           description: 'Spawn rotation.'
         },
         bPlayerOnly: { type: 'boolean', description: 'Restrict to players only.' },
-
-        // Spectating
         allowSpectating: { type: 'boolean', description: 'Allow spectator mode.' },
         spectatorViewMode: {
           type: 'string',
           enum: ['FreeCam', 'ThirdPerson', 'FirstPerson', 'DeathCam'],
           description: 'Spectator view mode.'
         },
-
-        // Options
-        save: { type: 'boolean', description: 'Save asset after operation.' }
+        save: commonSchemas.save
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        blueprintPath: { type: 'string', description: 'Path to created/modified blueprint.' },
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        blueprintPath: commonSchemas.blueprintPath,
         gameFrameworkInfo: {
           type: 'object',
           properties: {
-            gameModeClass: { type: 'string' },
-            gameStateClass: { type: 'string' },
-            playerControllerClass: { type: 'string' },
-            playerStateClass: { type: 'string' },
-            defaultPawnClass: { type: 'string' },
-            hudClass: { type: 'string' },
-            spectatorClass: { type: 'string' },
-            matchState: { type: 'string' },
-            numTeams: { type: 'number' },
-            timeLimit: { type: 'number' },
-            scoreLimit: { type: 'number' }
+            gameModeClass: commonSchemas.stringProp,
+            gameStateClass: commonSchemas.stringProp,
+            playerControllerClass: commonSchemas.stringProp,
+            playerStateClass: commonSchemas.stringProp,
+            defaultPawnClass: commonSchemas.stringProp,
+            hudClass: commonSchemas.stringProp,
+            spectatorClass: commonSchemas.stringProp,
+            matchState: commonSchemas.stringProp,
+            numTeams: commonSchemas.numberProp,
+            timeLimit: commonSchemas.numberProp,
+            scoreLimit: commonSchemas.numberProp
           },
           description: 'Game framework information (for get_game_framework_info).'
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // ============================================================================
-  // 34. SESSIONS & LOCAL MULTIPLAYER (Phase 22)
-  // ============================================================================
   {
     name: 'manage_sessions',
-    description: `Session management and local multiplayer support for split-screen, LAN play, and voice chat.
-
-Use it when you need to:
-- Configure local session settings and session interfaces.
-- Set up split-screen multiplayer with various layouts.
-- Manage local players (add/remove controllers).
-- Configure LAN play, host and join LAN servers.
-- Set up voice chat with channels, attenuation, and push-to-talk.
-
-Supported actions:
-- Session Management: configure_local_session_settings, configure_session_interface.
-- Local Multiplayer: configure_split_screen, set_split_screen_type, add_local_player, remove_local_player.
-- LAN: configure_lan_play, host_lan_server, join_lan_server.
-- Voice Chat: enable_voice_chat, configure_voice_settings, set_voice_channel, mute_player, set_voice_attenuation, configure_push_to_talk.
-- Utility: get_sessions_info.`,
+    category: 'utility',
+    description: 'Configure local multiplayer: split-screen layouts, LAN hosting/joining, voice chat channels, and push-to-talk.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Session Management (2)
             'configure_local_session_settings', 'configure_session_interface',
-            // Local Multiplayer (4)
             'configure_split_screen', 'set_split_screen_type', 'add_local_player', 'remove_local_player',
-            // LAN (3)
             'configure_lan_play', 'host_lan_server', 'join_lan_server',
-            // Voice Chat (6)
             'enable_voice_chat', 'configure_voice_settings', 'set_voice_channel',
             'mute_player', 'set_voice_attenuation', 'configure_push_to_talk',
-            // Utility (1)
             'get_sessions_info'
           ],
           description: 'Sessions action to perform.'
         },
-
-        // Session identification
-        sessionName: { type: 'string', description: 'Name of the session.' },
-        sessionId: { type: 'string', description: 'Session ID for existing sessions.' },
-
-        // Local session settings
-        maxPlayers: { type: 'number', description: 'Maximum players allowed in session.' },
+        sessionName: commonSchemas.sessionName,
+        sessionId: commonSchemas.sessionId,
+        maxPlayers: commonSchemas.numberProp,
         bIsLANMatch: { type: 'boolean', description: 'Whether this is a LAN match.' },
         bAllowJoinInProgress: { type: 'boolean', description: 'Allow joining games in progress.' },
         bAllowInvites: { type: 'boolean', description: 'Allow player invites.' },
         bUsesPresence: { type: 'boolean', description: 'Use presence for session discovery.' },
         bUseLobbiesIfAvailable: { type: 'boolean', description: 'Use lobby system if available.' },
         bShouldAdvertise: { type: 'boolean', description: 'Advertise session publicly.' },
-
-        // Session interface
         interfaceType: {
           type: 'string',
           enum: ['Default', 'LAN', 'Null'],
           description: 'Type of session interface to use.'
         },
-
-        // Split-screen configuration
-        enabled: { type: 'boolean', description: 'Enable/disable feature.' },
+        enabled: commonSchemas.enabled,
         splitScreenType: {
           type: 'string',
           enum: ['None', 'TwoPlayer_Horizontal', 'TwoPlayer_Vertical', 'ThreePlayer_FavorTop', 'ThreePlayer_FavorBottom', 'FourPlayer_Grid'],
           description: 'Split-screen layout type.'
         },
-
-        // Local player management
-        playerIndex: { type: 'number', description: 'Index of local player.' },
-        controllerId: { type: 'number', description: 'Controller ID to assign.' },
-
-        // LAN settings
-        serverAddress: { type: 'string', description: 'Server IP address to connect to.' },
-        serverPort: { type: 'number', description: 'Server port number.' },
+        playerIndex: commonSchemas.numberProp,
+        controllerId: commonSchemas.numberProp,
+        serverAddress: commonSchemas.serverAddress,
+        serverPort: commonSchemas.numberProp,
         serverPassword: { type: 'string', description: 'Server password for protected games.' },
         serverName: { type: 'string', description: 'Display name for the server.' },
         mapName: { type: 'string', description: 'Map to load for hosting.' },
         travelOptions: { type: 'string', description: 'Travel URL options string.' },
-
-        // Voice chat settings
         voiceEnabled: { type: 'boolean', description: 'Enable/disable voice chat.' },
         voiceSettings: {
           type: 'object',
@@ -5593,23 +3706,17 @@ Supported actions:
           },
           description: 'Voice processing settings.'
         },
-        channelName: { type: 'string', description: 'Voice channel name.' },
+        channelName: commonSchemas.channelName,
         channelType: {
           type: 'string',
           enum: ['Team', 'Global', 'Proximity', 'Party'],
           description: 'Voice channel type.'
         },
-
-        // Player targeting for voice operations
         playerName: { type: 'string', description: 'Player name for voice operations.' },
         targetPlayerId: { type: 'string', description: 'Target player ID.' },
-        muted: { type: 'boolean', description: 'Mute state for player.' },
-
-        // Voice attenuation
+        muted: commonSchemas.muted,
         attenuationRadius: { type: 'number', description: 'Radius for voice attenuation (Proximity chat).' },
         attenuationFalloff: { type: 'number', description: 'Falloff rate for voice attenuation.' },
-
-        // Push-to-talk
         pushToTalkEnabled: { type: 'boolean', description: 'Enable push-to-talk mode.' },
         pushToTalkKey: { type: 'string', description: 'Key binding for push-to-talk.' }
       },
@@ -5618,94 +3725,64 @@ Supported actions:
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        sessionId: { type: 'string', description: 'ID of created/modified session.' },
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        sessionId: commonSchemas.sessionId,
         sessionName: { type: 'string', description: 'Name of created session.' },
         playerIndex: { type: 'number', description: 'Index of added local player.' },
-        serverAddress: { type: 'string', description: 'Address of hosted/joined server.' },
+        serverAddress: commonSchemas.serverAddress,
         channelName: { type: 'string', description: 'Voice channel name.' },
         sessionsInfo: {
           type: 'object',
           properties: {
-            currentSessionName: { type: 'string' },
-            isLANMatch: { type: 'boolean' },
-            maxPlayers: { type: 'number' },
-            currentPlayers: { type: 'number' },
-            localPlayerCount: { type: 'number' },
-            splitScreenEnabled: { type: 'boolean' },
-            splitScreenType: { type: 'string' },
-            voiceChatEnabled: { type: 'boolean' },
+            currentSessionName: commonSchemas.stringProp,
+            isLANMatch: commonSchemas.booleanProp,
+            maxPlayers: commonSchemas.numberProp,
+            currentPlayers: commonSchemas.numberProp,
+            localPlayerCount: commonSchemas.numberProp,
+            splitScreenEnabled: commonSchemas.booleanProp,
+            splitScreenType: commonSchemas.stringProp,
+            voiceChatEnabled: commonSchemas.booleanProp,
             activeVoiceChannels: {
               type: 'array',
-              items: { type: 'string' }
+              items: commonSchemas.stringProp
             },
-            isHosting: { type: 'boolean' },
-            connectedServerAddress: { type: 'string' }
+            isHosting: commonSchemas.booleanProp,
+            connectedServerAddress: commonSchemas.stringProp
           },
           description: 'Sessions information (for get_sessions_info).'
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // ============================================================================
-  // 35. LEVEL STRUCTURE (Phase 23)
-  // ============================================================================
   {
     name: 'manage_level_structure',
-    description: `Level and world structure management for levels, World Partition, and level instances.
-
-Use it when you need to:
-- Create new levels and sublevels with streaming configuration.
-- Configure World Partition settings including grid size and data layers.
-- Manage HLOD layers and minimap volumes.
-- Work with Level Blueprints (open, add nodes, connect nodes).
-- Create level instances and packed level actors.
-
-Supported actions:
-- Levels: create_level, create_sublevel, configure_level_streaming, set_streaming_distance, configure_level_bounds.
-- World Partition: enable_world_partition, configure_grid_size, create_data_layer, assign_actor_to_data_layer, configure_hlod_layer, create_minimap_volume.
-- Level Blueprint: open_level_blueprint, add_level_blueprint_node, connect_level_blueprint_nodes.
-- Level Instances: create_level_instance, create_packed_level_actor.
-- Utility: get_level_structure_info.`,
+    category: 'world',
+    description: 'Create levels and sublevels. Configure World Partition, streaming, data layers, HLOD, and level instances.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Levels (5)
             'create_level', 'create_sublevel', 'configure_level_streaming',
             'set_streaming_distance', 'configure_level_bounds',
-            // World Partition (6)
             'enable_world_partition', 'configure_grid_size', 'create_data_layer',
             'assign_actor_to_data_layer', 'configure_hlod_layer', 'create_minimap_volume',
-            // Level Blueprint (3)
             'open_level_blueprint', 'add_level_blueprint_node', 'connect_level_blueprint_nodes',
-            // Level Instances (2)
             'create_level_instance', 'create_packed_level_actor',
-            // Utility (1)
             'get_level_structure_info'
           ],
           description: 'Level structure action to perform.'
         },
-
-        // Level identification
-        levelName: { type: 'string', description: 'Name of the level.' },
-        levelPath: { type: 'string', description: 'Path to the level asset.' },
-        parentLevel: { type: 'string', description: 'Parent level for sublevel creation.' },
-
-        // Level creation
-        templateLevel: { type: 'string', description: 'Template level to copy from.' },
+        levelName: commonSchemas.stringProp,
+        levelPath: commonSchemas.levelPath,
+        parentLevel: commonSchemas.parentLevel,
+        templateLevel: commonSchemas.templateLevel,
         bCreateWorldPartition: { type: 'boolean', description: 'Create with World Partition enabled.' },
-
-        // Sublevel configuration
-        sublevelName: { type: 'string', description: 'Name of the sublevel.' },
-        sublevelPath: { type: 'string', description: 'Path to the sublevel asset.' },
-
-        // Level streaming
+        sublevelName: commonSchemas.sublevelName,
+        sublevelPath: commonSchemas.levelPath,
         streamingMethod: {
           type: 'string',
           enum: ['Blueprint', 'AlwaysLoaded', 'Disabled'],
@@ -5714,8 +3791,6 @@ Supported actions:
         bShouldBeVisible: { type: 'boolean', description: 'Level should be visible when loaded.' },
         bShouldBlockOnLoad: { type: 'boolean', description: 'Block game until level is loaded.' },
         bDisableDistanceStreaming: { type: 'boolean', description: 'Disable distance-based streaming.' },
-
-        // Streaming distance (creates ALevelStreamingVolume)
         streamingDistance: { type: 'number', description: 'Distance/radius for streaming volume (creates ALevelStreamingVolume).' },
         streamingUsage: {
           type: 'string',
@@ -5723,31 +3798,25 @@ Supported actions:
           description: 'Streaming volume usage mode (default: LoadingAndVisibility).'
         },
         createVolume: { type: 'boolean', description: 'Create a streaming volume (true) or just report existing volumes (false). Default: true.' },
-
-        // Level bounds
         boundsOrigin: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Origin of level bounds.'
         },
         boundsExtent: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Extent of level bounds.'
         },
         bAutoCalculateBounds: { type: 'boolean', description: 'Auto-calculate bounds from content.' },
-
-        // World Partition
         bEnableWorldPartition: { type: 'boolean', description: 'Enable World Partition for level.' },
         gridCellSize: { type: 'number', description: 'World Partition grid cell size.' },
         loadingRange: { type: 'number', description: 'Loading range for grid cells.' },
-
-        // Data layers
-        dataLayerName: { type: 'string', description: 'Name of the data layer.' },
+        dataLayerName: commonSchemas.dataLayerName,
         dataLayerLabel: { type: 'string', description: 'Display label for the data layer.' },
         bIsInitiallyVisible: { type: 'boolean', description: 'Data layer initially visible.' },
         bIsInitiallyLoaded: { type: 'boolean', description: 'Data layer initially loaded.' },
@@ -5756,234 +3825,176 @@ Supported actions:
           enum: ['Runtime', 'Editor'],
           description: 'Type of data layer.'
         },
-
-        // Actor assignment to data layer
-        actorName: { type: 'string', description: 'Name of actor to assign to data layer.' },
-        actorPath: { type: 'string', description: 'Path to the actor.' },
-
-        // HLOD configuration
+        actorName: commonSchemas.actorName,
+        actorPath: commonSchemas.actorPath,
         hlodLayerName: { type: 'string', description: 'Name of the HLOD layer.' },
-        hlodLayerPath: { type: 'string', description: 'Path to the HLOD layer asset.' },
+        hlodLayerPath: commonSchemas.hlodLayerPath,
         bIsSpatiallyLoaded: { type: 'boolean', description: 'HLOD is spatially loaded.' },
         cellSize: { type: 'number', description: 'HLOD cell size.' },
         loadingDistance: { type: 'number', description: 'HLOD loading distance.' },
-
-        // Minimap volume
-        volumeName: { type: 'string', description: 'Name of the minimap volume.' },
+        volumeName: commonSchemas.volumeName,
         volumeLocation: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Location of the volume.'
         },
         volumeExtent: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Extent of the volume.'
         },
-
-        // Level Blueprint
-        nodeClass: { type: 'string', description: 'Class of node to add to Level Blueprint.' },
+        nodeClass: commonSchemas.nodeClass,
         nodePosition: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp
           },
           description: 'Position of node in graph.'
         },
-        nodeName: { type: 'string', description: 'Name of the node.' },
-
-        // Node connections
-        sourceNodeName: { type: 'string', description: 'Source node for connection.' },
-        sourcePinName: { type: 'string', description: 'Source pin name.' },
-        targetNodeName: { type: 'string', description: 'Target node for connection.' },
-        targetPinName: { type: 'string', description: 'Target pin name.' },
-
-        // Level instances
-        levelInstanceName: { type: 'string', description: 'Name of the level instance.' },
+        nodeName: commonSchemas.nodeName,
+        sourceNodeName: commonSchemas.sourceNode,
+        sourcePinName: commonSchemas.sourcePin,
+        targetNodeName: commonSchemas.targetNode,
+        targetPinName: commonSchemas.targetPin,
+        levelInstanceName: commonSchemas.levelInstanceName,
         levelAssetPath: { type: 'string', description: 'Path to the level asset for instancing.' },
         instanceLocation: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Location of the level instance.'
         },
         instanceRotation: {
           type: 'object',
           properties: {
-            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+            pitch: commonSchemas.numberProp, yaw: commonSchemas.numberProp, roll: commonSchemas.numberProp
           },
           description: 'Rotation of the level instance.'
         },
         instanceScale: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Scale of the level instance.'
         },
-
-        // Packed level actor
         packedLevelName: { type: 'string', description: 'Name for the packed level actor.' },
         bPackBlueprints: { type: 'boolean', description: 'Include blueprints in packed level.' },
         bPackStaticMeshes: { type: 'boolean', description: 'Include static meshes in packed level.' },
-
-        // Save option
-        save: { type: 'boolean', description: 'Save after operation.' }
+        save: commonSchemas.save
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        levelPath: { type: 'string', description: 'Path to created/modified level.' },
-        sublevelPath: { type: 'string', description: 'Path to created sublevel.' },
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        levelPath: commonSchemas.levelPath,
+        sublevelPath: commonSchemas.levelPath,
         dataLayerName: { type: 'string', description: 'Name of created data layer.' },
-        hlodLayerPath: { type: 'string', description: 'Path to created HLOD layer.' },
-        nodeName: { type: 'string', description: 'Name of created blueprint node.' },
-        levelInstanceName: { type: 'string', description: 'Name of created level instance.' },
+        hlodLayerPath: commonSchemas.hlodLayerPath,
+        nodeName: commonSchemas.nodeName,
+        levelInstanceName: commonSchemas.levelInstanceName,
         levelStructureInfo: {
           type: 'object',
           properties: {
-            currentLevel: { type: 'string' },
-            sublevelCount: { type: 'number' },
+            currentLevel: commonSchemas.stringProp,
+            sublevelCount: commonSchemas.numberProp,
             sublevels: {
               type: 'array',
-              items: { type: 'string' }
+              items: commonSchemas.stringProp
             },
-            worldPartitionEnabled: { type: 'boolean' },
-            gridCellSize: { type: 'number' },
+            worldPartitionEnabled: commonSchemas.booleanProp,
+            gridCellSize: commonSchemas.numberProp,
             dataLayers: {
               type: 'array',
-              items: { type: 'string' }
+              items: commonSchemas.stringProp
             },
             hlodLayers: {
               type: 'array',
-              items: { type: 'string' }
+              items: commonSchemas.stringProp
             },
             levelInstances: {
               type: 'array',
-              items: { type: 'string' }
+              items: commonSchemas.stringProp
             }
           },
           description: 'Level structure information (for get_level_structure_info).'
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // 38. VOLUMES & ZONES (Phase 24)
   {
     name: 'manage_volumes',
-    description: `Complete volume and trigger system management.
-
-Use it when you need to:
-- create trigger volumes for gameplay events.
-- add blocking volumes, kill zones, or pain-causing areas.
-- configure audio/reverb volumes for sound propagation.
-- set up navigation volumes for AI pathfinding.
-- manage rendering volumes (cull distance, lightmass, visibility).
-
-Supported actions:
-- Trigger Volumes: create_trigger_volume, create_trigger_box, create_trigger_sphere, create_trigger_capsule.
-- Gameplay Volumes: create_blocking_volume, create_kill_z_volume, create_pain_causing_volume, create_physics_volume.
-- Audio Volumes: create_audio_volume, create_reverb_volume.
-- Rendering Volumes: create_cull_distance_volume, create_precomputed_visibility_volume, create_lightmass_importance_volume.
-- Navigation Volumes: create_nav_mesh_bounds_volume, create_nav_modifier_volume, create_camera_blocking_volume.
-- Configuration: set_volume_extent, set_volume_properties.
-- Utility: get_volumes_info.`,
+    category: 'world',
+    description: 'Create trigger volumes, blocking volumes, physics volumes, audio volumes, and navigation bounds.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Trigger Volumes
             'create_trigger_volume', 'create_trigger_box', 'create_trigger_sphere', 'create_trigger_capsule',
-            // Gameplay Volumes
             'create_blocking_volume', 'create_kill_z_volume', 'create_pain_causing_volume', 'create_physics_volume',
-            // Audio Volumes
             'create_audio_volume', 'create_reverb_volume',
-            // Rendering Volumes
             'create_cull_distance_volume', 'create_precomputed_visibility_volume', 'create_lightmass_importance_volume',
-            // Navigation Volumes
             'create_nav_mesh_bounds_volume', 'create_nav_modifier_volume', 'create_camera_blocking_volume',
-            // Configuration
             'set_volume_extent', 'set_volume_properties',
-            // Utility
             'get_volumes_info'
           ],
           description: 'Volume action to perform'
         },
-
-        // Volume identification
-        volumeName: { type: 'string', description: 'Name for the volume actor.' },
-        volumePath: { type: 'string', description: 'Path to existing volume actor.' },
-
-        // Location and transform
+        volumeName: commonSchemas.volumeName,
+        volumePath: commonSchemas.volumePath,
         location: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'World location for the volume.'
         },
         rotation: {
           type: 'object',
           properties: {
-            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+            pitch: commonSchemas.numberProp, yaw: commonSchemas.numberProp, roll: commonSchemas.numberProp
           },
           description: 'Rotation of the volume.'
         },
-
-        // Volume extent/size
         extent: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Extent (half-size) of the volume in each axis.'
         },
-
-        // Trigger shape parameters
         sphereRadius: { type: 'number', description: 'Radius for sphere trigger volumes.' },
         capsuleRadius: { type: 'number', description: 'Radius for capsule trigger volumes.' },
         capsuleHalfHeight: { type: 'number', description: 'Half-height for capsule trigger volumes.' },
         boxExtent: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Extent for box trigger volumes.'
         },
-
-        // Pain Causing Volume specific
         bPainCausing: { type: 'boolean', description: 'Whether the volume causes pain/damage.' },
         damagePerSec: { type: 'number', description: 'Damage per second for pain volumes.' },
         damageType: { type: 'string', description: 'Damage type class path for pain volumes.' },
-
-        // Physics Volume specific
         bWaterVolume: { type: 'boolean', description: 'Whether this is a water volume.' },
         fluidFriction: { type: 'number', description: 'Fluid friction for physics volumes.' },
         terminalVelocity: { type: 'number', description: 'Terminal velocity in the volume.' },
-        priority: { type: 'number', description: 'Priority when volumes overlap.' },
-
-        // Audio Volume specific
+        priority: commonSchemas.priority,
         bEnabled: { type: 'boolean', description: 'Whether the audio volume is enabled.' },
-
-        // Reverb Volume specific
         reverbEffect: { type: 'string', description: 'Reverb effect asset path.' },
         reverbVolume: { type: 'number', description: 'Volume level for reverb (0.0-1.0).' },
-        fadeTime: { type: 'number', description: 'Fade time for reverb transitions.' },
-
-        // Cull Distance Volume specific
+        fadeTime: commonSchemas.fadeTime,
         cullDistances: {
           type: 'array',
           items: {
@@ -5995,60 +4006,50 @@ Supported actions:
           },
           description: 'Array of size/distance pairs for cull distance volumes.'
         },
-
-        // Nav Modifier Volume specific
-        areaClass: { type: 'string', description: 'Navigation area class path.' },
+        areaClass: commonSchemas.areaClass,
         bDynamicModifier: { type: 'boolean', description: 'Whether nav modifier updates dynamically.' },
-
-        // Post Process Volume (basic)
         bUnbound: { type: 'boolean', description: 'Whether post process volume affects entire world.' },
         blendRadius: { type: 'number', description: 'Blend radius for post process volume.' },
         blendWeight: { type: 'number', description: 'Blend weight (0.0-1.0) for post process.' },
-
-        // General volume properties
         properties: {
           type: 'object',
           description: 'Additional volume-specific properties as key-value pairs.'
         },
-
-        // Query parameters
-        filter: { type: 'string', description: 'Filter string for get_volumes_info.' },
+        filter: commonSchemas.filter,
         volumeType: { type: 'string', description: 'Type filter for get_volumes_info (e.g., "Trigger", "Physics").' },
-
-        // Save option
-        save: { type: 'boolean', description: 'Save the level after modification.' }
+        save: commonSchemas.save
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
         volumeName: { type: 'string', description: 'Name of created/modified volume.' },
-        volumePath: { type: 'string', description: 'Path to created/modified volume.' },
+        volumePath: commonSchemas.volumePath,
         volumeClass: { type: 'string', description: 'Class of the volume.' },
         volumesInfo: {
           type: 'object',
           properties: {
-            totalCount: { type: 'number' },
+            totalCount: commonSchemas.numberProp,
             volumes: {
               type: 'array',
               items: {
                 type: 'object',
                 properties: {
-                  name: { type: 'string' },
-                  class: { type: 'string' },
+                  name: commonSchemas.stringProp,
+                  class: commonSchemas.stringProp,
                   location: {
                     type: 'object',
                     properties: {
-                      x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+                      x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
                     }
                   },
                   extent: {
                     type: 'object',
                     properties: {
-                      x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+                      x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
                     }
                   }
                 }
@@ -6057,98 +4058,67 @@ Supported actions:
           },
           description: 'Volume information (for get_volumes_info).'
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // Phase 25: Navigation System
   {
     name: 'manage_navigation',
-    description: `Navigation system management for NavMesh and pathfinding.
-
-Use it when you need to:
-- configure NavMesh generation settings (cell size, tile size, region parameters).
-- set navigation agent properties (radius, height, step height, max slope).
-- rebuild the navigation mesh after level changes.
-- create nav modifier components to change area behavior.
-- set up nav links for connecting disjoint navmesh areas.
-- configure smart links for dynamic AI navigation.
-
-Actions:
-- NavMesh: configure_nav_mesh_settings, set_nav_agent_properties, rebuild_navigation
-- Nav Modifiers: create_nav_modifier_component, set_nav_area_class, configure_nav_area_cost
-- Nav Links: create_nav_link_proxy, configure_nav_link, set_nav_link_type, create_smart_link, configure_smart_link_behavior
-- Utility: get_navigation_info`,
+    category: 'gameplay',
+    description: 'Configure NavMesh settings, add nav modifiers, create nav links and smart links for pathfinding.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // NavMesh
             'configure_nav_mesh_settings', 'set_nav_agent_properties', 'rebuild_navigation',
-            // Nav Modifiers
             'create_nav_modifier_component', 'set_nav_area_class', 'configure_nav_area_cost',
-            // Nav Links
             'create_nav_link_proxy', 'configure_nav_link', 'set_nav_link_type',
             'create_smart_link', 'configure_smart_link_behavior',
-            // Utility
             'get_navigation_info'
           ],
           description: 'Navigation action to perform'
         },
-
-        // NavMesh identification
         navMeshPath: { type: 'string', description: 'Path to NavMesh data asset.' },
-        actorName: { type: 'string', description: 'Name of nav link proxy or actor.' },
-        actorPath: { type: 'string', description: 'Path to existing actor.' },
-        blueprintPath: { type: 'string', description: 'Path to Blueprint for component addition.' },
-
-        // Nav agent properties (ARecastNavMesh)
+        actorName: commonSchemas.actorName,
+        actorPath: commonSchemas.actorPath,
+        blueprintPath: commonSchemas.blueprintPath,
         agentRadius: { type: 'number', description: 'Navigation agent radius (default: 35).' },
         agentHeight: { type: 'number', description: 'Navigation agent height (default: 144).' },
         agentStepHeight: { type: 'number', description: 'Maximum step height agent can climb (default: 35).' },
         agentMaxSlope: { type: 'number', description: 'Maximum slope angle in degrees (default: 44).' },
-
-        // NavMesh generation settings (FNavMeshResolutionParam)
         cellSize: { type: 'number', description: 'NavMesh cell size (default: 19).' },
         cellHeight: { type: 'number', description: 'NavMesh cell height (default: 10).' },
         tileSizeUU: { type: 'number', description: 'NavMesh tile size in UU (default: 1000).' },
         minRegionArea: { type: 'number', description: 'Minimum region area to keep.' },
         mergeRegionSize: { type: 'number', description: 'Region merge threshold.' },
         maxSimplificationError: { type: 'number', description: 'Edge simplification error.' },
-
-        // Nav modifier component (UNavModifierComponent)
-        componentName: { type: 'string', description: 'Name for nav modifier component.' },
-        areaClass: { type: 'string', description: 'Nav area class path (e.g., /Script/NavigationSystem.NavArea_Obstacle).' },
+        componentName: commonSchemas.componentName,
+        areaClass: commonSchemas.areaClass,
         areaClassToReplace: { type: 'string', description: 'Area class to replace (optional modifier behavior).' },
         failsafeExtent: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Failsafe extent for nav modifier when actor has no collision.'
         },
         bIncludeAgentHeight: { type: 'boolean', description: 'Expand lower bounds by agent height.' },
-
-        // Nav area cost configuration
         areaCost: { type: 'number', description: 'Pathfinding cost multiplier for area (1.0 = normal).' },
         fixedAreaEnteringCost: { type: 'number', description: 'Fixed cost added when entering the area.' },
-
-        // Nav link configuration (ANavLinkProxy, FNavigationLink)
-        linkName: { type: 'string', description: 'Name for navigation link.' },
+        linkName: commonSchemas.linkName,
         startPoint: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Start point of navigation link (relative to actor).'
         },
         endPoint: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'End point of navigation link (relative to actor).'
         },
@@ -6159,8 +4129,6 @@ Actions:
         },
         snapRadius: { type: 'number', description: 'Snap radius for link endpoints (default: 30).' },
         linkEnabled: { type: 'boolean', description: 'Whether the link is enabled.' },
-
-        // Smart link configuration (UNavLinkCustomComponent)
         linkType: {
           type: 'string',
           enum: ['simple', 'smart'],
@@ -6171,191 +4139,156 @@ Actions:
         disabledAreaClass: { type: 'string', description: 'Area class when smart link is disabled.' },
         broadcastRadius: { type: 'number', description: 'Radius for state change broadcast.' },
         broadcastInterval: { type: 'number', description: 'Interval for state change broadcast (0 = single).' },
-
-        // Obstacle configuration
         bCreateBoxObstacle: { type: 'boolean', description: 'Add box obstacle during nav generation.' },
         obstacleOffset: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Offset of simple box obstacle.'
         },
         obstacleExtent: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Extent of simple box obstacle.'
         },
         obstacleAreaClass: { type: 'string', description: 'Area class for box obstacle.' },
-
-        // Location and transform
         location: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'World location for nav link proxy.'
         },
         rotation: {
           type: 'object',
           properties: {
-            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+            pitch: commonSchemas.numberProp, yaw: commonSchemas.numberProp, roll: commonSchemas.numberProp
           },
           description: 'Rotation for nav link proxy.'
         },
-
-        // Query parameters
-        filter: { type: 'string', description: 'Filter for get_navigation_info query.' },
-
-        // Save option
-        save: { type: 'boolean', description: 'Save the level/asset after modification.' }
+        filter: commonSchemas.filter,
+        save: commonSchemas.save
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        actorName: { type: 'string', description: 'Name of created/modified actor.' },
-        componentName: { type: 'string', description: 'Name of created component.' },
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        actorName: commonSchemas.actorName,
+        componentName: commonSchemas.componentName,
         navMeshInfo: {
           type: 'object',
           properties: {
-            agentRadius: { type: 'number' },
-            agentHeight: { type: 'number' },
-            agentStepHeight: { type: 'number' },
-            agentMaxSlope: { type: 'number' },
-            cellSize: { type: 'number' },
-            cellHeight: { type: 'number' },
-            tileSizeUU: { type: 'number' },
-            tileCount: { type: 'number' },
-            boundsVolumes: { type: 'number' },
-            navLinkCount: { type: 'number' }
+            agentRadius: commonSchemas.numberProp,
+            agentHeight: commonSchemas.numberProp,
+            agentStepHeight: commonSchemas.numberProp,
+            agentMaxSlope: commonSchemas.numberProp,
+            cellSize: commonSchemas.numberProp,
+            cellHeight: commonSchemas.numberProp,
+            tileSizeUU: commonSchemas.numberProp,
+            tileCount: commonSchemas.numberProp,
+            boundsVolumes: commonSchemas.numberProp,
+            navLinkCount: commonSchemas.numberProp
           },
           description: 'Navigation system information.'
         },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   },
-
-  // Phase 26: Spline System
   {
     name: 'manage_splines',
-    description: `Spline-based content creation and management system.
-
-Use it when you need to:
-- create spline actors with configurable points and curves.
-- add, remove, or modify spline points (position, tangents, rotation, scale).
-- set spline types (linear, curve, constant, clamped_curve, custom_tangent).
-- create spline mesh components that deform meshes along the spline.
-- scatter meshes along splines with configurable spacing and randomization.
-- use quick templates for roads, rivers, fences, walls, cables, or pipes.
-
-Actions:
-- Spline Creation: create_spline_actor, add_spline_point, remove_spline_point, set_spline_point_position, set_spline_point_tangents, set_spline_point_rotation, set_spline_point_scale, set_spline_type
-- Spline Mesh: create_spline_mesh_component, set_spline_mesh_asset, configure_spline_mesh_axis, set_spline_mesh_material
-- Spline Mesh Array: scatter_meshes_along_spline, configure_mesh_spacing, configure_mesh_randomization
-- Quick Templates: create_road_spline, create_river_spline, create_fence_spline, create_wall_spline, create_cable_spline, create_pipe_spline
-- Utility: get_splines_info`,
+    category: 'world',
+    description: 'Create spline actors, add/modify points, attach meshes along splines, and query spline data.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            // Spline Creation
             'create_spline_actor', 'add_spline_point', 'remove_spline_point',
             'set_spline_point_position', 'set_spline_point_tangents',
             'set_spline_point_rotation', 'set_spline_point_scale', 'set_spline_type',
-            // Spline Mesh
             'create_spline_mesh_component', 'set_spline_mesh_asset',
             'configure_spline_mesh_axis', 'set_spline_mesh_material',
-            // Spline Mesh Array
             'scatter_meshes_along_spline', 'configure_mesh_spacing', 'configure_mesh_randomization',
-            // Quick Templates
             'create_road_spline', 'create_river_spline', 'create_fence_spline',
             'create_wall_spline', 'create_cable_spline', 'create_pipe_spline',
-            // Utility
             'get_splines_info'
           ],
           description: 'Spline action to perform'
         },
-
-        // Actor/Spline identification
-        actorName: { type: 'string', description: 'Name for spline actor.' },
-        actorPath: { type: 'string', description: 'Path to existing spline actor.' },
+        actorName: commonSchemas.actorName,
+        actorPath: commonSchemas.actorPath,
         splineName: { type: 'string', description: 'Name of spline component.' },
-        componentName: { type: 'string', description: 'Name for created component.' },
-        blueprintPath: { type: 'string', description: 'Path to Blueprint for component addition.' },
-
-        // Location and transform
+        componentName: commonSchemas.componentName,
+        blueprintPath: commonSchemas.blueprintPath,
         location: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Location for spline actor.'
         },
         rotation: {
           type: 'object',
           properties: {
-            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+            pitch: commonSchemas.numberProp, yaw: commonSchemas.numberProp, roll: commonSchemas.numberProp
           },
           description: 'Rotation for spline actor.'
         },
         scale: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Scale for spline actor.'
         },
-
-        // Spline point manipulation
         pointIndex: { type: 'number', description: 'Index of spline point to modify.' },
         position: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Position for spline point.'
         },
         arriveTangent: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Arrive tangent for spline point (incoming direction).'
         },
         leaveTangent: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Leave tangent for spline point (outgoing direction).'
         },
         tangent: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Unified tangent (sets both arrive and leave).'
         },
         pointRotation: {
           type: 'object',
           properties: {
-            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+            pitch: commonSchemas.numberProp, yaw: commonSchemas.numberProp, roll: commonSchemas.numberProp
           },
           description: 'Rotation at spline point.'
         },
         pointScale: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Scale at spline point.'
         },
@@ -6364,8 +4297,6 @@ Actions:
           enum: ['Local', 'World'],
           description: 'Coordinate space for position/tangent values (default: Local).'
         },
-
-        // Spline type configuration
         splineType: {
           type: 'string',
           enum: ['Linear', 'Curve', 'Constant', 'CurveClamped', 'CurveCustomTangent'],
@@ -6373,10 +4304,8 @@ Actions:
         },
         bClosedLoop: { type: 'boolean', description: 'Whether spline forms a closed loop.' },
         bUpdateSpline: { type: 'boolean', description: 'Update spline after modification (default: true).' },
-
-        // Spline mesh configuration
-        meshPath: { type: 'string', description: 'Path to static mesh asset for spline mesh.' },
-        materialPath: { type: 'string', description: 'Path to material asset.' },
+        meshPath: commonSchemas.meshPath,
+        materialPath: commonSchemas.materialPath,
         forwardAxis: {
           type: 'string',
           enum: ['X', 'Y', 'Z'],
@@ -6385,46 +4314,44 @@ Actions:
         startPos: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Start position for spline mesh segment.'
         },
         startTangent: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'Start tangent for spline mesh segment.'
         },
         endPos: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'End position for spline mesh segment.'
         },
         endTangent: {
           type: 'object',
           properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+            x: commonSchemas.numberProp, y: commonSchemas.numberProp, z: commonSchemas.numberProp
           },
           description: 'End tangent for spline mesh segment.'
         },
         startScale: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          properties: commonSchemas.vector2.properties,
           description: 'X/Y scale at spline mesh start.'
         },
         endScale: {
           type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          properties: commonSchemas.vector2.properties,
           description: 'X/Y scale at spline mesh end.'
         },
         startRoll: { type: 'number', description: 'Roll angle at spline mesh start (radians).' },
         endRoll: { type: 'number', description: 'Roll angle at spline mesh end (radians).' },
         bSmoothInterpRollScale: { type: 'boolean', description: 'Use smooth interpolation for roll/scale.' },
-
-        // Mesh scattering configuration
         spacing: { type: 'number', description: 'Distance between scattered meshes.' },
         startOffset: { type: 'number', description: 'Offset from spline start for first mesh.' },
         endOffset: { type: 'number', description: 'Offset from spline end for last mesh.' },
@@ -6433,7 +4360,7 @@ Actions:
         rotationRandomRange: {
           type: 'object',
           properties: {
-            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+            pitch: commonSchemas.numberProp, yaw: commonSchemas.numberProp, roll: commonSchemas.numberProp
           },
           description: 'Random rotation range (degrees).'
         },
@@ -6441,21 +4368,17 @@ Actions:
         scaleMin: { type: 'number', description: 'Minimum random scale multiplier.' },
         scaleMax: { type: 'number', description: 'Maximum random scale multiplier.' },
         randomSeed: { type: 'number', description: 'Seed for randomization (for reproducible results).' },
-
-        // Template-specific options
         templateType: {
           type: 'string',
           enum: ['road', 'river', 'fence', 'wall', 'cable', 'pipe'],
           description: 'Type of spline template to create.'
         },
-        width: { type: 'number', description: 'Width for road/river templates.' },
+        width: commonSchemas.width,
         segmentLength: { type: 'number', description: 'Length of mesh segments for deformation.' },
         postSpacing: { type: 'number', description: 'Spacing between fence posts.' },
         railHeight: { type: 'number', description: 'Height of fence rails.' },
         pipeRadius: { type: 'number', description: 'Radius for pipe template.' },
         cableSlack: { type: 'number', description: 'Slack/sag amount for cable template.' },
-
-        // Points array for batch operations
         points: {
           type: 'array',
           items: {
@@ -6463,23 +4386,23 @@ Actions:
             properties: {
               position: {
                 type: 'object',
-                properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+                properties: commonSchemas.vector3.properties
               },
               arriveTangent: {
                 type: 'object',
-                properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+                properties: commonSchemas.vector3.properties
               },
               leaveTangent: {
                 type: 'object',
-                properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+                properties: commonSchemas.vector3.properties
               },
               rotation: {
                 type: 'object',
-                properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }
+                properties: commonSchemas.rotation.properties
               },
               scale: {
                 type: 'object',
-                properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+                properties: commonSchemas.vector3.properties
               },
               type: {
                 type: 'string',
@@ -6490,43 +4413,39 @@ Actions:
           },
           description: 'Array of spline points for batch creation.'
         },
-
-        // Query parameters
-        filter: { type: 'string', description: 'Filter for get_splines_info query.' },
-
-        // Save option
-        save: { type: 'boolean', description: 'Save the level/asset after modification.' }
+        filter: commonSchemas.filter,
+        save: commonSchemas.save
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        actorName: { type: 'string', description: 'Name of created/modified spline actor.' },
-        componentName: { type: 'string', description: 'Name of created spline component.' },
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        actorName: commonSchemas.actorName,
+        componentName: commonSchemas.componentName,
         pointCount: { type: 'number', description: 'Number of points in spline.' },
         splineLength: { type: 'number', description: 'Total length of spline in units.' },
         bClosedLoop: { type: 'boolean', description: 'Whether spline is a closed loop.' },
         splineInfo: {
           type: 'object',
           properties: {
-            pointCount: { type: 'number' },
-            splineLength: { type: 'number' },
-            bClosedLoop: { type: 'boolean' },
+            pointCount: commonSchemas.numberProp,
+            splineLength: commonSchemas.numberProp,
+            bClosedLoop: commonSchemas.booleanProp,
             points: {
               type: 'array',
               items: {
                 type: 'object',
                 properties: {
-                  index: { type: 'number' },
-                  position: { type: 'object' },
-                  arriveTangent: { type: 'object' },
-                  leaveTangent: { type: 'object' },
-                  rotation: { type: 'object' },
-                  scale: { type: 'object' },
-                  type: { type: 'string' }
+                  index: commonSchemas.numberProp,
+                  position: commonSchemas.objectProp,
+                  arriveTangent: commonSchemas.objectProp,
+                  leaveTangent: commonSchemas.objectProp,
+                  rotation: commonSchemas.objectProp,
+                  scale: commonSchemas.objectProp,
+                  type: commonSchemas.stringProp
                 }
               }
             }
@@ -6538,17 +4457,16 @@ Actions:
           items: {
             type: 'object',
             properties: {
-              name: { type: 'string' },
-              meshPath: { type: 'string' },
-              forwardAxis: { type: 'string' }
+              name: commonSchemas.stringProp,
+              meshPath: commonSchemas.stringProp,
+              forwardAxis: commonSchemas.stringProp
             }
           },
           description: 'List of spline mesh components.'
         },
         scatteredMeshes: { type: 'number', description: 'Number of meshes scattered along spline.' },
-        error: { type: 'string' }
+        error: commonSchemas.stringProp
       }
     }
   }
 ];
-

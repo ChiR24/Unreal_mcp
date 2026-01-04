@@ -4,7 +4,7 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
 import { HealthMonitor } from '../services/health-monitor.js';
-import { consolidatedToolDefinitions } from '../tools/consolidated-tool-definitions.js';
+import { consolidatedToolDefinitions, ToolDefinition } from '../tools/consolidated-tool-definitions.js';
 import { handleConsolidatedToolCall } from '../tools/consolidated-tool-handlers.js';
 import { responseValidator } from '../utils/response-validator.js';
 import { ErrorHandler } from '../utils/error-handler.js';
@@ -38,9 +38,45 @@ import { InputTools } from '../tools/input.js';
 
 import { LogTools } from '../tools/logs.js';
 import { getProjectSetting } from '../utils/ini-reader.js';
+import { config } from '../config.js';
+import { mcpClients } from 'mcp-client-capabilities';
+
+// Parse default categories from config
+function parseDefaultCategories(): string[] {
+    const raw = config.MCP_DEFAULT_CATEGORIES || 'core';
+    const cats = raw.split(',').map(c => c.trim().toLowerCase()).filter(c => c.length > 0);
+    return cats.length > 0 ? cats : ['core'];
+}
+
+// Check if a client supports tools.listChanged based on known client capabilities
+function clientSupportsListChanged(clientName: string | undefined): boolean {
+    if (!clientName) return false;
+    
+    // Normalize client name (lowercase, trim)
+    const normalizedName = clientName.toLowerCase().trim();
+    
+    // Check in the mcp-client-capabilities database
+    for (const [key, clientInfo] of Object.entries(mcpClients)) {
+        if (key.toLowerCase() === normalizedName || 
+            (clientInfo.title && clientInfo.title.toLowerCase() === normalizedName)) {
+            // Check if tools.listChanged is supported
+            const tools = clientInfo.tools as { listChanged?: boolean } | undefined;
+            return Boolean(tools?.listChanged);
+        }
+    }
+    
+    // Fallback: check for known clients by partial name match
+    const knownDynamicClients = ['cursor', 'cline', 'windsurf', 'kilo', 'opencode', 'vscode', 'visual studio code'];
+    for (const known of knownDynamicClients) {
+        if (normalizedName.includes(known)) return true;
+    }
+    
+    return false;
+}
 
 export class ToolRegistry {
     private defaultElicitationTimeoutMs = 60000;
+    private currentCategories: string[] = parseDefaultCategories();
 
     constructor(
         private server: Server,
@@ -53,6 +89,37 @@ export class ToolRegistry {
         private levelResources: LevelResources,
         private ensureConnected: () => Promise<boolean>
     ) { }
+    
+    private async handlePipelineCall(args: Record<string, unknown>) {
+        const action = args.action as string;
+        if (action === 'set_categories') {
+            const newCats = Array.isArray(args.categories) ? args.categories as string[] : [];
+            this.currentCategories = newCats.length > 0 ? newCats : ['all'];
+            this.logger.info(`MCP Categories updated to: ${this.currentCategories.join(', ')}`);
+            
+            // Trigger list_changed notification
+            this.server.notification({
+                method: 'notifications/tools/list_changed',
+                params: {}
+            }).catch(err => this.logger.error('Failed to send list_changed notification', err));
+
+            return { success: true, message: `Categories updated to ${this.currentCategories.join(', ')}`, categories: this.currentCategories };
+        } else if (action === 'list_categories') {
+            return { 
+                success: true, 
+                categories: this.currentCategories, 
+                available: ['core', 'world', 'authoring', 'gameplay', 'utility', 'all'] 
+            };
+        } else if (action === 'get_status') {
+            return { 
+                success: true, 
+                categories: this.currentCategories,
+                toolCount: consolidatedToolDefinitions.length,
+                filteredCount: consolidatedToolDefinitions.filter((t: ToolDefinition) => !t.category || this.currentCategories.includes(t.category) || this.currentCategories.includes('all')).length
+            };
+        }
+        return { success: false, error: `Unknown pipeline action: ${action}` };
+    }
 
     register() {
         // Initialize tools
@@ -195,8 +262,39 @@ export class ToolRegistry {
         const elicitation = createElicitationHelper(this.server, this.logger);
 
         this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-            this.logger.info('Serving consolidated tools');
-            const sanitized = (consolidatedToolDefinitions as Array<Record<string, unknown>>).map((t) => {
+            // Check if client supports listChanged based on client name from initialization
+            let supportsListChanged = false;
+            let clientName: string | undefined;
+            try {
+                // Get client info - the server stores this from the initialize request
+                // Note: _clientVersion is a private SDK property (fragile but necessary)
+                const serverObj = this.server as unknown as Record<string, unknown>;
+                const clientInfo = serverObj._clientVersion as { name?: string } | undefined;
+                clientName = clientInfo?.name;
+                supportsListChanged = clientSupportsListChanged(clientName);
+                this.logger.debug(`Client detection: name=${clientName}, supportsListChanged=${supportsListChanged}`);
+            } catch (_e) {
+                supportsListChanged = false;
+            }
+
+            // If client doesn't support dynamic loading, show ALL tools (backward compatibility)
+            // If client supports it AND categories don't include 'all', apply filtering
+            const effectiveCategories = (!supportsListChanged || this.currentCategories.includes('all'))
+                ? ['all']
+                : this.currentCategories;
+
+            this.logger.info(`Serving tools for categories: ${effectiveCategories.join(', ')} (client=${clientName || 'unknown'}, supportsListChanged=${supportsListChanged})`);
+            
+            // Filter by category AND hide manage_pipeline from clients that can't use it
+            const filtered = consolidatedToolDefinitions
+                .filter((t: ToolDefinition) => 
+                    !t.category || effectiveCategories.includes(t.category) || effectiveCategories.includes('all')
+                )
+                .filter((t: ToolDefinition) => 
+                    supportsListChanged || t.name !== 'manage_pipeline'
+                );
+            
+            const sanitized = filtered.map((t: ToolDefinition) => {
                 try {
                     const copy = JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
                     delete copy.outputSchema;
@@ -211,14 +309,17 @@ export class ToolRegistry {
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const { name } = request.params;
             let args: Record<string, unknown> = request.params.arguments || {};
+
+            if (name === 'manage_pipeline') {
+                return { content: [{ type: 'text', text: JSON.stringify(await this.handlePipelineCall(args)) }] };
+            }
+
             const startTime = Date.now();
 
             const connected = await this.ensureConnected();
             if (!connected) {
                 // Allow certain tools (pipeline, system checks) to run without connection
                 if (name === 'system_control' && args.action === 'get_project_settings') {
-                    // Allowed
-                } else if (name === 'manage_pipeline') {
                     // Allowed
                 } else {
                     this.healthMonitor.trackPerformance(startTime, false);

@@ -51,6 +51,9 @@ export const EnvSchema = z.object({
   // Timeouts
   MCP_CONNECTION_TIMEOUT_MS: z.preprocess((v) => stringToNumber(v, 5000), z.number().default(5000)),
   MCP_REQUEST_TIMEOUT_MS: z.preprocess((v) => stringToNumber(v, 30000), z.number().default(30000)),
+
+  // Tool Categories (comma-separated: core,world,authoring,gameplay,utility,all)
+  MCP_DEFAULT_CATEGORIES: z.string().default('core'),
 });
 
 export type Config = z.infer<typeof EnvSchema>;

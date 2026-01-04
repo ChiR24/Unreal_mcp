@@ -141,7 +141,7 @@ export function createServer() {
     },
     {
       capabilities: {
-        tools: {},
+        tools: { listChanged: true },
         resources: {},
         prompts: {}
       }

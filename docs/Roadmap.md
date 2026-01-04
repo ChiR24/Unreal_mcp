@@ -45,6 +45,70 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 - [ ] **Extensibility Framework**: Dynamic handler registry via JSON config and support for custom C++ handlers.
 - [ ] **Remote Profiling**: Deep integration with Unreal Insights for remote performance tuning.
 
+## Context Reduction Initiative (Phases 48-53)
+
+**Goal**: Reduce AI context overhead from ~78,000 tokens to ~25,000 tokens through multiple optimization strategies.
+
+---
+
+### Phase 48: Schema Pruning (Complete)
+
+**Issue**: [#106](https://github.com/ChiR24/Unreal_mcp/issues/106)
+
+**Results**: ~23,000 token reduction
+
+- [x] Remove "Supported actions:" lists from all tool descriptions (redundant with enum)
+- [x] Remove "Use it when you need to:" bullet lists
+- [x] Condense all descriptions to 1-2 sentences max
+- [x] Remove parameter descriptions that just restate the parameter name
+- [x] Audit and trim `manage_geometry`, `manage_asset`, `manage_niagara_authoring`
+
+---
+
+### Phase 49: Common Schema Extraction (Complete)
+
+**Issue**: [#108](https://github.com/ChiR24/Unreal_mcp/issues/108)
+
+**Results**: ~8,000 token reduction
+
+- [x] Move repeated parameters to `commonSchemas` in `tool-definition-utils.ts`
+- [x] Extract: `assetPath`, `actorName`, `location`, `rotation`, `scale`, `save`, `overwrite`
+- [x] Define `standardResponse` schema for `success` and `message`
+- [x] Update all tools to reference `commonSchemas`
+
+---
+
+### Phase 50: Dynamic Tool Loading (Complete)
+
+**Issue**: [#109](https://github.com/ChiR24/Unreal_mcp/issues/109)
+
+**Results**: ~50,000 token reduction (when using category filtering)
+
+- [x] Add `listChanged: true` to server capabilities
+- [x] Add `manage_pipeline` tool with `set_categories`, `list_categories`, `get_status` actions
+- [x] Define tool categories: `core`, `world`, `authoring`, `gameplay`, `utility`, `all`
+- [x] Filter tools by category in `ListToolsRequestSchema` handler
+- [x] Client capability detection via `mcp-client-capabilities` package
+- [x] Backward compatibility: clients without `listChanged` support get ALL tools
+
+---
+
+### Phase 53: Strategic Tool Merging (Complete)
+
+**Issue**: [#111](https://github.com/ChiR24/Unreal_mcp/issues/111)
+
+**Results**: Reduced tool count from 38 to 35 (~10,000 token savings)
+
+#### Tool Consolidations
+- [x] `manage_blueprint_graph` → merged into `manage_blueprint` (11 graph actions)
+- [x] `manage_audio_authoring` → merged into `manage_audio` (30 authoring actions)
+- [x] `manage_niagara_authoring` → merged into `manage_effect` (36 authoring actions)
+- [x] `manage_animation_authoring` → merged into `animation_physics` (45 authoring actions)
+
+#### Backward Compatibility
+- [x] Deprecated tools remain functional with once-per-session deprecation warnings
+- [x] Action routing uses parameter sniffing to resolve conflicts (e.g., `add_notify`: frame-based → authoring, time-based → runtime)
+
 ---
 
 # Advanced Capabilities Roadmap
