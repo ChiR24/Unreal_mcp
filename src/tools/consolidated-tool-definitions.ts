@@ -6240,6 +6240,315 @@ Actions:
         error: { type: 'string' }
       }
     }
+  },
+
+  // Phase 26: Spline System
+  {
+    name: 'manage_splines',
+    description: `Spline-based content creation and management system.
+
+Use it when you need to:
+- create spline actors with configurable points and curves.
+- add, remove, or modify spline points (position, tangents, rotation, scale).
+- set spline types (linear, curve, constant, clamped_curve, custom_tangent).
+- create spline mesh components that deform meshes along the spline.
+- scatter meshes along splines with configurable spacing and randomization.
+- use quick templates for roads, rivers, fences, walls, cables, or pipes.
+
+Actions:
+- Spline Creation: create_spline_actor, add_spline_point, remove_spline_point, set_spline_point_position, set_spline_point_tangents, set_spline_point_rotation, set_spline_point_scale, set_spline_type
+- Spline Mesh: create_spline_mesh_component, set_spline_mesh_asset, configure_spline_mesh_axis, set_spline_mesh_material
+- Spline Mesh Array: scatter_meshes_along_spline, configure_mesh_spacing, configure_mesh_randomization
+- Quick Templates: create_road_spline, create_river_spline, create_fence_spline, create_wall_spline, create_cable_spline, create_pipe_spline
+- Utility: get_splines_info`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Spline Creation
+            'create_spline_actor', 'add_spline_point', 'remove_spline_point',
+            'set_spline_point_position', 'set_spline_point_tangents',
+            'set_spline_point_rotation', 'set_spline_point_scale', 'set_spline_type',
+            // Spline Mesh
+            'create_spline_mesh_component', 'set_spline_mesh_asset',
+            'configure_spline_mesh_axis', 'set_spline_mesh_material',
+            // Spline Mesh Array
+            'scatter_meshes_along_spline', 'configure_mesh_spacing', 'configure_mesh_randomization',
+            // Quick Templates
+            'create_road_spline', 'create_river_spline', 'create_fence_spline',
+            'create_wall_spline', 'create_cable_spline', 'create_pipe_spline',
+            // Utility
+            'get_splines_info'
+          ],
+          description: 'Spline action to perform'
+        },
+
+        // Actor/Spline identification
+        actorName: { type: 'string', description: 'Name for spline actor.' },
+        actorPath: { type: 'string', description: 'Path to existing spline actor.' },
+        splineName: { type: 'string', description: 'Name of spline component.' },
+        componentName: { type: 'string', description: 'Name for created component.' },
+        blueprintPath: { type: 'string', description: 'Path to Blueprint for component addition.' },
+
+        // Location and transform
+        location: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Location for spline actor.'
+        },
+        rotation: {
+          type: 'object',
+          properties: {
+            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+          },
+          description: 'Rotation for spline actor.'
+        },
+        scale: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Scale for spline actor.'
+        },
+
+        // Spline point manipulation
+        pointIndex: { type: 'number', description: 'Index of spline point to modify.' },
+        position: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Position for spline point.'
+        },
+        arriveTangent: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Arrive tangent for spline point (incoming direction).'
+        },
+        leaveTangent: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Leave tangent for spline point (outgoing direction).'
+        },
+        tangent: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Unified tangent (sets both arrive and leave).'
+        },
+        pointRotation: {
+          type: 'object',
+          properties: {
+            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+          },
+          description: 'Rotation at spline point.'
+        },
+        pointScale: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Scale at spline point.'
+        },
+        coordinateSpace: {
+          type: 'string',
+          enum: ['Local', 'World'],
+          description: 'Coordinate space for position/tangent values (default: Local).'
+        },
+
+        // Spline type configuration
+        splineType: {
+          type: 'string',
+          enum: ['Linear', 'Curve', 'Constant', 'CurveClamped', 'CurveCustomTangent'],
+          description: 'Type of spline interpolation.'
+        },
+        bClosedLoop: { type: 'boolean', description: 'Whether spline forms a closed loop.' },
+        bUpdateSpline: { type: 'boolean', description: 'Update spline after modification (default: true).' },
+
+        // Spline mesh configuration
+        meshPath: { type: 'string', description: 'Path to static mesh asset for spline mesh.' },
+        materialPath: { type: 'string', description: 'Path to material asset.' },
+        forwardAxis: {
+          type: 'string',
+          enum: ['X', 'Y', 'Z'],
+          description: 'Forward axis for spline mesh deformation.'
+        },
+        startPos: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Start position for spline mesh segment.'
+        },
+        startTangent: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Start tangent for spline mesh segment.'
+        },
+        endPos: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'End position for spline mesh segment.'
+        },
+        endTangent: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'End tangent for spline mesh segment.'
+        },
+        startScale: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          description: 'X/Y scale at spline mesh start.'
+        },
+        endScale: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          description: 'X/Y scale at spline mesh end.'
+        },
+        startRoll: { type: 'number', description: 'Roll angle at spline mesh start (radians).' },
+        endRoll: { type: 'number', description: 'Roll angle at spline mesh end (radians).' },
+        bSmoothInterpRollScale: { type: 'boolean', description: 'Use smooth interpolation for roll/scale.' },
+
+        // Mesh scattering configuration
+        spacing: { type: 'number', description: 'Distance between scattered meshes.' },
+        startOffset: { type: 'number', description: 'Offset from spline start for first mesh.' },
+        endOffset: { type: 'number', description: 'Offset from spline end for last mesh.' },
+        bAlignToSpline: { type: 'boolean', description: 'Align scattered meshes to spline direction.' },
+        bRandomizeRotation: { type: 'boolean', description: 'Apply random rotation to scattered meshes.' },
+        rotationRandomRange: {
+          type: 'object',
+          properties: {
+            pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }
+          },
+          description: 'Random rotation range (degrees).'
+        },
+        bRandomizeScale: { type: 'boolean', description: 'Apply random scale to scattered meshes.' },
+        scaleMin: { type: 'number', description: 'Minimum random scale multiplier.' },
+        scaleMax: { type: 'number', description: 'Maximum random scale multiplier.' },
+        randomSeed: { type: 'number', description: 'Seed for randomization (for reproducible results).' },
+
+        // Template-specific options
+        templateType: {
+          type: 'string',
+          enum: ['road', 'river', 'fence', 'wall', 'cable', 'pipe'],
+          description: 'Type of spline template to create.'
+        },
+        width: { type: 'number', description: 'Width for road/river templates.' },
+        segmentLength: { type: 'number', description: 'Length of mesh segments for deformation.' },
+        postSpacing: { type: 'number', description: 'Spacing between fence posts.' },
+        railHeight: { type: 'number', description: 'Height of fence rails.' },
+        pipeRadius: { type: 'number', description: 'Radius for pipe template.' },
+        cableSlack: { type: 'number', description: 'Slack/sag amount for cable template.' },
+
+        // Points array for batch operations
+        points: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              position: {
+                type: 'object',
+                properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+              },
+              arriveTangent: {
+                type: 'object',
+                properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+              },
+              leaveTangent: {
+                type: 'object',
+                properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+              },
+              rotation: {
+                type: 'object',
+                properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }
+              },
+              scale: {
+                type: 'object',
+                properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+              },
+              type: {
+                type: 'string',
+                enum: ['Linear', 'Curve', 'Constant', 'CurveClamped', 'CurveCustomTangent']
+              }
+            },
+            required: ['position']
+          },
+          description: 'Array of spline points for batch creation.'
+        },
+
+        // Query parameters
+        filter: { type: 'string', description: 'Filter for get_splines_info query.' },
+
+        // Save option
+        save: { type: 'boolean', description: 'Save the level/asset after modification.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        actorName: { type: 'string', description: 'Name of created/modified spline actor.' },
+        componentName: { type: 'string', description: 'Name of created spline component.' },
+        pointCount: { type: 'number', description: 'Number of points in spline.' },
+        splineLength: { type: 'number', description: 'Total length of spline in units.' },
+        bClosedLoop: { type: 'boolean', description: 'Whether spline is a closed loop.' },
+        splineInfo: {
+          type: 'object',
+          properties: {
+            pointCount: { type: 'number' },
+            splineLength: { type: 'number' },
+            bClosedLoop: { type: 'boolean' },
+            points: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  index: { type: 'number' },
+                  position: { type: 'object' },
+                  arriveTangent: { type: 'object' },
+                  leaveTangent: { type: 'object' },
+                  rotation: { type: 'object' },
+                  scale: { type: 'object' },
+                  type: { type: 'string' }
+                }
+              }
+            }
+          },
+          description: 'Detailed spline information.'
+        },
+        meshComponents: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              meshPath: { type: 'string' },
+              forwardAxis: { type: 'string' }
+            }
+          },
+          description: 'List of spline mesh components.'
+        },
+        scatteredMeshes: { type: 'number', description: 'Number of meshes scattered along spline.' },
+        error: { type: 'string' }
+      }
+    }
   }
 ];
 

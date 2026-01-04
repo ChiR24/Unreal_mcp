@@ -1006,38 +1006,43 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 26: Spline System
+## Phase 26: Spline System (Complete)
 
 **Goal**: Complete spline-based content creation.
 
 **Tool**: `manage_splines`
 
+**Status**: All 21 actions fully implemented in TypeScript and C++.
+
 ### 26.1 Spline Creation
-- [ ] `create_spline_actor`
-- [ ] `add_spline_point`, `remove_spline_point`
-- [ ] `set_spline_point_position`
-- [ ] `set_spline_point_tangents`
-- [ ] `set_spline_point_rotation`, `set_spline_point_scale`
-- [ ] `set_spline_type` (linear, curve, constant, clamped_curve)
+- [x] `create_spline_actor`
+- [x] `add_spline_point`, `remove_spline_point`
+- [x] `set_spline_point_position`
+- [x] `set_spline_point_tangents`
+- [x] `set_spline_point_rotation`, `set_spline_point_scale`
+- [x] `set_spline_type` (linear, curve, constant, clamped_curve)
 
 ### 26.2 Spline Mesh
-- [ ] `create_spline_mesh_component`
-- [ ] `set_spline_mesh_asset`
-- [ ] `configure_spline_mesh_axis`
-- [ ] `set_spline_mesh_material`
+- [x] `create_spline_mesh_component`
+- [x] `set_spline_mesh_asset`
+- [x] `configure_spline_mesh_axis`
+- [x] `set_spline_mesh_material`
 
 ### 26.3 Spline Mesh Array
-- [ ] `scatter_meshes_along_spline`
-- [ ] `configure_mesh_spacing`
-- [ ] `configure_mesh_randomization`
+- [x] `scatter_meshes_along_spline`
+- [x] `configure_mesh_spacing`
+- [x] `configure_mesh_randomization`
 
 ### 26.4 Quick Templates
-- [ ] `create_road_spline`
-- [ ] `create_river_spline`
-- [ ] `create_fence_spline`
-- [ ] `create_wall_spline`
-- [ ] `create_cable_spline`
-- [ ] `create_pipe_spline`
+- [x] `create_road_spline`
+- [x] `create_river_spline`
+- [x] `create_fence_spline`
+- [x] `create_wall_spline`
+- [x] `create_cable_spline`
+- [x] `create_pipe_spline`
+
+### 26.5 Utility
+- [x] `get_splines_info`
 
 ---
 
