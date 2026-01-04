@@ -51,6 +51,14 @@ type NormalizedToolCall = {
   args: Record<string, unknown>;
 };
 
+// Interface for deprecation warning flags (stored in globalThis for once-per-session warnings)
+interface DeprecationFlags {
+  __blueprintGraphDeprecationLogged?: boolean;
+  __audioAuthoringDeprecationLogged?: boolean;
+  __niagaraAuthoringDeprecationLogged?: boolean;
+  __animationAuthoringDeprecationLogged?: boolean;
+}
+
 const MATERIAL_GRAPH_ACTION_MAP: Record<string, string> = {
   add_material_node: 'add_node',
   connect_material_pins: 'connect_pins',
@@ -165,17 +173,31 @@ function registerDefaultHandlers() {
     return await handleAssetTools(action, args, tools);
   });
 
-  // 2. BLUEPRINT MANAGER
+  // 2. BLUEPRINT MANAGER (includes merged manage_blueprint_graph - Phase 53)
   toolRegistry.register('manage_blueprint', async (args, tools) => {
     const action = getAction(args);
     if (action === 'get_blueprint') {
       return await handleBlueprintGet(args, tools);
     }
-    const graphActions = ['create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details'];
+    // Graph actions (merged from manage_blueprint_graph)
+    const graphActions = ['create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details', 'list_node_types', 'set_pin_default_value'];
     if (graphActions.includes(action)) {
       return await handleGraphTools('manage_blueprint_graph', action, args, tools);
     }
     return await handleBlueprintTools(action, args, tools);
+  });
+
+  // DEPRECATED: manage_blueprint_graph now merged into manage_blueprint (Phase 53)
+  // Kept for backward compatibility - routes to manage_blueprint
+  toolRegistry.register('manage_blueprint_graph', async (args, tools) => {
+    // Deprecation warning logged once per session
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__blueprintGraphDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_blueprint_graph is deprecated and merged into manage_blueprint. Use manage_blueprint instead.');
+      globalObj.__blueprintGraphDeprecationLogged = true;
+    }
+    return await handleGraphTools('manage_blueprint_graph', getAction(args), args, tools);
   });
 
   // 3. ACTOR CONTROL
@@ -203,12 +225,58 @@ function registerDefaultHandlers() {
     return await handleLevelTools(action, args, tools);
   });
 
-  // 6. ANIMATION & PHYSICS
-  toolRegistry.register('animation_physics', async (args, tools) => await handleAnimationTools(getAction(args), args, tools));
+  // 6. ANIMATION & PHYSICS (merged with manage_animation_authoring - Phase 53)
+  const ANIMATION_AUTHORING_ACTIONS = new Set([
+    'create_animation_sequence', 'set_sequence_length', 'add_bone_track', 'set_bone_key', 'set_curve_key',
+    'add_notify_state', 'add_sync_marker', 'set_root_motion_settings', 'set_additive_settings',
+    'create_montage', 'add_montage_section', 'add_montage_slot', 'set_section_timing',
+    'add_montage_notify', 'set_blend_in', 'set_blend_out', 'link_sections',
+    'create_blend_space_1d', 'create_blend_space_2d', 'add_blend_sample', 'set_axis_settings', 'set_interpolation_settings',
+    'create_aim_offset', 'add_aim_offset_sample',
+    'create_anim_blueprint', 'add_state_machine', 'add_state', 'add_transition', 'set_transition_rules',
+    'add_blend_node', 'add_cached_pose', 'add_slot_node', 'add_layered_blend_per_bone', 'set_anim_graph_node_value',
+    'create_control_rig', 'add_control', 'add_rig_unit', 'connect_rig_elements', 'create_pose_library',
+    'create_ik_rig', 'add_ik_chain', 'create_ik_retargeter', 'set_retarget_chain_mapping',
+    'get_animation_info'
+  ]);
+  toolRegistry.register('animation_physics', async (args, tools) => {
+    const action = getAction(args);
+    // Route authoring-specific actions to the authoring handler
+    if (ANIMATION_AUTHORING_ACTIONS.has(action)) {
+      return await handleAnimationAuthoringTools(action, args, tools);
+    }
+    // Handle add_notify conflict resolution:
+    // - frame-based (args.frame) or asset-based (args.assetPath) = authoring handler (animation sequence notifies)
+    // - time-based (args.time) or montage-based (args.montagePath) = runtime handler (montage notifies)
+    // - If neither, default to runtime handler which will return appropriate error if invalid
+    if (action === 'add_notify' && (args.frame !== undefined || args.assetPath !== undefined)) {
+      return await handleAnimationAuthoringTools(action, args, tools);
+    }
+    return await handleAnimationTools(action, args, tools);
+  });
 
-  // 7. EFFECTS MANAGER
+  // 7. EFFECTS MANAGER (merged with manage_niagara_authoring - Phase 53)
+  const NIAGARA_AUTHORING_ACTIONS = new Set([
+    'add_emitter_to_system', 'set_emitter_properties',
+    'add_spawn_rate_module', 'add_spawn_burst_module', 'add_spawn_per_unit_module',
+    'add_initialize_particle_module', 'add_particle_state_module',
+    'add_force_module', 'add_velocity_module', 'add_acceleration_module',
+    'add_size_module', 'add_color_module',
+    'add_sprite_renderer_module', 'add_mesh_renderer_module', 'add_ribbon_renderer_module', 'add_light_renderer_module',
+    'add_collision_module', 'add_kill_particles_module', 'add_camera_offset_module',
+    'add_user_parameter', 'set_parameter_value', 'bind_parameter_to_source',
+    'add_skeletal_mesh_data_interface', 'add_static_mesh_data_interface', 'add_spline_data_interface',
+    'add_audio_spectrum_data_interface', 'add_collision_query_data_interface',
+    'add_event_generator', 'add_event_receiver', 'configure_event_payload',
+    'enable_gpu_simulation', 'add_simulation_stage',
+    'get_niagara_info', 'validate_niagara_system'
+  ]);
   toolRegistry.register('manage_effect', async (args, tools) => {
     const action = getAction(args);
+    // Route authoring-specific actions to the authoring handler
+    if (NIAGARA_AUTHORING_ACTIONS.has(action)) {
+      return await handleNiagaraAuthoringTools(action, args, tools);
+    }
     if (isNiagaraGraphAction(action)) {
       // Instance check
       const isInstanceOp = action === 'set_niagara_parameter' && (args.actorName || (args.systemName && !args.assetPath && !args.systemPath));
@@ -245,14 +313,32 @@ function registerDefaultHandlers() {
   // 11. INTROSPECTION
   toolRegistry.register('inspect', async (args, tools) => await handleInspectTools(getAction(args), args, tools));
 
-  // 12. AUDIO
-  toolRegistry.register('manage_audio', async (args, tools) => await handleAudioTools(getAction(args), args, tools));
+  // 12. AUDIO (merged with manage_audio_authoring - Phase 53)
+  const AUDIO_AUTHORING_ACTIONS = new Set([
+    'add_cue_node', 'connect_cue_nodes', 'set_cue_attenuation', 'set_cue_concurrency',
+    'create_metasound', 'add_metasound_node', 'connect_metasound_nodes',
+    'add_metasound_input', 'add_metasound_output', 'set_metasound_default',
+    'set_class_properties', 'set_class_parent', 'add_mix_modifier', 'configure_mix_eq',
+    'create_attenuation_settings', 'configure_distance_attenuation',
+    'configure_spatialization', 'configure_occlusion', 'configure_reverb_send',
+    'create_dialogue_voice', 'create_dialogue_wave', 'set_dialogue_context',
+    'create_reverb_effect', 'create_source_effect_chain', 'add_source_effect', 'create_submix_effect',
+    'get_audio_info'
+  ]);
+  toolRegistry.register('manage_audio', async (args, tools) => {
+    const action = getAction(args);
+    // Route authoring-specific actions to the authoring handler
+    if (AUDIO_AUTHORING_ACTIONS.has(action)) {
+      return await handleAudioAuthoringTools(action, args, tools);
+    }
+    return await handleAudioTools(action, args, tools);
+  });
 
   // 13. BEHAVIOR TREE
   toolRegistry.register('manage_behavior_tree', async (args, tools) => await handleGraphTools('manage_behavior_tree', getAction(args), args, tools));
 
-  // 14. BLUEPRINT GRAPH DIRECT
-  toolRegistry.register('manage_blueprint_graph', async (args, tools) => await handleGraphTools('manage_blueprint_graph', getAction(args), args, tools));
+  // 14. [REMOVED] manage_blueprint_graph - now merged into manage_blueprint (Phase 53)
+  // See registration after manage_blueprint for backward compatibility alias
 
   // 15. RENDER TOOLS
   toolRegistry.register('manage_render', async (args, tools) => {
@@ -287,14 +373,41 @@ function registerDefaultHandlers() {
   // 23. TEXTURE MANAGEMENT (Phase 9)
   toolRegistry.register('manage_texture', async (args, tools) => await handleTextureTools(getAction(args), args, tools));
 
-  // 24. ANIMATION AUTHORING (Phase 10)
-  toolRegistry.register('manage_animation_authoring', async (args, tools) => await handleAnimationAuthoringTools(getAction(args), args, tools));
+  // 24. [DEPRECATED] ANIMATION AUTHORING - now merged into animation_physics (Phase 53)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_animation_authoring', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__animationAuthoringDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_animation_authoring is deprecated and merged into animation_physics. Use animation_physics instead.');
+      globalObj.__animationAuthoringDeprecationLogged = true;
+    }
+    return await handleAnimationAuthoringTools(getAction(args), args, tools);
+  });
 
-  // 25. AUDIO AUTHORING (Phase 11)
-  toolRegistry.register('manage_audio_authoring', async (args, tools) => await handleAudioAuthoringTools(getAction(args), args, tools));
+  // 25. [DEPRECATED] AUDIO AUTHORING - now merged into manage_audio (Phase 53)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_audio_authoring', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__audioAuthoringDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_audio_authoring is deprecated and merged into manage_audio. Use manage_audio instead.');
+      globalObj.__audioAuthoringDeprecationLogged = true;
+    }
+    return await handleAudioAuthoringTools(getAction(args), args, tools);
+  });
 
-  // 26. NIAGARA AUTHORING (Phase 12)
-  toolRegistry.register('manage_niagara_authoring', async (args, tools) => await handleNiagaraAuthoringTools(getAction(args), args, tools));
+  // 26. [DEPRECATED] NIAGARA AUTHORING - now merged into manage_effect (Phase 53)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_niagara_authoring', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__niagaraAuthoringDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_niagara_authoring is deprecated and merged into manage_effect. Use manage_effect instead.');
+      globalObj.__niagaraAuthoringDeprecationLogged = true;
+    }
+    return await handleNiagaraAuthoringTools(getAction(args), args, tools);
+  });
 
   // 27. GAS - GAMEPLAY ABILITY SYSTEM (Phase 13)
   toolRegistry.register('manage_gas', async (args, tools) => await handleGASTools(getAction(args), args, tools));

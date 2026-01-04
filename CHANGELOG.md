@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.10] - 2026-01-04
+
+> [!NOTE]
+> ### Phase 53: Strategic Tool Merging
+> This release consolidates 4 authoring tools into their runtime counterparts, reducing tool count from 38 to 35 and saving ~10,000 tokens in AI context. ([#111](https://github.com/ChiR24/Unreal_mcp/issues/111))
+
+### Changed
+
+<details>
+<summary><b>Tool Consolidation (Phase 53)</b></summary>
+
+| Deprecated Tool | Merged Into | Actions Moved |
+|-----------------|-------------|---------------|
+| `manage_blueprint_graph` | `manage_blueprint` | 11 graph actions |
+| `manage_audio_authoring` | `manage_audio` | 30 authoring actions |
+| `manage_niagara_authoring` | `manage_effect` | 36 authoring actions |
+| `manage_animation_authoring` | `animation_physics` | 45 authoring actions |
+
+**Benefits:**
+- Reduced tool count: 38 → 35
+- ~10,000 token savings in AI context
+- Simplified tool discovery for AI assistants
+- Backward compatible: deprecated tools still work with warnings
+
+</details>
+
+### Deprecated
+
+- `manage_blueprint_graph` - Use `manage_blueprint` with graph actions instead
+- `manage_audio_authoring` - Use `manage_audio` with authoring actions instead
+- `manage_niagara_authoring` - Use `manage_effect` with authoring actions instead
+- `manage_animation_authoring` - Use `animation_physics` with authoring actions instead
+
+---
+
 ## 🏷️ [0.5.9] - 2026-01-03
 
 > [!IMPORTANT]

@@ -183,23 +183,20 @@ ASSET_LIST_TTL_MS=10000
 | `manage_level` | Load/Save, World Partition, streaming |
 | `manage_lighting` | Spawn lights, GI, shadows, build lighting, **list_light_types** |
 | `manage_performance` | Profiling, optimization, scalability |
-| `animation_physics` | Animation BPs, Vehicles (custom types), Ragdolls |
-| `manage_effect` | Niagara, Particles, Debug Shapes, **list_debug_shapes** |
-| `manage_blueprint` | Create, SCS, Graph Editing |
-| `manage_blueprint_graph` | Direct Blueprint Graph Manipulation |
+| `animation_physics` | Animation BPs, Vehicles, Ragdolls, Control Rig, IK, Blend Spaces |
+| `manage_effect` | Niagara, Particles, Debug Shapes, Niagara authoring, GPU sim |
+| `manage_blueprint` | Create, SCS, Graph Editing, Node manipulation |
 | `build_environment` | Landscape, Foliage, Procedural |
 | `system_control` | UBT, Tests, Logs, Project Settings, CVars |
 | `manage_sequence` | Sequencer / Cinematics, **list_track_types** |
 | `inspect` | Object Introspection |
-| `manage_audio` | Audio Assets & Components |
+| `manage_audio` | Audio Assets, Components, Sound Cues, MetaSounds, Attenuation |
 | `manage_behavior_tree` | Behavior Tree Graph Editing |
 | `manage_input` | Enhanced Input Actions & Contexts |
 | `manage_geometry` | Procedural mesh creation (Geometry Script) |
 | `manage_skeleton` | Skeleton, sockets, physics assets, cloth binding |
 | `manage_material_authoring` | Material creation, expressions, landscape layers |
 | `manage_texture` | Texture creation, modification, compression settings |
-| `manage_animation_authoring` | AnimBP, Control Rig, IK Rig, IK Retargeter |
-| `manage_niagara_authoring` | Niagara system/emitter creation, modules, parameters |
 | `manage_gas` | Gameplay Ability System: abilities, effects, attributes |
 | `manage_character` | Character creation, movement, advanced locomotion |
 | `manage_combat` | Weapons, projectiles, damage, melee combat |
@@ -208,7 +205,6 @@ ASSET_LIST_TTL_MS=10000
 | `manage_interaction` | Interactables, destructibles, triggers |
 | `manage_widget_authoring` | UMG widget creation, layout, styling, animations |
 | `manage_networking` | Replication, RPCs, network prediction |
-| `manage_audio_authoring` | MetaSounds, sound classes, attenuation, dialogue |
 | `manage_game_framework` | Game modes, game states, player controllers, match flow |
 | `manage_sessions` | Sessions, split-screen, LAN, voice chat |
 | `manage_level_structure` | Level creation, sublevels, World Partition, data layers, HLOD |

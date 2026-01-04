@@ -124,7 +124,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create', 'get_blueprint', 'get', 'compile',
             'add_component', 'set_default', 'modify_scs', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property',
             'ensure_exists', 'probe_handle', 'add_variable', 'remove_variable', 'rename_variable', 'add_function', 'add_event', 'remove_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
-            'create_node', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details'
+            'create_node', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
+            'list_node_types', 'set_pin_default_value'
           ],
           description: 'Blueprint action'
         },
@@ -329,17 +330,30 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'animation_physics',
     category: 'utility',
-    description: 'Create Animation BPs, Montages, Blend Spaces, IK rigs, ragdolls, and vehicles (wheeled/hover/flying).',
+    description: 'Create Animation BPs, Montages, Blend Spaces, IK rigs, ragdolls, vehicles, and author animation sequences/curves.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
+            // Runtime animation & physics
             'create_animation_bp', 'play_montage', 'setup_ragdoll', 'activate_ragdoll', 'configure_vehicle',
             'create_blend_space', 'create_state_machine', 'setup_ik', 'create_procedural_anim',
             'create_blend_tree', 'setup_retargeting', 'setup_physics_simulation', 'cleanup',
-            'create_animation_asset', 'add_notify'
+            'create_animation_asset', 'add_notify',
+            // Animation authoring (merged from manage_animation_authoring)
+            'create_animation_sequence', 'set_sequence_length', 'add_bone_track', 'set_bone_key', 'set_curve_key',
+            'add_notify_state', 'add_sync_marker', 'set_root_motion_settings', 'set_additive_settings',
+            'create_montage', 'add_montage_section', 'add_montage_slot', 'set_section_timing',
+            'add_montage_notify', 'set_blend_in', 'set_blend_out', 'link_sections',
+            'create_blend_space_1d', 'create_blend_space_2d', 'add_blend_sample', 'set_axis_settings', 'set_interpolation_settings',
+            'create_aim_offset', 'add_aim_offset_sample',
+            'create_anim_blueprint', 'add_state_machine', 'add_state', 'add_transition', 'set_transition_rules',
+            'add_blend_node', 'add_cached_pose', 'add_slot_node', 'add_layered_blend_per_bone', 'set_anim_graph_node_value',
+            'create_control_rig', 'add_control', 'add_rig_unit', 'connect_rig_elements', 'create_pose_library',
+            'create_ik_rig', 'add_ik_chain', 'create_ik_retargeter', 'set_retarget_chain_mapping',
+            'get_animation_info'
           ],
           description: 'Action'
         },
@@ -353,33 +367,141 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         meshPath: commonSchemas.meshPath,
         vehicleName: commonSchemas.stringProp,
         vehicleType: commonSchemas.stringProp,
-        savePath: commonSchemas.savePath
+        savePath: commonSchemas.savePath,
+        // Authoring properties (merged from manage_animation_authoring)
+        path: commonSchemas.directoryPathForCreation,
+        assetPath: commonSchemas.assetPath,
+        skeletalMeshPath: commonSchemas.skeletalMeshPath,
+        blueprintPath: commonSchemas.blueprintPath,
+        save: commonSchemas.save,
+        numFrames: commonSchemas.numFrames,
+        frameRate: commonSchemas.frameRate,
+        boneName: commonSchemas.boneName,
+        frame: commonSchemas.frame,
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+        scale: commonSchemas.scale,
+        curveName: commonSchemas.curveName,
+        value: commonSchemas.numberProp,
+        createIfMissing: commonSchemas.booleanProp,
+        notifyClass: commonSchemas.notifyClass,
+        notifyName: commonSchemas.notifyName,
+        trackIndex: commonSchemas.trackIndex,
+        startFrame: commonSchemas.startFrame,
+        endFrame: commonSchemas.endFrame,
+        markerName: commonSchemas.markerName,
+        enableRootMotion: commonSchemas.booleanProp,
+        rootMotionRootLock: commonSchemas.stringProp,
+        forceRootLock: commonSchemas.booleanProp,
+        additiveAnimType: commonSchemas.stringProp,
+        basePoseType: commonSchemas.stringProp,
+        basePoseAnimation: commonSchemas.stringProp,
+        basePoseFrame: commonSchemas.numberProp,
+        slotName: commonSchemas.slotName,
+        sectionName: commonSchemas.sectionName,
+        startTime: commonSchemas.startTime,
+        length: commonSchemas.numberProp,
+        time: commonSchemas.numberProp,
+        blendTime: commonSchemas.blendTime,
+        blendOption: commonSchemas.stringProp,
+        fromSection: commonSchemas.fromSection,
+        toSection: commonSchemas.toSection,
+        axisName: commonSchemas.axisName,
+        axisMin: commonSchemas.minValue,
+        axisMax: commonSchemas.maxValue,
+        horizontalAxisName: commonSchemas.horizontalAxisName,
+        horizontalMin: commonSchemas.numberProp,
+        horizontalMax: commonSchemas.numberProp,
+        verticalAxisName: commonSchemas.verticalAxisName,
+        verticalMin: commonSchemas.numberProp,
+        verticalMax: commonSchemas.numberProp,
+        sampleValue: commonSchemas.value,
+        axis: commonSchemas.stringProp,
+        minValue: commonSchemas.numberProp,
+        maxValue: commonSchemas.numberProp,
+        gridDivisions: commonSchemas.numberProp,
+        interpolationType: commonSchemas.stringProp,
+        targetWeightInterpolationSpeed: commonSchemas.numberProp,
+        yaw: commonSchemas.numberProp,
+        pitch: commonSchemas.numberProp,
+        parentClass: commonSchemas.parentClass,
+        stateMachineName: commonSchemas.stateMachineName,
+        stateName: commonSchemas.stateName,
+        isEntryState: commonSchemas.booleanProp,
+        fromState: commonSchemas.stringProp,
+        toState: commonSchemas.stringProp,
+        blendLogicType: commonSchemas.stringProp,
+        automaticTriggerRule: commonSchemas.stringProp,
+        automaticTriggerTime: commonSchemas.numberProp,
+        blendType: commonSchemas.stringProp,
+        nodeName: commonSchemas.nodeName,
+        x: commonSchemas.nodeX,
+        y: commonSchemas.nodeY,
+        cacheName: commonSchemas.cacheName,
+        layerSetup: commonSchemas.arrayOfObjects,
+        propertyName: commonSchemas.propertyName,
+        controlName: commonSchemas.controlName,
+        controlType: commonSchemas.stringProp,
+        parentBone: commonSchemas.parentBone,
+        parentControl: commonSchemas.parentControl,
+        unitType: commonSchemas.stringProp,
+        unitName: commonSchemas.unitName,
+        settings: commonSchemas.objectProp,
+        sourceElement: commonSchemas.sourceElement,
+        sourcePin: commonSchemas.sourcePin,
+        targetElement: commonSchemas.targetElement,
+        targetPin: commonSchemas.targetPin,
+        chainName: commonSchemas.chainName,
+        startBone: commonSchemas.startBone,
+        endBone: commonSchemas.endBone,
+        goal: commonSchemas.goal,
+        sourceIKRigPath: commonSchemas.sourceIKRigPath,
+        targetIKRigPath: commonSchemas.targetIKRigPath,
+        sourceChain: commonSchemas.sourceChain,
+        targetChain: commonSchemas.targetChain
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        ...commonSchemas.outputBase
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
+        animationInfo: commonSchemas.objectProp
       }
     }
   },
   {
     name: 'manage_effect',
     category: 'utility',
-    description: 'Spawn Niagara/Cascade particles, draw debug shapes, and edit VFX node graphs.',
+    description: 'Spawn Niagara/Cascade particles, draw debug shapes, edit VFX node graphs, and author Niagara systems/emitters.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
+            // Runtime VFX control
             'particle', 'niagara', 'debug_shape', 'spawn_niagara', 'create_dynamic_light',
             'create_niagara_system', 'create_niagara_emitter',
             'create_volumetric_fog', 'create_particle_trail', 'create_environment_effect', 'create_impact_effect', 'create_niagara_ribbon',
             'activate', 'activate_effect', 'deactivate', 'reset', 'advance_simulation',
             'add_niagara_module', 'connect_niagara_pins', 'remove_niagara_node', 'set_niagara_parameter',
-            'clear_debug_shapes', 'cleanup', 'list_debug_shapes'
+            'clear_debug_shapes', 'cleanup', 'list_debug_shapes',
+            // Niagara authoring (merged from manage_niagara_authoring)
+            'add_emitter_to_system', 'set_emitter_properties',
+            'add_spawn_rate_module', 'add_spawn_burst_module', 'add_spawn_per_unit_module',
+            'add_initialize_particle_module', 'add_particle_state_module',
+            'add_force_module', 'add_velocity_module', 'add_acceleration_module',
+            'add_size_module', 'add_color_module',
+            'add_sprite_renderer_module', 'add_mesh_renderer_module', 'add_ribbon_renderer_module', 'add_light_renderer_module',
+            'add_collision_module', 'add_kill_particles_module', 'add_camera_offset_module',
+            'add_user_parameter', 'set_parameter_value', 'bind_parameter_to_source',
+            'add_skeletal_mesh_data_interface', 'add_static_mesh_data_interface', 'add_spline_data_interface',
+            'add_audio_spectrum_data_interface', 'add_collision_query_data_interface',
+            'add_event_generator', 'add_event_receiver', 'configure_event_payload',
+            'enable_gpu_simulation', 'add_simulation_stage',
+            'get_niagara_info', 'validate_niagara_system'
           ],
           description: 'Action'
         },
@@ -400,14 +522,94 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         parameterType: commonSchemas.stringProp,
         type: commonSchemas.stringProp,
         value: commonSchemas.value,
-        filter: commonSchemas.filter
+        filter: commonSchemas.filter,
+        // Authoring properties (merged from manage_niagara_authoring)
+        path: commonSchemas.directoryPathForCreation,
+        assetPath: commonSchemas.assetPath,
+        emitterPath: commonSchemas.emitterPath,
+        save: commonSchemas.save,
+        emitterProperties: commonSchemas.objectProp,
+        spawnRate: commonSchemas.numberProp,
+        burstCount: commonSchemas.numberProp,
+        burstTime: commonSchemas.numberProp,
+        burstInterval: commonSchemas.numberProp,
+        spawnPerUnit: commonSchemas.numberProp,
+        lifetime: commonSchemas.numberProp,
+        lifetimeMin: commonSchemas.numberProp,
+        lifetimeMax: commonSchemas.numberProp,
+        mass: commonSchemas.numberProp,
+        spriteSize: commonSchemas.objectProp,
+        meshScale: commonSchemas.objectProp,
+        forceType: commonSchemas.stringProp,
+        forceStrength: commonSchemas.numberProp,
+        forceVector: commonSchemas.objectProp,
+        dragCoefficient: commonSchemas.numberProp,
+        velocity: commonSchemas.objectProp,
+        velocityMin: commonSchemas.objectProp,
+        velocityMax: commonSchemas.objectProp,
+        acceleration: commonSchemas.objectProp,
+        velocityMode: commonSchemas.stringProp,
+        sizeMode: commonSchemas.stringProp,
+        uniformSize: commonSchemas.numberProp,
+        sizeScale: commonSchemas.objectProp,
+        sizeCurve: commonSchemas.arrayOfObjects,
+        colorMin: commonSchemas.objectProp,
+        colorMax: commonSchemas.objectProp,
+        colorMode: commonSchemas.stringProp,
+        colorCurve: commonSchemas.arrayOfObjects,
+        materialPath: commonSchemas.materialPath,
+        meshPath: commonSchemas.meshPath,
+        sortMode: commonSchemas.stringProp,
+        alignment: commonSchemas.stringProp,
+        facingMode: commonSchemas.stringProp,
+        ribbonWidth: commonSchemas.numberProp,
+        ribbonTwist: commonSchemas.numberProp,
+        ribbonFacingMode: commonSchemas.stringProp,
+        tessellationFactor: commonSchemas.numberProp,
+        lightRadius: commonSchemas.numberProp,
+        lightIntensity: commonSchemas.numberProp,
+        lightColor: commonSchemas.objectProp,
+        volumetricScattering: commonSchemas.numberProp,
+        lightExponent: commonSchemas.numberProp,
+        affectsTranslucency: commonSchemas.booleanProp,
+        collisionMode: commonSchemas.stringProp,
+        restitution: commonSchemas.numberProp,
+        friction: commonSchemas.numberProp,
+        radiusScale: commonSchemas.numberProp,
+        dieOnCollision: commonSchemas.booleanProp,
+        killCondition: commonSchemas.stringProp,
+        killBox: commonSchemas.objectProp,
+        invertKillZone: commonSchemas.booleanProp,
+        cameraOffset: commonSchemas.numberProp,
+        cameraOffsetMode: commonSchemas.stringProp,
+        parameterValue: commonSchemas.value,
+        sourceBinding: commonSchemas.stringProp,
+        skeletalMeshPath: commonSchemas.skeletalMeshPath,
+        staticMeshPath: commonSchemas.meshAssetPath,
+        useWholeSkeletonOrBones: commonSchemas.stringProp,
+        specificBones: commonSchemas.arrayOfStrings,
+        samplingMode: commonSchemas.stringProp,
+        eventName: commonSchemas.eventName,
+        eventPayload: commonSchemas.arrayOfObjects,
+        spawnOnEvent: commonSchemas.booleanProp,
+        eventSpawnCount: commonSchemas.numberProp,
+        gpuEnabled: commonSchemas.booleanProp,
+        fixedBoundsEnabled: commonSchemas.booleanProp,
+        deterministicEnabled: commonSchemas.booleanProp,
+        stageName: commonSchemas.stageName,
+        stageIterationSource: commonSchemas.stringProp
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        ...commonSchemas.outputBase
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
+        emitterName: commonSchemas.stringProp,
+        moduleName: commonSchemas.stringProp,
+        niagaraInfo: commonSchemas.objectProp,
+        validationResult: commonSchemas.objectProp
       }
     }
   },
@@ -678,20 +880,37 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_audio',
     category: 'utility',
-    description: 'Play/stop sounds, add audio components, configure mixes, attenuation, and spatial audio.',
+    description: 'Play/stop sounds, add audio components, configure mixes, attenuation, spatial audio, and author Sound Cues/MetaSounds.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
+            // Runtime audio control
             'create_sound_cue', 'play_sound_at_location', 'play_sound_2d', 'create_audio_component',
             'create_sound_mix', 'push_sound_mix', 'pop_sound_mix',
             'set_sound_mix_class_override', 'clear_sound_mix_class_override', 'set_base_sound_mix',
             'prime_sound', 'play_sound_attached', 'spawn_sound_at_location',
             'fade_sound_in', 'fade_sound_out', 'create_ambient_sound',
             'create_sound_class', 'set_sound_attenuation', 'create_reverb_zone',
-            'enable_audio_analysis', 'fade_sound', 'set_doppler_effect', 'set_audio_occlusion'
+            'enable_audio_analysis', 'fade_sound', 'set_doppler_effect', 'set_audio_occlusion',
+            // Sound Cue authoring (merged from manage_audio_authoring)
+            'add_cue_node', 'connect_cue_nodes', 'set_cue_attenuation', 'set_cue_concurrency',
+            // MetaSound authoring
+            'create_metasound', 'add_metasound_node', 'connect_metasound_nodes',
+            'add_metasound_input', 'add_metasound_output', 'set_metasound_default',
+            // Sound class/mix authoring
+            'set_class_properties', 'set_class_parent', 'add_mix_modifier', 'configure_mix_eq',
+            // Attenuation authoring
+            'create_attenuation_settings', 'configure_distance_attenuation',
+            'configure_spatialization', 'configure_occlusion', 'configure_reverb_send',
+            // Dialogue system
+            'create_dialogue_voice', 'create_dialogue_wave', 'set_dialogue_context',
+            // Effects
+            'create_reverb_effect', 'create_source_effect_chain', 'add_source_effect', 'create_submix_effect',
+            // Utility
+            'get_audio_info'
           ],
           description: 'Action'
         },
@@ -728,14 +947,42 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         scale: commonSchemas.numberProp,
         lowPassFilterFrequency: commonSchemas.numberProp,
         volumeAttenuation: commonSchemas.numberProp,
-        enabled: commonSchemas.enabled
+        enabled: commonSchemas.enabled,
+        // Authoring properties (merged from manage_audio_authoring)
+        path: commonSchemas.directoryPathForCreation,
+        assetPath: commonSchemas.assetPath,
+        save: commonSchemas.save,
+        wavePath: commonSchemas.wavePath,
+        nodeType: commonSchemas.stringProp,
+        nodeId: commonSchemas.nodeId,
+        sourceNodeId: commonSchemas.sourceNodeId,
+        targetNodeId: commonSchemas.targetNodeId,
+        outputPin: commonSchemas.numberProp,
+        inputPin: commonSchemas.numberProp,
+        looping: commonSchemas.looping,
+        x: commonSchemas.numberProp,
+        y: commonSchemas.numberProp,
+        metasoundType: commonSchemas.stringProp,
+        inputName: commonSchemas.inputName,
+        inputType: commonSchemas.stringProp,
+        outputName: commonSchemas.outputName,
+        sourceNode: commonSchemas.sourceNode,
+        sourcePin: commonSchemas.sourcePin,
+        targetNode: commonSchemas.targetNode,
+        targetPin: commonSchemas.targetPin,
+        defaultValue: commonSchemas.value,
+        metasoundNodeType: commonSchemas.stringProp,
+        soundClassPath: commonSchemas.soundClassPath,
+        parentClassPath: commonSchemas.parentClassPath
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        ...commonSchemas.outputBase
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
+        nodeId: commonSchemas.nodeId
       }
     }
   },
@@ -772,45 +1019,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       }
     }
   },
-  {
-    name: 'manage_blueprint_graph',
-    category: 'authoring',
-    description: 'Add Blueprint graph nodes (functions, events, variables), connect pins, and set property values.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            'create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property',
-            'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
-            'list_node_types', 'set_pin_default_value'
-          ],
-          description: 'Action'
-        },
-        blueprintPath: commonSchemas.blueprintPath,
-        graphName: commonSchemas.graphName,
-        nodeType: commonSchemas.stringProp,
-        nodeId: commonSchemas.nodeId,
-        pinName: commonSchemas.pinName,
-        linkedTo: commonSchemas.stringProp,
-        memberName: commonSchemas.stringProp,
-        x: commonSchemas.numberProp,
-        y: commonSchemas.numberProp,
-        propertyName: commonSchemas.propertyName,
-        value: commonSchemas.value
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        ...commonSchemas.outputBase,
-        nodeId: commonSchemas.nodeId,
-        details: commonSchemas.objectProp
-      }
-    }
-  },
+  // [MERGED] manage_blueprint_graph actions now in manage_blueprint (Phase 53: Strategic Tool Merging)
   {
     name: 'manage_lighting',
     category: 'world',
@@ -1385,781 +1594,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       }
     }
   },
-  {
-    name: 'manage_animation_authoring',
-    category: 'authoring',
-    description: 'Create Animation Sequences, Montages, Blend Spaces, Animation BPs, Control Rigs, and IK Retargeters.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            'create_animation_sequence',
-            'set_sequence_length',
-            'add_bone_track',
-            'set_bone_key',
-            'set_curve_key',
-            'add_notify',
-            'add_notify_state',
-            'add_sync_marker',
-            'set_root_motion_settings',
-            'set_additive_settings',
-            'create_montage',
-            'add_montage_section',
-            'add_montage_slot',
-            'set_section_timing',
-            'add_montage_notify',
-            'set_blend_in',
-            'set_blend_out',
-            'link_sections',
-            'create_blend_space_1d',
-            'create_blend_space_2d',
-            'add_blend_sample',
-            'set_axis_settings',
-            'set_interpolation_settings',
-            'create_aim_offset',
-            'add_aim_offset_sample',
-            'create_anim_blueprint',
-            'add_state_machine',
-            'add_state',
-            'add_transition',
-            'set_transition_rules',
-            'add_blend_node',
-            'add_cached_pose',
-            'add_slot_node',
-            'add_layered_blend_per_bone',
-            'set_anim_graph_node_value',
-            'create_control_rig',
-            'add_control',
-            'add_rig_unit',
-            'connect_rig_elements',
-            'create_pose_library',
-            'create_ik_rig',
-            'add_ik_chain',
-            'create_ik_retargeter',
-            'set_retarget_chain_mapping',
-            'get_animation_info'
-          ],
-          description: 'Animation authoring action to perform.'
-        },
-        name: commonSchemas.assetNameForCreation,
-        path: commonSchemas.directoryPathForCreation,
-        assetPath: commonSchemas.assetPath,
-        skeletonPath: commonSchemas.skeletonPath,
-        skeletalMeshPath: commonSchemas.skeletalMeshPath,
-        blueprintPath: commonSchemas.blueprintPath,
-        save: commonSchemas.save,
-        numFrames: commonSchemas.numFrames,
-        frameRate: commonSchemas.frameRate,
-        boneName: commonSchemas.boneName,
-        frame: commonSchemas.frame,
-        location: { type: 'object', description: 'Location {x, y, z}.' },
-        rotation: { type: 'object', description: 'Rotation {pitch, yaw, roll} or quaternion {x, y, z, w}.' },
-        scale: { type: 'object', description: 'Scale {x, y, z}.' },
-        curveName: commonSchemas.curveName,
-        value: { type: 'number', description: 'Curve/property value.' },
-        createIfMissing: { type: 'boolean', description: 'Create curve if it does not exist.' },
-        notifyClass: commonSchemas.notifyClass,
-        notifyName: commonSchemas.notifyName,
-        trackIndex: commonSchemas.trackIndex,
-        startFrame: commonSchemas.startFrame,
-        endFrame: commonSchemas.endFrame,
-        markerName: commonSchemas.markerName,
-        enableRootMotion: { type: 'boolean', description: 'Enable root motion.' },
-        rootMotionRootLock: { type: 'string', enum: ['RefPose', 'AnimFirstFrame', 'Zero'], description: 'Root motion lock mode.' },
-        forceRootLock: { type: 'boolean', description: 'Force root lock.' },
-        additiveAnimType: { type: 'string', enum: ['NoAdditive', 'LocalSpaceAdditive', 'MeshSpaceAdditive'], description: 'Additive animation type.' },
-        basePoseType: { type: 'string', enum: ['RefPose', 'AnimationFrame', 'AnimationScaled'], description: 'Base pose type for additive.' },
-        basePoseAnimation: { type: 'string', description: 'Base pose animation path.' },
-        basePoseFrame: { type: 'number', description: 'Base pose frame number.' },
-        slotName: commonSchemas.slotName,
-        sectionName: commonSchemas.sectionName,
-        startTime: commonSchemas.startTime,
-        animationPath: commonSchemas.animationAssetPath,
-        length: { type: 'number', description: 'Section length in seconds.' },
-        time: { type: 'number', description: 'Time position in seconds.' },
-        blendTime: commonSchemas.blendTime,
-        blendOption: { type: 'string', enum: ['Linear', 'Cubic', 'HermiteCubic', 'Sinusoidal', 'QuadraticInOut', 'CubicInOut', 'QuarticInOut', 'QuinticInOut', 'CircularIn', 'CircularOut', 'CircularInOut', 'ExpIn', 'ExpOut', 'ExpInOut'], description: 'Blend curve option.' },
-        fromSection: commonSchemas.fromSection,
-        toSection: commonSchemas.toSection,
-        axisName: commonSchemas.axisName,
-        axisMin: commonSchemas.minValue,
-        axisMax: commonSchemas.maxValue,
-        horizontalAxisName: commonSchemas.horizontalAxisName,
-        horizontalMin: { type: 'number', description: 'Horizontal axis minimum.' },
-        horizontalMax: { type: 'number', description: 'Horizontal axis maximum.' },
-        verticalAxisName: commonSchemas.verticalAxisName,
-        verticalMin: { type: 'number', description: 'Vertical axis minimum.' },
-        verticalMax: { type: 'number', description: 'Vertical axis maximum.' },
-        sampleValue: { type: ['number', 'object'], description: 'Sample value (number for 1D, {x, y} for 2D).' },
-        axis: { type: 'string', enum: ['Horizontal', 'Vertical', 'X'], description: 'Axis to configure.' },
-        minValue: { type: 'number', description: 'Axis minimum value.' },
-        maxValue: { type: 'number', description: 'Axis maximum value.' },
-        gridDivisions: { type: 'number', description: 'Number of grid divisions.' },
-        interpolationType: { type: 'string', enum: ['Lerp', 'Cubic'], description: 'Blend interpolation type.' },
-        targetWeightInterpolationSpeed: { type: 'number', description: 'Weight interpolation speed.' },
-        yaw: { type: 'number', description: 'Yaw angle for aim offset.' },
-        pitch: { type: 'number', description: 'Pitch angle for aim offset.' },
-        parentClass: commonSchemas.parentClass,
-        stateMachineName: commonSchemas.stateMachineName,
-        stateName: commonSchemas.stateName,
-        isEntryState: { type: 'boolean', description: 'Mark as entry state.' },
-        fromState: { type: 'string', description: 'Source state for transition.' },
-        toState: { type: 'string', description: 'Target state for transition.' },
-        blendLogicType: { type: 'string', enum: ['StandardBlend', 'Inertialization', 'Custom'], description: 'Transition blend logic type.' },
-        automaticTriggerRule: { type: 'string', enum: ['TimeRemaining', 'FractionRemaining', 'None'], description: 'Automatic transition trigger rule.' },
-        automaticTriggerTime: { type: 'number', description: 'Time/fraction for automatic trigger.' },
-        blendType: { type: 'string', enum: ['TwoWayBlend', 'BlendByBool', 'BlendPosesByBool', 'BlendByInt', 'LayeredBlendPerBone', 'MakeDynamicAdditive', 'ApplyAdditive'], description: 'Blend node type.' },
-        nodeName: commonSchemas.nodeName,
-        x: commonSchemas.nodeX,
-        y: commonSchemas.nodeY,
-        cacheName: commonSchemas.cacheName,
-        layerSetup: { type: 'array', items: commonSchemas.objectProp, description: 'Layer setup for layered blend per bone.' },
-        propertyName: commonSchemas.propertyName,
-        controlName: commonSchemas.controlName,
-        controlType: { type: 'string', enum: ['Transform', 'Bool', 'Float', 'Integer', 'Vector2D', 'EulerTransform'], description: 'Control type.' },
-        parentBone: commonSchemas.parentBone,
-        parentControl: commonSchemas.parentControl,
-        unitType: { type: 'string', enum: ['FKIK', 'Aim', 'BasicIK', 'TwoBoneIK', 'FABRIK', 'SplineIK', 'LimbIK'], description: 'Rig unit type.' },
-        unitName: commonSchemas.unitName,
-        settings: { type: 'object', description: 'Unit-specific settings.' },
-        sourceElement: commonSchemas.sourceElement,
-        sourcePin: commonSchemas.sourcePin,
-        targetElement: commonSchemas.targetElement,
-        targetPin: commonSchemas.targetPin,
-        chainName: commonSchemas.chainName,
-        startBone: commonSchemas.startBone,
-        endBone: commonSchemas.endBone,
-        goal: commonSchemas.goal,
-        sourceIKRigPath: commonSchemas.sourceIKRigPath,
-        targetIKRigPath: commonSchemas.targetIKRigPath,
-        sourceChain: commonSchemas.sourceChain,
-        targetChain: commonSchemas.targetChain
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        ...commonSchemas.outputBase,
-        assetPath: commonSchemas.assetPath,
-        animationInfo: {
-          type: 'object',
-          properties: {
-            assetType: commonSchemas.stringProp,
-            skeletonPath: commonSchemas.skeletonPath,
-            duration: commonSchemas.numberProp,
-            numFrames: commonSchemas.numberProp,
-            frameRate: commonSchemas.numberProp,
-            numBoneTracks: commonSchemas.numberProp,
-            numCurves: commonSchemas.numberProp,
-            numNotifies: commonSchemas.numberProp,
-            isAdditive: commonSchemas.booleanProp,
-            hasRootMotion: commonSchemas.booleanProp
-          }
-        },
-        error: commonSchemas.stringProp
-      }
-    }
-  },
-  {
-    name: 'manage_audio_authoring',
-    category: 'authoring',
-    description: 'Create Sound Cues, MetaSounds, sound classes/mixes, attenuation settings, and dialogue systems.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            'create_sound_cue',
-            'add_cue_node',
-            'connect_cue_nodes',
-            'set_cue_attenuation',
-            'set_cue_concurrency',
-            'create_metasound',
-            'add_metasound_node',
-            'connect_metasound_nodes',
-            'add_metasound_input',
-            'add_metasound_output',
-            'set_metasound_default',
-            'create_sound_class',
-            'set_class_properties',
-            'set_class_parent',
-            'create_sound_mix',
-            'add_mix_modifier',
-            'configure_mix_eq',
-            'create_attenuation_settings',
-            'configure_distance_attenuation',
-            'configure_spatialization',
-            'configure_occlusion',
-            'configure_reverb_send',
-            'create_dialogue_voice',
-            'create_dialogue_wave',
-            'set_dialogue_context',
-            'create_reverb_effect',
-            'create_source_effect_chain',
-            'add_source_effect',
-            'create_submix_effect',
-            'get_audio_info'
-          ],
-          description: 'Audio authoring action to perform.'
-        },
-        name: commonSchemas.assetNameForCreation,
-        path: commonSchemas.directoryPathForCreation,
-        assetPath: commonSchemas.assetPath,
-        save: commonSchemas.save,
-        wavePath: commonSchemas.wavePath,
-        nodeType: {
-          type: 'string',
-          enum: [
-            'WavePlayer', 'Mixer', 'Random', 'Modulator', 'Attenuation', 'Looping',
-            'Concatenator', 'Delay', 'Doppler', 'Enveloper', 'Crossfade', 'Switch',
-            'MatineeControlled', 'GroupControl', 'OscillatorSound', 'QualityLevel'
-          ],
-          description: 'Sound Cue node type to add.'
-        },
-        nodeId: { type: 'string', description: 'Node ID for reference.' },
-        sourceNodeId: commonSchemas.sourceNodeId,
-        targetNodeId: commonSchemas.targetNodeId,
-        outputPin: { type: 'number', description: 'Output pin index.' },
-        inputPin: { type: 'number', description: 'Input pin index.' },
-        attenuationPath: commonSchemas.attenuationPath,
-        concurrencyPath: commonSchemas.concurrencyPath,
-        looping: commonSchemas.looping,
-        volume: commonSchemas.volume,
-        pitch: commonSchemas.pitch,
-        x: commonSchemas.nodeX,
-        y: commonSchemas.nodeY,
-        metasoundType: {
-          type: 'string',
-          enum: ['Source', 'Patch'],
-          description: 'MetaSound type (Source for playable, Patch for reusable).'
-        },
-        inputName: commonSchemas.inputName,
-        inputType: {
-          type: 'string',
-          enum: ['Audio', 'Float', 'Int', 'Bool', 'String', 'Trigger', 'Time'],
-          description: 'MetaSound input data type.'
-        },
-        outputName: commonSchemas.outputName,
-        outputType: {
-          type: 'string',
-          enum: ['Audio', 'Float', 'Int', 'Bool', 'String', 'Trigger'],
-          description: 'MetaSound output data type.'
-        },
-        sourceNode: commonSchemas.sourceNode,
-        sourcePin: commonSchemas.sourcePin,
-        targetNode: commonSchemas.targetNode,
-        targetPin: commonSchemas.targetPin,
-        defaultValue: { description: 'Default value for input (type depends on inputType).' },
-        metasoundNodeType: {
-          type: 'string',
-          description: 'MetaSound node type (e.g., Audio:Multiply, Generators:Sine, Filters:BiQuad).'
-        },
-        soundClassPath: commonSchemas.soundClassPath,
-        parentClassPath: commonSchemas.parentClassPath,
-        properties: {
-          type: 'object',
-          properties: {
-            volume: commonSchemas.numberProp,
-            pitch: commonSchemas.numberProp,
-            lowPassFilterFrequency: commonSchemas.numberProp,
-            attenuationDistanceScale: commonSchemas.numberProp,
-            sendLevel: commonSchemas.numberProp,
-            occlusionFilterFrequency: commonSchemas.numberProp,
-            voiceCenterChannelVolume: commonSchemas.numberProp,
-            radioFilterVolume: commonSchemas.numberProp,
-            radioFilterVolumeThreshold: commonSchemas.numberProp,
-            defaultVolume: commonSchemas.numberProp,
-            default2DReverbSendAmount: commonSchemas.numberProp
-          },
-          description: 'Sound class property values.'
-        },
-        classAdjusters: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              soundClass: commonSchemas.stringProp,
-              volumeAdjuster: commonSchemas.numberProp,
-              pitchAdjuster: commonSchemas.numberProp,
-              applyToChildren: commonSchemas.booleanProp,
-              fadeInTime: commonSchemas.numberProp,
-              fadeOutTime: commonSchemas.numberProp
-            }
-          },
-          description: 'Array of sound class adjusters for the mix.'
-        },
-        eq: {
-          type: 'object',
-          properties: {
-            lowFrequency: commonSchemas.numberProp,
-            lowFrequencyGain: commonSchemas.numberProp,
-            midFrequency1: commonSchemas.numberProp,
-            midFrequency1Gain: commonSchemas.numberProp,
-            midFrequency2: commonSchemas.numberProp,
-            midFrequency2Gain: commonSchemas.numberProp,
-            midFrequency3: commonSchemas.numberProp,
-            midFrequency3Gain: commonSchemas.numberProp,
-            highFrequency: commonSchemas.numberProp,
-            highFrequencyGain: commonSchemas.numberProp
-          },
-          description: 'EQ settings for sound mix.'
-        },
-        attenuationFunction: {
-          type: 'string',
-          enum: ['Linear', 'Logarithmic', 'Inverse', 'LogReverse', 'NaturalSound', 'Custom'],
-          description: 'Distance attenuation function.'
-        },
-        innerRadius: { type: 'number', description: 'Inner radius (full volume).' },
-        falloffDistance: { type: 'number', description: 'Distance over which attenuation occurs.' },
-        dbAttenuationAtMax: { type: 'number', description: 'Attenuation in dB at max distance.' },
-        attenuationShape: {
-          type: 'string',
-          enum: ['Sphere', 'Capsule', 'Box', 'Cone'],
-          description: 'Shape of attenuation zone.'
-        },
-        spatializationAlgorithm: {
-          type: 'string',
-          enum: ['Panning', 'Binaural', 'Plugin'],
-          description: 'Spatialization algorithm.'
-        },
-        enableOcclusion: { type: 'boolean', description: 'Enable occlusion.' },
-        occlusionLowPassFilterFrequency: { type: 'number', description: 'Low pass filter frequency when occluded.' },
-        occlusionVolumeAttenuation: { type: 'number', description: 'Volume attenuation when occluded.' },
-        occlusionInterpolationTime: { type: 'number', description: 'Occlusion interpolation time.' },
-        reverbSendMethod: {
-          type: 'string',
-          enum: ['Linear', 'CustomCurve', 'Manual'],
-          description: 'Method for reverb send.'
-        },
-        reverbSendLevel: { type: 'number', description: 'Reverb send level (0.0 - 1.0).' },
-        reverbWetLevel: { type: 'number', description: 'Reverb wet level.' },
-        dialogueVoice: {
-          type: 'object',
-          properties: {
-            gender: { type: 'string', enum: ['Neutral', 'Male', 'Female'] },
-            plurality: { type: 'string', enum: ['Singular', 'Plural'] }
-          },
-          description: 'Dialogue voice characteristics.'
-        },
-        speakerPath: { type: 'string', description: 'Path to DialogueVoice asset for speaker.' },
-        targetPaths: {
-          type: 'array',
-          items: commonSchemas.stringProp,
-          description: 'Array of DialogueVoice paths for targets.'
-        },
-        dialogueContext: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              speaker: commonSchemas.stringProp,
-              targets: commonSchemas.arrayOfStrings,
-              wave: commonSchemas.stringProp
-            }
-          },
-          description: 'Dialogue context mappings.'
-        },
-        reverbSettings: {
-          type: 'object',
-          properties: {
-            density: commonSchemas.numberProp,
-            diffusion: commonSchemas.numberProp,
-            gain: commonSchemas.numberProp,
-            gainHF: commonSchemas.numberProp,
-            decayTime: commonSchemas.numberProp,
-            decayHFRatio: commonSchemas.numberProp,
-            reflectionsGain: commonSchemas.numberProp,
-            reflectionsDelay: commonSchemas.numberProp,
-            lateReverbGain: commonSchemas.numberProp,
-            lateReverbDelay: commonSchemas.numberProp,
-            airAbsorptionGainHF: commonSchemas.numberProp,
-            roomRolloffFactor: commonSchemas.numberProp
-          },
-          description: 'Reverb effect settings.'
-        },
-        effectType: {
-          type: 'string',
-          enum: [
-            'Filter', 'EQ', 'Chorus', 'Dynamics', 'Envelope', 'Flanger', 'Folding',
-            'LPF', 'HPF', 'Panner', 'Phaser', 'RingModulation', 'Stereo', 'Delay',
-            'BitCrusher', 'Convolution', 'Distortion', 'Limiter', 'Parametric'
-          ],
-          description: 'Source effect type to add.'
-        },
-        effectPreset: { type: 'string', description: 'Path to effect preset asset.' },
-        bypassWhenSilent: { type: 'boolean', description: 'Bypass effect when silent.' },
-        submixEffectType: {
-          type: 'string',
-          enum: [
-            'Reverb', 'EQ', 'Dynamics', 'SubmixDelay', 'SubmixFilter', 'StereoDelay',
-            'Flanger', 'Phaser', 'Limiter', 'Distortion', 'Chorus', 'Convolution'
-          ],
-          description: 'Submix effect type.'
-        }
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        ...commonSchemas.outputBase,
-        assetPath: commonSchemas.assetPath,
-        nodeId: commonSchemas.nodeId,
-        audioInfo: {
-          type: 'object',
-          properties: {
-            assetType: commonSchemas.stringProp,
-            duration: commonSchemas.numberProp,
-            sampleRate: commonSchemas.numberProp,
-            numChannels: commonSchemas.numberProp,
-            nodeCount: commonSchemas.numberProp,
-            inputCount: commonSchemas.numberProp,
-            outputCount: commonSchemas.numberProp,
-            soundClass: commonSchemas.stringProp,
-            attenuation: commonSchemas.stringProp,
-            concurrency: commonSchemas.stringProp
-          }
-        },
-        error: commonSchemas.stringProp
-      }
-    }
-  },
-  {
-    name: 'manage_niagara_authoring',
-    category: 'authoring',
-    description: 'Create Niagara Systems/Emitters, add modules, set parameters, and configure GPU simulations.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            'create_niagara_system',
-            'create_niagara_emitter',
-            'add_emitter_to_system',
-            'set_emitter_properties',
-            'add_spawn_rate_module',
-            'add_spawn_burst_module',
-            'add_spawn_per_unit_module',
-            'add_initialize_particle_module',
-            'add_particle_state_module',
-            'add_force_module',
-            'add_velocity_module',
-            'add_acceleration_module',
-            'add_size_module',
-            'add_color_module',
-            'add_sprite_renderer_module',
-            'add_mesh_renderer_module',
-            'add_ribbon_renderer_module',
-            'add_light_renderer_module',
-            'add_collision_module',
-            'add_kill_particles_module',
-            'add_camera_offset_module',
-            'add_user_parameter',
-            'set_parameter_value',
-            'bind_parameter_to_source',
-            'add_skeletal_mesh_data_interface',
-            'add_static_mesh_data_interface',
-            'add_spline_data_interface',
-            'add_audio_spectrum_data_interface',
-            'add_collision_query_data_interface',
-            'add_event_generator',
-            'add_event_receiver',
-            'configure_event_payload',
-            'enable_gpu_simulation',
-            'add_simulation_stage',
-            'get_niagara_info',
-            'validate_niagara_system'
-          ],
-          description: 'Niagara authoring action to perform.'
-        },
-        name: commonSchemas.assetNameForCreation,
-        path: commonSchemas.directoryPathForCreation,
-        assetPath: commonSchemas.assetPath,
-        systemPath: commonSchemas.systemPath,
-        emitterPath: commonSchemas.emitterPath,
-        emitterName: commonSchemas.emitterName,
-        save: commonSchemas.save,
-        emitterProperties: {
-          type: 'object',
-          properties: {
-            enabled: commonSchemas.enabled,
-            localSpace: { type: 'boolean', description: 'Simulate in local space.' },
-            deterministic: { type: 'boolean', description: 'Use deterministic random.' },
-            randomSeed: { type: 'number', description: 'Random seed for deterministic simulation.' },
-            simulationTarget: { type: 'string', enum: ['CPUSim', 'GPUComputeSim'], description: 'Simulation target.' },
-            scalabilityMode: { type: 'string', enum: ['Self', 'System'], description: 'Scalability mode.' },
-            fixedBounds: { type: 'boolean', description: 'Use fixed bounds.' },
-            bounds: {
-              type: 'object',
-              properties: {
-                min: commonSchemas.vector3,
-                max: commonSchemas.vector3
-              }
-            }
-          },
-          description: 'Emitter property values.'
-        },
-        spawnRate: { type: 'number', description: 'Particles per second for spawn rate module.' },
-        burstCount: { type: 'number', description: 'Number of particles for burst spawn.' },
-        burstTime: { type: 'number', description: 'Time at which burst occurs.' },
-        burstInterval: { type: 'number', description: 'Interval between bursts (0 for single burst).' },
-        spawnPerUnit: { type: 'number', description: 'Particles spawned per unit distance.' },
-        lifetime: commonSchemas.lifetime,
-        lifetimeMin: { type: 'number', description: 'Minimum lifetime for random range.' },
-        lifetimeMax: { type: 'number', description: 'Maximum lifetime for random range.' },
-        mass: commonSchemas.mass,
-        spriteSize: {
-          type: 'object',
-          properties: commonSchemas.vector2.properties,
-          description: 'Sprite size {x, y}.'
-        },
-        spriteSizeMin: { type: 'object', description: 'Minimum sprite size for random range.' },
-        spriteSizeMax: { type: 'object', description: 'Maximum sprite size for random range.' },
-        meshScale: {
-          type: 'object',
-          properties: commonSchemas.vector3.properties,
-          description: 'Mesh scale {x, y, z}.'
-        },
-        forceType: {
-          type: 'string',
-          enum: ['Gravity', 'Drag', 'Vortex', 'PointAttraction', 'CurlNoise', 'Wind', 'LinearForce'],
-          description: 'Type of force to apply.'
-        },
-        forceStrength: { type: 'number', description: 'Force strength/magnitude.' },
-        forceVector: {
-          type: 'object',
-          properties: commonSchemas.vector3.properties,
-          description: 'Force direction vector.'
-        },
-        dragCoefficient: { type: 'number', description: 'Drag coefficient.' },
-        vortexAxis: {
-          type: 'object',
-          properties: commonSchemas.vector3.properties,
-          description: 'Vortex rotation axis.'
-        },
-        attractorPosition: {
-          type: 'object',
-          properties: commonSchemas.vector3.properties,
-          description: 'Position of point attractor.'
-        },
-        attractorRadius: { type: 'number', description: 'Attractor influence radius.' },
-        killRadius: { type: 'number', description: 'Radius at which particles are killed.' },
-        noiseFrequency: { type: 'number', description: 'Curl noise frequency.' },
-        noiseStrength: { type: 'number', description: 'Curl noise strength.' },
-        velocity: {
-          type: 'object',
-          properties: commonSchemas.vector3.properties,
-          description: 'Initial velocity vector.'
-        },
-        velocityMin: { type: 'object', description: 'Minimum velocity for random range.' },
-        velocityMax: { type: 'object', description: 'Maximum velocity for random range.' },
-        acceleration: {
-          type: 'object',
-          properties: commonSchemas.vector3.properties,
-          description: 'Acceleration vector.'
-        },
-        velocityMode: {
-          type: 'string',
-          enum: ['Linear', 'FromPoint', 'InCone'],
-          description: 'Velocity initialization mode.'
-        },
-        coneAngle: { type: 'number', description: 'Cone angle for InCone velocity mode.' },
-        sizeMode: {
-          type: 'string',
-          enum: ['Uniform', 'NonUniform', 'ByLifetime'],
-          description: 'Size calculation mode.'
-        },
-        uniformSize: { type: 'number', description: 'Uniform size value.' },
-        sizeScale: {
-          type: 'object',
-          properties: commonSchemas.vector3.properties,
-          description: 'Size scale multiplier.'
-        },
-        sizeCurve: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: { time: commonSchemas.numberProp, value: commonSchemas.numberProp }
-          },
-          description: 'Size over lifetime curve points.'
-        },
-        color: {
-          type: 'object',
-          properties: commonSchemas.colorObject.properties,
-          description: 'Particle color {r, g, b, a} (0-1 range).'
-        },
-        colorMin: { type: 'object', description: 'Minimum color for random range.' },
-        colorMax: { type: 'object', description: 'Maximum color for random range.' },
-        colorMode: {
-          type: 'string',
-          enum: ['Direct', 'ByLifetime', 'BySpeed', 'ByAttribute'],
-          description: 'Color calculation mode.'
-        },
-        colorCurve: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              time: commonSchemas.numberProp,
-              color: commonSchemas.colorObject
-            }
-          },
-          description: 'Color over lifetime curve points.'
-        },
-        materialPath: commonSchemas.materialPath,
-        meshPath: commonSchemas.meshPath,
-        sortMode: {
-          type: 'string',
-          enum: ['None', 'ViewDepth', 'ViewDistance', 'CustomAscending', 'CustomDescending'],
-          description: 'Particle sort mode.'
-        },
-        subImageIndex: { type: 'number', description: 'Sub-image index for flipbook materials.' },
-        alignment: {
-          type: 'string',
-          enum: ['Unaligned', 'VelocityAligned', 'CustomAlignment'],
-          description: 'Sprite alignment mode.'
-        },
-        facingMode: {
-          type: 'string',
-          enum: ['FaceCamera', 'FaceCameraPlane', 'CustomFacing', 'FaceCameraPosition', 'FaceCameraDistanceBlend'],
-          description: 'Sprite facing mode.'
-        },
-        ribbonWidth: { type: 'number', description: 'Ribbon width.' },
-        ribbonTwist: { type: 'number', description: 'Ribbon twist amount.' },
-        ribbonFacingMode: {
-          type: 'string',
-          enum: ['Screen', 'Custom', 'CustomSideVector'],
-          description: 'Ribbon facing mode.'
-        },
-        tessellationFactor: { type: 'number', description: 'Ribbon tessellation factor.' },
-        lightRadius: { type: 'number', description: 'Light radius.' },
-        lightIntensity: { type: 'number', description: 'Light intensity.' },
-        lightColor: {
-          type: 'object',
-          properties: { r: commonSchemas.numberProp, g: commonSchemas.numberProp, b: commonSchemas.numberProp },
-          description: 'Light color.'
-        },
-        volumetricScattering: { type: 'number', description: 'Volumetric scattering intensity.' },
-        lightExponent: { type: 'number', description: 'Light falloff exponent.' },
-        affectsTranslucency: { type: 'boolean', description: 'Light affects translucent materials.' },
-        collisionMode: {
-          type: 'string',
-          enum: ['None', 'SceneDepth', 'DistanceField', 'AnalyticPlane'],
-          description: 'Collision detection mode.'
-        },
-        restitution: commonSchemas.restitution,
-        friction: commonSchemas.friction,
-        radiusScale: { type: 'number', description: 'Collision radius scale.' },
-        dieOnCollision: { type: 'boolean', description: 'Kill particle on collision.' },
-        killCondition: {
-          type: 'string',
-          enum: ['Age', 'Box', 'Sphere', 'Plane', 'Custom'],
-          description: 'Kill condition type.'
-        },
-        killBox: {
-          type: 'object',
-          properties: {
-            min: commonSchemas.vector3,
-            max: commonSchemas.vector3
-          },
-          description: 'Kill volume box bounds.'
-        },
-        invertKillZone: { type: 'boolean', description: 'Kill particles outside the zone instead of inside.' },
-        cameraOffset: { type: 'number', description: 'Camera offset distance.' },
-        cameraOffsetMode: {
-          type: 'string',
-          enum: ['Absolute', 'Relative'],
-          description: 'Camera offset mode.'
-        },
-        parameterName: commonSchemas.parameterName,
-        parameterType: {
-          type: 'string',
-          enum: ['Float', 'Int', 'Bool', 'Vector', 'LinearColor', 'Texture', 'StaticMesh', 'SkeletalMesh', 'Object'],
-          description: 'Parameter data type.'
-        },
-        parameterValue: { description: 'Parameter value (type depends on parameterType).' },
-        sourceBinding: commonSchemas.sourceBinding,
-        skeletalMeshPath: commonSchemas.skeletalMeshPath,
-        staticMeshPath: commonSchemas.meshAssetPath,
-        useWholeSkeletonOrBones: {
-          type: 'string',
-          enum: ['WholeSkeleton', 'SpecificBones'],
-          description: 'Skeletal mesh sampling mode.'
-        },
-        specificBones: {
-          type: 'array',
-          items: commonSchemas.stringProp,
-          description: 'List of specific bone names to sample.'
-        },
-        samplingMode: {
-          type: 'string',
-          enum: ['Vertices', 'Triangles', 'Bones', 'Sockets'],
-          description: 'Mesh sampling mode.'
-        },
-        eventName: commonSchemas.eventName,
-        eventPayload: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              name: commonSchemas.stringProp,
-              type: { type: 'string', enum: ['Float', 'Int', 'Bool', 'Vector', 'LinearColor'] }
-            }
-          },
-          description: 'Event payload attribute definitions.'
-        },
-        spawnOnEvent: { type: 'boolean', description: 'Spawn particles when event received.' },
-        eventSpawnCount: { type: 'number', description: 'Number of particles to spawn per event.' },
-        gpuEnabled: { type: 'boolean', description: 'Enable GPU simulation.' },
-        fixedBoundsEnabled: { type: 'boolean', description: 'Use fixed bounds for GPU sim.' },
-        deterministicEnabled: { type: 'boolean', description: 'Enable deterministic simulation.' },
-        stageName: commonSchemas.stageName,
-        stageIterationSource: {
-          type: 'string',
-          enum: ['Particles', 'DataInterface', 'None'],
-          description: 'Simulation stage iteration source.'
-        }
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        ...commonSchemas.outputBase,
-        assetPath: commonSchemas.assetPath,
-        emitterName: commonSchemas.stringProp,
-        moduleName: commonSchemas.stringProp,
-        parameterName: commonSchemas.parameterName,
-        niagaraInfo: {
-          type: 'object',
-          properties: {
-            assetType: { type: 'string', enum: ['System', 'Emitter'] },
-            emitterCount: commonSchemas.numberProp,
-            emitters: commonSchemas.arrayOfObjects,
-            userParameterCount: commonSchemas.numberProp,
-            userParameters: commonSchemas.arrayOfObjects,
-            hasGPUEmitters: commonSchemas.booleanProp,
-            isValid: commonSchemas.booleanProp,
-            validationErrors: commonSchemas.arrayOfStrings
-          }
-        },
-        validationResult: {
-          type: 'object',
-          properties: {
-            isValid: commonSchemas.booleanProp,
-            errors: commonSchemas.arrayOfStrings,
-            warnings: commonSchemas.arrayOfStrings
-          }
-        },
-        error: commonSchemas.stringProp
-      }
-    }
-  },
+  // [MERGED] manage_animation_authoring actions now in animation_physics (Phase 53: Strategic Tool Merging)
+  // [MERGED] manage_audio_authoring actions now in manage_audio (Phase 53: Strategic Tool Merging)
+  // [MERGED] manage_niagara_authoring actions now in manage_effect (Phase 53: Strategic Tool Merging)
   {
     name: 'manage_gas',
     category: 'gameplay',
