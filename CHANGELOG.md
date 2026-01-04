@@ -9,14 +9,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [0.5.10] - 2026-01-04
 
-> [!NOTE]
-> ### Phase 53: Strategic Tool Merging
-> This release consolidates 4 authoring tools into their runtime counterparts, reducing tool count from 38 to 35 and saving ~10,000 tokens in AI context. ([#111](https://github.com/ChiR24/Unreal_mcp/issues/111))
+> [!IMPORTANT]
+> ### 🚀 Context Reduction Initiative & Spline System
+> This release implements the **Context Reduction Initiative** (Phases 48-53), reducing AI context overhead from ~78,000 to ~25,000 tokens, and adds a complete **Spline System** (Phase 26) with 21 new actions. ([#107](https://github.com/ChiR24/Unreal_mcp/pull/107), [#105](https://github.com/ChiR24/Unreal_mcp/pull/105))
 
-### Changed
+### ✨ Added
 
 <details>
-<summary><b>Tool Consolidation (Phase 53)</b></summary>
+<summary><b>🛤️ Spline System (Phase 26)</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/105">#105</a>)</summary>
+
+New `manage_splines` tool with 21 actions for spline-based content creation:
+
+| Category | Actions |
+|----------|---------|
+| **Creation** | `create_spline_actor`, `add_spline_point`, `remove_spline_point`, `set_spline_point` |
+| **Properties** | `set_closed_loop`, `set_spline_type`, `set_tangent`, `get_spline_info` |
+| **Mesh Components** | `create_spline_mesh`, `set_mesh_asset`, `set_spline_mesh_axis`, `set_spline_mesh_material` |
+| **Scattering** | `create_mesh_along_spline`, `set_scatter_spacing`, `randomize_scatter` |
+| **Quick Templates** | `create_road_spline`, `create_river_spline`, `create_fence_spline`, `create_wall_spline`, `create_cable_spline`, `create_pipe_spline` |
+| **Utility** | `get_splines_info` |
+
+**C++ Implementation:**
+- `McpAutomationBridge_SplineHandlers.cpp` (1,512 lines)
+- Full UE5 Spline API integration with `USplineComponent` and `USplineMeshComponent`
+
+</details>
+
+<details>
+<summary><b>🔧 Pipeline Management Tool</b></summary>
+
+New `manage_pipeline` tool for dynamic tool category management:
+
+| Action | Description |
+|--------|-------------|
+| `set_categories` | Enable specific tool categories (core, world, authoring, gameplay, utility, all) |
+| `list_categories` | Show available categories and their tools |
+| `get_status` | View current state and tool counts |
+
+**MCP Capability:**
+- Server advertises `capabilities.tools.listChanged: true`
+- Client capability detection via `mcp-client-capabilities` package
+- Backward compatible: clients without `listChanged` support get ALL tools
+
+</details>
+
+### 🔧 Changed
+
+<details>
+<summary><b>📉 Context Reduction Initiative (Phases 48-53)</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/107">#107</a>)</summary>
+
+| Phase | Description | Token Reduction |
+|-------|-------------|-----------------|
+| **Phase 48** | Schema Pruning - Condensed all 35+ tool descriptions to 1-2 sentences | ~23,000 |
+| **Phase 49** | Common Schema Extraction - Shared schemas for paths, names, locations | ~8,000 |
+| **Phase 50** | Dynamic Tool Loading - Category-based filtering | ~50,000 (when using filtering) |
+| **Phase 53** | Strategic Tool Merging - Consolidated 4 tools | ~10,000 |
+
+**Total Potential Reduction: ~91,000 tokens**
+
+**Common Schemas Added:**
+- `assetPath`, `actorName`, `location`, `rotation`, `scale`, `save`, `overwrite`
+- `standardResponse` for consistent output formatting
+- Helper functions: `createOutputSchema()`, `actionDescription()`
+
+</details>
+
+<details>
+<summary><b>🔀 Tool Consolidation (Phase 53)</b></summary>
 
 | Deprecated Tool | Merged Into | Actions Moved |
 |-----------------|-------------|---------------|
@@ -27,18 +86,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Benefits:**
 - Reduced tool count: 38 → 35
-- ~10,000 token savings in AI context
 - Simplified tool discovery for AI assistants
-- Backward compatible: deprecated tools still work with warnings
+- Backward compatible: deprecated tools still work with once-per-session warnings
+- Action routing uses parameter sniffing to resolve conflicts
 
 </details>
 
-### Deprecated
+### ⚠️ Deprecated
 
 - `manage_blueprint_graph` - Use `manage_blueprint` with graph actions instead
 - `manage_audio_authoring` - Use `manage_audio` with authoring actions instead
 - `manage_niagara_authoring` - Use `manage_effect` with authoring actions instead
 - `manage_animation_authoring` - Use `animation_physics` with authoring actions instead
+
+### 📊 Statistics
+
+- **Files Changed:** 20
+- **Lines Added:** 4,541
+- **Lines Removed:** 3,555
+- **Net Change:** +986 lines
+- **New C++ Handler:** 1,512 lines (`McpAutomationBridge_SplineHandlers.cpp`)
+- **New TS Handler:** 169 lines (`spline-handlers.ts`)
+- **Common Schemas Added:** 50+ reusable schema definitions
+
+### 🔗 Related Issues
+
+Closes [#104](https://github.com/ChiR24/Unreal_mcp/issues/104), [#106](https://github.com/ChiR24/Unreal_mcp/issues/106), [#108](https://github.com/ChiR24/Unreal_mcp/issues/108), [#109](https://github.com/ChiR24/Unreal_mcp/issues/109), [#111](https://github.com/ChiR24/Unreal_mcp/issues/111)
 
 ---
 
