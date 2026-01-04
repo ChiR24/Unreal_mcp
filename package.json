@@ -1,6 +1,6 @@
 {
   "name": "unreal-engine-mcp-server",
-  "version": "0.5.9",
+  "version": "0.5.10",
   "mcpName": "io.github.ChiR24/unreal-engine-mcp",
   "description": "A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via native automation bridge. Built with TypeScript and designed for game development automation.",
   "type": "module",
