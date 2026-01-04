@@ -1103,3 +1103,47 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `create_pipe_spline` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates pipe with radius and segments |
 | **Utility** | | | |
 | `get_splines_info` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Returns spline info (points, length, closed) |
+
+## 39. PCG Manager (`manage_pcg`) - Phase 27
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Graph Management** | | | |
+| `create_pcg_graph` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleCreatePCGGraph` | Creates UPCGGraph asset with package |
+| `create_pcg_subgraph` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleCreatePCGSubgraph` | Creates embedded subgraph in parent |
+| `add_pcg_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddPCGNode` | Adds node by settings class name |
+| `connect_pcg_pins` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleConnectPCGPins` | Connects pins via Graph->AddEdge |
+| `set_pcg_node_settings` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleSetPCGNodeSettings` | Sets properties via UE reflection |
+| **Input Nodes** | | | |
+| `add_landscape_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddLandscapeDataNode` | UPCGDataFromActorSettings |
+| `add_spline_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddSplineDataNode` | UPCGDataFromActorSettings |
+| `add_volume_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddVolumeDataNode` | UPCGDataFromActorSettings |
+| `add_actor_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddActorDataNode` | Mode: GetSinglePoint/GetActorReference/ParseActorComponents |
+| `add_texture_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddTextureDataNode` | UPCGPointFromMeshSettings |
+| **Samplers** | | | |
+| `add_surface_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddSurfaceSampler` | PointsPerSquaredMeter, PointExtents, Looseness |
+| `add_mesh_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddMeshSampler` | UPCGPointFromMeshSettings with StaticMesh |
+| `add_spline_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddSplineSampler` | Dimension, Mode, SubdivisionsPerSegment |
+| `add_volume_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddVolumeSampler` | VoxelSize, bUnbounded |
+| **Filters & Modifiers** | | | |
+| `add_bounds_modifier` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddBoundsModifier` | UPCGPointExtentsModifierSettings |
+| `add_density_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddDensityFilter` | LowerBound, UpperBound, bInvertFilter |
+| `add_height_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddHeightFilter` | UPCGFilterByAttributeSettings (Position.Z) |
+| `add_slope_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddSlopeFilter` | UPCGFilterByAttributeSettings (Normal.Z) |
+| `add_distance_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddDistanceFilter` | UPCGFilterByIndexSettings |
+| `add_bounds_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddBoundsFilter` | UPCGFilterByAttributeSettings |
+| `add_self_pruning` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddSelfPruning` | PruningType, RadiusSimilarityFactor |
+| **Transform Operations** | | | |
+| `add_transform_points` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddTransformPoints` | Offset/Rotation/Scale Min/Max |
+| `add_project_to_surface` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddProjectToSurface` | UPCGProjectionSettings |
+| `add_copy_points` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddCopyPoints` | UPCGDuplicatePointSettings |
+| `add_merge_points` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddMergePoints` | bMergeMetadata |
+| **Spawners** | | | |
+| `add_static_mesh_spawner` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddStaticMeshSpawner` | bApplyMeshBoundsToPoints, bSynchronousLoad |
+| `add_actor_spawner` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddActorSpawner` | EPCGSpawnActorOption options |
+| `add_spline_spawner` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleAddSplineSpawner` | UPCGSpawnActorSettings |
+| **Execution** | | | |
+| `execute_pcg_graph` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleExecutePCGGraph` | Finds actor, calls PCGComponent->Generate() |
+| `set_pcg_partition_grid_size` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleSetPCGPartitionGridSize` | HiGen partition configuration |
+| **Utility** | | | |
+| `get_pcg_info` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleGetPCGInfo` | Lists graphs or returns node/connection info |
