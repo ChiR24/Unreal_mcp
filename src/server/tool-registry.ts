@@ -38,10 +38,45 @@ import { InputTools } from '../tools/input.js';
 
 import { LogTools } from '../tools/logs.js';
 import { getProjectSetting } from '../utils/ini-reader.js';
+import { config } from '../config.js';
+import { mcpClients } from 'mcp-client-capabilities';
+
+// Parse default categories from config
+function parseDefaultCategories(): string[] {
+    const raw = config.MCP_DEFAULT_CATEGORIES || 'core';
+    const cats = raw.split(',').map(c => c.trim().toLowerCase()).filter(c => c.length > 0);
+    return cats.length > 0 ? cats : ['core'];
+}
+
+// Check if a client supports tools.listChanged based on known client capabilities
+function clientSupportsListChanged(clientName: string | undefined): boolean {
+    if (!clientName) return false;
+    
+    // Normalize client name (lowercase, trim)
+    const normalizedName = clientName.toLowerCase().trim();
+    
+    // Check in the mcp-client-capabilities database
+    for (const [key, clientInfo] of Object.entries(mcpClients)) {
+        if (key.toLowerCase() === normalizedName || 
+            (clientInfo.title && clientInfo.title.toLowerCase() === normalizedName)) {
+            // Check if tools.listChanged is supported
+            const tools = clientInfo.tools as { listChanged?: boolean } | undefined;
+            return Boolean(tools?.listChanged);
+        }
+    }
+    
+    // Fallback: check for known clients by partial name match
+    const knownDynamicClients = ['cursor', 'cline', 'windsurf', 'kilo', 'opencode', 'vscode', 'visual studio code'];
+    for (const known of knownDynamicClients) {
+        if (normalizedName.includes(known)) return true;
+    }
+    
+    return false;
+}
 
 export class ToolRegistry {
     private defaultElicitationTimeoutMs = 60000;
-    private currentCategories: string[] = ['all'];
+    private currentCategories: string[] = parseDefaultCategories();
 
     constructor(
         private server: Server,
@@ -227,10 +262,38 @@ export class ToolRegistry {
         const elicitation = createElicitationHelper(this.server, this.logger);
 
         this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-            this.logger.info(`Serving tools for categories: ${this.currentCategories.join(', ')}`);
-            const filtered = consolidatedToolDefinitions.filter((t: ToolDefinition) => 
-                !t.category || this.currentCategories.includes(t.category) || this.currentCategories.includes('all')
-            );
+            // Check if client supports listChanged based on client name from initialization
+            let supportsListChanged = false;
+            let clientName: string | undefined;
+            try {
+                // Get client info - the server stores this from the initialize request
+                // Note: _clientVersion is a private SDK property (fragile but necessary)
+                const serverObj = this.server as unknown as Record<string, unknown>;
+                const clientInfo = serverObj._clientVersion as { name?: string } | undefined;
+                clientName = clientInfo?.name;
+                supportsListChanged = clientSupportsListChanged(clientName);
+                this.logger.debug(`Client detection: name=${clientName}, supportsListChanged=${supportsListChanged}`);
+            } catch (_e) {
+                supportsListChanged = false;
+            }
+
+            // If client doesn't support dynamic loading, show ALL tools (backward compatibility)
+            // If client supports it AND categories don't include 'all', apply filtering
+            const effectiveCategories = (!supportsListChanged || this.currentCategories.includes('all'))
+                ? ['all']
+                : this.currentCategories;
+
+            this.logger.info(`Serving tools for categories: ${effectiveCategories.join(', ')} (client=${clientName || 'unknown'}, supportsListChanged=${supportsListChanged})`);
+            
+            // Filter by category AND hide manage_pipeline from clients that can't use it
+            const filtered = consolidatedToolDefinitions
+                .filter((t: ToolDefinition) => 
+                    !t.category || effectiveCategories.includes(t.category) || effectiveCategories.includes('all')
+                )
+                .filter((t: ToolDefinition) => 
+                    supportsListChanged || t.name !== 'manage_pipeline'
+                );
+            
             const sanitized = filtered.map((t: ToolDefinition) => {
                 try {
                     const copy = JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
