@@ -41,6 +41,7 @@ import { handleSessionsTools } from './handlers/sessions-handlers.js';
 import { handleLevelStructureTools } from './handlers/level-structure-handlers.js';
 import { handleVolumeTools } from './handlers/volume-handlers.js';
 import { handleNavigationTools } from './handlers/navigation-handlers.js';
+import { handleSplineTools } from './handlers/spline-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -333,6 +334,9 @@ function registerDefaultHandlers() {
 
   // 39. NAVIGATION SYSTEM (Phase 25)
   toolRegistry.register('manage_navigation', async (args, tools) => await handleNavigationTools(getAction(args), args, tools));
+
+  // 40. SPLINE SYSTEM (Phase 26)
+  toolRegistry.register('manage_splines', async (args, tools) => await handleSplineTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

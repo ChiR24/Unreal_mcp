@@ -1063,3 +1063,35 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `configure_smart_link_behavior` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Configures UNavLinkCustomComponent settings |
 | **Utility** | | | |
 | `get_navigation_info` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Returns NavMesh stats, agent properties, link counts |
+
+## 38. Splines Manager (`manage_splines`) - Phase 26
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Spline Creation** | | | |
+| `create_spline_actor` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates ASplineActor with USplineComponent |
+| `add_spline_point` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Adds point at index with position/tangent |
+| `remove_spline_point` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Removes point at specified index |
+| `set_spline_point_position` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Sets point location in world/local space |
+| `set_spline_point_tangents` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Sets arrive/leave tangents |
+| `set_spline_point_rotation` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Sets point rotation |
+| `set_spline_point_scale` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Sets point scale |
+| `set_spline_type` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Sets type (linear, curve, constant, clamped_curve) |
+| **Spline Mesh** | | | |
+| `create_spline_mesh_component` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates USplineMeshComponent on actor |
+| `set_spline_mesh_asset` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Sets static mesh asset on spline mesh |
+| `configure_spline_mesh_axis` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Sets forward axis (X, Y, Z) |
+| `set_spline_mesh_material` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Sets material on spline mesh |
+| **Mesh Scattering** | | | |
+| `scatter_meshes_along_spline` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Spawns mesh instances along spline |
+| `configure_mesh_spacing` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Sets spacing mode (distance, count) |
+| `configure_mesh_randomization` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Sets random offset, rotation, scale |
+| **Quick Templates** | | | |
+| `create_road_spline` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates road with configurable width, lanes |
+| `create_river_spline` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates river with water material |
+| `create_fence_spline` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates fence with posts and rails |
+| `create_wall_spline` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates wall with height and thickness |
+| `create_cable_spline` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates hanging cable with sag |
+| `create_pipe_spline` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates pipe with radius and segments |
+| **Utility** | | | |
+| `get_splines_info` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Returns spline info (points, length, closed) |

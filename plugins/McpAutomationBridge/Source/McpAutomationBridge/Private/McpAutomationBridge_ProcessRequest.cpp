@@ -513,6 +513,41 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
           }))
         return;
 
+      // Phase 22: Sessions & Local Multiplayer
+      if (HandleAndLog(TEXT("HandleManageSessionsAction"), [&]() {
+            return HandleManageSessionsAction(RequestId, Action, Payload,
+                                              RequestingSocket);
+          }))
+        return;
+
+      // Phase 23: Level Structure
+      if (HandleAndLog(TEXT("HandleManageLevelStructureAction"), [&]() {
+            return HandleManageLevelStructureAction(RequestId, Action, Payload,
+                                                    RequestingSocket);
+          }))
+        return;
+
+      // Phase 24: Volumes & Zones
+      if (HandleAndLog(TEXT("HandleManageVolumesAction"), [&]() {
+            return HandleManageVolumesAction(RequestId, Action, Payload,
+                                             RequestingSocket);
+          }))
+        return;
+
+      // Phase 25: Navigation System
+      if (HandleAndLog(TEXT("HandleManageNavigationAction"), [&]() {
+            return HandleManageNavigationAction(RequestId, Action, Payload,
+                                                RequestingSocket);
+          }))
+        return;
+
+      // Phase 26: Spline System
+      if (HandleAndLog(TEXT("HandleManageSplinesAction"), [&]() {
+            return HandleManageSplinesAction(RequestId, Action, Payload,
+                                             RequestingSocket);
+          }))
+        return;
+
       // 2. Execution & Build / Test Pipeline
       if (HandleAndLog(TEXT("HandlePipelineAction"), [&]() {
             return HandlePipelineAction(RequestId, Action, Payload,

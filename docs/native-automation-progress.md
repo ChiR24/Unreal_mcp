@@ -381,6 +381,38 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 | **Utility** | | |
 | `get_navigation_info` | ✅ Done | Returns NavMesh stats, agent properties, link/volume counts |
 
+### Phase 26: Spline System (`manage_splines`)
+
+| Action | Status | Notes |
+|--------|--------|-------|
+| **Spline Creation** | | |
+| `create_spline_actor` | ✅ Done | Creates ASplineActor with USplineComponent |
+| `add_spline_point` | ✅ Done | Adds point at index with position/tangent |
+| `remove_spline_point` | ✅ Done | Removes point at specified index |
+| `set_spline_point_position` | ✅ Done | Sets point location in world/local space |
+| `set_spline_point_tangents` | ✅ Done | Sets arrive/leave tangents |
+| `set_spline_point_rotation` | ✅ Done | Sets point rotation |
+| `set_spline_point_scale` | ✅ Done | Sets point scale |
+| `set_spline_type` | ✅ Done | Sets type (linear, curve, constant, clamped_curve) |
+| **Spline Mesh** | | |
+| `create_spline_mesh_component` | ✅ Done | Creates USplineMeshComponent on actor |
+| `set_spline_mesh_asset` | ✅ Done | Sets static mesh asset on spline mesh |
+| `configure_spline_mesh_axis` | ✅ Done | Sets forward axis (X, Y, Z) |
+| `set_spline_mesh_material` | ✅ Done | Sets material on spline mesh |
+| **Mesh Scattering** | | |
+| `scatter_meshes_along_spline` | ✅ Done | Spawns mesh instances along spline |
+| `configure_mesh_spacing` | ✅ Done | Sets spacing mode (distance, count) |
+| `configure_mesh_randomization` | ✅ Done | Sets random offset, rotation, scale |
+| **Quick Templates** | | |
+| `create_road_spline` | ✅ Done | Creates road with configurable width, lanes |
+| `create_river_spline` | ✅ Done | Creates river with water material |
+| `create_fence_spline` | ✅ Done | Creates fence with posts and rails |
+| `create_wall_spline` | ✅ Done | Creates wall with height and thickness |
+| `create_cable_spline` | ✅ Done | Creates hanging cable with sag |
+| `create_pipe_spline` | ✅ Done | Creates pipe with radius and segments |
+| **Utility** | | |
+| `get_splines_info` | ✅ Done | Returns spline info (points, length, closed) |
+
 ## Next Steps
 
 1. Refine `manage_render` logic (now split).
@@ -391,4 +423,5 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 6. ~~Continue implementation of Phase 23 (Level Structure) per Roadmap.~~ ✅ Done
 7. ~~Continue implementation of Phase 24 (Volumes & Zones) per Roadmap.~~ ✅ Done
 8. ~~Continue implementation of Phase 25 (Navigation System) per Roadmap.~~ ✅ Done
-9. Continue implementation of Phase 26 (Spline System) per Roadmap.
+9. ~~Continue implementation of Phase 26 (Spline System) per Roadmap.~~ ✅ Done
+10. Continue implementation of Phase 27 (PCG Framework) per Roadmap.
