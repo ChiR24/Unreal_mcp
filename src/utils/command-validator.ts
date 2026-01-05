@@ -39,6 +39,22 @@ export class CommandValidator {
     ];
 
     /**
+     * Regex patterns for forbidden tokens to handle flexible whitespace.
+     */
+    private static readonly FORBIDDEN_PATTERNS = [
+        // Python imports with whitespace
+        /import\s+(?:os|sys|subprocess|importlib|shutil)/i,
+        /from\s+(?:os|sys|subprocess|importlib|shutil)\s+import/i,
+        // Function calls with flexible whitespace before parenthesis
+        /(?:exec|eval|open|write|read|system)\s*\(/i,
+        // Specific dangerous constructs
+        /__import__\s*\(/i,
+        /subprocess\./i,
+        /os\.system/i,
+        /start\s+"/i,
+    ];
+
+    /**
      * Patterns that indicate obviously invalid commands.
      * Used to warn about likely typos or invalid input.
      */
@@ -77,9 +93,9 @@ export class CommandValidator {
 
         const cmdLower = cmdTrimmed.toLowerCase();
 
-        // Check for 'py' followed by any whitespace or end of string
-        // This catches 'py', 'py ', 'py\t', etc. to prevent bypasses
-        if (/^py(?:\s|$)/.test(cmdLower)) {
+        // Check for 'py' or 'python' followed by any whitespace or end of string
+        // This catches 'py', 'py ', 'python', 'python ' etc. to prevent bypasses
+        if (/^(?:py|python)(?:\s|$)/.test(cmdLower)) {
             throw new Error('Python console commands are blocked from external calls for safety.');
         }
 
@@ -100,8 +116,14 @@ export class CommandValidator {
             throw new Error('Command piping with | is blocked for safety.');
         }
 
+        // Check for forbidden tokens (simple string match)
         if (this.FORBIDDEN_TOKENS.some(token => cmdLower.includes(token))) {
             throw new Error(`Command contains unsafe token and was blocked: ${command}`);
+        }
+
+        // Check for forbidden patterns (regex match for flexible whitespace)
+        if (this.FORBIDDEN_PATTERNS.some(pattern => pattern.test(cmdLower))) {
+             throw new Error(`Command contains unsafe pattern and was blocked: ${command}`);
         }
 
         // Block backticks which can be used for shell execution
