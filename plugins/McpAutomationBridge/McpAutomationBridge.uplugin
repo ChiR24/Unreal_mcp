@@ -95,6 +95,30 @@
     {
       "Name": "OnlineSubsystemUtils",
       "Enabled": true
+    },
+    {
+      "Name": "PCG",
+      "Enabled": true
+    },
+    {
+      "Name": "IKRig",
+      "Enabled": true
+    },
+    {
+      "Name": "AnimationModifierLibrary",
+      "Enabled": true
+    },
+    {
+      "Name": "SequencerScripting",
+      "Enabled": true
+    },
+    {
+      "Name": "Paper2D",
+      "Enabled": true
+    },
+    {
+      "Name": "ACLPlugin",
+      "Enabled": true
     }
   ]
 }

@@ -3,6 +3,7 @@
  */
 
 import { toRotTuple, toVec3Tuple } from './normalize.js';
+import { sanitizePath as sanitizePathStrict } from './path-security.js';
 
 /**
  * Maximum path length allowed in Unreal Engine
@@ -77,26 +78,42 @@ export function sanitizeAssetName(name: string): string {
 
 /**
  * Sanitize a path for Unreal Engine
+ * 
+ * NOTE: This is a lenient wrapper around sanitizePathStrict from path-security.ts.
+ * It catches validation errors and returns a safe default ('/Game') instead of throwing.
+ * For strict validation that throws on invalid input, use sanitizePathStrict directly.
+ * 
  * @param path The path to sanitize
- * @returns Sanitized path
+ * @returns Sanitized path or '/Game' if invalid
  */
 export function sanitizePath(path: string): string {
   if (!path || typeof path !== 'string') {
     return '/Game';
   }
 
-  // Normalize slashes
-  path = path.replace(/\\/g, '/');
+  // Normalize slashes first (backslash to forward, remove doubles)
+  let normalized = path.replace(/\\/g, '/');
+  // Remove consecutive slashes but preserve the leading one
+  normalized = normalized.replace(/\/+/g, '/');
+
+  // Try strict validation first
+  try {
+    // sanitizePathStrict validates and normalizes, allowing /Game, /Engine, /Script, /Temp
+    return sanitizePathStrict(normalized, ['/Game', '/Engine', '/Script', '/Temp']);
+  } catch {
+    // Strict validation failed - apply lenient sanitization
+  }
 
   // Ensure path starts with /
-  if (!path.startsWith('/')) {
-    path = `/${path}`;
+  let sanitized = normalized;
+  if (!sanitized.startsWith('/')) {
+    sanitized = `/${sanitized}`;
   }
 
   // Split path into segments and sanitize each
-  let segments = path.split('/').filter(s => s.length > 0);
+  let segments = sanitized.split('/').filter(s => s.length > 0);
 
-  // Block path traversal attempts
+  // Block path traversal attempts - this is critical security
   if (segments.some(s => s === '..' || s === '.')) {
     throw new Error('Path traversal (..) is not allowed');
   }

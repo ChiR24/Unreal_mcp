@@ -316,7 +316,7 @@ npm run test:all    # Run all tests
 
 | Resource | Description |
 |----------|-------------|
-| [Project Roadmap](https://github.com/users/ChiR24/projects/3) | Track development progress across 53+ phases |
+| [Project Roadmap](https://github.com/users/ChiR24/projects/3) | Track development progress across 59 phases |
 | [Discussions](https://github.com/ChiR24/Unreal_mcp/discussions) | Ask questions, share ideas, get help |
 | [Issues](https://github.com/ChiR24/Unreal_mcp/issues) | Report bugs and request features |
 

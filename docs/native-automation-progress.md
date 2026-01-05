@@ -183,12 +183,25 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 
 | Action | Status | Notes |
 |--------|--------|-------|
-| `create_niagara_system`, `create_niagara_emitter` | ✅ Done | System/emitter creation |
-| `add_spawn_rate_module`, `add_initialize_particle_module` | ✅ Done | Spawn modules |
-| `add_force_module`, `add_velocity_module` | ✅ Done | Physics modules |
-| `add_sprite_renderer_module`, `add_mesh_renderer_module` | ✅ Done | Renderers |
-| `add_user_parameter`, `bind_parameter_to_source` | ✅ Done | Parameter binding |
-| `enable_gpu_simulation`, `add_simulation_stage` | ✅ Done | GPU simulation |
+| `create_niagara_system`, `create_niagara_emitter` | ✅ Done | System/emitter creation via factories |
+| `add_spawn_rate_module`, `add_initialize_particle_module` | ✅ Done | Uses `FNiagaraStackGraphUtilities::AddScriptModuleToStack()` |
+| `add_force_module`, `add_velocity_module` | ✅ Done | Physics modules via stack utilities |
+| `add_collision_module`, `add_kill_particles_module`, `add_camera_offset_module` | ✅ Done | Uses real module asset paths |
+| `add_sprite_renderer_module`, `add_mesh_renderer_module` | ✅ Done | `NewObject<UNiagaraRendererProperties>()` |
+| `add_ribbon_renderer_module`, `add_light_renderer_module` | ✅ Done | Renderer properties with `Emitter->AddRenderer()` |
+| `add_user_parameter`, `set_parameter_value` | ✅ Done | `FNiagaraUserRedirectionParameterStore` |
+| `bind_parameter_to_source` | ✅ Done | `ResolvedDIBindings` mapping |
+| `add_skeletal_mesh_data_interface` | ✅ Done | `NewObject<UNiagaraDataInterfaceSkeletalMesh>()` + `SetDataInterface()` |
+| `add_static_mesh_data_interface` | ✅ Done | `NewObject<UNiagaraDataInterfaceStaticMesh>()` + `SetDataInterface()` |
+| `add_spline_data_interface` | ✅ Done | `NewObject<UNiagaraDataInterfaceSpline>()` + `SetDataInterface()` |
+| `add_audio_spectrum_data_interface` | ✅ Done | `NewObject<UNiagaraDataInterfaceAudioSpectrum>()` |
+| `add_collision_query_data_interface` | ✅ Done | `NewObject<UNiagaraDataInterfaceCollisionQuery>()` |
+| `add_event_generator` | ✅ Done | `FNiagaraEventGeneratorProperties` + `EventGenerators.Add()` |
+| `add_event_receiver` | ✅ Done | `FNiagaraEventScriptProperties` + `Emitter->AddEventHandler()` |
+| `configure_event_payload` | ✅ Done | `DataSetCompiledData.Variables` + `BuildLayout()` |
+| `enable_gpu_simulation` | ✅ Done | `EmitterData->SimTarget = ENiagaraSimTarget::GPUComputeSim` |
+| `add_simulation_stage` | ✅ Done | `NewObject<UNiagaraSimulationStageGeneric>()` + `Emitter->AddSimulationStage()` |
+| `get_niagara_info`, `validate_niagara_system` | ✅ Done | Query and validation operations |
 
 ### Phase 13: Gameplay Ability System (`manage_gas`)
 

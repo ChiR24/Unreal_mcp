@@ -31,7 +31,11 @@ export function toVec3Object(input: VectorInput | unknown): Vec3Obj | null {
         return { x, y, z };
       }
     }
-  } catch { }
+  } catch (error) {
+    // Input was not a valid vector format - silently return null
+    // Errors here are expected for invalid input formats
+    void error;
+  }
   return null;
 }
 
@@ -56,7 +60,11 @@ export function toRotObject(input: RotationInput | unknown): Rot3Obj | null {
         return { pitch, yaw, roll };
       }
     }
-  } catch { }
+  } catch (error) {
+    // Input was not a valid rotation format - silently return null
+    // Errors here are expected for invalid input formats
+    void error;
+  }
   return null;
 }
 

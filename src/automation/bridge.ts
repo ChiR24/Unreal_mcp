@@ -367,6 +367,17 @@ export class AutomationBridge extends EventEmitter {
         this.connectionManager.closeAll(1001, 'Server shutdown');
         this.lastHandshakeAck = undefined;
         this.requestTracker.rejectAll(new Error('Automation bridge server stopped'));
+        
+        // Drain queued requests to prevent memory leak
+        const queuedCount = this.queuedRequestItems.length;
+        if (queuedCount > 0) {
+            this.log.debug(`Rejecting ${queuedCount} queued requests on shutdown`);
+            const shutdownError = new Error('Automation bridge server stopped');
+            for (const item of this.queuedRequestItems) {
+                item.reject(shutdownError);
+            }
+            this.queuedRequestItems = [];
+        }
     }
 
     isConnected(): boolean {
