@@ -272,6 +272,48 @@ export class LevelTools extends BaseTool implements ILevelTools {
     if (!resolved) {
       return { success: false, error: 'No level specified' };
     }
+
+    // Try to get actual level summary from UE via automation bridge
+    try {
+      const response = await this.sendAutomationRequest<LevelResponse>('manage_level', {
+        action: 'get_summary',
+        levelPath: resolved
+      }, {
+        timeoutMs: DEFAULT_OPERATION_TIMEOUT_MS
+      });
+
+      if (response && response.success !== false) {
+        // Merge with local tracking data if available
+        const localRecord = this.getRecord(resolved);
+        const result: Record<string, unknown> = {
+          ...response,
+          success: true,
+          message: response.message || 'Level summary retrieved from Unreal Engine',
+          path: resolved
+        };
+
+        // Add local tracking info if available
+        if (localRecord) {
+          result.localTracking = {
+            partitioned: localRecord.partitioned,
+            streaming: localRecord.streaming,
+            loaded: localRecord.loaded,
+            visible: localRecord.visible,
+            createdAt: localRecord.createdAt,
+            lastSavedAt: localRecord.lastSavedAt,
+            exports: localRecord.exports,
+            lights: localRecord.lights,
+            metadata: localRecord.metadata
+          };
+        }
+
+        return result as StandardActionResponse;
+      }
+    } catch {
+      // Fall back to local summary if automation bridge fails
+    }
+
+    // Fallback to locally managed summary
     return this.summarizeLevel(resolved) as StandardActionResponse;
   }
 
@@ -419,20 +461,51 @@ export class LevelTools extends BaseTool implements ILevelTools {
   }
 
   async deleteLevels(params: { levelPaths: string[] }): Promise<StandardActionResponse> {
-    const removed: string[] = [];
+    const normalizedPaths: string[] = [];
     for (const path of params.levelPaths) {
-      const normalized = this.normalizeLevelPath(path).path;
-      if (this.managedLevels.has(normalized)) {
-        this.removeRecord(normalized);
-        removed.push(normalized);
-      }
+      normalizedPaths.push(this.normalizeLevelPath(path).path);
     }
 
-    return {
-      success: true,
-      message: removed.length ? `Deleted ${removed.length} managed level(s)` : 'No managed levels removed',
-      removed
-    } as StandardActionResponse;
+    // Route to C++ bridge for actual asset deletion
+    try {
+      const response = await this.sendAutomationRequest<LevelResponse>('manage_level', {
+        action: 'delete',
+        levelPaths: normalizedPaths
+      }, {
+        timeoutMs: DEFAULT_ASSET_OP_TIMEOUT_MS
+      });
+
+      if (response && response.success !== false) {
+        // Also remove from local tracking
+        const removed: string[] = [];
+        for (const normalized of normalizedPaths) {
+          if (this.managedLevels.has(normalized)) {
+            this.removeRecord(normalized);
+            removed.push(normalized);
+          }
+        }
+
+        return {
+          ...response,
+          success: true,
+          message: response.message || `Deleted ${normalizedPaths.length} level(s)`,
+          deleted: normalizedPaths,
+          locallyRemoved: removed
+        } as StandardActionResponse;
+      }
+
+      return {
+        success: false,
+        error: response.error || response.message || 'Failed to delete levels',
+        levelPaths: normalizedPaths
+      } as StandardActionResponse;
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to delete levels: ${error instanceof Error ? error.message : String(error)}`,
+        levelPaths: normalizedPaths
+      } as StandardActionResponse;
+    }
   }
 
   async loadLevel(params: {

@@ -49,32 +49,52 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return cleanObject(res);
     }
     case 'start_recording': {
-      // Use console command as fallback if bridge doesn't support it
+      // Route to C++ bridge for proper demo recording
       const filename = args.filename || 'TestRecording';
-      await tools.editorTools.executeConsoleCommand(`DemoRec ${filename}`);
-      return { success: true, message: `Started recording to ${filename}`, action: 'start_recording' };
+      const res = await executeAutomationRequest(tools, 'control_editor', { 
+        action: 'start_recording', 
+        filename 
+      });
+      return cleanObject(res);
     }
     case 'stop_recording': {
-      await tools.editorTools.executeConsoleCommand('DemoStop');
-      return { success: true, message: 'Stopped recording', action: 'stop_recording' };
+      // Route to C++ bridge for proper demo stop
+      const res = await executeAutomationRequest(tools, 'control_editor', { 
+        action: 'stop_recording' 
+      });
+      return cleanObject(res);
     }
     case 'step_frame': {
-      // Use console command for single frame advance
-      await tools.editorTools.executeConsoleCommand('r.SingleFrameAdvance 1');
-      return { success: true, message: 'Stepped frame', action: 'step_frame' };
+      // Route to C++ bridge for proper frame stepping
+      const res = await executeAutomationRequest(tools, 'control_editor', { 
+        action: 'step_frame',
+        steps: args.steps ?? 1 
+      });
+      return cleanObject(res);
     }
     case 'create_bookmark': {
-      const idx = parseInt(args.bookmarkName ?? '0') || 0;
-      await tools.editorTools.executeConsoleCommand(`r.SetBookmark ${idx}`);
-      return { success: true, message: `Created bookmark ${idx}`, action: 'create_bookmark' };
+      // Route to C++ bridge for proper bookmark creation
+      const res = await executeAutomationRequest(tools, 'control_editor', { 
+        action: 'create_bookmark',
+        bookmarkName: args.bookmarkName ?? '0'
+      });
+      return cleanObject(res);
     }
     case 'jump_to_bookmark': {
-      const idx = parseInt(args.bookmarkName ?? '0') || 0;
-      await tools.editorTools.executeConsoleCommand(`r.JumpToBookmark ${idx}`);
-      return { success: true, message: `Jumped to bookmark ${idx}`, action: 'jump_to_bookmark' };
+      // Route to C++ bridge for proper bookmark jump
+      const res = await executeAutomationRequest(tools, 'control_editor', { 
+        action: 'jump_to_bookmark',
+        bookmarkName: args.bookmarkName ?? '0'
+      });
+      return cleanObject(res);
     }
     case 'set_preferences': {
-      const res = await tools.editorTools.setEditorPreferences(args.category ?? '', args.preferences ?? {});
+      // Route to C++ bridge for actual editor preference setting
+      const res = await executeAutomationRequest(tools, 'control_editor', {
+        action: 'set_preferences',
+        category: args.category ?? '',
+        preferences: args.preferences ?? {}
+      });
       return cleanObject(res);
     }
     case 'open_asset': {
@@ -88,25 +108,29 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return { ...cleanObject(res), action: 'execute_command' };
     }
     case 'set_camera_fov': {
-      await tools.editorTools.executeConsoleCommand(`fov ${args.fov}`);
-      return { success: true, message: `Set FOV to ${args.fov}`, action: 'set_camera_fov' };
+      // Route to C++ bridge for proper FOV control
+      const res = await executeAutomationRequest(tools, 'control_editor', {
+        action: 'set_camera_fov',
+        fov: args.fov
+      });
+      return cleanObject(res);
     }
     case 'set_game_speed': {
-      await tools.editorTools.executeConsoleCommand(`slomo ${args.speed}`);
-      return { success: true, message: `Set game speed to ${args.speed}`, action: 'set_game_speed' };
+      // Route to C++ bridge for proper game speed control
+      const res = await executeAutomationRequest(tools, 'control_editor', {
+        action: 'set_game_speed',
+        speed: args.speed
+      });
+      return cleanObject(res);
     }
     case 'set_view_mode': {
       const viewMode = requireNonEmptyString(args.viewMode, 'viewMode');
-      const validModes = [
-        'Lit', 'Unlit', 'Wireframe', 'DetailLighting', 'LightingOnly', 'Reflections',
-        'OptimizationViewmodes', 'ShaderComplexity', 'LightmapDensity', 'StationaryLightOverlap', 'LightComplexity',
-        'PathTracing', 'Visualizer', 'LODColoration', 'CollisionPawn', 'CollisionVisibility'
-      ];
-      if (!validModes.includes(viewMode)) {
-        throw new Error(`unknown_viewmode: ${viewMode}. Must be one of: ${validModes.join(', ')}`);
-      }
-      await tools.editorTools.executeConsoleCommand(`viewmode ${viewMode}`);
-      return { success: true, message: `Set view mode to ${viewMode}`, action: 'set_view_mode' };
+      // Route to C++ bridge for proper viewport mode setting
+      const res = await executeAutomationRequest(tools, 'control_editor', {
+        action: 'set_view_mode',
+        viewMode
+      });
+      return cleanObject(res);
     }
     case 'set_viewport_resolution': {
       const width = Number(args.width);
@@ -119,14 +143,22 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
           action: 'set_viewport_resolution'
         };
       }
-      await tools.editorTools.executeConsoleCommand(`r.SetRes ${width}x${height}`);
-      return { success: true, message: `Set viewport resolution to ${width}x${height}`, action: 'set_viewport_resolution' };
+      // Route to C++ bridge for proper viewport resolution control
+      const res = await executeAutomationRequest(tools, 'control_editor', {
+        action: 'set_viewport_resolution',
+        width,
+        height
+      });
+      return cleanObject(res);
     }
     case 'set_viewport_realtime': {
       const enabled = args.enabled !== undefined ? args.enabled : (args.realtime !== false);
-      // Use console command since interface doesn't have setViewportRealtime
-      await tools.editorTools.executeConsoleCommand(`r.ViewportRealtime ${enabled ? 1 : 0}`);
-      return { success: true, message: `Set viewport realtime to ${enabled}`, action: 'set_viewport_realtime' };
+      // Route to C++ bridge for proper viewport realtime toggle
+      const res = await executeAutomationRequest(tools, 'control_editor', {
+        action: 'set_viewport_realtime',
+        enabled
+      });
+      return cleanObject(res);
     }
     default:
       return await executeAutomationRequest(tools, 'control_editor', args);

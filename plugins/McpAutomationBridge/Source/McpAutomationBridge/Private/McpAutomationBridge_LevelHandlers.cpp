@@ -583,10 +583,16 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
 
     // FEditorFileUtils::ExportMap(WorldToExport, ExportPath); // Legacy/Removed
     // Use SaveMap for .umap or FEditorFileUtils::SaveLevel
-    FEditorFileUtils::SaveMap(WorldToExport, ExportPath);
+    bool bSaved = FEditorFileUtils::SaveMap(WorldToExport, ExportPath);
 
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Level exported"), nullptr);
+    if (bSaved) {
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Level exported"), nullptr);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Failed to export level - SaveMap returned false"),
+                          TEXT("EXPORT_FAILED"));
+    }
     return true;
   }
   if (EffectiveAction == TEXT("import_level")) {

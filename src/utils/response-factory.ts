@@ -6,9 +6,28 @@ const log = new Logger('ResponseFactory');
 
 export class ResponseFactory {
     /**
-     * Create a standard success response
+     * Create a standard success response.
+     * If the incoming data already has success: false, propagates the failure state.
      */
     static success(data: unknown, message: string = 'Operation successful'): StandardActionResponse {
+        // Check if the incoming data already indicates failure
+        if (data && typeof data === 'object') {
+            const dataObj = data as Record<string, unknown>;
+            if (dataObj.success === false) {
+                // Propagate the failure state instead of overwriting with success
+                const errorMessage = typeof dataObj.message === 'string' 
+                    ? dataObj.message 
+                    : (typeof dataObj.error === 'string' ? dataObj.error : 'Operation failed');
+                const errorValue = typeof dataObj.error === 'string' ? dataObj.error : undefined;
+                return {
+                    success: false,
+                    message: errorMessage,
+                    error: errorValue,
+                    data: cleanObject(data)
+                };
+            }
+        }
+        
         return {
             success: true,
             message,

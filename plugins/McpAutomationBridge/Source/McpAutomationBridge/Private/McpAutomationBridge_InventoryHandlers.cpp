@@ -1727,12 +1727,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       // For custom loot table classes with proper array properties
       FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(LootTable));
       EntryIndex = ArrayHelper.Num();
-      bEntryAdded = true;
-    } else {
-      // For generic data assets, store in the generic data map
-      // The loot entry data will be stored as metadata
+      // Note: Adding elements to native struct arrays requires knowing the struct layout
+      // Mark as added since we found the array - the data is stored in Properties map below
       bEntryAdded = true;
     }
+    
+    // Store loot entry data in the Properties map for UMcpGenericDataAsset
+    // This ensures data is persisted regardless of whether native array exists
+    FString EntryKey = FString::Printf(TEXT("LootEntry_%d"), EntryIndex);
+    FString EntryValue = FString::Printf(TEXT("%s|%.3f|%d|%d"), *ItemPath, Weight, MinQuantity, MaxQuantity);
+    LootTable->Properties.Add(EntryKey, EntryValue);
+    LootTable->Properties.Add(TEXT("LootEntryCount"), FString::FromInt(EntryIndex + 1));
+    bEntryAdded = true;
 
     LootTable->MarkPackageDirty();
 
@@ -1951,6 +1957,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       bTiersSet = true;
     }
 
+    // Store tiers in the Properties map for UMcpGenericDataAsset
+    // This ensures data is persisted regardless of whether native property exists
+    LootTable->Properties.Add(TEXT("QualityTierCount"), FString::FromInt(Tiers.Num()));
+    for (int32 i = 0; i < Tiers.Num(); i++) {
+      FString TierKey = FString::Printf(TEXT("QualityTier_%d"), i);
+      FString TierValue = FString::Printf(TEXT("%s|%.2f"), *Tiers[i].Key, Tiers[i].Value);
+      LootTable->Properties.Add(TierKey, TierValue);
+    }
+    bTiersSet = true;
+
     LootTable->MarkPackageDirty();
 
     if (GetPayloadBool(Payload, TEXT("save"), false)) {
@@ -2047,13 +2063,72 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       return true;
     }
 
+    // Load the recipe asset (UMcpGenericDataAsset or custom DataAsset)
+    UObject* RecipeAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *RecipePath);
+    if (!RecipeAsset) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Recipe asset not found: %s"), *RecipePath),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    // Get requirement parameters
+    int32 RequiredLevel = static_cast<int32>(GetPayloadNumber(Payload, TEXT("requiredLevel"), 0));
+    FString RequiredStation = GetPayloadString(Payload, TEXT("requiredStation"), TEXT("None"));
+    float CraftingTime = static_cast<float>(GetPayloadNumber(Payload, TEXT("craftingTime"), 5.0));
+    bool bRequiresBlueprint = GetPayloadBool(Payload, TEXT("requiresBlueprint"), false);
+
+    bool bConfigured = false;
+
+    // Try to set properties via reflection for custom recipe classes
+    UClass* AssetClass = RecipeAsset->GetClass();
+    
+    // Set RequiredLevel if property exists
+    if (FIntProperty* LevelProp = FindFProperty<FIntProperty>(AssetClass, TEXT("RequiredLevel"))) {
+      LevelProp->SetPropertyValue_InContainer(RecipeAsset, RequiredLevel);
+      bConfigured = true;
+    }
+    
+    // Set RequiredStation if property exists  
+    if (FStrProperty* StationProp = FindFProperty<FStrProperty>(AssetClass, TEXT("RequiredStation"))) {
+      StationProp->SetPropertyValue_InContainer(RecipeAsset, RequiredStation);
+      bConfigured = true;
+    }
+    
+    // Set CraftingTime if property exists
+    if (FFloatProperty* TimeProp = FindFProperty<FFloatProperty>(AssetClass, TEXT("CraftingTime"))) {
+      TimeProp->SetPropertyValue_InContainer(RecipeAsset, CraftingTime);
+      bConfigured = true;
+    }
+
+    // For UMcpGenericDataAsset, use the Properties map
+    if (UMcpGenericDataAsset* GenericAsset = Cast<UMcpGenericDataAsset>(RecipeAsset)) {
+      GenericAsset->Properties.Add(TEXT("RequiredLevel"), FString::FromInt(RequiredLevel));
+      GenericAsset->Properties.Add(TEXT("RequiredStation"), RequiredStation);
+      GenericAsset->Properties.Add(TEXT("CraftingTime"), FString::SanitizeFloat(CraftingTime));
+      GenericAsset->Properties.Add(TEXT("RequiresBlueprint"), bRequiresBlueprint ? TEXT("true") : TEXT("false"));
+      bConfigured = true;
+    }
+
+    if (bConfigured) {
+      RecipeAsset->MarkPackageDirty();
+      
+      if (GetPayloadBool(Payload, TEXT("save"), true)) {
+        RecipeAsset->GetOutermost()->MarkPackageDirty();
+      }
+    }
+
     TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     Result->SetStringField(TEXT("recipePath"), RecipePath);
-    Result->SetNumberField(TEXT("requiredLevel"),
-                           GetPayloadNumber(Payload, TEXT("requiredLevel"), 0));
-    Result->SetStringField(TEXT("requiredStation"),
-                           GetPayloadString(Payload, TEXT("requiredStation"), TEXT("None")));
-    Result->SetBoolField(TEXT("configured"), true);
+    Result->SetNumberField(TEXT("requiredLevel"), RequiredLevel);
+    Result->SetStringField(TEXT("requiredStation"), RequiredStation);
+    Result->SetNumberField(TEXT("craftingTime"), CraftingTime);
+    Result->SetBoolField(TEXT("configured"), bConfigured);
+    
+    if (!bConfigured) {
+      Result->SetStringField(TEXT("note"), TEXT("No matching properties found. Recipe may require custom class with RequiredLevel, RequiredStation, CraftingTime properties."));
+    }
+    
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Recipe requirements configured"), Result);
     return true;

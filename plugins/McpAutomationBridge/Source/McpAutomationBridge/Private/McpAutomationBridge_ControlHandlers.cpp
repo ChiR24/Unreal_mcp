@@ -45,6 +45,13 @@
 #else
 #define MCP_HAS_LEVEL_EDITOR_MODULE 0
 #endif
+
+#if __has_include("LevelEditorViewport.h")
+#include "LevelEditorViewport.h"
+#define MCP_HAS_LEVEL_EDITOR_VIEWPORT 1
+#else
+#define MCP_HAS_LEVEL_EDITOR_VIEWPORT 0
+#endif
 #if __has_include("Settings/LevelEditorPlaySettings.h")
 #include "Settings/LevelEditorPlaySettings.h"
 #define MCP_HAS_LEVEL_EDITOR_PLAY_SETTINGS 1
@@ -2184,18 +2191,65 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
 #if WITH_EDITOR
   if (!GEditor->PlayWorld) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetBoolField(TEXT("alreadyStopped"), true);
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Play session not active"), Resp, FString());
+    Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetBoolField(TEXT("notPlaying"), true);
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Play session not active - cannot eject"), Resp, TEXT("NOT_PLAYING"));
     return true;
   }
 
-  GEditor->RequestEndPlayMap();
+  // Get the first player controller in the PIE session
+  APlayerController* PC = GEditor->PlayWorld->GetFirstPlayerController();
+  if (!PC) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("No player controller found"), nullptr, TEXT("NO_PLAYER_CONTROLLER"));
+    return true;
+  }
+
+  bool bEjected = false;
+  FString EjectMessage;
+
+  // Check if already in spectator mode
+  if (PC->GetSpectatorPawn()) {
+    EjectMessage = TEXT("Already in spectator/ejected mode");
+    bEjected = true;
+  }
+  else {
+    // Use the console command to toggle between play and spectate
+    // This is the proper way to eject during PIE
+    PC->ConsoleCommand(TEXT("ToggleDebugCamera"));
+    
+    // Alternative: Try to enable spectator mode
+    if (!PC->GetSpectatorPawn()) {
+      // Force spectator mode by unpossessing current pawn
+      APawn* CurrentPawn = PC->GetPawn();
+      if (CurrentPawn) {
+        PC->UnPossess();
+        bEjected = true;
+        EjectMessage = TEXT("Unpossessed current pawn - camera is now free");
+      }
+    }
+    else {
+      bEjected = true;
+      EjectMessage = TEXT("Ejected to debug camera");
+    }
+  }
+
+  // Also try to enable the level viewport camera control
+  for (FLevelEditorViewportClient* ViewportClient : GEditor->GetLevelViewportClients()) {
+    if (ViewportClient && ViewportClient->IsPerspective()) {
+      // Enable real-time viewport updates
+      ViewportClient->SetRealtime(true);
+      break;
+    }
+  }
+
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  Resp->SetBoolField(TEXT("success"), true);
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Play in Editor ejected"), Resp, FString());
+  Resp->SetBoolField(TEXT("success"), bEjected);
+  Resp->SetBoolField(TEXT("ejected"), bEjected);
+  Resp->SetBoolField(TEXT("stillPlaying"), GEditor->PlayWorld != nullptr);
+  SendAutomationResponse(Socket, RequestId, bEjected,
+                         bEjected ? EjectMessage : TEXT("Eject failed"), Resp, FString());
   return true;
 #else
   return false;

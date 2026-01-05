@@ -606,28 +606,68 @@ export class AnimationTools {
         || (params.baseAnimation ? params.baseAnimation.split('/').pop() || '' : '');
       const systemName = baseName || 'ProceduralSystem';
       const basePath = (params.savePath || '/Game/Animations').replace(/\/+$/, '');
-      const path = `${basePath || '/Game/Animations'}/${systemName}`;
+      const expectedPath = `${basePath || '/Game/Animations'}/${systemName}`;
 
-      this.trackArtifact(systemName, {
-        path,
-        type: 'ProceduralAnimation',
-        metadata: {
-          baseAnimation: params.baseAnimation,
-          modifiers: Array.isArray(params.modifiers) ? params.modifiers : []
+      // Route to C++ bridge for actual procedural animation creation
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp = await this.automationBridge.sendAutomationRequest('animation_physics', cleanObject({
+            action: 'create_procedural_anim',
+            systemName,
+            baseAnimation: params.baseAnimation,
+            modifiers: Array.isArray(params.modifiers) ? params.modifiers : [],
+            savePath: basePath
+          }), { timeoutMs: 60000 });
+
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? (result as Record<string, unknown>) : undefined;
+          const isSuccess = resp && resp.success !== false && !!resultObj;
+
+          if (isSuccess && resultObj) {
+            const path = typeof resultObj.path === 'string' ? (resultObj.path as string) : expectedPath;
+            this.trackArtifact(systemName, {
+              path,
+              type: 'ProceduralAnimation',
+              metadata: {
+                baseAnimation: params.baseAnimation,
+                modifiers: Array.isArray(params.modifiers) ? params.modifiers : []
+              }
+            });
+
+            return {
+              success: true,
+              message: resp.message || `Procedural animation system '${systemName}' created at ${path}`,
+              path,
+              systemName
+            };
+          }
+
+          const message = typeof resp?.message === 'string'
+            ? resp.message
+            : (typeof resp?.error === 'string' ? resp.error : 'Procedural animation creation failed');
+          const error = typeof resp?.error === 'string' ? resp.error : message;
+
+          return { success: false, message, error };
+        } catch (err) {
+          const error = String(err);
+          return {
+            success: false,
+            message: `Failed to create procedural animation system: ${error}`,
+            error
+          };
         }
-      });
+      }
 
       return {
-        success: true,
-        message: `Procedural animation system '${systemName}' specification recorded at ${path}`,
-        path,
-        systemName
+        success: false,
+        message: 'Automation bridge not connected for createProceduralAnim',
+        error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
       };
     } catch (err) {
       const error = String(err);
       return {
         success: false,
-        message: `Failed to record procedural animation system: ${error}`,
+        message: `Failed to create procedural animation system: ${error}`,
         error
       };
     }
@@ -652,29 +692,70 @@ export class AnimationTools {
       const rawName = (params.treeName || '').trim();
       const treeName = rawName || 'BlendTree';
       const basePath = (params.savePath || '/Game/Animations').replace(/\/+$/, '');
-      const path = `${basePath || '/Game/Animations'}/${treeName}`;
+      const expectedPath = `${basePath || '/Game/Animations'}/${treeName}`;
 
-      this.trackArtifact(treeName, {
-        path,
-        type: 'BlendTree',
-        metadata: {
-          blendType: params.blendType,
-          basePose: params.basePose,
-          additiveAnimations: Array.isArray(params.additiveAnimations) ? params.additiveAnimations : []
+      // Route to C++ bridge for actual blend tree creation
+      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        try {
+          const resp = await this.automationBridge.sendAutomationRequest('animation_physics', cleanObject({
+            action: 'create_blend_tree',
+            treeName,
+            blendType: params.blendType,
+            basePose: params.basePose,
+            additiveAnimations: Array.isArray(params.additiveAnimations) ? params.additiveAnimations : [],
+            savePath: basePath
+          }), { timeoutMs: 60000 });
+
+          const result = resp?.result ?? resp;
+          const resultObj = result && typeof result === 'object' ? (result as Record<string, unknown>) : undefined;
+          const isSuccess = resp && resp.success !== false && !!resultObj;
+
+          if (isSuccess && resultObj) {
+            const path = typeof resultObj.path === 'string' ? (resultObj.path as string) : expectedPath;
+            this.trackArtifact(treeName, {
+              path,
+              type: 'BlendTree',
+              metadata: {
+                blendType: params.blendType,
+                basePose: params.basePose,
+                additiveAnimations: Array.isArray(params.additiveAnimations) ? params.additiveAnimations : []
+              }
+            });
+
+            return {
+              success: true,
+              message: resp.message || `Blend tree '${treeName}' created at ${path}`,
+              path,
+              treeName
+            };
+          }
+
+          const message = typeof resp?.message === 'string'
+            ? resp.message
+            : (typeof resp?.error === 'string' ? resp.error : 'Blend tree creation failed');
+          const error = typeof resp?.error === 'string' ? resp.error : message;
+
+          return { success: false, message, error };
+        } catch (err) {
+          const error = String(err);
+          return {
+            success: false,
+            message: `Failed to create blend tree: ${error}`,
+            error
+          };
         }
-      });
+      }
 
       return {
-        success: true,
-        message: `Blend tree '${treeName}' specification recorded at ${path}`,
-        path,
-        treeName
+        success: false,
+        message: 'Automation bridge not connected for createBlendTree',
+        error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
       };
     } catch (err) {
       const error = String(err);
       return {
         success: false,
-        message: `Failed to record blend tree specification: ${error}`,
+        message: `Failed to create blend tree: ${error}`,
         error
       };
     }

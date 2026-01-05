@@ -334,6 +334,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       }
     }
 
+    // Save the newly created SoundCue asset
+    McpSafeAssetSave(SoundCue);
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
@@ -507,6 +509,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         }
       }
 
+      // Save the newly created SoundClass asset
+      McpSafeAssetSave(SoundClass);
+
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("path"), SoundClass->GetPathName());
@@ -565,6 +570,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
           }
         }
       }
+
+      // Save the newly created SoundMix asset
+      McpSafeAssetSave(SoundMix);
 
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);

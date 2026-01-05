@@ -20,6 +20,7 @@
 #include "PCGComponent.h"
 #include "PCGNode.h"
 #include "PCGPin.h"
+#include "PCGEdge.h"
 #include "PCGSettings.h"
 #include "PCGSubgraph.h"
 #include "PCGVolume.h"
@@ -991,10 +992,10 @@ static bool HandleSetPCGPartitionGridSize(
     }
     
     // Grid size is set on the graph via HiGen settings
-    UPCGGraphInterface* GraphInterface = PCGComp->GetGraphInterface();
-    if (GraphInterface && GraphInterface->GetGraph())
+    UPCGGraph* PCGGraph = PCGComp->GetGraph();
+    if (PCGGraph)
     {
-        GraphInterface->GetGraph()->MarkPackageDirty();
+        PCGGraph->MarkPackageDirty();
     }
     
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
@@ -1092,8 +1093,11 @@ static bool HandleGetPCGInfo(
             for (UPCGPin* OutputPin : Node->GetOutputPins())
             {
                 if (!OutputPin) continue;
-                for (UPCGPin* ConnectedPin : OutputPin->Edges)
+                // Edges is an array of UPCGEdge*, use GetOtherPin to get the connected pin
+                for (UPCGEdge* Edge : OutputPin->Edges)
                 {
+                    if (!Edge) continue;
+                    UPCGPin* ConnectedPin = Edge->GetOtherPin(OutputPin);
                     if (!ConnectedPin || !ConnectedPin->Node) continue;
                     TSharedPtr<FJsonObject> ConnObj = MakeShared<FJsonObject>();
                     ConnObj->SetStringField(TEXT("sourceNode"), Node->GetName());

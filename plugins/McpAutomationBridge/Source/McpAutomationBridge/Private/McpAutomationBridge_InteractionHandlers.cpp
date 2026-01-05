@@ -212,6 +212,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     if (!bShowOnHoverExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bShowOnHover"), BoolType);
     }
+    // Set default value for bShowOnHover
+    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+      if (Var.VarName == TEXT("bShowOnHover")) {
+        Var.DefaultValue = ShowOnHover ? TEXT("true") : TEXT("false");
+        break;
+      }
+    }
 
     // Add bShowPromptText variable
     bool bShowPromptTextExists = false;
@@ -224,6 +231,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     if (!bShowPromptTextExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bShowPromptText"), BoolType);
     }
+    // Set default value for bShowPromptText
+    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+      if (Var.VarName == TEXT("bShowPromptText")) {
+        Var.DefaultValue = ShowPromptText ? TEXT("true") : TEXT("false");
+        break;
+      }
+    }
 
     // Add PromptTextFormat variable
     bool bPromptFormatExists = false;
@@ -235,6 +249,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
     if (!bPromptFormatExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("PromptTextFormat"), StringType);
+    }
+    // Set default value for PromptTextFormat
+    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+      if (Var.VarName == TEXT("PromptTextFormat")) {
+        Var.DefaultValue = PromptTextFormat;
+        break;
+      }
     }
 
     // Add InteractionWidgetClass variable (soft class reference)
@@ -250,6 +271,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
     if (!bWidgetClassExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("InteractionWidgetClass"), SoftClassType);
+    }
+    // Set default value for InteractionWidgetClass if provided
+    if (!WidgetClass.IsEmpty()) {
+      for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+        if (Var.VarName == TEXT("InteractionWidgetClass")) {
+          Var.DefaultValue = WidgetClass;
+          break;
+        }
+      }
     }
 
     TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -688,6 +718,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     if (!bSwitchTypeExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("SwitchType"), NameType);
     }
+    // Set default value for SwitchType
+    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+      if (Var.VarName == TEXT("SwitchType")) {
+        Var.DefaultValue = SwitchType;
+        break;
+      }
+    }
 
     // Add bCanToggle variable
     bool bCanToggleExists = false;
@@ -699,6 +736,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
     if (!bCanToggleExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bCanToggle"), BoolType);
+    }
+    // Set default value for bCanToggle
+    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+      if (Var.VarName == TEXT("bCanToggle")) {
+        Var.DefaultValue = CanToggle ? TEXT("true") : TEXT("false");
+        break;
+      }
     }
 
     // Add bIsActivated variable
@@ -712,6 +756,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     if (!bIsActivatedExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bIsActivated"), BoolType);
     }
+    // Set default value for bIsActivated (default to false)
+    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+      if (Var.VarName == TEXT("bIsActivated")) {
+        Var.DefaultValue = TEXT("false");
+        break;
+      }
+    }
 
     // Add ResetTime variable
     bool bResetTimeExists = false;
@@ -723,6 +774,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
     if (!bResetTimeExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("ResetTime"), FloatType);
+    }
+    // Set default value for ResetTime
+    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+      if (Var.VarName == TEXT("ResetTime")) {
+        Var.DefaultValue = FString::Printf(TEXT("%f"), ResetTime);
+        break;
+      }
     }
 
     TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -851,6 +909,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     if (!bLockedExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bIsLocked"), BoolType);
     }
+    // Set default value for bIsLocked
+    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+      if (Var.VarName == TEXT("bIsLocked")) {
+        Var.DefaultValue = Locked ? TEXT("true") : TEXT("false");
+        break;
+      }
+    }
 
     // Add bIsOpen variable
     bool bIsOpenExists = false;
@@ -862,6 +927,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
     if (!bIsOpenExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bIsOpen"), BoolType);
+    }
+    // Set default value for bIsOpen (default to false - chest starts closed)
+    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+      if (Var.VarName == TEXT("bIsOpen")) {
+        Var.DefaultValue = TEXT("false");
+        break;
+      }
     }
 
     // Add LidOpenAngle variable
@@ -875,6 +947,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     if (!bLidAngleExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("LidOpenAngle"), FloatType);
     }
+    // Set default value for LidOpenAngle
+    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+      if (Var.VarName == TEXT("LidOpenAngle")) {
+        Var.DefaultValue = FString::Printf(TEXT("%f"), OpenAngle);
+        break;
+      }
+    }
 
     // Add OpenTime variable
     bool bOpenTimeExists = false;
@@ -887,6 +966,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     if (!bOpenTimeExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("OpenTime"), FloatType);
     }
+    // Set default value for OpenTime
+    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+      if (Var.VarName == TEXT("OpenTime")) {
+        Var.DefaultValue = FString::Printf(TEXT("%f"), OpenTime);
+        break;
+      }
+    }
 
     // Add LootTable soft reference
     bool bLootTableExists = false;
@@ -898,6 +984,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
     if (!bLootTableExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("LootTable"), SoftObjectType);
+    }
+    // Set default value for LootTable if provided
+    if (!LootTablePath.IsEmpty()) {
+      for (FBPVariableDescription& Var : Blueprint->NewVariables) {
+        if (Var.VarName == TEXT("LootTable")) {
+          Var.DefaultValue = LootTablePath;
+          break;
+        }
+      }
     }
 
     TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());

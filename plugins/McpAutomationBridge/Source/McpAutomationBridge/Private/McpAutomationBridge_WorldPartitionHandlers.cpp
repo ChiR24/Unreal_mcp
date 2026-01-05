@@ -291,9 +291,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
             SendAutomationError(RequestingSocket, RequestId, TEXT("DataLayerEditorSubsystem not found."), TEXT("SUBSYSTEM_NOT_FOUND"));
         }
 #else
-        // Fallback or simulation
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("DataLayerEditorSubsystem not available. set_datalayer skipped."));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor added to DataLayer (Simulated - Subsystem missing)."));
+        // DataLayerEditorSubsystem not available in this engine version
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("DataLayerEditorSubsystem not available. set_datalayer not supported."));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("DataLayerEditorSubsystem not available in this engine version. Use Editor UI to assign Data Layers."), TEXT("DATALAYER_NOT_SUPPORTED"));
 #endif
         return true;
     }

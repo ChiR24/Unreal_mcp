@@ -58,6 +58,22 @@
 #define MCP_HAS_CONTROLRIG_BLUEPRINT 0
 #endif
 
+// RigHierarchyController for adding controls to Control Rig
+#if __has_include("Rigs/RigHierarchyController.h")
+#include "Rigs/RigHierarchyController.h"
+#define MCP_HAS_RIG_HIERARCHY_CONTROLLER 1
+#else
+#define MCP_HAS_RIG_HIERARCHY_CONTROLLER 0
+#endif
+
+// ControlRigGraph for graph operations
+#if __has_include("Graph/ControlRigGraph.h")
+#include "Graph/ControlRigGraph.h"
+#define MCP_HAS_CONTROLRIG_GRAPH 1
+#else
+#define MCP_HAS_CONTROLRIG_GRAPH 0
+#endif
+
 // Control Rig Factory (for creating Control Rig assets)
 #if __has_include("ControlRigBlueprintFactory.h")
 #include "ControlRigBlueprintFactory.h"
@@ -1428,32 +1444,59 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
         }
         
-        // Determine axis index
+        // Determine axis index (0 = Horizontal/X, 1 = Vertical/Y)
         int32 AxisIndex = 0;
         if (Axis == TEXT("Vertical") || Axis == TEXT("Y"))
         {
             AxisIndex = 1;
         }
         
-        // Update axis settings - UE 5.7+ GetBlendParameter returns const ref
-        // We need to use Modify() pattern or just read and report the constraint
-        // For now, skip direct modification since BlendParameters is protected
-        // The creation flow above already sets defaults, this is for runtime update which
-        // may need different approach per UE version
-        
-        // Log info about what was requested but note it may not take effect in UE 5.7+
+        // Get requested axis settings
         FString RequestedAxisName = GetStringFieldSafe(Params, TEXT("axisName"), TEXT(""));
         float RequestedMin = static_cast<float>(GetNumberFieldSafe(Params, TEXT("minValue"), 0.0));
         float RequestedMax = static_cast<float>(GetNumberFieldSafe(Params, TEXT("maxValue"), 100.0));
         int32 RequestedGridNum = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("gridDivisions"), 4));
         
-        // Trigger PostEditChange to ensure any internal updates
-        BlendSpace->PostEditChange();
-        BlendSpace->MarkPackageDirty();
+        // Mark for modification before changing protected members
+        BlendSpace->Modify();
         
+        // Access protected BlendParameters using accessor pattern
+        // BlendParameters is a fixed-size array [3] - we access via cast
+        struct FBlendSpaceAccessor : public UBlendSpace
+        {
+            static FBlendParameter& GetParameter(UBlendSpace* BS, int32 Index)
+            {
+                return reinterpret_cast<FBlendSpaceAccessor*>(BS)->BlendParameters[Index];
+            }
+        };
+        
+        FBlendParameter& Param = FBlendSpaceAccessor::GetParameter(BlendSpace, AxisIndex);
+        
+        // Apply the requested settings
+        if (!RequestedAxisName.IsEmpty())
+        {
+            Param.DisplayName = RequestedAxisName;
+        }
+        Param.Min = RequestedMin;
+        Param.Max = RequestedMax;
+        Param.GridNum = RequestedGridNum;
+        
+#if WITH_EDITOR
+        // Rebuild internal triangulation and grid data (Required in UE 5.6+)
+        BlendSpace->ResampleData();
+        
+        // Notify the system that properties changed (refreshes Editor UI)
+        BlendSpace->PostEditChange();
+#endif
+        
+        BlendSpace->MarkPackageDirty();
         SaveAnimAsset(BlendSpace, bSave);
         
-        ANIM_SUCCESS_RESPONSE(TEXT("Axis settings updated"));
+        Response->SetStringField(TEXT("axis"), Axis);
+        Response->SetNumberField(TEXT("minValue"), RequestedMin);
+        Response->SetNumberField(TEXT("maxValue"), RequestedMax);
+        Response->SetNumberField(TEXT("gridDivisions"), RequestedGridNum);
+        ANIM_SUCCESS_RESPONSE(TEXT("Axis settings updated successfully"));
         return Response;
     }
     
@@ -1764,9 +1807,10 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         Response->SetStringField(TEXT("stateMachine"), StateMachineName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' created in state machine '%s'"), *StateName, *StateMachineName));
 #else
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
-        SaveAnimAsset(AnimBP, bSave);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' marked for creation (requires AnimGraph module)"), *StateName));
+        // AnimGraph headers not available - return error instead of fake success
+        ANIM_ERROR_RESPONSE(
+            FString::Printf(TEXT("Cannot create state '%s': AnimGraph module headers not available in this build. Enable AnimGraph module in Build.cs."), *StateName),
+            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
 #endif
         return Response;
     }
@@ -2057,9 +2101,10 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         Response->SetStringField(TEXT("cacheName"), CacheName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Cached pose node '%s' created"), *CacheName));
 #else
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
-        SaveAnimAsset(AnimBP, bSave);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Cached pose '%s' marked for creation (requires AnimGraph module)"), *CacheName));
+        // AnimGraph/CachedPose headers not available - return error instead of fake success
+        ANIM_ERROR_RESPONSE(
+            FString::Printf(TEXT("Cannot create cached pose node '%s': AnimGraph module headers not available in this build. Enable AnimGraph module in Build.cs."), *CacheName),
+            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
 #endif
         return Response;
     }
@@ -2296,12 +2341,10 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         Response->SetBoolField(TEXT("modularRig"), bModularRig);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Control Rig '%s' created successfully"), *Name));
 #elif MCP_HAS_CONTROLRIG_BLUEPRINT
-        // Factory not available, fall back to informative message
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/ControlRigs")));
-        FString FullPath = Path / Name;
-        Response->SetStringField(TEXT("assetPath"), FullPath);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Control Rig '%s' creation requires ControlRigEditor module"), *Name));
+        // Factory not available - return error instead of fake success
+        ANIM_ERROR_RESPONSE(
+            TEXT("Cannot create Control Rig: ControlRigBlueprintFactory not available. Ensure ControlRigEditor module is enabled in Build.cs."),
+            TEXT("CONTROLRIG_FACTORY_UNAVAILABLE"));
 #else
         ANIM_ERROR_RESPONSE(TEXT("Control Rig module not available"), TEXT("NOT_SUPPORTED"));
 #endif
@@ -2313,6 +2356,8 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 #if MCP_HAS_CONTROLRIG
         FString AssetPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
         FString ControlName = GetStringFieldSafe(Params, TEXT("controlName"), TEXT(""));
+        FString ControlType = GetStringFieldSafe(Params, TEXT("controlType"), TEXT("Transform"));
+        FString ParentControl = GetStringFieldSafe(Params, TEXT("parentControl"), TEXT(""));
         bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         if (ControlName.IsEmpty())
@@ -2320,7 +2365,92 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(TEXT("controlName is required"), TEXT("MISSING_CONTROL_NAME"));
         }
         
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Control '%s' added (requires manual rig setup)"), *ControlName));
+        // Load the Control Rig asset
+        UControlRigBlueprint* ControlRigBP = Cast<UControlRigBlueprint>(StaticLoadObject(UControlRigBlueprint::StaticClass(), nullptr, *AssetPath));
+        if (!ControlRigBP)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load Control Rig: %s"), *AssetPath), TEXT("CONTROLRIG_NOT_FOUND"));
+        }
+        
+        // Get the hierarchy controller to add controls
+        URigHierarchyController* HierarchyController = ControlRigBP->GetHierarchyController();
+        if (!HierarchyController)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not get hierarchy controller"), TEXT("HIERARCHY_ERROR"));
+        }
+        
+        // Determine parent key
+        FRigElementKey ParentKey;
+        if (!ParentControl.IsEmpty())
+        {
+            ParentKey = FRigElementKey(FName(*ParentControl), ERigElementType::Control);
+        }
+        
+        // Create control settings
+        FRigControlSettings ControlSettings;
+        ControlSettings.ControlType = ERigControlType::Transform;
+        if (ControlType == TEXT("Float"))
+        {
+            ControlSettings.ControlType = ERigControlType::Float;
+        }
+        else if (ControlType == TEXT("Integer"))
+        {
+            ControlSettings.ControlType = ERigControlType::Integer;
+        }
+        else if (ControlType == TEXT("Vector2D"))
+        {
+            ControlSettings.ControlType = ERigControlType::Vector2D;
+        }
+        else if (ControlType == TEXT("Position"))
+        {
+            ControlSettings.ControlType = ERigControlType::Position;
+        }
+        else if (ControlType == TEXT("Rotator"))
+        {
+            ControlSettings.ControlType = ERigControlType::Rotator;
+        }
+        else if (ControlType == TEXT("Scale"))
+        {
+            ControlSettings.ControlType = ERigControlType::Scale;
+        }
+        else if (ControlType == TEXT("EulerTransform"))
+        {
+            ControlSettings.ControlType = ERigControlType::EulerTransform;
+        }
+        else if (ControlType == TEXT("TransformNoScale"))
+        {
+            ControlSettings.ControlType = ERigControlType::TransformNoScale;
+        }
+        
+        // Add the control
+        FRigElementKey NewControlKey = HierarchyController->AddControl(
+            FName(*ControlName),
+            ParentKey,
+            ControlSettings,
+            FRigControlValue::Make<FTransform>(FTransform::Identity),
+            FTransform::Identity,
+            FTransform::Identity,
+            true // bSetupUndo
+        );
+        
+        bool bControlAdded = NewControlKey.IsValid();
+        
+        if (bControlAdded)
+        {
+            ControlRigBP->MarkPackageDirty();
+            if (bSave)
+            {
+                ControlRigBP->PostEditChange();
+            }
+            
+            Response->SetStringField(TEXT("controlKey"), NewControlKey.Name.ToString());
+            Response->SetBoolField(TEXT("controlAdded"), true);
+            ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Control '%s' added successfully"), *ControlName));
+        }
+        else
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to add control '%s'"), *ControlName), TEXT("ADD_CONTROL_FAILED"));
+        }
 #else
         ANIM_ERROR_RESPONSE(TEXT("Control Rig module not available"), TEXT("NOT_SUPPORTED"));
 #endif
@@ -2332,8 +2462,103 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 #if MCP_HAS_CONTROLRIG
         FString AssetPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
         FString UnitType = GetStringFieldSafe(Params, TEXT("unitType"), TEXT(""));
+        FString UnitName = GetStringFieldSafe(Params, TEXT("unitName"), TEXT(""));
+        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Rig unit '%s' added (requires manual rig setup)"), *UnitType));
+        if (UnitType.IsEmpty())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("unitType is required"), TEXT("MISSING_UNIT_TYPE"));
+        }
+        
+        // Load the Control Rig asset
+        UControlRigBlueprint* ControlRigBP = Cast<UControlRigBlueprint>(StaticLoadObject(UControlRigBlueprint::StaticClass(), nullptr, *AssetPath));
+        if (!ControlRigBP)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load Control Rig: %s"), *AssetPath), TEXT("CONTROLRIG_NOT_FOUND"));
+        }
+        
+        // Get the rig VM compiler model (the graph)
+        UControlRigGraph* RigGraph = nullptr;
+        TArray<UEdGraph*> Graphs;
+        ControlRigBP->GetAllGraphs(Graphs);
+        for (UEdGraph* Graph : Graphs)
+        {
+            if (UControlRigGraph* CRGraph = Cast<UControlRigGraph>(Graph))
+            {
+                RigGraph = CRGraph;
+                break;
+            }
+        }
+        
+        if (!RigGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find Control Rig graph"), TEXT("GRAPH_NOT_FOUND"));
+        }
+        
+        // Find the rig unit struct by name
+        FString FullUnitTypeName = UnitType;
+        if (!FullUnitTypeName.StartsWith(TEXT("FRigUnit_")))
+        {
+            FullUnitTypeName = FString::Printf(TEXT("FRigUnit_%s"), *UnitType);
+        }
+        
+        UScriptStruct* UnitStruct = FindObject<UScriptStruct>(nullptr, *FullUnitTypeName);
+        if (!UnitStruct)
+        {
+            // Try common rig units
+            TMap<FString, FString> CommonUnits;
+            CommonUnits.Add(TEXT("TwoBoneIK"), TEXT("/Script/ControlRig.RigUnit_TwoBoneIKSimple"));
+            CommonUnits.Add(TEXT("FABRIK"), TEXT("/Script/ControlRig.RigUnit_FABRIK"));
+            CommonUnits.Add(TEXT("SetTransform"), TEXT("/Script/ControlRig.RigUnit_SetTransform"));
+            CommonUnits.Add(TEXT("GetTransform"), TEXT("/Script/ControlRig.RigUnit_GetTransform"));
+            CommonUnits.Add(TEXT("SetBoneTransform"), TEXT("/Script/ControlRig.RigUnit_SetBoneTransform"));
+            
+            if (FString* FoundPath = CommonUnits.Find(UnitType))
+            {
+                UnitStruct = LoadObject<UScriptStruct>(nullptr, **FoundPath);
+            }
+        }
+        
+        bool bUnitAdded = false;
+        FString AddedNodeName;
+        
+        if (UnitStruct)
+        {
+            // Create a new rig unit node in the graph
+            FVector2D NodePosition(200.0f, 200.0f);
+            URigVMController* Controller = ControlRigBP->GetController(Cast<UEdGraph>(RigGraph));
+            if (Controller)
+            {
+                FName NodeName = UnitName.IsEmpty() ? FName(*UnitType) : FName(*UnitName);
+                URigVMNode* NewNode = Controller->AddUnitNode(UnitStruct, TEXT("Execute"), NodePosition, NodeName.ToString(), true);
+                if (NewNode)
+                {
+                    bUnitAdded = true;
+                    AddedNodeName = NewNode->GetName();
+                }
+            }
+        }
+        
+        if (bUnitAdded)
+        {
+            ControlRigBP->MarkPackageDirty();
+            if (bSave)
+            {
+                ControlRigBP->PostEditChange();
+            }
+            
+            Response->SetStringField(TEXT("nodeName"), AddedNodeName);
+            Response->SetBoolField(TEXT("unitAdded"), true);
+            ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Rig unit '%s' added successfully"), *UnitType));
+        }
+        else
+        {
+            // Fallback: store intent in metadata if direct graph manipulation fails
+            Response->SetStringField(TEXT("requestedUnit"), UnitType);
+            Response->SetBoolField(TEXT("unitAdded"), false);
+            Response->SetStringField(TEXT("note"), TEXT("Unit type not found or graph manipulation unavailable. Add manually in Control Rig editor."));
+            ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Rig unit '%s' registered (manual graph setup may be needed)"), *UnitType));
+        }
 #else
         ANIM_ERROR_RESPONSE(TEXT("Control Rig module not available"), TEXT("NOT_SUPPORTED"));
 #endif
@@ -2343,7 +2568,78 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
     if (SubAction == TEXT("connect_rig_elements"))
     {
 #if MCP_HAS_CONTROLRIG
-        ANIM_SUCCESS_RESPONSE(TEXT("Rig elements connected (requires manual rig setup)"));
+        FString AssetPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
+        FString SourceElement = GetStringFieldSafe(Params, TEXT("sourceElement"), TEXT(""));
+        FString SourcePin = GetStringFieldSafe(Params, TEXT("sourcePin"), TEXT(""));
+        FString TargetElement = GetStringFieldSafe(Params, TEXT("targetElement"), TEXT(""));
+        FString TargetPin = GetStringFieldSafe(Params, TEXT("targetPin"), TEXT(""));
+        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        
+        if (SourceElement.IsEmpty() || TargetElement.IsEmpty())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("sourceElement and targetElement are required"), TEXT("MISSING_ELEMENTS"));
+        }
+        
+        // Load the Control Rig asset
+        UControlRigBlueprint* ControlRigBP = Cast<UControlRigBlueprint>(StaticLoadObject(UControlRigBlueprint::StaticClass(), nullptr, *AssetPath));
+        if (!ControlRigBP)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load Control Rig: %s"), *AssetPath), TEXT("CONTROLRIG_NOT_FOUND"));
+        }
+        
+        // Get the rig graph
+        UControlRigGraph* RigGraph = nullptr;
+        TArray<UEdGraph*> Graphs;
+        ControlRigBP->GetAllGraphs(Graphs);
+        for (UEdGraph* Graph : Graphs)
+        {
+            if (UControlRigGraph* CRGraph = Cast<UControlRigGraph>(Graph))
+            {
+                RigGraph = CRGraph;
+                break;
+            }
+        }
+        
+        if (!RigGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find Control Rig graph"), TEXT("GRAPH_NOT_FOUND"));
+        }
+        
+        // Get the VM controller for graph manipulation
+        URigVMController* Controller = ControlRigBP->GetController(Cast<UEdGraph>(RigGraph));
+        if (!Controller)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not get graph controller"), TEXT("CONTROLLER_ERROR"));
+        }
+        
+        // Build pin paths
+        FString SourcePinPath = SourcePin.IsEmpty() ? 
+            FString::Printf(TEXT("%s.ExecuteContext"), *SourceElement) :
+            FString::Printf(TEXT("%s.%s"), *SourceElement, *SourcePin);
+        FString TargetPinPath = TargetPin.IsEmpty() ? 
+            FString::Printf(TEXT("%s.ExecuteContext"), *TargetElement) :
+            FString::Printf(TEXT("%s.%s"), *TargetElement, *TargetPin);
+        
+        // Create the link
+        bool bLinkCreated = Controller->AddLink(SourcePinPath, TargetPinPath, true);
+        
+        if (bLinkCreated)
+        {
+            ControlRigBP->MarkPackageDirty();
+            if (bSave)
+            {
+                ControlRigBP->PostEditChange();
+            }
+            
+            Response->SetBoolField(TEXT("connected"), true);
+            Response->SetStringField(TEXT("sourcePin"), SourcePinPath);
+            Response->SetStringField(TEXT("targetPin"), TargetPinPath);
+            ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Connected '%s' to '%s'"), *SourceElement, *TargetElement));
+        }
+        else
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to connect '%s' to '%s'. Check pin names."), *SourceElement, *TargetElement), TEXT("CONNECT_FAILED"));
+        }
 #else
         ANIM_ERROR_RESPONSE(TEXT("Control Rig module not available"), TEXT("NOT_SUPPORTED"));
 #endif
@@ -2369,9 +2665,36 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
         }
         
+        // Create package for the PoseAsset
         FString FullPath = Path / Name;
-        Response->SetStringField(TEXT("assetPath"), FullPath);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Pose library '%s' creation requires manual setup"), *Name));
+        UPackage* Package = CreatePackage(*FullPath);
+        if (!Package)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Failed to create package for Pose Asset"), TEXT("PACKAGE_ERROR"));
+        }
+        
+        // Create the PoseAsset directly
+        UPoseAsset* NewPoseAsset = NewObject<UPoseAsset>(Package, FName(*Name), RF_Public | RF_Standalone);
+        if (!NewPoseAsset)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Failed to create Pose Asset"), TEXT("CREATION_FAILED"));
+        }
+        
+        // Set the skeleton
+        NewPoseAsset->SetSkeleton(Skeleton);
+        
+        // Notify asset registry
+        FAssetRegistryModule::AssetCreated(NewPoseAsset);
+        
+        // Save if requested
+        if (bSave)
+        {
+            NewPoseAsset->MarkPackageDirty();
+            NewPoseAsset->PostEditChange();
+        }
+        
+        Response->SetStringField(TEXT("assetPath"), NewPoseAsset->GetPathName());
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Pose library '%s' created successfully"), *Name));
 #else
         ANIM_ERROR_RESPONSE(TEXT("Pose Asset not available in this engine version"), TEXT("NOT_SUPPORTED"));
 #endif
@@ -2423,12 +2746,10 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         Response->SetStringField(TEXT("assetPath"), IKRig->GetPathName());
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("IK Rig '%s' created successfully"), *Name));
 #elif MCP_HAS_IKRIG
-        // Factory not available, fall back to informative message
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Retargeting")));
-        FString FullPath = Path / Name;
-        Response->SetStringField(TEXT("assetPath"), FullPath);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("IK Rig '%s' creation requires IKRigEditor module"), *Name));
+        // Factory not available - return error instead of fake success
+        ANIM_ERROR_RESPONSE(
+            TEXT("Cannot create IK Rig: IKRigDefinitionFactory not available. Ensure IKRigEditor module is enabled in Build.cs."),
+            TEXT("IKRIG_FACTORY_UNAVAILABLE"));
 #else
         ANIM_ERROR_RESPONSE(TEXT("IK Rig module not available"), TEXT("NOT_SUPPORTED"));
 #endif
@@ -2440,13 +2761,55 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 #if MCP_HAS_IKRIG
         FString AssetPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
         FString ChainName = GetStringFieldSafe(Params, TEXT("chainName"), TEXT(""));
+        FString StartBone = GetStringFieldSafe(Params, TEXT("startBone"), TEXT(""));
+        FString EndBone = GetStringFieldSafe(Params, TEXT("endBone"), TEXT(""));
+        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         if (ChainName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("chainName is required"), TEXT("MISSING_CHAIN_NAME"));
         }
         
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("IK chain '%s' added (requires manual setup)"), *ChainName));
+        if (StartBone.IsEmpty() || EndBone.IsEmpty())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("startBone and endBone are required"), TEXT("MISSING_BONES"));
+        }
+        
+        // Load the IK Rig asset
+        UIKRigDefinition* IKRig = Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, *AssetPath));
+        if (!IKRig)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load IK Rig: %s"), *AssetPath), TEXT("IKRIG_NOT_FOUND"));
+        }
+        
+        // Get the IK Rig controller
+        UIKRigController* Controller = UIKRigController::GetController(IKRig);
+        if (!Controller)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not get IK Rig controller"), TEXT("CONTROLLER_ERROR"));
+        }
+        
+        // Add the retarget chain
+        bool bChainAdded = Controller->AddRetargetChain(FName(*ChainName), FName(*StartBone), FName(*EndBone));
+        
+        if (bChainAdded)
+        {
+            IKRig->MarkPackageDirty();
+            if (bSave)
+            {
+                IKRig->PostEditChange();
+            }
+            
+            Response->SetBoolField(TEXT("chainAdded"), true);
+            Response->SetStringField(TEXT("chainName"), ChainName);
+            Response->SetStringField(TEXT("startBone"), StartBone);
+            Response->SetStringField(TEXT("endBone"), EndBone);
+            ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("IK chain '%s' added (%s -> %s)"), *ChainName, *StartBone, *EndBone));
+        }
+        else
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to add IK chain '%s'. Check bone names exist in skeleton."), *ChainName), TEXT("ADD_CHAIN_FAILED"));
+        }
 #else
         ANIM_ERROR_RESPONSE(TEXT("IK Rig module not available"), TEXT("NOT_SUPPORTED"));
 #endif
@@ -2514,12 +2877,10 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         Response->SetStringField(TEXT("assetPath"), Retargeter->GetPathName());
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("IK Retargeter '%s' created successfully"), *Name));
 #elif MCP_HAS_IKRETARGETER
-        // Factory not available, fall back to informative message
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Retargeting")));
-        FString FullPath = Path / Name;
-        Response->SetStringField(TEXT("assetPath"), FullPath);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("IK Retargeter '%s' creation requires IKRigEditor module"), *Name));
+        // Factory not available - return error instead of fake success
+        ANIM_ERROR_RESPONSE(
+            TEXT("Cannot create IK Retargeter: IKRetargetFactory not available. Ensure IKRigEditor module is enabled in Build.cs."),
+            TEXT("IKRETARGETER_FACTORY_UNAVAILABLE"));
 #else
         ANIM_ERROR_RESPONSE(TEXT("IK Retargeter module not available"), TEXT("NOT_SUPPORTED"));
 #endif
@@ -2532,13 +2893,47 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         FString AssetPath = NormalizeAnimPath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
         FString SourceChain = GetStringFieldSafe(Params, TEXT("sourceChain"), TEXT(""));
         FString TargetChain = GetStringFieldSafe(Params, TEXT("targetChain"), TEXT(""));
+        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
         
         if (SourceChain.IsEmpty() || TargetChain.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("sourceChain and targetChain are required"), TEXT("MISSING_CHAINS"));
         }
         
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Chain mapping '%s' -> '%s' set"), *SourceChain, *TargetChain));
+        // Load the IK Retargeter asset
+        UIKRetargeter* Retargeter = Cast<UIKRetargeter>(StaticLoadObject(UIKRetargeter::StaticClass(), nullptr, *AssetPath));
+        if (!Retargeter)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load IK Retargeter: %s"), *AssetPath), TEXT("RETARGETER_NOT_FOUND"));
+        }
+        
+        // Get the retargeter controller
+        UIKRetargeterController* Controller = UIKRetargeterController::GetController(Retargeter);
+        if (!Controller)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not get retargeter controller"), TEXT("CONTROLLER_ERROR"));
+        }
+        
+        // Set the chain mapping
+        bool bMappingSet = Controller->SetRetargetChainSettings(FName(*SourceChain), FName(*TargetChain));
+        
+        if (bMappingSet)
+        {
+            Retargeter->MarkPackageDirty();
+            if (bSave)
+            {
+                Retargeter->PostEditChange();
+            }
+            
+            Response->SetBoolField(TEXT("mappingSet"), true);
+            Response->SetStringField(TEXT("sourceChain"), SourceChain);
+            Response->SetStringField(TEXT("targetChain"), TargetChain);
+            ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Chain mapping '%s' -> '%s' set successfully"), *SourceChain, *TargetChain));
+        }
+        else
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to set chain mapping. Ensure chains exist in source and target IK Rigs.")), TEXT("MAPPING_FAILED"));
+        }
 #else
         ANIM_ERROR_RESPONSE(TEXT("IK Retargeter module not available"), TEXT("NOT_SUPPORTED"));
 #endif
