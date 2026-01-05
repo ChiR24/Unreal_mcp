@@ -14,7 +14,7 @@ Source/McpAutomationBridge/
 ├── Private/
 │   ├── McpAutomationBridgeSubsystem.cpp    # Initialize, tick, dispatch
 │   ├── McpAutomationBridge_ProcessRequest.cpp  # Request routing
-│   ├── *Handlers.cpp                       # Action implementations (35+)
+│   ├── *Handlers.cpp                       # Action implementations (36+)
 │   └── McpAutomationBridgeHelpers.h        # Critical UE 5.7 safety helpers
 └── McpAutomationBridge.Build.cs
 ```

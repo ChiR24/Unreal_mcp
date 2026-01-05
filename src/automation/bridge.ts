@@ -370,6 +370,10 @@ export class AutomationBridge extends EventEmitter {
     }
 
     isConnected(): boolean {
+        // Mock mode always reports connected
+        if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
+            return true;
+        }
         return this.connectionManager.isConnected();
     }
 
@@ -433,6 +437,22 @@ export class AutomationBridge extends EventEmitter {
         payload: Record<string, unknown> = {},
         options: { timeoutMs?: number } = {}
     ): Promise<T> {
+        // Mock mode returns simulated success responses
+        if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
+            this.log.debug(`[MOCK] Simulating response for action: ${action}`);
+            const mockResponse = {
+                success: true,
+                action,
+                result: {
+                    success: true,
+                    message: `Mock response for ${action}`,
+                    ...payload
+                },
+                transport: 'mock_bridge'
+            } as T;
+            return mockResponse;
+        }
+
         if (!this.isConnected()) {
             if (this.enabled) {
                 this.log.info('Automation bridge not connected, attempting lazy connection...');

@@ -69,14 +69,6 @@
 #else
 #define MCP_HAS_LANDSCAPE_LAYER 0
 #endif
-
-// Landscape material expressions
-#if __has_include("Materials/MaterialExpressionLandscapeLayerBlend.h")
-#include "Materials/MaterialExpressionLandscapeLayerBlend.h"
-#define MCP_HAS_LANDSCAPE_LAYER_BLEND 1
-#else
-#define MCP_HAS_LANDSCAPE_LAYER_BLEND 0
-#endif
 #endif
 
 // Forward declarations of helper functions
@@ -1175,84 +1167,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
         }
       }
     }
-    else {
-      // Disconnect from a specific expression node by NodeId
-#if WITH_EDITORONLY_DATA
-      bool bNodeFound = false;
-      bool bPinDisconnected = false;
-      
-      // Find the target expression node by name/index
-      for (UMaterialExpression* Expr : Material->GetEditorOnlyData()->ExpressionCollection.Expressions) {
-        if (!Expr) continue;
-        
-        // Match by node name or class name + index pattern
-        FString ExprName = Expr->GetName();
-        FString ExprDesc = Expr->Desc.IsEmpty() ? Expr->GetClass()->GetName() : Expr->Desc;
-        
-        if (ExprName == NodeId || ExprDesc == NodeId || 
-            ExprName.Contains(NodeId) || 
-            FString::Printf(TEXT("%s_%d"), *Expr->GetClass()->GetName(), Expr->GetUniqueID()) == NodeId) {
-          bNodeFound = true;
-          
-          // Disconnect all outputs from this expression
-          for (int32 OutputIdx = 0; OutputIdx < Expr->Outputs.Num(); OutputIdx++) {
-            FExpressionOutput& Output = Expr->Outputs[OutputIdx];
-            
-            // If specific pin requested, only disconnect that one
-            if (!PinName.IsEmpty() && Output.OutputName.ToString() != PinName) {
-              continue;
-            }
-            
-            // Find and break all connections FROM this output
-            // Check each expression that might reference this one
-            for (UMaterialExpression* OtherExpr : Material->GetEditorOnlyData()->ExpressionCollection.Expressions) {
-              if (!OtherExpr || OtherExpr == Expr) continue;
-              
-              // Check each input of the other expression using GetInput(int32)
-              int32 InputCount = OtherExpr->CountInputs();
-              for (int32 InputIdx = 0; InputIdx < InputCount; ++InputIdx) {
-                FExpressionInput* Input = OtherExpr->GetInput(InputIdx);
-                if (Input && Input->Expression == Expr && Input->OutputIndex == OutputIdx) {
-                  Input->Expression = nullptr;
-                  Input->OutputIndex = 0;
-                  bPinDisconnected = true;
-                }
-              }
-            }
-          }
-          
-          if (bPinDisconnected) {
-            Material->PostEditChange();
-            Material->MarkPackageDirty();
-            
-            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-            Result->SetStringField(TEXT("nodeId"), NodeId);
-            Result->SetBoolField(TEXT("disconnected"), true);
-            SendAutomationResponse(Socket, RequestId, true,
-                                   FString::Printf(TEXT("Disconnected outputs from node '%s'"), *NodeId), Result);
-            return true;
-          }
-          else {
-            // Node found but no connections to disconnect
-            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-            Result->SetStringField(TEXT("nodeId"), NodeId);
-            Result->SetBoolField(TEXT("disconnected"), false);
-            Result->SetStringField(TEXT("note"), TEXT("Node found but had no output connections"));
-            SendAutomationResponse(Socket, RequestId, true,
-                                   TEXT("No connections to disconnect"), Result);
-            return true;
-          }
-        }
-      }
-      
-      if (!bNodeFound) {
-        SendAutomationError(Socket, RequestId,
-                           FString::Printf(TEXT("Expression node '%s' not found in material"), *NodeId),
-                           TEXT("NODE_NOT_FOUND"));
-        return true;
-      }
-#endif
-    }
 
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Disconnect operation completed."));
@@ -1872,90 +1786,11 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
   }
   
   if (SubAction == TEXT("configure_layer_blend")) {
-    // Configure layer blending in a landscape material
-    FString AssetPath;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
-      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' for material."),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    UMaterial* Material = LoadObject<UMaterial>(nullptr, *AssetPath);
-    if (!Material) {
-      SendAutomationError(Socket, RequestId, TEXT("Could not load material."),
-                          TEXT("ASSET_NOT_FOUND"));
-      return true;
-    }
-
-#if WITH_EDITORONLY_DATA && MCP_HAS_LANDSCAPE_LAYER_BLEND
-    // Get layer names from payload
-    TArray<FString> LayerNames;
-    const TArray<TSharedPtr<FJsonValue>>* LayersArr = nullptr;
-    if (Payload->TryGetArrayField(TEXT("layers"), LayersArr) && LayersArr) {
-      for (const auto& LayerVal : *LayersArr) {
-        FString LayerName;
-        if (LayerVal->TryGetString(LayerName)) {
-          LayerNames.Add(LayerName);
-        }
-      }
-    }
-    
-    // Default layers if none provided
-    if (LayerNames.Num() == 0) {
-      LayerNames.Add(TEXT("Grass"));
-      LayerNames.Add(TEXT("Dirt"));
-      LayerNames.Add(TEXT("Rock"));
-    }
-
-    // Create a LandscapeLayerBlend expression
-    UMaterialExpressionLandscapeLayerBlend* BlendExpr = NewObject<UMaterialExpressionLandscapeLayerBlend>(
-        Material, UMaterialExpressionLandscapeLayerBlend::StaticClass(), NAME_None, RF_Transactional);
-    
-    if (BlendExpr) {
-      // Configure the layers
-      BlendExpr->Layers.Empty();
-      for (const FString& LayerName : LayerNames) {
-        FLayerBlendInput NewLayer;
-        NewLayer.LayerName = FName(*LayerName);
-        NewLayer.BlendType = LB_WeightBlend;
-        NewLayer.PreviewWeight = 1.0f / LayerNames.Num();
-        BlendExpr->Layers.Add(NewLayer);
-      }
-      
-      // Position the node
-      BlendExpr->MaterialExpressionEditorX = -400;
-      BlendExpr->MaterialExpressionEditorY = 0;
-      
-      // Add to material
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(BlendExpr);
-      
-      Material->PostEditChange();
-      Material->MarkPackageDirty();
-      
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-      Result->SetStringField(TEXT("assetPath"), AssetPath);
-      Result->SetNumberField(TEXT("layerCount"), LayerNames.Num());
-      
-      TArray<TSharedPtr<FJsonValue>> LayerArray;
-      for (const FString& LayerName : LayerNames) {
-        LayerArray.Add(MakeShareable(new FJsonValueString(LayerName)));
-      }
-      Result->SetArrayField(TEXT("layers"), LayerArray);
-      Result->SetBoolField(TEXT("blendExpressionAdded"), true);
-      Result->SetStringField(TEXT("note"), TEXT("LandscapeLayerBlend expression added. Connect layer inputs in Material Editor."));
-      
-      SendAutomationResponse(Socket, RequestId, true,
-                             TEXT("Layer blend expression configured"), Result);
-      return true;
-    }
-#else
-    SendAutomationError(Socket, RequestId, TEXT("LandscapeLayerBlend not available in this engine version."),
-                        TEXT("NOT_SUPPORTED"));
-    return true;
-#endif
-
-    SendAutomationError(Socket, RequestId, TEXT("Failed to create layer blend expression."),
-                        TEXT("CREATION_FAILED"));
+    // Layer blend configuration is material-based
+    // Return informative message about how to set up layer blending
+    SendAutomationResponse(
+        Socket, RequestId, true,
+        TEXT("Layer blend is configured via material expressions. Use 'add_custom_expression' with LandscapeLayerBlend or LandscapeLayerWeight nodes in your landscape material."));
     return true;
   }
 

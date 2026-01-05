@@ -3,8 +3,8 @@
 ## Overview
 
 This project uses consolidated integration test suites covering all MCP tools:
-- **Core Suite** (17 original tools, 44 scenarios)
-- **Advanced Suite** (15 new Phase 6-20 tools, 80 scenarios)
+- **Core Suite** (18 original tools, 44 scenarios)
+- **Advanced Suite** (18 new Phase 6-27 tools, 80+ scenarios)
 
 Plus Vitest for unit tests and a CI smoke test for mock-mode validation.
 
@@ -31,7 +31,7 @@ npm run test:all      # Both suites (124 tests)
 
 ### Core Suite (`tests/integration.mjs`)
 
-Covers 44 scenarios across the original 17 tool categories:
+Covers 44 scenarios across the original 18 tool categories:
 - Infrastructure & Discovery
 - Asset & Material Lifecycle
 - Actor Control & Introspection
@@ -43,14 +43,14 @@ Covers 44 scenarios across the original 17 tool categories:
 
 ### Advanced Suite (`tests/integration-advanced.mjs`)
 
-Covers 80 scenarios across the 15 new Phase 6-20 tools:
+Covers 80+ scenarios across the 18 new Phase 6-27 tools:
 - Phase 6: Geometry & Mesh Creation (`manage_geometry`)
 - Phase 7: Skeletal Mesh & Rigging (`manage_skeleton`)
 - Phase 8: Advanced Material Authoring (`manage_material_authoring`)
 - Phase 9: Texture Generation (`manage_texture`)
-- Phase 10: Animation Authoring (`manage_animation_authoring`)
-- Phase 11: Audio Authoring (`manage_audio_authoring`)
-- Phase 12: Niagara VFX Authoring (`manage_niagara_authoring`)
+- Phase 10: Animation Authoring (merged into `animation_physics`)
+- Phase 11: Audio Authoring (merged into `manage_audio`)
+- Phase 12: Niagara VFX Authoring (merged into `manage_effect`)
 - Phase 13: Gameplay Ability System (`manage_gas`)
 - Phase 14: Character & Movement (`manage_character`)
 - Phase 15: Combat & Weapons (`manage_combat`)
@@ -59,6 +59,13 @@ Covers 80 scenarios across the 15 new Phase 6-20 tools:
 - Phase 18: Interaction System (`manage_interaction`)
 - Phase 19: Widget Authoring (`manage_widget_authoring`)
 - Phase 20: Networking & Multiplayer (`manage_networking`)
+- Phase 21: Game Framework (`manage_game_framework`)
+- Phase 22: Sessions & Local Multiplayer (`manage_sessions`)
+- Phase 23: Level Structure (`manage_level_structure`)
+- Phase 24: Volumes & Zones (`manage_volumes`)
+- Phase 25: Navigation System (`manage_navigation`)
+- Phase 26: Spline System (`manage_splines`)
+- Phase 27: PCG Framework (`manage_pcg`)
 
 ### Test Structure
 

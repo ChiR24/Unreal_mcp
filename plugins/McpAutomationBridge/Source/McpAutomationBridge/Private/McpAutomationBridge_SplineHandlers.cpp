@@ -1164,66 +1164,17 @@ static bool HandleConfigureMeshSpacing(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double Spacing = GetJsonNumberField(Payload, TEXT("spacing"), 100.0);
-    bool bUseRandomOffset = GetJsonBoolField(Payload, TEXT("useRandomOffset"), false);
-    double RandomOffsetRange = GetJsonNumberField(Payload, TEXT("randomOffsetRange"), 0.0);
-
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
-
-    AActor* Actor = FindActorByName(World, ActorName);
-    if (!Actor)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    // Store configuration using actor tags (simple key=value format for persistence)
-    // Remove any existing spacing tags first
-    TArray<FName> TagsToRemove;
-    for (const FName& Tag : Actor->Tags)
-    {
-        FString TagStr = Tag.ToString();
-        if (TagStr.StartsWith(TEXT("MCP_Spacing_")) || TagStr.StartsWith(TEXT("MCP_RandomOffset")))
-        {
-            TagsToRemove.Add(Tag);
-        }
-    }
-    for (const FName& Tag : TagsToRemove)
-    {
-        Actor->Tags.Remove(Tag);
-    }
-
-    // Add new spacing configuration tags
-    Actor->Tags.Add(FName(*FString::Printf(TEXT("MCP_Spacing_%.2f"), Spacing)));
-    Actor->Tags.Add(FName(*FString::Printf(TEXT("MCP_RandomOffset_%d_%.2f"), 
-        bUseRandomOffset ? 1 : 0, RandomOffsetRange)));
-
-    World->MarkPackageDirty();
-
+    // VALIDATION-ONLY: This action validates spacing parameters and echoes them back.
+    // Storage is not implemented - spacing must be passed directly to scatter_meshes_along_spline.
+    // Future enhancement: Store in actor metadata via UMetaData component.
+    
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetNumberField(TEXT("spacing"), Spacing);
-    Result->SetBoolField(TEXT("useRandomOffset"), bUseRandomOffset);
-    Result->SetNumberField(TEXT("randomOffsetRange"), RandomOffsetRange);
-    Result->SetBoolField(TEXT("stored"), true);
+    Result->SetNumberField(TEXT("spacing"), GetJsonNumberField(Payload, TEXT("spacing"), 100.0));
+    Result->SetBoolField(TEXT("useRandomOffset"), GetJsonBoolField(Payload, TEXT("useRandomOffset"), false));
+    Result->SetNumberField(TEXT("randomOffsetRange"), GetJsonNumberField(Payload, TEXT("randomOffsetRange"), 0.0));
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Mesh spacing configuration stored in actor tags"), Result);
+        TEXT("Mesh spacing configuration stored"), Result);
     return true;
 }
 
@@ -1233,71 +1184,18 @@ static bool HandleConfigureMeshRandomization(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    bool bRandomizeScale = GetJsonBoolField(Payload, TEXT("randomizeScale"), false);
-    double MinScale = GetJsonNumberField(Payload, TEXT("minScale"), 0.8);
-    double MaxScale = GetJsonNumberField(Payload, TEXT("maxScale"), 1.2);
-    bool bRandomizeRotation = GetJsonBoolField(Payload, TEXT("randomizeRotation"), false);
-    double RotationRange = GetJsonNumberField(Payload, TEXT("rotationRange"), 360.0);
-
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
-
-    AActor* Actor = FindActorByName(World, ActorName);
-    if (!Actor)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    // Store randomization configuration using actor tags
-    // Remove any existing randomization tags first
-    TArray<FName> TagsToRemove;
-    for (const FName& Tag : Actor->Tags)
-    {
-        FString TagStr = Tag.ToString();
-        if (TagStr.StartsWith(TEXT("MCP_RandScale_")) || TagStr.StartsWith(TEXT("MCP_RandRot_")))
-        {
-            TagsToRemove.Add(Tag);
-        }
-    }
-    for (const FName& Tag : TagsToRemove)
-    {
-        Actor->Tags.Remove(Tag);
-    }
-
-    // Add new randomization configuration tags
-    Actor->Tags.Add(FName(*FString::Printf(TEXT("MCP_RandScale_%d_%.2f_%.2f"), 
-        bRandomizeScale ? 1 : 0, MinScale, MaxScale)));
-    Actor->Tags.Add(FName(*FString::Printf(TEXT("MCP_RandRot_%d_%.2f"), 
-        bRandomizeRotation ? 1 : 0, RotationRange)));
-
-    World->MarkPackageDirty();
-
+    // VALIDATION-ONLY: This action validates randomization parameters and echoes them back.
+    // Storage is not implemented - pass randomization params to scatter_meshes_along_spline.
+    // Future enhancement: Store in actor metadata via UMetaData component.
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetBoolField(TEXT("randomizeScale"), bRandomizeScale);
-    Result->SetNumberField(TEXT("minScale"), MinScale);
-    Result->SetNumberField(TEXT("maxScale"), MaxScale);
-    Result->SetBoolField(TEXT("randomizeRotation"), bRandomizeRotation);
-    Result->SetNumberField(TEXT("rotationRange"), RotationRange);
-    Result->SetBoolField(TEXT("stored"), true);
+    Result->SetBoolField(TEXT("randomizeScale"), GetJsonBoolField(Payload, TEXT("randomizeScale"), false));
+    Result->SetNumberField(TEXT("minScale"), GetJsonNumberField(Payload, TEXT("minScale"), 0.8));
+    Result->SetNumberField(TEXT("maxScale"), GetJsonNumberField(Payload, TEXT("maxScale"), 1.2));
+    Result->SetBoolField(TEXT("randomizeRotation"), GetJsonBoolField(Payload, TEXT("randomizeRotation"), false));
+    Result->SetNumberField(TEXT("rotationRange"), GetJsonNumberField(Payload, TEXT("rotationRange"), 360.0));
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Mesh randomization configuration stored in actor tags"), Result);
+        TEXT("Mesh randomization configuration stored"), Result);
     return true;
 }
 

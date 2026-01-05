@@ -5,6 +5,7 @@
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.7-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
+[![Tools](https://img.shields.io/badge/Tools-36-purple)](docs/handler-mapping.md)
 [![Project Board](https://img.shields.io/badge/Project-Roadmap-blueviolet?logo=github)](https://github.com/users/ChiR24/projects/3)
 [![Discussions](https://img.shields.io/badge/Discussions-Join-brightgreen?logo=github)](https://github.com/ChiR24/Unreal_mcp/discussions)
 
@@ -41,6 +42,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 | **Sequencer** | Cinematics, timeline control, camera animations, keyframes |
 | **Graph Editing** | Blueprint, Niagara, Material, and Behavior Tree graph manipulation |
 | **Audio** | Sound cues, audio components, sound mixes, ambient sounds |
+| **Procedural Content** | PCG graphs, samplers, filters, spawners, splines, mesh scattering |
 | **System** | Console commands, UBT, tests, logs, project settings, CVars |
 
 ### Architecture
@@ -176,43 +178,63 @@ ASSET_LIST_TTL_MS=10000
 
 ## Available Tools
 
+**36 Tools** organized by category:
+
+### Core Tools
 | Tool | Description |
 |------|-------------|
-| `manage_asset` | Assets, Materials, Render Targets, Behavior Trees |
-| `control_actor` | Spawn, delete, transform, physics, tags |
-| `control_editor` | PIE, Camera, viewport, screenshots |
-| `manage_level` | Load/Save, World Partition, streaming |
-| `manage_lighting` | Spawn lights, GI, shadows, build lighting, **list_light_types** |
-| `manage_performance` | Profiling, optimization, scalability |
-| `animation_physics` | Animation BPs, Vehicles, Ragdolls, Control Rig, IK, Blend Spaces |
-| `manage_effect` | Niagara, Particles, Debug Shapes, Niagara authoring, GPU sim |
-| `manage_blueprint` | Create, SCS, Graph Editing, Node manipulation |
-| `build_environment` | Landscape, Foliage, Procedural |
+| `manage_pipeline` | Filter visible tools by category, enable/disable tool groups |
+| `manage_asset` | Assets, Materials, Render Targets, Material graph editing |
+| `control_actor` | Spawn, delete, transform, physics, tags, components |
+| `control_editor` | PIE, Camera, viewport, screenshots, bookmarks |
+| `manage_level` | Load/Save, World Partition, streaming, data layers |
+| `inspect` | Object introspection, property access, snapshots |
 | `system_control` | UBT, Tests, Logs, Project Settings, CVars |
-| `manage_sequence` | Sequencer / Cinematics, **list_track_types** |
-| `inspect` | Object Introspection |
-| `manage_audio` | Audio Assets, Components, Sound Cues, MetaSounds, Attenuation |
-| `manage_behavior_tree` | Behavior Tree Graph Editing |
-| `manage_input` | Enhanced Input Actions & Contexts |
+
+### World Building
+| Tool | Description |
+|------|-------------|
+| `manage_lighting` | Spawn lights, GI, shadows, build lighting |
+| `build_environment` | Landscape, Foliage, Procedural generation |
+| `manage_level_structure` | Level creation, sublevels, World Partition, HLOD |
+| `manage_volumes` | Trigger, blocking, physics, audio, navigation volumes |
+| `manage_navigation` | NavMesh settings, nav modifiers, nav links, pathfinding |
+| `manage_splines` | Spline creation, spline meshes, road/river templates |
+| `manage_pcg` | PCG graphs, samplers, filters, spawners |
+
+### Authoring Tools
+| Tool | Description |
+|------|-------------|
+| `manage_blueprint` | Create, SCS components, Graph editing, Node manipulation |
+| `manage_material_authoring` | Material creation, expressions, landscape layers |
+| `manage_texture` | Texture creation, modification, compression |
 | `manage_geometry` | Procedural mesh creation (Geometry Script) |
 | `manage_skeleton` | Skeleton, sockets, physics assets, cloth binding |
-| `manage_material_authoring` | Material creation, expressions, landscape layers |
-| `manage_texture` | Texture creation, modification, compression settings |
+| `manage_audio` | Sound Cues, MetaSounds, Attenuation, ambient audio |
+| `manage_sequence` | Sequencer / Cinematics, camera animations |
+| `manage_behavior_tree` | Behavior Tree graph editing |
+| `manage_widget_authoring` | UMG widget creation, layout, styling, animations |
+
+### Gameplay Systems
+| Tool | Description |
+|------|-------------|
+| `animation_physics` | Animation BPs, Vehicles, Ragdolls, Control Rig, IK, Blend Spaces |
+| `manage_effect` | Niagara particles, GPU sim, debug shapes |
+| `manage_input` | Enhanced Input Actions & Contexts |
 | `manage_gas` | Gameplay Ability System: abilities, effects, attributes |
 | `manage_character` | Character creation, movement, advanced locomotion |
 | `manage_combat` | Weapons, projectiles, damage, melee combat |
 | `manage_ai` | AI controllers, EQS, perception, State Trees, Smart Objects |
 | `manage_inventory` | Items, equipment, loot tables, crafting |
 | `manage_interaction` | Interactables, destructibles, triggers |
-| `manage_widget_authoring` | UMG widget creation, layout, styling, animations |
+
+### Utility Tools
+| Tool | Description |
+|------|-------------|
+| `manage_performance` | Profiling, optimization, scalability |
 | `manage_networking` | Replication, RPCs, network prediction |
 | `manage_game_framework` | Game modes, game states, player controllers, match flow |
 | `manage_sessions` | Sessions, split-screen, LAN, voice chat |
-| `manage_level_structure` | Level creation, sublevels, World Partition, data layers, HLOD |
-| `manage_volumes` | Trigger volumes, blocking, physics, audio, navigation volumes |
-| `manage_navigation` | NavMesh settings, nav modifiers, nav links, smart links, pathfinding |
-| `manage_splines` | Spline creation, spline meshes, mesh scattering, road/river/fence templates |
-| `manage_pcg` | PCG graphs, samplers, filters, spawners, procedural content generation |
 
 ### Supported Asset Types
 
@@ -294,7 +316,7 @@ npm run test:all    # Run all tests
 
 | Resource | Description |
 |----------|-------------|
-| [Project Roadmap](https://github.com/users/ChiR24/projects/3) | Track development progress across 47 phases |
+| [Project Roadmap](https://github.com/users/ChiR24/projects/3) | Track development progress across 53+ phases |
 | [Discussions](https://github.com/ChiR24/Unreal_mcp/discussions) | Ask questions, share ideas, get help |
 | [Issues](https://github.com/ChiR24/Unreal_mcp/issues) | Report bugs and request features |
 
