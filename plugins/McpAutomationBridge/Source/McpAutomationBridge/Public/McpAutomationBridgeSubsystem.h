@@ -731,6 +731,16 @@ private:
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 32: Build & Deployment handlers
+  bool HandleManageBuildAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 33: Testing & Quality handlers
+  bool HandleManageTestingAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
   // 2. Execution & Build / Test Pipeline
   bool HandlePipelineAction(const FString &RequestId, const FString &Action,

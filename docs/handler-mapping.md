@@ -1386,3 +1386,73 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `get_config_section` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Returns entire section |
 | `flush_config` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Writes config to disk |
 | `reload_config` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Reloads config from disk |
+
+## 47. Build & Deployment Manager (`manage_build`) - Phase 32
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Build Pipeline** | | | |
+| `run_ubt` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Runs UnrealBuildTool with args |
+| `generate_project_files` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Generates project files |
+| `compile_shaders` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Reports shader compilation status |
+| `cook_content` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Runs content cooking for platform |
+| `package_project` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Packages project for distribution |
+| `configure_build_settings` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Configures build optimization settings |
+| `get_build_info` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Returns engine version, build config |
+| **Platform Configuration** | | | |
+| `configure_platform` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Configures platform-specific settings |
+| `get_platform_settings` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Returns platform settings |
+| `get_target_platforms` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Lists available target platforms |
+| **Asset Validation** | | | |
+| `validate_assets` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Runs asset validation commandlet |
+| `audit_assets` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Audits assets for issues |
+| `get_asset_size_info` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Returns asset size breakdown |
+| `get_asset_references` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Returns asset reference graph |
+| **PAK & Chunking** | | | |
+| `configure_chunking` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Configures asset chunking settings |
+| `create_pak_file` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Creates PAK file (via UAT) |
+| `configure_encryption` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Configures PAK encryption |
+| **Plugin Management** | | | |
+| `list_plugins` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Lists all plugins with status |
+| `enable_plugin` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Enables plugin in .uproject |
+| `disable_plugin` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Disables plugin in .uproject |
+| `get_plugin_info` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Returns plugin descriptor info |
+| **DDC Management** | | | |
+| `clear_ddc` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Clears Derived Data Cache |
+| `get_ddc_stats` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Returns DDC statistics |
+| `configure_ddc` | `McpAutomationBridge_BuildHandlers.cpp` | `HandleManageBuildAction` | Reports DDC configuration |
+
+## 48. Testing & Quality Manager (`manage_testing`) - Phase 33
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Automation Tests** | | | |
+| `list_tests` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Lists available automation tests |
+| `run_tests` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Runs automation tests with filter |
+| `run_test` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Runs single automation test by name |
+| `get_test_results` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Gets automation test results |
+| `get_test_info` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Gets test system info |
+| **Functional Tests** | | | |
+| `list_functional_tests` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Lists functional tests in level |
+| `run_functional_test` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Runs specific functional test |
+| `get_functional_test_results` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Gets functional test results |
+| **Profiling - Trace** | | | |
+| `start_trace` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Starts Unreal Insights trace |
+| `stop_trace` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Stops Unreal Insights trace |
+| `get_trace_status` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Gets trace recording status |
+| **Profiling - Visual Logger** | | | |
+| `enable_visual_logger` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Enables visual logger |
+| `disable_visual_logger` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Disables visual logger |
+| `get_visual_logger_status` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Gets visual logger status |
+| **Profiling - Stats** | | | |
+| `start_stats_capture` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Starts stats capture |
+| `stop_stats_capture` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Stops stats capture |
+| `get_memory_report` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Gets memory usage report |
+| `get_performance_stats` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Gets performance statistics |
+| **Validation** | | | |
+| `validate_asset` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Validates single asset |
+| `validate_assets_in_path` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Validates all assets in directory |
+| `validate_blueprint` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Validates blueprint compilation |
+| `check_map_errors` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Checks current map for errors |
+| `fix_redirectors` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Fixes asset redirectors |
+| `get_redirectors` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Lists asset redirectors |

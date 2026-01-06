@@ -442,7 +442,9 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 12. ~~Continue implementation of Phase 29 (Advanced Lighting & Rendering) per Roadmap.~~ ✅ Done
 13. ~~Continue implementation of Phase 30 (Cinematics & Media) per Roadmap.~~ ✅ Done
 14. ~~Continue implementation of Phase 31 (Data & Persistence) per Roadmap.~~ ✅ Done
-15. Continue implementation of Phase 32 per Roadmap.
+15. ~~Continue implementation of Phase 32 (Build & Deployment) per Roadmap.~~ ✅ Done
+16. ~~Continue implementation of Phase 33 (Testing & Quality) per Roadmap.~~ ✅ Done
+17. Continue implementation of Phase 34 (Editor Utilities) per Roadmap.
 
 ---
 
@@ -789,3 +791,109 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 - Gameplay Tags use `UGameplayTagsManager` singleton
 - Config operations work with `GConfig` for engine/game/editor configs
 - Uses `McpSafeAssetSave()` helper for UE 5.7 compatibility (no direct `UPackage::SavePackage()`)
+
+---
+
+## Phase 32: Build & Deployment - Implementation Details
+
+**Status**: ✅ Complete (24 actions)
+
+**Files**: 
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_BuildHandlers.cpp` (~850 lines)
+- `src/tools/handlers/build-handlers.ts`
+
+| Action | Status | Description |
+|--------|--------|-------------|
+| **Build Pipeline** | | |
+| `run_ubt` | ✅ Done | Runs UnrealBuildTool with arguments |
+| `generate_project_files` | ✅ Done | Generates project files via script |
+| `compile_shaders` | ✅ Done | Reports shader compilation status |
+| `cook_content` | ✅ Done | Runs content cooking for platform via UAT |
+| `package_project` | ✅ Done | Packages project for distribution via UAT |
+| `configure_build_settings` | ✅ Done | Configures build optimization settings |
+| `get_build_info` | ✅ Done | Returns engine version, build config, platform info |
+| **Platform Configuration** | | |
+| `configure_platform` | ✅ Done | Configures platform-specific settings |
+| `get_platform_settings` | ✅ Done | Returns current platform settings |
+| `get_target_platforms` | ✅ Done | Lists available target platforms |
+| **Asset Validation** | | |
+| `validate_assets` | ✅ Done | Runs asset validation commandlet |
+| `audit_assets` | ✅ Done | Audits assets for issues |
+| `get_asset_size_info` | ✅ Done | Returns asset size breakdown |
+| `get_asset_references` | ✅ Done | Returns asset reference graph |
+| **PAK & Chunking** | | |
+| `configure_chunking` | ✅ Done | Configures asset chunking settings |
+| `create_pak_file` | ✅ Done | Creates PAK file via UAT |
+| `configure_encryption` | ✅ Done | Configures PAK encryption settings |
+| **Plugin Management** | | |
+| `list_plugins` | ✅ Done | Lists all plugins with enabled status |
+| `enable_plugin` | ✅ Done | Enables plugin in .uproject file |
+| `disable_plugin` | ✅ Done | Disables plugin in .uproject file |
+| `get_plugin_info` | ✅ Done | Returns plugin descriptor info |
+| **DDC Management** | | |
+| `clear_ddc` | ✅ Done | Clears Derived Data Cache |
+| `get_ddc_stats` | ✅ Done | Returns DDC statistics |
+| `configure_ddc` | ✅ Done | Reports DDC configuration |
+
+### Implementation Notes
+
+- All actions use native UE 5.7 APIs (no stubs)
+- Uses `UGameMapsSettings::GetGameDefaultMap()` static method (not instance method)
+- Plugin management uses `IProjectManager` and `IPluginManager` interfaces
+- DDC operations use `GetDerivedDataCache()` from `DerivedDataCacheInterface.h`
+- Platform detection uses `FPlatformProperties` static methods
+- External processes (UAT, UBT) launched via `FPlatformProcess::CreateProc()`
+- Uses `DesktopPlatform` module for project file operations
+
+---
+
+## Phase 33: Testing & Quality - Implementation Details
+
+**Status**: ✅ Complete (23 actions)
+
+**Files**: 
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_TestingHandlers.cpp` (~685 lines)
+- `src/tools/handlers/testing-handlers.ts`
+
+| Action | Status | Description |
+|--------|--------|-------------|
+| **Automation Tests** | | |
+| `list_tests` | ✅ Done | Lists automation tests with optional filter |
+| `run_tests` | ✅ Done | Runs automation tests via IAutomationControllerModule |
+| `run_test` | ✅ Done | Runs single test by name |
+| `get_test_results` | ✅ Done | Returns last test execution results |
+| `get_test_info` | ✅ Done | Returns test system configuration |
+| **Functional Tests** | | |
+| `list_functional_tests` | ✅ Done | Lists AFunctionalTest actors in level |
+| `run_functional_test` | ✅ Done | Runs specific functional test actor |
+| `get_functional_test_results` | ✅ Done | Returns functional test results |
+| **Profiling - Trace** | | |
+| `start_trace` | ✅ Done | Starts trace via FTraceAuxiliary |
+| `stop_trace` | ✅ Done | Stops trace, returns output path |
+| `get_trace_status` | ✅ Done | Returns trace recording status |
+| **Profiling - Visual Logger** | | |
+| `enable_visual_logger` | ✅ Done | Enables FVisualLogger |
+| `disable_visual_logger` | ✅ Done | Disables FVisualLogger |
+| `get_visual_logger_status` | ✅ Done | Returns visual logger state |
+| **Profiling - Stats** | | |
+| `start_stats_capture` | ✅ Done | Starts stat capture via console commands |
+| `stop_stats_capture` | ✅ Done | Stops stat capture |
+| `get_memory_report` | ✅ Done | Returns memory stats from FPlatformMemoryStats |
+| `get_performance_stats` | ✅ Done | Returns FPS, frame time, GPU time |
+| **Validation** | | |
+| `validate_asset` | ✅ Done | Validates asset via UEditorValidatorSubsystem |
+| `validate_assets_in_path` | ✅ Done | Batch validates assets in directory |
+| `validate_blueprint` | ✅ Done | Compiles BP and returns errors/warnings |
+| `check_map_errors` | ✅ Done | Runs map check on current level |
+| `fix_redirectors` | ✅ Done | Fixes redirectors via AssetToolsModule |
+| `get_redirectors` | ✅ Done | Lists ObjectRedirector assets |
+
+### Implementation Notes
+
+- Automation tests use `IAutomationControllerModule::Get().GetAutomationController()`
+- Functional tests require `FunctionalTesting` module in Build.cs
+- Trace uses `FTraceAuxiliary::Start()` and `FTraceAuxiliary::Stop()`
+- Visual logger uses `FVisualLogger::Get()` singleton
+- Memory stats from `FPlatformMemory::GetStats()`
+- Asset validation uses `UEditorValidatorSubsystem` with `ValidateAssets()` method
+- Build.cs includes: `AutomationController`, `DataValidation`, `TraceLog`, `FunctionalTesting`

@@ -50,6 +50,8 @@ import { handleSequencerTools } from './handlers/sequencer-handlers.js';
 import { handleMovieRenderTools } from './handlers/movie-render-handlers.js';
 import { handleMediaTools } from './handlers/media-handlers.js';
 import { handleDataTools } from './handlers/data-handlers.js';
+import { handleBuildTools } from './handlers/build-handlers.js';
+import { handleTestingTools } from './handlers/testing-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -482,6 +484,12 @@ function registerDefaultHandlers() {
 
   // 48. DATA & PERSISTENCE (Phase 31)
   toolRegistry.register('manage_data', async (args, tools) => await handleDataTools(getAction(args), args, tools));
+
+  // 49. BUILD & DEPLOYMENT (Phase 32)
+  toolRegistry.register('manage_build', async (args, tools) => await handleBuildTools(getAction(args), args, tools));
+
+  // 50. TESTING & QUALITY (Phase 33)
+  toolRegistry.register('manage_testing', async (args, tools) => await handleTestingTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

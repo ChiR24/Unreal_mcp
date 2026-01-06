@@ -5,7 +5,7 @@
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.7-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
-[![Tools](https://img.shields.io/badge/Tools-43-purple)](docs/handler-mapping.md)
+[![Tools](https://img.shields.io/badge/Tools-44-purple)](docs/handler-mapping.md)
 [![Project Board](https://img.shields.io/badge/Project-Roadmap-blueviolet?logo=github)](https://github.com/users/ChiR24/projects/3)
 [![Discussions](https://img.shields.io/badge/Discussions-Join-brightgreen?logo=github)](https://github.com/ChiR24/Unreal_mcp/discussions)
 
@@ -179,7 +179,7 @@ ASSET_LIST_TTL_MS=10000
 
 ## Available Tools
 
-**43 Tools** organized by category:
+**45 Tools** organized by category:
 
 ### Core Tools
 | Tool | Description |
@@ -244,6 +244,16 @@ ASSET_LIST_TTL_MS=10000
 | Tool | Description |
 |------|-------------|
 | `manage_data` | Data assets, DataTables, CurveTables, SaveGame, Gameplay Tags, Config |
+
+### Build & Deployment
+| Tool | Description |
+|------|-------------|
+| `manage_build` | Build pipeline, platform config, asset validation, PAK/chunking, plugins, DDC |
+
+### Testing & Quality
+| Tool | Description |
+|------|-------------|
+| `manage_testing` | Automation tests, functional tests, profiling (trace, visual logger, stats), asset validation |
 
 ### Supported Asset Types
 

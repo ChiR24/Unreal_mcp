@@ -1538,8 +1538,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
 
 /**
  * Handles requests to set asset tags. NOTE: Asset Registry tags are distinct
- * from Actor tags. This function currently returns NOT_IMPLEMENTED as generic
- * asset tagging is ambiguous (metadata vs registry tags).
+ * from Actor tags. This function maps tags to Package Metadata (Tag=true).
  *
  * @param RequestId Unique request identifier.
  * @param Payload JSON payload.

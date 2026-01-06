@@ -2,10 +2,12 @@
 /**
  * Fully Consolidated Integration Test Suite
  *
- * Covers all 40 MCP tools (Phases 1-31):
+ * Covers all 45 MCP tools (Phases 1-33):
  * - Groups 1-8: Original 17 tools
  * - Groups 9-29: Advanced tools (Phases 6-29)
  * - Phase 31: Data & Persistence (manage_data)
+ * - Phase 32: Build & Deployment (manage_build)
+ * - Phase 33: Testing & Quality (manage_testing)
  *
  * Usage:
  *   node tests/integration.mjs
@@ -109,6 +111,46 @@ const testCases = [
   { scenario: 'Data: Request gameplay tag', toolName: 'manage_data', arguments: { action: 'request_gameplay_tag', tagName: 'Ability.Sprint' }, expected: 'success' },
   { scenario: 'Data: Read config value', toolName: 'manage_data', arguments: { action: 'read_config_value', section: '/Script/Engine.Engine', key: 'bEnableOnScreenDebugMessages', configFile: 'Engine' }, expected: 'success|not found' },
   { scenario: 'Data: Get config section', toolName: 'manage_data', arguments: { action: 'get_config_section', section: '/Script/Engine.Engine', configFile: 'Engine' }, expected: 'success|not found' },
+  // Phase 32: Build & Deployment
+  { scenario: 'Build: Get build info', toolName: 'manage_build', arguments: { action: 'get_build_info' }, expected: 'success' },
+  { scenario: 'Build: Get target platforms', toolName: 'manage_build', arguments: { action: 'get_target_platforms' }, expected: 'success' },
+  { scenario: 'Build: Get platform settings', toolName: 'manage_build', arguments: { action: 'get_platform_settings' }, expected: 'success' },
+  { scenario: 'Build: List plugins', toolName: 'manage_build', arguments: { action: 'list_plugins' }, expected: 'success' },
+  { scenario: 'Build: Get plugin info', toolName: 'manage_build', arguments: { action: 'get_plugin_info', pluginName: 'McpAutomationBridge' }, expected: 'success|not found' },
+  { scenario: 'Build: Get DDC stats', toolName: 'manage_build', arguments: { action: 'get_ddc_stats' }, expected: 'success' },
+  { scenario: 'Build: Configure DDC', toolName: 'manage_build', arguments: { action: 'configure_ddc' }, expected: 'success' },
+  { scenario: 'Build: Get asset size info', toolName: 'manage_build', arguments: { action: 'get_asset_size_info', assetPath: '/Engine/BasicShapes/Cube' }, expected: 'success|not found' },
+  { scenario: 'Build: Configure chunking', toolName: 'manage_build', arguments: { action: 'configure_chunking' }, expected: 'success' },
+  // Phase 33: Testing & Quality
+  // Automation Tests
+  { scenario: 'Testing: List automation tests', toolName: 'manage_testing', arguments: { action: 'list_tests' }, expected: 'success' },
+  { scenario: 'Testing: List tests with filter', toolName: 'manage_testing', arguments: { action: 'list_tests', testFilter: 'System' }, expected: 'success' },
+  { scenario: 'Testing: Get test results', toolName: 'manage_testing', arguments: { action: 'get_test_results' }, expected: 'success' },
+  { scenario: 'Testing: Get test info', toolName: 'manage_testing', arguments: { action: 'get_test_info', testName: 'System.Core' }, expected: 'success|not found' },
+  // Functional Tests
+  { scenario: 'Testing: List functional tests', toolName: 'manage_testing', arguments: { action: 'list_functional_tests' }, expected: 'success' },
+  { scenario: 'Testing: Get functional test results', toolName: 'manage_testing', arguments: { action: 'get_functional_test_results' }, expected: 'success' },
+  // Profiling - Trace
+  { scenario: 'Testing: Get trace status', toolName: 'manage_testing', arguments: { action: 'get_trace_status' }, expected: 'success' },
+  { scenario: 'Testing: Start trace', toolName: 'manage_testing', arguments: { action: 'start_trace', channels: 'cpu,gpu,frame' }, expected: 'success|already' },
+  { scenario: 'Testing: Stop trace', toolName: 'manage_testing', arguments: { action: 'stop_trace' }, expected: 'success|not running' },
+  // Profiling - Visual Logger
+  { scenario: 'Testing: Get visual logger status', toolName: 'manage_testing', arguments: { action: 'get_visual_logger_status' }, expected: 'success' },
+  { scenario: 'Testing: Enable visual logger', toolName: 'manage_testing', arguments: { action: 'enable_visual_logger' }, expected: 'success|already' },
+  { scenario: 'Testing: Disable visual logger', toolName: 'manage_testing', arguments: { action: 'disable_visual_logger' }, expected: 'success|not enabled' },
+  // Profiling - Stats
+  { scenario: 'Testing: Get memory report', toolName: 'manage_testing', arguments: { action: 'get_memory_report' }, expected: 'success' },
+  { scenario: 'Testing: Get performance stats', toolName: 'manage_testing', arguments: { action: 'get_performance_stats' }, expected: 'success' },
+  { scenario: 'Testing: Start stats capture', toolName: 'manage_testing', arguments: { action: 'start_stats_capture' }, expected: 'success|already' },
+  { scenario: 'Testing: Stop stats capture', toolName: 'manage_testing', arguments: { action: 'stop_stats_capture' }, expected: 'success|not running' },
+  // Validation
+  { scenario: 'Testing: Validate engine asset', toolName: 'manage_testing', arguments: { action: 'validate_asset', assetPath: '/Engine/BasicShapes/Cube' }, expected: 'success' },
+  { scenario: 'Testing: Validate assets in path', toolName: 'manage_testing', arguments: { action: 'validate_assets_in_path', directoryPath: '/Engine/BasicShapes' }, expected: 'success' },
+  { scenario: 'Testing: Validate blueprint', toolName: 'manage_testing', arguments: { action: 'validate_blueprint', blueprintPath: `${ADV_TEST_FOLDER}/BP_IntegrationTest` }, expected: 'success|not found' },
+  { scenario: 'Testing: Check map errors', toolName: 'manage_testing', arguments: { action: 'check_map_errors' }, expected: 'success' },
+  { scenario: 'Testing: Get redirectors', toolName: 'manage_testing', arguments: { action: 'get_redirectors', directoryPath: '/Game' }, expected: 'success' },
+  { scenario: 'Testing: Fix redirectors', toolName: 'manage_testing', arguments: { action: 'fix_redirectors', directoryPath: '/Game' }, expected: 'success' },
+  // Cleanup tests
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }
 ];

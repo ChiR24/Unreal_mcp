@@ -128,7 +128,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Module node added."));
         return true;
     }
-    // Implement other subactions: connect, remove, etc.
 
     else if (SubAction == TEXT("connect_pins"))
     {

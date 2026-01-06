@@ -5690,5 +5690,337 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         sectionData: commonSchemas.objectProp
       }
     }
+  },
+  // Phase 32: Build & Deployment
+  {
+    name: 'manage_build',
+    category: 'utility',
+    description: 'Run UBT, generate projects, cook/package, validate assets, manage plugins and DDC.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Pipeline (7 actions)
+            'run_ubt', 'generate_project_files', 'compile_shaders', 'cook_content',
+            'package_project', 'configure_build_settings', 'get_build_info',
+            // Platform Configuration (3 actions)
+            'configure_platform', 'get_platform_settings', 'get_target_platforms',
+            // Asset Validation & Auditing (4 actions)
+            'validate_assets', 'audit_assets', 'get_asset_size_info', 'get_asset_references',
+            // PAK & Chunking (3 actions)
+            'configure_chunking', 'create_pak_file', 'configure_encryption',
+            // Plugin Management (4 actions)
+            'list_plugins', 'enable_plugin', 'disable_plugin', 'get_plugin_info',
+            // DDC Management (3 actions)
+            'clear_ddc', 'get_ddc_stats', 'configure_ddc'
+          ],
+          description: 'Build action to perform.'
+        },
+        // Pipeline parameters
+        target: { type: 'string', description: 'Build target name (e.g., MyProjectEditor).' },
+        platform: { type: 'string', enum: ['Win64', 'Linux', 'Mac', 'Android', 'IOS'], description: 'Target platform.' },
+        configuration: { type: 'string', enum: ['Debug', 'DebugGame', 'Development', 'Shipping', 'Test'], description: 'Build configuration.' },
+        ubtArgs: { type: 'string', description: 'Additional arguments to pass to UBT.' },
+        clean: { type: 'boolean', description: 'Perform a clean build.' },
+
+        // Cook/Package parameters
+        cookFlavor: { type: 'string', description: 'Cook flavor (e.g., ASTC, ETC2).' },
+        iterativeCook: { type: 'boolean', description: 'Enable iterative cooking.' },
+        compressContent: { type: 'boolean', description: 'Compress cooked content.' },
+        outputDirectory: commonSchemas.outputPath,
+        stagingDirectory: { type: 'string', description: 'Staging directory for packaging.' },
+        maps: { type: 'array', items: { type: 'string' }, description: 'List of maps to cook.' },
+
+        // Build settings
+        settingName: { type: 'string', description: 'Build setting name.' },
+        settingValue: { type: 'string', description: 'Build setting value.' },
+
+        // Asset validation parameters
+        assetPaths: { type: 'array', items: { type: 'string' }, description: 'Array of asset paths to validate/audit.' },
+        assetPath: commonSchemas.assetPath,
+        validateOnSave: { type: 'boolean', description: 'Enable validation on asset save.' },
+        validationRules: { type: 'array', items: { type: 'string' }, description: 'Validation rules to apply.' },
+
+        // Chunking parameters
+        chunkId: { type: 'number', description: 'Chunk ID for asset assignment.' },
+        chunkAssets: { type: 'array', items: { type: 'string' }, description: 'Assets to assign to chunk.' },
+
+        // PAK parameters
+        pakFilePath: { type: 'string', description: 'Output PAK file path.' },
+        pakContentPaths: { type: 'array', items: { type: 'string' }, description: 'Content paths to include in PAK.' },
+        signPak: { type: 'boolean', description: 'Sign the PAK file.' },
+        encryptPak: { type: 'boolean', description: 'Encrypt the PAK file.' },
+        encryptionKey: { type: 'string', description: 'Encryption key (AES-256 base64).' },
+
+        // Plugin parameters
+        pluginName: { type: 'string', description: 'Plugin name.' },
+        pluginCategory: { type: 'string', description: 'Filter plugins by category.' },
+        includeEngine: { type: 'boolean', description: 'Include engine plugins in list.' },
+        includeProject: { type: 'boolean', description: 'Include project plugins in list.' },
+
+        // DDC parameters
+        ddcBackend: { type: 'string', description: 'DDC backend name (Local, Shared, etc.).' },
+        ddcPath: { type: 'string', description: 'DDC storage path.' },
+        clearLocal: { type: 'boolean', description: 'Clear local DDC.' },
+        clearShared: { type: 'boolean', description: 'Clear shared DDC.' },
+
+        // Common
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        // Pipeline results
+        exitCode: commonSchemas.numberProp,
+        buildLog: commonSchemas.stringProp,
+        buildTime: commonSchemas.numberProp,
+        shadersCompiled: commonSchemas.numberProp,
+        shadersRemaining: commonSchemas.numberProp,
+
+        // Platform results
+        platforms: commonSchemas.arrayOfStrings,
+        platformSettings: commonSchemas.objectProp,
+
+        // Validation results
+        validationResults: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              assetPath: commonSchemas.stringProp,
+              isValid: commonSchemas.booleanProp,
+              errors: commonSchemas.arrayOfStrings,
+              warnings: commonSchemas.arrayOfStrings
+            }
+          }
+        },
+        assetSizeInfo: {
+          type: 'object',
+          properties: {
+            totalSize: commonSchemas.numberProp,
+            diskSize: commonSchemas.numberProp,
+            memorySize: commonSchemas.numberProp
+          }
+        },
+        assetReferences: commonSchemas.arrayOfStrings,
+        assetDependencies: commonSchemas.arrayOfStrings,
+
+        // Chunking results
+        chunkAssignments: commonSchemas.objectProp,
+
+        // PAK results
+        pakFilePath: commonSchemas.stringProp,
+        pakFileSize: commonSchemas.numberProp,
+
+        // Plugin results
+        plugins: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: commonSchemas.stringProp,
+              friendlyName: commonSchemas.stringProp,
+              description: commonSchemas.stringProp,
+              category: commonSchemas.stringProp,
+              version: commonSchemas.stringProp,
+              isEnabled: commonSchemas.booleanProp,
+              isEnginePlugin: commonSchemas.booleanProp,
+              canContainContent: commonSchemas.booleanProp,
+              installedPath: commonSchemas.stringProp
+            }
+          }
+        },
+        pluginInfo: commonSchemas.objectProp,
+
+        // DDC results
+        ddcStats: {
+          type: 'object',
+          properties: {
+            hitRate: commonSchemas.numberProp,
+            totalRequests: commonSchemas.numberProp,
+            cacheSize: commonSchemas.numberProp,
+            localSize: commonSchemas.numberProp,
+            sharedSize: commonSchemas.numberProp
+          }
+        }
+      }
+    }
+  },
+  // Phase 33: Testing & Quality
+  {
+    name: 'manage_testing',
+    category: 'utility',
+    description: 'Run automation tests, create functional tests, enable profiling tools, validate assets and blueprints.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Automation Tests
+            'list_tests', 'run_tests', 'run_test', 'get_test_results', 'get_test_info',
+            // Functional Tests
+            'list_functional_tests', 'run_functional_test', 'get_functional_test_results',
+            // Profiling
+            'start_trace', 'stop_trace', 'get_trace_status',
+            'enable_visual_logger', 'disable_visual_logger', 'get_visual_logger_status',
+            'start_stats_capture', 'stop_stats_capture',
+            'get_memory_report', 'get_performance_stats',
+            // Validation
+            'validate_asset', 'validate_assets_in_path', 'validate_blueprint',
+            'check_map_errors', 'fix_redirectors', 'get_redirectors'
+          ],
+          description: 'Testing action to perform.'
+        },
+        // Test parameters
+        testName: { type: 'string', description: 'Full test name or pattern to run.' },
+        testFilter: { type: 'string', description: 'Filter tests by name pattern.' },
+        testFlags: {
+          type: 'string',
+          enum: ['Smoke', 'Engine', 'Product', 'Perf', 'Stress', 'All'],
+          description: 'Test category filter.'
+        },
+        testPriority: {
+          type: 'string',
+          enum: ['Critical', 'High', 'Medium', 'Low', 'All'],
+          description: 'Test priority filter.'
+        },
+        runInPIE: { type: 'boolean', description: 'Run test in Play-In-Editor mode.' },
+        
+        // Functional test parameters
+        functionalTestPath: { type: 'string', description: 'Path to functional test level or actor.' },
+        testTimeout: { type: 'number', description: 'Test timeout in seconds.' },
+        
+        // Trace parameters
+        traceName: { type: 'string', description: 'Name for trace file.' },
+        traceChannels: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Trace channels to enable (CPU, GPU, Frame, Memory, etc.).'
+        },
+        traceOutputPath: { type: 'string', description: 'Output path for trace file.' },
+        
+        // Visual Logger parameters
+        logCategories: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Visual logger categories to enable.'
+        },
+        
+        // Validation parameters
+        assetPath: commonSchemas.assetPath,
+        directoryPath: commonSchemas.directoryPath,
+        blueprintPath: commonSchemas.blueprintPath,
+        levelPath: { type: 'string', description: 'Level path for map error checking.' },
+        recursive: { type: 'boolean', description: 'Recursively validate assets in subdirectories.' },
+        fixIssues: { type: 'boolean', description: 'Attempt to fix validation issues.' },
+        
+        // Common
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        // Test results
+        tests: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: commonSchemas.stringProp,
+              displayName: commonSchemas.stringProp,
+              testFlags: commonSchemas.stringProp,
+              numParticipants: commonSchemas.numberProp
+            }
+          }
+        },
+        testResults: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              testName: commonSchemas.stringProp,
+              passed: commonSchemas.booleanProp,
+              duration: commonSchemas.numberProp,
+              errors: commonSchemas.arrayOfStrings,
+              warnings: commonSchemas.arrayOfStrings,
+              logs: commonSchemas.arrayOfStrings
+            }
+          }
+        },
+        totalTests: commonSchemas.numberProp,
+        passedTests: commonSchemas.numberProp,
+        failedTests: commonSchemas.numberProp,
+        skippedTests: commonSchemas.numberProp,
+        
+        // Trace results
+        traceFilePath: commonSchemas.stringProp,
+        traceStatus: { type: 'string', enum: ['idle', 'recording', 'stopped'] },
+        traceDuration: commonSchemas.numberProp,
+        
+        // Visual Logger status
+        visualLoggerEnabled: commonSchemas.booleanProp,
+        activeCategories: commonSchemas.arrayOfStrings,
+        
+        // Performance stats
+        performanceStats: {
+          type: 'object',
+          properties: {
+            frameTime: commonSchemas.numberProp,
+            gameThreadTime: commonSchemas.numberProp,
+            renderThreadTime: commonSchemas.numberProp,
+            gpuTime: commonSchemas.numberProp,
+            fps: commonSchemas.numberProp,
+            memoryUsedMB: commonSchemas.numberProp,
+            memoryAvailableMB: commonSchemas.numberProp
+          }
+        },
+        memoryReport: {
+          type: 'object',
+          properties: {
+            totalPhysical: commonSchemas.numberProp,
+            usedPhysical: commonSchemas.numberProp,
+            totalVirtual: commonSchemas.numberProp,
+            usedVirtual: commonSchemas.numberProp,
+            peakUsed: commonSchemas.numberProp
+          }
+        },
+        
+        // Validation results
+        validationResults: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              assetPath: commonSchemas.stringProp,
+              isValid: commonSchemas.booleanProp,
+              errors: commonSchemas.arrayOfStrings,
+              warnings: commonSchemas.arrayOfStrings
+            }
+          }
+        },
+        mapErrors: commonSchemas.arrayOfStrings,
+        redirectors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              redirectorPath: commonSchemas.stringProp,
+              targetPath: commonSchemas.stringProp,
+              fixed: commonSchemas.booleanProp
+            }
+          }
+        },
+        redirectorsFixed: commonSchemas.numberProp
+      }
+    }
   }
 ];

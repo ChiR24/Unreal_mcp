@@ -3,10 +3,10 @@
 **Generated:** 2026-01-06 16:00:00 UTC
 **Commit:** latest
 **Branch:** pcg
-**Tools:** 43 consolidated tools
+**Tools:** 44 consolidated tools
 
 ## OVERVIEW
-MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C++ (Bridge Plugin). 43 action-based tools covering assets, actors, blueprints, levels, animation, VFX, audio, AI, gameplay systems, procedural content generation, water, weather, post-processing, cinematics, media, and data persistence.
+MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C++ (Bridge Plugin). 44 action-based tools covering assets, actors, blueprints, levels, animation, VFX, audio, AI, gameplay systems, procedural content generation, water, weather, post-processing, cinematics, media, data persistence, and build/deployment.
 
 ## STRUCTURE
 ```

@@ -920,8 +920,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
         // Set data from payload if provided
         const TSharedPtr<FJsonObject>* DataObj = nullptr;
         if (Payload->TryGetObjectField(TEXT("data"), DataObj) && DataObj) {
-          // Store data as string properties if the SaveGame supports it
-          // For now we just create the basic save
+          // Iterate through JSON fields and apply to SaveGame properties
+          for (const auto& Pair : (*DataObj)->Values) {
+            FString PropName = Pair.Key;
+            const TSharedPtr<FJsonValue>& JsonVal = Pair.Value;
+            
+            FProperty* Property = SaveObj->GetClass()->FindPropertyByName(*PropName);
+            if (Property) {
+              FString ApplyError;
+              ApplyJsonValueToProperty(SaveObj, Property, JsonVal, ApplyError);
+            }
+          }
         }
         
         bool bSaved = UGameplayStatics::SaveGameToSlot(SaveObj, SlotName, UserIndex);

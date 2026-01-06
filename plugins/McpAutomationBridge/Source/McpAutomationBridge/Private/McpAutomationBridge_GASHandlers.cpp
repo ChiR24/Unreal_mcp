@@ -1987,11 +1987,25 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
                                 
                                 // Check if OwnedGameplayTags variable exists, if not create it
                                 bool bHasTagVar = false;
-                                for (const FBPVariableDescription& VarDesc : Blueprint->NewVariables)
+                                for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
                                 {
                                     if (VarDesc.VarName == TEXT("OwnedGameplayTags"))
                                     {
                                         bHasTagVar = true;
+                                        
+                                        // Parse current default value
+                                        FGameplayTagContainer DefaultTags;
+                                        if (!VarDesc.DefaultValue.IsEmpty())
+                                        {
+                                            DefaultTags.FromExportString(VarDesc.DefaultValue);
+                                        }
+                                        
+                                        // Add new tag
+                                        DefaultTags.AddTag(Tag);
+                                        
+                                        // Update default value string
+                                        VarDesc.DefaultValue = DefaultTags.ToString();
+                                        
                                         break;
                                     }
                                 }
@@ -1999,6 +2013,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
                                 if (!bHasTagVar)
                                 {
                                     FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("OwnedGameplayTags"), TagContainerPinType);
+                                    
+                                    // Find the new variable and set its default value
+                                    for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
+                                    {
+                                        if (VarDesc.VarName == TEXT("OwnedGameplayTags"))
+                                        {
+                                            FGameplayTagContainer DefaultTags;
+                                            DefaultTags.AddTag(Tag);
+                                            VarDesc.DefaultValue = DefaultTags.ToString();
+                                            break;
+                                        }
+                                    }
                                 }
                                 
                                 AssetType = TEXT("Actor with ASC");

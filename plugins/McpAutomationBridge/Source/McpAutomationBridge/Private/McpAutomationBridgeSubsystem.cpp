@@ -930,6 +930,22 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageDataAction(R, A, P, S);
                   });
+
+  // Phase 32: Build & Deployment
+  RegisterHandler(TEXT("manage_build"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageBuildAction(R, A, P, S);
+                  });
+
+  // Phase 33: Testing & Quality
+  RegisterHandler(TEXT("manage_testing"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageTestingAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

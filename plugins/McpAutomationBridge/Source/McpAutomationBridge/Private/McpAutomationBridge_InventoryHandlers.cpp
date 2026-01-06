@@ -547,8 +547,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       }
     }
 
-    // Mark as expected functions to implement in Blueprint
-    TArray<FString> FunctionStubs = {
+    // Create actual function graphs
+    TArray<FString> FunctionNames = {
       TEXT("AddItem"),
       TEXT("RemoveItem"),
       TEXT("GetItemCount"),
@@ -556,8 +556,28 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       TEXT("TransferItem")
     };
 
-    for (const FString& FuncName : FunctionStubs) {
-      FunctionsAdded.Add(MakeShareable(new FJsonValueString(FuncName + TEXT(" (implement in Blueprint)"))));
+    for (const FString& FuncName : FunctionNames) {
+      // Check if function already exists
+      bool bFuncExists = false;
+      for (UEdGraph* Graph : Blueprint->FunctionGraphs) {
+        if (Graph && Graph->GetName() == FuncName) {
+          bFuncExists = true;
+          break;
+        }
+      }
+
+      if (!bFuncExists) {
+        // Create new function graph
+        UEdGraph* NewGraph = FBlueprintEditorUtils::CreateNewGraph(
+            Blueprint, FName(*FuncName), UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+        
+        if (NewGraph) {
+          FBlueprintEditorUtils::AddFunctionGraph<UFunction>(Blueprint, NewGraph, true, nullptr);
+          FunctionsAdded.Add(MakeShareable(new FJsonValueString(FuncName)));
+        }
+      } else {
+        FunctionsAdded.Add(MakeShareable(new FJsonValueString(FuncName + TEXT(" (exists)"))));
+      }
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
