@@ -43,6 +43,8 @@ import { handleVolumeTools } from './handlers/volume-handlers.js';
 import { handleNavigationTools } from './handlers/navigation-handlers.js';
 import { handleSplineTools } from './handlers/spline-handlers.js';
 import { handlePCGTools } from './handlers/pcg-handlers.js';
+import { handleWaterTools } from './handlers/water-handlers.js';
+import { handleWeatherTools } from './handlers/weather-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -454,6 +456,12 @@ function registerDefaultHandlers() {
 
   // 41. PCG FRAMEWORK (Phase 27)
   toolRegistry.register('manage_pcg', async (args, tools) => await handlePCGTools(getAction(args), args, tools));
+
+  // 42. WATER SYSTEM (Phase 28)
+  toolRegistry.register('manage_water', async (args, tools) => await handleWaterTools(getAction(args), args, tools));
+
+  // 43. WEATHER SYSTEM (Phase 28)
+  toolRegistry.register('manage_weather', async (args, tools) => await handleWeatherTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

@@ -878,6 +878,22 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManagePCGAction(R, A, P, S);
                   });
+
+  // Phase 28: Water System
+  RegisterHandler(TEXT("manage_water"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleWaterAction(R, A, P, S);
+                  });
+
+  // Phase 28: Weather System
+  RegisterHandler(TEXT("manage_weather"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleWeatherAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

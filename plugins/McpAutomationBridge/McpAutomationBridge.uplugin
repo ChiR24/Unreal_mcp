@@ -115,10 +115,6 @@
     {
       "Name": "Paper2D",
       "Enabled": true
-    },
-    {
-      "Name": "ACLPlugin",
-      "Enabled": true
     }
   ]
 }

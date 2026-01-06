@@ -38,6 +38,14 @@
 #include "NiagaraSystem.h"
 #include "ProceduralMeshComponent.h"
 
+// Environment Components
+#include "Components/SkyAtmosphereComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
+#include "Components/VolumetricCloudComponent.h"
+#include "Engine/TextureCube.h"
+// SkyAtmosphere/ExponentialHeightFog/VolumetricCloud actors - use forward declaration + class lookup
+// These actor headers may not exist in all engine versions
+
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
@@ -358,6 +366,729 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
       Message = TEXT("Failed to create fog volume");
       ErrorCode = TEXT("CREATION_FAILED");
     }
+  }
+  // ========================================================================
+  // Phase 28: Environment Systems - Sky, Fog, Cloud Configuration
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_sky_atmosphere")) {
+    // Configure Sky Atmosphere component properties
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+
+    if (!GEditor) {
+      bSuccess = false;
+      Message = TEXT("Editor not available");
+      ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UEditorActorSubsystem *ActorSS =
+          GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+      if (!ActorSS) {
+        bSuccess = false;
+        Message = TEXT("EditorActorSubsystem not available");
+        ErrorCode = TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        // Find existing SkyAtmosphere actor (optionally filtered by name)
+        AActor *SkyAtmosphereActor = nullptr;
+        for (AActor *Actor : ActorSS->GetAllLevelActors()) {
+          if (!Actor) continue;
+          FString ClassName = Actor->GetClass()->GetName();
+          // Must be SkyAtmosphere class AND match name if specified
+          if (ClassName.Contains(TEXT("SkyAtmosphere")) &&
+              (ActorName.IsEmpty() || Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))) {
+            SkyAtmosphereActor = Actor;
+            break;
+          }
+        }
+
+        if (!SkyAtmosphereActor) {
+          // Spawn new SkyAtmosphere if not found
+          UClass *SkyAtmosphereClass = LoadClass<AActor>(
+              nullptr, TEXT("/Script/Engine.SkyAtmosphere"));
+          if (SkyAtmosphereClass) {
+            SkyAtmosphereActor = SpawnActorInActiveWorld<AActor>(
+                SkyAtmosphereClass, FVector::ZeroVector, FRotator::ZeroRotator,
+                ActorName.IsEmpty() ? TEXT("SkyAtmosphere") : *ActorName);
+          }
+        }
+
+        if (SkyAtmosphereActor) {
+          // Find the SkyAtmosphereComponent using actual API
+          USkyAtmosphereComponent *SkyComp = SkyAtmosphereActor->FindComponentByClass<USkyAtmosphereComponent>();
+          
+          if (SkyComp) {
+            // Apply configuration using proper setter methods from SkyAtmosphereComponent.h
+            double BottomRadius = 0.0;
+            if (Payload->TryGetNumberField(TEXT("bottomRadius"), BottomRadius)) {
+              SkyComp->SetBottomRadius(static_cast<float>(BottomRadius));
+            }
+
+            double AtmosphereHeight = 0.0;
+            if (Payload->TryGetNumberField(TEXT("atmosphereHeight"), AtmosphereHeight)) {
+              SkyComp->SetAtmosphereHeight(static_cast<float>(AtmosphereHeight));
+            }
+
+            double MieAnisotropy = 0.0;
+            if (Payload->TryGetNumberField(TEXT("mieAnisotropy"), MieAnisotropy)) {
+              SkyComp->SetMieAnisotropy(static_cast<float>(MieAnisotropy));
+            }
+
+            double MieScatteringScale = 0.0;
+            if (Payload->TryGetNumberField(TEXT("mieScatteringScale"), MieScatteringScale)) {
+              SkyComp->SetMieScatteringScale(static_cast<float>(MieScatteringScale));
+            }
+
+            double RayleighScatteringScale = 0.0;
+            if (Payload->TryGetNumberField(TEXT("rayleighScatteringScale"), RayleighScatteringScale)) {
+              SkyComp->SetRayleighScatteringScale(static_cast<float>(RayleighScatteringScale));
+            }
+
+            double MultiScatteringFactor = 0.0;
+            if (Payload->TryGetNumberField(TEXT("multiScatteringFactor"), MultiScatteringFactor)) {
+              SkyComp->SetMultiScatteringFactor(static_cast<float>(MultiScatteringFactor));
+            }
+
+            // Additional properties from SkyAtmosphereComponent.h
+            double RayleighExponentialDistribution = 0.0;
+            if (Payload->TryGetNumberField(TEXT("rayleighExponentialDistribution"), RayleighExponentialDistribution)) {
+              SkyComp->SetRayleighExponentialDistribution(static_cast<float>(RayleighExponentialDistribution));
+            }
+
+            double MieExponentialDistribution = 0.0;
+            if (Payload->TryGetNumberField(TEXT("mieExponentialDistribution"), MieExponentialDistribution)) {
+              SkyComp->SetMieExponentialDistribution(static_cast<float>(MieExponentialDistribution));
+            }
+
+            double MieAbsorptionScale = 0.0;
+            if (Payload->TryGetNumberField(TEXT("mieAbsorptionScale"), MieAbsorptionScale)) {
+              SkyComp->SetMieAbsorptionScale(static_cast<float>(MieAbsorptionScale));
+            }
+
+            double OtherAbsorptionScale = 0.0;
+            if (Payload->TryGetNumberField(TEXT("otherAbsorptionScale"), OtherAbsorptionScale)) {
+              SkyComp->SetOtherAbsorptionScale(static_cast<float>(OtherAbsorptionScale));
+            }
+
+            double HeightFogContribution = 0.0;
+            if (Payload->TryGetNumberField(TEXT("heightFogContribution"), HeightFogContribution)) {
+              SkyComp->SetHeightFogContribution(static_cast<float>(HeightFogContribution));
+            }
+
+            double AerialPerspectiveViewDistanceScale = 0.0;
+            if (Payload->TryGetNumberField(TEXT("aerialPerspectiveViewDistanceScale"), AerialPerspectiveViewDistanceScale)) {
+              SkyComp->SetAerialPespectiveViewDistanceScale(static_cast<float>(AerialPerspectiveViewDistanceScale));
+            }
+
+            double TransmittanceMinLightElevationAngle = 0.0;
+            if (Payload->TryGetNumberField(TEXT("transmittanceMinLightElevationAngle"), TransmittanceMinLightElevationAngle)) {
+              SkyComp->SetTransmittanceMinLightElevationAngle(static_cast<float>(TransmittanceMinLightElevationAngle));
+            }
+
+            double AerialPerspectiveStartDepth = 0.0;
+            if (Payload->TryGetNumberField(TEXT("aerialPerspectiveStartDepth"), AerialPerspectiveStartDepth)) {
+              SkyComp->SetAerialPerspectiveStartDepth(static_cast<float>(AerialPerspectiveStartDepth));
+            }
+
+            // Color properties
+            const TSharedPtr<FJsonObject> *GroundAlbedoObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("groundAlbedo"), GroundAlbedoObj) && GroundAlbedoObj) {
+              double R = 0, G = 0, B = 0;
+              (*GroundAlbedoObj)->TryGetNumberField(TEXT("r"), R);
+              (*GroundAlbedoObj)->TryGetNumberField(TEXT("g"), G);
+              (*GroundAlbedoObj)->TryGetNumberField(TEXT("b"), B);
+              SkyComp->SetGroundAlbedo(FColor(
+                static_cast<uint8>(FMath::Clamp(R * 255.0, 0.0, 255.0)),
+                static_cast<uint8>(FMath::Clamp(G * 255.0, 0.0, 255.0)),
+                static_cast<uint8>(FMath::Clamp(B * 255.0, 0.0, 255.0))
+              ));
+            }
+
+            const TSharedPtr<FJsonObject> *RayleighScatteringObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("rayleighScattering"), RayleighScatteringObj) && RayleighScatteringObj) {
+              double R = 0.0586, G = 0.1335, B = 0.3314; // Default Earth-like Rayleigh scattering
+              (*RayleighScatteringObj)->TryGetNumberField(TEXT("r"), R);
+              (*RayleighScatteringObj)->TryGetNumberField(TEXT("g"), G);
+              (*RayleighScatteringObj)->TryGetNumberField(TEXT("b"), B);
+              SkyComp->SetRayleighScattering(FLinearColor(R, G, B, 1.0f));
+            }
+
+            const TSharedPtr<FJsonObject> *MieScatteringObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("mieScattering"), MieScatteringObj) && MieScatteringObj) {
+              double R = 0.004, G = 0.004, B = 0.004;
+              (*MieScatteringObj)->TryGetNumberField(TEXT("r"), R);
+              (*MieScatteringObj)->TryGetNumberField(TEXT("g"), G);
+              (*MieScatteringObj)->TryGetNumberField(TEXT("b"), B);
+              SkyComp->SetMieScattering(FLinearColor(R, G, B, 1.0f));
+            }
+
+            const TSharedPtr<FJsonObject> *MieAbsorptionObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("mieAbsorption"), MieAbsorptionObj) && MieAbsorptionObj) {
+              double R = 0.0044, G = 0.0044, B = 0.0044;
+              (*MieAbsorptionObj)->TryGetNumberField(TEXT("r"), R);
+              (*MieAbsorptionObj)->TryGetNumberField(TEXT("g"), G);
+              (*MieAbsorptionObj)->TryGetNumberField(TEXT("b"), B);
+              SkyComp->SetMieAbsorption(FLinearColor(R, G, B, 1.0f));
+            }
+
+            const TSharedPtr<FJsonObject> *SkyLuminanceFactorObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("skyLuminanceFactor"), SkyLuminanceFactorObj) && SkyLuminanceFactorObj) {
+              double R = 1.0, G = 1.0, B = 1.0;
+              (*SkyLuminanceFactorObj)->TryGetNumberField(TEXT("r"), R);
+              (*SkyLuminanceFactorObj)->TryGetNumberField(TEXT("g"), G);
+              (*SkyLuminanceFactorObj)->TryGetNumberField(TEXT("b"), B);
+              SkyComp->SetSkyLuminanceFactor(FLinearColor(R, G, B, 1.0f));
+            }
+
+            // Mark render state dirty is handled internally by setter methods
+            bSuccess = true;
+            Message = TEXT("Sky atmosphere configured");
+            Resp->SetStringField(TEXT("actorName"), SkyAtmosphereActor->GetActorLabel());
+          } else {
+            bSuccess = false;
+            Message = TEXT("SkyAtmosphereComponent not found on actor");
+            ErrorCode = TEXT("COMPONENT_NOT_FOUND");
+            Resp->SetStringField(TEXT("error"), Message);
+          }
+        } else {
+          bSuccess = false;
+          Message = TEXT("Failed to find or create SkyAtmosphere actor");
+          ErrorCode = TEXT("ACTOR_NOT_FOUND");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("configure_exponential_height_fog")) {
+    // Configure Exponential Height Fog component properties
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+
+    if (!GEditor) {
+      bSuccess = false;
+      Message = TEXT("Editor not available");
+      ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UEditorActorSubsystem *ActorSS =
+          GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+      if (!ActorSS) {
+        bSuccess = false;
+        Message = TEXT("EditorActorSubsystem not available");
+        ErrorCode = TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        // Find existing ExponentialHeightFog actor (optionally filtered by name)
+        AActor *FogActor = nullptr;
+        for (AActor *Actor : ActorSS->GetAllLevelActors()) {
+          if (!Actor) continue;
+          FString ClassName = Actor->GetClass()->GetName();
+          // Must be ExponentialHeightFog class AND match name if specified
+          if (ClassName.Contains(TEXT("ExponentialHeightFog")) &&
+              (ActorName.IsEmpty() || Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))) {
+            FogActor = Actor;
+            break;
+          }
+        }
+
+        if (!FogActor) {
+          // Spawn new ExponentialHeightFog if not found
+          UClass *FogClass = LoadClass<AActor>(
+              nullptr, TEXT("/Script/Engine.ExponentialHeightFog"));
+          if (FogClass) {
+            FogActor = SpawnActorInActiveWorld<AActor>(
+                FogClass, FVector::ZeroVector, FRotator::ZeroRotator,
+                ActorName.IsEmpty() ? TEXT("ExponentialHeightFog") : *ActorName);
+          }
+        }
+
+        if (FogActor) {
+          // Find the ExponentialHeightFogComponent using actual API
+          UExponentialHeightFogComponent *FogComp = FogActor->FindComponentByClass<UExponentialHeightFogComponent>();
+          
+          if (FogComp) {
+            // Apply fog configuration using proper setter methods from ExponentialHeightFogComponent.h
+            double FogDensity = 0.0;
+            if (Payload->TryGetNumberField(TEXT("fogDensity"), FogDensity)) {
+              FogComp->SetFogDensity(static_cast<float>(FogDensity));
+            }
+
+            double FogHeightFalloff = 0.0;
+            if (Payload->TryGetNumberField(TEXT("fogHeightFalloff"), FogHeightFalloff)) {
+              FogComp->SetFogHeightFalloff(static_cast<float>(FogHeightFalloff));
+            }
+
+            double FogMaxOpacity = 0.0;
+            if (Payload->TryGetNumberField(TEXT("fogMaxOpacity"), FogMaxOpacity)) {
+              FogComp->SetFogMaxOpacity(static_cast<float>(FogMaxOpacity));
+            }
+
+            double StartDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("startDistance"), StartDistance)) {
+              FogComp->SetStartDistance(static_cast<float>(StartDistance));
+            }
+
+            double EndDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("endDistance"), EndDistance)) {
+              FogComp->SetEndDistance(static_cast<float>(EndDistance));
+            }
+
+            double FogCutoffDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("fogCutoffDistance"), FogCutoffDistance)) {
+              FogComp->SetFogCutoffDistance(static_cast<float>(FogCutoffDistance));
+            }
+
+            // Volumetric fog settings
+            bool bVolumetricFog = false;
+            if (Payload->TryGetBoolField(TEXT("volumetricFog"), bVolumetricFog)) {
+              FogComp->SetVolumetricFog(bVolumetricFog);
+            }
+
+            double VolumetricFogScatteringDistribution = 0.0;
+            if (Payload->TryGetNumberField(TEXT("volumetricFogScatteringDistribution"), VolumetricFogScatteringDistribution)) {
+              FogComp->SetVolumetricFogScatteringDistribution(static_cast<float>(VolumetricFogScatteringDistribution));
+            }
+
+            double VolumetricFogExtinctionScale = 0.0;
+            if (Payload->TryGetNumberField(TEXT("volumetricFogExtinctionScale"), VolumetricFogExtinctionScale)) {
+              FogComp->SetVolumetricFogExtinctionScale(static_cast<float>(VolumetricFogExtinctionScale));
+            }
+
+            double VolumetricFogDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("volumetricFogDistance"), VolumetricFogDistance)) {
+              FogComp->SetVolumetricFogDistance(static_cast<float>(VolumetricFogDistance));
+            }
+
+            double VolumetricFogStartDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("volumetricFogStartDistance"), VolumetricFogStartDistance)) {
+              FogComp->SetVolumetricFogStartDistance(static_cast<float>(VolumetricFogStartDistance));
+            }
+
+            double VolumetricFogNearFadeInDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("volumetricFogNearFadeInDistance"), VolumetricFogNearFadeInDistance)) {
+              FogComp->SetVolumetricFogNearFadeInDistance(static_cast<float>(VolumetricFogNearFadeInDistance));
+            }
+
+            // Color properties
+            const TSharedPtr<FJsonObject> *FogInscatteringColorObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("fogInscatteringColor"), FogInscatteringColorObj) && FogInscatteringColorObj) {
+              double R = 1.0, G = 1.0, B = 1.0;
+              (*FogInscatteringColorObj)->TryGetNumberField(TEXT("r"), R);
+              (*FogInscatteringColorObj)->TryGetNumberField(TEXT("g"), G);
+              (*FogInscatteringColorObj)->TryGetNumberField(TEXT("b"), B);
+              FogComp->SetFogInscatteringColor(FLinearColor(R, G, B, 1.0f));
+            }
+
+            const TSharedPtr<FJsonObject> *DirectionalInscatteringColorObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("directionalInscatteringColor"), DirectionalInscatteringColorObj) && DirectionalInscatteringColorObj) {
+              double R = 1.0, G = 1.0, B = 1.0;
+              (*DirectionalInscatteringColorObj)->TryGetNumberField(TEXT("r"), R);
+              (*DirectionalInscatteringColorObj)->TryGetNumberField(TEXT("g"), G);
+              (*DirectionalInscatteringColorObj)->TryGetNumberField(TEXT("b"), B);
+              FogComp->SetDirectionalInscatteringColor(FLinearColor(R, G, B, 1.0f));
+            }
+
+            // Volumetric fog albedo (FColor)
+            const TSharedPtr<FJsonObject> *VolumetricFogAlbedoObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("volumetricFogAlbedo"), VolumetricFogAlbedoObj) && VolumetricFogAlbedoObj) {
+              double R = 1.0, G = 1.0, B = 1.0;
+              (*VolumetricFogAlbedoObj)->TryGetNumberField(TEXT("r"), R);
+              (*VolumetricFogAlbedoObj)->TryGetNumberField(TEXT("g"), G);
+              (*VolumetricFogAlbedoObj)->TryGetNumberField(TEXT("b"), B);
+              FogComp->SetVolumetricFogAlbedo(FColor(
+                static_cast<uint8>(FMath::Clamp(R * 255.0, 0.0, 255.0)),
+                static_cast<uint8>(FMath::Clamp(G * 255.0, 0.0, 255.0)),
+                static_cast<uint8>(FMath::Clamp(B * 255.0, 0.0, 255.0))
+              ));
+            }
+
+            // Volumetric fog emissive
+            const TSharedPtr<FJsonObject> *VolumetricFogEmissiveObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("volumetricFogEmissive"), VolumetricFogEmissiveObj) && VolumetricFogEmissiveObj) {
+              double R = 0.0, G = 0.0, B = 0.0;
+              (*VolumetricFogEmissiveObj)->TryGetNumberField(TEXT("r"), R);
+              (*VolumetricFogEmissiveObj)->TryGetNumberField(TEXT("g"), G);
+              (*VolumetricFogEmissiveObj)->TryGetNumberField(TEXT("b"), B);
+              FogComp->SetVolumetricFogEmissive(FLinearColor(R, G, B, 1.0f));
+            }
+
+            // Directional inscattering
+            double DirectionalInscatteringExponent = 0.0;
+            if (Payload->TryGetNumberField(TEXT("directionalInscatteringExponent"), DirectionalInscatteringExponent)) {
+              FogComp->SetDirectionalInscatteringExponent(static_cast<float>(DirectionalInscatteringExponent));
+            }
+
+            double DirectionalInscatteringStartDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("directionalInscatteringStartDistance"), DirectionalInscatteringStartDistance)) {
+              FogComp->SetDirectionalInscatteringStartDistance(static_cast<float>(DirectionalInscatteringStartDistance));
+            }
+
+            // Second fog data
+            double SecondFogDensity = 0.0;
+            if (Payload->TryGetNumberField(TEXT("secondFogDensity"), SecondFogDensity)) {
+              FogComp->SetSecondFogDensity(static_cast<float>(SecondFogDensity));
+            }
+
+            double SecondFogHeightFalloff = 0.0;
+            if (Payload->TryGetNumberField(TEXT("secondFogHeightFalloff"), SecondFogHeightFalloff)) {
+              FogComp->SetSecondFogHeightFalloff(static_cast<float>(SecondFogHeightFalloff));
+            }
+
+            double SecondFogHeightOffset = 0.0;
+            if (Payload->TryGetNumberField(TEXT("secondFogHeightOffset"), SecondFogHeightOffset)) {
+              FogComp->SetSecondFogHeightOffset(static_cast<float>(SecondFogHeightOffset));
+            }
+
+            // Inscattering texture settings
+            double InscatteringColorCubemapAngle = 0.0;
+            if (Payload->TryGetNumberField(TEXT("inscatteringColorCubemapAngle"), InscatteringColorCubemapAngle)) {
+              FogComp->SetInscatteringColorCubemapAngle(static_cast<float>(InscatteringColorCubemapAngle));
+            }
+
+            double FullyDirectionalInscatteringColorDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("fullyDirectionalInscatteringColorDistance"), FullyDirectionalInscatteringColorDistance)) {
+              FogComp->SetFullyDirectionalInscatteringColorDistance(static_cast<float>(FullyDirectionalInscatteringColorDistance));
+            }
+
+            double NonDirectionalInscatteringColorDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("nonDirectionalInscatteringColorDistance"), NonDirectionalInscatteringColorDistance)) {
+              FogComp->SetNonDirectionalInscatteringColorDistance(static_cast<float>(NonDirectionalInscatteringColorDistance));
+            }
+
+            const TSharedPtr<FJsonObject> *InscatteringTextureTintObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("inscatteringTextureTint"), InscatteringTextureTintObj) && InscatteringTextureTintObj) {
+              double R = 1.0, G = 1.0, B = 1.0;
+              (*InscatteringTextureTintObj)->TryGetNumberField(TEXT("r"), R);
+              (*InscatteringTextureTintObj)->TryGetNumberField(TEXT("g"), G);
+              (*InscatteringTextureTintObj)->TryGetNumberField(TEXT("b"), B);
+              FogComp->SetInscatteringTextureTint(FLinearColor(R, G, B, 1.0f));
+            }
+
+            // Sky Atmosphere ambient contribution color scale
+            const TSharedPtr<FJsonObject> *SkyAtmosphereAmbientColorObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("skyAtmosphereAmbientContributionColorScale"), SkyAtmosphereAmbientColorObj) && SkyAtmosphereAmbientColorObj) {
+              double R = 1.0, G = 1.0, B = 1.0;
+              (*SkyAtmosphereAmbientColorObj)->TryGetNumberField(TEXT("r"), R);
+              (*SkyAtmosphereAmbientColorObj)->TryGetNumberField(TEXT("g"), G);
+              (*SkyAtmosphereAmbientColorObj)->TryGetNumberField(TEXT("b"), B);
+              FogComp->SetSkyAtmosphereAmbientContributionColorScale(FLinearColor(R, G, B, 1.0f));
+            }
+
+            // Holdout setting (UE 5.7+)
+            bool bHoldout = false;
+            if (Payload->TryGetBoolField(TEXT("holdout"), bHoldout)) {
+              FogComp->SetHoldout(bHoldout);
+            }
+
+            // Render in main pass setting
+            bool bRenderInMainPass = true;
+            if (Payload->TryGetBoolField(TEXT("renderInMainPass"), bRenderInMainPass)) {
+              FogComp->SetRenderInMainPass(bRenderInMainPass);
+            }
+
+            // Inscattering color cubemap (texture path)
+            FString InscatteringCubemapPath;
+            if (Payload->TryGetStringField(TEXT("inscatteringColorCubemap"), InscatteringCubemapPath) && !InscatteringCubemapPath.IsEmpty()) {
+              UTextureCube* Cubemap = LoadObject<UTextureCube>(nullptr, *InscatteringCubemapPath);
+              if (Cubemap) {
+                FogComp->SetInscatteringColorCubemap(Cubemap);
+              }
+            }
+
+            // Mark render state dirty is handled internally by setter methods
+            bSuccess = true;
+            Message = TEXT("Exponential height fog configured");
+            Resp->SetStringField(TEXT("actorName"), FogActor->GetActorLabel());
+          } else {
+            bSuccess = false;
+            Message = TEXT("ExponentialHeightFogComponent not found on actor");
+            ErrorCode = TEXT("COMPONENT_NOT_FOUND");
+            Resp->SetStringField(TEXT("error"), Message);
+          }
+        } else {
+          bSuccess = false;
+          Message = TEXT("Failed to find or create ExponentialHeightFog actor");
+          ErrorCode = TEXT("ACTOR_NOT_FOUND");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("configure_volumetric_cloud")) {
+    // Configure Volumetric Cloud component properties using proper setter methods
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+
+    if (!GEditor) {
+      bSuccess = false;
+      Message = TEXT("Editor not available");
+      ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UEditorActorSubsystem *ActorSS =
+          GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+      if (!ActorSS) {
+        bSuccess = false;
+        Message = TEXT("EditorActorSubsystem not available");
+        ErrorCode = TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        // Find existing VolumetricCloud actor (optionally filtered by name)
+        AActor *CloudActor = nullptr;
+        for (AActor *Actor : ActorSS->GetAllLevelActors()) {
+          if (!Actor) continue;
+          FString ClassName = Actor->GetClass()->GetName();
+          // Must be VolumetricCloud class AND match name if specified
+          if (ClassName.Contains(TEXT("VolumetricCloud")) &&
+              (ActorName.IsEmpty() || Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))) {
+            CloudActor = Actor;
+            break;
+          }
+        }
+
+        if (!CloudActor) {
+          // Spawn new VolumetricCloud if not found
+          UClass *CloudClass = LoadClass<AActor>(
+              nullptr, TEXT("/Script/Engine.VolumetricCloud"));
+          if (CloudClass) {
+            CloudActor = SpawnActorInActiveWorld<AActor>(
+                CloudClass, FVector::ZeroVector, FRotator::ZeroRotator,
+                ActorName.IsEmpty() ? TEXT("VolumetricCloud") : *ActorName);
+          }
+        }
+
+        if (CloudActor) {
+          // Find the VolumetricCloudComponent using proper API
+          UVolumetricCloudComponent *CloudComp = CloudActor->FindComponentByClass<UVolumetricCloudComponent>();
+          
+          if (CloudComp) {
+            // Apply cloud configuration using proper setter methods from VolumetricCloudComponent.h
+            
+            // Layer settings
+            double LayerBottomAltitude = 0.0;
+            if (Payload->TryGetNumberField(TEXT("layerBottomAltitude"), LayerBottomAltitude)) {
+              CloudComp->SetLayerBottomAltitude(static_cast<float>(LayerBottomAltitude));
+            }
+
+            double LayerHeight = 0.0;
+            if (Payload->TryGetNumberField(TEXT("layerHeight"), LayerHeight)) {
+              CloudComp->SetLayerHeight(static_cast<float>(LayerHeight));
+            }
+
+            // Tracing settings
+            double TracingStartMaxDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("tracingStartMaxDistance"), TracingStartMaxDistance)) {
+              CloudComp->SetTracingStartMaxDistance(static_cast<float>(TracingStartMaxDistance));
+            }
+
+            double TracingStartDistanceFromCamera = 0.0;
+            if (Payload->TryGetNumberField(TEXT("tracingStartDistanceFromCamera"), TracingStartDistanceFromCamera)) {
+              CloudComp->SetTracingStartDistanceFromCamera(static_cast<float>(TracingStartDistanceFromCamera));
+            }
+
+            double TracingMaxDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("tracingMaxDistance"), TracingMaxDistance)) {
+              CloudComp->SetTracingMaxDistance(static_cast<float>(TracingMaxDistance));
+            }
+
+            // Planet settings
+            double PlanetRadius = 0.0;
+            if (Payload->TryGetNumberField(TEXT("planetRadius"), PlanetRadius)) {
+              CloudComp->SetPlanetRadius(static_cast<float>(PlanetRadius));
+            }
+
+            const TSharedPtr<FJsonObject> *GroundAlbedoObj = nullptr;
+            if (Payload->TryGetObjectField(TEXT("groundAlbedo"), GroundAlbedoObj) && GroundAlbedoObj) {
+              double R = 1.0, G = 1.0, B = 1.0;
+              (*GroundAlbedoObj)->TryGetNumberField(TEXT("r"), R);
+              (*GroundAlbedoObj)->TryGetNumberField(TEXT("g"), G);
+              (*GroundAlbedoObj)->TryGetNumberField(TEXT("b"), B);
+              CloudComp->SetGroundAlbedo(FColor(
+                static_cast<uint8>(FMath::Clamp(R * 255.0, 0.0, 255.0)),
+                static_cast<uint8>(FMath::Clamp(G * 255.0, 0.0, 255.0)),
+                static_cast<uint8>(FMath::Clamp(B * 255.0, 0.0, 255.0))
+              ));
+            }
+
+            // Atmospheric light transmittance
+            bool bUsePerSampleAtmosphericLightTransmittance = false;
+            if (Payload->TryGetBoolField(TEXT("usePerSampleAtmosphericLightTransmittance"), bUsePerSampleAtmosphericLightTransmittance)) {
+              CloudComp->SetbUsePerSampleAtmosphericLightTransmittance(bUsePerSampleAtmosphericLightTransmittance);
+            }
+
+            // Sky light occlusion
+            double SkyLightCloudBottomOcclusion = 0.0;
+            if (Payload->TryGetNumberField(TEXT("skyLightCloudBottomOcclusion"), SkyLightCloudBottomOcclusion)) {
+              CloudComp->SetSkyLightCloudBottomOcclusion(static_cast<float>(SkyLightCloudBottomOcclusion));
+            }
+
+            // Sample count scales
+            double ViewSampleCountScale = 0.0;
+            if (Payload->TryGetNumberField(TEXT("viewSampleCountScale"), ViewSampleCountScale)) {
+              CloudComp->SetViewSampleCountScale(static_cast<float>(ViewSampleCountScale));
+            }
+
+            double ReflectionViewSampleCountScale = 0.0;
+            if (Payload->TryGetNumberField(TEXT("reflectionViewSampleCountScale"), ReflectionViewSampleCountScale)) {
+              CloudComp->SetReflectionViewSampleCountScale(static_cast<float>(ReflectionViewSampleCountScale));
+            }
+
+            double ShadowViewSampleCountScale = 0.0;
+            if (Payload->TryGetNumberField(TEXT("shadowViewSampleCountScale"), ShadowViewSampleCountScale)) {
+              CloudComp->SetShadowViewSampleCountScale(static_cast<float>(ShadowViewSampleCountScale));
+            }
+
+            double ShadowReflectionViewSampleCountScale = 0.0;
+            if (Payload->TryGetNumberField(TEXT("shadowReflectionViewSampleCountScale"), ShadowReflectionViewSampleCountScale)) {
+              CloudComp->SetShadowReflectionViewSampleCountScale(static_cast<float>(ShadowReflectionViewSampleCountScale));
+            }
+
+            // Shadow tracing
+            double ShadowTracingDistance = 0.0;
+            if (Payload->TryGetNumberField(TEXT("shadowTracingDistance"), ShadowTracingDistance)) {
+              CloudComp->SetShadowTracingDistance(static_cast<float>(ShadowTracingDistance));
+            }
+
+            // Transmittance threshold
+            double StopTracingTransmittanceThreshold = 0.0;
+            if (Payload->TryGetNumberField(TEXT("stopTracingTransmittanceThreshold"), StopTracingTransmittanceThreshold)) {
+              CloudComp->SetStopTracingTransmittanceThreshold(static_cast<float>(StopTracingTransmittanceThreshold));
+            }
+
+            // Material
+            FString MaterialPath;
+            if (Payload->TryGetStringField(TEXT("materialPath"), MaterialPath)) {
+              UMaterialInterface *CloudMaterial = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
+              if (CloudMaterial) {
+                CloudComp->SetMaterial(CloudMaterial);
+              }
+            }
+
+            // Rendering flags
+            bool bHoldout = false;
+            if (Payload->TryGetBoolField(TEXT("holdout"), bHoldout)) {
+              CloudComp->SetHoldout(bHoldout);
+            }
+
+            bool bRenderInMainPass = true;
+            if (Payload->TryGetBoolField(TEXT("renderInMainPass"), bRenderInMainPass)) {
+              CloudComp->SetRenderInMainPass(bRenderInMainPass);
+            }
+
+            bool bVisibleInRealTimeSkyCaptures = true;
+            if (Payload->TryGetBoolField(TEXT("visibleInRealTimeSkyCaptures"), bVisibleInRealTimeSkyCaptures)) {
+              CloudComp->SetVisibleInRealTimeSkyCaptures(bVisibleInRealTimeSkyCaptures);
+            }
+
+            // MarkRenderStateDirty is handled internally by setter methods
+            bSuccess = true;
+            Message = TEXT("Volumetric cloud configured");
+            Resp->SetStringField(TEXT("actorName"), CloudActor->GetActorLabel());
+          } else {
+            bSuccess = false;
+            Message = TEXT("VolumetricCloudComponent not found on actor");
+            ErrorCode = TEXT("COMPONENT_NOT_FOUND");
+            Resp->SetStringField(TEXT("error"), Message);
+          }
+        } else {
+          bSuccess = false;
+          Message = TEXT("Failed to find or create VolumetricCloud actor");
+          ErrorCode = TEXT("ACTOR_NOT_FOUND");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("create_sky_atmosphere")) {
+    // Create a new SkyAtmosphere actor
+    FVector Location(0, 0, 0);
+    const TSharedPtr<FJsonObject> *LocObj = nullptr;
+    if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
+      (*LocObj)->TryGetNumberField(TEXT("x"), Location.X);
+      (*LocObj)->TryGetNumberField(TEXT("y"), Location.Y);
+      (*LocObj)->TryGetNumberField(TEXT("z"), Location.Z);
+    }
+    FString Name;
+    Payload->TryGetStringField(TEXT("name"), Name);
+
+    if (GEditor) {
+      UClass *SkyAtmosphereClass = LoadClass<AActor>(
+          nullptr, TEXT("/Script/Engine.SkyAtmosphere"));
+      if (SkyAtmosphereClass) {
+        AActor *SkyAtmosphere = SpawnActorInActiveWorld<AActor>(
+            SkyAtmosphereClass, Location, FRotator::ZeroRotator,
+            Name.IsEmpty() ? TEXT("SkyAtmosphere") : *Name);
+        if (SkyAtmosphere) {
+          bSuccess = true;
+          Message = TEXT("Sky atmosphere created");
+          Resp->SetStringField(TEXT("actorName"), SkyAtmosphere->GetActorLabel());
+        }
+      }
+    }
+    if (!bSuccess) {
+      bSuccess = false;
+      Message = TEXT("Failed to create sky atmosphere");
+      ErrorCode = TEXT("CREATION_FAILED");
+    }
+  } else if (LowerSub == TEXT("create_volumetric_cloud")) {
+    // Create a new VolumetricCloud actor
+    FVector Location(0, 0, 0);
+    const TSharedPtr<FJsonObject> *LocObj = nullptr;
+    if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
+      (*LocObj)->TryGetNumberField(TEXT("x"), Location.X);
+      (*LocObj)->TryGetNumberField(TEXT("y"), Location.Y);
+      (*LocObj)->TryGetNumberField(TEXT("z"), Location.Z);
+    }
+    FString Name;
+    Payload->TryGetStringField(TEXT("name"), Name);
+
+    if (GEditor) {
+      UClass *VolumetricCloudClass = LoadClass<AActor>(
+          nullptr, TEXT("/Script/Engine.VolumetricCloud"));
+      if (VolumetricCloudClass) {
+        AActor *VolumetricCloud = SpawnActorInActiveWorld<AActor>(
+            VolumetricCloudClass, Location, FRotator::ZeroRotator,
+            Name.IsEmpty() ? TEXT("VolumetricCloud") : *Name);
+        if (VolumetricCloud) {
+          bSuccess = true;
+          Message = TEXT("Volumetric cloud created");
+          Resp->SetStringField(TEXT("actorName"), VolumetricCloud->GetActorLabel());
+        }
+      }
+    }
+    if (!bSuccess) {
+      bSuccess = false;
+      Message = TEXT("Failed to create volumetric cloud");
+      ErrorCode = TEXT("CREATION_FAILED");
+    }
+  } else if (LowerSub == TEXT("create_exponential_height_fog")) {
+    // Create a new ExponentialHeightFog actor
+    FVector Location(0, 0, 0);
+    const TSharedPtr<FJsonObject> *LocObj = nullptr;
+    if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
+      (*LocObj)->TryGetNumberField(TEXT("x"), Location.X);
+      (*LocObj)->TryGetNumberField(TEXT("y"), Location.Y);
+      (*LocObj)->TryGetNumberField(TEXT("z"), Location.Z);
+    }
+    FString Name;
+    Payload->TryGetStringField(TEXT("name"), Name);
+
+    if (GEditor) {
+      UClass *FogClass = LoadClass<AActor>(
+          nullptr, TEXT("/Script/Engine.ExponentialHeightFog"));
+      if (FogClass) {
+        AActor *HeightFog = SpawnActorInActiveWorld<AActor>(
+            FogClass, Location, FRotator::ZeroRotator,
+            Name.IsEmpty() ? TEXT("ExponentialHeightFog") : *Name);
+        if (HeightFog) {
+          bSuccess = true;
+          Message = TEXT("Exponential height fog created");
+          Resp->SetStringField(TEXT("actorName"), HeightFog->GetActorLabel());
+        }
+      }
+    }
+    if (!bSuccess) {
+      bSuccess = false;
+      Message = TEXT("Failed to create exponential height fog");
+      ErrorCode = TEXT("CREATION_FAILED");
+    }
   } else {
     bSuccess = false;
     Message = FString::Printf(TEXT("Environment action '%s' not implemented"),
@@ -541,6 +1272,182 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
     Result->SetNumberField(TEXT("intensity"), Intensity);
     Result->SetStringField(TEXT("actor"), SkyActor->GetPathName());
     SendResult(true, TEXT("Skylight intensity updated"), FString(), Result);
+    return true;
+  }
+
+  // ========================================================================
+  // Phase 28: Extended Time of Day Actions
+  // ========================================================================
+
+  if (LowerSub == TEXT("configure_sun_position")) {
+    // Configure DirectionalLight position using pitch, yaw, roll
+    double Pitch = 0.0, Yaw = 0.0, Roll = 0.0;
+    Payload->TryGetNumberField(TEXT("pitch"), Pitch);
+    Payload->TryGetNumberField(TEXT("yaw"), Yaw);
+    Payload->TryGetNumberField(TEXT("roll"), Roll);
+
+    ADirectionalLight *SunLight = FindFirstDirectionalLight();
+    if (!SunLight) {
+      SendResult(false, TEXT("No directional light found"),
+                 TEXT("SUN_NOT_FOUND"), nullptr);
+      return true;
+    }
+
+    SunLight->Modify();
+    FRotator NewRotation(static_cast<float>(Pitch), static_cast<float>(Yaw), static_cast<float>(Roll));
+    SunLight->SetActorRotation(NewRotation);
+
+    if (UDirectionalLightComponent *LightComp =
+            Cast<UDirectionalLightComponent>(SunLight->GetLightComponent())) {
+      LightComp->MarkRenderStateDirty();
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetNumberField(TEXT("pitch"), Pitch);
+    Result->SetNumberField(TEXT("yaw"), Yaw);
+    Result->SetNumberField(TEXT("roll"), Roll);
+    Result->SetStringField(TEXT("actor"), SunLight->GetPathName());
+    SendResult(true, TEXT("Sun position configured"), FString(), Result);
+    return true;
+  }
+
+  if (LowerSub == TEXT("configure_sun_color")) {
+    // Configure DirectionalLight color and temperature
+    double Temperature = 6500.0; // Default daylight temperature
+    bool bUseTemperature = false;
+    
+    const TSharedPtr<FJsonObject> *ColorObj = nullptr;
+    FLinearColor LightColor(1.0f, 1.0f, 1.0f, 1.0f);
+    
+    if (Payload->TryGetObjectField(TEXT("color"), ColorObj) && ColorObj) {
+      double R = 1.0, G = 1.0, B = 1.0;
+      (*ColorObj)->TryGetNumberField(TEXT("r"), R);
+      (*ColorObj)->TryGetNumberField(TEXT("g"), G);
+      (*ColorObj)->TryGetNumberField(TEXT("b"), B);
+      LightColor = FLinearColor(R, G, B, 1.0f);
+    }
+    
+    Payload->TryGetNumberField(TEXT("temperature"), Temperature);
+    Payload->TryGetBoolField(TEXT("useTemperature"), bUseTemperature);
+
+    ADirectionalLight *SunLight = FindFirstDirectionalLight();
+    if (!SunLight) {
+      SendResult(false, TEXT("No directional light found"),
+                 TEXT("SUN_NOT_FOUND"), nullptr);
+      return true;
+    }
+
+    if (UDirectionalLightComponent *LightComp =
+            Cast<UDirectionalLightComponent>(SunLight->GetLightComponent())) {
+      LightComp->SetLightColor(LightColor);
+      LightComp->SetUseTemperature(bUseTemperature);
+      if (bUseTemperature) {
+        LightComp->SetTemperature(static_cast<float>(Temperature));
+      }
+      LightComp->MarkRenderStateDirty();
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> ColorResult = MakeShared<FJsonObject>();
+    ColorResult->SetNumberField(TEXT("r"), LightColor.R);
+    ColorResult->SetNumberField(TEXT("g"), LightColor.G);
+    ColorResult->SetNumberField(TEXT("b"), LightColor.B);
+    Result->SetObjectField(TEXT("color"), ColorResult);
+    Result->SetNumberField(TEXT("temperature"), Temperature);
+    Result->SetBoolField(TEXT("useTemperature"), bUseTemperature);
+    Result->SetStringField(TEXT("actor"), SunLight->GetPathName());
+    SendResult(true, TEXT("Sun color configured"), FString(), Result);
+    return true;
+  }
+
+  if (LowerSub == TEXT("configure_sun_atmosphere")) {
+    // Configure sun as atmosphere sun light
+    bool bAtmosphereSunLight = true;
+    int32 AtmosphereSunLightIndex = 0;
+    bool bCastShadows = true;
+    double ShadowAmount = 1.0;
+    
+    Payload->TryGetBoolField(TEXT("atmosphereSunLight"), bAtmosphereSunLight);
+    Payload->TryGetNumberField(TEXT("atmosphereSunLightIndex"), AtmosphereSunLightIndex);
+    Payload->TryGetBoolField(TEXT("castShadows"), bCastShadows);
+    Payload->TryGetNumberField(TEXT("shadowAmount"), ShadowAmount);
+
+    ADirectionalLight *SunLight = FindFirstDirectionalLight();
+    if (!SunLight) {
+      SendResult(false, TEXT("No directional light found"),
+                 TEXT("SUN_NOT_FOUND"), nullptr);
+      return true;
+    }
+
+    if (UDirectionalLightComponent *LightComp =
+            Cast<UDirectionalLightComponent>(SunLight->GetLightComponent())) {
+      LightComp->SetAtmosphereSunLight(bAtmosphereSunLight);
+      LightComp->SetAtmosphereSunLightIndex(AtmosphereSunLightIndex);
+      LightComp->SetCastShadows(bCastShadows);
+      LightComp->SetShadowAmount(static_cast<float>(ShadowAmount));
+      LightComp->MarkRenderStateDirty();
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("atmosphereSunLight"), bAtmosphereSunLight);
+    Result->SetNumberField(TEXT("atmosphereSunLightIndex"), AtmosphereSunLightIndex);
+    Result->SetBoolField(TEXT("castShadows"), bCastShadows);
+    Result->SetNumberField(TEXT("shadowAmount"), ShadowAmount);
+    Result->SetStringField(TEXT("actor"), SunLight->GetPathName());
+    SendResult(true, TEXT("Sun atmosphere settings configured"), FString(), Result);
+    return true;
+  }
+
+  if (LowerSub == TEXT("create_time_of_day_controller")) {
+    // Create a simple actor to serve as time-of-day controller
+    // This spawns a DirectionalLight if none exists, configured for sun simulation
+    FString ControllerName;
+    Payload->TryGetStringField(TEXT("name"), ControllerName);
+    if (ControllerName.IsEmpty()) {
+      ControllerName = TEXT("TimeOfDayController");
+    }
+    
+    double InitialHour = 12.0;
+    Payload->TryGetNumberField(TEXT("initialHour"), InitialHour);
+    
+    ADirectionalLight *SunLight = FindFirstDirectionalLight();
+    if (!SunLight) {
+      // Create a new directional light for the sun
+      UClass *DirectionalLightClass = ADirectionalLight::StaticClass();
+      SunLight = Cast<ADirectionalLight>(SpawnActorInActiveWorld<AActor>(
+          DirectionalLightClass, FVector::ZeroVector, FRotator::ZeroRotator,
+          TEXT("Sun")));
+    }
+    
+    if (SunLight) {
+      // Configure initial time
+      const float ClampedHour = FMath::Clamp(static_cast<float>(InitialHour), 0.0f, 24.0f);
+      const float SolarPitch = (ClampedHour / 24.0f) * 360.0f - 90.0f;
+      
+      FRotator NewRotation = SunLight->GetActorRotation();
+      NewRotation.Pitch = SolarPitch;
+      SunLight->SetActorRotation(NewRotation);
+      
+      if (UDirectionalLightComponent *LightComp =
+              Cast<UDirectionalLightComponent>(SunLight->GetLightComponent())) {
+        LightComp->SetAtmosphereSunLight(true);
+        LightComp->SetAtmosphereSunLightIndex(0);
+        LightComp->MarkRenderStateDirty();
+      }
+      
+      // Tag the actor for identification
+      SunLight->Tags.AddUnique(FName(*ControllerName));
+      
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("controllerName"), ControllerName);
+      Result->SetStringField(TEXT("sunActor"), SunLight->GetPathName());
+      Result->SetNumberField(TEXT("initialHour"), ClampedHour);
+      Result->SetNumberField(TEXT("initialPitch"), SolarPitch);
+      SendResult(true, TEXT("Time of day controller created"), FString(), Result);
+    } else {
+      SendResult(false, TEXT("Failed to create or find directional light"),
+                 TEXT("CREATION_FAILED"), nullptr);
+    }
     return true;
   }
 

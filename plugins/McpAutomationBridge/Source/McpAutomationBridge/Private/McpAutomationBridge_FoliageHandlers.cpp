@@ -986,3 +986,283 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   return true;
 #endif
 }
+
+// ============================================================================
+// Phase 28: Extended Foliage Actions
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleConfigureFoliagePlacement(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("configure_foliage_placement"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("configure_foliage_placement payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString FoliageTypePath;
+  if (!Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("foliageTypePath required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Load the foliage type
+  UFoliageType *FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
+  if (!FoliageType) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Foliage type not found: %s"), *FoliageTypePath),
+                        TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  FoliageType->Modify();
+
+  // Placement settings
+  bool bAlignToNormal = false;
+  if (Payload->TryGetBoolField(TEXT("alignToNormal"), bAlignToNormal)) {
+    FoliageType->AlignToNormal = bAlignToNormal;
+  }
+
+  double AlignMaxAngle = 0.0;
+  if (Payload->TryGetNumberField(TEXT("alignMaxAngle"), AlignMaxAngle)) {
+    FoliageType->AlignMaxAngle = static_cast<float>(AlignMaxAngle);
+  }
+
+  bool bRandomYaw = true;
+  if (Payload->TryGetBoolField(TEXT("randomYaw"), bRandomYaw)) {
+    FoliageType->RandomYaw = bRandomYaw;
+  }
+
+  double RandomPitchAngle = 0.0;
+  if (Payload->TryGetNumberField(TEXT("randomPitchAngle"), RandomPitchAngle)) {
+    FoliageType->RandomPitchAngle = static_cast<float>(RandomPitchAngle);
+  }
+
+  // Ground slope settings
+  double GroundSlopeAngleMin = 0.0, GroundSlopeAngleMax = 45.0;
+  if (Payload->TryGetNumberField(TEXT("groundSlopeAngleMin"), GroundSlopeAngleMin)) {
+    FoliageType->GroundSlopeAngle.Min = static_cast<float>(GroundSlopeAngleMin);
+  }
+  if (Payload->TryGetNumberField(TEXT("groundSlopeAngleMax"), GroundSlopeAngleMax)) {
+    FoliageType->GroundSlopeAngle.Max = static_cast<float>(GroundSlopeAngleMax);
+  }
+
+  // Height range
+  double HeightMin = -262144.0, HeightMax = 262144.0;
+  if (Payload->TryGetNumberField(TEXT("heightMin"), HeightMin)) {
+    FoliageType->Height.Min = static_cast<float>(HeightMin);
+  }
+  if (Payload->TryGetNumberField(TEXT("heightMax"), HeightMax)) {
+    FoliageType->Height.Max = static_cast<float>(HeightMax);
+  }
+
+  // Density settings
+  double Density = 100.0;
+  if (Payload->TryGetNumberField(TEXT("density"), Density)) {
+    FoliageType->Density = static_cast<float>(Density);
+  }
+
+  double Radius = 0.0;
+  if (Payload->TryGetNumberField(TEXT("radius"), Radius)) {
+    FoliageType->Radius = static_cast<float>(Radius);
+  }
+
+  // Scale settings
+  double ScaleMinX = 1.0, ScaleMaxX = 1.0;
+  double ScaleMinY = 1.0, ScaleMaxY = 1.0;
+  double ScaleMinZ = 1.0, ScaleMaxZ = 1.0;
+  if (Payload->TryGetNumberField(TEXT("scaleMinX"), ScaleMinX)) {
+    FoliageType->ScaleX.Min = static_cast<float>(ScaleMinX);
+  }
+  if (Payload->TryGetNumberField(TEXT("scaleMaxX"), ScaleMaxX)) {
+    FoliageType->ScaleX.Max = static_cast<float>(ScaleMaxX);
+  }
+  if (Payload->TryGetNumberField(TEXT("scaleMinY"), ScaleMinY)) {
+    FoliageType->ScaleY.Min = static_cast<float>(ScaleMinY);
+  }
+  if (Payload->TryGetNumberField(TEXT("scaleMaxY"), ScaleMaxY)) {
+    FoliageType->ScaleY.Max = static_cast<float>(ScaleMaxY);
+  }
+  if (Payload->TryGetNumberField(TEXT("scaleMinZ"), ScaleMinZ)) {
+    FoliageType->ScaleZ.Min = static_cast<float>(ScaleMinZ);
+  }
+  if (Payload->TryGetNumberField(TEXT("scaleMaxZ"), ScaleMaxZ)) {
+    FoliageType->ScaleZ.Max = static_cast<float>(ScaleMaxZ);
+  }
+
+  // Z Offset
+  double ZOffsetMin = 0.0, ZOffsetMax = 0.0;
+  if (Payload->TryGetNumberField(TEXT("zOffsetMin"), ZOffsetMin)) {
+    FoliageType->ZOffset.Min = static_cast<float>(ZOffsetMin);
+  }
+  if (Payload->TryGetNumberField(TEXT("zOffsetMax"), ZOffsetMax)) {
+    FoliageType->ZOffset.Max = static_cast<float>(ZOffsetMax);
+  }
+
+  McpSafeAssetSave(FoliageType);
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
+  Resp->SetStringField(TEXT("message"), TEXT("Foliage placement configured"));
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Foliage placement configured"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(
+      RequestingSocket, RequestId, false,
+      TEXT("configure_foliage_placement requires editor build."), nullptr,
+      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleConfigureFoliageLOD(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("configure_foliage_lod"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("configure_foliage_lod payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString FoliageTypePath;
+  if (!Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("foliageTypePath required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Load the foliage type
+  UFoliageType *FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
+  if (!FoliageType) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Foliage type not found: %s"), *FoliageTypePath),
+                        TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  FoliageType->Modify();
+
+  // Culling settings
+  double CullDistanceMin = 0.0, CullDistanceMax = 0.0;
+  if (Payload->TryGetNumberField(TEXT("cullDistanceMin"), CullDistanceMin)) {
+    FoliageType->CullDistance.Min = static_cast<int32>(CullDistanceMin);
+  }
+  if (Payload->TryGetNumberField(TEXT("cullDistanceMax"), CullDistanceMax)) {
+    FoliageType->CullDistance.Max = static_cast<int32>(CullDistanceMax);
+  }
+
+  // Scalability group
+  bool bEnableDensityScaling = true;
+  if (Payload->TryGetBoolField(TEXT("enableDensityScaling"), bEnableDensityScaling)) {
+    FoliageType->bEnableDensityScaling = bEnableDensityScaling;
+  }
+
+  bool bEnableDiscardOnLoad = false;
+  if (Payload->TryGetBoolField(TEXT("enableDiscardOnLoad"), bEnableDiscardOnLoad)) {
+    FoliageType->bEnableDiscardOnLoad = bEnableDiscardOnLoad;
+  }
+
+  McpSafeAssetSave(FoliageType);
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
+  Resp->SetNumberField(TEXT("cullDistanceMin"), FoliageType->CullDistance.Min);
+  Resp->SetNumberField(TEXT("cullDistanceMax"), FoliageType->CullDistance.Max);
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Foliage LOD configured"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(
+      RequestingSocket, RequestId, false,
+      TEXT("configure_foliage_lod requires editor build."), nullptr,
+      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleGetFoliageTypes(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("get_foliage_types"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Editor not available"),
+                        TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  UWorld *World = GEditor->GetEditorWorldContext().World();
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No world available"),
+                        TEXT("WORLD_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Get the instanced foliage actor
+  AInstancedFoliageActor *IFA = AInstancedFoliageActor::GetInstancedFoliageActorForCurrentLevel(World, false);
+  
+  TArray<TSharedPtr<FJsonValue>> FoliageTypesArray;
+  
+  if (IFA) {
+    for (auto& Pair : IFA->GetFoliageInfos()) {
+      const UFoliageType *FoliageType = Pair.Key;
+      const FFoliageInfo &Info = Pair.Value.Get();
+      
+      if (FoliageType) {
+        TSharedPtr<FJsonObject> TypeObj = MakeShared<FJsonObject>();
+        TypeObj->SetStringField(TEXT("name"), FoliageType->GetName());
+        TypeObj->SetStringField(TEXT("path"), FoliageType->GetPathName());
+        TypeObj->SetNumberField(TEXT("instanceCount"), Info.Instances.Num());
+        
+        FoliageTypesArray.Add(MakeShared<FJsonValueObject>(TypeObj));
+      }
+    }
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetArrayField(TEXT("foliageTypes"), FoliageTypesArray);
+  Resp->SetNumberField(TEXT("count"), FoliageTypesArray.Num());
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Foliage types retrieved"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(
+      RequestingSocket, RequestId, false,
+      TEXT("get_foliage_types requires editor build."), nullptr,
+      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}

@@ -1696,7 +1696,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                         FVersionedNiagaraEmitterData* EmitterData = Emitter->GetLatestEmitterData();
                         if (EmitterData)
                         {
-                            // Store the binding mapping in the resolved DI bindings
+                            // Store the binding mapping in the ResolvedDIBindings map.
+                            // Note: This directly modifies the emitter's serialized binding data.
+                            // Niagara recompilation or graph edits in the editor may require
+                            // these bindings to be re-applied. For production use, consider
+                            // using the Niagara System Editor or stack-based binding APIs.
                             EmitterData->ResolvedDIBindings.Add(*TargetParam, SourceVar);
                             bBindingSet = true;
                         }

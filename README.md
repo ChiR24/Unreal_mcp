@@ -5,7 +5,7 @@
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.7-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
-[![Tools](https://img.shields.io/badge/Tools-36-purple)](docs/handler-mapping.md)
+[![Tools](https://img.shields.io/badge/Tools-38-purple)](docs/handler-mapping.md)
 [![Project Board](https://img.shields.io/badge/Project-Roadmap-blueviolet?logo=github)](https://github.com/users/ChiR24/projects/3)
 [![Discussions](https://img.shields.io/badge/Discussions-Join-brightgreen?logo=github)](https://github.com/ChiR24/Unreal_mcp/discussions)
 
@@ -115,6 +115,7 @@ Enable via **Edit → Plugins**, then restart the editor:
 | **Subobject Data Interface** | Blueprint components (UE 5.7+) |
 | **Geometry Script** | `manage_geometry` operations (procedural mesh) |
 | **PCG** | `manage_pcg` operations (procedural content generation) |
+| **Water** (Experimental) | `manage_water` operations (oceans, lakes, rivers) |
 
 ### Step 4: Configure MCP Client
 
@@ -178,7 +179,7 @@ ASSET_LIST_TTL_MS=10000
 
 ## Available Tools
 
-**36 Tools** organized by category:
+**38 Tools** organized by category:
 
 ### Core Tools
 | Tool | Description |
@@ -201,6 +202,8 @@ ASSET_LIST_TTL_MS=10000
 | `manage_navigation` | NavMesh settings, nav modifiers, nav links, pathfinding |
 | `manage_splines` | Spline creation, spline meshes, road/river templates |
 | `manage_pcg` | PCG graphs, samplers, filters, spawners |
+| `manage_water` | Water bodies (ocean, lake, river), waves, materials |
+| `manage_weather` | Weather systems (wind, rain, snow, lightning) |
 
 ### Authoring Tools
 | Tool | Description |

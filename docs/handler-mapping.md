@@ -1147,3 +1147,45 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `set_pcg_partition_grid_size` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleSetPCGPartitionGridSize` | HiGen partition configuration |
 | **Utility** | | | |
 | `get_pcg_info` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleGetPCGInfo` | Lists graphs or returns node/connection info |
+
+## 40. Water Manager (`manage_water`) - Phase 28
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Water Body Creation** | | | Requires Water plugin (Experimental) |
+| `create_water_body_ocean` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Creates AWaterBodyOcean with configurable height offset |
+| `create_water_body_lake` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Creates AWaterBodyLake with spline-defined shape |
+| `create_water_body_river` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Creates AWaterBodyRiver with flow direction |
+| **Water Configuration** | | | |
+| `configure_water_body` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Set water, underwater, water info, and static mesh materials |
+| `configure_water_waves` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Query Gerstner wave settings (configure via asset editor) |
+| **Water Info** | | | |
+| `get_water_body_info` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Returns type, wave support, physical material, channel depth |
+| `list_water_bodies` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Lists all water bodies with type and location |
+| **River Configuration** | | | |
+| `set_river_depth` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Sets river depth/width at spline key via SetRiverDepthAtSplineInputKey |
+| **Ocean Configuration** | | | |
+| `set_ocean_extent` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Sets ocean extent, collision bounds, and height offset |
+| **Water Mesh** | | | |
+| `set_water_static_mesh` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Enable static mesh mode and set mesh override |
+| **Transitions** | | | |
+| `set_river_transitions` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Set lake/ocean transition materials for river |
+| **Water Zone** | | | |
+| `set_water_zone` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Override water zone for water body |
+| **Surface Queries** | | | |
+| `get_water_surface_info` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Query surface location, normal, velocity at point |
+| `get_wave_info` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Query wave height, max height, attenuation, normal at point |
+
+## 41. Weather Manager (`manage_weather`) - Phase 28
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Wind** | | | |
+| `configure_wind` | `McpAutomationBridge_WeatherHandlers.cpp` | `HandleWeatherAction` | Spawns/configures WindDirectionalSource with strength, speed, gusts |
+| **Weather System** | | | |
+| `create_weather_system` | `McpAutomationBridge_WeatherHandlers.cpp` | `HandleWeatherAction` | Spawns master weather controller actor |
+| **Precipitation** | | | |
+| `configure_rain_particles` | `McpAutomationBridge_WeatherHandlers.cpp` | `HandleWeatherAction` | Spawns rain Niagara system with intensity/coverage |
+| `configure_snow_particles` | `McpAutomationBridge_WeatherHandlers.cpp` | `HandleWeatherAction` | Spawns snow Niagara system with intensity/coverage |
+| **Lightning** | | | |
+| `configure_lightning` | `McpAutomationBridge_WeatherHandlers.cpp` | `HandleWeatherAction` | Spawns lightning actor with flash intensity/duration |

@@ -534,22 +534,42 @@ Complete procedural content generation.
 
 # Milestone 6: Advanced Systems (Phases 28-35)
 
-## Phase 28: Environment Systems 🔄
+## Phase 28: Environment & Water Systems ✅
 
-**Status**: Planned | **Tool**: `manage_environment` | **Actions**: ~45
+**Status**: Complete | **Tools**: `build_environment`, `manage_water`, `manage_weather` | **Actions**: 27 implemented
 
-Complete environment (sky, weather, water).
+Complete environment (landscape, foliage, sky, fog, clouds, weather, water) systems.
 
-### Planned Capabilities
+### Implemented Capabilities ✅
 
 | Category | Actions |
 |----------|---------|
-| Landscape | `create_landscape`, `import_heightmap`, `export_heightmap`, `sculpt_landscape`, `paint_landscape_layer`, `create_landscape_layer_info`, `configure_landscape_material`, `create_landscape_grass_type`, `configure_landscape_splines`, `configure_landscape_lod` |
-| Foliage | `create_foliage_type`, `configure_foliage_mesh`, `configure_foliage_placement`, `configure_foliage_lod`, `configure_foliage_collision`, `paint_foliage_instances`, `remove_foliage_instances` |
-| Sky | `configure_sky_atmosphere`, `configure_sky_light`, `configure_directional_light_atmosphere`, `configure_exponential_height_fog`, `configure_volumetric_cloud`, `create_sky_sphere` |
-| Weather | `create_weather_system`, `configure_rain_particles`, `configure_snow_particles`, `configure_wind`, `configure_lightning` |
+| Landscape | `create_landscape`, `sculpt_landscape`, `paint_landscape_layer`, `modify_heightmap`, `set_landscape_material`, `create_landscape_grass_type` |
+| Foliage | `add_foliage_type`, `add_foliage_instances`, `paint_foliage`, `remove_foliage`, `get_foliage_instances`, `create_procedural_foliage` |
+| Sky | `configure_sky_atmosphere` (29 properties), `create_sky_atmosphere` |
+| Fog | `configure_exponential_height_fog` (29 properties), `create_exponential_height_fog` |
+| Clouds | `configure_volumetric_cloud` (25+ properties), `create_volumetric_cloud` |
+| Water Bodies | `create_water_body_ocean`, `create_water_body_lake`, `create_water_body_river` |
+| Water Config | `configure_water_body` (5 material setters), `configure_water_waves` (15 Gerstner properties) |
+| Water Info | `get_water_body_info`, `list_water_bodies` |
+| Water Extended | `set_river_depth`, `set_ocean_extent`, `set_water_static_mesh`, `set_river_transitions`, `set_water_zone`, `get_water_surface_info`, `get_wave_info` |
+| Weather | `configure_wind`, `create_weather_system`, `configure_rain_particles`, `configure_snow_particles`, `configure_lightning` |
+
+### Planned Capabilities 🔄
+
+| Category | Actions |
+|----------|---------|
+| Landscape | `import_heightmap`, `export_heightmap`, `create_landscape_layer_info`, `configure_landscape_splines`, `configure_landscape_lod` |
+| Foliage | `configure_foliage_mesh`, `configure_foliage_placement`, `configure_foliage_lod`, `configure_foliage_collision` |
 | Time of Day | `create_time_of_day_system`, `configure_sun_position`, `configure_light_color_curve`, `configure_sky_color_curve` |
-| Water | `create_water_body_ocean`, `create_water_body_lake`, `create_water_body_river`, `create_water_body_custom`, `configure_water_waves`, `configure_water_material`, `configure_water_collision`, `create_buoyancy_component` |
+| Water (Extended) | `create_water_body_custom`, `configure_water_collision`, `create_buoyancy_component` |
+
+### Notes
+- Water system requires Water Plugin (Experimental) enabled
+- Weather system in `manage_weather` tool (wind, rain, snow, lightning)
+- All implemented actions use real UE 5.7 setter APIs (no stubs)
+- Landscape/foliage handlers support both World Partition and non-partitioned levels
+- Actor search uses class AND name filtering for precise targeting
 
 ---
 

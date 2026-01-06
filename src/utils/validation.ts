@@ -101,7 +101,8 @@ export function sanitizePath(path: string): string {
     // sanitizePathStrict validates and normalizes, allowing /Game, /Engine, /Script, /Temp
     return sanitizePathStrict(normalized, ['/Game', '/Engine', '/Script', '/Temp']);
   } catch {
-    // Strict validation failed - apply lenient sanitization
+    // Expected: strict validation throws on invalid roots, illegal chars, or path traversal.
+    // Fall through to lenient sanitization which repairs paths rather than rejecting them.
   }
 
   // Ensure path starts with /

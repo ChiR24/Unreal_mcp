@@ -438,7 +438,8 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 8. ~~Continue implementation of Phase 25 (Navigation System) per Roadmap.~~ ✅ Done
 9. ~~Continue implementation of Phase 26 (Spline System) per Roadmap.~~ ✅ Done
 10. ~~Continue implementation of Phase 27 (PCG Framework) per Roadmap.~~ ✅ Done
-11. Continue implementation of Phase 28 (Environment Systems) per Roadmap.
+11. ~~Continue implementation of Phase 28 (Environment & Water Systems) per Roadmap.~~ ✅ Done
+12. Continue implementation of Phase 29 (Advanced Lighting & Rendering) per Roadmap.
 
 ---
 
@@ -489,3 +490,65 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 | `set_pcg_partition_grid_size` | ✅ Done | Configures HiGen partition grid |
 | **Utility** | | |
 | `get_pcg_info` | ✅ Done | Lists graphs or returns detailed info |
+
+---
+
+## Phase 28: Environment & Water Systems - Implementation Details
+
+**Status**: ✅ Complete (27 actions: 17 environment/water + 5 weather + 7 new water queries)
+
+**Files**: 
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_EnvironmentHandlers.cpp`
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_WaterHandlers.cpp`
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_WeatherHandlers.cpp`
+
+| Action | Status | Description |
+|--------|--------|-------------|
+| **Sky & Atmosphere** | | |
+| `configure_sky_atmosphere` | ✅ Done | 29 properties via real setter methods |
+| `create_sky_atmosphere` | ✅ Done | Spawns ASkyAtmosphere actor |
+| **Fog** | | |
+| `configure_exponential_height_fog` | ✅ Done | 29 properties via real setter methods |
+| `create_exponential_height_fog` | ✅ Done | Spawns AExponentialHeightFog actor |
+| **Volumetric Clouds** | | |
+| `configure_volumetric_cloud` | ✅ Done | 25+ properties via real setter methods |
+| `create_volumetric_cloud` | ✅ Done | Spawns AVolumetricCloud actor |
+| **Water Bodies** | | Requires Water Plugin (Experimental) |
+| `create_water_body_ocean` | ✅ Done | Spawns AWaterBodyOcean with height offset |
+| `create_water_body_lake` | ✅ Done | Spawns AWaterBodyLake with spline shape |
+| `create_water_body_river` | ✅ Done | Spawns AWaterBodyRiver with flow |
+| **Water Configuration** | | |
+| `configure_water_body` | ✅ Done | 5 material setters (water, underwater, info, static mesh) |
+| `configure_water_waves` | ✅ Done | 15 Gerstner wave generator properties |
+| **Water Info** | | |
+| `get_water_body_info` | ✅ Done | Returns type, wave support, physical material, channel depth |
+| `list_water_bodies` | ✅ Done | Lists all water bodies with type and location |
+| **River Configuration (NEW)** | | |
+| `set_river_depth` | ✅ Done | SetRiverDepthAtSplineInputKey, SetRiverWidthAtSplineInputKey |
+| **Ocean Configuration (NEW)** | | |
+| `set_ocean_extent` | ✅ Done | SetOceanExtent, SetCollisionExtents, SetHeightOffset |
+| **Water Mesh (NEW)** | | |
+| `set_water_static_mesh` | ✅ Done | SetWaterBodyStaticMeshEnabled, SetWaterMeshOverride |
+| **Transitions (NEW)** | | |
+| `set_river_transitions` | ✅ Done | SetLakeTransitionMaterial, SetOceanTransitionMaterial |
+| **Water Zone (NEW)** | | |
+| `set_water_zone` | ✅ Done | SetWaterZoneOverride with TSoftObjectPtr |
+| **Surface Queries (NEW)** | | |
+| `get_water_surface_info` | ✅ Done | GetWaterSurfaceInfoAtLocation for surface/velocity |
+| `get_wave_info` | ✅ Done | GetWaveInfoAtPosition with FWaveInfo struct |
+| **Weather System (NEW - `manage_weather` tool)** | | |
+| `configure_wind` | ✅ Done | WindDirectionalSource with strength, speed, gusts |
+| `create_weather_system` | ✅ Done | Master weather controller actor |
+| `configure_rain_particles` | ✅ Done | Rain Niagara system with intensity/coverage |
+| `configure_snow_particles` | ✅ Done | Snow Niagara system with intensity/coverage |
+| `configure_lightning` | ✅ Done | Lightning actor with flash intensity/duration |
+
+### Implementation Notes
+
+- All environment actions use real UE 5.7 setter APIs (no stubs or reflection hacks)
+- Actor search uses class AND name filtering for precise targeting
+- Water system conditionally compiles with `MCP_HAS_WATER_PLUGIN` macro
+- Missing includes handled: `Engine/TextureCube.h`, `Materials/MaterialInterface.h`, `PhysicalMaterials/PhysicalMaterial.h`
+- Weather system uses separate handler file for modular organization
+- FWaveInfo struct fields: Height, MaxHeight, AttenuationFactor, ReferenceTime, Normal
+- Fixed `TSoftObjectPtr<AWaterZone>` deprecation warning in set_water_zone

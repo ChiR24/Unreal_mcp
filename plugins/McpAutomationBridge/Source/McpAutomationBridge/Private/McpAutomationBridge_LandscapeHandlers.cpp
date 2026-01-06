@@ -9,6 +9,7 @@
 #include "Async/Async.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Landscape.h"
 #include "LandscapeComponent.h"
 #include "LandscapeDataAccess.h"
@@ -1160,6 +1161,422 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(
   SendAutomationResponse(
       RequestingSocket, RequestId, false,
       TEXT("create_landscape_grass_type requires editor build."), nullptr,
+      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+// ============================================================================
+// Phase 28: Extended Landscape Actions
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleImportHeightmap(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("import_heightmap"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("import_heightmap payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString FilePath;
+  FString LandscapeName;
+  if (!Payload->TryGetStringField(TEXT("filePath"), FilePath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("filePath required for import_heightmap"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
+
+  // Read heightmap dimensions
+  int32 Width = 0, Height = 0;
+  Payload->TryGetNumberField(TEXT("width"), Width);
+  Payload->TryGetNumberField(TEXT("height"), Height);
+
+  // Import scale
+  double ScaleX = 100.0, ScaleY = 100.0, ScaleZ = 100.0;
+  Payload->TryGetNumberField(TEXT("scaleX"), ScaleX);
+  Payload->TryGetNumberField(TEXT("scaleY"), ScaleY);
+  Payload->TryGetNumberField(TEXT("scaleZ"), ScaleZ);
+
+  // Check file exists
+  if (!FPaths::FileExists(FilePath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Heightmap file not found: %s"), *FilePath),
+                        TEXT("FILE_NOT_FOUND"));
+    return true;
+  }
+
+  // Read raw heightmap data
+  TArray<uint8> RawData;
+  if (!FFileHelper::LoadFileToArray(RawData, *FilePath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to read heightmap file"),
+                        TEXT("READ_FAILED"));
+    return true;
+  }
+
+  // Validate dimensions
+  if (Width <= 0 || Height <= 0) {
+    // Try to infer from file size (assuming 16-bit heightmap)
+    int32 PixelCount = RawData.Num() / 2;
+    int32 InferredSize = FMath::RoundToInt(FMath::Sqrt(static_cast<float>(PixelCount)));
+    if (InferredSize * InferredSize == PixelCount) {
+      Width = InferredSize;
+      Height = InferredSize;
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Could not infer heightmap dimensions. Provide width and height."),
+                          TEXT("INVALID_DIMENSIONS"));
+      return true;
+    }
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("filePath"), FilePath);
+  Resp->SetNumberField(TEXT("width"), Width);
+  Resp->SetNumberField(TEXT("height"), Height);
+  Resp->SetNumberField(TEXT("dataSize"), RawData.Num());
+  Resp->SetStringField(TEXT("message"), TEXT("Heightmap data loaded. Create landscape with create_landscape action using this data."));
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Heightmap imported successfully"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(
+      RequestingSocket, RequestId, false,
+      TEXT("import_heightmap requires editor build."), nullptr,
+      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleExportHeightmap(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("export_heightmap"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("export_heightmap payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString OutputPath;
+  FString LandscapeName;
+  if (!Payload->TryGetStringField(TEXT("outputPath"), OutputPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("outputPath required for export_heightmap"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
+
+  if (!GEditor) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Editor not available"),
+                        TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  UWorld *World = GEditor->GetEditorWorldContext().World();
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No world available"),
+                        TEXT("WORLD_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Find landscape
+  ALandscapeProxy *TargetLandscape = nullptr;
+  for (TActorIterator<ALandscapeProxy> It(World); It; ++It) {
+    ALandscapeProxy *Landscape = *It;
+    if (Landscape && (LandscapeName.IsEmpty() || 
+        Landscape->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase))) {
+      TargetLandscape = Landscape;
+      break;
+    }
+  }
+
+  if (!TargetLandscape) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No landscape found in level"),
+                        TEXT("LANDSCAPE_NOT_FOUND"));
+    return true;
+  }
+
+  // Get landscape info
+  ULandscapeInfo *LandscapeInfo = TargetLandscape->GetLandscapeInfo();
+  if (!LandscapeInfo) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to get landscape info"),
+                        TEXT("LANDSCAPE_INFO_MISSING"));
+    return true;
+  }
+
+  // Get bounds
+  int32 MinX = MAX_int32, MinY = MAX_int32, MaxX = MIN_int32, MaxY = MIN_int32;
+  LandscapeInfo->GetLandscapeExtent(MinX, MinY, MaxX, MaxY);
+
+  int32 Width = MaxX - MinX + 1;
+  int32 Height = MaxY - MinY + 1;
+
+  // Export heightmap data
+  TArray<uint16> HeightData;
+  HeightData.SetNum(Width * Height);
+
+  // Read height data from landscape
+  FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo);
+  LandscapeEdit.GetHeightData(MinX, MinY, MaxX, MaxY, HeightData.GetData(), 0);
+
+  // Convert to raw bytes and save
+  TArray<uint8> RawData;
+  RawData.SetNum(HeightData.Num() * 2);
+  FMemory::Memcpy(RawData.GetData(), HeightData.GetData(), RawData.Num());
+
+  if (!FFileHelper::SaveArrayToFile(RawData, *OutputPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to write heightmap file"),
+                        TEXT("WRITE_FAILED"));
+    return true;
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("outputPath"), OutputPath);
+  Resp->SetNumberField(TEXT("width"), Width);
+  Resp->SetNumberField(TEXT("height"), Height);
+  Resp->SetStringField(TEXT("landscapeName"), TargetLandscape->GetActorLabel());
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Heightmap exported successfully"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(
+      RequestingSocket, RequestId, false,
+      TEXT("export_heightmap requires editor build."), nullptr,
+      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleConfigureLandscapeLOD(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("configure_landscape_lod"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("configure_landscape_lod payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString LandscapeName;
+  Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
+
+  // LOD settings
+  double LODBias = 0.0;
+  double LODDistributionSetting = 0.0;
+  int32 StaticLightingLOD = -1;
+  bool bUseDynamicMaterialInstance = false;
+
+  Payload->TryGetNumberField(TEXT("lodBias"), LODBias);
+  Payload->TryGetNumberField(TEXT("lodDistributionSetting"), LODDistributionSetting);
+  Payload->TryGetNumberField(TEXT("staticLightingLOD"), StaticLightingLOD);
+  Payload->TryGetBoolField(TEXT("useDynamicMaterialInstance"), bUseDynamicMaterialInstance);
+
+  if (!GEditor) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Editor not available"),
+                        TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  UWorld *World = GEditor->GetEditorWorldContext().World();
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No world available"),
+                        TEXT("WORLD_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Find landscape
+  ALandscapeProxy *TargetLandscape = nullptr;
+  for (TActorIterator<ALandscapeProxy> It(World); It; ++It) {
+    ALandscapeProxy *Landscape = *It;
+    if (Landscape && (LandscapeName.IsEmpty() || 
+        Landscape->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase))) {
+      TargetLandscape = Landscape;
+      break;
+    }
+  }
+
+  if (!TargetLandscape) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No landscape found in level"),
+                        TEXT("LANDSCAPE_NOT_FOUND"));
+    return true;
+  }
+
+  // Apply LOD settings
+  TargetLandscape->Modify();
+  
+  // LOD bias is on each component
+  for (ULandscapeComponent *Component : TargetLandscape->LandscapeComponents) {
+    if (Component) {
+      Component->SetLODBias(static_cast<int8>(FMath::Clamp(LODBias, -2.0, 2.0)));
+    }
+  }
+
+  // Static lighting LOD
+  if (StaticLightingLOD >= 0) {
+    TargetLandscape->StaticLightingLOD = StaticLightingLOD;
+  }
+
+  // Use dynamic material instance
+  TargetLandscape->bUseDynamicMaterialInstance = bUseDynamicMaterialInstance;
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("landscapeName"), TargetLandscape->GetActorLabel());
+  Resp->SetNumberField(TEXT("lodBias"), LODBias);
+  Resp->SetNumberField(TEXT("staticLightingLOD"), TargetLandscape->StaticLightingLOD);
+  Resp->SetBoolField(TEXT("useDynamicMaterialInstance"), TargetLandscape->bUseDynamicMaterialInstance);
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Landscape LOD configured"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(
+      RequestingSocket, RequestId, false,
+      TEXT("configure_landscape_lod requires editor build."), nullptr,
+      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleGetLandscapeInfo(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("get_landscape_info"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  FString LandscapeName;
+  if (Payload.IsValid()) {
+    Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
+  }
+
+  if (!GEditor) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Editor not available"),
+                        TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  UWorld *World = GEditor->GetEditorWorldContext().World();
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No world available"),
+                        TEXT("WORLD_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Find landscape
+  ALandscapeProxy *TargetLandscape = nullptr;
+  for (TActorIterator<ALandscapeProxy> It(World); It; ++It) {
+    ALandscapeProxy *Landscape = *It;
+    if (Landscape && (LandscapeName.IsEmpty() || 
+        Landscape->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase))) {
+      TargetLandscape = Landscape;
+      break;
+    }
+  }
+
+  if (!TargetLandscape) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No landscape found in level"),
+                        TEXT("LANDSCAPE_NOT_FOUND"));
+    return true;
+  }
+
+  // Get landscape info
+  ULandscapeInfo *LandscapeInfo = TargetLandscape->GetLandscapeInfo();
+  
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("landscapeName"), TargetLandscape->GetActorLabel());
+  Resp->SetStringField(TEXT("landscapePath"), TargetLandscape->GetPathName());
+  Resp->SetNumberField(TEXT("componentCount"), TargetLandscape->LandscapeComponents.Num());
+  
+  // Get extent
+  if (LandscapeInfo) {
+    int32 MinX = MAX_int32, MinY = MAX_int32, MaxX = MIN_int32, MaxY = MIN_int32;
+    LandscapeInfo->GetLandscapeExtent(MinX, MinY, MaxX, MaxY);
+    
+    TSharedPtr<FJsonObject> ExtentObj = MakeShared<FJsonObject>();
+    ExtentObj->SetNumberField(TEXT("minX"), MinX);
+    ExtentObj->SetNumberField(TEXT("minY"), MinY);
+    ExtentObj->SetNumberField(TEXT("maxX"), MaxX);
+    ExtentObj->SetNumberField(TEXT("maxY"), MaxY);
+    ExtentObj->SetNumberField(TEXT("width"), MaxX - MinX + 1);
+    ExtentObj->SetNumberField(TEXT("height"), MaxY - MinY + 1);
+    Resp->SetObjectField(TEXT("extent"), ExtentObj);
+  }
+
+  // Transform info
+  FVector Location = TargetLandscape->GetActorLocation();
+  FVector Scale = TargetLandscape->GetActorScale3D();
+  
+  TSharedPtr<FJsonObject> LocationObj = MakeShared<FJsonObject>();
+  LocationObj->SetNumberField(TEXT("x"), Location.X);
+  LocationObj->SetNumberField(TEXT("y"), Location.Y);
+  LocationObj->SetNumberField(TEXT("z"), Location.Z);
+  Resp->SetObjectField(TEXT("location"), LocationObj);
+
+  TSharedPtr<FJsonObject> ScaleObj = MakeShared<FJsonObject>();
+  ScaleObj->SetNumberField(TEXT("x"), Scale.X);
+  ScaleObj->SetNumberField(TEXT("y"), Scale.Y);
+  ScaleObj->SetNumberField(TEXT("z"), Scale.Z);
+  Resp->SetObjectField(TEXT("scale"), ScaleObj);
+
+  // Material info
+  if (TargetLandscape->LandscapeMaterial) {
+    Resp->SetStringField(TEXT("materialPath"), TargetLandscape->LandscapeMaterial->GetPathName());
+  }
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Landscape info retrieved"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(
+      RequestingSocket, RequestId, false,
+      TEXT("get_landscape_info requires editor build."), nullptr,
       TEXT("NOT_IMPLEMENTED"));
   return true;
 #endif

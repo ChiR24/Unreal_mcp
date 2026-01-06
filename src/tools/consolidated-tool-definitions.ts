@@ -616,18 +616,27 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'build_environment',
     category: 'world',
-    description: 'Create/sculpt landscapes, paint foliage, and generate procedural terrain/biomes.',
+    description: 'Create/sculpt landscapes, paint foliage, generate procedural terrain/biomes, configure sky/fog/clouds.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
+            // Landscape
             'create_landscape', 'sculpt', 'sculpt_landscape', 'add_foliage', 'paint_foliage',
             'create_procedural_terrain', 'create_procedural_foliage', 'add_foliage_instances',
             'get_foliage_instances', 'remove_foliage', 'paint_landscape', 'paint_landscape_layer',
             'modify_heightmap', 'set_landscape_material', 'create_landscape_grass_type',
-            'generate_lods', 'bake_lightmap', 'export_snapshot', 'import_snapshot', 'delete'
+            'generate_lods', 'bake_lightmap', 'export_snapshot', 'import_snapshot', 'delete',
+            // Phase 28: Sky/Atmosphere
+            'create_sky_sphere', 'create_sky_atmosphere', 'configure_sky_atmosphere',
+            // Phase 28: Fog
+            'create_fog_volume', 'create_exponential_height_fog', 'configure_exponential_height_fog',
+            // Phase 28: Clouds
+            'create_volumetric_cloud', 'configure_volumetric_cloud',
+            // Time of Day
+            'set_time_of_day'
           ],
           description: 'Action'
         },
@@ -683,7 +692,114 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         foliageTypes: commonSchemas.arrayOfObjects,
         path: commonSchemas.directoryPath,
         filename: commonSchemas.stringProp,
-        assetPaths: commonSchemas.arrayOfStrings
+        assetPaths: commonSchemas.arrayOfStrings,
+        // Phase 28: Sky Atmosphere properties
+        bottomRadius: { type: 'number', description: 'Bottom radius of the atmosphere in km' },
+        atmosphereHeight: { type: 'number', description: 'Height of the atmosphere in km' },
+        mieAnisotropy: { type: 'number', description: 'Mie scattering anisotropy factor (-1 to 1)' },
+        mieScatteringScale: { type: 'number', description: 'Scale for Mie scattering' },
+        rayleighScatteringScale: { type: 'number', description: 'Scale for Rayleigh scattering' },
+        multiScatteringFactor: { type: 'number', description: 'Multi-scattering approximation factor' },
+        rayleighExponentialDistribution: { type: 'number', description: 'Rayleigh exponential distribution' },
+        mieExponentialDistribution: { type: 'number', description: 'Mie exponential distribution' },
+        mieAbsorptionScale: { type: 'number', description: 'Mie absorption scale' },
+        otherAbsorptionScale: { type: 'number', description: 'Other absorption scale (ozone)' },
+        heightFogContribution: { type: 'number', description: 'Height fog contribution to atmosphere' },
+        aerialPerspectiveViewDistanceScale: { type: 'number', description: 'Aerial perspective view distance scale' },
+        transmittanceMinLightElevationAngle: { type: 'number', description: 'Minimum light elevation angle for transmittance' },
+        aerialPerspectiveStartDepth: { type: 'number', description: 'Aerial perspective start depth' },
+        rayleighScattering: { 
+          type: 'object', 
+          description: 'Rayleigh scattering color as {r, g, b}',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } }
+        },
+        mieScattering: { 
+          type: 'object', 
+          description: 'Mie scattering color as {r, g, b}',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } }
+        },
+        mieAbsorption: { 
+          type: 'object', 
+          description: 'Mie absorption color as {r, g, b}',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } }
+        },
+        skyLuminanceFactor: { 
+          type: 'object', 
+          description: 'Sky luminance factor as {r, g, b}',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } }
+        },
+        // Phase 28: Exponential Height Fog properties
+        fogDensity: { type: 'number', description: 'Global fog density (0.0 - 1.0)' },
+        fogHeightFalloff: { type: 'number', description: 'Rate at which fog density decreases with height' },
+        fogMaxOpacity: { type: 'number', description: 'Maximum fog opacity (0.0 - 1.0)' },
+        startDistance: { type: 'number', description: 'Distance from the camera at which fog starts' },
+        endDistance: { type: 'number', description: 'End distance for fog' },
+        fogCutoffDistance: { type: 'number', description: 'Distance at which fog is completely cut off' },
+        volumetricFog: { type: 'boolean', description: 'Enable volumetric fog' },
+        volumetricFogScatteringDistribution: { type: 'number', description: 'Phase function for volumetric fog' },
+        volumetricFogExtinctionScale: { type: 'number', description: 'Scale for volumetric fog extinction' },
+        volumetricFogDistance: { type: 'number', description: 'Volumetric fog distance' },
+        volumetricFogStartDistance: { type: 'number', description: 'Volumetric fog start distance' },
+        volumetricFogNearFadeInDistance: { type: 'number', description: 'Volumetric fog near fade-in distance' },
+        fogInscatteringColor: { 
+          type: 'object', 
+          description: 'Fog inscattering color as {r, g, b}',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } }
+        },
+        directionalInscatteringColor: { 
+          type: 'object', 
+          description: 'Directional inscattering color as {r, g, b}',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } }
+        },
+        volumetricFogAlbedo: { 
+          type: 'object', 
+          description: 'Volumetric fog albedo as {r, g, b} (0.0 - 1.0)',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } }
+        },
+        volumetricFogEmissive: { 
+          type: 'object', 
+          description: 'Volumetric fog emissive color as {r, g, b}',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } }
+        },
+        directionalInscatteringExponent: { type: 'number', description: 'Directional inscattering exponent' },
+        directionalInscatteringStartDistance: { type: 'number', description: 'Directional inscattering start distance' },
+        secondFogDensity: { type: 'number', description: 'Second fog layer density' },
+        secondFogHeightFalloff: { type: 'number', description: 'Second fog layer height falloff' },
+        secondFogHeightOffset: { type: 'number', description: 'Second fog layer height offset' },
+        inscatteringColorCubemapAngle: { type: 'number', description: 'Inscattering color cubemap angle' },
+        fullyDirectionalInscatteringColorDistance: { type: 'number', description: 'Fully directional inscattering color distance' },
+        nonDirectionalInscatteringColorDistance: { type: 'number', description: 'Non-directional inscattering color distance' },
+        inscatteringTextureTint: { 
+          type: 'object', 
+          description: 'Inscattering texture tint as {r, g, b}',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } }
+        },
+        // Phase 28: Volumetric Cloud properties
+        layerBottomAltitude: { type: 'number', description: 'Bottom altitude of cloud layer in km' },
+        layerHeight: { type: 'number', description: 'Height of cloud layer in km' },
+        tracingStartMaxDistance: { type: 'number', description: 'Max distance for cloud tracing start' },
+        tracingStartDistanceFromCamera: { type: 'number', description: 'Distance from camera to start tracing' },
+        tracingMaxDistance: { type: 'number', description: 'Maximum ray marching distance for clouds' },
+        planetRadius: { type: 'number', description: 'Planet radius in km (used when no SkyAtmosphere)' },
+        groundAlbedo: { 
+          type: 'object', 
+          description: 'Ground albedo color as {r, g, b} (0.0 - 1.0)',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } }
+        },
+        usePerSampleAtmosphericLightTransmittance: { type: 'boolean', description: 'Per-sample atmospheric light transmittance' },
+        skyLightCloudBottomOcclusion: { type: 'number', description: 'Sky light occlusion at cloud bottom (0.0 - 1.0)' },
+        viewSampleCountScale: { type: 'number', description: 'Sample count scale for primary view' },
+        reflectionViewSampleCountScale: { type: 'number', description: 'Sample count scale for reflections' },
+        shadowViewSampleCountScale: { type: 'number', description: 'Sample count scale for shadow view' },
+        shadowReflectionViewSampleCountScale: { type: 'number', description: 'Sample count scale for shadow reflections' },
+        shadowTracingDistance: { type: 'number', description: 'Shadow tracing distance in km' },
+        stopTracingTransmittanceThreshold: { type: 'number', description: 'Transmittance threshold to stop tracing (0.0 - 1.0)' },
+        holdout: { type: 'boolean', description: 'Render as holdout (black with alpha 0)' },
+        renderInMainPass: { type: 'boolean', description: 'Render in main pass' },
+        visibleInRealTimeSkyCaptures: { type: 'boolean', description: 'Visible in real-time sky captures' },
+        // Time of Day
+        time: { type: 'number', description: 'Time of day (0.0 - 24.0)' },
+        hour: { type: 'number', description: 'Hour of day (0.0 - 24.0)' }
       },
       required: ['action']
     },
@@ -4705,6 +4821,187 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           description: 'PCG graph information (for get_pcg_info).'
         },
         error: commonSchemas.stringProp
+      }
+    }
+  },
+  // Phase 28: Water System Tool
+  {
+    name: 'manage_water',
+    category: 'world',
+    description: 'Create and manage Water Bodies (Ocean, Lake, River). Configure water materials, waves, and properties. Requires Water plugin.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'create_water_body_ocean', 'create_water_body_lake', 'create_water_body_river',
+            'configure_water_body', 'configure_water_waves', 'get_water_body_info', 'list_water_bodies',
+            'set_river_depth', 'set_ocean_extent', 'set_water_static_mesh', 'set_river_transitions',
+            'set_water_zone', 'get_water_surface_info', 'get_wave_info'
+          ],
+          description: 'Water action to perform'
+        },
+        name: { type: 'string', description: 'Name for the water body actor.' },
+        actorName: { type: 'string', description: 'Name of existing water body actor to configure.' },
+        location: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
+          },
+          description: 'Location for spawning water body.'
+        },
+        heightOffset: { type: 'number', description: 'Height offset for ocean water body.' },
+        materialPath: { type: 'string', description: 'Path to water material.' },
+        underwaterMaterialPath: { type: 'string', description: 'Path to underwater post-process material.' },
+        waterInfoMaterialPath: { type: 'string', description: 'Path to water info texture material.' },
+        staticMeshMaterialPath: { type: 'string', description: 'Path to static mesh water material.' },
+        // Wave parameters (for configure_water_waves with Gerstner wave generator)
+        numWaves: { type: 'number', description: 'Number of waves (1-128). Default varies by generator.' },
+        seed: { type: 'number', description: 'Random seed for wave generation.' },
+        randomness: { type: 'number', description: 'Randomness factor (0-1).' },
+        minWavelength: { type: 'number', description: 'Minimum wavelength in cm.' },
+        maxWavelength: { type: 'number', description: 'Maximum wavelength in cm.' },
+        wavelengthFalloff: { type: 'number', description: 'Wavelength falloff exponent.' },
+        minAmplitude: { type: 'number', description: 'Minimum amplitude in cm.' },
+        maxAmplitude: { type: 'number', description: 'Maximum amplitude in cm.' },
+        amplitudeFalloff: { type: 'number', description: 'Amplitude falloff exponent.' },
+        windAngle: { type: 'number', description: 'Wind direction in degrees.' },
+        directionSpread: { type: 'number', description: 'Direction angular spread in degrees.' },
+        smallWaveSteepness: { type: 'number', description: 'Steepness for small waves (0-1).' },
+        largeWaveSteepness: { type: 'number', description: 'Steepness for large waves (0-1).' },
+        steepnessFalloff: { type: 'number', description: 'Steepness falloff exponent.' },
+        // River depth parameters (for set_river_depth)
+        splineKey: { type: 'number', description: 'Spline input key (0-1) for river depth/width.' },
+        depth: { type: 'number', description: 'River depth at spline key.' },
+        width: { type: 'number', description: 'River width at spline key.' },
+        // Ocean extent parameters (for set_ocean_extent)
+        extentX: { type: 'number', description: 'Ocean extent X size.' },
+        extentY: { type: 'number', description: 'Ocean extent Y size.' },
+        collisionExtentX: { type: 'number', description: 'Ocean collision extent X.' },
+        collisionExtentY: { type: 'number', description: 'Ocean collision extent Y.' },
+        // Static mesh parameters (for set_water_static_mesh)
+        staticMeshEnabled: { type: 'boolean', description: 'Enable water body static mesh.' },
+        waterMeshPath: { type: 'string', description: 'Path to water mesh override.' },
+        // Transition material parameters (for set_river_transitions)
+        lakeTransitionMaterialPath: { type: 'string', description: 'Path to lake transition material.' },
+        oceanTransitionMaterialPath: { type: 'string', description: 'Path to ocean transition material.' },
+        // Water zone parameters (for set_water_zone)
+        waterZonePath: { type: 'string', description: 'Name of AWaterZone actor in level to use as override.' },
+        // Query location (for get_water_surface_info, get_wave_info)
+        queryLocation: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Location to query water surface or wave info.'
+        }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded.' },
+        message: { type: 'string', description: 'Result message.' },
+        actorName: { type: 'string', description: 'Name of the created/modified water body.' },
+        waterBodyType: { type: 'string', description: 'Type of water body (Ocean, Lake, River).' },
+        supportsWaves: { type: 'boolean', description: 'Whether the water body supports waves.' },
+        hasWaves: { type: 'boolean', description: 'Whether waves are configured.' },
+        waveType: { type: 'string', description: 'Type of wave asset (e.g., GerstnerWaterWaves).' },
+        physicalMaterial: { type: 'string', description: 'Physical material name.' },
+        overlapMaterialPriority: { type: 'number', description: 'Overlap material priority.' },
+        channelDepth: { type: 'number', description: 'Channel depth.' },
+        count: { type: 'number', description: 'Number of water bodies found (for list_water_bodies).' },
+        waterBodies: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              class: { type: 'string' },
+              type: { type: 'string' },
+              location: {
+                type: 'object',
+                properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+              }
+            }
+          },
+          description: 'List of water bodies (for list_water_bodies).'
+        },
+        // Surface info output (for get_water_surface_info)
+        surfaceLocation: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Water surface location at query point.'
+        },
+        surfaceNormal: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Water surface normal at query point.'
+        },
+        velocity: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Water velocity at query point.'
+        },
+        immersionDepth: { type: 'number', description: 'Immersion depth at query point.' },
+        // Wave info output (for get_wave_info)
+        waveHeight: { type: 'number', description: 'Wave height at query point.' },
+        waveMaxHeight: { type: 'number', description: 'Maximum wave height.' },
+        waveAttenuation: { type: 'number', description: 'Wave attenuation factor.' },
+        waveNormal: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Wave normal at query point.'
+        },
+        error: { type: 'string', description: 'Error message if failed.' }
+      }
+    }
+  },
+  // Phase 28: Weather System Tool
+  {
+    name: 'manage_weather',
+    category: 'world',
+    description: 'Configure weather and atmospheric effects. Wind, rain, snow, lightning systems.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'configure_wind', 'create_weather_system',
+            'configure_rain_particles', 'configure_snow_particles', 'configure_lightning'
+          ],
+          description: 'Weather action to perform'
+        },
+        actorName: { type: 'string', description: 'Name for the weather actor.' },
+        location: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Location for spawning weather effects.'
+        },
+        // Wind properties
+        strength: { type: 'number', description: 'Wind strength.' },
+        speed: { type: 'number', description: 'Wind speed.' },
+        minGustAmount: { type: 'number', description: 'Minimum gust amount.' },
+        maxGustAmount: { type: 'number', description: 'Maximum gust amount.' },
+        // Particle properties
+        niagaraSystemPath: { type: 'string', description: 'Path to Niagara system for rain/snow.' },
+        intensity: { type: 'number', description: 'Precipitation intensity.' },
+        coverage: { type: 'number', description: 'Precipitation coverage area.' },
+        // Lightning properties
+        flashIntensity: { type: 'number', description: 'Lightning flash intensity.' },
+        flashDuration: { type: 'number', description: 'Lightning flash duration.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded.' },
+        message: { type: 'string', description: 'Result message.' },
+        actorName: { type: 'string', description: 'Name of the weather actor.' },
+        propertiesSet: { type: 'number', description: 'Number of properties configured.' },
+        error: { type: 'string', description: 'Error message if failed.' }
       }
     }
   }

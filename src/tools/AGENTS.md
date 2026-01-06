@@ -1,6 +1,6 @@
 # src/tools
 
-MCP tool implementations: 36 consolidated tools with action-based dispatch.
+MCP tool implementations: 38 consolidated tools with action-based dispatch.
 
 ## OVERVIEW
 Consolidated tool architecture using action-based dispatch to native C++ handlers.
