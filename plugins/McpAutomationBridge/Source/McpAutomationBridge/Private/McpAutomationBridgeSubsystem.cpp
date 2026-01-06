@@ -894,6 +894,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleWeatherAction(R, A, P, S);
                   });
+
+  // Phase 29: Post-Process & Rendering
+  RegisterHandler(TEXT("manage_post_process"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandlePostProcessAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the
