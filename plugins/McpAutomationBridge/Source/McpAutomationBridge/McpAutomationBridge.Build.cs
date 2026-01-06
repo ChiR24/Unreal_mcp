@@ -124,6 +124,14 @@ public class McpAutomationBridge : ModuleRules
             TryAddConditionalModule(Target, EngineDir, "Water", "Water");
             TryAddConditionalModule(Target, EngineDir, "WaterEditor", "WaterEditor");
 
+            // Phase 30: Movie Render Pipeline (conditional - for cinematics/rendering)
+            TryAddConditionalModule(Target, EngineDir, "MovieRenderPipelineCore", "MovieRenderPipelineCore");
+            TryAddConditionalModule(Target, EngineDir, "MovieRenderPipelineSettings", "MovieRenderPipelineSettings");
+            TryAddConditionalModule(Target, EngineDir, "MovieRenderPipelineRenderPasses", "MovieRenderPipelineRenderPasses");
+
+            // Phase 30: Media Framework
+            TryAddConditionalModule(Target, EngineDir, "MediaAssets", "MediaAssets");
+
             // Ensure editor builds expose full Blueprint graph editing APIs.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=1");

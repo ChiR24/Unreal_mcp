@@ -86,6 +86,11 @@ export const commonSchemas = {
   skeletalMeshPath: { type: 'string', description: 'Skeletal mesh path.' },
   niagaraPath: { type: 'string', description: 'Niagara system path.' },
   widgetPath: { type: 'string', description: 'Widget blueprint path.' },
+  sequencePath: { type: 'string', description: 'Level Sequence asset path.' },
+  mediaPlayerPath: { type: 'string', description: 'Media Player asset path.' },
+  mediaSourcePath: { type: 'string', description: 'Media Source asset path.' },
+  mediaTexturePath: { type: 'string', description: 'Media Texture asset path.' },
+  exportPath: { type: 'string', description: 'Export file path.' },
 
   physicsAssetPath: { type: 'string', description: 'Path to physics asset.' },
   morphTargetPath: { type: 'string', description: 'Path to morph target.' },
@@ -452,9 +457,6 @@ export const commonSchemas = {
   
   // State machine schemas
   stateMachineName: { type: 'string', description: 'State machine name.' },
-  
-  // Export/Import paths
-  exportPath: { type: 'string', description: 'Export file path.' },
   
   // Physics body schemas
   bodyName: { type: 'string', description: 'Physics body name.' },

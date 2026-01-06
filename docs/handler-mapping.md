@@ -1232,4 +1232,109 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `configure_lightmass_settings` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Indirect lighting quality, bounces |
 | `build_lighting_quality` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Triggers lighting build with quality preset |
 | `configure_indirect_lighting_cache` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | ILC quality settings |
-| `configure_volumetric_lightmap` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Volumetric lightmap detail cell size
+| `configure_volumetric_lightmap` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Volumetric lightmap detail cell size |
+
+## 43. Sequencer Manager (`manage_sequencer`) - Phase 30
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Sequence Creation & Management** | | | |
+| `create_master_sequence` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Creates ULevelSequence with display rate |
+| `add_subsequence` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Adds UMovieSceneSubSection to shot track |
+| `remove_subsequence` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Removes subsequence section |
+| `get_subsequences` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Lists all subsequences |
+| `list_sequences` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Lists all LevelSequence assets |
+| `duplicate_sequence` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Duplicates sequence asset |
+| `delete_sequence` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Deletes sequence asset |
+| **Shot Tracks** | | | |
+| `add_shot_track` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Adds UMovieSceneSubTrack |
+| `add_shot` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Adds shot section with sequence |
+| `remove_shot` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Removes shot section |
+| `get_shots` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Lists all shots |
+| **Camera** | | | |
+| `create_cine_camera_actor` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Spawns ACineCameraActor with settings |
+| `configure_camera_settings` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Sets focal length, aperture, sensor size |
+| `add_camera_cut_track` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Adds UMovieSceneCameraCutTrack |
+| `add_camera_cut` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Adds camera cut section with binding |
+| **Actor Binding** | | | |
+| `bind_actor` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Binds as possessable or spawnable |
+| `unbind_actor` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Removes binding |
+| `get_bindings` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Lists all bindings |
+| **Tracks & Sections** | | | |
+| `add_track` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Adds Transform, Animation, Audio, Event, Fade tracks |
+| `remove_track` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Removes track |
+| `get_tracks` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Lists tracks for binding or master |
+| `add_section` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Adds section to track |
+| `remove_section` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Removes section |
+| **Keyframes** | | | |
+| `add_keyframe` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Adds keyframe to float channel |
+| `remove_keyframe` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Removes keyframe at frame |
+| `get_keyframes` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Lists all keyframes with channel info |
+| **Playback** | | | |
+| `set_playback_range` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Sets playback start/end time |
+| `get_playback_range` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Returns playback range |
+| `set_display_rate` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Sets FPS display rate |
+| `get_sequence_info` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Returns full sequence metadata |
+| `play_sequence` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Plays via ALevelSequenceActor |
+| `pause_sequence` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Pauses playback |
+| `stop_sequence` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Stops playback |
+| `scrub_to_time` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | Seeks to time |
+| **Export** | | | |
+| `export_sequence` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | FBX/USD export support |
+
+## 44. Movie Render Manager (`manage_movie_render`) - Phase 30
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Queue Management** | | | Requires MovieRenderPipeline plugin |
+| `create_queue` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Gets/creates UMoviePipelineQueue |
+| `add_job` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Adds render job with sequence/map |
+| `remove_job` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Removes job by index |
+| `clear_queue` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Clears all jobs |
+| `get_queue` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Lists all jobs |
+| **Job Configuration** | | | |
+| `configure_job` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Updates job settings |
+| `configure_output` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Sets output directory, resolution, format |
+| **Render Settings** | | | |
+| `add_render_pass` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Adds deferred render passes |
+| `configure_anti_aliasing` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Spatial/temporal sample counts |
+| `configure_high_res_settings` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Tile count, overlap ratio |
+| `add_console_variable` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Adds CVars to job |
+| **Render Execution** | | | |
+| `start_render` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Starts PIE executor |
+| `stop_render` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Cancels active pipeline |
+| `get_render_status` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Returns render state |
+| `get_render_progress` | `McpAutomationBridge_MovieRenderHandlers.cpp` | `HandleMovieRenderAction` | Returns progress info |
+
+## 45. Media Manager (`manage_media`) - Phase 30
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Asset Creation** | | | Requires MediaAssets module |
+| `create_media_player` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Creates UMediaPlayer asset |
+| `create_file_media_source` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Creates UFileMediaSource |
+| `create_stream_media_source` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Creates UStreamMediaSource |
+| `create_media_texture` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Creates UMediaTexture with player binding |
+| `create_media_playlist` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Creates UMediaPlaylist |
+| **Media Info** | | | |
+| `get_media_info` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Returns duration, tracks, state |
+| **Playback Control** | | | |
+| `open_source` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Opens media source in player |
+| `open_url` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Opens URL in player |
+| `play` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Starts playback |
+| `pause` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Pauses playback |
+| `stop` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Stops playback |
+| `close` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Closes media |
+| `seek` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Seeks to time |
+| `set_rate` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Sets playback rate |
+| `set_looping` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Enables/disables looping |
+| **Playback Query** | | | |
+| `get_duration` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Returns total duration |
+| `get_time` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Returns current time |
+| `get_state` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Returns full playback state |
+| **Playlist Management** | | | |
+| `add_to_playlist` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Adds source to playlist |
+| `get_playlist` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Lists playlist contents |
+| **Texture Binding** | | | |
+| `bind_to_texture` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Binds player to texture |
+| `unbind_from_texture` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Unbinds player from texture |

@@ -902,6 +902,26 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandlePostProcessAction(R, A, P, S);
                   });
+
+  // Phase 30: Cinematics & Media
+  RegisterHandler(TEXT("manage_sequencer"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleSequencerAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_movie_render"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleMovieRenderAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_media"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleMediaAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

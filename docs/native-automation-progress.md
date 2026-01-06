@@ -608,5 +608,117 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 - Water system conditionally compiles with `MCP_HAS_WATER_PLUGIN` macro
 - Missing includes handled: `Engine/TextureCube.h`, `Materials/MaterialInterface.h`, `PhysicalMaterials/PhysicalMaterial.h`
 - Weather system uses separate handler file for modular organization
+
+---
+
+## Phase 30: Cinematics & Media - Implementation Details
+
+**Status**: ✅ Complete (90 actions: 35 sequencer + 30 movie render + 25 media)
+
+**Files**: 
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_SequencerConsolidatedHandlers.cpp` (1500+ lines)
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_MovieRenderHandlers.cpp` (667 lines)
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_MediaHandlers.cpp` (888 lines)
+
+| Action | Status | Description |
+|--------|--------|-------------|
+| **Sequencer - Sequence Management** | | |
+| `create_master_sequence` | ✅ Done | Creates ULevelSequence with configurable display rate |
+| `add_subsequence` | ✅ Done | Adds UMovieSceneSubSection to shot track |
+| `remove_subsequence` | ✅ Done | Removes subsequence section by path |
+| `get_subsequences` | ✅ Done | Lists all subsequences with paths |
+| `list_sequences` | ✅ Done | Lists all LevelSequence assets in directory |
+| `duplicate_sequence` | ✅ Done | Duplicates sequence to new name |
+| `delete_sequence` | ✅ Done | Deletes sequence via ObjectTools |
+| **Sequencer - Shot Tracks** | | |
+| `add_shot_track` | ✅ Done | Adds UMovieSceneSubTrack |
+| `add_shot` | ✅ Done | Adds shot section with sequence |
+| `remove_shot` | ✅ Done | Removes shot section by ID |
+| `get_shots` | ✅ Done | Lists all shots with frame ranges |
+| **Sequencer - Camera** | | |
+| `create_cine_camera_actor` | ✅ Done | Spawns ACineCameraActor with focal/aperture settings |
+| `configure_camera_settings` | ✅ Done | Sets focal length, aperture, sensor dimensions |
+| `add_camera_cut_track` | ✅ Done | Adds UMovieSceneCameraCutTrack |
+| `add_camera_cut` | ✅ Done | Adds camera cut section with binding |
+| **Sequencer - Actor Binding** | | |
+| `bind_actor` | ✅ Done | Creates possessable or spawnable binding |
+| `unbind_actor` | ✅ Done | Removes binding by GUID |
+| `get_bindings` | ✅ Done | Lists all possessables and spawnables |
+| **Sequencer - Tracks & Sections** | | |
+| `add_track` | ✅ Done | Transform, Animation, Audio, Event, Fade, LevelVisibility |
+| `remove_track` | ✅ Done | Removes track by ID |
+| `get_tracks` | ✅ Done | Lists tracks for binding or master |
+| `add_section` | ✅ Done | Adds section to track with frame range |
+| `remove_section` | ✅ Done | Removes section by ID |
+| **Sequencer - Keyframes** | | |
+| `add_keyframe` | ✅ Done | Adds keyframe to float channel |
+| `remove_keyframe` | ✅ Done | Removes keyframe at frame via FKeyHandle |
+| `get_keyframes` | ✅ Done | Lists all keyframes with channel/value info |
+| **Sequencer - Playback** | | |
+| `set_playback_range` | ✅ Done | Sets start/end time in seconds |
+| `get_playback_range` | ✅ Done | Returns frame and time ranges |
+| `set_display_rate` | ✅ Done | Sets FPS display rate |
+| `get_sequence_info` | ✅ Done | Returns full sequence metadata |
+| `play_sequence` | ✅ Done | Plays via ALevelSequenceActor |
+| `pause_sequence` | ✅ Done | Pauses playback |
+| `stop_sequence` | ✅ Done | Stops playback |
+| `scrub_to_time` | ✅ Done | Seeks to time |
+| **Sequencer - Export** | | |
+| `export_sequence` | ✅ Done | FBX/USD export with fallback notes |
+| **Movie Render - Queue Management** | | Requires MovieRenderPipeline plugin |
+| `create_queue` | ✅ Done | Gets/creates UMoviePipelineQueue |
+| `add_job` | ✅ Done | Adds render job with sequence/map |
+| `remove_job` | ✅ Done | Removes job by index |
+| `clear_queue` | ✅ Done | Clears all jobs |
+| `get_queue` | ✅ Done | Lists all jobs with settings |
+| **Movie Render - Configuration** | | |
+| `configure_job` | ✅ Done | Updates job settings |
+| `configure_output` | ✅ Done | Sets directory, resolution, frame rate, format |
+| `add_render_pass` | ✅ Done | Adds deferred render passes |
+| `configure_anti_aliasing` | ✅ Done | Spatial/temporal sample counts |
+| `configure_high_res_settings` | ✅ Done | Tile count, overlap ratio |
+| `add_console_variable` | ✅ Done | Adds CVars to job |
+| **Movie Render - Execution** | | |
+| `start_render` | ✅ Done | Starts PIE executor |
+| `stop_render` | ✅ Done | Cancels active pipeline via RequestShutdown |
+| `get_render_status` | ✅ Done | Returns render state (Idle/Rendering/Unknown) |
+| `get_render_progress` | ✅ Done | Returns progress info |
+| **Media - Asset Creation** | | Requires MediaAssets module |
+| `create_media_player` | ✅ Done | Creates UMediaPlayer asset |
+| `create_file_media_source` | ✅ Done | Creates UFileMediaSource |
+| `create_stream_media_source` | ✅ Done | Creates UStreamMediaSource |
+| `create_media_texture` | ✅ Done | Creates UMediaTexture with player binding |
+| `create_media_playlist` | ✅ Done | Creates UMediaPlaylist |
+| **Media - Info** | | |
+| `get_media_info` | ✅ Done | Returns duration, tracks, playback state |
+| **Media - Playback Control** | | |
+| `open_source` | ✅ Done | Opens media source in player |
+| `open_url` | ✅ Done | Opens URL in player |
+| `play` | ✅ Done | Starts playback |
+| `pause` | ✅ Done | Pauses playback |
+| `stop` | ✅ Done | Stops playback |
+| `close` | ✅ Done | Closes media |
+| `seek` | ✅ Done | Seeks to time in seconds |
+| `set_rate` | ✅ Done | Sets playback rate |
+| `set_looping` | ✅ Done | Enables/disables looping |
+| **Media - Playback Query** | | |
+| `get_duration` | ✅ Done | Returns total duration |
+| `get_time` | ✅ Done | Returns current playback time |
+| `get_state` | ✅ Done | Returns full playback state |
+| **Media - Playlist Management** | | |
+| `add_to_playlist` | ✅ Done | Adds source to playlist |
+| `get_playlist` | ✅ Done | Lists playlist contents |
+| **Media - Texture Binding** | | |
+| `bind_to_texture` | ✅ Done | Binds player to texture |
+| `unbind_from_texture` | ✅ Done | Unbinds player from texture |
+
+### Implementation Notes
+
+- All sequencer actions use native MovieScene/LevelSequence APIs
+- CineCamera support includes filmback presets and focus settings
+- MovieRenderPipeline integration with PIE executor for rendering
+- MediaPlayer supports both file and streaming sources
+- Texture binding allows real-time video in materials
+- Conditional compilation with `MCP_HAS_MOVIE_RENDER_QUEUE` and `MCP_HAS_MEDIA_FRAMEWORK`
 - FWaveInfo struct fields: Height, MaxHeight, AttenuationFactor, ReferenceTime, Normal
 - Fixed `TSoftObjectPtr<AWaterZone>` deprecation warning in set_water_zone

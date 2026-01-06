@@ -5243,5 +5243,339 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         error: commonSchemas.stringProp
       }
     }
+  },
+  // ============================================================================
+  // Phase 30: Cinematics & Media
+  // ============================================================================
+  {
+    name: 'manage_sequencer',
+    category: 'authoring',
+    description: 'Manage Level Sequences and cinematics. Create master sequences, add subsequences, shot tracks, bind actors, control playback, and manage camera cuts.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Sequence creation & management
+            'create_master_sequence', 'add_subsequence', 'remove_subsequence', 'get_subsequences',
+            // Shot tracks
+            'add_shot_track', 'add_shot', 'remove_shot', 'get_shots',
+            // Camera
+            'create_cine_camera_actor', 'configure_camera_settings', 'add_camera_cut_track', 'add_camera_cut',
+            // Actor binding
+            'bind_actor', 'unbind_actor', 'get_bindings',
+            // Tracks & sections
+            'add_track', 'remove_track', 'add_section', 'remove_section', 'get_tracks',
+            // Keyframes
+            'add_keyframe', 'remove_keyframe', 'get_keyframes',
+            // Playback
+            'set_playback_range', 'get_playback_range', 'set_display_rate', 'get_sequence_info',
+            // Runtime control
+            'play_sequence', 'pause_sequence', 'stop_sequence', 'scrub_to_time',
+            // Utilities
+            'list_sequences', 'duplicate_sequence', 'delete_sequence', 'export_sequence'
+          ],
+          description: 'Sequencer action to perform.'
+        },
+        // Sequence identification
+        sequencePath: commonSchemas.sequencePath,
+        sequenceName: commonSchemas.name,
+        savePath: commonSchemas.savePath,
+        
+        // Subsequence & shots
+        subsequencePath: { type: 'string', description: 'Path to subsequence asset.' },
+        shotName: { type: 'string', description: 'Name for shot section.' },
+        shotNumber: { type: 'number', description: 'Shot number for ordering.' },
+        startFrame: { type: 'number', description: 'Start frame of section.' },
+        endFrame: { type: 'number', description: 'End frame of section.' },
+        
+        // Camera settings
+        cameraActorName: commonSchemas.actorName,
+        filmbackPreset: { type: 'string', enum: ['16:9_DSLR', '16:9_Film', '35mm_Academy', '35mm_VistaVision', '65mm_IMAX', 'Super_35', 'Custom'], description: 'Filmback preset.' },
+        sensorWidth: { type: 'number', description: 'Custom sensor width in mm.' },
+        sensorHeight: { type: 'number', description: 'Custom sensor height in mm.' },
+        focalLength: { type: 'number', description: 'Focal length in mm.' },
+        aperture: { type: 'number', description: 'Aperture (f-stop).' },
+        focusDistance: { type: 'number', description: 'Manual focus distance.' },
+        autoFocus: { type: 'boolean', description: 'Enable auto focus.' },
+        focusMethod: { type: 'string', enum: ['DoNotOverride', 'Manual', 'Tracking'], description: 'Focus method.' },
+        focusTarget: { type: 'string', description: 'Actor name for focus tracking.' },
+        
+        // Actor binding
+        actorName: commonSchemas.actorName,
+        bindingName: { type: 'string', description: 'Binding display name.' },
+        bindingId: { type: 'string', description: 'Binding GUID.' },
+        spawnable: { type: 'boolean', description: 'Bind as spawnable (true) or possessable (false).' },
+        
+        // Tracks
+        trackType: {
+          type: 'string',
+          enum: ['Transform', 'Animation', 'Audio', 'Event', 'Property', 'Fade', 'LevelVisibility', 'CameraCut', 'Skeletal', 'Material'],
+          description: 'Type of track to add.'
+        },
+        trackName: { type: 'string', description: 'Track display name.' },
+        propertyPath: { type: 'string', description: 'Property path for property tracks.' },
+        
+        // Keyframes
+        time: { type: 'number', description: 'Time in seconds for keyframe.' },
+        frame: { type: 'number', description: 'Frame number for keyframe.' },
+        value: commonSchemas.value,
+        interpolation: { type: 'string', enum: ['Auto', 'User', 'Break', 'Linear', 'Constant'], description: 'Keyframe interpolation mode.' },
+        
+        // Playback range
+        startTime: { type: 'number', description: 'Playback start time in seconds.' },
+        endTime: { type: 'number', description: 'Playback end time in seconds.' },
+        displayRate: { type: 'number', description: 'Display rate in FPS.' },
+        tickResolution: { type: 'number', description: 'Tick resolution (ticks per second).' },
+        
+        // Export
+        exportPath: commonSchemas.exportPath,
+        exportFormat: { type: 'string', enum: ['FBX', 'USD'], description: 'Export format.' },
+        
+        // Common
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        sequencePath: commonSchemas.sequencePath,
+        sequenceName: commonSchemas.stringProp,
+        bindingId: commonSchemas.stringProp,
+        trackId: commonSchemas.stringProp,
+        sectionId: commonSchemas.stringProp,
+        cameraActorName: commonSchemas.actorName,
+        sequences: commonSchemas.arrayOfStrings,
+        bindings: commonSchemas.arrayOfObjects,
+        tracks: commonSchemas.arrayOfObjects,
+        sections: commonSchemas.arrayOfObjects,
+        keyframes: commonSchemas.arrayOfObjects,
+        playbackRange: {
+          type: 'object',
+          properties: {
+            startFrame: commonSchemas.numberProp,
+            endFrame: commonSchemas.numberProp,
+            startTime: commonSchemas.numberProp,
+            endTime: commonSchemas.numberProp
+          }
+        },
+        sequenceInfo: {
+          type: 'object',
+          properties: {
+            displayRate: commonSchemas.numberProp,
+            tickResolution: commonSchemas.numberProp,
+            duration: commonSchemas.numberProp,
+            bindingCount: commonSchemas.numberProp,
+            trackCount: commonSchemas.numberProp
+          }
+        },
+        error: commonSchemas.stringProp
+      }
+    }
+  },
+  {
+    name: 'manage_movie_render',
+    category: 'authoring',
+    description: 'Manage Movie Render Queue. Create render jobs, configure output settings, add render passes, and execute renders.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Queue management
+            'create_queue', 'add_job', 'remove_job', 'clear_queue', 'get_queue',
+            // Job configuration
+            'configure_job', 'set_sequence', 'set_map',
+            // Output settings
+            'configure_output', 'set_resolution', 'set_frame_rate', 'set_output_directory', 'set_file_name_format',
+            // Render passes
+            'add_render_pass', 'remove_render_pass', 'get_render_passes', 'configure_render_pass',
+            // Anti-aliasing
+            'configure_anti_aliasing', 'set_spatial_sample_count', 'set_temporal_sample_count',
+            // Burn-ins
+            'add_burn_in', 'remove_burn_in', 'configure_burn_in',
+            // Execution
+            'start_render', 'stop_render', 'get_render_status', 'get_render_progress',
+            // Console variables
+            'add_console_variable', 'remove_console_variable',
+            // High-resolution
+            'configure_high_res_settings', 'set_tile_count'
+          ],
+          description: 'Movie render action to perform.'
+        },
+        // Job identification
+        jobName: { type: 'string', description: 'Render job name.' },
+        jobIndex: { type: 'number', description: 'Job index in queue.' },
+        sequencePath: commonSchemas.sequencePath,
+        mapPath: { type: 'string', description: 'Map/level path to render.' },
+        
+        // Output settings
+        outputDirectory: { type: 'string', description: 'Output directory path.' },
+        fileNameFormat: { type: 'string', description: 'File name format string with tokens like {sequence_name}, {frame_number}.' },
+        outputFormat: { type: 'string', enum: ['PNG', 'JPG', 'EXR', 'BMP', 'ProRes', 'AVI'], description: 'Output image/video format.' },
+        resolutionX: { type: 'number', description: 'Output resolution width.' },
+        resolutionY: { type: 'number', description: 'Output resolution height.' },
+        frameRate: { type: 'number', description: 'Output frame rate.' },
+        
+        // Render passes
+        passType: {
+          type: 'string',
+          enum: ['FinalImage', 'ObjectId', 'MaterialId', 'Depth', 'WorldNormal', 'BaseColor', 'Roughness', 'Metallic', 'AmbientOcclusion', 'Cryptomatte'],
+          description: 'Type of render pass.'
+        },
+        passName: { type: 'string', description: 'Custom name for render pass.' },
+        passEnabled: { type: 'boolean', description: 'Enable/disable render pass.' },
+        
+        // Anti-aliasing
+        spatialSampleCount: { type: 'number', description: 'Spatial sample count for AA.' },
+        temporalSampleCount: { type: 'number', description: 'Temporal sample count for motion blur.' },
+        overrideAntiAliasing: { type: 'boolean', description: 'Override engine AA settings.' },
+        antiAliasingMethod: { type: 'string', enum: ['None', 'FXAA', 'TAA', 'MSAA'], description: 'Anti-aliasing method.' },
+        
+        // Burn-ins
+        burnInClass: { type: 'string', description: 'Burn-in widget blueprint class path.' },
+        burnInText: { type: 'string', description: 'Text content for burn-in.' },
+        burnInPosition: { type: 'string', enum: ['TopLeft', 'TopCenter', 'TopRight', 'BottomLeft', 'BottomCenter', 'BottomRight'], description: 'Burn-in position.' },
+        
+        // Console variables
+        cvarName: { type: 'string', description: 'Console variable name.' },
+        cvarValue: { type: 'string', description: 'Console variable value.' },
+        
+        // High-resolution
+        tileCountX: { type: 'number', description: 'Tile count X for high-res rendering.' },
+        tileCountY: { type: 'number', description: 'Tile count Y for high-res rendering.' },
+        overlapRatio: { type: 'number', description: 'Tile overlap ratio (0.0-0.5).' },
+        
+        // Common
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        jobName: commonSchemas.stringProp,
+        jobIndex: commonSchemas.numberProp,
+        queueSize: commonSchemas.numberProp,
+        jobs: commonSchemas.arrayOfObjects,
+        renderPasses: commonSchemas.arrayOfObjects,
+        renderStatus: {
+          type: 'object',
+          properties: {
+            state: { type: 'string', enum: ['Idle', 'Rendering', 'Paused', 'Finished', 'Error'] },
+            currentFrame: commonSchemas.numberProp,
+            totalFrames: commonSchemas.numberProp,
+            progress: commonSchemas.numberProp,
+            elapsedTime: commonSchemas.numberProp,
+            estimatedTimeRemaining: commonSchemas.numberProp
+          }
+        },
+        outputPath: commonSchemas.stringProp,
+        error: commonSchemas.stringProp
+      }
+    }
+  },
+  {
+    name: 'manage_media',
+    category: 'authoring',
+    description: 'Manage Media Framework. Create media players, sources, textures, and control playback.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Asset creation
+            'create_media_player', 'create_file_media_source', 'create_stream_media_source', 'create_media_texture',
+            'create_media_playlist', 'create_media_sound_wave',
+            // Asset management
+            'delete_media_asset', 'get_media_info',
+            // Playlist management
+            'add_to_playlist', 'remove_from_playlist', 'get_playlist',
+            // Playback control
+            'open_source', 'open_url', 'close', 'play', 'pause', 'stop', 'seek', 'set_rate',
+            // Properties
+            'set_looping', 'get_duration', 'get_time', 'get_state',
+            // Texture binding
+            'bind_to_texture', 'unbind_from_texture'
+          ],
+          description: 'Media action to perform.'
+        },
+        // Asset paths
+        mediaPlayerPath: { type: 'string', description: 'Path to media player asset.' },
+        mediaSourcePath: { type: 'string', description: 'Path to media source asset.' },
+        mediaTexturePath: { type: 'string', description: 'Path to media texture asset.' },
+        playlistPath: { type: 'string', description: 'Path to media playlist asset.' },
+        soundWavePath: { type: 'string', description: 'Path to media sound wave asset.' },
+        savePath: commonSchemas.savePath,
+        assetName: commonSchemas.name,
+        
+        // File/stream sources
+        filePath: { type: 'string', description: 'Path to media file on disk.' },
+        url: { type: 'string', description: 'URL for streaming media.' },
+        
+        // Texture settings
+        textureWidth: { type: 'number', description: 'Media texture width.' },
+        textureHeight: { type: 'number', description: 'Media texture height.' },
+        srgb: { type: 'boolean', description: 'Enable sRGB for texture.' },
+        autoPlay: { type: 'boolean', description: 'Auto play when opened.' },
+        
+        // Playback control
+        time: { type: 'number', description: 'Time in seconds for seek.' },
+        rate: { type: 'number', description: 'Playback rate (1.0 = normal speed).' },
+        looping: { type: 'boolean', description: 'Enable looping.' },
+        
+        // Playlist
+        playlistIndex: { type: 'number', description: 'Index in playlist.' },
+        
+        // Common
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        mediaPlayerPath: commonSchemas.stringProp,
+        mediaSourcePath: commonSchemas.stringProp,
+        mediaTexturePath: commonSchemas.stringProp,
+        playlistPath: commonSchemas.stringProp,
+        mediaInfo: {
+          type: 'object',
+          properties: {
+            duration: commonSchemas.numberProp,
+            videoWidth: commonSchemas.numberProp,
+            videoHeight: commonSchemas.numberProp,
+            frameRate: commonSchemas.numberProp,
+            audioChannels: commonSchemas.numberProp,
+            audioSampleRate: commonSchemas.numberProp,
+            hasVideo: commonSchemas.booleanProp,
+            hasAudio: commonSchemas.booleanProp,
+            codecInfo: commonSchemas.stringProp
+          }
+        },
+        playbackState: {
+          type: 'object',
+          properties: {
+            state: { type: 'string', enum: ['Closed', 'Error', 'Opening', 'Playing', 'Paused', 'Stopped', 'Preparing'] },
+            currentTime: commonSchemas.numberProp,
+            duration: commonSchemas.numberProp,
+            rate: commonSchemas.numberProp,
+            isLooping: commonSchemas.booleanProp,
+            isBuffering: commonSchemas.booleanProp
+          }
+        },
+        playlist: commonSchemas.arrayOfStrings,
+        error: commonSchemas.stringProp
+      }
+    }
   }
 ];

@@ -46,6 +46,9 @@ import { handlePCGTools } from './handlers/pcg-handlers.js';
 import { handleWaterTools } from './handlers/water-handlers.js';
 import { handleWeatherTools } from './handlers/weather-handlers.js';
 import { handlePostProcessTools } from './handlers/post-process-handlers.js';
+import { handleSequencerTools } from './handlers/sequencer-handlers.js';
+import { handleMovieRenderTools } from './handlers/movie-render-handlers.js';
+import { handleMediaTools } from './handlers/media-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -466,6 +469,15 @@ function registerDefaultHandlers() {
 
   // 44. POST-PROCESS & RENDERING SYSTEM (Phase 29)
   toolRegistry.register('manage_post_process', async (args, tools) => await handlePostProcessTools(getAction(args), args, tools));
+
+  // 45. SEQUENCER (Phase 30 - Cinematics & Media)
+  toolRegistry.register('manage_sequencer', async (args, tools) => await handleSequencerTools(getAction(args), args, tools));
+
+  // 46. MOVIE RENDER QUEUE (Phase 30 - Cinematics & Media)
+  toolRegistry.register('manage_movie_render', async (args, tools) => await handleMovieRenderTools(getAction(args), args, tools));
+
+  // 47. MEDIA FRAMEWORK (Phase 30 - Cinematics & Media)
+  toolRegistry.register('manage_media', async (args, tools) => await handleMediaTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately
