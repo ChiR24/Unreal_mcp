@@ -52,7 +52,12 @@
 
 // Asset utilities
 #include "AssetToolsModule.h"
+#if __has_include("Factories/LevelSequenceFactoryNew.h")
 #include "Factories/LevelSequenceFactoryNew.h"
+#define MCP_HAS_LEVEL_SEQUENCE_FACTORY 1
+#else
+#define MCP_HAS_LEVEL_SEQUENCE_FACTORY 0
+#endif
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 #include "Misc/PackageName.h"
@@ -64,6 +69,37 @@
 // Runtime
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+
+// Object tools for deletion/export
+#if __has_include("ObjectTools.h")
+#include "ObjectTools.h"
+#define MCP_HAS_OBJECT_TOOLS 1
+#else
+#define MCP_HAS_OBJECT_TOOLS 0
+#endif
+
+// Exporter
+#include "Exporters/Exporter.h"
+
+// Helper: Find existing binding for an object by iterating possessables
+// This avoids the deprecated FindBindingFromObject(UObject*, UObject*) API in UE 5.5+
+static FGuid McpFindExistingBindingForObject(ULevelSequence* Sequence, UMovieScene* MovieScene, AActor* TargetActor)
+{
+  if (!Sequence || !MovieScene || !TargetActor) return FGuid();
+  
+  // Check all possessables for a matching binding
+  for (int32 i = 0; i < MovieScene->GetPossessableCount(); ++i)
+  {
+    FMovieScenePossessable& Possessable = MovieScene->GetPossessable(i);
+    // Match by name and class
+    if (Possessable.GetName() == TargetActor->GetName() && 
+        Possessable.GetPossessedObjectClass() == TargetActor->GetClass())
+    {
+      return Possessable.GetGuid();
+    }
+  }
+  return FGuid();
+}
 
 #endif // WITH_EDITOR
 
@@ -402,7 +438,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
     if (Sequence) {
       UMovieScene* MovieScene = Sequence->GetMovieScene();
       if (MovieScene) {
-        UMovieSceneCameraCutTrack* CameraCutTrack = MovieScene->AddCameraCutTrack(FMovieSceneTrackIdentifier());
+        UMovieSceneCameraCutTrack* CameraCutTrack = Cast<UMovieSceneCameraCutTrack>(MovieScene->AddCameraCutTrack(UMovieSceneCameraCutTrack::StaticClass()));
         if (CameraCutTrack) {
           MovieScene->Modify();
           bSuccess = true;
@@ -433,7 +469,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
       UMovieSceneCameraCutTrack* CameraCutTrack = MovieScene->FindTrack<UMovieSceneCameraCutTrack>();
       
       if (!CameraCutTrack) {
-        CameraCutTrack = MovieScene->AddCameraCutTrack(FMovieSceneTrackIdentifier());
+        CameraCutTrack = Cast<UMovieSceneCameraCutTrack>(MovieScene->AddCameraCutTrack(UMovieSceneCameraCutTrack::StaticClass()));
       }
       
       if (CameraCutTrack) {
@@ -447,8 +483,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
         }
         
         if (CameraActor) {
-          // Get or create binding for camera
-          FGuid CameraBinding = Sequence->FindBindingFromObject(CameraActor, World);
+          // Get or create binding for camera (using non-deprecated helper)
+          FGuid CameraBinding = McpFindExistingBindingForObject(Sequence, MovieScene, CameraActor);
           if (!CameraBinding.IsValid()) {
             CameraBinding = MovieScene->AddPossessable(CameraActor->GetName(), CameraActor->GetClass());
             Sequence->BindPossessableObject(CameraBinding, *CameraActor, World);
@@ -1006,7 +1042,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
           ULevelSequencePlayer* Player = It->GetSequencePlayer();
           if (Player) {
             FMovieSceneSequencePlaybackParams Params;
-            Params.Time = FFrameTime(FFrameNumber(static_cast<int32>(Time * Sequence->GetMovieScene()->GetTickResolution().AsDecimal())));
+            Params.Frame = FFrameTime(FFrameNumber(static_cast<int32>(Time * Sequence->GetMovieScene()->GetTickResolution().AsDecimal())));
             Player->SetPlaybackPosition(Params);
             bSuccess = true;
             Message = FString::Printf(TEXT("Scrubbed to %.2f seconds"), Time);
@@ -1082,7 +1118,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
     
     ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
     if (Sequence) {
-      // Use ObjectTools to delete
+      // Use EditorAssetLibrary to delete
+#if MCP_HAS_OBJECT_TOOLS
       TArray<UObject*> ObjectsToDelete;
       ObjectsToDelete.Add(Sequence);
       
@@ -1094,6 +1131,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
         Message = TEXT("Failed to delete sequence");
         ErrorCode = TEXT("DELETE_FAILED");
       }
+#else
+      // Fallback: use UEditorAssetLibrary
+      if (UEditorAssetLibrary::DeleteAsset(SequencePath)) {
+        bSuccess = true;
+        Message = TEXT("Sequence deleted");
+      } else {
+        bSuccess = false;
+        Message = TEXT("Failed to delete sequence");
+        ErrorCode = TEXT("DELETE_FAILED");
+      }
+#endif
     }
   }
   // ========================================================================
@@ -1473,47 +1521,38 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
     if (Sequence && !ExportPath.IsEmpty()) {
       // Use UnrealEd export functionality
       if (ExportFormat.Equals(TEXT("FBX"), ESearchCase::IgnoreCase)) {
-        // FBX export requires the FBX exporter module
-        IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
-        
-        TArray<UObject*> ObjectsToExport;
-        ObjectsToExport.Add(Sequence);
-        
-        // Export using asset tools
+        // Export using UExporter system
         FString FullExportPath = FPaths::IsRelative(ExportPath) 
             ? FPaths::ProjectDir() / ExportPath 
             : ExportPath;
         
+        // Ensure .fbx extension
+        if (!FullExportPath.EndsWith(TEXT(".fbx"), ESearchCase::IgnoreCase)) {
+          FullExportPath = FPaths::ChangeExtension(FullExportPath, TEXT("fbx"));
+        }
+        
         // Ensure directory exists
         FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*FPaths::GetPath(FullExportPath));
         
-        // Note: Full FBX sequence export typically requires specific export settings
-        // For now, we export the sequence asset itself
-        TArray<UExporter*> Exporters;
-        ObjectTools::FindExportersForObjects(ObjectsToExport, Exporters);
-        
-        bool bExported = false;
-        for (UExporter* Exporter : Exporters) {
-          if (Exporter && Exporter->SupportedClass == ULevelSequence::StaticClass()) {
-            bExported = UExporter::ExportToFile(Sequence, Exporter, *FullExportPath, false);
-            if (bExported) break;
+        // Find exporter for this object type and format
+        UExporter* Exporter = UExporter::FindExporter(Sequence, TEXT("FBX"));
+        if (Exporter) {
+          int32 ExportResult = UExporter::ExportToFile(Sequence, Exporter, *FullExportPath, false, false, false);
+          if (ExportResult == 1) {
+            bSuccess = true;
+            Message = FString::Printf(TEXT("Sequence exported to %s"), *FullExportPath);
+            Resp->SetStringField(TEXT("exportPath"), FullExportPath);
+          } else {
+            bSuccess = false;
+            Message = TEXT("FBX export failed");
+            ErrorCode = TEXT("EXPORT_FAILED");
           }
-        }
-        
-        if (bExported) {
-          bSuccess = true;
-          Message = FString::Printf(TEXT("Sequence exported to %s"), *FullExportPath);
-          Resp->SetStringField(TEXT("exportPath"), FullExportPath);
         } else {
-          // Fallback: Save as .uasset copy
-          FString FallbackPath = FullExportPath;
-          if (!FallbackPath.EndsWith(TEXT(".uasset"))) {
-            FallbackPath = FPaths::ChangeExtension(FallbackPath, TEXT("uasset"));
-          }
-          
+          // No FBX exporter found for LevelSequence - inform user
           bSuccess = true;
-          Message = TEXT("Direct FBX export not available. Sequence can be exported via Editor menu.");
-          Resp->SetStringField(TEXT("note"), TEXT("Use Movie Render Queue for cinematic export"));
+          Message = TEXT("No FBX exporter available for Level Sequences. Use Movie Render Queue for cinematic renders.");
+          Resp->SetStringField(TEXT("sequencePath"), SequencePath);
+          Resp->SetStringField(TEXT("note"), TEXT("Use Movie Render Queue or Sequencer Editor Export for FBX animation export"));
         }
       } else if (ExportFormat.Equals(TEXT("USD"), ESearchCase::IgnoreCase)) {
         // USD export requires USD plugin

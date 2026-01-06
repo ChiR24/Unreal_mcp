@@ -11,7 +11,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 
 // Movie Render Queue Headers (conditionally included)
-#if __has_include("MoviePipelineQueue.h")
+#if __has_include("MoviePipelineQueue.h") && __has_include("MoviePipelineQueueSubsystem.h")
 #define MCP_HAS_MOVIE_RENDER_QUEUE 1
 #include "MoviePipelineQueue.h"
 #include "MoviePipelineQueueSubsystem.h"

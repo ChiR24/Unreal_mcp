@@ -5577,5 +5577,118 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         error: commonSchemas.stringProp
       }
     }
+  },
+  // Phase 31: Data & Persistence
+  {
+    name: 'manage_data',
+    category: 'utility',
+    description: 'Manage data assets, data tables, save games, gameplay tags, and config files. Create, edit, import/export data.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Data Assets
+            'create_data_asset', 'create_primary_data_asset', 'get_data_asset_info', 'set_data_asset_property',
+            // Data Tables
+            'create_data_table', 'add_data_table_row', 'remove_data_table_row', 'get_data_table_row',
+            'get_data_table_rows', 'import_data_table_csv', 'export_data_table_csv', 'empty_data_table',
+            // Curve Tables
+            'create_curve_table', 'add_curve_row', 'get_curve_value', 'import_curve_table_csv', 'export_curve_table_csv',
+            // Save Game
+            'create_save_game_blueprint', 'save_game_to_slot', 'load_game_from_slot', 'delete_save_slot',
+            'does_save_exist', 'get_save_slot_names',
+            // Gameplay Tags
+            'create_gameplay_tag', 'add_native_gameplay_tag', 'request_gameplay_tag', 'check_tag_match',
+            'create_tag_container', 'add_tag_to_container', 'remove_tag_from_container', 'has_tag',
+            'get_all_gameplay_tags',
+            // Config
+            'read_config_value', 'write_config_value', 'get_config_section', 'flush_config', 'reload_config'
+          ],
+          description: 'Data action to perform.'
+        },
+        // Data Asset parameters
+        assetPath: commonSchemas.assetPath,
+        assetName: commonSchemas.name,
+        savePath: commonSchemas.savePath,
+        dataAssetClass: { type: 'string', description: 'Class path for data asset (e.g., /Script/Engine.DataAsset).' },
+        primaryAssetType: { type: 'string', description: 'Primary asset type name for PrimaryDataAsset.' },
+        primaryAssetName: { type: 'string', description: 'Primary asset name for PrimaryDataAsset.' },
+        properties: commonSchemas.objectProp,
+        propertyName: commonSchemas.propertyName,
+        propertyValue: commonSchemas.value,
+
+        // Data Table parameters
+        dataTablePath: { type: 'string', description: 'Path to data table asset.' },
+        rowStructPath: { type: 'string', description: 'Path to row struct (e.g., /Script/MyProject.FMyRowStruct).' },
+        rowName: { type: 'string', description: 'Name of the row in data table.' },
+        rowData: { type: 'object', description: 'Row data as JSON object matching the row struct.' },
+        csvString: { type: 'string', description: 'CSV string for import/export.' },
+        csvFilePath: { type: 'string', description: 'File path for CSV import/export.' },
+
+        // Curve Table parameters
+        curveTablePath: { type: 'string', description: 'Path to curve table asset.' },
+        curveName: commonSchemas.curveName,
+        curveType: { type: 'string', enum: ['RichCurve', 'SimpleCurve'], description: 'Type of curve to create.' },
+        keyTime: { type: 'number', description: 'Time value for curve key.' },
+        keyValue: { type: 'number', description: 'Value at curve key.' },
+        interpMode: { type: 'string', enum: ['Linear', 'Constant', 'Cubic', 'Auto'], description: 'Interpolation mode for curve.' },
+
+        // Save Game parameters
+        slotName: commonSchemas.slotName,
+        userIndex: { type: 'number', description: 'User index for save game (default 0).' },
+        saveGameClass: { type: 'string', description: 'Class path for custom SaveGame class.' },
+        saveData: { type: 'object', description: 'Data to save (serializable properties).' },
+
+        // Gameplay Tag parameters
+        tagName: commonSchemas.tagName,
+        tagString: { type: 'string', description: 'Full tag string (e.g., Character.State.Dead).' },
+        tagDevComment: { type: 'string', description: 'Developer comment for native tag registration.' },
+        tagToCheck: { type: 'string', description: 'Tag to check for matching.' },
+        containerName: { type: 'string', description: 'Name identifier for tag container.' },
+        exactMatch: { type: 'boolean', description: 'Use exact tag matching instead of hierarchical.' },
+        tags: { type: 'array', items: { type: 'string' }, description: 'Array of tag strings.' },
+
+        // Config parameters
+        configName: { type: 'string', description: 'Config file base name (e.g., Engine, Game, Input).' },
+        configSection: { type: 'string', description: 'Config section name (e.g., /Script/Engine.Engine).' },
+        configKey: { type: 'string', description: 'Config key name.' },
+        configValue: { type: 'string', description: 'Config value to set.' },
+
+        // Common
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.stringProp,
+        dataAssetInfo: {
+          type: 'object',
+          properties: {
+            className: commonSchemas.stringProp,
+            primaryAssetId: commonSchemas.stringProp,
+            properties: commonSchemas.objectProp
+          }
+        },
+        rows: commonSchemas.arrayOfObjects,
+        rowData: commonSchemas.objectProp,
+        csvData: commonSchemas.stringProp,
+        curveValue: commonSchemas.numberProp,
+        saveExists: commonSchemas.booleanProp,
+        slotNames: commonSchemas.arrayOfStrings,
+        loadedData: commonSchemas.objectProp,
+        tag: commonSchemas.stringProp,
+        tagValid: commonSchemas.booleanProp,
+        tagMatches: commonSchemas.booleanProp,
+        containerTags: commonSchemas.arrayOfStrings,
+        allTags: commonSchemas.arrayOfStrings,
+        configValue: commonSchemas.stringProp,
+        sectionData: commonSchemas.objectProp
+      }
+    }
   }
 ];

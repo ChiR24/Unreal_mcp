@@ -49,6 +49,7 @@ import { handlePostProcessTools } from './handlers/post-process-handlers.js';
 import { handleSequencerTools } from './handlers/sequencer-handlers.js';
 import { handleMovieRenderTools } from './handlers/movie-render-handlers.js';
 import { handleMediaTools } from './handlers/media-handlers.js';
+import { handleDataTools } from './handlers/data-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -478,6 +479,9 @@ function registerDefaultHandlers() {
 
   // 47. MEDIA FRAMEWORK (Phase 30 - Cinematics & Media)
   toolRegistry.register('manage_media', async (args, tools) => await handleMediaTools(getAction(args), args, tools));
+
+  // 48. DATA & PERSISTENCE (Phase 31)
+  toolRegistry.register('manage_data', async (args, tools) => await handleDataTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

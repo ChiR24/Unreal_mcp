@@ -440,7 +440,9 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 10. ~~Continue implementation of Phase 27 (PCG Framework) per Roadmap.~~ ✅ Done
 11. ~~Continue implementation of Phase 28 (Environment & Water Systems) per Roadmap.~~ ✅ Done
 12. ~~Continue implementation of Phase 29 (Advanced Lighting & Rendering) per Roadmap.~~ ✅ Done
-13. Continue implementation of Phase 30 (Cinematics & Media) per Roadmap.
+13. ~~Continue implementation of Phase 30 (Cinematics & Media) per Roadmap.~~ ✅ Done
+14. ~~Continue implementation of Phase 31 (Data & Persistence) per Roadmap.~~ ✅ Done
+15. Continue implementation of Phase 32 per Roadmap.
 
 ---
 
@@ -722,3 +724,68 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 - Conditional compilation with `MCP_HAS_MOVIE_RENDER_QUEUE` and `MCP_HAS_MEDIA_FRAMEWORK`
 - FWaveInfo struct fields: Height, MaxHeight, AttenuationFactor, ReferenceTime, Normal
 - Fixed `TSoftObjectPtr<AWaterZone>` deprecation warning in set_water_zone
+
+---
+
+## Phase 31: Data & Persistence - Implementation Details
+
+**Status**: ✅ Complete (35 actions)
+
+**Files**: 
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_DataHandlers.cpp` (~1320 lines)
+- `src/tools/handlers/data-handlers.ts`
+
+| Action | Status | Description |
+|--------|--------|-------------|
+| **Data Assets** | | |
+| `create_data_asset` | ✅ Done | Creates UDataAsset with specified class |
+| `create_primary_data_asset` | ✅ Done | Creates UPrimaryDataAsset |
+| `get_data_asset_info` | ✅ Done | Returns data asset properties |
+| `set_data_asset_property` | ✅ Done | Sets property via UE reflection |
+| **Data Tables** | | |
+| `create_data_table` | ✅ Done | Creates UDataTable with row struct |
+| `add_data_table_row` | ✅ Done | Adds row via FDataTableEditorUtils |
+| `remove_data_table_row` | ✅ Done | Removes row by name |
+| `get_data_table_row` | ✅ Done | Returns single row as JSON |
+| `get_data_table_rows` | ✅ Done | Returns all rows as JSON array |
+| `import_data_table_csv` | ✅ Done | Imports from CSV via DataTableFactory |
+| `export_data_table_csv` | ✅ Done | Exports to CSV format |
+| `empty_data_table` | ✅ Done | Removes all rows |
+| **Curve Tables** | | |
+| `create_curve_table` | ✅ Done | Creates UCurveTable with interpolation type |
+| `add_curve_row` | ✅ Done | Adds curve row with key values |
+| `get_curve_value` | ✅ Done | Evaluates curve at X position |
+| `import_curve_table_csv` | ✅ Done | Imports from CSV |
+| `export_curve_table_csv` | ✅ Done | Exports to CSV |
+| **Save Game** | | |
+| `create_save_game_blueprint` | ✅ Done | Creates USaveGame blueprint class |
+| `save_game_to_slot` | ✅ Done | Saves via UGameplayStatics::SaveGameToSlot |
+| `load_game_from_slot` | ✅ Done | Loads via UGameplayStatics::LoadGameFromSlot |
+| `delete_save_slot` | ✅ Done | Deletes save slot file |
+| `does_save_exist` | ✅ Done | Checks if save slot exists |
+| `get_save_slot_names` | ✅ Done | Lists all save slots in directory |
+| **Gameplay Tags** | | |
+| `create_gameplay_tag` | ✅ Done | Creates tag via config file |
+| `add_native_gameplay_tag` | ✅ Done | Registers native tag at runtime |
+| `request_gameplay_tag` | ✅ Done | Requests existing tag by name |
+| `check_tag_match` | ✅ Done | Checks tag hierarchy matching |
+| `create_tag_container` | ✅ Done | Creates FGameplayTagContainer |
+| `add_tag_to_container` | ✅ Done | Adds tag to container |
+| `remove_tag_from_container` | ✅ Done | Removes tag from container |
+| `has_tag` | ✅ Done | Checks if container has tag |
+| `get_all_gameplay_tags` | ✅ Done | Lists all registered tags |
+| **Config** | | |
+| `read_config_value` | ✅ Done | Reads GConfig value |
+| `write_config_value` | ✅ Done | Writes GConfig value |
+| `get_config_section` | ✅ Done | Returns entire config section |
+| `flush_config` | ✅ Done | Flushes config to disk |
+| `reload_config` | ✅ Done | Reloads config from disk |
+
+### Implementation Notes
+
+- All actions use native UE 5.7 APIs (no stubs)
+- DataTable operations use `FDataTableEditorUtils` for row manipulation
+- SaveGame uses `UGameplayStatics` for cross-platform save/load
+- Gameplay Tags use `UGameplayTagsManager` singleton
+- Config operations work with `GConfig` for engine/game/editor configs
+- Uses `McpSafeAssetSave()` helper for UE 5.7 compatibility (no direct `UPackage::SavePackage()`)

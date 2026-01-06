@@ -10,8 +10,8 @@ A comprehensive development plan for the Unreal Engine Model Context Protocol (M
 |--------|-------|
 | **Total Phases** | 59 |
 | **Estimated Actions** | ~2,850 |
-| **Completed Phases** | 29 |
-| **In Progress** | Phase 5 (Infrastructure), Phase 31-35 (Advanced Systems) |
+| **Completed Phases** | 30 |
+| **In Progress** | Phase 5 (Infrastructure), Phase 32-35 (Advanced Systems) |
 | **Engine Support** | Unreal Engine 5.0 - 5.7 |
 
 ---
@@ -631,20 +631,24 @@ Complete sequencer and media capabilities.
 
 ---
 
-## Phase 31: Data & Persistence 🔄
+## Phase 31: Data & Persistence ✅
 
-**Status**: Planned | **Actions**: ~35
+**Status**: Complete | **Tool**: `manage_data` | **Actions**: 35
 
 Complete data management and save systems.
 
-### Planned Capabilities
+### Capabilities
 
 | Category | Actions |
 |----------|---------|
-| Data Assets | `create_data_asset`, `create_primary_data_asset`, `create_data_table`, `add_data_table_row`, `import_data_table_csv`, `export_data_table_csv`, `create_curve_table` |
-| Save System | `create_save_game_class`, `add_save_variable`, `save_game_to_slot`, `load_game_from_slot`, `delete_save_slot`, `get_save_slot_names` |
-| Gameplay Tags | `create_gameplay_tag`, `create_tag_container`, `add_tag_to_container`, `check_tag_match`, `register_native_tag` |
-| Config | `read_config_value`, `write_config_value`, `get_section`, `flush_config`, `reload_config` |
+| Data Assets | `create_data_asset`, `create_primary_data_asset`, `get_data_asset_info`, `set_data_asset_property` |
+| Data Tables | `create_data_table`, `add_data_table_row`, `remove_data_table_row`, `get_data_table_row`, `get_data_table_rows`, `import_data_table_csv`, `export_data_table_csv`, `empty_data_table` |
+| Curve Tables | `create_curve_table`, `add_curve_row`, `get_curve_value`, `import_curve_table_csv`, `export_curve_table_csv` |
+| Save System | `create_save_game_blueprint`, `save_game_to_slot`, `load_game_from_slot`, `delete_save_slot`, `does_save_exist`, `get_save_slot_names` |
+| Gameplay Tags | `create_gameplay_tag`, `add_native_gameplay_tag`, `request_gameplay_tag`, `check_tag_match`, `create_tag_container`, `add_tag_to_container`, `remove_tag_from_container`, `has_tag`, `get_all_gameplay_tags` |
+| Config | `read_config_value`, `write_config_value`, `get_config_section`, `flush_config`, `reload_config` |
+
+> **Cross-Reference**: Gameplay Tags used by GAS → Phase 13
 
 ---
 
@@ -1187,7 +1191,7 @@ Make new project setup reproducible.
 | Gameplay Systems (13-18) | 6 | ~160 |
 | UI/Networking/Framework (19-22) | 4 | ~130 |
 | World Building (23-27) | 5 | ~100 |
-| Advanced Systems (28-35) | 8 | ~345 |
+| Advanced Systems (28-35) | 8 | ~380 |
 | Plugin: Character/Avatar (36) | 1 | ~60 |
 | Plugin: Asset/Content (37) | 1 | ~150 |
 | Plugin: Audio Middleware (38) | 1 | ~80 |

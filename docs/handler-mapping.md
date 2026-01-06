@@ -1338,3 +1338,51 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Texture Binding** | | | |
 | `bind_to_texture` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Binds player to texture |
 | `unbind_from_texture` | `McpAutomationBridge_MediaHandlers.cpp` | `HandleMediaAction` | Unbinds player from texture |
+
+## 46. Data Manager (`manage_data`) - Phase 31
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Data Assets** | | | |
+| `create_data_asset` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Creates UDataAsset with class name |
+| `create_primary_data_asset` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Creates UPrimaryDataAsset |
+| `get_data_asset_info` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Returns data asset properties |
+| `set_data_asset_property` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Sets property via reflection |
+| **Data Tables** | | | |
+| `create_data_table` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Creates UDataTable with row struct |
+| `add_data_table_row` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Adds row with JSON data |
+| `remove_data_table_row` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Removes row by name |
+| `get_data_table_row` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Returns single row as JSON |
+| `get_data_table_rows` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Returns all rows as JSON array |
+| `import_data_table_csv` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Imports from CSV file |
+| `export_data_table_csv` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Exports to CSV file |
+| `empty_data_table` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Removes all rows |
+| **Curve Tables** | | | |
+| `create_curve_table` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Creates UCurveTable with interpolation |
+| `add_curve_row` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Adds curve row with keys |
+| `get_curve_value` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Evaluates curve at X value |
+| `import_curve_table_csv` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Imports from CSV file |
+| `export_curve_table_csv` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Exports to CSV file |
+| **Save Game** | | | |
+| `create_save_game_blueprint` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Creates USaveGame blueprint |
+| `save_game_to_slot` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Saves game to named slot |
+| `load_game_from_slot` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Loads game from slot |
+| `delete_save_slot` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Deletes save slot |
+| `does_save_exist` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Checks if slot exists |
+| `get_save_slot_names` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Lists all save slots |
+| **Gameplay Tags** | | | |
+| `create_gameplay_tag` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Creates tag in config |
+| `add_native_gameplay_tag` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Adds native gameplay tag |
+| `request_gameplay_tag` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Requests existing tag |
+| `check_tag_match` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Checks tag hierarchy match |
+| `create_tag_container` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Creates tag container |
+| `add_tag_to_container` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Adds tag to container |
+| `remove_tag_from_container` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Removes tag from container |
+| `has_tag` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Checks container for tag |
+| `get_all_gameplay_tags` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Lists all registered tags |
+| **Config** | | | |
+| `read_config_value` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Reads from config section |
+| `write_config_value` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Writes to config section |
+| `get_config_section` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Returns entire section |
+| `flush_config` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Writes config to disk |
+| `reload_config` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Reloads config from disk |

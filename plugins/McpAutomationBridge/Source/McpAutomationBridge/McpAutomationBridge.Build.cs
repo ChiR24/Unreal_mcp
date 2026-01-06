@@ -54,7 +54,8 @@ public class McpAutomationBridge : ModuleRules
         PublicDependencyModuleNames.AddRange(new string[]
         {
             "Core","CoreUObject","Engine","Json","JsonUtilities",
-            "LevelSequence", "MovieScene", "MovieSceneTracks", "GameplayTags"
+            "LevelSequence", "MovieScene", "MovieSceneTracks", "GameplayTags",
+            "CinematicCamera"  // For ACineCameraActor and UCineCameraComponent
         });
 
         if (Target.bBuildEditor)

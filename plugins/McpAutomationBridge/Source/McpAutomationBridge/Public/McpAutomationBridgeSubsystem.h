@@ -726,6 +726,11 @@ private:
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 31: Data & Persistence handlers
+  bool HandleManageDataAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
   // 2. Execution & Build / Test Pipeline
   bool HandlePipelineAction(const FString &RequestId, const FString &Action,

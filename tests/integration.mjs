@@ -2,9 +2,10 @@
 /**
  * Fully Consolidated Integration Test Suite
  *
- * Covers all 39 MCP tools (Phases 1-29):
+ * Covers all 40 MCP tools (Phases 1-31):
  * - Groups 1-8: Original 17 tools
  * - Groups 9-29: Advanced tools (Phases 6-29)
+ * - Phase 31: Data & Persistence (manage_data)
  *
  * Usage:
  *   node tests/integration.mjs
@@ -91,6 +92,23 @@ const testCases = [
   { scenario: 'Cleanup: delete sphere reflection', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_SphereReflection' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete scene capture', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_SceneCapture2D' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_Cube' }, expected: 'success|not found' },
+  // Phase 31: Data & Persistence
+  { scenario: 'Data: Create data asset', toolName: 'manage_data', arguments: { action: 'create_data_asset', assetPath: `${ADV_TEST_FOLDER}/DA_TestItem` }, expected: 'success|already exists' },
+  { scenario: 'Data: Get data asset info', toolName: 'manage_data', arguments: { action: 'get_data_asset_info', assetPath: `${ADV_TEST_FOLDER}/DA_TestItem` }, expected: 'success|not found' },
+  { scenario: 'Data: Set data asset property', toolName: 'manage_data', arguments: { action: 'set_data_asset_property', assetPath: `${ADV_TEST_FOLDER}/DA_TestItem`, propertyName: 'itemName', value: 'Test Item' }, expected: 'success|not found' },
+  { scenario: 'Data: Create data table', toolName: 'manage_data', arguments: { action: 'create_data_table', assetPath: `${ADV_TEST_FOLDER}/DT_TestTable` }, expected: 'success|already exists' },
+  { scenario: 'Data: Get data table rows', toolName: 'manage_data', arguments: { action: 'get_data_table_rows', assetPath: `${ADV_TEST_FOLDER}/DT_TestTable` }, expected: 'success|not found' },
+  { scenario: 'Data: Empty data table', toolName: 'manage_data', arguments: { action: 'empty_data_table', assetPath: `${ADV_TEST_FOLDER}/DT_TestTable` }, expected: 'success|not found' },
+  { scenario: 'Data: Create curve table', toolName: 'manage_data', arguments: { action: 'create_curve_table', assetPath: `${ADV_TEST_FOLDER}/CT_TestCurve` }, expected: 'success|already exists' },
+  { scenario: 'Data: Add curve row', toolName: 'manage_data', arguments: { action: 'add_curve_row', assetPath: `${ADV_TEST_FOLDER}/CT_TestCurve`, rowName: 'DamageCurve', keys: [{ time: 0, value: 0 }, { time: 1, value: 100 }] }, expected: 'success|not found' },
+  { scenario: 'Data: Get curve value', toolName: 'manage_data', arguments: { action: 'get_curve_value', assetPath: `${ADV_TEST_FOLDER}/CT_TestCurve`, rowName: 'DamageCurve', time: 0.5 }, expected: 'success|not found' },
+  { scenario: 'Data: Create save game blueprint', toolName: 'manage_data', arguments: { action: 'create_save_game_blueprint', assetPath: `${ADV_TEST_FOLDER}/BP_TestSaveGame` }, expected: 'success|already exists' },
+  { scenario: 'Data: Does save exist', toolName: 'manage_data', arguments: { action: 'does_save_exist', slotName: 'IntegrationTestSlot' }, expected: 'success' },
+  { scenario: 'Data: Get save slot names', toolName: 'manage_data', arguments: { action: 'get_save_slot_names' }, expected: 'success' },
+  { scenario: 'Data: Get all gameplay tags', toolName: 'manage_data', arguments: { action: 'get_all_gameplay_tags' }, expected: 'success' },
+  { scenario: 'Data: Request gameplay tag', toolName: 'manage_data', arguments: { action: 'request_gameplay_tag', tagName: 'Ability.Sprint' }, expected: 'success' },
+  { scenario: 'Data: Read config value', toolName: 'manage_data', arguments: { action: 'read_config_value', section: '/Script/Engine.Engine', key: 'bEnableOnScreenDebugMessages', configFile: 'Engine' }, expected: 'success|not found' },
+  { scenario: 'Data: Get config section', toolName: 'manage_data', arguments: { action: 'get_config_section', section: '/Script/Engine.Engine', configFile: 'Engine' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }
 ];

@@ -922,6 +922,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleMediaAction(R, A, P, S);
                   });
+
+  // Phase 31: Data & Persistence
+  RegisterHandler(TEXT("manage_data"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageDataAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the
