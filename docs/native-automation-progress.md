@@ -439,7 +439,65 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 9. ~~Continue implementation of Phase 26 (Spline System) per Roadmap.~~ ✅ Done
 10. ~~Continue implementation of Phase 27 (PCG Framework) per Roadmap.~~ ✅ Done
 11. ~~Continue implementation of Phase 28 (Environment & Water Systems) per Roadmap.~~ ✅ Done
-12. Continue implementation of Phase 29 (Advanced Lighting & Rendering) per Roadmap.
+12. ~~Continue implementation of Phase 29 (Advanced Lighting & Rendering) per Roadmap.~~ ✅ Done
+13. Continue implementation of Phase 30 (Cinematics & Media) per Roadmap.
+
+---
+
+## Phase 29: Advanced Lighting & Rendering - Implementation Details
+
+**Status**: ✅ Complete (31 actions)
+
+**File**: `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_PostProcessHandlers.cpp`
+
+| Action | Status | Description |
+|--------|--------|-------------|
+| **Post-Process Volume Core** | | |
+| `create_post_process_volume` | ✅ Done | Creates PPV with bounds/unbound option |
+| `configure_pp_blend` | ✅ Done | Sets blend weight and radius |
+| `configure_pp_priority` | ✅ Done | Sets PPV priority |
+| `get_post_process_settings` | ✅ Done | Returns all settings as JSON |
+| **Visual Effects** | | |
+| `configure_bloom` | ✅ Done | Intensity, threshold, size scale |
+| `configure_dof` | ✅ Done | Focal distance, fstop, bokeh |
+| `configure_motion_blur` | ✅ Done | Amount, max velocity |
+| **Color & Lens** | | |
+| `configure_color_grading` | ✅ Done | Saturation, contrast, gamma, gain |
+| `configure_white_balance` | ✅ Done | Temperature, tint |
+| `configure_vignette` | ✅ Done | Intensity |
+| `configure_chromatic_aberration` | ✅ Done | Intensity, start offset |
+| `configure_film_grain` | ✅ Done | Intensity, response |
+| `configure_lens_flares` | ✅ Done | Intensity, tint, threshold |
+| **Reflection Captures** | | |
+| `create_sphere_reflection_capture` | ✅ Done | Spawns with influence radius |
+| `create_box_reflection_capture` | ✅ Done | Spawns with transition distance |
+| `create_planar_reflection` | ✅ Done | Spawns with screen percentage |
+| `recapture_scene` | ✅ Done | Recaptures all reflection captures |
+| **Ray Tracing** | | |
+| `configure_ray_traced_shadows` | ✅ Done | Enable via console variable |
+| `configure_ray_traced_gi` | ✅ Done | Enable via console variable |
+| `configure_ray_traced_reflections` | ✅ Done | Enable via console variable |
+| `configure_ray_traced_ao` | ✅ Done | Enable via console variable |
+| `configure_path_tracing` | ✅ Done | Enable via console variable |
+| **Scene Captures** | | |
+| `create_scene_capture_2d` | ✅ Done | Spawns with render target |
+| `create_scene_capture_cube` | ✅ Done | Spawns with cube render target |
+| `capture_scene` | ✅ Done | Triggers capture |
+| **Light Channels** | | |
+| `set_light_channel` | ✅ Done | Sets on light component |
+| `set_actor_light_channel` | ✅ Done | Sets on actor's primitives |
+| **Lightmass** | | |
+| `configure_lightmass_settings` | ✅ Done | Indirect lighting quality |
+| `build_lighting_quality` | ✅ Done | Triggers lighting build |
+| `configure_indirect_lighting_cache` | ✅ Done | ILC quality |
+| `configure_volumetric_lightmap` | ✅ Done | Detail cell size |
+
+### Implementation Notes
+
+- Post-process settings use proper `bOverride_*` flags before setting values
+- Ray tracing actions use console variables (`r.RayTracing.*`)
+- Reflection captures use `MarkDirtyForRecapture()` for scene updates
+- All actions implemented with real UE 5.6/5.7 APIs (no stubs)
 
 ---
 

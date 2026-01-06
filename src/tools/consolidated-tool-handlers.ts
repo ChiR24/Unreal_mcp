@@ -45,6 +45,7 @@ import { handleSplineTools } from './handlers/spline-handlers.js';
 import { handlePCGTools } from './handlers/pcg-handlers.js';
 import { handleWaterTools } from './handlers/water-handlers.js';
 import { handleWeatherTools } from './handlers/weather-handlers.js';
+import { handlePostProcessTools } from './handlers/post-process-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -462,6 +463,9 @@ function registerDefaultHandlers() {
 
   // 43. WEATHER SYSTEM (Phase 28)
   toolRegistry.register('manage_weather', async (args, tools) => await handleWeatherTools(getAction(args), args, tools));
+
+  // 44. POST-PROCESS & RENDERING SYSTEM (Phase 29)
+  toolRegistry.register('manage_post_process', async (args, tools) => await handlePostProcessTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

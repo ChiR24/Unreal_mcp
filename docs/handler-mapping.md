@@ -1189,3 +1189,47 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `configure_snow_particles` | `McpAutomationBridge_WeatherHandlers.cpp` | `HandleWeatherAction` | Spawns snow Niagara system with intensity/coverage |
 | **Lightning** | | | |
 | `configure_lightning` | `McpAutomationBridge_WeatherHandlers.cpp` | `HandleWeatherAction` | Spawns lightning actor with flash intensity/duration |
+
+## 42. Post-Process Manager (`manage_post_process`) - Phase 29
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Post-Process Volume Core** | | | |
+| `create_post_process_volume` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Creates APostProcessVolume with bounds/unbound option |
+| `configure_pp_blend` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Sets blend weight and radius |
+| `configure_pp_priority` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Sets PPV priority |
+| `get_post_process_settings` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Returns all PPV settings as JSON |
+| **Visual Effects** | | | |
+| `configure_bloom` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Intensity, threshold, size scale, convolution settings |
+| `configure_dof` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Focal distance, fstop, blade count, bokeh |
+| `configure_motion_blur` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Amount, max velocity, per-object size |
+| **Color & Lens Effects** | | | |
+| `configure_color_grading` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Saturation, contrast, gamma, gain, offset per zone |
+| `configure_white_balance` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Temperature, tint |
+| `configure_vignette` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Intensity |
+| `configure_chromatic_aberration` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Intensity, start offset |
+| `configure_film_grain` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Intensity, response, texture, jitter |
+| `configure_lens_flares` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Intensity, tint, bokeh size, threshold, texture |
+| **Reflection Captures** | | | |
+| `create_sphere_reflection_capture` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Spawns sphere reflection capture with influence radius |
+| `create_box_reflection_capture` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Spawns box reflection capture with transition distance |
+| `create_planar_reflection` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Spawns planar reflection with screen percentage |
+| `recapture_scene` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Recaptures all reflection captures in scene |
+| **Ray Tracing** | | | |
+| `configure_ray_traced_shadows` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Enable via console variable |
+| `configure_ray_traced_gi` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Enable via console variable |
+| `configure_ray_traced_reflections` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Enable via console variable |
+| `configure_ray_traced_ao` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Enable via console variable |
+| `configure_path_tracing` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Enable via console variable |
+| **Scene Captures** | | | |
+| `create_scene_capture_2d` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Spawns ASceneCapture2D with render target |
+| `create_scene_capture_cube` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Spawns ASceneCaptureCube with cube render target |
+| `capture_scene` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Triggers capture on scene capture actor |
+| **Light Channels** | | | |
+| `set_light_channel` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Sets light channels on light component |
+| `set_actor_light_channel` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Sets light channels on actor's primitive components |
+| **Lightmass** | | | |
+| `configure_lightmass_settings` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Indirect lighting quality, bounces |
+| `build_lighting_quality` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Triggers lighting build with quality preset |
+| `configure_indirect_lighting_cache` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | ILC quality settings |
+| `configure_volumetric_lightmap` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Volumetric lightmap detail cell size

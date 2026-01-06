@@ -2070,11 +2070,103 @@ static inline void SendStandardErrorResponse(
 #if WITH_EDITOR
 #include "Editor.h"
 #include "GameFramework/Actor.h"
+#include "EngineUtils.h"
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
 #include "EditorActorSubsystem.h"
 #endif
+
+// ============================================================================
+// GET ACTIVE WORLD HELPER
+// ============================================================================
+// Returns the currently active world - either PIE world if playing, or
+// the editor world otherwise.
+// ============================================================================
+
+static inline UWorld *GetActiveWorld() {
+  if (!GEditor)
+    return nullptr;
+
+  // Prefer PIE world if active
+  if (GEditor->PlayWorld) {
+    return GEditor->PlayWorld;
+  }
+
+  // Fall back to editor world
+  return GEditor->GetEditorWorldContext().World();
+}
+
+// ============================================================================
+// FIND ACTOR BY LABEL OR NAME TEMPLATE
+// ============================================================================
+// This template function finds an actor by its label or name, with proper
+// type casting. It checks both PIE and editor worlds.
+//
+// Usage:
+//   APostProcessVolume *PPV = FindActorByLabelOrName<APostProcessVolume>(TEXT("MyVolume"));
+//
+// ============================================================================
+
+template <typename T = AActor>
+static inline T *FindActorByLabelOrName(const FString &Target) {
+  static_assert(std::is_base_of<AActor, T>::value,
+                "T must be derived from AActor");
+
+  if (Target.IsEmpty() || !GEditor)
+    return nullptr;
+
+  // Priority: PIE World if active
+  if (GEditor->PlayWorld) {
+    for (TActorIterator<T> It(GEditor->PlayWorld); It; ++It) {
+      T *A = *It;
+      if (!A)
+        continue;
+      if (A->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
+          A->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
+          A->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) {
+        return A;
+      }
+    }
+  }
+
+  // Fall back to Editor World
+  UEditorActorSubsystem *ActorSS =
+      GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+  if (!ActorSS)
+    return nullptr;
+
+  TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
+  T *ExactMatch = nullptr;
+  TArray<T *> FuzzyMatches;
+
+  for (AActor *A : AllActors) {
+    T *TypedActor = Cast<T>(A);
+    if (!TypedActor)
+      continue;
+    if (TypedActor->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
+        TypedActor->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
+        TypedActor->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) {
+      ExactMatch = TypedActor;
+      break;
+    }
+    // Collect fuzzy matches
+    if (TypedActor->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase)) {
+      FuzzyMatches.Add(TypedActor);
+    }
+  }
+
+  if (ExactMatch) {
+    return ExactMatch;
+  }
+
+  // If no exact match, check fuzzy matches
+  if (FuzzyMatches.Num() == 1) {
+    return FuzzyMatches[0];
+  }
+
+  return nullptr;
+}
 
 template <typename T = AActor>
 static inline T *

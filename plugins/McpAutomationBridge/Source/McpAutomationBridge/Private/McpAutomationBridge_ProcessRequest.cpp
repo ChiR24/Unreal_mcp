@@ -555,6 +555,13 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
           }))
         return;
 
+      // Phase 29: Post-Process & Rendering
+      if (HandleAndLog(TEXT("HandlePostProcessAction"), [&]() {
+            return HandlePostProcessAction(RequestId, Action, Payload,
+                                           RequestingSocket);
+          }))
+        return;
+
       // 2. Execution & Build / Test Pipeline
       if (HandleAndLog(TEXT("HandlePipelineAction"), [&]() {
             return HandlePipelineAction(RequestId, Action, Payload,

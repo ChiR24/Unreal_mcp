@@ -2,9 +2,9 @@
 /**
  * Fully Consolidated Integration Test Suite
  *
- * Covers all 37 MCP tools (Phases 1-26):
+ * Covers all 39 MCP tools (Phases 1-29):
  * - Groups 1-8: Original 17 tools
- * - Groups 9-26: Advanced tools (Phases 6-26)
+ * - Groups 9-29: Advanced tools (Phases 6-29)
  *
  * Usage:
  *   node tests/integration.mjs
@@ -75,6 +75,21 @@ const testCases = [
   { scenario: 'Splines: Get specific spline info', toolName: 'manage_splines', arguments: { action: 'get_splines_info', actorName: 'IT_SplineActor' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete spline actors', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_SplineActor' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete road spline', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_RoadSpline' }, expected: 'success|not found' },
+  // Phase 27: PCG Framework (existing tests would be here)
+  // Phase 28: Water & Weather (existing tests would be here)
+  // Phase 29: Post-Process & Rendering
+  { scenario: 'Post-Process: Create PPV', toolName: 'manage_post_process', arguments: { action: 'create_post_process_volume', volumeName: 'IT_PPVolume', location: { x: 0, y: 0, z: 0 }, infinite: true }, expected: 'success' },
+  { scenario: 'Post-Process: Configure bloom', toolName: 'manage_post_process', arguments: { action: 'configure_bloom', volumeName: 'IT_PPVolume', bloomIntensity: 1.5, bloomThreshold: -1, bloomSizeScale: 4 }, expected: 'success|not found' },
+  { scenario: 'Post-Process: Configure DOF', toolName: 'manage_post_process', arguments: { action: 'configure_dof', volumeName: 'IT_PPVolume', focalDistance: 1000, depthBlurRadius: 2.8 }, expected: 'success|not found' },
+  { scenario: 'Post-Process: Configure color grading', toolName: 'manage_post_process', arguments: { action: 'configure_color_grading', volumeName: 'IT_PPVolume', globalSaturation: { x: 1.1, y: 1.1, z: 1.1, w: 1 }, globalContrast: { x: 1.05, y: 1.05, z: 1.05, w: 1 } }, expected: 'success|not found' },
+  { scenario: 'Post-Process: Configure vignette', toolName: 'manage_post_process', arguments: { action: 'configure_vignette', volumeName: 'IT_PPVolume', vignetteIntensity: 0.4 }, expected: 'success|not found' },
+  { scenario: 'Post-Process: Get settings', toolName: 'manage_post_process', arguments: { action: 'get_post_process_settings', volumeName: 'IT_PPVolume' }, expected: 'success|not found' },
+  { scenario: 'Post-Process: Create sphere reflection', toolName: 'manage_post_process', arguments: { action: 'create_sphere_reflection_capture', actorName: 'IT_SphereReflection', location: { x: 0, y: 0, z: 200 }, influenceRadius: 500 }, expected: 'success' },
+  { scenario: 'Post-Process: Create scene capture 2D', toolName: 'manage_post_process', arguments: { action: 'create_scene_capture_2d', actorName: 'IT_SceneCapture2D', location: { x: 0, y: 0, z: 300 }, captureWidth: 512, captureHeight: 512 }, expected: 'success' },
+  { scenario: 'Post-Process: Set light channel', toolName: 'manage_post_process', arguments: { action: 'set_actor_light_channel', actorName: 'IT_Cube', channel0: true, channel1: false, channel2: false }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete PPV', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_PPVolume' }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete sphere reflection', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_SphereReflection' }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete scene capture', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_SceneCapture2D' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_Cube' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }

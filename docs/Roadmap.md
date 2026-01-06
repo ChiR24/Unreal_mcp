@@ -10,8 +10,8 @@ A comprehensive development plan for the Unreal Engine Model Context Protocol (M
 |--------|-------|
 | **Total Phases** | 59 |
 | **Estimated Actions** | ~2,850 |
-| **Completed Phases** | 27 |
-| **In Progress** | Phase 5 (Infrastructure), Phase 28-35 (Advanced Systems) |
+| **Completed Phases** | 28 |
+| **In Progress** | Phase 5 (Infrastructure), Phase 30-35 (Advanced Systems) |
 | **Engine Support** | Unreal Engine 5.0 - 5.7 |
 
 ---
@@ -573,22 +573,30 @@ Complete environment (landscape, foliage, sky, fog, clouds, weather, water) syst
 
 ---
 
-## Phase 29: Advanced Lighting & Rendering 🔄
+## Phase 29: Advanced Lighting & Rendering ✅
 
-**Status**: Planned | **Tools**: `manage_lighting`, `manage_post_process` | **Actions**: ~50
+**Status**: Complete | **Tools**: `manage_lighting`, `manage_post_process` | **Actions**: 31
 
-Complete lighting and post-processing.
+Complete lighting and post-processing system.
 
-### Planned Capabilities
+### Implemented Capabilities
 
 | Category | Actions |
 |----------|---------|
+| Post-Process Core | `create_post_process_volume`, `configure_pp_blend`, `configure_pp_priority`, `get_post_process_settings` |
+| Visual Effects | `configure_bloom`, `configure_dof`, `configure_motion_blur` |
+| Color & Lens | `configure_color_grading`, `configure_white_balance`, `configure_vignette`, `configure_chromatic_aberration`, `configure_film_grain`, `configure_lens_flares` |
+| Reflections | `create_sphere_reflection_capture`, `create_box_reflection_capture`, `create_planar_reflection`, `recapture_scene` |
 | Ray Tracing | `configure_ray_traced_shadows`, `configure_ray_traced_gi`, `configure_ray_traced_reflections`, `configure_ray_traced_ao`, `configure_path_tracing` |
+| Scene Capture | `create_scene_capture_2d`, `create_scene_capture_cube`, `capture_scene` |
 | Light Channels | `set_light_channel`, `set_actor_light_channel` |
-| Lightmass | `configure_lightmass_settings`, `build_lighting_quality`, `configure_indirect_lighting_cache` |
-| Reflections | `create_sphere_reflection_capture`, `create_box_reflection_capture`, `configure_capture_resolution`, `recapture_scene`, `create_planar_reflection`, `configure_ssr_settings`, `configure_lumen_reflection_settings` |
-| Post Processing | `create_post_process_volume`, `configure_pp_blend`, color grading, bloom, DOF, motion blur, exposure, AO, vignette, chromatic aberration |
-| Scene Capture | `create_scene_capture_2d`, `create_scene_capture_cube`, `create_render_target`, `capture_scene` |
+| Lightmass | `configure_lightmass_settings`, `build_lighting_quality`, `configure_indirect_lighting_cache`, `configure_volumetric_lightmap` |
+
+### Notes
+- Post-process settings use proper `bOverride_*` flags before setting values
+- Ray tracing actions use console variables for configuration
+- Reflection captures support `MarkDirtyForRecapture()` for scene updates
+- All actions implemented with real UE 5.6/5.7 APIs
 
 ---
 

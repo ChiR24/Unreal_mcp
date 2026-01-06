@@ -5004,5 +5004,244 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         error: { type: 'string', description: 'Error message if failed.' }
       }
     }
+  },
+  // Phase 29: Advanced Lighting & Rendering
+  {
+    name: 'manage_post_process',
+    category: 'world',
+    description: 'Post-process volumes, bloom, DOF, motion blur, color grading, reflection captures, ray tracing, scene captures, and light channels.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Post-Process Core
+            'create_post_process_volume', 'configure_pp_blend', 'configure_pp_priority', 'get_post_process_settings',
+            // Visual Effects
+            'configure_bloom', 'configure_dof', 'configure_motion_blur',
+            // Color & Lens
+            'configure_color_grading', 'configure_white_balance', 'configure_vignette',
+            'configure_chromatic_aberration', 'configure_film_grain', 'configure_lens_flares',
+            // Reflection Captures
+            'create_sphere_reflection_capture', 'create_box_reflection_capture', 'create_planar_reflection', 'recapture_scene',
+            // Ray Tracing
+            'configure_ray_traced_shadows', 'configure_ray_traced_gi', 'configure_ray_traced_reflections',
+            'configure_ray_traced_ao', 'configure_path_tracing',
+            // Scene Captures
+            'create_scene_capture_2d', 'create_scene_capture_cube', 'capture_scene',
+            // Light Channels
+            'set_light_channel', 'set_actor_light_channel',
+            // Lightmass
+            'configure_lightmass_settings', 'build_lighting_quality', 'configure_indirect_lighting_cache', 'configure_volumetric_lightmap'
+          ],
+          description: 'Post-process/rendering action'
+        },
+        // Actor/Volume identification
+        actorName: commonSchemas.actorName,
+        volumeName: commonSchemas.volumeName,
+        name: commonSchemas.name,
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+        
+        // Post-Process Volume Core
+        infinite: { type: 'boolean', description: 'Whether volume is infinite (unbound) or uses extent.' },
+        blendRadius: { type: 'number', description: 'Blend radius for volume transitions.' },
+        blendWeight: { type: 'number', description: 'Blend weight (0.0 - 1.0).' },
+        priority: { type: 'number', description: 'Volume priority (higher = more important).' },
+        enabled: commonSchemas.enabled,
+        extent: commonSchemas.extent,
+        
+        // Bloom Settings
+        bloomIntensity: { type: 'number', description: 'Bloom intensity (0.0 - 8.0).' },
+        bloomThreshold: { type: 'number', description: 'Bloom threshold (-1 to 8, -1 = default).' },
+        bloomSizeScale: { type: 'number', description: 'Bloom size scale multiplier.' },
+        bloomConvolutionSize: { type: 'number', description: 'Bloom convolution kernel size.' },
+        lensFlareIntensity: { type: 'number', description: 'Lens flare intensity (0.0 - 8.0).' },
+        lensFlareTint: commonSchemas.colorObject,
+        lensFlareBokehSize: { type: 'number', description: 'Lens flare bokeh size.' },
+        lensFlareThreshold: { type: 'number', description: 'Lens flare threshold.' },
+        
+        // Depth of Field Settings
+        focalDistance: { type: 'number', description: 'Distance to focus plane in cm.' },
+        focalRegion: { type: 'number', description: 'Size of focal region in cm.' },
+        nearTransitionRegion: { type: 'number', description: 'Near blur transition region in cm.' },
+        farTransitionRegion: { type: 'number', description: 'Far blur transition region in cm.' },
+        depthBlurKmForMaxMobileDof: { type: 'number', description: 'Depth blur distance for mobile DOF.' },
+        depthBlurRadius: { type: 'number', description: 'Depth blur radius.' },
+        depthOfFieldMethod: { type: 'string', enum: ['BokehDOF', 'Gaussian', 'CircleDOF'], description: 'DOF rendering method.' },
+        nearBlurSize: { type: 'number', description: 'Near blur size (0.0 - 4.0).' },
+        farBlurSize: { type: 'number', description: 'Far blur size (0.0 - 4.0).' },
+        
+        // Motion Blur Settings
+        motionBlurAmount: { type: 'number', description: 'Motion blur amount (0.0 - 4.0).' },
+        motionBlurMax: { type: 'number', description: 'Max motion blur (% of screen).' },
+        motionBlurPerObjectSize: { type: 'number', description: 'Per-object motion blur size threshold.' },
+        motionBlurTargetFPS: { type: 'number', description: 'Target FPS for motion blur calculations.' },
+        
+        // Color Grading Settings
+        globalSaturation: commonSchemas.colorObject,
+        globalContrast: commonSchemas.colorObject,
+        globalGamma: commonSchemas.colorObject,
+        globalGain: commonSchemas.colorObject,
+        globalOffset: commonSchemas.colorObject,
+        colorOffset: commonSchemas.colorObject,
+        colorSaturation: commonSchemas.colorObject,
+        colorContrast: commonSchemas.colorObject,
+        colorGamma: commonSchemas.colorObject,
+        colorGain: commonSchemas.colorObject,
+        sceneColorTint: commonSchemas.colorObject,
+        
+        // White Balance
+        whiteTemp: { type: 'number', description: 'White balance temperature (1500-15000).' },
+        whiteTint: { type: 'number', description: 'White balance tint (-1.0 to 1.0).' },
+        
+        // Vignette
+        vignetteIntensity: { type: 'number', description: 'Vignette intensity (0.0 - 1.0).' },
+        
+        // Chromatic Aberration
+        chromaticAberrationIntensity: { type: 'number', description: 'Chromatic aberration intensity (0.0 - 1.0).' },
+        chromaticAberrationStartOffset: { type: 'number', description: 'Chromatic aberration start offset (0.0 - 1.0).' },
+        
+        // Film Grain
+        filmGrainIntensity: { type: 'number', description: 'Film grain intensity (0.0 - 1.0).' },
+        filmGrainIntensityShadows: { type: 'number', description: 'Film grain intensity in shadows.' },
+        filmGrainIntensityMidtones: { type: 'number', description: 'Film grain intensity in midtones.' },
+        filmGrainIntensityHighlights: { type: 'number', description: 'Film grain intensity in highlights.' },
+        filmGrainShadowsMax: { type: 'number', description: 'Film grain shadows max.' },
+        filmGrainHighlightsMin: { type: 'number', description: 'Film grain highlights min.' },
+        filmGrainHighlightsMax: { type: 'number', description: 'Film grain highlights max.' },
+        filmGrainTexelSize: { type: 'number', description: 'Film grain texel size.' },
+        
+        // Reflection Capture
+        influenceRadius: { type: 'number', description: 'Influence radius for reflection capture.' },
+        boxExtent: commonSchemas.extent,
+        boxTransitionDistance: { type: 'number', description: 'Box transition distance.' },
+        captureOffset: commonSchemas.location,
+        brightness: { type: 'number', description: 'Capture brightness.' },
+        screenPercentage: { type: 'number', description: 'Screen percentage for planar reflections (25-100).' },
+        
+        // Ray Tracing
+        rayTracedShadowsEnabled: { type: 'boolean', description: 'Enable ray traced shadows.' },
+        rayTracedShadowsSamplesPerPixel: { type: 'number', description: 'Samples per pixel for RT shadows.' },
+        rayTracedGIEnabled: { type: 'boolean', description: 'Enable ray traced global illumination.' },
+        rayTracedGIType: { type: 'string', enum: ['BruteForce', 'FinalGather'], description: 'Ray traced GI type.' },
+        rayTracedGIMaxBounces: { type: 'number', description: 'Max bounces for RT GI.' },
+        rayTracedGISamplesPerPixel: { type: 'number', description: 'Samples per pixel for RT GI.' },
+        rayTracedReflectionsEnabled: { type: 'boolean', description: 'Enable ray traced reflections.' },
+        rayTracedReflectionsMaxBounces: { type: 'number', description: 'Max bounces for RT reflections.' },
+        rayTracedReflectionsSamplesPerPixel: { type: 'number', description: 'Samples per pixel for RT reflections.' },
+        rayTracedReflectionsMaxRoughness: { type: 'number', description: 'Max roughness for RT reflections.' },
+        rayTracedAOEnabled: { type: 'boolean', description: 'Enable ray traced ambient occlusion.' },
+        rayTracedAOIntensity: { type: 'number', description: 'RT AO intensity.' },
+        rayTracedAORadius: { type: 'number', description: 'RT AO radius.' },
+        rayTracedAOSamplesPerPixel: { type: 'number', description: 'Samples per pixel for RT AO.' },
+        pathTracingEnabled: { type: 'boolean', description: 'Enable path tracing.' },
+        pathTracingSamplesPerPixel: { type: 'number', description: 'Samples per pixel for path tracing.' },
+        pathTracingMaxBounces: { type: 'number', description: 'Max bounces for path tracing.' },
+        pathTracingFilterWidth: { type: 'number', description: 'Filter width for path tracing.' },
+        
+        // Scene Capture
+        fov: { type: 'number', description: 'Field of view for scene capture.' },
+        captureResolution: { type: 'number', description: 'Capture resolution (width=height).' },
+        captureWidth: { type: 'number', description: 'Capture width in pixels.' },
+        captureHeight: { type: 'number', description: 'Capture height in pixels.' },
+        captureSource: {
+          type: 'string',
+          enum: ['SceneColorHDR', 'SceneColorHDRNoAlpha', 'FinalColorLDR', 'SceneColorSceneDepth', 'SceneDepth', 'DeviceDepth', 'Normal', 'BaseColor'],
+          description: 'What to capture.'
+        },
+        textureTargetPath: { type: 'string', description: 'Path to render target texture.' },
+        savePath: commonSchemas.savePath,
+        
+        // Light Channels
+        lightActorName: { type: 'string', description: 'Name of light actor to configure.' },
+        channel0: { type: 'boolean', description: 'Light channel 0 state.' },
+        channel1: { type: 'boolean', description: 'Light channel 1 state.' },
+        channel2: { type: 'boolean', description: 'Light channel 2 state.' },
+        
+        // Lightmass Settings
+        numIndirectBounces: { type: 'number', description: 'Number of indirect lighting bounces.' },
+        indirectLightingQuality: { type: 'number', description: 'Indirect lighting quality (0.0-1.0).' },
+        indirectLightingSmoothness: { type: 'number', description: 'Indirect lighting smoothness.' },
+        environmentColor: commonSchemas.colorObject,
+        environmentIntensity: { type: 'number', description: 'Environment lighting intensity.' },
+        staticLightingScaleX: { type: 'number', description: 'Static lighting scale X.' },
+        staticLightingScaleY: { type: 'number', description: 'Static lighting scale Y.' },
+        staticLightingScaleZ: { type: 'number', description: 'Static lighting scale Z.' },
+        
+        // Lighting Quality
+        quality: {
+          type: 'string',
+          enum: ['Preview', 'Medium', 'High', 'Production'],
+          description: 'Lighting build quality.'
+        },
+        
+        // Indirect Lighting Cache
+        indirectLightingCacheEnabled: { type: 'boolean', description: 'Enable indirect lighting cache.' },
+        indirectLightingCacheQuality: {
+          type: 'string',
+          enum: ['Point', 'Volume'],
+          description: 'Indirect lighting cache quality.'
+        },
+        
+        // Volumetric Lightmap
+        volumetricLightmapEnabled: { type: 'boolean', description: 'Enable volumetric lightmap.' },
+        volumetricLightmapDetailCellSize: { type: 'number', description: 'Volumetric lightmap detail cell size.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        actorName: commonSchemas.actorName,
+        volumeName: commonSchemas.stringProp,
+        capturePath: commonSchemas.stringProp,
+        textureTargetPath: commonSchemas.stringProp,
+        // Post-process settings output
+        postProcessSettings: {
+          type: 'object',
+          description: 'Current post-process settings.'
+        },
+        // Reflection capture info
+        reflectionCaptureInfo: {
+          type: 'object',
+          properties: {
+            type: commonSchemas.stringProp,
+            influenceRadius: commonSchemas.numberProp,
+            brightness: commonSchemas.numberProp
+          }
+        },
+        // Scene capture info
+        sceneCaptureInfo: {
+          type: 'object',
+          properties: {
+            captureSource: commonSchemas.stringProp,
+            resolution: commonSchemas.numberProp,
+            fov: commonSchemas.numberProp
+          }
+        },
+        // Light channel info
+        lightChannels: {
+          type: 'object',
+          properties: {
+            channel0: commonSchemas.booleanProp,
+            channel1: commonSchemas.booleanProp,
+            channel2: commonSchemas.booleanProp
+          }
+        },
+        // Lightmass info
+        lightmassInfo: {
+          type: 'object',
+          properties: {
+            numIndirectBounces: commonSchemas.numberProp,
+            indirectLightingQuality: commonSchemas.numberProp,
+            buildQuality: commonSchemas.stringProp
+          }
+        },
+        error: commonSchemas.stringProp
+      }
+    }
   }
 ];
