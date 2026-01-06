@@ -30,8 +30,8 @@ export class CommandValidator {
      */
     private static readonly FORBIDDEN_TOKENS = [
         // Shell commands (Windows/Unix)
-        'rm ', 'rm-', 'del ', 'format ', 'shutdown', 'reboot',
-        'rmdir', 'mklink', 'copy ', 'move ', 'start "', 'system(',
+        'rm-', 'shutdown', 'reboot',
+        'rmdir', 'mklink',
         // Python injection attempts
         'import os', 'import subprocess', 'subprocess.', 'os.system',
         'exec(', 'eval(', '__import__', 'import sys', 'import importlib',
@@ -42,6 +42,9 @@ export class CommandValidator {
      * Regex patterns for forbidden tokens to handle flexible whitespace.
      */
     private static readonly FORBIDDEN_PATTERNS = [
+        // Shell commands with flexible whitespace
+        // Catches 'rm ', 'rm\t', 'del ', 'del\n' etc.
+        /(?:rm|del|copy|move|format)\s+/i,
         // Python imports with whitespace
         /import\s+(?:os|sys|subprocess|importlib|shutil)/i,
         /from\s+(?:os|sys|subprocess|importlib|shutil)\s+import/i,
