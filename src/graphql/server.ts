@@ -42,6 +42,14 @@ export class GraphQLServer {
         credentials: process.env.GRAPHQL_CORS_CREDENTIALS === 'true'
       }
     };
+
+    // Security check: Forcefully disable credentials if origin is wildcard
+    if (this.config.cors.origin === '*' && this.config.cors.credentials) {
+      this.log.error(
+        "SECURITY: CORS 'origin: *' cannot be used with 'credentials: true'. Disabling credentials to prevent vulnerability."
+      );
+      this.config.cors.credentials = false;
+    }
   }
 
   async start(): Promise<void> {
