@@ -978,6 +978,22 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageAssetPluginsAction(R, A, P, S);
                   });
+
+  // Phase 38: Audio Middleware Plugins (Wwise, FMOD, Bink Video)
+  RegisterHandler(TEXT("manage_audio_middleware"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageAudioMiddlewareAction(R, A, P, S);
+                  });
+
+  // Phase 39: Live Link & Motion Capture
+  RegisterHandler(TEXT("manage_livelink"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageLiveLinkAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

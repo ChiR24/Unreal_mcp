@@ -3,10 +3,10 @@
 **Generated:** 2026-01-07 10:45:00 UTC
 **Commit:** latest
 **Branch:** pcg
-**Tools:** 52 consolidated tools
+**Tools:** 54 consolidated tools
 
 ## OVERVIEW
-MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C++ (Bridge Plugin). 52 action-based tools covering assets, actors, blueprints, levels, animation, VFX, audio, AI, gameplay systems, procedural content generation, water, weather, post-processing, cinematics, media, data persistence, build/deployment, testing, editor utilities, gameplay systems, character/avatar plugins (MetaHuman, Groom, Mutable, Ready Player Me), and asset/content plugins (Interchange, USD, Alembic, glTF, Datasmith, SpeedTree, Quixel/Fab, Houdini Engine, Substance).
+MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C++ (Bridge Plugin). 54 action-based tools covering assets, actors, blueprints, levels, animation, VFX, audio, AI, gameplay systems, procedural content generation, water, weather, post-processing, cinematics, media, data persistence, build/deployment, testing, editor utilities, gameplay systems, character/avatar plugins (MetaHuman, Groom, Mutable, Ready Player Me), asset/content plugins (Interchange, USD, Alembic, glTF, Datasmith, SpeedTree, Quixel/Fab, Houdini Engine, Substance), audio middleware plugins (Wwise, FMOD, Bink Video), and Live Link/motion capture integration.
 
 ## STRUCTURE
 ```

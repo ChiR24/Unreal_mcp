@@ -180,6 +180,28 @@ public class McpAutomationBridge : ModuleRules
             TryAddConditionalModule(Target, EngineDir, "SubstanceCore", "SubstanceCore");
             TryAddConditionalModule(Target, EngineDir, "SubstanceEditor", "SubstanceEditor");
 
+            // Phase 38: Audio Middleware Plugins
+            // Bink Video (built-in for UE 5.0+)
+            TryAddConditionalModule(Target, EngineDir, "BinkMediaPlayer", "BinkMediaPlayer");
+            // Wwise (external - Audiokinetic installed)
+            TryAddConditionalModule(Target, EngineDir, "AkAudio", "AkAudio");
+            TryAddConditionalModule(Target, EngineDir, "AkAudioEditor", "AkAudioEditor");
+            // FMOD (external - Firelight Technologies installed)
+            TryAddConditionalModule(Target, EngineDir, "FMODStudio", "FMODStudio");
+            TryAddConditionalModule(Target, EngineDir, "FMODStudioEditor", "FMODStudioEditor");
+
+            // Phase 39: Live Link & Motion Capture
+            // LiveLinkInterface (built-in since UE 4.19+)
+            TryAddConditionalModule(Target, EngineDir, "LiveLinkInterface", "LiveLinkInterface");
+            // LiveLink (main plugin module)
+            TryAddConditionalModule(Target, EngineDir, "LiveLink", "LiveLink");
+            // LiveLinkComponents (component controllers)
+            TryAddConditionalModule(Target, EngineDir, "LiveLinkComponents", "LiveLinkComponents");
+            // LiveLinkEditor (editor integration)
+            TryAddConditionalModule(Target, EngineDir, "LiveLinkEditor", "LiveLinkEditor");
+            // LiveLinkMessageBusFramework (network discovery)
+            TryAddConditionalModule(Target, EngineDir, "LiveLinkMessageBusFramework", "LiveLinkMessageBusFramework");
+
             // Ensure editor builds expose full Blueprint graph editing APIs.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=1");

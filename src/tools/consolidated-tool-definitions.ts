@@ -7175,5 +7175,639 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         }
       }
     }
+  },
+
+  // ===== PHASE 38: AUDIO MIDDLEWARE PLUGINS =====
+  {
+    name: 'manage_audio_middleware',
+    category: 'utility',
+    description: 'Audio middleware integration: Wwise (Audiokinetic), FMOD (Firelight), and Bink Video (built-in). Post events, manage banks, set parameters, play videos.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // WWISE (30 actions)
+            'connect_wwise_project', 'post_wwise_event', 'post_wwise_event_at_location',
+            'stop_wwise_event', 'set_rtpc_value', 'set_rtpc_value_on_actor', 'get_rtpc_value',
+            'set_wwise_switch', 'set_wwise_switch_on_actor', 'set_wwise_state',
+            'load_wwise_bank', 'unload_wwise_bank', 'get_loaded_banks',
+            'create_wwise_component', 'configure_wwise_component', 'configure_spatial_audio',
+            'configure_room', 'configure_portal', 'set_listener_position',
+            'get_wwise_event_duration', 'create_wwise_trigger', 'set_wwise_game_object',
+            'unset_wwise_game_object', 'post_wwise_trigger', 'set_aux_send',
+            'configure_occlusion', 'set_wwise_project_path', 'get_wwise_status',
+            'configure_wwise_init', 'restart_wwise_engine',
+            // FMOD (30 actions)
+            'connect_fmod_project', 'play_fmod_event', 'play_fmod_event_at_location',
+            'stop_fmod_event', 'set_fmod_parameter', 'set_fmod_global_parameter',
+            'get_fmod_parameter', 'load_fmod_bank', 'unload_fmod_bank', 'get_fmod_loaded_banks',
+            'create_fmod_component', 'configure_fmod_component', 'set_fmod_bus_volume',
+            'set_fmod_bus_paused', 'set_fmod_bus_mute', 'set_fmod_vca_volume',
+            'apply_fmod_snapshot', 'release_fmod_snapshot', 'set_fmod_listener_attributes',
+            'get_fmod_event_info', 'configure_fmod_occlusion', 'configure_fmod_attenuation',
+            'set_fmod_studio_path', 'get_fmod_status', 'configure_fmod_init',
+            'restart_fmod_engine', 'set_fmod_3d_attributes', 'get_fmod_memory_usage',
+            'pause_all_fmod_events', 'resume_all_fmod_events',
+            // BINK VIDEO (20 actions)
+            'create_bink_media_player', 'open_bink_video', 'play_bink', 'pause_bink',
+            'stop_bink', 'seek_bink', 'set_bink_looping', 'set_bink_rate',
+            'set_bink_volume', 'get_bink_duration', 'get_bink_time', 'get_bink_status',
+            'create_bink_texture', 'configure_bink_texture', 'set_bink_texture_player',
+            'draw_bink_to_texture', 'configure_bink_buffer_mode', 'configure_bink_sound_track',
+            'configure_bink_draw_style', 'get_bink_dimensions',
+            // Utility
+            'get_audio_middleware_info'
+          ],
+          description: 'Audio middleware action.'
+        },
+        
+        // Common parameters
+        actorName: commonSchemas.actorName,
+        assetPath: commonSchemas.assetPath,
+        componentName: { type: 'string', description: 'Audio component name.' },
+        
+        // WWISE parameters
+        eventName: { type: 'string', description: 'Wwise event name or path.' },
+        eventId: { type: 'number', description: 'Wwise event ID (optional alternative to name).' },
+        playingId: { type: 'number', description: 'Wwise playing ID for stopping specific instances.' },
+        rtpcName: { type: 'string', description: 'RTPC (Real-Time Parameter Control) name.' },
+        rtpcValue: { type: 'number', description: 'RTPC value.' },
+        rtpcInterpolation: { type: 'number', description: 'RTPC interpolation time in ms.' },
+        switchGroup: { type: 'string', description: 'Wwise switch group name.' },
+        switchValue: { type: 'string', description: 'Wwise switch value.' },
+        stateGroup: { type: 'string', description: 'Wwise state group name.' },
+        stateValue: { type: 'string', description: 'Wwise state value.' },
+        bankName: { type: 'string', description: 'SoundBank name.' },
+        bankPath: { type: 'string', description: 'SoundBank file path.' },
+        triggerName: { type: 'string', description: 'Wwise trigger name.' },
+        auxBusName: { type: 'string', description: 'Auxiliary bus name.' },
+        auxSendLevel: { type: 'number', description: 'Aux send level (0.0 - 1.0).' },
+        occlusionValue: { type: 'number', description: 'Occlusion value (0.0 - 1.0).' },
+        obstructionValue: { type: 'number', description: 'Obstruction value (0.0 - 1.0).' },
+        roomId: { type: 'number', description: 'Wwise room ID.' },
+        roomSettings: { 
+          type: 'object', 
+          properties: {
+            reverbLevel: { type: 'number' },
+            transmissionLoss: { type: 'number' },
+            roomGameObjectId: { type: 'number' }
+          },
+          description: 'Room acoustic settings.'
+        },
+        portalSettings: {
+          type: 'object',
+          properties: {
+            enabled: { type: 'boolean' },
+            openness: { type: 'number' }
+          },
+          description: 'Portal acoustic settings.'
+        },
+        wwiseProjectPath: { type: 'string', description: 'Path to Wwise project folder.' },
+        wwiseInitSettings: {
+          type: 'object',
+          properties: {
+            maxSoundPropagationDepth: { type: 'number' },
+            diffractionShadowAttenFactor: { type: 'number' },
+            diffractionShadowDegrees: { type: 'number' }
+          },
+          description: 'Wwise initialization settings.'
+        },
+        
+        // FMOD parameters
+        fmodEventPath: { type: 'string', description: 'FMOD event path (e.g., event:/Music/Theme).' },
+        fmodEventId: { type: 'string', description: 'FMOD event GUID.' },
+        fmodInstanceId: { type: 'number', description: 'FMOD event instance ID.' },
+        parameterName: { type: 'string', description: 'FMOD parameter name.' },
+        parameterValue: { type: 'number', description: 'FMOD parameter value.' },
+        fmodBankPath: { type: 'string', description: 'FMOD bank file path.' },
+        busPath: { type: 'string', description: 'FMOD bus path (e.g., bus:/Music).' },
+        busVolume: { type: 'number', description: 'Bus volume (0.0 - 1.0).' },
+        busPaused: { type: 'boolean', description: 'Bus paused state.' },
+        busMuted: { type: 'boolean', description: 'Bus muted state.' },
+        vcaPath: { type: 'string', description: 'FMOD VCA path.' },
+        vcaVolume: { type: 'number', description: 'VCA volume (0.0 - 1.0).' },
+        snapshotPath: { type: 'string', description: 'FMOD snapshot path.' },
+        snapshotIntensity: { type: 'number', description: 'Snapshot intensity (0.0 - 1.0).' },
+        listenerIndex: { type: 'number', description: 'Listener index.' },
+        fmod3DAttributes: {
+          type: 'object',
+          properties: {
+            position: { type: 'array', items: { type: 'number' } },
+            velocity: { type: 'array', items: { type: 'number' } },
+            forward: { type: 'array', items: { type: 'number' } },
+            up: { type: 'array', items: { type: 'number' } }
+          },
+          description: 'FMOD 3D attributes.'
+        },
+        fmodStudioPath: { type: 'string', description: 'Path to FMOD Studio project folder.' },
+        fmodInitSettings: {
+          type: 'object',
+          properties: {
+            maxChannels: { type: 'number' },
+            studioFlags: { type: 'number' },
+            liveupdatePort: { type: 'number' }
+          },
+          description: 'FMOD initialization settings.'
+        },
+        fmodOcclusionSettings: {
+          type: 'object',
+          properties: {
+            directOcclusion: { type: 'number' },
+            reverbOcclusion: { type: 'number' }
+          },
+          description: 'FMOD occlusion settings.'
+        },
+        fmodAttenuationSettings: {
+          type: 'object',
+          properties: {
+            minDistance: { type: 'number' },
+            maxDistance: { type: 'number' },
+            rolloff: { type: 'string', enum: ['Linear', 'Logarithmic', 'Custom'] }
+          },
+          description: 'FMOD attenuation settings.'
+        },
+        
+        // BINK VIDEO parameters
+        mediaPlayerName: { type: 'string', description: 'Bink media player asset name.' },
+        mediaPlayerPath: { type: 'string', description: 'Bink media player asset path.' },
+        videoUrl: { type: 'string', description: 'Video URL or file path.' },
+        seekTime: { type: 'number', description: 'Seek time in seconds.' },
+        looping: { type: 'boolean', description: 'Enable looping playback.' },
+        playbackRate: { type: 'number', description: 'Playback rate (1.0 = normal).' },
+        volume: { type: 'number', description: 'Volume (0.0 - 1.0).' },
+        textureName: { type: 'string', description: 'Bink texture asset name.' },
+        texturePath: { type: 'string', description: 'Bink texture asset path.' },
+        binkTextureSettings: {
+          type: 'object',
+          properties: {
+            addressX: { type: 'string', enum: ['Wrap', 'Clamp', 'Mirror'] },
+            addressY: { type: 'string', enum: ['Wrap', 'Clamp', 'Mirror'] },
+            pixelFormat: { type: 'string' },
+            tonemap: { type: 'boolean' },
+            outputNits: { type: 'number' },
+            alpha: { type: 'number' },
+            decodeSRGB: { type: 'boolean' }
+          },
+          description: 'Bink texture settings.'
+        },
+        bufferMode: { 
+          type: 'string', 
+          enum: ['Stream', 'PreloadAll', 'StreamUntilResident'], 
+          description: 'Bink buffer mode.' 
+        },
+        soundTrack: { 
+          type: 'string', 
+          enum: ['None', 'Simple', 'LanguageOverride', '51Surround', '51SurroundLanguageOverride', '71Surround', '71SurroundLanguageOverride'], 
+          description: 'Bink sound track mode.' 
+        },
+        soundTrackStart: { type: 'number', description: 'Sound track start index.' },
+        drawStyle: { 
+          type: 'string', 
+          enum: ['RenderToTexture', 'OverlayFillScreenWithAspectRatio', 'OverlayOriginalMovieSize', 'OverlayFillScreen', 'OverlaySpecificDestinationRectangle'], 
+          description: 'Bink draw style.' 
+        },
+        layerDepth: { type: 'number', description: 'Bink layer depth for overlay rendering.' },
+        drawToTexture: { type: 'string', description: 'Target texture for Draw operation.' },
+        drawTonemap: { type: 'boolean', description: 'Enable tonemapping when drawing.' },
+        drawAlpha: { type: 'number', description: 'Alpha value for drawing (0.0 - 1.0).' },
+        drawHDR: { type: 'boolean', description: 'Enable HDR when drawing.' },
+        
+        // Common transform for spatial audio
+        location: { type: 'array', items: { type: 'number' }, description: 'World location [X, Y, Z].' },
+        rotation: { type: 'array', items: { type: 'number' }, description: 'Rotation [Pitch, Yaw, Roll].' },
+        
+        // Common
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        error: commonSchemas.stringProp,
+        
+        // Plugin availability
+        middlewareInfo: {
+          type: 'object',
+          properties: {
+            wwiseAvailable: commonSchemas.booleanProp,
+            wwiseVersion: commonSchemas.stringProp,
+            fmodAvailable: commonSchemas.booleanProp,
+            fmodVersion: commonSchemas.stringProp,
+            binkAvailable: commonSchemas.booleanProp
+          },
+          description: 'Audio middleware availability (for get_audio_middleware_info).'
+        },
+        
+        // Wwise outputs
+        playingId: { type: 'number', description: 'Wwise playing ID.' },
+        rtpcValue: { type: 'number', description: 'Retrieved RTPC value.' },
+        eventDuration: { type: 'number', description: 'Event duration in ms.' },
+        loadedBanks: { type: 'array', items: { type: 'string' }, description: 'List of loaded bank names.' },
+        wwiseStatus: {
+          type: 'object',
+          properties: {
+            isInitialized: commonSchemas.booleanProp,
+            projectPath: commonSchemas.stringProp,
+            activeSounds: { type: 'number' }
+          },
+          description: 'Wwise status info.'
+        },
+        
+        // FMOD outputs
+        fmodInstanceId: { type: 'number', description: 'FMOD event instance ID.' },
+        fmodParameterValue: { type: 'number', description: 'Retrieved parameter value.' },
+        fmodLoadedBanks: { type: 'array', items: { type: 'string' }, description: 'List of loaded FMOD banks.' },
+        fmodEventInfo: {
+          type: 'object',
+          properties: {
+            path: commonSchemas.stringProp,
+            length: { type: 'number' },
+            is3D: commonSchemas.booleanProp,
+            isOneshot: commonSchemas.booleanProp,
+            minDistance: { type: 'number' },
+            maxDistance: { type: 'number' }
+          },
+          description: 'FMOD event information.'
+        },
+        fmodMemoryUsage: {
+          type: 'object',
+          properties: {
+            currentAllocated: { type: 'number' },
+            maxAllocated: { type: 'number' },
+            sampleDataAllocated: { type: 'number' }
+          },
+          description: 'FMOD memory usage stats.'
+        },
+        fmodStatus: {
+          type: 'object',
+          properties: {
+            isInitialized: commonSchemas.booleanProp,
+            studioPath: commonSchemas.stringProp,
+            activeEvents: { type: 'number' },
+            cpuDsp: { type: 'number' },
+            cpuUpdate: { type: 'number' }
+          },
+          description: 'FMOD status info.'
+        },
+        
+        // Bink outputs
+        mediaPlayerPath: commonSchemas.stringProp,
+        texturePath: commonSchemas.stringProp,
+        duration: { type: 'number', description: 'Video duration in seconds.' },
+        currentTime: { type: 'number', description: 'Current playback time in seconds.' },
+        binkStatus: {
+          type: 'object',
+          properties: {
+            isPlaying: commonSchemas.booleanProp,
+            isPaused: commonSchemas.booleanProp,
+            isStopped: commonSchemas.booleanProp,
+            isLooping: commonSchemas.booleanProp,
+            currentRate: { type: 'number' }
+          },
+          description: 'Bink playback status.'
+        },
+        binkDimensions: {
+          type: 'object',
+          properties: {
+            width: { type: 'number' },
+            height: { type: 'number' },
+            frameRate: { type: 'number' }
+          },
+          description: 'Bink video dimensions.'
+        }
+      }
+    }
+  },
+
+  // ===== PHASE 39: MOTION CAPTURE & LIVE LINK =====
+  {
+    name: 'manage_livelink',
+    category: 'utility',
+    description: 'Live Link motion capture: sources, subjects, presets, face tracking, skeleton mapping. Manage live data streaming from mocap systems.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // SOURCES (9 actions)
+            'add_livelink_source', 'remove_livelink_source', 'list_livelink_sources',
+            'get_source_status', 'get_source_type', 'configure_source_settings',
+            'add_messagebus_source', 'discover_messagebus_sources', 'remove_all_sources',
+            // SUBJECTS (15 actions)
+            'list_livelink_subjects', 'get_subject_role', 'get_subject_state',
+            'enable_subject', 'disable_subject', 'pause_subject', 'unpause_subject',
+            'clear_subject_frames', 'get_subject_static_data', 'get_subject_frame_data',
+            'add_virtual_subject', 'remove_virtual_subject', 'configure_subject_settings',
+            'get_subject_frame_times', 'get_subjects_by_role',
+            // PRESETS (8 actions)
+            'create_livelink_preset', 'load_livelink_preset', 'apply_livelink_preset',
+            'add_preset_to_client', 'build_preset_from_client', 'save_livelink_preset',
+            'get_preset_sources', 'get_preset_subjects',
+            // COMPONENTS (8 actions)
+            'add_livelink_controller', 'configure_livelink_controller', 'set_controller_subject',
+            'set_controller_role', 'enable_controller_evaluation', 'disable_controller_evaluation',
+            'set_controlled_component', 'get_controller_info',
+            // TIMECODE (6 actions)
+            'configure_livelink_timecode', 'set_timecode_provider', 'get_livelink_timecode',
+            'configure_time_sync', 'set_buffer_settings', 'configure_frame_interpolation',
+            // FACE TRACKING (8 actions)
+            'configure_face_source', 'configure_arkit_mapping', 'set_face_neutral_pose',
+            'get_face_blendshapes', 'configure_blendshape_remap', 'apply_face_to_skeletal_mesh',
+            'configure_face_retargeting', 'get_face_tracking_status',
+            // SKELETON MAPPING (6 actions)
+            'configure_skeleton_mapping', 'create_retarget_asset', 'configure_bone_mapping',
+            'configure_curve_mapping', 'apply_mocap_to_character', 'get_skeleton_mapping_info',
+            // UTILITY (4 actions)
+            'get_livelink_info', 'list_available_roles', 'list_source_factories', 'force_livelink_tick'
+          ],
+          description: 'Live Link action.'
+        },
+        
+        // Source identification
+        sourceGuid: { type: 'string', description: 'Live Link source GUID.' },
+        sourceType: { type: 'string', description: 'Source type (MessageBus, etc.).' },
+        sourceName: { type: 'string', description: 'Display name for the source.' },
+        connectionString: { type: 'string', description: 'Connection string for source factory.' },
+        
+        // Subject identification
+        subjectName: { type: 'string', description: 'Live Link subject name.' },
+        subjectKey: {
+          type: 'object',
+          properties: {
+            source: { type: 'string', description: 'Source GUID.' },
+            subjectName: { type: 'string', description: 'Subject name.' }
+          },
+          description: 'Full subject key (source + name).'
+        },
+        
+        // Role configuration
+        roleName: { 
+          type: 'string',
+          enum: ['Animation', 'Transform', 'Camera', 'Light', 'Basic', 'InputDevice', 'Locator'],
+          description: 'Live Link role type.'
+        },
+        
+        // Preset management
+        presetPath: commonSchemas.assetPath,
+        presetName: { type: 'string', description: 'Preset asset name.' },
+        recreateExisting: { type: 'boolean', description: 'Recreate existing sources/subjects when applying preset.' },
+        
+        // Component controller
+        actorName: commonSchemas.actorName,
+        componentName: { type: 'string', description: 'Component to control.' },
+        controllerClass: { type: 'string', description: 'Controller class name.' },
+        updateInEditor: { type: 'boolean', description: 'Update in editor mode.' },
+        disableWhenSpawnable: { type: 'boolean', description: 'Disable evaluation when actor is spawnable.' },
+        
+        // Source settings
+        sourceSettings: {
+          type: 'object',
+          properties: {
+            mode: { type: 'string', enum: ['LatestFrame', 'TimeSynchronized', 'ClosestToWorldTime'] },
+            bufferOffset: { type: 'number' },
+            timecodeFrameOffset: { type: 'number' },
+            subjectTimeOffset: { type: 'number' }
+          },
+          description: 'Source settings configuration.'
+        },
+        
+        // Subject settings
+        subjectSettings: {
+          type: 'object',
+          properties: {
+            enabled: { type: 'boolean' },
+            rebroadcastSubjectName: { type: 'string' },
+            translateToRole: { type: 'string' }
+          },
+          description: 'Subject settings configuration.'
+        },
+        
+        // Message Bus discovery
+        discoveryTimeout: { type: 'number', description: 'Discovery timeout in seconds.' },
+        machineAddress: { type: 'string', description: 'Machine address for message bus source.' },
+        
+        // Virtual subject
+        virtualSubjectClass: { type: 'string', description: 'Virtual subject class name.' },
+        
+        // Timecode
+        timecodeSettings: {
+          type: 'object',
+          properties: {
+            useTimecodeProvider: { type: 'boolean' },
+            frameRate: { type: 'string' },
+            useSystemTime: { type: 'boolean' },
+            timecodeSubject: { type: 'string' }
+          },
+          description: 'Timecode configuration.'
+        },
+        
+        // Buffer/Interpolation settings
+        bufferSettings: {
+          type: 'object',
+          properties: {
+            bufferMode: { type: 'string', enum: ['LatestFrame', 'ClosestToTimecode', 'Interpolate'] },
+            bufferSize: { type: 'number' },
+            maxLatenessCorrectionTime: { type: 'number' }
+          },
+          description: 'Frame buffer settings.'
+        },
+        
+        interpolationSettings: {
+          type: 'object',
+          properties: {
+            useInterpolation: { type: 'boolean' },
+            interpolationOffset: { type: 'number' }
+          },
+          description: 'Frame interpolation settings.'
+        },
+        
+        // Face tracking (ARKit/Live Link Face)
+        blendshapeMapping: {
+          type: 'object',
+          additionalProperties: { type: 'string' },
+          description: 'ARKit blendshape to morph target mapping.'
+        },
+        neutralPose: {
+          type: 'object',
+          additionalProperties: { type: 'number' },
+          description: 'Neutral pose blendshape values.'
+        },
+        faceRemapAsset: { type: 'string', description: 'Face remap asset path.' },
+        skeletalMeshPath: { type: 'string', description: 'Target skeletal mesh for face data.' },
+        
+        // Skeleton/Retargeting
+        retargetAssetPath: { type: 'string', description: 'Retarget asset path.' },
+        boneMapping: {
+          type: 'object',
+          additionalProperties: { type: 'string' },
+          description: 'Source to target bone name mapping.'
+        },
+        curveMapping: {
+          type: 'object',
+          additionalProperties: { type: 'string' },
+          description: 'Source to target curve name mapping.'
+        },
+        targetSkeleton: { type: 'string', description: 'Target skeleton asset path.' },
+        sourceSkeleton: { type: 'string', description: 'Source skeleton reference.' },
+        characterActor: { type: 'string', description: 'Target character actor name.' },
+        
+        // Include filters
+        includeDisabledSubjects: { type: 'boolean', description: 'Include disabled subjects in listings.' },
+        includeVirtualSubjects: { type: 'boolean', description: 'Include virtual subjects in listings.' },
+        
+        // Common
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        error: commonSchemas.stringProp,
+        
+        // Source outputs
+        sourceGuid: { type: 'string', description: 'Created/queried source GUID.' },
+        sources: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              guid: { type: 'string' },
+              type: { type: 'string' },
+              status: { type: 'string' },
+              machineName: { type: 'string' }
+            }
+          },
+          description: 'List of Live Link sources.'
+        },
+        
+        // Subject outputs
+        subjects: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              sourceGuid: { type: 'string' },
+              subjectName: { type: 'string' },
+              role: { type: 'string' },
+              enabled: { type: 'boolean' },
+              state: { type: 'string' }
+            }
+          },
+          description: 'List of Live Link subjects.'
+        },
+        subjectState: { 
+          type: 'string', 
+          enum: ['Connected', 'Unresponsive', 'Disconnected', 'InvalidOrDisabled', 'Paused', 'Unknown'],
+          description: 'Subject state.' 
+        },
+        subjectRole: { type: 'string', description: 'Subject role name.' },
+        
+        // Frame data outputs
+        staticData: {
+          type: 'object',
+          properties: {
+            boneNames: { type: 'array', items: { type: 'string' } },
+            boneParents: { type: 'array', items: { type: 'number' } },
+            curveNames: { type: 'array', items: { type: 'string' } }
+          },
+          description: 'Subject static data (skeleton info).'
+        },
+        frameData: {
+          type: 'object',
+          properties: {
+            worldTime: { type: 'number' },
+            timecode: { type: 'string' },
+            transforms: { type: 'array', items: { type: 'object' } },
+            curveValues: { type: 'array', items: { type: 'number' } }
+          },
+          description: 'Current frame data.'
+        },
+        frameTimes: { type: 'array', items: { type: 'number' }, description: 'Available frame times.' },
+        
+        // Preset outputs
+        presetPath: { type: 'string', description: 'Created preset path.' },
+        presetSources: { type: 'array', items: { type: 'object' }, description: 'Sources in preset.' },
+        presetSubjects: { type: 'array', items: { type: 'object' }, description: 'Subjects in preset.' },
+        
+        // Controller outputs
+        controllerInfo: {
+          type: 'object',
+          properties: {
+            subjectName: { type: 'string' },
+            role: { type: 'string' },
+            evaluating: { type: 'boolean' },
+            controlledComponent: { type: 'string' }
+          },
+          description: 'Controller component info.'
+        },
+        
+        // Timecode outputs
+        currentTimecode: { type: 'string', description: 'Current timecode value.' },
+        frameRate: { type: 'string', description: 'Current frame rate.' },
+        
+        // Face tracking outputs
+        blendshapes: { type: 'array', items: { type: 'string' }, description: 'Available blendshape names.' },
+        faceTrackingStatus: {
+          type: 'object',
+          properties: {
+            isTracking: { type: 'boolean' },
+            deviceName: { type: 'string' },
+            subjectName: { type: 'string' }
+          },
+          description: 'Face tracking status.'
+        },
+        
+        // Skeleton outputs
+        mappingInfo: {
+          type: 'object',
+          properties: {
+            boneMappingCount: { type: 'number' },
+            curveMappingCount: { type: 'number' },
+            targetSkeleton: { type: 'string' }
+          },
+          description: 'Skeleton mapping info.'
+        },
+        retargetAssetPath: { type: 'string', description: 'Created retarget asset path.' },
+        
+        // Discovery outputs
+        discoveredSources: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              machineName: { type: 'string' },
+              machineAddress: { type: 'string' },
+              sourceType: { type: 'string' }
+            }
+          },
+          description: 'Discovered message bus sources.'
+        },
+        
+        // Role/Factory outputs
+        availableRoles: { type: 'array', items: { type: 'string' }, description: 'Available Live Link role types.' },
+        sourceFactories: { type: 'array', items: { type: 'string' }, description: 'Available source factory types.' },
+        
+        // Live Link info
+        liveLinkInfo: {
+          type: 'object',
+          properties: {
+            isAvailable: { type: 'boolean' },
+            sourceCount: { type: 'number' },
+            subjectCount: { type: 'number' },
+            enabledSubjectCount: { type: 'number' }
+          },
+          description: 'General Live Link system info.'
+        }
+      }
+    }
   }
 ];

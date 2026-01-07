@@ -1784,3 +1784,170 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `configure_substance_output` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures Substance output |
 | `reimport_substance` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Reimports Substance asset |
 | `get_substance_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets Substance plugin status |
+
+## 53. Audio Middleware Manager (`manage_audio_middleware`) - Phase 38
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Wwise (30 actions)** | | | |
+| `connect_wwise_project` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Notes Wwise project path |
+| `post_wwise_event` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Posts Wwise event on actor |
+| `post_wwise_event_at_location` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Posts Wwise event at location |
+| `stop_wwise_event` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Stops Wwise event by ID |
+| `set_rtpc_value` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets global RTPC value |
+| `set_rtpc_value_on_actor` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets RTPC on actor |
+| `get_rtpc_value` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets RTPC value |
+| `set_wwise_switch` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets global switch |
+| `set_wwise_switch_on_actor` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets switch on actor |
+| `set_wwise_state` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets global state |
+| `load_wwise_bank` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Loads sound bank |
+| `unload_wwise_bank` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Unloads sound bank |
+| `get_loaded_banks` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets loaded banks info |
+| `create_wwise_component` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Creates AkComponent on actor |
+| `configure_wwise_component` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures AkComponent |
+| `configure_spatial_audio` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures spatial audio |
+| `configure_room` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures Wwise room |
+| `configure_portal` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures Wwise portal |
+| `set_listener_position` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets listener position |
+| `get_wwise_event_duration` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets event duration |
+| `create_wwise_trigger` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Creates Wwise trigger |
+| `set_wwise_game_object` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Registers game object |
+| `unset_wwise_game_object` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Unregisters game object |
+| `post_wwise_trigger` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Posts Wwise trigger |
+| `set_aux_send` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets aux send |
+| `configure_occlusion` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures occlusion |
+| `set_wwise_project_path` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets project path |
+| `get_wwise_status` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets Wwise status |
+| `configure_wwise_init` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures initialization |
+| `restart_wwise_engine` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Restarts Wwise engine |
+| **FMOD (30 actions)** | | | |
+| `connect_fmod_project` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Notes FMOD project path |
+| `play_fmod_event` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Plays FMOD event 2D |
+| `play_fmod_event_at_location` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Plays FMOD event at location |
+| `stop_fmod_event` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Stops FMOD events on actor |
+| `set_fmod_parameter` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets parameter on component |
+| `set_fmod_global_parameter` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets global parameter |
+| `get_fmod_parameter` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets parameter value |
+| `load_fmod_bank` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Loads FMOD bank |
+| `unload_fmod_bank` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Unloads FMOD bank |
+| `get_fmod_loaded_banks` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets loaded banks |
+| `create_fmod_component` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Creates FMOD component |
+| `configure_fmod_component` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures FMOD component |
+| `set_fmod_bus_volume` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets bus volume |
+| `set_fmod_bus_paused` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Pauses bus |
+| `set_fmod_bus_mute` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Mutes bus |
+| `set_fmod_vca_volume` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets VCA volume |
+| `apply_fmod_snapshot` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Applies FMOD snapshot |
+| `release_fmod_snapshot` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Releases FMOD snapshot |
+| `set_fmod_listener_attributes` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets listener attributes |
+| `get_fmod_event_info` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets event info |
+| `configure_fmod_occlusion` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures occlusion |
+| `configure_fmod_attenuation` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures attenuation |
+| `set_fmod_studio_path` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets studio path |
+| `get_fmod_status` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets FMOD status |
+| `configure_fmod_init` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures initialization |
+| `restart_fmod_engine` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Restarts FMOD engine |
+| `set_fmod_3d_attributes` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets 3D attributes |
+| `get_fmod_memory_usage` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets memory usage |
+| `pause_all_fmod_events` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Pauses all events |
+| `resume_all_fmod_events` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Resumes all events |
+| **Bink Video (20 actions)** | | | |
+| `create_bink_media_player` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Creates UBinkMediaPlayer |
+| `open_bink_video` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Opens video URL |
+| `play_bink` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Plays video |
+| `pause_bink` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Pauses video |
+| `stop_bink` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Stops video |
+| `seek_bink` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Seeks to time |
+| `set_bink_looping` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets looping |
+| `set_bink_rate` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets playback rate |
+| `set_bink_volume` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets volume |
+| `get_bink_duration` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets duration |
+| `get_bink_time` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets current time |
+| `get_bink_status` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets playback status |
+| `create_bink_texture` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Creates UBinkMediaTexture |
+| `configure_bink_texture` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures texture settings |
+| `set_bink_texture_player` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Assigns player to texture |
+| `draw_bink_to_texture` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Triggers draw |
+| `configure_bink_buffer_mode` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets buffer mode |
+| `configure_bink_sound_track` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Configures sound track |
+| `configure_bink_draw_style` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Sets draw style |
+| `get_bink_dimensions` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets video dimensions |
+| **Utility** | | | |
+| `get_audio_middleware_info` | `McpAutomationBridge_AudioMiddlewareHandlers.cpp` | `HandleManageAudioMiddlewareAction` | Gets middleware availability |
+
+## 54. Live Link & Motion Capture Manager (`manage_livelink`) - Phase 39
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Sources (9 actions)** | | | |
+| `add_livelink_source` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Adds Live Link source by factory |
+| `remove_livelink_source` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Removes source by GUID |
+| `list_livelink_sources` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Lists all active sources |
+| `get_source_status` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets source connection status |
+| `get_source_type` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets source type name |
+| `configure_source_settings` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Configures source settings |
+| `add_messagebus_source` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Adds Message Bus source |
+| `discover_messagebus_sources` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Discovers network sources |
+| `remove_all_sources` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Removes all sources |
+| **Subjects (15 actions)** | | | |
+| `list_livelink_subjects` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Lists all subjects |
+| `get_subject_role` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets subject role type |
+| `get_subject_state` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets subject enabled state |
+| `enable_subject` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Enables subject |
+| `disable_subject` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Disables subject |
+| `pause_subject` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Pauses subject updates |
+| `unpause_subject` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Resumes subject updates |
+| `clear_subject_frames` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Clears buffered frames |
+| `get_subject_static_data` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets static data (bones, etc.) |
+| `get_subject_frame_data` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets latest frame data |
+| `add_virtual_subject` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Creates virtual subject |
+| `remove_virtual_subject` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Removes virtual subject |
+| `configure_subject_settings` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Configures subject settings |
+| `get_subject_frame_times` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets frame timing info |
+| `get_subjects_by_role` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Filters subjects by role |
+| **Presets (8 actions)** | | | |
+| `create_livelink_preset` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Creates preset asset |
+| `load_livelink_preset` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Loads preset from path |
+| `apply_livelink_preset` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Applies preset to client |
+| `add_preset_to_client` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Adds preset sources to client |
+| `build_preset_from_client` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Builds preset from current config |
+| `save_livelink_preset` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Saves preset to disk |
+| `get_preset_sources` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets sources in preset |
+| `get_preset_subjects` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets subjects in preset |
+| **Components (8 actions)** | | | |
+| `add_livelink_controller` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Adds controller to actor |
+| `configure_livelink_controller` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Configures controller |
+| `set_controller_subject` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Sets controller subject |
+| `set_controller_role` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Sets controller role |
+| `enable_controller_evaluation` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Enables evaluation |
+| `disable_controller_evaluation` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Disables evaluation |
+| `set_controlled_component` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Sets component to control |
+| `get_controller_info` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets controller info |
+| **Timecode (6 actions)** | | | |
+| `configure_livelink_timecode` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Configures timecode |
+| `set_timecode_provider` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Sets timecode provider |
+| `get_livelink_timecode` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets current timecode |
+| `configure_time_sync` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Configures time sync |
+| `set_buffer_settings` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Sets buffer settings |
+| `configure_frame_interpolation` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Configures interpolation |
+| **Face Tracking (8 actions)** | | | |
+| `configure_face_source` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Configures face source |
+| `configure_arkit_mapping` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Maps ARKit blendshapes |
+| `set_face_neutral_pose` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Sets neutral pose |
+| `get_face_blendshapes` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets blendshape values |
+| `configure_blendshape_remap` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Remaps blendshapes |
+| `apply_face_to_skeletal_mesh` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Applies face data to mesh |
+| `configure_face_retargeting` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Configures retargeting |
+| `get_face_tracking_status` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets face tracking status |
+| **Skeleton Mapping (6 actions)** | | | |
+| `configure_skeleton_mapping` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Configures skeleton mapping |
+| `create_retarget_asset` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Creates retarget asset |
+| `configure_bone_mapping` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Maps bones |
+| `configure_curve_mapping` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Maps curves |
+| `apply_mocap_to_character` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Applies mocap to character |
+| `get_skeleton_mapping_info` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets mapping info |
+| **Utility (4 actions)** | | | |
+| `get_livelink_info` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Gets Live Link availability |
+| `list_available_roles` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Lists available roles |
+| `list_source_factories` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Lists source factories |
+| `force_livelink_tick` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Forces tick update |

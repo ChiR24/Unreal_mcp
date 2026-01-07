@@ -56,6 +56,8 @@ import { handleEditorUtilitiesTools } from './handlers/editor-utilities-handlers
 import { handleGameplaySystemsTools } from './handlers/gameplay-systems-handlers.js';
 import { handleCharacterAvatarTools } from './handlers/character-avatar-handlers.js';
 import { handleAssetPluginsTools } from './handlers/asset-plugins-handlers.js';
+import { handleAudioMiddlewareTools } from './handlers/audio-middleware-handlers.js';
+import { handleLiveLinkTools } from './handlers/livelink-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -506,6 +508,12 @@ function registerDefaultHandlers() {
 
   // 54. ASSET & CONTENT PLUGINS (Phase 37)
   toolRegistry.register('manage_asset_plugins', async (args, tools) => await handleAssetPluginsTools(getAction(args), args, tools));
+
+  // 55. AUDIO MIDDLEWARE PLUGINS (Phase 38)
+  toolRegistry.register('manage_audio_middleware', async (args, tools) => await handleAudioMiddlewareTools(getAction(args), args, tools));
+
+  // 56. LIVE LINK & MOTION CAPTURE (Phase 39)
+  toolRegistry.register('manage_livelink', async (args, tools) => await handleLiveLinkTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately
