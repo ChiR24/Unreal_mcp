@@ -6022,5 +6022,786 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         redirectorsFixed: commonSchemas.numberProp
       }
     }
+  },
+  
+  // ===== PHASE 34: EDITOR UTILITIES =====
+  {
+    name: 'manage_editor_utilities',
+    description: 'Editor automation: modes, content browser, selection, collision, physics materials, subsystems, timers, delegates, transactions.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Editor Modes
+            'set_editor_mode', 'configure_editor_preferences', 'set_grid_settings', 'set_snap_settings',
+            // Content Browser
+            'navigate_to_path', 'sync_to_asset', 'create_collection', 'add_to_collection', 'show_in_explorer',
+            // Selection
+            'select_actor', 'select_actors_by_class', 'select_actors_by_tag', 'deselect_all', 
+            'group_actors', 'ungroup_actors', 'get_selected_actors',
+            // Collision
+            'create_collision_channel', 'create_collision_profile', 'configure_channel_responses', 'get_collision_info',
+            // Physical Materials
+            'create_physical_material', 'set_friction', 'set_restitution', 'configure_surface_type', 'get_physical_material_info',
+            // Subsystems
+            'create_game_instance_subsystem', 'create_world_subsystem', 'create_local_player_subsystem', 'get_subsystem_info',
+            // Timers
+            'set_timer', 'clear_timer', 'clear_all_timers', 'get_active_timers',
+            // Delegates
+            'create_event_dispatcher', 'bind_to_event', 'unbind_from_event', 'broadcast_event', 'create_blueprint_interface',
+            // Transactions
+            'begin_transaction', 'end_transaction', 'cancel_transaction', 'undo', 'redo', 'get_transaction_history',
+            // Utility
+            'get_editor_utilities_info'
+          ],
+          description: 'Editor utility action.'
+        },
+        
+        // Editor Mode parameters
+        modeName: { type: 'string', description: 'Editor mode name (Default, Landscape, Foliage, Mesh, etc.).' },
+        category: { type: 'string', description: 'Preference category.' },
+        preferences: { type: 'object', description: 'Preference key-value pairs.' },
+        gridSize: { type: 'number', description: 'Grid size in units.' },
+        rotationSnap: { type: 'number', description: 'Rotation snap in degrees.' },
+        scaleSnap: { type: 'number', description: 'Scale snap increment.' },
+        
+        // Content Browser parameters
+        path: { type: 'string', description: 'Content browser path.' },
+        assetPath: commonSchemas.assetPath,
+        collectionName: { type: 'string', description: 'Collection name.' },
+        collectionType: { type: 'string', enum: ['Local', 'Private', 'Shared'], description: 'Collection type.' },
+        assetPaths: { type: 'array', items: { type: 'string' }, description: 'Array of asset paths.' },
+        
+        // Selection parameters
+        actorName: commonSchemas.actorName,
+        className: { type: 'string', description: 'Actor class name.' },
+        tag: { type: 'string', description: 'Actor tag.' },
+        addToSelection: { type: 'boolean', description: 'Add to existing selection instead of replacing.' },
+        groupName: { type: 'string', description: 'Group name for actor grouping.' },
+        
+        // Collision parameters
+        channelName: { type: 'string', description: 'Collision channel name.' },
+        channelType: { type: 'string', enum: ['Object', 'Trace'], description: 'Channel type.' },
+        profileName: { type: 'string', description: 'Collision profile name.' },
+        collisionEnabled: { type: 'boolean', description: 'Enable/disable collision.' },
+        objectType: { type: 'string', description: 'Object type for collision.' },
+        responses: { type: 'object', description: 'Channel response mappings (channel -> Ignore/Overlap/Block).' },
+        
+        // Physical Material parameters
+        materialName: { type: 'string', description: 'Physical material name.' },
+        friction: { type: 'number', description: 'Friction coefficient (0-1).' },
+        staticFriction: { type: 'number', description: 'Static friction coefficient.' },
+        restitution: { type: 'number', description: 'Restitution/bounciness (0-1).' },
+        density: { type: 'number', description: 'Material density.' },
+        surfaceType: { type: 'string', description: 'Surface type (Default, Grass, Metal, Wood, etc.).' },
+        
+        // Subsystem parameters
+        subsystemClass: { type: 'string', description: 'Subsystem class name.' },
+        parentClass: { type: 'string', description: 'Parent class for subsystem.' },
+        
+        // Timer parameters
+        timerHandle: { type: 'string', description: 'Timer handle identifier.' },
+        duration: { type: 'number', description: 'Timer duration in seconds.' },
+        looping: { type: 'boolean', description: 'Whether timer loops.' },
+        functionName: { type: 'string', description: 'Function to call.' },
+        targetActor: { type: 'string', description: 'Target actor for timer.' },
+        
+        // Delegate parameters
+        dispatcherName: { type: 'string', description: 'Event dispatcher name.' },
+        eventName: { type: 'string', description: 'Event name.' },
+        blueprintPath: commonSchemas.blueprintPath,
+        interfaceName: { type: 'string', description: 'Blueprint interface name.' },
+        functions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              inputs: { type: 'array', items: { type: 'object' } },
+              outputs: { type: 'array', items: { type: 'object' } }
+            }
+          },
+          description: 'Interface function definitions.'
+        },
+        
+        // Transaction parameters
+        transactionName: { type: 'string', description: 'Transaction name for undo/redo.' },
+        transactionId: { type: 'string', description: 'Transaction identifier.' },
+        
+        // Common
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        
+        // Editor mode info
+        currentMode: commonSchemas.stringProp,
+        availableModes: commonSchemas.arrayOfStrings,
+        
+        // Grid/snap settings
+        gridSettings: {
+          type: 'object',
+          properties: {
+            gridSize: commonSchemas.numberProp,
+            rotationSnap: commonSchemas.numberProp,
+            scaleSnap: commonSchemas.numberProp,
+            gridEnabled: commonSchemas.booleanProp
+          }
+        },
+        
+        // Selection results
+        selectedActors: commonSchemas.arrayOfStrings,
+        selectionCount: commonSchemas.numberProp,
+        
+        // Collision info
+        collisionChannels: commonSchemas.arrayOfStrings,
+        collisionProfiles: commonSchemas.arrayOfStrings,
+        
+        // Physical material info
+        physicalMaterialInfo: {
+          type: 'object',
+          properties: {
+            friction: commonSchemas.numberProp,
+            restitution: commonSchemas.numberProp,
+            density: commonSchemas.numberProp,
+            surfaceType: commonSchemas.stringProp
+          }
+        },
+        
+        // Subsystem info
+        subsystems: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              className: commonSchemas.stringProp,
+              type: commonSchemas.stringProp
+            }
+          }
+        },
+        
+        // Timer info
+        timerHandle: commonSchemas.stringProp,
+        activeTimers: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              handle: commonSchemas.stringProp,
+              functionName: commonSchemas.stringProp,
+              remainingTime: commonSchemas.numberProp,
+              looping: commonSchemas.booleanProp
+            }
+          }
+        },
+        
+        // Transaction info
+        transactionId: commonSchemas.stringProp,
+        transactionHistory: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: commonSchemas.stringProp,
+              name: commonSchemas.stringProp,
+              timestamp: commonSchemas.stringProp
+            }
+          }
+        },
+        canUndo: commonSchemas.booleanProp,
+        canRedo: commonSchemas.booleanProp
+      }
+    }
+  },
+  
+  // ==================== PHASE 35: ADDITIONAL GAMEPLAY SYSTEMS ====================
+  {
+    name: 'manage_gameplay_systems',
+    category: 'gameplay',
+    description: 'Common gameplay patterns: targeting, checkpoints, objectives, markers, photo mode, dialogue, instancing, HLOD, localization, scalability.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Targeting
+            'create_targeting_component', 'configure_lock_on_target', 'configure_aim_assist',
+            // Checkpoints
+            'create_checkpoint_actor', 'save_checkpoint', 'load_checkpoint',
+            // Objectives
+            'create_objective', 'set_objective_state', 'configure_objective_markers',
+            // World Markers
+            'create_world_marker', 'create_ping_system', 'configure_marker_widget',
+            // Photo Mode
+            'enable_photo_mode', 'configure_photo_mode_camera', 'take_photo_mode_screenshot',
+            // Quest/Dialogue
+            'create_quest_data_asset', 'create_dialogue_tree', 'add_dialogue_node', 'play_dialogue',
+            // Instancing
+            'create_instanced_static_mesh_component', 'create_hierarchical_instanced_static_mesh',
+            'add_instance', 'remove_instance', 'get_instance_count',
+            // HLOD
+            'create_hlod_layer', 'configure_hlod_settings', 'build_hlod', 'assign_actor_to_hlod',
+            // Localization
+            'create_string_table', 'add_string_entry', 'get_string_entry',
+            'import_localization', 'export_localization', 'set_culture', 'get_available_cultures',
+            // Scalability
+            'create_device_profile', 'configure_scalability_group', 'set_quality_level',
+            'get_scalability_settings', 'set_resolution_scale',
+            // Utility
+            'get_gameplay_systems_info'
+          ],
+          description: 'Gameplay systems action to perform.'
+        },
+        
+        // Targeting parameters
+        actorName: commonSchemas.actorName,
+        componentName: { type: 'string', description: 'Component name.' },
+        maxTargetingRange: { type: 'number', description: 'Max targeting range.' },
+        targetingConeAngle: { type: 'number', description: 'Targeting cone angle in degrees.' },
+        autoTargetNearest: { type: 'boolean', description: 'Auto-target nearest valid target.' },
+        lockOnRange: { type: 'number', description: 'Lock-on range.' },
+        lockOnAngle: { type: 'number', description: 'Lock-on cone angle.' },
+        breakLockOnDistance: { type: 'number', description: 'Distance to break lock-on.' },
+        stickyLockOn: { type: 'boolean', description: 'Whether lock-on is sticky.' },
+        lockOnSpeed: { type: 'number', description: 'Lock-on camera speed.' },
+        aimAssistStrength: { type: 'number', description: 'Aim assist strength (0-1).' },
+        aimAssistRadius: { type: 'number', description: 'Aim assist radius.' },
+        magnetismStrength: { type: 'number', description: 'Bullet magnetism strength.' },
+        bulletMagnetism: { type: 'boolean', description: 'Enable bullet magnetism.' },
+        frictionZoneScale: { type: 'number', description: 'Aim friction zone scale.' },
+        
+        // Checkpoint parameters
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+        checkpointId: { type: 'string', description: 'Unique checkpoint identifier.' },
+        autoActivate: { type: 'boolean', description: 'Auto-activate on overlap.' },
+        triggerRadius: { type: 'number', description: 'Trigger volume radius.' },
+        slotName: { type: 'string', description: 'Save slot name.' },
+        playerIndex: { type: 'number', description: 'Player index.' },
+        saveWorldState: { type: 'boolean', description: 'Save world state with checkpoint.' },
+        
+        // Objective parameters
+        objectiveId: { type: 'string', description: 'Unique objective identifier.' },
+        objectiveName: { type: 'string', description: 'Objective display name.' },
+        description: { type: 'string', description: 'Objective description.' },
+        objectiveType: { type: 'string', enum: ['Primary', 'Secondary', 'Optional'], description: 'Objective type.' },
+        initialState: { type: 'string', enum: ['Inactive', 'Active', 'Completed', 'Failed'], description: 'Initial state.' },
+        parentObjectiveId: { type: 'string', description: 'Parent objective ID for sub-objectives.' },
+        trackingType: { type: 'string', enum: ['None', 'Count', 'Boolean', 'Custom'], description: 'Progress tracking type.' },
+        state: { type: 'string', description: 'Objective state.' },
+        progress: { type: 'number', description: 'Objective progress (0-1).' },
+        notify: { type: 'boolean', description: 'Show notification on state change.' },
+        showOnCompass: { type: 'boolean', description: 'Show on compass.' },
+        showOnMap: { type: 'boolean', description: 'Show on map.' },
+        showInWorld: { type: 'boolean', description: 'Show in world as 3D marker.' },
+        markerIcon: { type: 'string', description: 'Marker icon path.' },
+        markerColor: { type: 'object', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } }, description: 'Marker color.' },
+        distanceDisplay: { type: 'boolean', description: 'Show distance to objective.' },
+        
+        // World Marker parameters
+        markerId: { type: 'string', description: 'Unique marker identifier.' },
+        markerType: { type: 'string', enum: ['Generic', 'Enemy', 'Loot', 'Objective', 'Custom'], description: 'Marker type.' },
+        iconPath: { type: 'string', description: 'Icon texture path.' },
+        label: { type: 'string', description: 'Marker label text.' },
+        color: { type: 'object', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } }, description: 'Marker color.' },
+        lifetime: { type: 'number', description: 'Marker lifetime (0 = persistent).' },
+        visibleRange: { type: 'number', description: 'Visible range (0 = always).' },
+        maxPingsPerPlayer: { type: 'number', description: 'Max pings per player.' },
+        pingLifetime: { type: 'number', description: 'Ping lifetime in seconds.' },
+        pingCooldown: { type: 'number', description: 'Ping cooldown in seconds.' },
+        replicatedPings: { type: 'boolean', description: 'Replicate pings to other players.' },
+        contextualPings: { type: 'boolean', description: 'Enable contextual ping types.' },
+        widgetClass: { type: 'string', description: 'Widget class path.' },
+        clampToScreen: { type: 'boolean', description: 'Clamp marker to screen edge.' },
+        fadeWithDistance: { type: 'boolean', description: 'Fade marker with distance.' },
+        fadeStartDistance: { type: 'number', description: 'Distance to start fading.' },
+        fadeEndDistance: { type: 'number', description: 'Distance to fully fade.' },
+        scaleWithDistance: { type: 'boolean', description: 'Scale marker with distance.' },
+        minScale: { type: 'number', description: 'Minimum scale.' },
+        maxScale: { type: 'number', description: 'Maximum scale.' },
+        
+        // Photo Mode parameters
+        enabled: { type: 'boolean', description: 'Enable/disable photo mode.' },
+        pauseGame: { type: 'boolean', description: 'Pause game in photo mode.' },
+        hideUI: { type: 'boolean', description: 'Hide UI in photo mode.' },
+        hidePlayer: { type: 'boolean', description: 'Hide player character.' },
+        allowCameraMovement: { type: 'boolean', description: 'Allow free camera movement.' },
+        maxCameraDistance: { type: 'number', description: 'Max camera distance from player.' },
+        fov: { type: 'number', description: 'Field of view.' },
+        aperture: { type: 'number', description: 'Camera aperture.' },
+        focalDistance: { type: 'number', description: 'Focal distance.' },
+        depthOfField: { type: 'boolean', description: 'Enable depth of field.' },
+        exposure: { type: 'number', description: 'Exposure compensation.' },
+        contrast: { type: 'number', description: 'Contrast multiplier.' },
+        saturation: { type: 'number', description: 'Saturation multiplier.' },
+        vignetteIntensity: { type: 'number', description: 'Vignette intensity.' },
+        filmGrain: { type: 'number', description: 'Film grain intensity.' },
+        filename: { type: 'string', description: 'Screenshot filename.' },
+        resolution: { type: 'string', description: 'Screenshot resolution (e.g. 1920x1080).' },
+        format: { type: 'string', enum: ['PNG', 'JPEG', 'EXR'], description: 'Image format.' },
+        superSampling: { type: 'number', description: 'Super sampling multiplier.' },
+        includeUI: { type: 'boolean', description: 'Include UI in screenshot.' },
+        
+        // Quest/Dialogue parameters
+        assetPath: commonSchemas.assetPath,
+        questId: { type: 'string', description: 'Unique quest identifier.' },
+        questName: { type: 'string', description: 'Quest display name.' },
+        questType: { type: 'string', enum: ['MainQuest', 'SideQuest', 'Daily', 'Event'], description: 'Quest type.' },
+        prerequisites: { type: 'array', items: { type: 'string' }, description: 'Quest prerequisites.' },
+        rewards: { type: 'array', items: { type: 'object' }, description: 'Quest rewards.' },
+        dialogueName: { type: 'string', description: 'Dialogue tree name.' },
+        startNodeId: { type: 'string', description: 'Starting node ID.' },
+        nodeId: { type: 'string', description: 'Dialogue node ID.' },
+        speakerId: { type: 'string', description: 'Speaker identifier.' },
+        text: { type: 'string', description: 'Dialogue text.' },
+        audioAsset: { type: 'string', description: 'Audio asset path.' },
+        duration: { type: 'number', description: 'Node duration (0 = auto from audio).' },
+        choices: { type: 'array', items: { type: 'object', properties: { text: { type: 'string' }, nextNodeId: { type: 'string' }, condition: { type: 'string' } } }, description: 'Dialogue choices.' },
+        nextNodeId: { type: 'string', description: 'Next node ID.' },
+        events: { type: 'array', items: { type: 'string' }, description: 'Events to trigger.' },
+        targetActor: { type: 'string', description: 'Target actor for dialogue.' },
+        skipable: { type: 'boolean', description: 'Whether dialogue is skipable.' },
+        
+        // Instancing parameters
+        meshPath: { type: 'string', description: 'Static mesh asset path.' },
+        materialPath: { type: 'string', description: 'Material asset path.' },
+        cullDistance: { type: 'number', description: 'Cull distance (0 = no culling).' },
+        castShadow: { type: 'boolean', description: 'Cast shadows.' },
+        minLOD: { type: 'number', description: 'Minimum LOD level.' },
+        useGpuLodSelection: { type: 'boolean', description: 'Use GPU LOD selection.' },
+        transform: {
+          type: 'object',
+          properties: {
+            location: commonSchemas.location,
+            rotation: commonSchemas.rotation,
+            scale: commonSchemas.scale
+          },
+          description: 'Instance transform.'
+        },
+        instances: { type: 'array', items: { type: 'object' }, description: 'Array of instance transforms.' },
+        instanceIndex: { type: 'number', description: 'Instance index.' },
+        instanceIndices: { type: 'array', items: { type: 'number' }, description: 'Array of instance indices.' },
+        
+        // HLOD parameters
+        layerName: { type: 'string', description: 'HLOD layer name.' },
+        cellSize: { type: 'number', description: 'HLOD cell size.' },
+        loadingRange: { type: 'number', description: 'HLOD loading range.' },
+        parentLayer: { type: 'string', description: 'Parent HLOD layer.' },
+        hlodBuildMethod: { type: 'string', enum: ['MeshMerge', 'MeshSimplify', 'MeshApproximate', 'Custom'], description: 'HLOD build method.' },
+        minDrawDistance: { type: 'number', description: 'Minimum draw distance.' },
+        spatiallyLoaded: { type: 'boolean', description: 'Spatially loaded.' },
+        alwaysLoaded: { type: 'boolean', description: 'Always loaded.' },
+        buildAll: { type: 'boolean', description: 'Build all HLOD layers.' },
+        forceRebuild: { type: 'boolean', description: 'Force rebuild.' },
+        
+        // Localization parameters
+        tableName: { type: 'string', description: 'String table name.' },
+        namespace: { type: 'string', description: 'Localization namespace.' },
+        key: { type: 'string', description: 'String key.' },
+        sourceString: { type: 'string', description: 'Source string.' },
+        comment: { type: 'string', description: 'Translator comment.' },
+        sourcePath: { type: 'string', description: 'Source file path.' },
+        targetPath: { type: 'string', description: 'Target asset path.' },
+        outputPath: { type: 'string', description: 'Output file path.' },
+        culture: { type: 'string', description: 'Culture code (e.g. en, fr, de).' },
+        saveToConfig: { type: 'boolean', description: 'Save culture to config.' },
+        
+        // Scalability parameters
+        profileName: { type: 'string', description: 'Device profile name.' },
+        baseProfile: { type: 'string', description: 'Base device profile.' },
+        deviceType: { type: 'string', enum: ['Desktop', 'Mobile', 'Console'], description: 'Device type.' },
+        cvars: { type: 'object', additionalProperties: true, description: 'Console variables.' },
+        groupName: { type: 'string', description: 'Scalability group name.' },
+        qualityLevel: { type: 'number', description: 'Quality level (0-4).' },
+        overallQuality: { type: 'number', description: 'Overall quality level (0-4).' },
+        applyImmediately: { type: 'boolean', description: 'Apply changes immediately.' },
+        scale: { type: 'number', description: 'Resolution scale (0-100).' },
+        
+        // Common
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        
+        // Targeting info
+        targetingRange: commonSchemas.numberProp,
+        lockOnEnabled: commonSchemas.booleanProp,
+        currentTarget: commonSchemas.stringProp,
+        
+        // Checkpoint info
+        checkpointSaved: commonSchemas.booleanProp,
+        checkpointLoaded: commonSchemas.booleanProp,
+        
+        // Objective info
+        objectives: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: commonSchemas.stringProp,
+              name: commonSchemas.stringProp,
+              state: commonSchemas.stringProp,
+              progress: commonSchemas.numberProp
+            }
+          }
+        },
+        
+        // Marker info
+        markersActive: commonSchemas.numberProp,
+        
+        // Photo mode info
+        photoModeActive: commonSchemas.booleanProp,
+        screenshotPath: commonSchemas.stringProp,
+        
+        // Dialogue info
+        dialogueActive: commonSchemas.booleanProp,
+        currentNode: commonSchemas.stringProp,
+        
+        // Instance info
+        instanceCount: commonSchemas.numberProp,
+        instancesAdded: commonSchemas.numberProp,
+        instancesRemoved: commonSchemas.numberProp,
+        
+        // HLOD info
+        hlodLayers: commonSchemas.arrayOfStrings,
+        hlodBuilt: commonSchemas.booleanProp,
+        
+        // Localization info
+        stringTableEntries: commonSchemas.numberProp,
+        availableCultures: commonSchemas.arrayOfStrings,
+        currentCulture: commonSchemas.stringProp,
+        localizedString: commonSchemas.stringProp,
+        
+        // Scalability info
+        deviceProfiles: commonSchemas.arrayOfStrings,
+        currentQuality: commonSchemas.numberProp,
+        resolutionScale: commonSchemas.numberProp,
+        scalabilitySettings: {
+          type: 'object',
+          properties: {
+            viewDistance: commonSchemas.numberProp,
+            antiAliasing: commonSchemas.numberProp,
+            postProcess: commonSchemas.numberProp,
+            shadow: commonSchemas.numberProp,
+            texture: commonSchemas.numberProp,
+            effects: commonSchemas.numberProp,
+            foliage: commonSchemas.numberProp,
+            shading: commonSchemas.numberProp
+          }
+        }
+      }
+    }
+  },
+
+  // ===== PHASE 36: CHARACTER & AVATAR PLUGINS =====
+  {
+    name: 'manage_character_avatar',
+    category: 'authoring',
+    description: 'MetaHuman, Groom/Hair, Mutable (Customizable), and Ready Player Me avatar systems. Import, spawn, customize, and configure character avatars.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // MetaHuman (18 actions)
+            'import_metahuman', 'spawn_metahuman_actor', 'get_metahuman_component',
+            'set_body_type', 'set_face_parameter', 'set_skin_tone', 'set_hair_style', 'set_eye_color',
+            'configure_metahuman_lod', 'enable_body_correctives', 'enable_neck_correctives',
+            'set_quality_level', 'configure_face_rig', 'set_body_part',
+            'get_metahuman_info', 'list_available_presets', 'apply_preset', 'export_metahuman_settings',
+            // Groom/Hair (14 actions)
+            'create_groom_asset', 'import_groom', 'create_groom_binding', 'spawn_groom_actor',
+            'attach_groom_to_skeletal_mesh', 'configure_hair_simulation', 'set_hair_width',
+            'set_hair_root_scale', 'set_hair_tip_scale', 'set_hair_color',
+            'configure_hair_physics', 'configure_hair_rendering', 'enable_hair_simulation', 'get_groom_info',
+            // Mutable/Customizable (16 actions)
+            'create_customizable_object', 'compile_customizable_object', 'create_customizable_instance',
+            'set_bool_parameter', 'set_int_parameter', 'set_float_parameter', 'set_color_parameter',
+            'set_vector_parameter', 'set_texture_parameter', 'set_transform_parameter', 'set_projector_parameter',
+            'update_skeletal_mesh', 'bake_customizable_instance', 'get_parameter_info', 'get_instance_info',
+            'spawn_customizable_actor',
+            // Ready Player Me (12 actions)
+            'load_avatar_from_url', 'load_avatar_from_glb', 'create_rpm_actor', 'apply_avatar_to_character',
+            'configure_rpm_materials', 'set_rpm_outfit', 'get_avatar_metadata', 'cache_avatar',
+            'clear_avatar_cache', 'create_rpm_animation_blueprint', 'retarget_rpm_animation', 'get_rpm_info'
+          ],
+          description: 'Character avatar action to perform.'
+        },
+        
+        // Common parameters
+        name: commonSchemas.name,
+        actorName: commonSchemas.actorName,
+        sourcePath: commonSchemas.sourcePath,
+        destinationPath: commonSchemas.destinationPath,
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+        scale: commonSchemas.scale,
+        
+        // MetaHuman parameters
+        metahumanPath: { type: 'string', description: 'Path to MetaHuman asset.' },
+        bodyType: { type: 'string', enum: ['Masculine', 'Feminine'], description: 'MetaHuman body type.' },
+        parameterName: commonSchemas.parameterName,
+        parameterValue: { type: 'number', description: 'Parameter value (0-1 for face params).' },
+        skinTone: { type: 'number', description: 'Skin tone index or value.' },
+        hairStylePath: { type: 'string', description: 'Path to hair style asset.' },
+        eyeColor: {
+          type: 'object',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } },
+          description: 'Eye color (RGBA 0-1).'
+        },
+        lodLevel: { type: 'number', description: 'LOD level (0 = highest quality).' },
+        lodScreenSize: { type: 'number', description: 'LOD screen size threshold.' },
+        rigLogicLODThreshold: { type: 'number', description: 'RigLogic LOD threshold.' },
+        enableBodyCorrectives: { type: 'boolean', description: 'Enable body correctives.' },
+        enableNeckCorrectives: { type: 'boolean', description: 'Enable neck correctives.' },
+        qualityLevel: { type: 'string', enum: ['Low', 'Medium', 'High', 'Cinematic'], description: 'Quality preset.' },
+        bodyPartType: { type: 'string', enum: ['Face', 'Body', 'Outfit', 'Accessories'], description: 'Body part type.' },
+        bodyPartPath: { type: 'string', description: 'Path to body part asset.' },
+        presetName: { type: 'string', description: 'Preset name.' },
+        exportPath: commonSchemas.outputPath,
+        
+        // Groom/Hair parameters
+        groomAssetPath: { type: 'string', description: 'Path to groom asset.' },
+        groomBindingPath: { type: 'string', description: 'Path to groom binding asset.' },
+        skeletalMeshPath: { type: 'string', description: 'Path to skeletal mesh.' },
+        hairWidth: { type: 'number', description: 'Hair strand width.' },
+        hairRootScale: { type: 'number', description: 'Hair root scale.' },
+        hairTipScale: { type: 'number', description: 'Hair tip scale.' },
+        hairColor: {
+          type: 'object',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } },
+          description: 'Hair color (RGBA 0-1).'
+        },
+        enableSimulation: { type: 'boolean', description: 'Enable hair simulation.' },
+        simulationSettings: {
+          type: 'object',
+          properties: {
+            damping: { type: 'number', description: 'Damping (0-1).' },
+            stiffness: { type: 'number', description: 'Stiffness (0-1).' },
+            gravity: { type: 'number', description: 'Gravity scale.' },
+            iterations: { type: 'number', description: 'Solver iterations.' }
+          },
+          description: 'Hair simulation settings.'
+        },
+        physicsSettings: {
+          type: 'object',
+          properties: {
+            solverIterations: { type: 'number' },
+            subSteps: { type: 'number' },
+            maxStretch: { type: 'number' },
+            inertiaScale: { type: 'number' }
+          },
+          description: 'Hair physics settings.'
+        },
+        renderingSettings: {
+          type: 'object',
+          properties: {
+            renderMode: { type: 'string', enum: ['Strands', 'Cards', 'Meshes'] },
+            shadowMode: { type: 'string', enum: ['None', 'CastShadow', 'CastDeepShadow'] },
+            geometryType: { type: 'string', enum: ['Strands', 'Cards', 'Meshes'] },
+            hairDensity: { type: 'number' }
+          },
+          description: 'Hair rendering settings.'
+        },
+        
+        // Mutable/Customizable parameters
+        objectPath: { type: 'string', description: 'Path to Customizable Object.' },
+        instancePath: { type: 'string', description: 'Path to Customizable Object Instance.' },
+        boolValue: { type: 'boolean', description: 'Boolean parameter value.' },
+        intValue: { type: 'number', description: 'Integer parameter value.' },
+        floatValue: { type: 'number', description: 'Float parameter value.' },
+        colorValue: {
+          type: 'object',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } },
+          description: 'Color parameter value (RGBA 0-1).'
+        },
+        vectorValue: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Vector parameter value.'
+        },
+        texturePath: commonSchemas.texturePath,
+        transformValue: {
+          type: 'object',
+          properties: {
+            location: commonSchemas.location,
+            rotation: commonSchemas.rotation,
+            scale: commonSchemas.scale
+          },
+          description: 'Transform parameter value.'
+        },
+        projectorValue: {
+          type: 'object',
+          properties: {
+            position: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+            direction: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+            up: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+            scale: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+            projectionAngle: { type: 'number' }
+          },
+          description: 'Projector parameter value.'
+        },
+        bakeOutputPath: { type: 'string', description: 'Output path for baked mesh.' },
+        componentIndex: { type: 'number', description: 'Component index for mesh update.' },
+        
+        // Ready Player Me parameters
+        avatarUrl: { type: 'string', description: 'Ready Player Me avatar URL.' },
+        glbPath: { type: 'string', description: 'Path to GLB file.' },
+        avatarAssetPath: { type: 'string', description: 'Path to avatar asset.' },
+        characterPath: { type: 'string', description: 'Path to character Blueprint.' },
+        materialSettings: {
+          type: 'object',
+          properties: {
+            usePBR: { type: 'boolean' },
+            materialPath: { type: 'string' },
+            skinMaterialPath: { type: 'string' },
+            hairMaterialPath: { type: 'string' },
+            eyeMaterialPath: { type: 'string' }
+          },
+          description: 'RPM material configuration.'
+        },
+        outfitId: { type: 'string', description: 'Outfit asset ID or path.' },
+        cacheKey: { type: 'string', description: 'Cache key for avatar.' },
+        animBlueprintPath: { type: 'string', description: 'Animation Blueprint path.' },
+        sourceAnimationPath: { type: 'string', description: 'Source animation path.' },
+        targetSkeletonPath: { type: 'string', description: 'Target skeleton path.' },
+        
+        // Common options
+        save: commonSchemas.save,
+        overwrite: commonSchemas.overwrite
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        
+        // Common outputs
+        actorName: commonSchemas.actorName,
+        assetPath: commonSchemas.stringProp,
+        
+        // MetaHuman outputs
+        metahumanInfo: {
+          type: 'object',
+          properties: {
+            bodyType: commonSchemas.stringProp,
+            qualityLevel: commonSchemas.stringProp,
+            lodLevel: commonSchemas.numberProp,
+            bodyCorrectives: commonSchemas.booleanProp,
+            neckCorrectives: commonSchemas.booleanProp,
+            faceParameters: { type: 'object' },
+            skinTone: commonSchemas.numberProp,
+            hairStyle: commonSchemas.stringProp,
+            eyeColor: { type: 'object' }
+          },
+          description: 'MetaHuman component info (for get_metahuman_info).'
+        },
+        presets: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: commonSchemas.stringProp,
+              category: commonSchemas.stringProp,
+              description: commonSchemas.stringProp
+            }
+          },
+          description: 'Available presets (for list_available_presets).'
+        },
+        exportedSettings: { type: 'object', description: 'Exported settings JSON.' },
+        
+        // Groom outputs
+        groomInfo: {
+          type: 'object',
+          properties: {
+            assetPath: commonSchemas.stringProp,
+            bindingPath: commonSchemas.stringProp,
+            hairWidth: commonSchemas.numberProp,
+            rootScale: commonSchemas.numberProp,
+            tipScale: commonSchemas.numberProp,
+            simulationEnabled: commonSchemas.booleanProp,
+            strandCount: commonSchemas.numberProp,
+            guideCount: commonSchemas.numberProp
+          },
+          description: 'Groom component info (for get_groom_info).'
+        },
+        
+        // Mutable outputs
+        parameterInfo: {
+          type: 'object',
+          properties: {
+            parameters: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: commonSchemas.stringProp,
+                  type: commonSchemas.stringProp,
+                  defaultValue: { type: ['string', 'number', 'boolean', 'object'] },
+                  options: commonSchemas.arrayOfStrings
+                }
+              }
+            }
+          },
+          description: 'Customizable object parameters (for get_parameter_info).'
+        },
+        instanceInfo: {
+          type: 'object',
+          properties: {
+            objectPath: commonSchemas.stringProp,
+            isCompiled: commonSchemas.booleanProp,
+            parameterValues: { type: 'object' },
+            skeletalMeshPath: commonSchemas.stringProp
+          },
+          description: 'Customizable instance info (for get_instance_info).'
+        },
+        bakedMeshPath: commonSchemas.stringProp,
+        
+        // Ready Player Me outputs
+        avatarMetadata: {
+          type: 'object',
+          properties: {
+            avatarId: commonSchemas.stringProp,
+            gender: commonSchemas.stringProp,
+            outfit: commonSchemas.stringProp,
+            bodyType: commonSchemas.stringProp,
+            createdAt: commonSchemas.stringProp
+          },
+          description: 'Avatar metadata (for get_avatar_metadata).'
+        },
+        rpmInfo: {
+          type: 'object',
+          properties: {
+            isAvailable: commonSchemas.booleanProp,
+            version: commonSchemas.stringProp,
+            cachedAvatars: commonSchemas.numberProp,
+            supportedFormats: commonSchemas.arrayOfStrings
+          },
+          description: 'RPM system info (for get_rpm_info).'
+        },
+        cacheInfo: {
+          type: 'object',
+          properties: {
+            cacheKey: commonSchemas.stringProp,
+            cacheSize: commonSchemas.numberProp,
+            itemsCached: commonSchemas.numberProp
+          },
+          description: 'Cache info (for cache operations).'
+        }
+      }
+    }
   }
 ];

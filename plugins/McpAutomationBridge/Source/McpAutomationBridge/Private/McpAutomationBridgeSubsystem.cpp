@@ -946,6 +946,30 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageTestingAction(R, A, P, S);
                   });
+
+  // Phase 34: Editor Utilities
+  RegisterHandler(TEXT("manage_editor_utilities"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageEditorUtilitiesAction(R, A, P, S);
+                  });
+
+  // Phase 35: Gameplay Systems
+  RegisterHandler(TEXT("manage_gameplay_systems"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageGameplaySystemsAction(R, A, P, S);
+                  });
+
+  // Phase 36: Character & Avatar Plugins
+  RegisterHandler(TEXT("manage_character_avatar"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageCharacterAvatarAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

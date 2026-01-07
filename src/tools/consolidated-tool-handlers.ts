@@ -52,6 +52,9 @@ import { handleMediaTools } from './handlers/media-handlers.js';
 import { handleDataTools } from './handlers/data-handlers.js';
 import { handleBuildTools } from './handlers/build-handlers.js';
 import { handleTestingTools } from './handlers/testing-handlers.js';
+import { handleEditorUtilitiesTools } from './handlers/editor-utilities-handlers.js';
+import { handleGameplaySystemsTools } from './handlers/gameplay-systems-handlers.js';
+import { handleCharacterAvatarTools } from './handlers/character-avatar-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -490,6 +493,15 @@ function registerDefaultHandlers() {
 
   // 50. TESTING & QUALITY (Phase 33)
   toolRegistry.register('manage_testing', async (args, tools) => await handleTestingTools(getAction(args), args, tools));
+
+  // 51. EDITOR UTILITIES (Phase 34)
+  toolRegistry.register('manage_editor_utilities', async (args, tools) => await handleEditorUtilitiesTools(getAction(args), args, tools));
+
+  // 52. GAMEPLAY SYSTEMS (Phase 35)
+  toolRegistry.register('manage_gameplay_systems', async (args, tools) => await handleGameplaySystemsTools(getAction(args), args, tools));
+
+  // 53. CHARACTER & AVATAR (Phase 36)
+  toolRegistry.register('manage_character_avatar', async (args, tools) => await handleCharacterAvatarTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

@@ -5,7 +5,7 @@
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.7-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
-[![Tools](https://img.shields.io/badge/Tools-44-purple)](docs/handler-mapping.md)
+[![Tools](https://img.shields.io/badge/Tools-51-purple)](docs/handler-mapping.md)
 [![Project Board](https://img.shields.io/badge/Project-Roadmap-blueviolet?logo=github)](https://github.com/users/ChiR24/projects/3)
 [![Discussions](https://img.shields.io/badge/Discussions-Join-brightgreen?logo=github)](https://github.com/ChiR24/Unreal_mcp/discussions)
 
@@ -116,6 +116,8 @@ Enable via **Edit → Plugins**, then restart the editor:
 | **Geometry Script** | `manage_geometry` operations (procedural mesh) |
 | **PCG** | `manage_pcg` operations (procedural content generation) |
 | **Water** (Experimental) | `manage_water` operations (oceans, lakes, rivers) |
+| **HairStrands** (Optional) | `manage_character_avatar` groom/hair operations |
+| **Mutable** (Optional) | `manage_character_avatar` customizable object operations |
 
 ### Step 4: Configure MCP Client
 
@@ -179,7 +181,7 @@ ASSET_LIST_TTL_MS=10000
 
 ## Available Tools
 
-**45 Tools** organized by category:
+**51 Tools** organized by category:
 
 ### Core Tools
 | Tool | Description |
@@ -254,6 +256,21 @@ ASSET_LIST_TTL_MS=10000
 | Tool | Description |
 |------|-------------|
 | `manage_testing` | Automation tests, functional tests, profiling (trace, visual logger, stats), asset validation |
+
+### Editor Utilities
+| Tool | Description |
+|------|-------------|
+| `manage_editor_utilities` | Editor modes, content browser, selection, collision, physical materials, subsystems, timers, delegates, transactions |
+
+### Gameplay Systems
+| Tool | Description |
+|------|-------------|
+| `manage_gameplay_systems` | Targeting, checkpoints, objectives, world markers, photo mode, quest/dialogue, instancing (ISM/HISM), HLOD, localization, scalability |
+
+### Character & Avatar
+| Tool | Description |
+|------|-------------|
+| `manage_character_avatar` | MetaHuman, Groom/Hair (HairStrands), Mutable/Customizable objects, Ready Player Me avatar integration |
 
 ### Supported Asset Types
 

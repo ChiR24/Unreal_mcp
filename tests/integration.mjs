@@ -2,12 +2,15 @@
 /**
  * Fully Consolidated Integration Test Suite
  *
- * Covers all 45 MCP tools (Phases 1-33):
+ * Covers all 46 MCP tools (Phases 1-36):
  * - Groups 1-8: Original 17 tools
  * - Groups 9-29: Advanced tools (Phases 6-29)
  * - Phase 31: Data & Persistence (manage_data)
  * - Phase 32: Build & Deployment (manage_build)
  * - Phase 33: Testing & Quality (manage_testing)
+ * - Phase 34: Editor Utilities (manage_editor_utilities)
+ * - Phase 35: Gameplay Systems (manage_gameplay_systems)
+ * - Phase 36: Character & Avatar Plugins (manage_character_avatar)
  *
  * Usage:
  *   node tests/integration.mjs
@@ -150,6 +153,102 @@ const testCases = [
   { scenario: 'Testing: Check map errors', toolName: 'manage_testing', arguments: { action: 'check_map_errors' }, expected: 'success' },
   { scenario: 'Testing: Get redirectors', toolName: 'manage_testing', arguments: { action: 'get_redirectors', directoryPath: '/Game' }, expected: 'success' },
   { scenario: 'Testing: Fix redirectors', toolName: 'manage_testing', arguments: { action: 'fix_redirectors', directoryPath: '/Game' }, expected: 'success' },
+  
+  // ==================== PHASE 34: EDITOR UTILITIES ====================
+  // Editor Modes
+  { scenario: 'EditorUtilities: Get editor utilities info', toolName: 'manage_editor_utilities', arguments: { action: 'get_editor_utilities_info' }, expected: 'success' },
+  { scenario: 'EditorUtilities: Set grid settings', toolName: 'manage_editor_utilities', arguments: { action: 'set_grid_settings', gridSize: 10, rotationSnap: 15, scaleSnap: 0.25 }, expected: 'success' },
+  { scenario: 'EditorUtilities: Set snap settings', toolName: 'manage_editor_utilities', arguments: { action: 'set_snap_settings', gridSize: 20 }, expected: 'success' },
+  { scenario: 'EditorUtilities: Set editor mode (Default)', toolName: 'manage_editor_utilities', arguments: { action: 'set_editor_mode', modeName: 'Default' }, expected: 'success' },
+  // Content Browser
+  { scenario: 'EditorUtilities: Navigate to path', toolName: 'manage_editor_utilities', arguments: { action: 'navigate_to_path', path: '/Game' }, expected: 'success' },
+  { scenario: 'EditorUtilities: Sync to asset', toolName: 'manage_editor_utilities', arguments: { action: 'sync_to_asset', assetPath: '/Engine/BasicShapes/Cube' }, expected: 'success|not found' },
+  { scenario: 'EditorUtilities: Show in explorer', toolName: 'manage_editor_utilities', arguments: { action: 'show_in_explorer', path: '/Game' }, expected: 'success' },
+  { scenario: 'EditorUtilities: Create collection', toolName: 'manage_editor_utilities', arguments: { action: 'create_collection', collectionName: 'TestCollection', collectionType: 'Local' }, expected: 'success|already exists' },
+  // Selection
+  { scenario: 'EditorUtilities: Deselect all', toolName: 'manage_editor_utilities', arguments: { action: 'deselect_all' }, expected: 'success' },
+  { scenario: 'EditorUtilities: Get selected actors', toolName: 'manage_editor_utilities', arguments: { action: 'get_selected_actors' }, expected: 'success' },
+  { scenario: 'EditorUtilities: Select actors by class', toolName: 'manage_editor_utilities', arguments: { action: 'select_actors_by_class', className: 'StaticMeshActor' }, expected: 'success' },
+  { scenario: 'EditorUtilities: Select actors by tag', toolName: 'manage_editor_utilities', arguments: { action: 'select_actors_by_tag', tag: 'TestTag' }, expected: 'success' },
+  // Collision
+  { scenario: 'EditorUtilities: Get collision info', toolName: 'manage_editor_utilities', arguments: { action: 'get_collision_info' }, expected: 'success' },
+  { scenario: 'EditorUtilities: Create collision channel (info)', toolName: 'manage_editor_utilities', arguments: { action: 'create_collision_channel', channelName: 'CustomChannel', channelType: 'Object' }, expected: 'success|note' },
+  { scenario: 'EditorUtilities: Create collision profile (info)', toolName: 'manage_editor_utilities', arguments: { action: 'create_collision_profile', profileName: 'CustomProfile' }, expected: 'success|note' },
+  // Physical Materials
+  { scenario: 'EditorUtilities: Create physical material', toolName: 'manage_editor_utilities', arguments: { action: 'create_physical_material', materialName: `${TEST_FOLDER}/PM_TestPhysical`, friction: 0.5, restitution: 0.3 }, expected: 'success' },
+  { scenario: 'EditorUtilities: Get physical material info', toolName: 'manage_editor_utilities', arguments: { action: 'get_physical_material_info', assetPath: `${TEST_FOLDER}/PM_TestPhysical` }, expected: 'success|not found' },
+  { scenario: 'EditorUtilities: Set friction', toolName: 'manage_editor_utilities', arguments: { action: 'set_friction', assetPath: `${TEST_FOLDER}/PM_TestPhysical`, friction: 0.8 }, expected: 'success|not found' },
+  { scenario: 'EditorUtilities: Set restitution', toolName: 'manage_editor_utilities', arguments: { action: 'set_restitution', assetPath: `${TEST_FOLDER}/PM_TestPhysical`, restitution: 0.5 }, expected: 'success|not found' },
+  // Subsystems
+  { scenario: 'EditorUtilities: Get subsystem info', toolName: 'manage_editor_utilities', arguments: { action: 'get_subsystem_info' }, expected: 'success' },
+  // Timers
+  { scenario: 'EditorUtilities: Get active timers', toolName: 'manage_editor_utilities', arguments: { action: 'get_active_timers' }, expected: 'success' },
+  // Transactions
+  { scenario: 'EditorUtilities: Begin transaction', toolName: 'manage_editor_utilities', arguments: { action: 'begin_transaction', transactionName: 'TestTransaction' }, expected: 'success' },
+  { scenario: 'EditorUtilities: End transaction', toolName: 'manage_editor_utilities', arguments: { action: 'end_transaction' }, expected: 'success' },
+  { scenario: 'EditorUtilities: Get transaction history', toolName: 'manage_editor_utilities', arguments: { action: 'get_transaction_history' }, expected: 'success' },
+  { scenario: 'EditorUtilities: Undo', toolName: 'manage_editor_utilities', arguments: { action: 'undo' }, expected: 'success|nothing' },
+  { scenario: 'EditorUtilities: Redo', toolName: 'manage_editor_utilities', arguments: { action: 'redo' }, expected: 'success|nothing' },
+  // Delegates
+  { scenario: 'EditorUtilities: Create blueprint interface', toolName: 'manage_editor_utilities', arguments: { action: 'create_blueprint_interface', interfaceName: `${TEST_FOLDER}/BPI_TestInterface` }, expected: 'success' },
+  
+  // ==================== Phase 35: Gameplay Systems ====================
+  // Targeting
+  { scenario: 'GameplaySystems: Create targeting component', toolName: 'manage_gameplay_systems', arguments: { action: 'create_targeting_component', actorName: 'NonExistentActor' }, expected: 'error|not found' },
+  { scenario: 'GameplaySystems: Configure aim assist', toolName: 'manage_gameplay_systems', arguments: { action: 'configure_aim_assist', actorName: 'NonExistentActor', aimAssistStrength: 0.5 }, expected: 'error|not found' },
+  // Checkpoints
+  { scenario: 'GameplaySystems: Create checkpoint actor', toolName: 'manage_gameplay_systems', arguments: { action: 'create_checkpoint_actor', actorName: 'Checkpoint_Test', location: { x: 0, y: 0, z: 0 } }, expected: 'success' },
+  { scenario: 'GameplaySystems: Save checkpoint', toolName: 'manage_gameplay_systems', arguments: { action: 'save_checkpoint', checkpointId: 'TestCheckpoint', slotName: 'TestSlot' }, expected: 'success' },
+  { scenario: 'GameplaySystems: Load checkpoint', toolName: 'manage_gameplay_systems', arguments: { action: 'load_checkpoint', checkpointId: 'TestCheckpoint', slotName: 'TestSlot' }, expected: 'success' },
+  // Objectives
+  { scenario: 'GameplaySystems: Create objective', toolName: 'manage_gameplay_systems', arguments: { action: 'create_objective', objectiveId: 'OBJ_Test', objectiveName: 'Test Objective', objectiveType: 'Primary' }, expected: 'success' },
+  { scenario: 'GameplaySystems: Set objective state', toolName: 'manage_gameplay_systems', arguments: { action: 'set_objective_state', objectiveId: 'OBJ_Test', state: 'Active' }, expected: 'success' },
+  { scenario: 'GameplaySystems: Configure objective markers', toolName: 'manage_gameplay_systems', arguments: { action: 'configure_objective_markers', objectiveId: 'OBJ_Test', showOnCompass: true, showOnMap: true }, expected: 'success' },
+  // World Markers
+  { scenario: 'GameplaySystems: Create world marker', toolName: 'manage_gameplay_systems', arguments: { action: 'create_world_marker', markerId: 'Marker_Test', markerType: 'Loot', location: { x: 100, y: 200, z: 0 } }, expected: 'success' },
+  { scenario: 'GameplaySystems: Create ping system', toolName: 'manage_gameplay_systems', arguments: { action: 'create_ping_system', actorName: 'PingSystem_Test', maxPingsPerPlayer: 3 }, expected: 'success' },
+  // Photo Mode
+  { scenario: 'GameplaySystems: Enable photo mode', toolName: 'manage_gameplay_systems', arguments: { action: 'enable_photo_mode', enabled: true, pauseGame: false }, expected: 'success' },
+  { scenario: 'GameplaySystems: Configure photo mode camera', toolName: 'manage_gameplay_systems', arguments: { action: 'configure_photo_mode_camera', fov: 90, aperture: 2.8 }, expected: 'success' },
+  { scenario: 'GameplaySystems: Disable photo mode', toolName: 'manage_gameplay_systems', arguments: { action: 'enable_photo_mode', enabled: false }, expected: 'success' },
+  // Quest/Dialogue
+  { scenario: 'GameplaySystems: Create quest data asset', toolName: 'manage_gameplay_systems', arguments: { action: 'create_quest_data_asset', assetPath: `${TEST_FOLDER}/Quest_Test`, questId: 'QUEST_01', questName: 'Test Quest' }, expected: 'success' },
+  { scenario: 'GameplaySystems: Create dialogue tree', toolName: 'manage_gameplay_systems', arguments: { action: 'create_dialogue_tree', assetPath: `${TEST_FOLDER}/Dialogue_Test`, dialogueName: 'TestDialogue' }, expected: 'success' },
+  { scenario: 'GameplaySystems: Add dialogue node', toolName: 'manage_gameplay_systems', arguments: { action: 'add_dialogue_node', assetPath: `${TEST_FOLDER}/Dialogue_Test`, nodeId: 'Node_01', speakerId: 'NPC', text: 'Hello!' }, expected: 'success' },
+  // Instancing
+  { scenario: 'GameplaySystems: Get instance count (no component)', toolName: 'manage_gameplay_systems', arguments: { action: 'get_instance_count', actorName: 'NonExistentActor', componentName: 'ISM' }, expected: 'error|not found' },
+  // HLOD
+  { scenario: 'GameplaySystems: Create HLOD layer', toolName: 'manage_gameplay_systems', arguments: { action: 'create_hlod_layer', layerName: 'HLOD_Test', cellSize: 25600 }, expected: 'success' },
+  { scenario: 'GameplaySystems: Configure HLOD settings', toolName: 'manage_gameplay_systems', arguments: { action: 'configure_hlod_settings', layerName: 'HLOD_Test', hlodBuildMethod: 'MeshMerge' }, expected: 'success' },
+  // Localization
+  { scenario: 'GameplaySystems: Create string table', toolName: 'manage_gameplay_systems', arguments: { action: 'create_string_table', assetPath: `${TEST_FOLDER}/ST_Test`, tableName: 'TestStrings', namespace: 'Game' }, expected: 'success' },
+  { scenario: 'GameplaySystems: Add string entry', toolName: 'manage_gameplay_systems', arguments: { action: 'add_string_entry', assetPath: `${TEST_FOLDER}/ST_Test`, key: 'HELLO_WORLD', sourceString: 'Hello, World!' }, expected: 'success' },
+  { scenario: 'GameplaySystems: Get string entry', toolName: 'manage_gameplay_systems', arguments: { action: 'get_string_entry', assetPath: `${TEST_FOLDER}/ST_Test`, key: 'HELLO_WORLD' }, expected: 'success' },
+  { scenario: 'GameplaySystems: Get available cultures', toolName: 'manage_gameplay_systems', arguments: { action: 'get_available_cultures' }, expected: 'success' },
+  // Scalability
+  { scenario: 'GameplaySystems: Get scalability settings', toolName: 'manage_gameplay_systems', arguments: { action: 'get_scalability_settings' }, expected: 'success' },
+  { scenario: 'GameplaySystems: Set quality level', toolName: 'manage_gameplay_systems', arguments: { action: 'set_quality_level', overallQuality: 3 }, expected: 'success' },
+  { scenario: 'GameplaySystems: Set resolution scale', toolName: 'manage_gameplay_systems', arguments: { action: 'set_resolution_scale', scale: 100 }, expected: 'success' },
+  // Utility
+  { scenario: 'GameplaySystems: Get gameplay systems info', toolName: 'manage_gameplay_systems', arguments: { action: 'get_gameplay_systems_info' }, expected: 'success' },
+  
+  // ==================== Phase 36: Character & Avatar Plugins ====================
+  // MetaHuman
+  { scenario: 'CharacterAvatar: Get RPM info', toolName: 'manage_character_avatar', arguments: { action: 'get_rpm_info' }, expected: 'success' },
+  { scenario: 'CharacterAvatar: List available presets', toolName: 'manage_character_avatar', arguments: { action: 'list_available_presets' }, expected: 'success' },
+  { scenario: 'CharacterAvatar: Get MetaHuman info (non-existent)', toolName: 'manage_character_avatar', arguments: { action: 'get_metahuman_info', actorName: 'NonExistentMetaHuman' }, expected: 'error|not found' },
+  // Groom/Hair (conditional - requires HairStrands plugin)
+  { scenario: 'CharacterAvatar: Get groom info (non-existent)', toolName: 'manage_character_avatar', arguments: { action: 'get_groom_info', actorName: 'NonExistentGroom' }, expected: 'error|not found|not available' },
+  { scenario: 'CharacterAvatar: Create groom asset', toolName: 'manage_character_avatar', arguments: { action: 'create_groom_asset', name: 'TestGroom', destinationPath: ADV_TEST_FOLDER }, expected: 'success|not available' },
+  // Mutable/Customizable (conditional - requires Mutable plugin)
+  { scenario: 'CharacterAvatar: Create customizable object', toolName: 'manage_character_avatar', arguments: { action: 'create_customizable_object', name: 'TestCustomizable', destinationPath: ADV_TEST_FOLDER }, expected: 'success|not available' },
+  { scenario: 'CharacterAvatar: Get parameter info (non-existent)', toolName: 'manage_character_avatar', arguments: { action: 'get_parameter_info', objectPath: '/Game/NonExistent' }, expected: 'error|not found|not available' },
+  // Ready Player Me
+  { scenario: 'CharacterAvatar: Load avatar from URL', toolName: 'manage_character_avatar', arguments: { action: 'load_avatar_from_url', avatarUrl: 'https://models.readyplayer.me/test.glb' }, expected: 'success' },
+  { scenario: 'CharacterAvatar: Load avatar from GLB', toolName: 'manage_character_avatar', arguments: { action: 'load_avatar_from_glb', glbPath: '/Game/Avatars/test.glb' }, expected: 'success' },
+  { scenario: 'CharacterAvatar: Clear avatar cache', toolName: 'manage_character_avatar', arguments: { action: 'clear_avatar_cache' }, expected: 'success' },
+  { scenario: 'CharacterAvatar: Get avatar metadata', toolName: 'manage_character_avatar', arguments: { action: 'get_avatar_metadata', avatarUrl: 'https://models.readyplayer.me/test.glb' }, expected: 'success' },
+  
   // Cleanup tests
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }

@@ -10,8 +10,8 @@ A comprehensive development plan for the Unreal Engine Model Context Protocol (M
 |--------|-------|
 | **Total Phases** | 59 |
 | **Estimated Actions** | ~2,850 |
-| **Completed Phases** | 33 |
-| **In Progress** | Phase 5 (Infrastructure), Phase 34-35 (Additional Systems) |
+| **Completed Phases** | 36 |
+| **In Progress** | Phase 5 (Infrastructure), Phase 37 (Asset & Content Plugins) |
 | **Engine Support** | Unreal Engine 5.0 - 5.7 |
 
 ---
@@ -702,34 +702,45 @@ Complete testing and profiling infrastructure.
 
 ---
 
-## Phase 34: Editor Utilities 🔄
+## Phase 34: Editor Utilities ✅
 
-**Status**: Planned | **Actions**: ~50
+**Status**: Complete | **Tool**: `manage_editor_utilities` | **Actions**: 46
 
 Complete editor automation.
 
-### Planned Capabilities
+### Implemented Capabilities
 
 | Category | Actions |
 |----------|---------|
 | Editor Modes | `set_editor_mode`, `configure_editor_preferences`, `set_grid_settings`, `set_snap_settings` |
 | Content Browser | `navigate_to_path`, `sync_to_asset`, `create_collection`, `add_to_collection`, `show_in_explorer` |
-| Selection | `select_actor`, `select_actors_by_class`, `select_actors_by_tag`, `deselect_all`, `group_actors` |
-| Collision | `create_collision_channel`, `create_collision_profile`, `configure_channel_responses` |
-| Physics Materials | `create_physical_material`, `set_friction`, `set_restitution`, `configure_surface_type` |
-| Subsystems | `create_game_instance_subsystem`, `create_world_subsystem`, `create_local_player_subsystem` |
-| Timers | `set_timer`, `clear_timer`, `create_latent_action`, `create_async_action` |
-| Delegates | `create_event_dispatcher`, `bind_to_event`, `broadcast_event`, `create_blueprint_interface` |
+| Selection | `select_actor`, `select_actors_by_class`, `select_actors_by_tag`, `deselect_all`, `group_actors`, `ungroup_actors`, `get_selected_actors` |
+| Collision | `create_collision_channel`, `create_collision_profile`, `configure_channel_responses`, `get_collision_info` |
+| Physical Materials | `create_physical_material`, `set_friction`, `set_restitution`, `configure_surface_type`, `get_physical_material_info` |
+| Subsystems | `create_game_instance_subsystem`, `create_world_subsystem`, `create_local_player_subsystem`, `get_subsystem_info` |
+| Timers | `set_timer`, `clear_timer`, `clear_all_timers`, `get_active_timers` |
+| Delegates | `create_event_dispatcher`, `bind_to_event`, `unbind_from_event`, `broadcast_event`, `create_blueprint_interface` |
+| Transactions | `begin_transaction`, `end_transaction`, `cancel_transaction`, `undo`, `redo`, `get_transaction_history` |
+| Utility | `get_editor_utilities_info` |
+
+### Implementation Notes
+- Uses `FEditorModeTools` for mode switching
+- Content Browser operations via `FContentBrowserModule`
+- Selection via `GEditor->SelectActor()` and `GEditor->GetSelectedActors()`
+- Collision channels require `DefaultEngine.ini` modification (guidance provided)
+- Physical materials created via `NewObject<UPhysicalMaterial>()`
+- Transactions use `GEditor->BeginTransaction()` / `EndTransaction()` for undo support
+- Blueprint interfaces created via `FKismetEditorUtilities::CreateBlueprint()`
 
 ---
 
-## Phase 35: Additional Gameplay Systems 🔄
+## Phase 35: Additional Gameplay Systems ✅
 
-**Status**: Planned | **Actions**: ~60
+**Status**: Complete | **Tool**: `manage_gameplay_systems` | **Actions**: 43
 
 Common gameplay patterns and systems.
 
-### Planned Capabilities
+### Implemented Capabilities
 
 | Category | Actions |
 |----------|---------|
@@ -739,29 +750,46 @@ Common gameplay patterns and systems.
 | World Markers | `create_world_marker`, `create_ping_system`, `configure_marker_widget` |
 | Photo Mode | `enable_photo_mode`, `configure_photo_mode_camera`, `take_photo_mode_screenshot` |
 | Quest/Dialogue | `create_quest_data_asset`, `create_dialogue_tree`, `add_dialogue_node`, `play_dialogue` |
-| Instancing | `create_instanced_static_mesh_component`, `create_hierarchical_instanced_static_mesh`, `add_instance` |
-| HLOD | `create_hlod_layer`, `configure_hlod_settings`, `build_hlod` |
-| Localization | `create_string_table`, `add_string_entry`, `import_localization`, `set_culture` |
-| Scalability | `create_device_profile`, `configure_scalability_group`, `set_quality_level` |
+| Instancing | `create_instanced_static_mesh_component`, `create_hierarchical_instanced_static_mesh`, `add_instance`, `remove_instance`, `get_instance_count` |
+| HLOD | `create_hlod_layer`, `configure_hlod_settings`, `build_hlod`, `assign_actor_to_hlod` |
+| Localization | `create_string_table`, `add_string_entry`, `get_string_entry`, `import_localization`, `export_localization`, `set_culture`, `get_available_cultures` |
+| Scalability | `create_device_profile`, `configure_scalability_group`, `set_quality_level`, `get_scalability_settings`, `set_resolution_scale` |
+| Utility | `get_gameplay_systems_info` |
+
+### Implementation Notes
+- Targeting uses component tags for configuration (actual targeting logic is blueprint-based)
+- Checkpoints integrate with UE's SaveGame system
+- Objectives stored as hidden actors with tag-based metadata
+- Instancing uses native UInstancedStaticMeshComponent and UHierarchicalInstancedStaticMeshComponent
+- HLOD uses UHLODLayer for World Partition integration
+- Localization uses UStringTable for string tables
+- Scalability uses Scalability::FQualityLevels API
 
 ---
 
 # Milestone 7: Plugin Integration (Phases 36-46)
 
-## Phase 36: Character & Avatar Plugins 🔄
+## Phase 36: Character & Avatar Plugins ✅
 
-**Status**: Planned | **Actions**: ~60
+**Status**: Complete | **Tool**: `manage_character_avatar` | **Actions**: 60
 
 MetaHuman, Ready Player Me, Mutable, Groom.
 
-### Planned Capabilities
+### Implemented Capabilities
 
-| Plugin | Key Actions |
-|--------|-------------|
-| MetaHuman | `import_metahuman`, `spawn_metahuman_actor`, `set_face_parameter`, `set_skin_tone`, `set_hair_style`, `configure_metahuman_lod` |
-| Ready Player Me | `load_avatar_from_url`, `load_avatar_from_glb`, `apply_avatar_to_character` |
-| Mutable | `create_customizable_object`, `create_customizable_instance`, `set_color_parameter`, `bake_customizable_instance` |
-| Groom/Hair | `create_groom_asset`, `import_groom`, `configure_hair_simulation`, `set_hair_color` |
+| Category | Actions |
+|----------|---------|
+| MetaHuman | `import_metahuman`, `spawn_metahuman_actor`, `get_metahuman_component`, `set_body_type`, `set_face_parameter`, `set_skin_tone`, `set_hair_style`, `set_eye_color`, `configure_metahuman_lod`, `enable_body_correctives`, `enable_neck_correctives`, `set_quality_level`, `configure_face_rig`, `set_body_part`, `get_metahuman_info`, `list_available_presets`, `apply_preset`, `export_metahuman_settings` |
+| Groom/Hair | `create_groom_asset`, `import_groom`, `create_groom_binding`, `spawn_groom_actor`, `attach_groom_to_skeletal_mesh`, `configure_hair_simulation`, `set_hair_width`, `set_hair_root_scale`, `set_hair_tip_scale`, `set_hair_color`, `configure_hair_physics`, `configure_hair_rendering`, `enable_hair_simulation`, `get_groom_info` |
+| Mutable | `create_customizable_object`, `compile_customizable_object`, `create_customizable_instance`, `set_bool_parameter`, `set_int_parameter`, `set_float_parameter`, `set_color_parameter`, `set_vector_parameter`, `set_texture_parameter`, `set_transform_parameter`, `set_projector_parameter`, `update_skeletal_mesh`, `bake_customizable_instance`, `get_parameter_info`, `get_instance_info`, `spawn_customizable_actor` |
+| Ready Player Me | `load_avatar_from_url`, `load_avatar_from_glb`, `create_rpm_actor`, `apply_avatar_to_character`, `configure_rpm_materials`, `set_rpm_outfit`, `get_avatar_metadata`, `cache_avatar`, `clear_avatar_cache`, `create_rpm_animation_blueprint`, `retarget_rpm_animation`, `get_rpm_info` |
+
+### Implementation Notes
+- Groom/HairStrands uses conditional compilation (`#if MCP_HAS_GROOM`)
+- Mutable uses conditional compilation (`#if MCP_HAS_MUTABLE`)
+- MetaHuman SDK has limited public API - provides guidance messages for SDK-dependent features
+- Ready Player Me integration provides URL/GLB loading guidance
+- All actions return success with appropriate messages even when optional plugins unavailable
 
 ---
 

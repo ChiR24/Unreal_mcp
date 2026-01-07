@@ -243,12 +243,6 @@ export async function handleBuildTools(
     // DEFAULT CASE
     // =========================================
     default:
-      // Try to send to automation bridge for any unhandled actions
-      return cleanObject(await executeAutomationRequest(
-        tools,
-        'manage_build',
-        payload,
-        `Automation bridge not available for ${action}`
-      ));
+      return { success: false, error: `Unknown manage_build action: ${action}` };
   }
 }

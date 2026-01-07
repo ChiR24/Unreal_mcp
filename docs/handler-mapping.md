@@ -1456,3 +1456,189 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `check_map_errors` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Checks current map for errors |
 | `fix_redirectors` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Fixes asset redirectors |
 | `get_redirectors` | `McpAutomationBridge_TestingHandlers.cpp` | `HandleManageTestingAction` | Lists asset redirectors |
+
+## 49. Editor Utilities Manager (`manage_editor_utilities`) - Phase 34
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Editor Modes** | | | |
+| `set_editor_mode` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Sets editor mode (Default, Landscape, Foliage, MeshPaint, Geometry) |
+| `configure_editor_preferences` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Configures editor preference category |
+| `set_grid_settings` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Sets grid size, rotation snap, scale snap |
+| `set_snap_settings` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Sets snap settings |
+| **Content Browser** | | | |
+| `navigate_to_path` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Navigates content browser to path |
+| `sync_to_asset` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Syncs content browser to specific asset |
+| `create_collection` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Creates asset collection (Local/Private/Shared) |
+| `add_to_collection` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Adds assets to collection |
+| `show_in_explorer` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Opens file explorer at asset path |
+| **Selection** | | | |
+| `select_actor` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Selects actor by name |
+| `select_actors_by_class` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Selects all actors of class |
+| `select_actors_by_tag` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Selects all actors with tag |
+| `deselect_all` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Deselects all actors |
+| `group_actors` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Groups selected actors |
+| `ungroup_actors` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Ungroups selected actors |
+| `get_selected_actors` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Gets list of selected actors |
+| **Collision** | | | |
+| `create_collision_channel` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Creates custom collision channel (requires DefaultEngine.ini) |
+| `create_collision_profile` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Creates collision profile |
+| `configure_channel_responses` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Configures channel response mappings |
+| `get_collision_info` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Gets available channels and profiles |
+| **Physical Materials** | | | |
+| `create_physical_material` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Creates UPhysicalMaterial asset |
+| `set_friction` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Sets friction on physical material |
+| `set_restitution` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Sets restitution/bounciness |
+| `configure_surface_type` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Configures surface type |
+| `get_physical_material_info` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Gets physical material properties |
+| **Subsystems** | | | |
+| `create_game_instance_subsystem` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Guidance for creating game instance subsystem |
+| `create_world_subsystem` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Guidance for creating world subsystem |
+| `create_local_player_subsystem` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Guidance for creating local player subsystem |
+| `get_subsystem_info` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Gets available subsystem types |
+| **Timers** | | | |
+| `set_timer` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Sets up timer for function call |
+| `clear_timer` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Clears timer by handle |
+| `clear_all_timers` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Clears all timers for actor |
+| `get_active_timers` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Gets active timers |
+| **Delegates** | | | |
+| `create_event_dispatcher` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Creates event dispatcher in blueprint |
+| `bind_to_event` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Guidance for event binding |
+| `unbind_from_event` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Guidance for event unbinding |
+| `broadcast_event` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Guidance for event broadcasting |
+| `create_blueprint_interface` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Creates UBlueprint interface asset |
+| **Transactions** | | | |
+| `begin_transaction` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Begins undo transaction |
+| `end_transaction` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Ends undo transaction |
+| `cancel_transaction` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Cancels current transaction |
+| `undo` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Performs undo operation |
+| `redo` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Performs redo operation |
+| `get_transaction_history` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Gets transaction history and undo/redo state |
+| **Utility** | | | |
+| `get_editor_utilities_info` | `McpAutomationBridge_EditorUtilitiesHandlers.cpp` | `HandleManageEditorUtilitiesAction` | Gets current editor state info |
+
+## 50. Gameplay Systems Manager (`manage_gameplay_systems`) - Phase 35
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Targeting** | | | |
+| `create_targeting_component` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates targeting component with settings |
+| `configure_lock_on_target` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Configures lock-on target behavior |
+| `configure_aim_assist` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Configures aim assist settings |
+| **Checkpoints** | | | |
+| `create_checkpoint_actor` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates checkpoint actor with trigger |
+| `save_checkpoint` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Saves game state to checkpoint slot |
+| `load_checkpoint` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Loads game state from checkpoint slot |
+| **Objectives** | | | |
+| `create_objective` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates objective with type and state |
+| `set_objective_state` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Sets objective state and progress |
+| `configure_objective_markers` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Configures objective marker visibility |
+| **World Markers** | | | |
+| `create_world_marker` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates world marker at location |
+| `create_ping_system` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates multiplayer ping system |
+| `configure_marker_widget` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Configures marker widget settings |
+| **Photo Mode** | | | |
+| `enable_photo_mode` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Enables/disables photo mode |
+| `configure_photo_mode_camera` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Configures photo mode camera settings |
+| `take_photo_mode_screenshot` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Takes screenshot in photo mode |
+| **Quest/Dialogue** | | | |
+| `create_quest_data_asset` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates quest data asset |
+| `create_dialogue_tree` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates dialogue tree data asset |
+| `add_dialogue_node` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Adds node to dialogue tree |
+| `play_dialogue` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Starts dialogue playback |
+| **Instancing** | | | |
+| `create_instanced_static_mesh_component` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates ISM component on actor |
+| `create_hierarchical_instanced_static_mesh` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates HISM component on actor |
+| `add_instance` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Adds instance(s) to ISM/HISM component |
+| `remove_instance` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Removes instance(s) from ISM/HISM component |
+| `get_instance_count` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Gets instance count from ISM/HISM component |
+| **HLOD** | | | |
+| `create_hlod_layer` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates HLOD layer asset |
+| `configure_hlod_settings` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Configures HLOD layer settings |
+| `build_hlod` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Initiates HLOD build |
+| `assign_actor_to_hlod` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Assigns actor to HLOD layer |
+| **Localization** | | | |
+| `create_string_table` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates UStringTable asset |
+| `add_string_entry` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Adds entry to string table |
+| `get_string_entry` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Gets entry from string table |
+| `import_localization` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Imports localization from CSV/PO/JSON |
+| `export_localization` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Exports localization to CSV/PO/JSON |
+| `set_culture` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Sets current culture/language |
+| `get_available_cultures` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Gets list of available cultures |
+| **Scalability** | | | |
+| `create_device_profile` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Creates device profile |
+| `configure_scalability_group` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Configures scalability group quality |
+| `set_quality_level` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Sets overall quality level (0-4) |
+| `get_scalability_settings` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Gets current scalability settings |
+| `set_resolution_scale` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Sets resolution scale percentage |
+| **Utility** | | | |
+| `get_gameplay_systems_info` | `McpAutomationBridge_GameplaySystemsHandlers.cpp` | `HandleManageGameplaySystemsAction` | Gets gameplay systems status info |
+
+## 51. Character & Avatar Manager (`manage_character_avatar`) - Phase 36
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **MetaHuman** | | | |
+| `import_metahuman` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Guidance for MetaHuman SDK import |
+| `spawn_metahuman_actor` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Spawns MetaHuman actor in level |
+| `get_metahuman_component` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Gets MetaHuman component from actor |
+| `set_body_type` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets MetaHuman body type |
+| `set_face_parameter` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets MetaHuman face rig parameter |
+| `set_skin_tone` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets MetaHuman skin tone |
+| `set_hair_style` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets MetaHuman hair style |
+| `set_eye_color` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets MetaHuman eye color |
+| `configure_metahuman_lod` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Configures MetaHuman LOD settings |
+| `enable_body_correctives` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Enables body corrective shapes |
+| `enable_neck_correctives` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Enables neck corrective shapes |
+| `set_quality_level` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets MetaHuman quality level |
+| `configure_face_rig` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Configures face rig settings |
+| `set_body_part` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets MetaHuman body part |
+| `get_metahuman_info` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Gets MetaHuman component info |
+| `list_available_presets` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Lists available MetaHuman presets |
+| `apply_preset` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Applies MetaHuman preset |
+| `export_metahuman_settings` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Exports MetaHuman settings to JSON |
+| **Groom/Hair** | | | |
+| `create_groom_asset` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Creates UGroomAsset (requires HairStrands) |
+| `import_groom` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Imports groom from Alembic file |
+| `create_groom_binding` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Creates UGroomBindingAsset |
+| `spawn_groom_actor` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Spawns AGroomActor in level |
+| `attach_groom_to_skeletal_mesh` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Attaches groom to skeletal mesh |
+| `configure_hair_simulation` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Configures hair physics simulation |
+| `set_hair_width` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets groom hair width |
+| `set_hair_root_scale` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets hair root width scale |
+| `set_hair_tip_scale` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets hair tip width scale |
+| `set_hair_color` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets groom hair color |
+| `configure_hair_physics` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Configures hair physics parameters |
+| `configure_hair_rendering` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Configures hair rendering settings |
+| `enable_hair_simulation` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Enables/disables hair simulation |
+| `get_groom_info` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Gets groom asset information |
+| **Mutable/Customizable** | | | |
+| `create_customizable_object` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Creates UCustomizableObject asset |
+| `compile_customizable_object` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Compiles customizable object |
+| `create_customizable_instance` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Creates UCustomizableObjectInstance |
+| `set_bool_parameter` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets bool parameter on instance |
+| `set_int_parameter` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets int parameter on instance |
+| `set_float_parameter` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets float parameter on instance |
+| `set_color_parameter` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets color parameter on instance |
+| `set_vector_parameter` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets vector parameter on instance |
+| `set_texture_parameter` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets texture parameter on instance |
+| `set_transform_parameter` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets transform parameter on instance |
+| `set_projector_parameter` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets projector parameter on instance |
+| `update_skeletal_mesh` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Updates skeletal mesh from instance |
+| `bake_customizable_instance` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Bakes instance to static mesh |
+| `get_parameter_info` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Gets customizable object parameter info |
+| `get_instance_info` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Gets customizable instance info |
+| `spawn_customizable_actor` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Spawns actor with customizable component |
+| **Ready Player Me** | | | |
+| `load_avatar_from_url` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Loads RPM avatar from URL |
+| `load_avatar_from_glb` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Loads RPM avatar from GLB file |
+| `create_rpm_actor` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Creates Ready Player Me actor |
+| `apply_avatar_to_character` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Applies RPM avatar to character |
+| `configure_rpm_materials` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Configures RPM material settings |
+| `set_rpm_outfit` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Sets RPM outfit configuration |
+| `get_avatar_metadata` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Gets RPM avatar metadata |
+| `cache_avatar` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Caches RPM avatar locally |
+| `clear_avatar_cache` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Clears RPM avatar cache |
+| `create_rpm_animation_blueprint` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Creates animation BP for RPM |
+| `retarget_rpm_animation` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Retargets animations to RPM skeleton |
+| `get_rpm_info` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Gets Ready Player Me integration info |

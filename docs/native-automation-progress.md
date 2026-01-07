@@ -444,7 +444,8 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 14. ~~Continue implementation of Phase 31 (Data & Persistence) per Roadmap.~~ ✅ Done
 15. ~~Continue implementation of Phase 32 (Build & Deployment) per Roadmap.~~ ✅ Done
 16. ~~Continue implementation of Phase 33 (Testing & Quality) per Roadmap.~~ ✅ Done
-17. Continue implementation of Phase 34 (Editor Utilities) per Roadmap.
+17. ~~Continue implementation of Phase 34 (Editor Utilities) per Roadmap.~~ ✅ Done
+18. Continue implementation of Phase 35 (Additional Gameplay Systems) per Roadmap.
 
 ---
 
@@ -897,3 +898,82 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 - Memory stats from `FPlatformMemory::GetStats()`
 - Asset validation uses `UEditorValidatorSubsystem` with `ValidateAssets()` method
 - Build.cs includes: `AutomationController`, `DataValidation`, `TraceLog`, `FunctionalTesting`
+
+---
+
+## Phase 34: Editor Utilities - Implementation Details
+
+**Status**: ✅ Complete (46 actions)
+
+**Files**: 
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_EditorUtilitiesHandlers.cpp` (~1050 lines)
+- `src/tools/handlers/editor-utilities-handlers.ts`
+
+| Action | Status | Description |
+|--------|--------|-------------|
+| **Editor Modes** | | |
+| `set_editor_mode` | ✅ Done | Activates mode via `FEditorModeTools` |
+| `configure_editor_preferences` | ✅ Done | Preference category configuration |
+| `set_grid_settings` | ✅ Done | Sets grid, rotation snap, scale snap via `GEditor` |
+| `set_snap_settings` | ✅ Done | Alternative snap settings |
+| **Content Browser** | | |
+| `navigate_to_path` | ✅ Done | Uses `FContentBrowserModule::SyncBrowserToFolders` |
+| `sync_to_asset` | ✅ Done | Uses `FContentBrowserModule::SyncBrowserToAssets` |
+| `create_collection` | ✅ Done | Uses `ICollectionManager::CreateCollection` |
+| `add_to_collection` | ✅ Done | Uses `ICollectionManager::AddToCollection` |
+| `show_in_explorer` | ✅ Done | Uses `FPlatformProcess::ExploreFolder` |
+| **Selection** | | |
+| `select_actor` | ✅ Done | Uses `GEditor->SelectActor` |
+| `select_actors_by_class` | ✅ Done | Iterates with `TActorIterator` and selects by class |
+| `select_actors_by_tag` | ✅ Done | Iterates and selects by tag |
+| `deselect_all` | ✅ Done | Uses `GEditor->SelectNone` |
+| `group_actors` | ✅ Done | Uses `GEditor->edactRegroupFromSelected` |
+| `ungroup_actors` | ✅ Done | Uses `GEditor->edactUngroupFromSelected` |
+| `get_selected_actors` | ✅ Done | Uses `GEditor->GetSelectedActors` |
+| **Collision** | | |
+| `create_collision_channel` | ✅ Done | Provides guidance (requires DefaultEngine.ini) |
+| `create_collision_profile` | ✅ Done | Provides guidance (requires DefaultEngine.ini) |
+| `configure_channel_responses` | ✅ Done | Profile response configuration |
+| `get_collision_info` | ✅ Done | Returns standard channels and profiles |
+| **Physical Materials** | | |
+| `create_physical_material` | ✅ Done | Creates `UPhysicalMaterial` asset |
+| `set_friction` | ✅ Done | Sets friction on physical material |
+| `set_restitution` | ✅ Done | Sets restitution on physical material |
+| `configure_surface_type` | ✅ Done | Surface type configuration guidance |
+| `get_physical_material_info` | ✅ Done | Returns material properties |
+| **Subsystems** | | |
+| `create_game_instance_subsystem` | ✅ Done | Provides guidance for subsystem creation |
+| `create_world_subsystem` | ✅ Done | Provides guidance for subsystem creation |
+| `create_local_player_subsystem` | ✅ Done | Provides guidance for subsystem creation |
+| `get_subsystem_info` | ✅ Done | Returns available subsystem types |
+| **Timers** | | |
+| `set_timer` | ✅ Done | Timer setup guidance |
+| `clear_timer` | ✅ Done | Timer clearing |
+| `clear_all_timers` | ✅ Done | Clear all timers for actor |
+| `get_active_timers` | ✅ Done | Returns timer info (runtime only) |
+| **Delegates** | | |
+| `create_event_dispatcher` | ✅ Done | Creates multicast delegate in blueprint |
+| `bind_to_event` | ✅ Done | Event binding guidance |
+| `unbind_from_event` | ✅ Done | Event unbinding guidance |
+| `broadcast_event` | ✅ Done | Event broadcast guidance |
+| `create_blueprint_interface` | ✅ Done | Creates `UBlueprint` interface asset |
+| **Transactions** | | |
+| `begin_transaction` | ✅ Done | Uses `GEditor->BeginTransaction` |
+| `end_transaction` | ✅ Done | Uses `GEditor->EndTransaction` |
+| `cancel_transaction` | ✅ Done | Uses `GEditor->CancelTransaction` |
+| `undo` | ✅ Done | Uses `GEditor->UndoTransaction` |
+| `redo` | ✅ Done | Uses `GEditor->RedoTransaction` |
+| `get_transaction_history` | ✅ Done | Returns undo/redo buffer state |
+| **Utility** | | |
+| `get_editor_utilities_info` | ✅ Done | Returns current editor state |
+
+### Implementation Notes
+
+- Uses `FEditorModeTools` singleton (`GLevelEditorModeTools()`) for mode switching
+- Content browser operations via `FContentBrowserModule::Get()`
+- Selection uses `GEditor` singleton for actor selection
+- Physical materials created via `NewObject<UPhysicalMaterial>()` with proper package creation
+- Transactions use `GEditor->BeginTransaction()` / `EndTransaction()` for full undo support
+- Blueprint interfaces created via `FKismetEditorUtilities::CreateBlueprint()` with `BPTYPE_Interface`
+- Event dispatchers added via `Blueprint->NewVariables` with `PC_MCDelegate` pin category
+- Collection management uses `ICollectionManager` from `CollectionManagerModule`

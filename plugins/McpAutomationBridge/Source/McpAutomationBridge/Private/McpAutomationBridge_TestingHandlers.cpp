@@ -158,6 +158,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTestingAction(
     Resp->SetNumberField(TEXT("totalTests"), TotalCount);
     Resp->SetNumberField(TEXT("passedTests"), PassedCount);
     Resp->SetNumberField(TEXT("failedTests"), FailedCount);
+    Resp->SetStringField(TEXT("note"), TEXT("Results are transient and cleared after each run. Use automation session for persistent results."));
     
     Message = TEXT("Retrieved test results");
   }
@@ -238,7 +239,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTestingAction(
     if (FunctionalTestPath.EndsWith(TEXT(".umap")) || FunctionalTestPath.StartsWith(TEXT("/Game/")))
     {
       GEditor->GetEditorWorldContext().SetCurrentWorld(nullptr);
-      FEditorFileUtils::LoadMap(FunctionalTestPath, false, true);
+      bool bLoaded = FEditorFileUtils::LoadMap(FunctionalTestPath, false, true);
+      if (!bLoaded)
+      {
+        SendAutomationError(RequestingSocket, RequestId, 
+          FString::Printf(TEXT("Failed to load map: %s"), *FunctionalTestPath),
+          TEXT("LOAD_MAP_FAILED"));
+        return true;
+      }
     }
     
     Message = FString::Printf(TEXT("Started functional test: %s"), *FunctionalTestPath);

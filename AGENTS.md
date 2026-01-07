@@ -1,12 +1,12 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-01-06 16:00:00 UTC
+**Generated:** 2026-01-07 10:45:00 UTC
 **Commit:** latest
 **Branch:** pcg
-**Tools:** 44 consolidated tools
+**Tools:** 51 consolidated tools
 
 ## OVERVIEW
-MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C++ (Bridge Plugin). 44 action-based tools covering assets, actors, blueprints, levels, animation, VFX, audio, AI, gameplay systems, procedural content generation, water, weather, post-processing, cinematics, media, data persistence, and build/deployment.
+MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C++ (Bridge Plugin). 51 action-based tools covering assets, actors, blueprints, levels, animation, VFX, audio, AI, gameplay systems, procedural content generation, water, weather, post-processing, cinematics, media, data persistence, build/deployment, testing, editor utilities, gameplay systems, and character/avatar plugins (MetaHuman, Groom, Mutable, Ready Player Me).
 
 ## STRUCTURE
 ```

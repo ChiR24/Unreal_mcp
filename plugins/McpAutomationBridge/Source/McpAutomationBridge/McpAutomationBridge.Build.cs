@@ -65,7 +65,8 @@ public class McpAutomationBridge : ModuleRules
             PublicDependencyModuleNames.AddRange(new string[] 
             { 
                 "LevelSequenceEditor", "Sequencer", "MovieSceneTools", "Niagara", "NiagaraEditor", "UnrealEd",
-                "WorldPartitionEditor", "DataLayerEditor", "EnhancedInput", "InputEditor"
+                "WorldPartitionEditor", "DataLayerEditor", "EnhancedInput", "InputEditor",
+                "EditorFramework"  // For FBuiltinEditorModes (EM_Default, EM_Landscape, etc.)
             });
 
             PrivateDependencyModuleNames.AddRange(new string[]
@@ -76,7 +77,8 @@ public class McpAutomationBridge : ModuleRules
                 "AudioEditor", "DataValidation", "NiagaraEditor",
                 // Phase 24: GAS, Audio, and missing module dependencies
                 "GameplayAbilities",  // Required for UAttributeSet, UGameplayEffect, UGameplayAbility, etc.
-                "AudioMixer"          // Required for FAudioEQEffect::ClampValues
+                "AudioMixer",         // Required for FAudioEQEffect::ClampValues
+                "CollectionManager"   // Required for ICollectionManager
             });
 
             PrivateDependencyModuleNames.AddRange(new string[]
@@ -133,6 +135,15 @@ public class McpAutomationBridge : ModuleRules
 
             // Phase 30: Media Framework
             TryAddConditionalModule(Target, EngineDir, "MediaAssets", "MediaAssets");
+
+            // Phase 36: Character & Avatar Plugins
+            // Groom/HairStrands (conditional - requires HairStrands plugin)
+            TryAddConditionalModule(Target, EngineDir, "HairStrandsCore", "HairStrandsCore");
+            TryAddConditionalModule(Target, EngineDir, "HairStrandsEditor", "HairStrandsEditor");
+            // Note: Niagara is already added as a public dependency on line 67, no duplicate needed
+            // Mutable/Customizable (conditional - requires Mutable plugin)
+            TryAddConditionalModule(Target, EngineDir, "MutableRuntime", "MutableRuntime");
+            TryAddConditionalModule(Target, EngineDir, "MutableTools", "MutableTools");
 
             // Ensure editor builds expose full Blueprint graph editing APIs.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
