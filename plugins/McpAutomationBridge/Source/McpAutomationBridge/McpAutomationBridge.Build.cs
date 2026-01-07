@@ -79,6 +79,7 @@ public class McpAutomationBridge : ModuleRules
                 "GameplayAbilities",  // Required for UAttributeSet, UGameplayEffect, UGameplayAbility, etc.
                 "AudioMixer",         // Required for FAudioEQEffect::ClampValues
                 "CollectionManager"   // Required for ICollectionManager
+                // Note: Interchange modules moved to conditional dependencies (TryAddConditionalModule)
             });
 
             PrivateDependencyModuleNames.AddRange(new string[]
@@ -144,6 +145,40 @@ public class McpAutomationBridge : ModuleRules
             // Mutable/Customizable (conditional - requires Mutable plugin)
             TryAddConditionalModule(Target, EngineDir, "MutableRuntime", "MutableRuntime");
             TryAddConditionalModule(Target, EngineDir, "MutableTools", "MutableTools");
+
+            // Phase 37: Asset & Content Plugins
+            // Interchange Framework (built-in for UE 5.0+)
+            TryAddConditionalModule(Target, EngineDir, "InterchangeCore", "InterchangeCore");
+            TryAddConditionalModule(Target, EngineDir, "InterchangeEngine", "InterchangeEngine");
+            TryAddConditionalModule(Target, EngineDir, "InterchangeNodes", "InterchangeNodes");
+            TryAddConditionalModule(Target, EngineDir, "InterchangePipelines", "InterchangePipelines");
+            // USD (built-in plugin) - Module names match directory names
+            TryAddConditionalModule(Target, EngineDir, "USDClasses", "USDClasses");
+            TryAddConditionalModule(Target, EngineDir, "USDStage", "USDStage");
+            TryAddConditionalModule(Target, EngineDir, "USDStageEditor", "USDStageEditor");
+            TryAddConditionalModule(Target, EngineDir, "USDSchemas", "USDSchemas");
+            TryAddConditionalModule(Target, EngineDir, "USDExporter", "USDExporter");
+            // Note: No USDImporter module - it's a plugin folder, not a module
+            // Alembic (built-in plugin)
+            TryAddConditionalModule(Target, EngineDir, "AlembicLibrary", "AlembicLibrary");
+            // Note: No AlembicImporter module - functionality is in AlembicLibrary
+            // glTF (built-in Enterprise plugin)
+            TryAddConditionalModule(Target, EngineDir, "GLTFExporter", "GLTFExporter");
+            TryAddConditionalModule(Target, EngineDir, "GLTFCore", "GLTFCore");
+            // Datasmith (built-in Enterprise plugin)
+            TryAddConditionalModule(Target, EngineDir, "DatasmithCore", "DatasmithCore");
+            TryAddConditionalModule(Target, EngineDir, "DatasmithContent", "DatasmithContent");
+            // Note: DatasmithTranslator, DatasmithImporter, DatasmithExporter may not exist as separate modules
+            // SpeedTree (built-in)
+            TryAddConditionalModule(Target, EngineDir, "SpeedTree", "SpeedTree");
+            // Fab/Quixel (external - Epic Games Launcher installed)
+            TryAddConditionalModule(Target, EngineDir, "QuixelBridge", "QuixelBridge");
+            // Houdini Engine (external - SideFX installed)
+            TryAddConditionalModule(Target, EngineDir, "HoudiniEngineRuntime", "HoudiniEngineRuntime");
+            TryAddConditionalModule(Target, EngineDir, "HoudiniEngineEditor", "HoudiniEngineEditor");
+            // Substance (external - Adobe installed)
+            TryAddConditionalModule(Target, EngineDir, "SubstanceCore", "SubstanceCore");
+            TryAddConditionalModule(Target, EngineDir, "SubstanceEditor", "SubstanceEditor");
 
             // Ensure editor builds expose full Blueprint graph editing APIs.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
@@ -360,7 +395,19 @@ public class McpAutomationBridge : ModuleRules
                     Path.Combine(PluginsDir, "Runtime", "MassEntity", "Source", SearchName),
                     Path.Combine(PluginsDir, "Runtime", "MassGameplay", "Source", SearchName),
                     Path.Combine(PluginsDir, "Runtime", "SmartObjects", "Source", SearchName),
-                    Path.Combine(PluginsDir, "Runtime", "StateTree", "Source", SearchName)
+                    Path.Combine(PluginsDir, "Runtime", "StateTree", "Source", SearchName),
+                    // Phase 37: Asset & Content Plugin paths
+                    Path.Combine(PluginsDir, "Importers", SearchName),
+                    Path.Combine(PluginsDir, "Importers", "USDImporter", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Importers", "AlembicImporter", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Enterprise", SearchName),
+                    Path.Combine(PluginsDir, "Enterprise", "GLTFExporter", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Enterprise", "DatasmithImporter", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Interchange", "Runtime", SearchName),
+                    Path.Combine(PluginsDir, "Interchange", "Editor", SearchName),
+                    Path.Combine(PluginsDir, "Editor", SearchName),
+                    Path.Combine(PluginsDir, "FX", SearchName),
+                    Path.Combine(PluginsDir, "Animation", SearchName)
                 };
 
                 foreach (string SearchPath in SearchPaths)

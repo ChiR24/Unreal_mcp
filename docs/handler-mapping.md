@@ -1642,3 +1642,145 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `create_rpm_animation_blueprint` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Creates animation BP for RPM |
 | `retarget_rpm_animation` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Retargets animations to RPM skeleton |
 | `get_rpm_info` | `McpAutomationBridge_CharacterAvatarHandlers.cpp` | `HandleManageCharacterAvatarAction` | Gets Ready Player Me integration info |
+
+## 52. Asset & Content Plugins Manager (`manage_asset_plugins`) - Phase 37
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Interchange (18 actions)** | | | |
+| `import_with_interchange` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports asset using Interchange pipeline |
+| `export_with_interchange` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Exports asset using Interchange pipeline |
+| `create_interchange_pipeline` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Creates custom Interchange pipeline |
+| `configure_static_mesh_settings` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures static mesh import settings |
+| `configure_skeletal_mesh_settings` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures skeletal mesh import settings |
+| `configure_texture_settings` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures texture import settings |
+| `configure_material_settings` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures material import settings |
+| `configure_animation_settings` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures animation import settings |
+| `set_pipeline_source` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets pipeline source file |
+| `get_available_translators` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Lists available Interchange translators |
+| `register_factory_node` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Registers custom factory node |
+| `configure_scene_import` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures scene import settings |
+| `configure_common_pipelines_settings` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures common pipeline settings |
+| `get_interchange_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets Interchange plugin status |
+| **USD (24 actions)** | | | |
+| `create_usd_stage` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Creates new USD stage |
+| `open_usd_stage` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Opens existing USD stage |
+| `close_usd_stage` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Closes USD stage |
+| `save_usd_stage` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Saves USD stage to file |
+| `create_usd_prim` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Creates prim in USD stage |
+| `set_usd_prim_attribute` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets prim attribute value |
+| `get_usd_prim_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets prim information |
+| `add_reference` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Adds reference to USD prim |
+| `export_actor_to_usd` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Exports actor to USD |
+| `export_level_to_usd` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Exports level to USD |
+| `import_usd_layer` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports USD layer |
+| `create_usd_layer` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Creates new USD layer |
+| `mute_usd_layer` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Mutes/unmutes USD layer |
+| `set_edit_target` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets USD edit target layer |
+| `enable_usd_live_edit` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Enables live USD editing |
+| `create_usd_assets_from_prims` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Creates UE assets from USD prims |
+| `configure_usd_stage_options` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures USD stage options |
+| `get_usd_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets USD plugin status |
+| **Alembic (15 actions)** | | | |
+| `import_alembic_file` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports Alembic file |
+| `set_alembic_import_settings` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures Alembic import settings |
+| `create_geometry_cache_track` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Creates geometry cache track |
+| `import_alembic_groom` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports Alembic groom data |
+| `configure_geometry_cache_playback` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures geometry cache playback |
+| `create_geometry_cache_actor` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Creates geometry cache actor |
+| `sample_geometry_cache_transform` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Samples geometry cache transform |
+| `configure_alembic_compression` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures Alembic compression |
+| `export_alembic` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Exports to Alembic format |
+| `get_alembic_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets Alembic plugin status |
+| **glTF (16 actions)** | | | |
+| `import_gltf_file` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports glTF file |
+| `import_glb_file` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports GLB file |
+| `export_to_gltf` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Exports to glTF format |
+| `export_to_glb` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Exports to GLB format |
+| `configure_gltf_import_settings` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures glTF import settings |
+| `configure_gltf_export_settings` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures glTF export settings |
+| `import_gltf_static_mesh` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports glTF as static mesh |
+| `import_gltf_skeletal_mesh` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports glTF as skeletal mesh |
+| `import_gltf_scene` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports glTF scene hierarchy |
+| `set_draco_compression` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Enables Draco compression |
+| `configure_material_import` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures material import |
+| `get_gltf_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets glTF plugin status |
+| **Datasmith (18 actions)** | | | |
+| `import_datasmith_file` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports Datasmith file |
+| `configure_datasmith_import` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures Datasmith import |
+| `import_cad_file` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports CAD file |
+| `import_cad_assembly` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports CAD assembly |
+| `configure_cad_import_options` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures CAD import options |
+| `import_revit_file` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports Revit file |
+| `import_sketchup_file` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports SketchUp file |
+| `import_3ds_max_file` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports 3ds Max file |
+| `import_rhino_file` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports Rhino file |
+| `import_archicad_file` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports ArchiCAD file |
+| `configure_tessellation` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures tessellation settings |
+| `configure_lightmap_settings` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures lightmap settings |
+| `reimport_datasmith` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Reimports Datasmith scene |
+| `get_datasmith_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets Datasmith plugin status |
+| **SpeedTree (13 actions)** | | | |
+| `import_speedtree_model` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports SpeedTree model |
+| `import_speedtree_9` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports SpeedTree 9 format |
+| `import_speedtree_atlas` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports SpeedTree atlas |
+| `configure_speedtree_wind` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures SpeedTree wind |
+| `set_speedtree_wind_type` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets SpeedTree wind type |
+| `set_speedtree_wind_speed` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets SpeedTree wind speed |
+| `configure_speedtree_lod` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures SpeedTree LOD |
+| `set_speedtree_lod_distances` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets SpeedTree LOD distances |
+| `set_speedtree_lod_transition` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets SpeedTree LOD transition |
+| `create_speedtree_material` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Creates SpeedTree material |
+| `configure_speedtree_collision` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures SpeedTree collision |
+| `apply_speedtree_wind_to_material` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Applies wind to material |
+| `get_speedtree_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets SpeedTree plugin status |
+| **Quixel/Fab (12 actions)** | | | |
+| `connect_to_bridge` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Connects to Quixel Bridge |
+| `disconnect_from_bridge` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Disconnects from Bridge |
+| `import_megascan_surface` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports Megascan surface |
+| `import_megascan_3d_asset` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports Megascan 3D asset |
+| `import_megascan_3d_plant` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports Megascan 3D plant |
+| `configure_megascan_lods` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures Megascan LODs |
+| `apply_megascan_material` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Applies Megascan material |
+| `search_quixel_library` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Searches Quixel library |
+| `download_fab_asset` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Downloads Fab asset |
+| `get_quixel_bridge_status` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets Quixel Bridge status |
+| `get_quixel_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets Quixel plugin status |
+| **Houdini Engine (22 actions)** | | | |
+| `import_hda` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports HDA file |
+| `instantiate_hda` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Instantiates HDA in level |
+| `rebake_hda` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Rebakes HDA output |
+| `set_hda_float_parameter` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets HDA float parameter |
+| `set_hda_int_parameter` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets HDA int parameter |
+| `set_hda_string_parameter` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets HDA string parameter |
+| `set_hda_toggle_parameter` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets HDA toggle parameter |
+| `get_hda_parameter_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets HDA parameter info |
+| `cook_hda` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Cooks HDA |
+| `recook_hda` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Recooks HDA |
+| `bake_hda_to_actors` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Bakes HDA to actors |
+| `bake_hda_to_blueprint` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Bakes HDA to Blueprint |
+| `bake_hda_to_foliage` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Bakes HDA to foliage |
+| `bake_hda_to_landscape` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Bakes HDA to landscape |
+| `set_hda_input_object` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets HDA input object |
+| `set_hda_input_landscape` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets HDA input landscape |
+| `set_hda_input_curve` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets HDA input curve |
+| `clear_hda_input` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Clears HDA input |
+| `get_hda_output_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets HDA output info |
+| `rebuild_hda` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Rebuilds HDA instance |
+| `delete_hda_instance` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Deletes HDA instance |
+| `get_houdini_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets Houdini Engine status |
+| **Substance (20 actions)** | | | |
+| `import_sbsar_file` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Imports SBSAR file |
+| `create_substance_graph_instance` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Creates Substance graph instance |
+| `set_substance_input_float` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets Substance float input |
+| `set_substance_input_int` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets Substance int input |
+| `set_substance_input_color` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets Substance color input |
+| `set_substance_input_image` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Sets Substance image input |
+| `get_substance_input_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets Substance input info |
+| `render_substance_textures` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Renders Substance textures |
+| `configure_substance_output_size` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures output size |
+| `randomize_substance_seed` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Randomizes Substance seed |
+| `create_material_from_substance` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Creates material from Substance |
+| `configure_substance_output` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Configures Substance output |
+| `reimport_substance` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Reimports Substance asset |
+| `get_substance_info` | `McpAutomationBridge_AssetPluginsHandlers.cpp` | `HandleManageAssetPluginsAction` | Gets Substance plugin status |

@@ -6803,5 +6803,377 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         }
       }
     }
+  },
+
+  // ===== PHASE 37: ASSET & CONTENT PLUGINS =====
+  {
+    name: 'manage_asset_plugins',
+    category: 'utility',
+    description: 'Import/export via Interchange, USD, Alembic, glTF, Datasmith, SpeedTree, Quixel/Fab, Houdini Engine, and Substance plugins.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Interchange Framework (18 actions)
+            'create_interchange_pipeline', 'configure_interchange_pipeline', 'import_with_interchange',
+            'import_fbx_with_interchange', 'import_obj_with_interchange', 'export_with_interchange',
+            'set_interchange_translator', 'get_interchange_translators', 'configure_import_asset_type',
+            'set_interchange_result_container', 'get_interchange_import_result', 'cancel_interchange_import',
+            'create_interchange_source_data', 'set_interchange_pipeline_stack',
+            'configure_static_mesh_settings', 'configure_skeletal_mesh_settings',
+            'configure_animation_settings', 'configure_material_settings',
+            // USD (24 actions)
+            'create_usd_stage', 'open_usd_stage', 'close_usd_stage', 'get_usd_stage_info',
+            'create_usd_prim', 'get_usd_prim', 'set_usd_prim_attribute', 'get_usd_prim_attribute',
+            'add_usd_reference', 'add_usd_payload', 'set_usd_variant', 'create_usd_layer',
+            'set_edit_target_layer', 'save_usd_stage', 'export_actor_to_usd', 'export_level_to_usd',
+            'export_static_mesh_to_usd', 'export_skeletal_mesh_to_usd', 'export_material_to_usd',
+            'export_animation_to_usd', 'enable_usd_live_edit', 'spawn_usd_stage_actor',
+            'configure_usd_asset_cache', 'get_usd_prim_children',
+            // Alembic (15 actions)
+            'import_alembic_file', 'import_alembic_static_mesh', 'import_alembic_skeletal_mesh',
+            'import_alembic_geometry_cache', 'import_alembic_groom', 'configure_alembic_import_settings',
+            'set_alembic_sampling_settings', 'set_alembic_compression_type', 'set_alembic_normal_generation',
+            'reimport_alembic_asset', 'get_alembic_info', 'create_geometry_cache_track',
+            'play_geometry_cache', 'set_geometry_cache_time', 'export_to_alembic',
+            // glTF (16 actions)
+            'import_gltf', 'import_glb', 'import_gltf_static_mesh', 'import_gltf_skeletal_mesh',
+            'export_to_gltf', 'export_to_glb', 'export_level_to_gltf', 'export_actor_to_gltf',
+            'configure_gltf_export_options', 'set_gltf_export_scale', 'set_gltf_texture_format',
+            'set_draco_compression', 'export_material_to_gltf', 'export_animation_to_gltf',
+            'get_gltf_export_messages', 'configure_gltf_material_baking',
+            // Datasmith (18 actions)
+            'import_datasmith_file', 'import_datasmith_cad', 'import_datasmith_revit',
+            'import_datasmith_sketchup', 'import_datasmith_3dsmax', 'import_datasmith_rhino',
+            'import_datasmith_solidworks', 'import_datasmith_archicad', 'configure_datasmith_import_options',
+            'set_datasmith_tessellation_quality', 'reimport_datasmith_scene', 'get_datasmith_scene_info',
+            'update_datasmith_scene', 'configure_datasmith_lightmap', 'create_datasmith_runtime_actor',
+            'configure_datasmith_materials', 'export_datasmith_scene', 'sync_datasmith_changes',
+            // SpeedTree (12 actions)
+            'import_speedtree_model', 'import_speedtree_9', 'import_speedtree_atlas',
+            'configure_speedtree_wind', 'set_speedtree_wind_type', 'set_speedtree_wind_speed',
+            'configure_speedtree_lod', 'set_speedtree_lod_distances', 'set_speedtree_lod_transition',
+            'create_speedtree_material', 'configure_speedtree_collision', 'get_speedtree_info',
+            // Quixel/Fab (12 actions)
+            'connect_to_bridge', 'disconnect_bridge', 'get_bridge_status',
+            'import_megascan_surface', 'import_megascan_3d_asset', 'import_megascan_3d_plant',
+            'import_megascan_decal', 'import_megascan_atlas', 'import_megascan_brush',
+            'search_fab_assets', 'download_fab_asset', 'configure_megascan_import_settings',
+            // Houdini Engine (22 actions)
+            'import_hda', 'instantiate_hda', 'spawn_hda_actor', 'get_hda_parameters',
+            'set_hda_float_parameter', 'set_hda_int_parameter', 'set_hda_bool_parameter',
+            'set_hda_string_parameter', 'set_hda_color_parameter', 'set_hda_vector_parameter',
+            'set_hda_ramp_parameter', 'set_hda_multi_parameter', 'cook_hda',
+            'bake_hda_to_actors', 'bake_hda_to_blueprint', 'configure_hda_input',
+            'set_hda_world_input', 'set_hda_geometry_input', 'set_hda_curve_input',
+            'get_hda_outputs', 'get_hda_cook_status', 'connect_to_houdini_session',
+            // Substance (20 actions)
+            'import_sbsar_file', 'create_substance_instance', 'get_substance_parameters',
+            'set_substance_float_parameter', 'set_substance_int_parameter', 'set_substance_bool_parameter',
+            'set_substance_color_parameter', 'set_substance_string_parameter', 'set_substance_image_input',
+            'render_substance_textures', 'get_substance_outputs', 'create_material_from_substance',
+            'apply_substance_to_material', 'configure_substance_output_size', 'randomize_substance_seed',
+            'export_substance_textures', 'reimport_sbsar', 'get_substance_graph_info',
+            'set_substance_output_format', 'batch_render_substances',
+            // Utility
+            'get_asset_plugins_info'
+          ],
+          description: 'Asset & content plugin action.'
+        },
+        
+        // Common file parameters
+        filePath: { type: 'string', description: 'Source file path (absolute or project-relative).' },
+        destinationPath: { type: 'string', description: 'Destination path in content browser (/Game/...).' },
+        assetPath: commonSchemas.assetPath,
+        actorName: commonSchemas.actorName,
+        
+        // Interchange parameters
+        pipelineName: { type: 'string', description: 'Name for the interchange pipeline.' },
+        pipelineClass: { type: 'string', description: 'Pipeline class to use.' },
+        translatorClass: { type: 'string', description: 'Translator class for specific file type.' },
+        importOptions: { type: 'object', description: 'Import configuration options.' },
+        exportOptions: { type: 'object', description: 'Export configuration options.' },
+        assetType: { type: 'string', enum: ['StaticMesh', 'SkeletalMesh', 'Animation', 'Material', 'Texture'], description: 'Asset type to import.' },
+        
+        // USD parameters
+        rootLayerPath: { type: 'string', description: 'USD root layer file path.' },
+        primPath: { type: 'string', description: 'USD prim path (e.g., /Root/MyPrim).' },
+        primType: { type: 'string', description: 'USD prim type (Xform, Mesh, Scope, etc.).' },
+        attributeName: { type: 'string', description: 'USD attribute name.' },
+        attributeValue: { type: ['string', 'number', 'boolean', 'object'], description: 'Attribute value.' },
+        referencePath: { type: 'string', description: 'Path to USD file to reference.' },
+        payloadPath: { type: 'string', description: 'Path to USD payload file.' },
+        variantSetName: { type: 'string', description: 'USD variant set name.' },
+        variantName: { type: 'string', description: 'USD variant name.' },
+        layerIdentifier: { type: 'string', description: 'USD layer identifier.' },
+        stageState: { type: 'string', enum: ['Closed', 'Opened', 'OpenedAndLoaded'], description: 'USD stage state.' },
+        enableLiveEdit: { type: 'boolean', description: 'Enable USD live editing.' },
+        
+        // Alembic parameters
+        importType: { type: 'string', enum: ['StaticMesh', 'GeometryCache', 'Skeletal'], description: 'Alembic import type.' },
+        samplingType: { type: 'string', enum: ['PerFrame', 'PerXFrames', 'PerTimeStep'], description: 'Animation sampling type.' },
+        frameSteps: { type: 'number', description: 'Frame steps for sampling.' },
+        timeSteps: { type: 'number', description: 'Time steps for sampling.' },
+        frameStart: { type: 'number', description: 'Start frame.' },
+        frameEnd: { type: 'number', description: 'End frame.' },
+        recomputeNormals: { type: 'boolean', description: 'Recompute normals on import.' },
+        compressionType: { type: 'string', enum: ['PercentageBased', 'FixedNumber', 'NoCompression'], description: 'Compression type.' },
+        
+        // glTF parameters
+        exportScale: { type: 'number', description: 'Export scale factor (default 0.01 for cm to m).' },
+        textureFormat: { type: 'string', enum: ['None', 'PNG', 'JPEG'], description: 'Texture image format.' },
+        textureQuality: { type: 'number', description: 'JPEG texture quality (1-100).' },
+        useDracoCompression: { type: 'boolean', description: 'Enable Draco mesh compression.' },
+        exportVertexColors: { type: 'boolean', description: 'Export vertex colors.' },
+        exportMorphTargets: { type: 'boolean', description: 'Export morph targets/blend shapes.' },
+        bakeMaterialInputs: { type: 'string', enum: ['Disabled', 'Simple', 'UseMeshData'], description: 'Material baking mode.' },
+        
+        // Datasmith parameters
+        tessellationQuality: { type: 'string', enum: ['Draft', 'Low', 'Medium', 'High', 'Custom'], description: 'CAD tessellation quality.' },
+        lightmapResolution: { type: 'number', description: 'Lightmap resolution for imported assets.' },
+        importHierarchy: { type: 'boolean', description: 'Preserve source hierarchy.' },
+        minLightmapResolution: { type: 'number', description: 'Minimum lightmap resolution.' },
+        
+        // SpeedTree parameters
+        modelPath: { type: 'string', description: 'SpeedTree model file path.' },
+        windType: { type: 'string', enum: ['None', 'Fastest', 'Fast', 'Better', 'Best', 'Palm'], description: 'Wind animation type.' },
+        windSpeed: { type: 'number', description: 'Wind speed multiplier.' },
+        lodDistances: { type: 'array', items: { type: 'number' }, description: 'LOD distance thresholds.' },
+        enableCollision: { type: 'boolean', description: 'Generate collision.' },
+        
+        // Quixel/Fab parameters
+        assetId: { type: 'string', description: 'Megascan/Fab asset ID.' },
+        searchQuery: { type: 'string', description: 'Search query for Fab assets.' },
+        quality: { type: 'string', enum: ['Low', 'Medium', 'High', 'Ultra'], description: 'Asset quality tier.' },
+        applyMaterials: { type: 'boolean', description: 'Auto-apply materials on import.' },
+        
+        // Houdini Engine parameters
+        hdaPath: { type: 'string', description: 'HDA file path.' },
+        parameterName: { type: 'string', description: 'HDA parameter name.' },
+        parameterValue: { type: ['string', 'number', 'boolean', 'array', 'object'], description: 'Parameter value.' },
+        inputIndex: { type: 'number', description: 'HDA input index.' },
+        inputActors: { type: 'array', items: { type: 'string' }, description: 'Actors to use as HDA input.' },
+        bakeToBlueprint: { type: 'boolean', description: 'Bake output to Blueprint.' },
+        bakeToActors: { type: 'boolean', description: 'Bake output to level actors.' },
+        cookMode: { type: 'string', enum: ['OnAssetChange', 'OnParameterChange', 'Manual'], description: 'HDA cook mode.' },
+        
+        // Substance parameters
+        sbsarPath: { type: 'string', description: 'SBSAR file path.' },
+        graphName: { type: 'string', description: 'Substance graph name.' },
+        outputSize: { type: 'number', description: 'Output texture size (power of 2).' },
+        seed: { type: 'number', description: 'Random seed.' },
+        outputFormat: { type: 'string', enum: ['DXT1', 'DXT5', 'BC7', 'RGBA8'], description: 'Output texture format.' },
+        parameterValues: { type: 'object', description: 'Batch of parameter name-value pairs.' },
+        
+        // Common
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        error: commonSchemas.stringProp,
+        
+        // Common outputs
+        assetPath: commonSchemas.stringProp,
+        actorName: commonSchemas.stringProp,
+        importedAssets: { type: 'array', items: { type: 'string' }, description: 'List of imported asset paths.' },
+        exportedFile: { type: 'string', description: 'Exported file path.' },
+        
+        // Plugin availability
+        pluginInfo: {
+          type: 'object',
+          properties: {
+            interchangeAvailable: commonSchemas.booleanProp,
+            usdAvailable: commonSchemas.booleanProp,
+            alembicAvailable: commonSchemas.booleanProp,
+            gltfAvailable: commonSchemas.booleanProp,
+            datasmithAvailable: commonSchemas.booleanProp,
+            speedtreeAvailable: commonSchemas.booleanProp,
+            quixelAvailable: commonSchemas.booleanProp,
+            houdiniAvailable: commonSchemas.booleanProp,
+            substanceAvailable: commonSchemas.booleanProp
+          },
+          description: 'Plugin availability status (for get_asset_plugins_info).'
+        },
+        
+        // Interchange outputs
+        translators: { type: 'array', items: { type: 'string' }, description: 'Available translators.' },
+        pipelinePath: commonSchemas.stringProp,
+        importResult: {
+          type: 'object',
+          properties: {
+            status: { type: 'string', enum: ['Invalid', 'InProgress', 'Done'] },
+            importedObjects: { type: 'array', items: { type: 'string' } },
+            errors: commonSchemas.arrayOfStrings
+          }
+        },
+        
+        // USD outputs
+        stageInfo: {
+          type: 'object',
+          properties: {
+            rootLayerPath: commonSchemas.stringProp,
+            stageState: commonSchemas.stringProp,
+            primCount: commonSchemas.numberProp,
+            timeCodesPerSecond: commonSchemas.numberProp,
+            startTimeCode: commonSchemas.numberProp,
+            endTimeCode: commonSchemas.numberProp
+          },
+          description: 'USD stage information.'
+        },
+        primInfo: {
+          type: 'object',
+          properties: {
+            primPath: commonSchemas.stringProp,
+            primType: commonSchemas.stringProp,
+            isActive: commonSchemas.booleanProp,
+            hasPayload: commonSchemas.booleanProp,
+            children: { type: 'array', items: { type: 'string' } },
+            attributes: { type: 'object' }
+          },
+          description: 'USD prim information.'
+        },
+        
+        // Alembic outputs
+        alembicInfo: {
+          type: 'object',
+          properties: {
+            filePath: commonSchemas.stringProp,
+            frameRange: { type: 'object', properties: { start: commonSchemas.numberProp, end: commonSchemas.numberProp } },
+            meshCount: commonSchemas.numberProp,
+            hasAnimation: commonSchemas.booleanProp
+          },
+          description: 'Alembic file information.'
+        },
+        
+        // glTF outputs
+        gltfMessages: { type: 'array', items: { type: 'string' }, description: 'Export warnings/messages.' },
+        exportOptions: {
+          type: 'object',
+          properties: {
+            scale: commonSchemas.numberProp,
+            textureFormat: commonSchemas.stringProp,
+            useDraco: commonSchemas.booleanProp
+          }
+        },
+        
+        // Datasmith outputs
+        sceneInfo: {
+          type: 'object',
+          properties: {
+            actorCount: commonSchemas.numberProp,
+            meshCount: commonSchemas.numberProp,
+            materialCount: commonSchemas.numberProp,
+            textureCount: commonSchemas.numberProp,
+            lightCount: commonSchemas.numberProp
+          },
+          description: 'Datasmith scene statistics.'
+        },
+        
+        // SpeedTree outputs
+        speedtreeInfo: {
+          type: 'object',
+          properties: {
+            meshPath: commonSchemas.stringProp,
+            materialPath: commonSchemas.stringProp,
+            lodCount: commonSchemas.numberProp,
+            hasWind: commonSchemas.booleanProp,
+            windType: commonSchemas.stringProp
+          }
+        },
+        
+        // Quixel/Fab outputs
+        bridgeStatus: {
+          type: 'object',
+          properties: {
+            connected: commonSchemas.booleanProp,
+            bridgeVersion: commonSchemas.stringProp,
+            accountEmail: commonSchemas.stringProp
+          }
+        },
+        searchResults: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              assetId: commonSchemas.stringProp,
+              name: commonSchemas.stringProp,
+              category: commonSchemas.stringProp,
+              thumbnailUrl: commonSchemas.stringProp
+            }
+          }
+        },
+        
+        // Houdini outputs
+        hdaParameters: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: commonSchemas.stringProp,
+              type: commonSchemas.stringProp,
+              value: { type: ['string', 'number', 'boolean', 'array'] },
+              label: commonSchemas.stringProp
+            }
+          },
+          description: 'HDA parameters list.'
+        },
+        hdaOutputs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              outputIndex: commonSchemas.numberProp,
+              outputType: commonSchemas.stringProp,
+              meshCount: commonSchemas.numberProp
+            }
+          }
+        },
+        cookStatus: { type: 'string', enum: ['Idle', 'Cooking', 'Cooked', 'Failed'] },
+        
+        // Substance outputs
+        substanceParameters: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: commonSchemas.stringProp,
+              type: { type: 'string', enum: ['Float', 'Int', 'Bool', 'Color', 'String', 'Image'] },
+              defaultValue: { type: ['string', 'number', 'boolean', 'object'] },
+              minValue: commonSchemas.numberProp,
+              maxValue: commonSchemas.numberProp
+            }
+          }
+        },
+        substanceOutputs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: commonSchemas.stringProp,
+              usage: commonSchemas.stringProp,
+              texturePath: commonSchemas.stringProp
+            }
+          }
+        },
+        graphInfo: {
+          type: 'object',
+          properties: {
+            graphName: commonSchemas.stringProp,
+            author: commonSchemas.stringProp,
+            description: commonSchemas.stringProp,
+            category: commonSchemas.stringProp,
+            parameterCount: commonSchemas.numberProp,
+            outputCount: commonSchemas.numberProp
+          }
+        }
+      }
+    }
   }
 ];

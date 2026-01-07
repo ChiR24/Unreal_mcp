@@ -10,8 +10,8 @@ A comprehensive development plan for the Unreal Engine Model Context Protocol (M
 |--------|-------|
 | **Total Phases** | 59 |
 | **Estimated Actions** | ~2,850 |
-| **Completed Phases** | 36 |
-| **In Progress** | Phase 5 (Infrastructure), Phase 37 (Asset & Content Plugins) |
+| **Completed Phases** | 37 |
+| **In Progress** | Phase 5 (Infrastructure) |
 | **Engine Support** | Unreal Engine 5.0 - 5.7 |
 
 ---
@@ -793,11 +793,11 @@ MetaHuman, Ready Player Me, Mutable, Groom.
 
 ---
 
-## Phase 37: Asset & Content Plugins 🔄
+## Phase 37: Asset & Content Plugins ✅
 
-**Status**: Planned | **Actions**: ~150
+**Status**: Complete | **Tool**: `manage_asset_plugins` | **Actions**: 158
 
-Interchange, USD, Alembic, glTF, Substance, Houdini Engine, SpeedTree, Datasmith.
+Interchange, USD, Alembic, glTF, Substance, Houdini Engine, SpeedTree, Datasmith, Quixel/Fab.
 
 > **External Dependencies**: Some plugins require external software/accounts:
 > - **Quixel/Fab**: Requires Epic Games account (free with UE license)
@@ -805,19 +805,25 @@ Interchange, USD, Alembic, glTF, Substance, Houdini Engine, SpeedTree, Datasmith
 > - **Houdini Engine**: Requires SideFX Houdini license
 > - **SpeedTree**: Requires SpeedTree license for authoring (runtime is free)
 
-### Planned Capabilities
+### Implemented Capabilities
 
-| Plugin | Key Actions |
-|--------|-------------|
-| Quixel/Fab | `connect_to_bridge`, `import_megascan_surface`, `import_megascan_3d_asset`, `download_fab_asset` |
-| Interchange | `create_interchange_pipeline`, `import_with_interchange`, `configure_import_asset_type` |
-| USD | `create_usd_stage`, `open_usd_stage`, `create_usd_prim`, `export_level_to_usd`, `enable_usd_live_edit` |
-| Alembic | `import_alembic_file`, `create_geometry_cache_track`, `import_alembic_groom` |
-| glTF | `import_gltf`, `import_glb`, `export_to_gltf`, `set_draco_compression` |
-| Substance | `import_sbsar_file`, `set_substance_parameter`, `render_substance_textures`, `create_material_from_substance` |
-| Houdini Engine | `import_hda`, `instantiate_hda`, `set_hda_float_parameter`, `cook_hda`, `bake_hda_to_actors` |
-| SpeedTree | `import_speedtree_model`, `configure_speedtree_wind`, `configure_speedtree_lod` |
-| Datasmith | `import_datasmith_file`, `import_cad_file`, `import_revit`, `import_sketchup` |
+| Plugin | # Actions | Key Actions |
+|--------|-----------|-------------|
+| Interchange | 18 | `import_with_interchange`, `export_with_interchange`, `create_interchange_pipeline`, `configure_static_mesh_settings`, `configure_skeletal_mesh_settings`, `configure_texture_settings`, `configure_material_settings`, `configure_animation_settings`, `set_pipeline_source`, `get_available_translators`, `register_factory_node`, `configure_scene_import`, `configure_common_pipelines_settings`, `get_interchange_info` |
+| USD | 24 | `create_usd_stage`, `open_usd_stage`, `close_usd_stage`, `save_usd_stage`, `create_usd_prim`, `set_usd_prim_attribute`, `get_usd_prim_info`, `add_reference`, `export_actor_to_usd`, `export_level_to_usd`, `import_usd_layer`, `create_usd_layer`, `mute_usd_layer`, `set_edit_target`, `enable_usd_live_edit`, `create_usd_assets_from_prims`, `configure_usd_stage_options`, `get_usd_info` |
+| Alembic | 15 | `import_alembic_file`, `set_alembic_import_settings`, `create_geometry_cache_track`, `import_alembic_groom`, `configure_geometry_cache_playback`, `create_geometry_cache_actor`, `sample_geometry_cache_transform`, `configure_alembic_compression`, `export_alembic`, `get_alembic_info` |
+| glTF | 16 | `import_gltf_file`, `import_glb_file`, `export_to_gltf`, `export_to_glb`, `configure_gltf_import_settings`, `configure_gltf_export_settings`, `import_gltf_static_mesh`, `import_gltf_skeletal_mesh`, `import_gltf_scene`, `set_draco_compression`, `configure_material_import`, `get_gltf_info` |
+| Datasmith | 18 | `import_datasmith_file`, `configure_datasmith_import`, `import_cad_file`, `import_cad_assembly`, `configure_cad_import_options`, `import_revit_file`, `import_sketchup_file`, `import_3ds_max_file`, `import_rhino_file`, `import_archicad_file`, `configure_tessellation`, `configure_lightmap_settings`, `reimport_datasmith`, `get_datasmith_info` |
+| SpeedTree | 12 | `import_speedtree_model`, `import_speedtree_9`, `configure_speedtree_wind`, `configure_speedtree_lod`, `configure_speedtree_materials`, `configure_speedtree_collision`, `apply_speedtree_wind_to_material`, `get_speedtree_info` |
+| Quixel/Fab | 12 | `connect_to_bridge`, `disconnect_from_bridge`, `import_megascan_surface`, `import_megascan_3d_asset`, `import_megascan_3d_plant`, `configure_megascan_lods`, `apply_megascan_material`, `search_quixel_library`, `download_fab_asset`, `get_quixel_bridge_status`, `get_quixel_info` |
+| Houdini Engine | 22 | `import_hda`, `instantiate_hda`, `rebake_hda`, `set_hda_float_parameter`, `set_hda_int_parameter`, `set_hda_string_parameter`, `set_hda_toggle_parameter`, `get_hda_parameter_info`, `cook_hda`, `recook_hda`, `bake_hda_to_actors`, `bake_hda_to_blueprint`, `bake_hda_to_foliage`, `bake_hda_to_landscape`, `set_hda_input_object`, `set_hda_input_landscape`, `set_hda_input_curve`, `clear_hda_input`, `get_hda_output_info`, `rebuild_hda`, `delete_hda_instance`, `get_houdini_info` |
+| Substance | 20 | `import_sbsar_file`, `create_substance_graph_instance`, `set_substance_input_float`, `set_substance_input_int`, `set_substance_input_color`, `set_substance_input_image`, `get_substance_input_info`, `render_substance_textures`, `configure_substance_output_size`, `randomize_substance_seed`, `create_material_from_substance`, `configure_substance_output`, `reimport_substance`, `get_substance_info` |
+
+### Implementation Notes
+- All 157 actions fully implemented in both TypeScript and C++ handlers
+- Conditional compilation (`#if`) for optional plugins (Houdini, Substance)
+- Graceful fallback messages when external plugins not installed
+- Uses real UE 5.7 APIs for all Interchange, USD, Alembic, glTF, Datasmith operations
 
 ---
 
@@ -1238,7 +1244,7 @@ Make new project setup reproducible.
 | World Building (23-27) | 5 | ~100 |
 | Advanced Systems (28-35) | 8 | ~380 |
 | Plugin: Character/Avatar (36) | 1 | ~60 |
-| Plugin: Asset/Content (37) | 1 | ~150 |
+| Plugin: Asset/Content (37) | 1 | 158 ✅ |
 | Plugin: Audio Middleware (38) | 1 | ~80 |
 | Plugin: Motion Capture (39) | 1 | ~70 |
 | Plugin: Virtual Production (40) | 1 | ~150 |

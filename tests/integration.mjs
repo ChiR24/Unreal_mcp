@@ -2,7 +2,7 @@
 /**
  * Fully Consolidated Integration Test Suite
  *
- * Covers all 46 MCP tools (Phases 1-36):
+ * Covers all 52 MCP tools (Phases 1-37):
  * - Groups 1-8: Original 17 tools
  * - Groups 9-29: Advanced tools (Phases 6-29)
  * - Phase 31: Data & Persistence (manage_data)
@@ -11,6 +11,7 @@
  * - Phase 34: Editor Utilities (manage_editor_utilities)
  * - Phase 35: Gameplay Systems (manage_gameplay_systems)
  * - Phase 36: Character & Avatar Plugins (manage_character_avatar)
+ * - Phase 37: Asset & Content Plugins (manage_asset_plugins)
  *
  * Usage:
  *   node tests/integration.mjs
@@ -248,6 +249,52 @@ const testCases = [
   { scenario: 'CharacterAvatar: Load avatar from GLB', toolName: 'manage_character_avatar', arguments: { action: 'load_avatar_from_glb', glbPath: '/Game/Avatars/test.glb' }, expected: 'success' },
   { scenario: 'CharacterAvatar: Clear avatar cache', toolName: 'manage_character_avatar', arguments: { action: 'clear_avatar_cache' }, expected: 'success' },
   { scenario: 'CharacterAvatar: Get avatar metadata', toolName: 'manage_character_avatar', arguments: { action: 'get_avatar_metadata', avatarUrl: 'https://models.readyplayer.me/test.glb' }, expected: 'success' },
+  
+  // ==================== Phase 37: Asset & Content Plugins ====================
+  // Utility - Get plugin availability
+  { scenario: 'AssetPlugins: Get plugins info', toolName: 'manage_asset_plugins', arguments: { action: 'get_asset_plugins_info' }, expected: 'success' },
+  
+  // Interchange Framework (built-in)
+  { scenario: 'AssetPlugins: Get Interchange translators', toolName: 'manage_asset_plugins', arguments: { action: 'get_interchange_translators' }, expected: 'success|not available' },
+  { scenario: 'AssetPlugins: Get Interchange pipelines', toolName: 'manage_asset_plugins', arguments: { action: 'get_interchange_pipelines' }, expected: 'success|not available' },
+  { scenario: 'AssetPlugins: Get import preview (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_import_preview', sourceFile: 'C:/NonExistent/test.fbx' }, expected: 'success|not available' },
+  
+  // USD (conditional - requires USD plugin)
+  { scenario: 'AssetPlugins: Get USD stage info (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_usd_stage_info', actorName: 'NonExistentUsdStage' }, expected: 'success|not available' },
+  { scenario: 'AssetPlugins: Get USD variants (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_usd_variants', actorName: 'NonExistentUsdStage', primPath: '/' }, expected: 'success|not available' },
+  
+  // Alembic (conditional - requires Alembic plugin)
+  { scenario: 'AssetPlugins: Get Alembic import options', toolName: 'manage_asset_plugins', arguments: { action: 'get_alembic_import_options' }, expected: 'success|not available' },
+  { scenario: 'AssetPlugins: Get Alembic time range (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_alembic_time_range', sourceFile: 'C:/NonExistent/test.abc' }, expected: 'success|not available' },
+  
+  // glTF (conditional - requires glTF plugin)
+  { scenario: 'AssetPlugins: Get glTF extensions', toolName: 'manage_asset_plugins', arguments: { action: 'get_gltf_extensions' }, expected: 'success|not available' },
+  { scenario: 'AssetPlugins: Get glTF scene info (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_gltf_scene_info', sourceFile: 'C:/NonExistent/test.gltf' }, expected: 'success|not available' },
+  { scenario: 'AssetPlugins: Validate glTF (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'validate_gltf', sourceFile: 'C:/NonExistent/test.gltf' }, expected: 'success|not available' },
+  
+  // Datasmith (conditional - requires Datasmith plugin)
+  { scenario: 'AssetPlugins: Get Datasmith scene info (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_datasmith_scene_info', scenePath: '/Game/NonExistent' }, expected: 'success|not available' },
+  { scenario: 'AssetPlugins: Get Datasmith actors (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_datasmith_actors', scenePath: '/Game/NonExistent' }, expected: 'success|not available' },
+  
+  // SpeedTree (conditional - requires SpeedTree plugin)
+  { scenario: 'AssetPlugins: Get SpeedTree info (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_speedtree_info', assetPath: '/Game/NonExistent' }, expected: 'success|not available' },
+  
+  // Quixel/Fab (external - may not be available)
+  { scenario: 'AssetPlugins: Get Megascan categories', toolName: 'manage_asset_plugins', arguments: { action: 'get_megascan_categories' }, expected: 'success' },
+  { scenario: 'AssetPlugins: Get local Megascan assets', toolName: 'manage_asset_plugins', arguments: { action: 'get_local_megascan_assets' }, expected: 'success' },
+  { scenario: 'AssetPlugins: Search Fab library', toolName: 'manage_asset_plugins', arguments: { action: 'search_fab_library', query: 'test' }, expected: 'success' },
+  { scenario: 'AssetPlugins: Connect to Fab', toolName: 'manage_asset_plugins', arguments: { action: 'connect_to_fab' }, expected: 'success' },
+  
+  // Houdini Engine (external - requires SideFX plugin)
+  { scenario: 'AssetPlugins: Get HDA parameters (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_hda_parameters', actorName: 'NonExistentHDA' }, expected: 'error|not found|not available' },
+  { scenario: 'AssetPlugins: Get HDA outputs (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_hda_outputs', actorName: 'NonExistentHDA' }, expected: 'success|not available' },
+  { scenario: 'AssetPlugins: Get HDA cook status (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_hda_cook_status', actorName: 'NonExistentHDA' }, expected: 'success|not available' },
+  { scenario: 'AssetPlugins: Connect to Houdini session', toolName: 'manage_asset_plugins', arguments: { action: 'connect_to_houdini_session', sessionType: 'InProcess' }, expected: 'success|not available' },
+  
+  // Substance (external - requires Adobe plugin)
+  { scenario: 'AssetPlugins: Get Substance parameters (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_substance_parameters', instancePath: '/Game/NonExistent' }, expected: 'success|not available' },
+  { scenario: 'AssetPlugins: Get Substance outputs (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_substance_outputs', instancePath: '/Game/NonExistent' }, expected: 'success|not available' },
+  { scenario: 'AssetPlugins: Get Substance graph info (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_substance_graph_info', assetPath: '/Game/NonExistent' }, expected: 'success|not available' },
   
   // Cleanup tests
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },

@@ -756,6 +756,11 @@ private:
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 37: Asset & Content Plugins handlers
+  bool HandleManageAssetPluginsAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
   // 2. Execution & Build / Test Pipeline
   bool HandlePipelineAction(const FString &RequestId, const FString &Action,

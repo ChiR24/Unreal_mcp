@@ -970,6 +970,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageCharacterAvatarAction(R, A, P, S);
                   });
+
+  // Phase 37: Asset & Content Plugins
+  RegisterHandler(TEXT("manage_asset_plugins"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageAssetPluginsAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

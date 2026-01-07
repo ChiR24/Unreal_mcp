@@ -5,7 +5,7 @@
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.7-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
-[![Tools](https://img.shields.io/badge/Tools-51-purple)](docs/handler-mapping.md)
+[![Tools](https://img.shields.io/badge/Tools-52-purple)](docs/handler-mapping.md)
 [![Project Board](https://img.shields.io/badge/Project-Roadmap-blueviolet?logo=github)](https://github.com/users/ChiR24/projects/3)
 [![Discussions](https://img.shields.io/badge/Discussions-Join-brightgreen?logo=github)](https://github.com/ChiR24/Unreal_mcp/discussions)
 
@@ -118,6 +118,13 @@ Enable via **Edit → Plugins**, then restart the editor:
 | **Water** (Experimental) | `manage_water` operations (oceans, lakes, rivers) |
 | **HairStrands** (Optional) | `manage_character_avatar` groom/hair operations |
 | **Mutable** (Optional) | `manage_character_avatar` customizable object operations |
+| **Interchange** (Built-in) | `manage_asset_plugins` Interchange Framework import/export |
+| **USD Importer** (Optional) | `manage_asset_plugins` USD stage and prim operations |
+| **Alembic Importer** (Optional) | `manage_asset_plugins` Alembic geometry cache import |
+| **glTF Exporter** (Optional) | `manage_asset_plugins` glTF/GLB import/export |
+| **Datasmith** (Optional) | `manage_asset_plugins` CAD and scene import |
+| **Houdini Engine** (External) | `manage_asset_plugins` HDA operations (requires SideFX plugin) |
+| **Substance** (External) | `manage_asset_plugins` SBSAR procedural textures (requires Adobe plugin) |
 
 ### Step 4: Configure MCP Client
 
@@ -271,6 +278,11 @@ ASSET_LIST_TTL_MS=10000
 | Tool | Description |
 |------|-------------|
 | `manage_character_avatar` | MetaHuman, Groom/Hair (HairStrands), Mutable/Customizable objects, Ready Player Me avatar integration |
+
+### Asset & Content Plugins
+| Tool | Description |
+|------|-------------|
+| `manage_asset_plugins` | Interchange Framework, USD, Alembic, glTF, Datasmith, SpeedTree, Quixel/Fab, Houdini Engine, Substance (~158 actions) |
 
 ### Supported Asset Types
 
