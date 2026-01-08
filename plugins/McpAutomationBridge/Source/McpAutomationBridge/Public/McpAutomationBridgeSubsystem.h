@@ -781,6 +781,31 @@ private:
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 42: AI & NPC Plugins handlers (Convai, Inworld AI, NVIDIA ACE)
+  bool HandleManageAINPCAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 43: Utility Plugins handlers (Python, Editor Scripting, Modeling Tools, Common UI, Paper2D, Procedural Mesh, Variant Manager)
+  bool HandleManageUtilityPluginsAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 44: Physics & Destruction Plugins handlers (Chaos Destruction, Vehicles, Cloth, Flesh)
+  bool HandleManagePhysicsDestructionAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 45: Accessibility System handlers
+  bool HandleManageAccessibilityAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 46: Modding & UGC System handlers
+  bool HandleManageModdingAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
   // 2. Execution & Build / Test Pipeline
   bool HandlePipelineAction(const FString &RequestId, const FString &Action,

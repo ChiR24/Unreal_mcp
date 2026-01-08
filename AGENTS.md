@@ -1,12 +1,12 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-01-07 10:45:00 UTC
+**Generated:** 2026-01-08 10:00:00 UTC
 **Commit:** latest
 **Branch:** pcg
-**Tools:** 54 consolidated tools
+**Tools:** 61 consolidated tools
 
 ## OVERVIEW
-MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C++ (Bridge Plugin). 54 action-based tools covering assets, actors, blueprints, levels, animation, VFX, audio, AI, gameplay systems, procedural content generation, water, weather, post-processing, cinematics, media, data persistence, build/deployment, testing, editor utilities, gameplay systems, character/avatar plugins (MetaHuman, Groom, Mutable, Ready Player Me), asset/content plugins (Interchange, USD, Alembic, glTF, Datasmith, SpeedTree, Quixel/Fab, Houdini Engine, Substance), audio middleware plugins (Wwise, FMOD, Bink Video), and Live Link/motion capture integration.
+MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C++ (Bridge Plugin). 61 action-based tools covering assets, actors, blueprints, levels, animation, VFX, audio, AI, gameplay systems, procedural content generation, water, weather, post-processing, cinematics, media, data persistence, build/deployment, testing, editor utilities, gameplay systems, character/avatar plugins (MetaHuman, Groom, Mutable, Ready Player Me), asset/content plugins (Interchange, USD, Alembic, glTF, Datasmith, SpeedTree, Quixel/Fab, Houdini Engine, Substance), audio middleware plugins (Wwise, FMOD, Bink Video), Live Link/motion capture integration, virtual production (nDisplay, Composure, ICVFX), XR/VR/AR platforms (OpenXR, Meta Quest, SteamVR, ARKit, ARCore, Varjo, HoloLens), AI NPC plugins (Convai, Inworld AI, NVIDIA ACE), utility plugins (Python Scripting, Editor Scripting, Modeling Tools, Common UI, Paper2D, Procedural Mesh, Variant Manager), physics/destruction plugins (Chaos Destruction, Vehicles, Cloth, Flesh), accessibility (colorblind, subtitles, motor, cognitive), and modding/UGC (PAK loading, mod discovery, asset overrides, SDK generation, security).
 
 ## STRUCTURE
 ```

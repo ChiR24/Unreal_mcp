@@ -1010,6 +1010,46 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageXRAction(R, A, P, S);
                   });
+
+  // Phase 42: AI & NPC Plugins (Convai, Inworld AI, NVIDIA ACE)
+  RegisterHandler(TEXT("manage_ai_npc"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageAINPCAction(R, A, P, S);
+                  });
+
+  // Phase 43: Utility Plugins (Python Scripting, Editor Scripting, Modeling Tools, Common UI, Paper2D, Procedural Mesh, Variant Manager)
+  RegisterHandler(TEXT("manage_utility_plugins"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageUtilityPluginsAction(R, A, P, S);
+                  });
+
+  // Phase 44: Physics & Destruction (Chaos Destruction, Vehicles, Cloth, Flesh)
+  RegisterHandler(TEXT("manage_physics_destruction"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManagePhysicsDestructionAction(R, A, P, S);
+                  });
+
+  // Phase 45: Accessibility System
+  RegisterHandler(TEXT("manage_accessibility"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageAccessibilityAction(R, A, P, S);
+                  });
+
+  // Phase 46: Modding & UGC System
+  RegisterHandler(TEXT("manage_modding"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageModdingAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

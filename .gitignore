@@ -67,4 +67,4 @@ Desktop.ini
 .agent/
 plugins/McpAutomationBridge/.clangd
 plugins/McpAutomationBridge/Source/McpAutomationBridge/ue_stubs.h
-.opencode/supermemory.jsonc
+.opencode/

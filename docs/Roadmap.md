@@ -9,8 +9,8 @@ A comprehensive development plan for the Unreal Engine Model Context Protocol (M
 | Metric | Value |
 |--------|-------|
 | **Total Phases** | 59 |
-| **Estimated Actions** | ~2,850 |
-| **Completed Phases** | 44 |
+| **Estimated Actions** | ~2,930 |
+| **Completed Phases** | 47 |
 | **In Progress** | Phase 5 (Infrastructure) |
 | **Engine Support** | Unreal Engine 5.0 - 5.7 |
 
@@ -961,93 +961,132 @@ OpenXR, Meta Quest, SteamVR, Apple ARKit, Google ARCore, Varjo, HoloLens.
 
 ---
 
-## Phase 42: AI & NPC Plugins 🔄
+## Phase 42: AI & NPC Plugins ✅
 
-**Status**: Planned | **Actions**: ~30
+**Status**: Complete | **Tool**: `manage_ai_npc` | **Actions**: 30
 
 > **Note**: These plugins require external cloud services for full functionality. Actions configure the UE-side integration only.
 
-### Planned Capabilities
+### Implemented Capabilities
 
-| Plugin | Key Actions |
-|--------|-------------|
-| Convai | `create_convai_character`, `configure_character_backstory`, `configure_convai_lipsync` |
-| Inworld AI | `create_inworld_character`, `configure_inworld_settings`, `get_character_emotion` |
-| NVIDIA ACE | `configure_audio2face`, `process_audio_to_blendshapes`, `configure_blendshape_mapping` |
+| Plugin | # Actions | Key Actions |
+|--------|-----------|-------------|
+| Convai | 10 | `create_convai_character`, `configure_character_backstory`, `configure_character_voice`, `configure_convai_lipsync`, `start_convai_session`, `stop_convai_session`, `send_text_to_character`, `get_character_response`, `configure_convai_actions`, `get_convai_info` |
+| Inworld AI | 10 | `create_inworld_character`, `configure_inworld_settings`, `configure_inworld_scene`, `start_inworld_session`, `stop_inworld_session`, `send_message_to_character`, `get_character_emotion`, `get_character_goals`, `trigger_inworld_event`, `get_inworld_info` |
+| NVIDIA ACE/Audio2Face | 8 | `configure_audio2face`, `process_audio_to_blendshapes`, `configure_blendshape_mapping`, `start_audio2face_stream`, `stop_audio2face_stream`, `get_audio2face_status`, `configure_ace_emotions`, `get_ace_info` |
+| Utilities | 2 | `get_ai_npc_info`, `list_available_ai_backends` |
+
+### Implementation Notes
+- Uses conditional compilation (`#if __has_include`) for optional third-party plugins
+- Convai: `UConvaiChatbotComponent`, `UConvaiChatBotCreateProxy`, `UConvaiChatBotUpdateProxy`
+- Inworld: `UInworldCharacterComponent`, `UInworldConversationGroup`, `UInworldProjectSettings`
+- NVIDIA ACE: `UACEBlueprintLibrary`, `UACEAudioCurveSourceComponent`, `FACERuntimeModule`
 
 ---
 
-## Phase 43: Utility Plugins 🔄
+## Phase 43: Utility Plugins ✅
 
-**Status**: Planned | **Actions**: ~100
+**Status**: Complete | **Tool**: `manage_utility_plugins` | **Actions**: 100
 
 Python Scripting, Editor Scripting, Modeling Tools, Common UI, Paper2D, Procedural Mesh, Variant Manager.
 
-### Planned Capabilities
+### Implemented Capabilities
 
-| Plugin | Key Actions |
-|--------|-------------|
-| Python | `execute_python_script`, `execute_python_file`, `configure_python_paths`, `create_python_editor_utility` |
-| Editor Scripting | `create_editor_utility_widget`, `add_menu_entry`, `add_toolbar_button`, `register_editor_command` |
-| Modeling Tools | `activate_modeling_tool`, `select_mesh_elements`, `set_sculpt_brush`, `sculpt_stroke` |
-| Common UI | `configure_ui_input_config`, `create_common_activatable_widget`, `configure_navigation_rules` |
-| Paper2D | `create_sprite`, `create_flipbook`, `create_tile_map`, `spawn_paper_sprite_actor` |
-| Procedural Mesh | `create_procedural_mesh_component`, `create_mesh_section`, `set_mesh_vertices`, `convert_to_static_mesh` |
-| Variant Manager | `create_variant_set`, `add_variant`, `activate_variant`, `export_variant_configuration` |
+| Plugin | Actions | Key Features |
+|--------|---------|--------------|
+| Python Scripting | 15 | `execute_python_script`, `execute_python_file`, `configure_python_paths`, `get_python_info`, `reload_python_module` |
+| Editor Scripting | 12 | `create_editor_utility_widget`, `add_menu_entry`, `add_toolbar_button`, `register_editor_command`, `run_editor_utility` |
+| Modeling Tools | 18 | `activate_modeling_tool`, `select_mesh_elements`, `set_sculpt_brush`, `apply_mesh_operation`, `list_available_tools` |
+| Common UI | 10 | `configure_ui_input_config`, `create_common_activatable_widget`, `configure_navigation_rules`, `configure_gamepad_navigation` |
+| Paper2D | 12 | `create_sprite`, `create_flipbook`, `create_tile_map`, `spawn_paper_sprite_actor`, `spawn_paper_flipbook_actor` |
+| Procedural Mesh | 15 | `create_procedural_mesh_component`, `create_mesh_section`, `set_mesh_vertices`, `convert_procedural_to_static_mesh` |
+| Variant Manager | 15 | `create_level_variant_sets`, `create_variant_set`, `add_variant`, `activate_variant`, `capture_property` |
+| Utilities | 3 | `get_utility_plugins_info`, `list_utility_plugins`, `get_plugin_status` |
+
+### Implementation Notes
+- All 100 actions fully implemented in both TypeScript and C++ handlers
+- Conditional compilation via `__has_include()` for optional plugins:
+  - `MCP_HAS_PYTHON` - Python Scripting (IPythonScriptPlugin)
+  - `MCP_HAS_EDITOR_UTILITY_WIDGET` - Editor Utility Widgets (Blutility)
+  - `MCP_HAS_MODELING_TOOLS` - Modeling Tools Editor Mode
+  - `MCP_HAS_COMMON_UI` - Common UI plugin
+  - `MCP_HAS_PAPER_SPRITE` - Paper2D sprites/flipbooks
+  - `MCP_HAS_PROCEDURAL_MESH` - Procedural Mesh Component
+  - `MCP_HAS_VARIANT_MANAGER_BP` - Variant Manager
 
 ---
 
-## Phase 44: Physics & Destruction Plugins 🔄
+## Phase 44: Physics & Destruction Plugins ✅
 
-**Status**: Planned | **Actions**: ~80
+**Status**: Complete | **Tool**: `manage_physics_destruction` | **Actions**: 80
 
 Chaos Destruction, Chaos Vehicles, Chaos Cloth, Chaos Flesh.
 
-### Planned Capabilities
+### Implemented Capabilities
 
-| Plugin | Key Actions |
-|--------|-------------|
-| Chaos Destruction | `create_geometry_collection`, `apply_uniform_fracture`, `apply_radial_fracture`, `configure_damage_threshold`, `create_field_system` |
-| Chaos Vehicles | `create_chaos_wheeled_vehicle`, `add_wheel_setup`, `configure_engine_torque_curve`, `configure_transmission` |
-| Chaos Cloth | `create_cloth_asset`, `configure_cloth_config`, `paint_max_distance`, `configure_cloth_lod` |
-| Chaos Flesh | `create_flesh_asset`, `configure_flesh_simulation`, `configure_flesh_collision` |
+| Plugin | Actions | Key Features |
+|--------|---------|--------------|
+| Chaos Destruction | 29 | `create_geometry_collection`, `fracture_uniform`, `fracture_clustered`, `fracture_radial`, `fracture_slice`, `fracture_brick`, `create_field_system_actor`, `add_field_radial_falloff` |
+| Chaos Vehicles | 19 | `create_wheeled_vehicle_bp`, `add_vehicle_wheel`, `configure_engine_setup`, `configure_transmission_setup`, `configure_differential_setup`, `configure_suspension_setup` |
+| Chaos Cloth | 15 | `create_chaos_cloth_config`, `apply_cloth_to_skeletal_mesh`, `set_cloth_stiffness`, `set_cloth_damping`, `set_cloth_aerodynamics`, `set_cloth_collision_properties` |
+| Chaos Flesh | 13 | `create_flesh_asset`, `create_flesh_component`, `set_flesh_stiffness`, `set_flesh_damping`, `bind_flesh_to_skeleton`, `create_flesh_cache` |
+| Utilities | 4 | `get_physics_destruction_info`, `list_geometry_collections`, `list_chaos_vehicles`, `get_chaos_plugin_status` |
+
+### Implementation Notes
+- All 80 actions fully implemented in both TypeScript and C++ handlers
+- Conditional compilation via `__has_include()` for optional plugins:
+  - `MCP_HAS_GEOMETRY_COLLECTION` - Geometry Collection Engine
+  - `MCP_HAS_FIELD_SYSTEM` - Field System for physics forces
+  - `MCP_HAS_CHAOS_VEHICLES` - Chaos Vehicles plugin
+  - `MCP_HAS_CHAOS_CLOTH` / `MCP_HAS_CLOTHING_ASSET` - Chaos Cloth simulation
+  - `MCP_HAS_CHAOS_FLESH` - Chaos Flesh deformable physics
 
 ---
 
-## Phase 45: Accessibility System 🔄
+## Phase 45: Accessibility System ✅
 
-**Status**: Planned | **Tool**: `manage_accessibility` | **Actions**: ~40
+**Status**: Complete | **Tool**: `manage_accessibility` | **Actions**: 50
 
 Complete accessibility features for inclusive game design.
 
-### Planned Capabilities
+### Implemented Capabilities
 
-| Category | Actions |
-|----------|---------|
-| Visual | `create_colorblind_filter`, `configure_high_contrast_mode`, `set_ui_scale`, `configure_text_to_speech` |
-| Subtitles | `create_subtitle_widget`, `configure_subtitle_style`, `configure_speaker_identification`, `add_directional_indicators` |
-| Audio | `configure_mono_audio`, `configure_audio_visualization`, `create_sound_indicator_widget` |
-| Motor | `configure_control_remapping_ui`, `configure_hold_vs_toggle`, `configure_auto_aim_strength`, `configure_one_handed_mode` |
-| Cognitive | `configure_difficulty_presets`, `configure_objective_reminders`, `configure_navigation_assistance`, `configure_motion_sickness_options` |
-| Presets | `create_accessibility_preset`, `apply_accessibility_preset`, `export_accessibility_settings` |
+| Category | Actions | Key Features |
+|----------|---------|--------------|
+| Visual Accessibility | 10 | `set_colorblind_mode`, `set_colorblind_severity`, `enable_high_contrast`, `set_ui_scale`, `enable_text_to_speech`, `set_large_text`, `set_screen_reader`, `get_visual_settings` |
+| Subtitle Accessibility | 8 | `enable_subtitles`, `set_subtitle_font_size`, `set_subtitle_color`, `enable_subtitle_background`, `enable_speaker_identification`, `enable_directional_indicators`, `set_subtitle_position`, `get_subtitle_settings` |
+| Audio Accessibility | 8 | `enable_mono_audio`, `enable_audio_visualization`, `enable_visual_sound_cues`, `set_audio_balance`, `enable_audio_ducking`, `enable_screen_narrator`, `create_sound_indicator_widget`, `get_audio_settings` |
+| Motor Accessibility | 10 | `enable_hold_to_toggle`, `enable_auto_aim`, `set_auto_aim_strength`, `enable_one_handed_mode`, `set_input_timing_tolerance`, `set_qte_options`, `set_cursor_size`, `remap_control`, `reset_control_mappings`, `get_motor_settings` |
+| Cognitive Accessibility | 8 | `set_difficulty_preset`, `enable_objective_reminders`, `enable_navigation_assistance`, `set_motion_sickness_options`, `set_game_speed`, `enable_tutorial_hints`, `enable_simplified_ui`, `get_cognitive_settings` |
+| Presets & Utilities | 6 | `create_accessibility_preset`, `apply_accessibility_preset`, `list_presets`, `export_accessibility_settings`, `import_accessibility_settings`, `get_accessibility_info` |
+
+### Implementation Notes
+- All 50 actions fully implemented in both TypeScript and C++ handlers
+- Uses GConfig and UGameUserSettings for persistent accessibility settings
+- Colorblind modes: Protanopia, Deuteranopia, Tritanopia with severity control
+- Subtitle system with font, color, background, speaker identification, and directional indicators
+- Motor accessibility includes auto-aim, hold-to-toggle, one-handed mode, QTE adjustments
+- Motion sickness reduction: camera shake, head bob, motion blur toggles, FOV adjustment
+- Preset system for saving/loading/exporting accessibility configurations
 
 ---
 
-## Phase 46: Modding & UGC System 🔄
+## Phase 46: Modding & UGC System ✅
 
-**Status**: Planned | **Tool**: `manage_modding` | **Actions**: ~25
+**Status**: Complete | **Tool**: `manage_modding` | **Actions**: 25
 
 Enable mod support and user-generated content.
 
-### Planned Capabilities
+### Capabilities
 
 | Category | Actions |
 |----------|---------|
-| Pak Loading | `configure_mod_loading_paths`, `scan_for_mod_paks`, `load_mod_pak`, `unload_mod_pak`, `validate_mod_pak`, `configure_mod_load_order` |
-| Discovery | `create_mod_browser_widget`, `list_installed_mods`, `enable_mod`, `disable_mod`, `check_mod_compatibility` |
-| Asset Override | `configure_asset_override_paths`, `register_mod_asset_redirect`, `restore_original_asset` |
-| SDK Generation | `export_moddable_headers`, `create_mod_template_project`, `configure_exposed_classes` |
-| Security | `configure_mod_sandbox`, `set_allowed_mod_operations`, `validate_mod_content` |
+| PAK Loading | `configure_mod_loading_paths`, `scan_for_mod_paks`, `load_mod_pak`, `unload_mod_pak`, `validate_mod_pak`, `configure_mod_load_order` |
+| Discovery | `list_installed_mods`, `enable_mod`, `disable_mod`, `check_mod_compatibility`, `get_mod_info` |
+| Asset Override | `configure_asset_override_paths`, `register_mod_asset_redirect`, `restore_original_asset`, `list_asset_overrides` |
+| SDK Generation | `export_moddable_headers`, `create_mod_template_project`, `configure_exposed_classes`, `get_sdk_config` |
+| Security | `configure_mod_sandbox`, `set_allowed_mod_operations`, `validate_mod_content`, `get_security_config` |
+| Utility | `get_modding_info`, `reset_mod_system` |
 
 ---
 

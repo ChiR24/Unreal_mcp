@@ -27,9 +27,18 @@
 #include "LiveLinkSourceSettings.h"
 #include "LiveLinkSubjectSettings.h"
 #include "LiveLinkRole.h"
+
+#if __has_include("LiveLinkVirtualSubject.h")
+#include "LiveLinkVirtualSubject.h"
+#define MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS 1
+#else
+#define MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS 0
+#endif
+
 #define MCP_HAS_LIVELINK 1
 #else
 #define MCP_HAS_LIVELINK 0
+#define MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS 0
 #endif
 
 #if MCP_HAS_LIVELINK && __has_include("LiveLinkClient.h")
@@ -46,6 +55,13 @@
 #define MCP_HAS_LIVELINK_COMPONENTS 1
 #else
 #define MCP_HAS_LIVELINK_COMPONENTS 0
+#endif
+
+#if MCP_HAS_LIVELINK && __has_include("LiveLinkMessageBusFinder.h")
+#include "LiveLinkMessageBusFinder.h"
+#define MCP_HAS_LIVELINK_MESSAGEBUS_FINDER 1
+#else
+#define MCP_HAS_LIVELINK_MESSAGEBUS_FINDER 0
 #endif
 
 #if MCP_HAS_LIVELINK && __has_include("Roles/LiveLinkAnimationRole.h")
@@ -328,10 +344,85 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
     
     if (Action == TEXT("discover_messagebus_sources"))
     {
-        // Message Bus discovery is typically done through UI - provide info
-        Result = MakeLiveLinkSuccess(TEXT("Message Bus discovery should be initiated through the Live Link panel. Use add_messagebus_source with a machine address to connect directly."));
+#if MCP_HAS_LIVELINK_MESSAGEBUS_FINDER
+        double DurationSeconds = GetNumberFieldSafe(Payload, TEXT("durationSeconds"), 0.2);
+        if (DurationSeconds <= 0.0)
+        {
+            DurationSeconds = 0.2;
+        }
+        // Safety cap to avoid excessively long polling.
+        if (DurationSeconds > 5.0)
+        {
+            DurationSeconds = 5.0;
+        }
+
+        UWorld* World = GetActiveWorld();
+        if (!World)
+        {
+            Result = MakeLiveLinkError(TEXT("No active world available for message bus discovery"), TEXT("WORLD_NOT_FOUND"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        ULiveLinkMessageBusFinder* Finder = ULiveLinkMessageBusFinder::ConstructMessageBusFinder();
+        if (!Finder)
+        {
+            Result = MakeLiveLinkError(TEXT("Failed to construct LiveLinkMessageBusFinder"), TEXT("FINDER_CREATE_FAILED"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        // Fire a network poll, then collect after DurationSeconds using a timer.
+        Finder->PollNetwork();
+
+        const FString RequestIdCopy = RequestId;
+        const TSharedPtr<FMcpBridgeWebSocket> SocketCopy = RequestingSocket;
+
+        FTimerDelegate TimerDelegate;
+        TimerDelegate.BindLambda([this, Finder, RequestIdCopy, SocketCopy]()
+        {
+            TArray<FProviderPollResult> Providers;
+            Finder->GetPollResults(Providers);
+
+            TArray<TSharedPtr<FJsonValue>> ProvidersArray;
+            ProvidersArray.Reserve(Providers.Num());
+
+            for (const FProviderPollResult& Provider : Providers)
+            {
+                TSharedPtr<FJsonObject> ProviderObj = MakeShareable(new FJsonObject());
+                ProviderObj->SetStringField(TEXT("name"), Provider.Name);
+                ProviderObj->SetStringField(TEXT("machineName"), Provider.MachineName);
+                ProviderObj->SetBoolField(TEXT("isValidProvider"), Provider.bIsValidProvider);
+                ProviderObj->SetNumberField(TEXT("machineTimeOffset"), Provider.MachineTimeOffset);
+                ProviderObj->SetStringField(TEXT("address"), Provider.Address.ToString());
+
+                // Serialize annotations (FName -> FString)
+                TSharedPtr<FJsonObject> AnnotationsObj = MakeShareable(new FJsonObject());
+                for (const TPair<FName, FString>& Pair : Provider.Annotations)
+                {
+                    AnnotationsObj->SetStringField(Pair.Key.ToString(), Pair.Value);
+                }
+                ProviderObj->SetObjectField(TEXT("annotations"), AnnotationsObj);
+
+                ProvidersArray.Add(MakeShareable(new FJsonValueObject(ProviderObj)));
+            }
+
+            TSharedPtr<FJsonObject> TimerResult = MakeLiveLinkSuccess(FString::Printf(TEXT("Found %d message bus providers"), Providers.Num()));
+            TimerResult->SetArrayField(TEXT("providers"), ProvidersArray);
+
+            SendAutomationResponse(SocketCopy, RequestIdCopy, TimerResult->GetBoolField(TEXT("success")), TimerResult->GetStringField(TEXT("message")), TimerResult);
+        });
+
+        FTimerHandle Handle;
+        World->GetTimerManager().SetTimer(Handle, TimerDelegate, static_cast<float>(DurationSeconds), false);
+
+        // Do not respond immediately; response will be sent by timer.
+        return true;
+#else
+        Result = MakeLiveLinkError(TEXT("LiveLinkMessageBusFinder not available in this build"), TEXT("NOT_SUPPORTED"));
         SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
+#endif
     }
     
     if (Action == TEXT("configure_source_settings"))
@@ -792,11 +883,185 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
         return true;
     }
     
-    if (Action == TEXT("add_virtual_subject") || Action == TEXT("remove_virtual_subject") || Action == TEXT("configure_subject_settings"))
+    if (Action == TEXT("add_virtual_subject"))
     {
-        Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Action '%s' acknowledged. Virtual subject management requires specific class setup."), *Action));
+#if MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS
+        if (!LiveLinkClient)
+        {
+            Result = MakeLiveLinkError(TEXT("Live Link client not available"), TEXT("CLIENT_NOT_FOUND"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        const FString VirtualSubjectNameStr = GetStringFieldSafe(Payload, TEXT("virtualSubjectName"));
+        if (VirtualSubjectNameStr.IsEmpty())
+        {
+            Result = MakeLiveLinkError(TEXT("virtualSubjectName is required"), TEXT("MISSING_PARAM"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        // Optional: allow specifying a custom virtual subject class (defaults to ULiveLinkVirtualSubject).
+        const FString VirtualSubjectClassName = GetStringFieldSafe(Payload, TEXT("virtualSubjectClass"), TEXT("LiveLinkVirtualSubject"));
+        UClass* VirtualSubjectClass = nullptr;
+        if (!VirtualSubjectClassName.IsEmpty())
+        {
+            VirtualSubjectClass = FindObject<UClass>(nullptr, *VirtualSubjectClassName);
+            if (!VirtualSubjectClass)
+            {
+                // Try with common script prefix.
+                VirtualSubjectClass = FindObject<UClass>(nullptr, *(FString(TEXT("/Script/LiveLinkInterface.")) + VirtualSubjectClassName));
+            }
+        }
+        if (!VirtualSubjectClass)
+        {
+            VirtualSubjectClass = ULiveLinkVirtualSubject::StaticClass();
+        }
+
+        // Source for virtual subjects typically comes from a dedicated "Virtual" source.
+        const FString VirtualSourceName = GetStringFieldSafe(Payload, TEXT("virtualSourceName"), TEXT("MCPVirtual"));
+        const FGuid VirtualSourceGuid = LiveLinkClient->AddVirtualSubjectSource(*VirtualSourceName);
+        FLiveLinkSubjectKey VirtualKey(VirtualSourceGuid, *VirtualSubjectNameStr);
+
+        const bool bAdded = LiveLinkClient->AddVirtualSubject(VirtualKey, VirtualSubjectClass);
+        if (!bAdded)
+        {
+            Result = MakeLiveLinkError(FString::Printf(TEXT("Failed to add virtual subject '%s'"), *VirtualSubjectNameStr), TEXT("ADD_FAILED"));
+        }
+        else
+        {
+            Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Added virtual subject '%s'"), *VirtualSubjectNameStr));
+            Result->SetStringField(TEXT("virtualSourceGuid"), VirtualSourceGuid.ToString());
+            Result->SetStringField(TEXT("virtualSubjectName"), VirtualSubjectNameStr);
+        }
+
         SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
+#else
+        Result = MakeLiveLinkError(TEXT("Virtual subjects are not available in this build"), TEXT("NOT_SUPPORTED"));
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+        return true;
+#endif
+    }
+
+    if (Action == TEXT("remove_virtual_subject"))
+    {
+#if MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS
+        if (!LiveLinkClient)
+        {
+            Result = MakeLiveLinkError(TEXT("Live Link client not available"), TEXT("CLIENT_NOT_FOUND"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        const FString VirtualSubjectNameStr = GetStringFieldSafe(Payload, TEXT("virtualSubjectName"));
+        if (VirtualSubjectNameStr.IsEmpty())
+        {
+            Result = MakeLiveLinkError(TEXT("virtualSubjectName is required"), TEXT("MISSING_PARAM"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        const FString VirtualSourceGuidStr = GetStringFieldSafe(Payload, TEXT("virtualSourceGuid"));
+        if (VirtualSourceGuidStr.IsEmpty())
+        {
+            Result = MakeLiveLinkError(TEXT("virtualSourceGuid is required"), TEXT("MISSING_PARAM"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        FGuid VirtualSourceGuid;
+        if (!FGuid::Parse(VirtualSourceGuidStr, VirtualSourceGuid))
+        {
+            Result = MakeLiveLinkError(TEXT("virtualSourceGuid is invalid"), TEXT("INVALID_PARAM"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        FLiveLinkSubjectKey VirtualKey(VirtualSourceGuid, *VirtualSubjectNameStr);
+        LiveLinkClient->RemoveVirtualSubject(VirtualKey);
+
+        Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Removed virtual subject '%s'"), *VirtualSubjectNameStr));
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+        return true;
+#else
+        Result = MakeLiveLinkError(TEXT("Virtual subjects are not available in this build"), TEXT("NOT_SUPPORTED"));
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+        return true;
+#endif
+    }
+
+    if (Action == TEXT("configure_subject_settings"))
+    {
+#if MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS
+        if (!LiveLinkClient)
+        {
+            Result = MakeLiveLinkError(TEXT("Live Link client not available"), TEXT("CLIENT_NOT_FOUND"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        const FString SubjectNameStr = GetStringFieldSafe(Payload, TEXT("subjectName"));
+        const FString SourceGuidStr = GetStringFieldSafe(Payload, TEXT("sourceGuid"));
+        if (SubjectNameStr.IsEmpty() || SourceGuidStr.IsEmpty())
+        {
+            Result = MakeLiveLinkError(TEXT("subjectName and sourceGuid are required"), TEXT("MISSING_PARAM"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        FGuid SourceGuid;
+        if (!FGuid::Parse(SourceGuidStr, SourceGuid))
+        {
+            Result = MakeLiveLinkError(TEXT("sourceGuid is invalid"), TEXT("INVALID_PARAM"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        const FLiveLinkSubjectKey SubjectKey(SourceGuid, *SubjectNameStr);
+        UObject* SettingsObj = LiveLinkClient->GetSubjectSettings(SubjectKey);
+        if (!SettingsObj)
+        {
+            Result = MakeLiveLinkError(TEXT("Subject settings not found"), TEXT("SETTINGS_NOT_FOUND"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        ULiveLinkSubjectSettings* SubjectSettings = Cast<ULiveLinkSubjectSettings>(SettingsObj);
+        if (!SubjectSettings)
+        {
+            Result = MakeLiveLinkError(TEXT("Subject settings object is not ULiveLinkSubjectSettings (may be a virtual subject object)"), TEXT("SETTINGS_TYPE_UNSUPPORTED"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        const TSharedPtr<FJsonObject>* SettingsPayloadObj = nullptr;
+        if (!Payload->TryGetObjectField(TEXT("subjectSettings"), SettingsPayloadObj) || !SettingsPayloadObj || !SettingsPayloadObj->IsValid())
+        {
+            Result = MakeLiveLinkError(TEXT("subjectSettings object is required"), TEXT("MISSING_PARAM"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        const TSharedPtr<FJsonObject>& SettingsPayload = *SettingsPayloadObj;
+
+        // Minimal, safe subset: rebroadcast and evaluation settings.
+        bool bRebroadcast = SubjectSettings->bRebroadcastSubject;
+        if (SettingsPayload->TryGetBoolField(TEXT("rebroadcast"), bRebroadcast))
+        {
+            SubjectSettings->bRebroadcastSubject = bRebroadcast;
+        }
+
+        Result = MakeLiveLinkSuccess(TEXT("Subject settings configured"));
+        Result->SetBoolField(TEXT("rebroadcast"), SubjectSettings->bRebroadcastSubject);
+
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+        return true;
+#else
+        Result = MakeLiveLinkError(TEXT("Virtual subjects are not available in this build"), TEXT("NOT_SUPPORTED"));
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+        return true;
+#endif
     }
 
     // =========================================================================
@@ -1083,7 +1348,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
         return true;
     }
     
-    // Handle remaining component actions with acknowledgment
     if (Action == TEXT("configure_livelink_controller") ||
         Action == TEXT("set_controller_subject") ||
         Action == TEXT("set_controller_role") ||
@@ -1092,9 +1356,263 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
         Action == TEXT("set_controlled_component") ||
         Action == TEXT("get_controller_info"))
     {
-        Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Action '%s' acknowledged. Configure controllers through actor component settings."), *Action));
+#if MCP_HAS_LIVELINK_COMPONENTS
+        const FString ActorName = GetStringFieldSafe(Payload, TEXT("actorName"));
+        if (ActorName.IsEmpty())
+        {
+            Result = MakeLiveLinkError(TEXT("actorName is required"), TEXT("MISSING_PARAM"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        if (!World)
+        {
+            Result = MakeLiveLinkError(TEXT("No editor world available"), TEXT("NO_WORLD"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        AActor* TargetActor = nullptr;
+        for (TActorIterator<AActor> It(World); It; ++It)
+        {
+            if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
+            {
+                TargetActor = *It;
+                break;
+            }
+        }
+
+        if (!TargetActor)
+        {
+            Result = MakeLiveLinkError(FString::Printf(TEXT("Actor '%s' not found"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        // Locate the LiveLinkComponentController on the actor.
+        const int32 ControllerIndex = static_cast<int32>(GetNumberFieldSafe(Payload, TEXT("controllerIndex"), 0.0));
+        TArray<ULiveLinkComponentController*> Controllers;
+        TargetActor->GetComponents<ULiveLinkComponentController>(Controllers);
+
+        if (Controllers.Num() == 0)
+        {
+            Result = MakeLiveLinkError(TEXT("No LiveLinkComponentController found on actor"), TEXT("CONTROLLER_NOT_FOUND"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        ULiveLinkComponentController* Controller = nullptr;
+        if (ControllerIndex >= 0 && ControllerIndex < Controllers.Num())
+        {
+            Controller = Controllers[ControllerIndex];
+        }
+        else
+        {
+            Controller = Controllers[0];
+        }
+
+        if (!Controller)
+        {
+            Result = MakeLiveLinkError(TEXT("Controller component not found"), TEXT("CONTROLLER_NOT_FOUND"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        auto ResolveRoleClass = [](const FString& RoleName) -> TSubclassOf<ULiveLinkRole>
+        {
+            if (RoleName.IsEmpty())
+            {
+                return nullptr;
+            }
+            // Common built-in roles.
+#if MCP_HAS_LIVELINK_ROLES
+            if (RoleName == TEXT("Animation"))
+                return ULiveLinkAnimationRole::StaticClass();
+            if (RoleName == TEXT("Transform"))
+                return ULiveLinkTransformRole::StaticClass();
+            if (RoleName == TEXT("Camera"))
+                return ULiveLinkCameraRole::StaticClass();
+            if (RoleName == TEXT("Light"))
+                return ULiveLinkLightRole::StaticClass();
+#endif
+            // Fallback: try by class name.
+            if (UClass* Found = FindObject<UClass>(nullptr, *RoleName))
+            {
+                if (Found->IsChildOf(ULiveLinkRole::StaticClass()))
+                {
+                    return Found;
+                }
+            }
+            if (UClass* Found = FindObject<UClass>(nullptr, *(FString(TEXT("/Script/LiveLinkInterface.")) + RoleName)))
+            {
+                if (Found->IsChildOf(ULiveLinkRole::StaticClass()))
+                {
+                    return Found;
+                }
+            }
+            return nullptr;
+        };
+
+        if (Action == TEXT("set_controller_subject"))
+        {
+            const FString SubjectNameStr = GetStringFieldSafe(Payload, TEXT("subjectName"));
+            if (SubjectNameStr.IsEmpty())
+            {
+                Result = MakeLiveLinkError(TEXT("subjectName is required"), TEXT("MISSING_PARAM"));
+            }
+            else
+            {
+                const FString RoleName = GetStringFieldSafe(Payload, TEXT("roleName"), TEXT("Animation"));
+                TSubclassOf<ULiveLinkRole> RoleClass = ResolveRoleClass(RoleName);
+                if (!RoleClass)
+                {
+                    Result = MakeLiveLinkError(FString::Printf(TEXT("Unknown role: %s"), *RoleName), TEXT("UNKNOWN_ROLE"));
+                }
+                else
+                {
+                    FLiveLinkSubjectRepresentation Rep;
+                    Rep.Subject = FLiveLinkSubjectName(*SubjectNameStr);
+                    Rep.Role = RoleClass;
+                    Controller->SetSubjectRepresentation(Rep);
+                    Result = MakeLiveLinkSuccess(TEXT("Controller subject set"));
+                }
+            }
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        if (Action == TEXT("set_controller_role"))
+        {
+            const FString RoleName = GetStringFieldSafe(Payload, TEXT("roleName"), TEXT("Animation"));
+            TSubclassOf<ULiveLinkRole> RoleClass = ResolveRoleClass(RoleName);
+            if (!RoleClass)
+            {
+                Result = MakeLiveLinkError(FString::Printf(TEXT("Unknown role: %s"), *RoleName), TEXT("UNKNOWN_ROLE"));
+            }
+            else
+            {
+                FLiveLinkSubjectRepresentation Rep = Controller->GetSubjectRepresentation();
+                Rep.Role = RoleClass;
+                Controller->SetSubjectRepresentation(Rep);
+                Result = MakeLiveLinkSuccess(TEXT("Controller role set"));
+            }
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        if (Action == TEXT("enable_controller_evaluation") || Action == TEXT("disable_controller_evaluation"))
+        {
+            Controller->bEvaluateLiveLink = (Action == TEXT("enable_controller_evaluation"));
+            Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Controller evaluation %s"), Controller->bEvaluateLiveLink ? TEXT("enabled") : TEXT("disabled")));
+            Result->SetBoolField(TEXT("evaluate"), Controller->bEvaluateLiveLink);
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        if (Action == TEXT("set_controlled_component"))
+        {
+            const FString RoleName = GetStringFieldSafe(Payload, TEXT("roleName"), TEXT("Animation"));
+            TSubclassOf<ULiveLinkRole> RoleClass = ResolveRoleClass(RoleName);
+            if (!RoleClass)
+            {
+                Result = MakeLiveLinkError(FString::Printf(TEXT("Unknown role: %s"), *RoleName), TEXT("UNKNOWN_ROLE"));
+                SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+                return true;
+            }
+
+            const FString ComponentName = GetStringFieldSafe(Payload, TEXT("componentName"));
+            if (ComponentName.IsEmpty())
+            {
+                Result = MakeLiveLinkError(TEXT("componentName is required"), TEXT("MISSING_PARAM"));
+                SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+                return true;
+            }
+
+            UActorComponent* Controlled = nullptr;
+            for (UActorComponent* Comp : TargetActor->GetComponents())
+            {
+                if (!Comp)
+                {
+                    continue;
+                }
+                if (Comp->GetName() == ComponentName)
+                {
+                    Controlled = Comp;
+                    break;
+                }
+            }
+
+            if (!Controlled)
+            {
+                Result = MakeLiveLinkError(FString::Printf(TEXT("Component '%s' not found on actor"), *ComponentName), TEXT("COMPONENT_NOT_FOUND"));
+                SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+                return true;
+            }
+
+            Controller->SetControlledComponent(RoleClass, Controlled);
+            Result = MakeLiveLinkSuccess(TEXT("Controlled component set"));
+            Result->SetStringField(TEXT("componentName"), Controlled->GetName());
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        if (Action == TEXT("get_controller_info"))
+        {
+            const FLiveLinkSubjectRepresentation Rep = Controller->GetSubjectRepresentation();
+
+            Result = MakeLiveLinkSuccess(TEXT("Controller info retrieved"));
+            Result->SetStringField(TEXT("subjectName"), Rep.Subject.Name.ToString());
+            Result->SetStringField(TEXT("roleClass"), Rep.Role ? Rep.Role->GetName() : TEXT(""));
+            Result->SetBoolField(TEXT("evaluate"), Controller->bEvaluateLiveLink);
+            Result->SetBoolField(TEXT("updateInEditor"), Controller->bUpdateInEditor);
+            Result->SetNumberField(TEXT("controllerCount"), Controllers.Num());
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        // configure_livelink_controller: allow toggling bUpdateInEditor / bUpdateInPreviewEditor.
+        if (Action == TEXT("configure_livelink_controller"))
+        {
+            bool bUpdateInEditor = Controller->bUpdateInEditor;
+            bool bUpdateInPreview = Controller->bUpdateInPreviewEditor;
+            bool bDisableWhenSpawnable = Controller->bDisableEvaluateLiveLinkWhenSpawnable;
+
+            if (Payload->HasField(TEXT("updateInEditor")))
+            {
+                bUpdateInEditor = GetBoolFieldSafe(Payload, TEXT("updateInEditor"), bUpdateInEditor);
+                Controller->bUpdateInEditor = bUpdateInEditor;
+            }
+            if (Payload->HasField(TEXT("updateInPreviewEditor")))
+            {
+                bUpdateInPreview = GetBoolFieldSafe(Payload, TEXT("updateInPreviewEditor"), bUpdateInPreview);
+                Controller->bUpdateInPreviewEditor = bUpdateInPreview;
+            }
+            if (Payload->HasField(TEXT("disableEvaluateWhenSpawnable")))
+            {
+                bDisableWhenSpawnable = GetBoolFieldSafe(Payload, TEXT("disableEvaluateWhenSpawnable"), bDisableWhenSpawnable);
+                Controller->bDisableEvaluateLiveLinkWhenSpawnable = bDisableWhenSpawnable;
+            }
+
+            Result = MakeLiveLinkSuccess(TEXT("Controller configured"));
+            Result->SetBoolField(TEXT("updateInEditor"), Controller->bUpdateInEditor);
+            Result->SetBoolField(TEXT("updateInPreviewEditor"), Controller->bUpdateInPreviewEditor);
+            Result->SetBoolField(TEXT("disableEvaluateWhenSpawnable"), Controller->bDisableEvaluateLiveLinkWhenSpawnable);
+            Result->SetBoolField(TEXT("evaluate"), Controller->bEvaluateLiveLink);
+
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        // If we fell through, action isn't supported.
+        Result = MakeLiveLinkError(FString::Printf(TEXT("Unknown controller action: %s"), *Action), TEXT("UNKNOWN_ACTION"));
         SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
+#else
+        Result = MakeLiveLinkError(TEXT("Live Link components not available"), TEXT("NOT_SUPPORTED"));
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+        return true;
+#endif
     }
 
     // =========================================================================

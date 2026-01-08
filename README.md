@@ -5,7 +5,7 @@
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.7-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
-[![Tools](https://img.shields.io/badge/Tools-54-purple)](docs/handler-mapping.md)
+[![Tools](https://img.shields.io/badge/Tools-61-purple)](docs/handler-mapping.md)
 [![Project Board](https://img.shields.io/badge/Project-Roadmap-blueviolet?logo=github)](https://github.com/users/ChiR24/projects/3)
 [![Discussions](https://img.shields.io/badge/Discussions-Join-brightgreen?logo=github)](https://github.com/ChiR24/Unreal_mcp/discussions)
 
@@ -192,7 +192,7 @@ ASSET_LIST_TTL_MS=10000
 
 ## Available Tools
 
-**54 Tools** organized by category:
+**61 Tools** organized by category:
 
 ### Core Tools
 | Tool | Description |
@@ -297,6 +297,37 @@ ASSET_LIST_TTL_MS=10000
 | Tool | Description |
 |------|-------------|
 | `manage_livelink` | Live Link motion capture - sources, subjects, presets, face tracking, skeleton mapping - 64 actions |
+
+### Virtual Production & XR
+| Tool | Description |
+|------|-------------|
+| `manage_virtual_production` | nDisplay, Composure, LED walls, ICVFX camera, stage settings - 37 actions |
+| `manage_xr` | OpenXR, Meta Quest, SteamVR, ARKit, ARCore, Varjo, HoloLens - 142 actions |
+
+### AI & NPC Plugins
+| Tool | Description |
+|------|-------------|
+| `manage_ai_npc` | Convai, Inworld AI, NVIDIA ACE/Audio2Face - 30 actions for conversational AI NPCs |
+
+### Utility Plugins
+| Tool | Description |
+|------|-------------|
+| `manage_utility_plugins` | Python Scripting, Editor Scripting, Modeling Tools, Common UI, Paper2D, Procedural Mesh, Variant Manager - 100 actions |
+
+### Physics & Destruction
+| Tool | Description |
+|------|-------------|
+| `manage_physics_destruction` | Chaos Destruction (Geometry Collections, Field Systems), Chaos Vehicles, Chaos Cloth, Chaos Flesh - 80 actions |
+
+### Accessibility
+| Tool | Description |
+|------|-------------|
+| `manage_accessibility` | Visual (colorblind, high contrast, UI scale), Subtitles, Audio (mono, visualization), Motor (auto-aim, one-handed), Cognitive (difficulty, navigation) - 50 actions |
+
+### Modding & UGC
+| Tool | Description |
+|------|-------------|
+| `manage_modding` | PAK loading, mod discovery, asset overrides, SDK generation, security sandbox - 25 actions |
 
 ### Supported Asset Types
 

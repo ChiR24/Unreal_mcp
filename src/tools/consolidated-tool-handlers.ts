@@ -60,6 +60,11 @@ import { handleAudioMiddlewareTools } from './handlers/audio-middleware-handlers
 import { handleLiveLinkTools } from './handlers/livelink-handlers.js';
 import { handleVirtualProductionTools } from './handlers/virtual-production-handlers.js';
 import { handleXRPluginsTools } from './handlers/xr-plugins-handlers.js';
+import { handleAINPCTools } from './handlers/ai-npc-handlers.js';
+import { handleUtilityPluginsTools } from './handlers/utility-plugins-handlers.js';
+import { handlePhysicsDestructionTools } from './handlers/physics-destruction-handlers.js';
+import { handleAccessibilityTools } from './handlers/accessibility-handlers.js';
+import { handleModdingTools } from './handlers/modding-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -522,6 +527,21 @@ function registerDefaultHandlers() {
 
   // 58. XR PLUGINS (Phase 41)
   toolRegistry.register('manage_xr', async (args, tools) => await handleXRPluginsTools(getAction(args), args, tools));
+
+  // 59. AI & NPC PLUGINS (Phase 42)
+  toolRegistry.register('manage_ai_npc', async (args, tools) => await handleAINPCTools(getAction(args), args, tools));
+
+  // 60. UTILITY PLUGINS (Phase 43)
+  toolRegistry.register('manage_utility_plugins', async (args, tools) => await handleUtilityPluginsTools(getAction(args), args, tools));
+
+  // 61. PHYSICS & DESTRUCTION (Phase 44)
+  toolRegistry.register('manage_physics_destruction', async (args, tools) => await handlePhysicsDestructionTools(getAction(args), args, tools));
+
+  // 62. ACCESSIBILITY SYSTEM (Phase 45)
+  toolRegistry.register('manage_accessibility', async (args, tools) => await handleAccessibilityTools(getAction(args), args, tools));
+
+  // 63. MODDING & UGC SYSTEM (Phase 46)
+  toolRegistry.register('manage_modding', async (args, tools) => await handleModdingTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

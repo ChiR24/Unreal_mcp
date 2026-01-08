@@ -9126,5 +9126,1717 @@ UTILITIES (6 actions): System info, device management`,
         xrRuntimeName: { type: 'string', description: 'Active XR runtime name.' }
       }
     }
+  },
+
+  // ============================================
+  // Phase 42: AI & NPC Plugins - manage_ai_npc
+  // ============================================
+  {
+    name: 'manage_ai_npc',
+    category: 'gameplay',
+    description: `AI & NPC Plugins management - Convai, Inworld AI, NVIDIA ACE (Audio2Face).
+Supports ~30 actions across 3 AI NPC subsystems for conversational AI characters.
+
+CONVAI (10 actions): Character creation, backstory configuration, voice settings, lipsync, sessions
+INWORLD AI (10 actions): Character creation, scene configuration, emotions, goals, sessions
+NVIDIA ACE (8 actions): Audio2Face configuration, blendshape processing, streaming, emotion control
+UTILITIES (2 actions): System info, backend listing`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Convai (10 actions)
+            'create_convai_character', 'configure_character_backstory', 'configure_character_voice',
+            'configure_convai_lipsync', 'start_convai_session', 'stop_convai_session',
+            'send_text_to_character', 'get_character_response', 'configure_convai_actions', 'get_convai_info',
+            // Inworld AI (10 actions)
+            'create_inworld_character', 'configure_inworld_settings', 'configure_inworld_scene',
+            'start_inworld_session', 'stop_inworld_session', 'send_message_to_character',
+            'get_character_emotion', 'get_character_goals', 'trigger_inworld_event', 'get_inworld_info',
+            // NVIDIA ACE (8 actions)
+            'configure_audio2face', 'process_audio_to_blendshapes', 'configure_blendshape_mapping',
+            'start_audio2face_stream', 'stop_audio2face_stream', 'get_audio2face_status',
+            'configure_ace_emotions', 'get_ace_info',
+            // Utilities (2 actions)
+            'get_ai_npc_info', 'list_available_ai_backends'
+          ],
+          description: 'AI NPC action to perform.'
+        },
+
+        // === Common Parameters ===
+        actorName: commonSchemas.actorName,
+        componentName: commonSchemas.componentName,
+        blueprintPath: commonSchemas.blueprintPath,
+        save: commonSchemas.save,
+
+        // === Character Identity ===
+        characterId: { type: 'string', description: 'Character ID from Convai or Inworld.' },
+        characterName: { type: 'string', description: 'Display name for the character.' },
+        backstory: { type: 'string', description: 'Character backstory/personality prompt.' },
+        role: { type: 'string', description: 'Character role (e.g., "Guard", "Merchant").' },
+        description: { type: 'string', description: 'Character description.' },
+
+        // === Convai Voice Settings ===
+        voiceType: { type: 'string', description: 'Voice type (e.g., "Male", "Female", or specific voice ID).' },
+        voiceId: { type: 'string', description: 'Specific voice ID for the character.' },
+        language: { type: 'string', description: 'Language code (e.g., "en-US", "es-ES").' },
+        speechRate: { type: 'number', description: 'Speech rate multiplier (0.5-2.0).' },
+        pitch: { type: 'number', description: 'Voice pitch adjustment (-1.0 to 1.0).' },
+
+        // === Convai Lipsync ===
+        lipsyncEnabled: { type: 'boolean', description: 'Enable lipsync processing.' },
+        lipsyncMode: { type: 'string', enum: ['viseme', 'blendshape', 'arkit'], description: 'Lipsync output mode.' },
+        visemeMultiplier: { type: 'number', description: 'Viseme intensity multiplier.' },
+        blendshapeParams: {
+          type: 'object',
+          properties: {
+            jawOpenMultiplier: { type: 'number' },
+            lipFunnelMultiplier: { type: 'number' },
+            lipPuckerMultiplier: { type: 'number' },
+            mouthSmileMultiplier: { type: 'number' }
+          },
+          description: 'Blendshape parameter overrides.'
+        },
+
+        // === Convai Actions ===
+        availableActions: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Actions the character can perform (e.g., "wave", "point", "attack").'
+        },
+        actionContext: { type: 'string', description: 'Context description for action selection.' },
+
+        // === Session Management ===
+        sessionId: { type: 'string', description: 'Session ID for conversation tracking.' },
+        autoStartSession: { type: 'boolean', description: 'Automatically start session on component begin play.' },
+        sessionTimeout: { type: 'number', description: 'Session timeout in seconds.' },
+
+        // === Text/Message Input ===
+        message: { type: 'string', description: 'Text message to send to the character.' },
+        textInput: { type: 'string', description: 'Text input for the character.' },
+        speakerName: { type: 'string', description: 'Name of the speaker sending the message.' },
+
+        // === Inworld Settings ===
+        sceneId: { type: 'string', description: 'Inworld scene/workspace ID.' },
+        apiKey: { type: 'string', description: 'Inworld API key.' },
+        apiSecret: { type: 'string', description: 'Inworld API secret.' },
+
+        // === Inworld Character Profile ===
+        characterProfile: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            role: { type: 'string' },
+            pronouns: { type: 'string' },
+            age: { type: 'string' },
+            hobbies: { type: 'string' },
+            motivation: { type: 'string' },
+            flaws: { type: 'string' },
+            facts: { type: 'array', items: { type: 'string' } }
+          },
+          description: 'Inworld character profile configuration.'
+        },
+
+        // === Inworld Emotions ===
+        emotionLabel: {
+          type: 'string',
+          enum: [
+            'NEUTRAL', 'JOY', 'SADNESS', 'ANGER', 'FEAR', 'SURPRISE', 'DISGUST', 'CONTEMPT',
+            'BELLIGERENCE', 'DOMINEERING', 'CRITICISM', 'TENSION', 'TENSE_HUMOR', 'DEFENSIVENESS',
+            'WHINING', 'STONEWALLING', 'INTEREST', 'VALIDATION', 'HUMOR', 'AFFECTION'
+          ],
+          description: 'Emotion label for the character.'
+        },
+        emotionStrength: { type: 'number', description: 'Emotion intensity (0.0-1.0).' },
+
+        // === Inworld Goals ===
+        goalName: { type: 'string', description: 'Character goal name.' },
+        goalPriority: { type: 'number', description: 'Goal priority (1-10).' },
+        goalDescription: { type: 'string', description: 'Goal description.' },
+
+        // === Inworld Events ===
+        eventName: commonSchemas.eventName,
+        eventPayload: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'Event payload data.'
+        },
+
+        // === Inworld Relationship ===
+        relationship: {
+          type: 'object',
+          properties: {
+            trust: { type: 'number', description: 'Trust level (-100 to 100).' },
+            respect: { type: 'number', description: 'Respect level (-100 to 100).' },
+            familiar: { type: 'number', description: 'Familiarity level (-100 to 100).' },
+            flirtatious: { type: 'number', description: 'Flirtatiousness (-100 to 100).' },
+            attraction: { type: 'number', description: 'Attraction level (-100 to 100).' }
+          },
+          description: 'Character relationship parameters.'
+        },
+
+        // === NVIDIA ACE / Audio2Face ===
+        aceProviderName: { type: 'string', description: 'ACE provider name (e.g., "LocalA2F-Claire", "RemoteA2F").' },
+        aceDestUrl: { type: 'string', description: 'ACE destination URL (e.g., "https://grpc.nvcf.nvidia.com:443").' },
+        aceApiKey: { type: 'string', description: 'NVIDIA API key for cloud ACE.' },
+        nvcfFunctionId: { type: 'string', description: 'NVCF function ID for cloud ACE.' },
+        nvcfFunctionVersion: { type: 'string', description: 'NVCF function version.' },
+
+        // === Audio2Face Audio Input ===
+        soundWavePath: { type: 'string', description: 'Path to SoundWave asset for A2F processing.' },
+        audioSampleRate: { type: 'number', description: 'Audio sample rate in Hz.' },
+        audioChannels: { type: 'number', description: 'Number of audio channels.' },
+        isLastAudioChunk: { type: 'boolean', description: 'Whether this is the last audio chunk in stream.' },
+
+        // === Audio2Face Blendshape Mapping ===
+        blendshapeMapping: {
+          type: 'object',
+          additionalProperties: { type: 'string' },
+          description: 'Custom blendshape name mapping (ARKit name -> mesh blendshape name).'
+        },
+        blendshapeMultipliers: {
+          type: 'object',
+          additionalProperties: { type: 'number' },
+          description: 'Per-blendshape intensity multipliers.'
+        },
+
+        // === Audio2Face Emotion Control ===
+        a2fEmotion: {
+          type: 'object',
+          properties: {
+            joy: { type: 'number', description: 'Joy weight (0.0-1.0).' },
+            sadness: { type: 'number', description: 'Sadness weight (0.0-1.0).' },
+            anger: { type: 'number', description: 'Anger weight (0.0-1.0).' },
+            fear: { type: 'number', description: 'Fear weight (0.0-1.0).' },
+            surprise: { type: 'number', description: 'Surprise weight (0.0-1.0).' },
+            disgust: { type: 'number', description: 'Disgust weight (0.0-1.0).' }
+          },
+          description: 'Audio2Face emotion override weights.'
+        },
+        a2fParams: {
+          type: 'object',
+          properties: {
+            skinStrength: { type: 'number', description: 'Skin deformation strength.' },
+            blinkStrength: { type: 'number', description: 'Blink animation strength.' },
+            lipSyncStrength: { type: 'number', description: 'Lip sync strength.' },
+            browStrength: { type: 'number', description: 'Eyebrow movement strength.' },
+            eyelidOpenOffset: { type: 'number', description: 'Eyelid open offset.' }
+          },
+          description: 'Audio2Face model parameters.'
+        },
+
+        // === MetaHuman Integration ===
+        isMetaHuman: { type: 'boolean', description: 'Whether the target is a MetaHuman character.' },
+        faceAnimBPPath: { type: 'string', description: 'Path to Face_AnimBP for MetaHuman.' },
+        useA2FPoseAsset: { type: 'boolean', description: 'Use mh_arkit_mapping_pose_A2F for MetaHuman.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded.' },
+        message: { type: 'string', description: 'Status message.' },
+
+        // === Character Creation Outputs ===
+        characterId: { type: 'string', description: 'Created/referenced character ID.' },
+        componentAdded: { type: 'boolean', description: 'Whether component was added to actor.' },
+
+        // === Session Outputs ===
+        sessionId: { type: 'string', description: 'Active session ID.' },
+        sessionActive: { type: 'boolean', description: 'Whether session is active.' },
+
+        // === Character Response ===
+        responseText: { type: 'string', description: 'Character response text.' },
+        responseAudioPath: { type: 'string', description: 'Path to generated response audio.' },
+        selectedAction: { type: 'string', description: 'Action selected by the character.' },
+
+        // === Emotion Outputs ===
+        currentEmotion: { type: 'string', description: 'Current emotion label.' },
+        emotionStrength: { type: 'number', description: 'Current emotion strength.' },
+        emotionWeights: {
+          type: 'object',
+          additionalProperties: { type: 'number' },
+          description: 'All emotion weights.'
+        },
+
+        // === Goals Outputs ===
+        activeGoals: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              priority: { type: 'number' },
+              progress: { type: 'number' }
+            }
+          },
+          description: 'Active character goals.'
+        },
+
+        // === Audio2Face Outputs ===
+        a2fProcessing: { type: 'boolean', description: 'Whether A2F is processing.' },
+        blendshapeCount: { type: 'number', description: 'Number of blendshapes being driven.' },
+        currentBlendshapes: {
+          type: 'object',
+          additionalProperties: { type: 'number' },
+          description: 'Current blendshape values.'
+        },
+
+        // === Convai Info ===
+        convaiInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            moduleVersion: { type: 'string' },
+            connectedCharacters: { type: 'number' },
+            activeSessions: { type: 'number' },
+            lipsyncEnabled: { type: 'boolean' }
+          },
+          description: 'Convai plugin info.'
+        },
+
+        // === Inworld Info ===
+        inworldInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            connected: { type: 'boolean' },
+            activeSceneId: { type: 'string' },
+            registeredCharacters: { type: 'number' },
+            activeConversations: { type: 'number' }
+          },
+          description: 'Inworld AI plugin info.'
+        },
+
+        // === ACE Info ===
+        aceInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            runtimeLoaded: { type: 'boolean' },
+            providers: { type: 'array', items: { type: 'string' } },
+            activeStreams: { type: 'number' },
+            gpuAccelerated: { type: 'boolean' }
+          },
+          description: 'NVIDIA ACE plugin info.'
+        },
+
+        // === Backend List ===
+        availableBackends: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              type: { type: 'string', enum: ['convai', 'inworld', 'ace'] },
+              available: { type: 'boolean' },
+              version: { type: 'string' }
+            }
+          },
+          description: 'Available AI NPC backends.'
+        },
+
+        // === AI NPC Info (combined) ===
+        aiNpcInfo: {
+          type: 'object',
+          properties: {
+            actorName: { type: 'string' },
+            hasConvaiComponent: { type: 'boolean' },
+            hasInworldComponent: { type: 'boolean' },
+            hasACEComponent: { type: 'boolean' },
+            activeBackend: { type: 'string' },
+            characterId: { type: 'string' },
+            sessionActive: { type: 'boolean' },
+            currentEmotion: { type: 'string' }
+          },
+          description: 'AI NPC configuration info for a specific actor.'
+        },
+
+        error: commonSchemas.stringProp
+      }
+    }
+  },
+
+  // ============================================
+  // Phase 43: Utility Plugins - manage_utility_plugins
+  // ============================================
+  {
+    name: 'manage_utility_plugins',
+    category: 'utility',
+    description: `Utility Plugins management - Python Scripting, Editor Scripting, Modeling Tools, Common UI, Paper2D, Procedural Mesh, Variant Manager.
+Supports ~100 actions across 7 utility plugin subsystems.
+
+PYTHON SCRIPTING (15 actions): Execute scripts, configure paths, create editor utilities
+EDITOR SCRIPTING (12 actions): Editor utility widgets, menu entries, toolbar buttons
+MODELING TOOLS (18 actions): Activate tools, mesh selection, sculpt brushes, geometry ops
+COMMON UI (10 actions): UI input config, activatable widgets, navigation rules
+PAPER2D (12 actions): Sprites, flipbooks, tile maps, sprite actors
+PROCEDURAL MESH (15 actions): Procedural mesh components, sections, vertices, conversion
+VARIANT MANAGER (15 actions): Variant sets, variants, activation, property captures
+UTILITIES (3 actions): System info, plugin listing`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Python Scripting (15 actions)
+            'execute_python_script', 'execute_python_file', 'execute_python_command',
+            'configure_python_paths', 'add_python_path', 'remove_python_path',
+            'get_python_paths', 'create_python_editor_utility', 'run_startup_scripts',
+            'get_python_output', 'clear_python_output', 'is_python_available',
+            'get_python_version', 'reload_python_module', 'get_python_info',
+            // Editor Scripting (12 actions)
+            'create_editor_utility_widget', 'create_editor_utility_blueprint',
+            'add_menu_entry', 'remove_menu_entry', 'add_toolbar_button', 'remove_toolbar_button',
+            'register_editor_command', 'unregister_editor_command', 'execute_editor_command',
+            'create_blutility_action', 'run_editor_utility', 'get_editor_scripting_info',
+            // Modeling Tools (18 actions)
+            'activate_modeling_tool', 'deactivate_modeling_tool', 'get_active_tool',
+            'select_mesh_elements', 'clear_mesh_selection', 'get_mesh_selection',
+            'set_sculpt_brush', 'configure_sculpt_brush', 'execute_sculpt_stroke',
+            'apply_mesh_operation', 'undo_mesh_operation', 'accept_tool_result',
+            'cancel_tool', 'set_tool_property', 'get_tool_properties',
+            'list_available_tools', 'enter_modeling_mode', 'get_modeling_tools_info',
+            // Common UI (10 actions)
+            'configure_ui_input_config', 'create_common_activatable_widget',
+            'configure_navigation_rules', 'set_input_action_data', 'get_ui_input_config',
+            'register_common_input_metadata', 'configure_gamepad_navigation',
+            'set_default_focus_widget', 'configure_analog_cursor', 'get_common_ui_info',
+            // Paper2D (12 actions)
+            'create_sprite', 'create_flipbook', 'add_flipbook_keyframe',
+            'create_tile_map', 'create_tile_set', 'set_tile_map_layer',
+            'spawn_paper_sprite_actor', 'spawn_paper_flipbook_actor',
+            'configure_sprite_collision', 'configure_sprite_material',
+            'get_sprite_info', 'get_paper2d_info',
+            // Procedural Mesh (15 actions)
+            'create_procedural_mesh_component', 'create_mesh_section',
+            'update_mesh_section', 'clear_mesh_section', 'clear_all_mesh_sections',
+            'set_mesh_section_visible', 'set_mesh_collision',
+            'set_mesh_vertices', 'set_mesh_triangles', 'set_mesh_normals',
+            'set_mesh_uvs', 'set_mesh_colors', 'set_mesh_tangents',
+            'convert_procedural_to_static_mesh', 'get_procedural_mesh_info',
+            // Variant Manager (15 actions)
+            'create_level_variant_sets', 'create_variant_set', 'delete_variant_set',
+            'add_variant', 'remove_variant', 'duplicate_variant',
+            'activate_variant', 'deactivate_variant', 'get_active_variant',
+            'add_actor_binding', 'remove_actor_binding', 'capture_property',
+            'configure_variant_dependency', 'export_variant_configuration',
+            'get_variant_manager_info',
+            // Utilities (3 actions)
+            'get_utility_plugins_info', 'list_utility_plugins', 'get_plugin_status'
+          ],
+          description: 'Utility plugin action to perform.'
+        },
+
+        // === Common Parameters ===
+        actorName: commonSchemas.actorName,
+        componentName: commonSchemas.componentName,
+        blueprintPath: commonSchemas.blueprintPath,
+        assetPath: commonSchemas.assetPath,
+        save: commonSchemas.save,
+
+        // === Python Scripting ===
+        pythonScript: { type: 'string', description: 'Python script content to execute.' },
+        pythonFilePath: { type: 'string', description: 'Path to Python file to execute.' },
+        pythonCommand: { type: 'string', description: 'Python command/statement to execute.' },
+        pythonPaths: { type: 'array', items: { type: 'string' }, description: 'Python paths to add to sys.path.' },
+        pythonPath: { type: 'string', description: 'Single Python path to add/remove.' },
+        moduleName: { type: 'string', description: 'Python module name to reload.' },
+        executionMode: {
+          type: 'string',
+          enum: ['execute_file', 'execute_statement', 'evaluate_statement'],
+          description: 'Python execution mode.'
+        },
+        captureOutput: { type: 'boolean', description: 'Capture Python stdout/stderr.' },
+
+        // === Editor Scripting ===
+        widgetName: { type: 'string', description: 'Editor utility widget name.' },
+        widgetClass: { type: 'string', description: 'Widget class to create.' },
+        menuName: { type: 'string', description: 'Menu name for entry.' },
+        menuSection: { type: 'string', description: 'Menu section.' },
+        menuLabel: { type: 'string', description: 'Menu entry label.' },
+        menuTooltip: { type: 'string', description: 'Menu entry tooltip.' },
+        menuIcon: { type: 'string', description: 'Menu icon style name.' },
+        toolbarName: { type: 'string', description: 'Toolbar name.' },
+        buttonLabel: { type: 'string', description: 'Toolbar button label.' },
+        buttonTooltip: { type: 'string', description: 'Toolbar button tooltip.' },
+        buttonIcon: { type: 'string', description: 'Toolbar button icon.' },
+        commandName: { type: 'string', description: 'Editor command name.' },
+        commandDescription: { type: 'string', description: 'Editor command description.' },
+        blutilityClass: { type: 'string', description: 'Blutility action class.' },
+
+        // === Modeling Tools ===
+        toolName: { type: 'string', description: 'Modeling tool name (e.g., "PolyEdit", "Sculpt", "TriEdit").' },
+        toolIdentifier: { type: 'string', description: 'Full tool identifier.' },
+        selectionMode: {
+          type: 'string',
+          enum: ['vertex', 'edge', 'face', 'polygroup', 'triangle'],
+          description: 'Mesh element selection mode.'
+        },
+        elementIndices: { type: 'array', items: { type: 'number' }, description: 'Indices of elements to select.' },
+        brushType: {
+          type: 'string',
+          enum: ['standard', 'smooth', 'move', 'pinch', 'inflate', 'flatten', 'plane_cut'],
+          description: 'Sculpt brush type.'
+        },
+        brushRadius: { type: 'number', description: 'Sculpt brush radius.' },
+        brushStrength: { type: 'number', description: 'Sculpt brush strength (0.0-1.0).' },
+        brushFalloff: { type: 'number', description: 'Sculpt brush falloff.' },
+        strokeStart: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Sculpt stroke start position.'
+        },
+        strokeEnd: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Sculpt stroke end position.'
+        },
+        meshOperation: {
+          type: 'string',
+          enum: ['extrude', 'inset', 'bevel', 'bridge', 'fill_hole', 'weld', 'delete', 'flip_normals'],
+          description: 'Mesh operation to apply.'
+        },
+        operationParams: { type: 'object', additionalProperties: true, description: 'Mesh operation parameters.' },
+        toolPropertyName: { type: 'string', description: 'Tool property name to set.' },
+        toolPropertyValue: { type: ['string', 'number', 'boolean', 'object'], description: 'Tool property value.' },
+
+        // === Common UI ===
+        inputConfigName: { type: 'string', description: 'UI input config name.' },
+        inputConfigClass: { type: 'string', description: 'UI input config class.' },
+        navigationRules: {
+          type: 'object',
+          properties: {
+            wrapHorizontal: { type: 'boolean' },
+            wrapVertical: { type: 'boolean' },
+            explicitNavigation: { type: 'boolean' }
+          },
+          description: 'Navigation rule settings.'
+        },
+        inputActionData: {
+          type: 'object',
+          properties: {
+            actionName: { type: 'string' },
+            keyMappings: { type: 'array', items: { type: 'string' } }
+          },
+          description: 'Input action data configuration.'
+        },
+        focusWidgetPath: { type: 'string', description: 'Path to default focus widget.' },
+        analogCursorSettings: {
+          type: 'object',
+          properties: {
+            enabled: { type: 'boolean' },
+            speed: { type: 'number' },
+            deadzone: { type: 'number' }
+          },
+          description: 'Analog cursor settings.'
+        },
+
+        // === Paper2D ===
+        spriteName: { type: 'string', description: 'Sprite asset name.' },
+        texturePath: { type: 'string', description: 'Source texture path.' },
+        sourceRect: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, width: { type: 'number' }, height: { type: 'number' } },
+          description: 'Source rectangle in texture.'
+        },
+        pixelsPerUnit: { type: 'number', description: 'Pixels per Unreal unit.' },
+        flipbookName: { type: 'string', description: 'Flipbook asset name.' },
+        frameRate: { type: 'number', description: 'Flipbook frame rate.' },
+        keyframeIndex: { type: 'number', description: 'Keyframe index.' },
+        keyframeDuration: { type: 'number', description: 'Keyframe duration.' },
+        spriteAsset: { type: 'string', description: 'Sprite asset path for keyframe.' },
+        tileMapName: { type: 'string', description: 'Tile map asset name.' },
+        tileSetName: { type: 'string', description: 'Tile set asset name.' },
+        mapWidth: { type: 'number', description: 'Tile map width in tiles.' },
+        mapHeight: { type: 'number', description: 'Tile map height in tiles.' },
+        tileWidth: { type: 'number', description: 'Tile width in pixels.' },
+        tileHeight: { type: 'number', description: 'Tile height in pixels.' },
+        layerIndex: { type: 'number', description: 'Tile map layer index.' },
+        tileData: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { x: { type: 'number' }, y: { type: 'number' }, tileIndex: { type: 'number' } }
+          },
+          description: 'Tile placement data.'
+        },
+        collisionType: {
+          type: 'string',
+          enum: ['none', 'box', 'circle', 'polygon'],
+          description: 'Sprite collision type.'
+        },
+        location: commonSchemas.location,
+
+        // === Procedural Mesh ===
+        sectionIndex: { type: 'number', description: 'Mesh section index.' },
+        vertices: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+          },
+          description: 'Vertex positions.'
+        },
+        triangles: {
+          type: 'array',
+          items: { type: 'number' },
+          description: 'Triangle indices (groups of 3).'
+        },
+        normals: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
+          },
+          description: 'Vertex normals.'
+        },
+        uvs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { u: { type: 'number' }, v: { type: 'number' } }
+          },
+          description: 'UV coordinates.'
+        },
+        vertexColors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } }
+          },
+          description: 'Vertex colors.'
+        },
+        tangents: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }, w: { type: 'number' } }
+          },
+          description: 'Vertex tangents.'
+        },
+        createCollision: { type: 'boolean', description: 'Generate collision for mesh.' },
+        staticMeshPath: { type: 'string', description: 'Output static mesh asset path.' },
+
+        // === Variant Manager ===
+        variantSetsName: { type: 'string', description: 'Level variant sets asset name.' },
+        variantSetName: { type: 'string', description: 'Variant set name.' },
+        variantName: { type: 'string', description: 'Variant name.' },
+        variantDisplayText: { type: 'string', description: 'Variant display text.' },
+        targetActorName: { type: 'string', description: 'Target actor for binding.' },
+        propertyPath: { type: 'string', description: 'Property path to capture.' },
+        propertyValue: { type: ['string', 'number', 'boolean', 'object'], description: 'Property value to set.' },
+        dependencyVariant: { type: 'string', description: 'Variant dependency name.' },
+        dependencyCondition: {
+          type: 'string',
+          enum: ['enable', 'disable'],
+          description: 'Dependency condition.'
+        },
+        exportPath: { type: 'string', description: 'Export file path.' },
+        exportFormat: {
+          type: 'string',
+          enum: ['json', 'csv'],
+          description: 'Export format.'
+        },
+
+        // === Plugin Query ===
+        pluginName: { type: 'string', description: 'Plugin name to query.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        message: { type: 'string', description: 'Status message.' },
+
+        // === Python Outputs ===
+        pythonOutput: { type: 'string', description: 'Python script output.' },
+        pythonError: { type: 'string', description: 'Python error message if any.' },
+        pythonResult: { type: 'string', description: 'Python evaluation result.' },
+        pythonVersion: { type: 'string', description: 'Python version string.' },
+        pythonAvailable: { type: 'boolean', description: 'Whether Python is available.' },
+        pythonPaths: { type: 'array', items: { type: 'string' }, description: 'Current Python paths.' },
+        pythonInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            version: { type: 'string' },
+            paths: { type: 'array', items: { type: 'string' } },
+            startupScripts: { type: 'array', items: { type: 'string' } }
+          },
+          description: 'Python scripting info.'
+        },
+
+        // === Editor Scripting Outputs ===
+        widgetCreated: { type: 'boolean', description: 'Whether widget was created.' },
+        widgetPath: { type: 'string', description: 'Created widget asset path.' },
+        menuEntryAdded: { type: 'boolean', description: 'Whether menu entry was added.' },
+        toolbarButtonAdded: { type: 'boolean', description: 'Whether toolbar button was added.' },
+        commandRegistered: { type: 'boolean', description: 'Whether command was registered.' },
+        editorScriptingInfo: {
+          type: 'object',
+          properties: {
+            registeredCommands: { type: 'array', items: { type: 'string' } },
+            activeWidgets: { type: 'array', items: { type: 'string' } }
+          },
+          description: 'Editor scripting info.'
+        },
+
+        // === Modeling Tools Outputs ===
+        toolActivated: { type: 'boolean', description: 'Whether tool was activated.' },
+        activeTool: { type: 'string', description: 'Currently active tool name.' },
+        selectedElements: {
+          type: 'object',
+          properties: {
+            mode: { type: 'string' },
+            count: { type: 'number' },
+            indices: { type: 'array', items: { type: 'number' } }
+          },
+          description: 'Current mesh selection.'
+        },
+        operationApplied: { type: 'boolean', description: 'Whether operation was applied.' },
+        availableTools: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              identifier: { type: 'string' },
+              category: { type: 'string' }
+            }
+          },
+          description: 'Available modeling tools.'
+        },
+        modelingToolsInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            inModelingMode: { type: 'boolean' },
+            activeTool: { type: 'string' },
+            toolCount: { type: 'number' }
+          },
+          description: 'Modeling tools info.'
+        },
+
+        // === Common UI Outputs ===
+        configApplied: { type: 'boolean', description: 'Whether config was applied.' },
+        commonUIInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            inputConfigs: { type: 'array', items: { type: 'string' } },
+            activatableWidgets: { type: 'number' }
+          },
+          description: 'Common UI info.'
+        },
+
+        // === Paper2D Outputs ===
+        spriteCreated: { type: 'boolean', description: 'Whether sprite was created.' },
+        spritePath: { type: 'string', description: 'Created sprite asset path.' },
+        flipbookCreated: { type: 'boolean', description: 'Whether flipbook was created.' },
+        flipbookPath: { type: 'string', description: 'Created flipbook asset path.' },
+        tileMapCreated: { type: 'boolean', description: 'Whether tile map was created.' },
+        tileMapPath: { type: 'string', description: 'Created tile map asset path.' },
+        actorSpawned: { type: 'boolean', description: 'Whether actor was spawned.' },
+        actorName: { type: 'string', description: 'Spawned actor name.' },
+        paper2DInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            spriteCount: { type: 'number' },
+            flipbookCount: { type: 'number' },
+            tileMapCount: { type: 'number' }
+          },
+          description: 'Paper2D info.'
+        },
+
+        // === Procedural Mesh Outputs ===
+        componentCreated: { type: 'boolean', description: 'Whether component was created.' },
+        sectionCreated: { type: 'boolean', description: 'Whether section was created.' },
+        sectionUpdated: { type: 'boolean', description: 'Whether section was updated.' },
+        sectionCleared: { type: 'boolean', description: 'Whether section was cleared.' },
+        meshConverted: { type: 'boolean', description: 'Whether mesh was converted.' },
+        convertedMeshPath: { type: 'string', description: 'Converted static mesh path.' },
+        proceduralMeshInfo: {
+          type: 'object',
+          properties: {
+            componentName: { type: 'string' },
+            sectionCount: { type: 'number' },
+            vertexCount: { type: 'number' },
+            triangleCount: { type: 'number' },
+            hasCollision: { type: 'boolean' }
+          },
+          description: 'Procedural mesh component info.'
+        },
+
+        // === Variant Manager Outputs ===
+        variantSetsCreated: { type: 'boolean', description: 'Whether variant sets were created.' },
+        variantSetsPath: { type: 'string', description: 'Variant sets asset path.' },
+        variantSetCreated: { type: 'boolean', description: 'Whether variant set was created.' },
+        variantCreated: { type: 'boolean', description: 'Whether variant was created.' },
+        variantActivated: { type: 'boolean', description: 'Whether variant was activated.' },
+        activeVariant: { type: 'string', description: 'Currently active variant name.' },
+        bindingAdded: { type: 'boolean', description: 'Whether binding was added.' },
+        propertyCaptured: { type: 'boolean', description: 'Whether property was captured.' },
+        exported: { type: 'boolean', description: 'Whether export succeeded.' },
+        variantManagerInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            variantSetsCount: { type: 'number' },
+            totalVariants: { type: 'number' }
+          },
+          description: 'Variant manager info.'
+        },
+
+        // === Utility Plugin List ===
+        utilityPlugins: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              available: { type: 'boolean' },
+              enabled: { type: 'boolean' },
+              version: { type: 'string' }
+            }
+          },
+          description: 'Available utility plugins.'
+        },
+
+        // === Plugin Status ===
+        pluginStatus: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            available: { type: 'boolean' },
+            enabled: { type: 'boolean' },
+            loaded: { type: 'boolean' },
+            version: { type: 'string' }
+          },
+          description: 'Specific plugin status.'
+        },
+
+         error: commonSchemas.stringProp
+      }
+    }
+  },
+
+  // ===== PHASE 44: PHYSICS & DESTRUCTION PLUGINS =====
+  {
+    name: 'manage_physics_destruction',
+    category: 'gameplay',
+    description: 'Chaos Physics systems: Destruction (Geometry Collections, fracturing, field systems), Vehicles (wheeled physics), Cloth (simulation), and Flesh (deformable physics).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // CHAOS DESTRUCTION (29 actions)
+            'create_geometry_collection', 'fracture_uniform', 'fracture_clustered', 'fracture_radial',
+            'fracture_slice', 'fracture_brick', 'flatten_fracture', 'set_geometry_collection_materials',
+            'set_damage_thresholds', 'set_cluster_connection_type', 'set_collision_particles_fraction',
+            'set_remove_on_break', 'create_field_system_actor', 'add_transient_field', 'add_persistent_field',
+            'add_construction_field', 'add_field_radial_falloff', 'add_field_radial_vector',
+            'add_field_uniform_vector', 'add_field_noise', 'add_field_strain', 'create_anchor_field',
+            'set_dynamic_state', 'enable_clustering', 'get_geometry_collection_stats',
+            'create_geometry_collection_cache', 'record_geometry_collection_cache',
+            'apply_cache_to_collection', 'remove_geometry_collection_cache',
+            // CHAOS VEHICLES (19 actions)
+            'create_wheeled_vehicle_bp', 'add_vehicle_wheel', 'remove_wheel_from_vehicle',
+            'configure_engine_setup', 'configure_transmission_setup', 'configure_steering_setup',
+            'configure_differential_setup', 'configure_suspension_setup', 'configure_brake_setup',
+            'set_vehicle_mesh', 'set_wheel_class', 'set_wheel_offset', 'set_wheel_radius',
+            'set_vehicle_mass', 'set_drag_coefficient', 'set_center_of_mass',
+            'create_vehicle_animation_instance', 'set_vehicle_animation_bp', 'get_vehicle_config',
+            // CHAOS CLOTH (15 actions)
+            'create_chaos_cloth_config', 'create_chaos_cloth_shared_sim_config',
+            'apply_cloth_to_skeletal_mesh', 'remove_cloth_from_skeletal_mesh',
+            'set_cloth_mass_properties', 'set_cloth_gravity', 'set_cloth_damping',
+            'set_cloth_collision_properties', 'set_cloth_stiffness', 'set_cloth_tether_stiffness',
+            'set_cloth_aerodynamics', 'set_cloth_anim_drive', 'set_cloth_long_range_attachment',
+            'get_cloth_config', 'get_cloth_stats',
+            // CHAOS FLESH (13 actions)
+            'create_flesh_asset', 'create_flesh_component', 'set_flesh_simulation_properties',
+            'set_flesh_stiffness', 'set_flesh_damping', 'set_flesh_incompressibility',
+            'set_flesh_inflation', 'set_flesh_solver_iterations', 'bind_flesh_to_skeleton',
+            'set_flesh_rest_state', 'create_flesh_cache', 'record_flesh_simulation',
+            'get_flesh_asset_info',
+            // Utility (4 actions)
+            'get_physics_destruction_info', 'list_geometry_collections', 'list_chaos_vehicles', 'get_chaos_plugin_status'
+          ],
+          description: 'Physics/Destruction action.'
+        },
+
+        // === Common Parameters ===
+        actorName: commonSchemas.actorName,
+        assetPath: commonSchemas.assetPath,
+        assetName: { type: 'string', description: 'Name for the new asset.' },
+        componentName: { type: 'string', description: 'Component name.' },
+        save: commonSchemas.save,
+
+        // === Geometry Collection Parameters ===
+        sourceMeshPath: { type: 'string', description: 'Source static mesh path for geometry collection.' },
+        geometryCollectionPath: { type: 'string', description: 'Geometry collection asset path.' },
+        fractureLevel: { type: 'number', description: 'Fracture level (0 = root level).' },
+        seedCount: { type: 'number', description: 'Number of Voronoi seeds for fracturing.' },
+        clusterCount: { type: 'number', description: 'Number of clusters for clustered fracture.' },
+        radialCenter: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Center point for radial fracture.'
+        },
+        radialNormal: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Normal direction for radial fracture.'
+        },
+        radialRadius: { type: 'number', description: 'Radius for radial fracture.' },
+        slicePlane: {
+          type: 'object',
+          properties: {
+            origin: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+            normal: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
+          },
+          description: 'Plane definition for slice fracture.'
+        },
+        brickLength: { type: 'number', description: 'Brick length for brick fracture.' },
+        brickWidth: { type: 'number', description: 'Brick width for brick fracture.' },
+        brickHeight: { type: 'number', description: 'Brick height for brick fracture.' },
+        materialPaths: { type: 'array', items: { type: 'string' }, description: 'Material paths for geometry collection.' },
+        damageThreshold: { type: 'number', description: 'Damage threshold value.' },
+        damageModel: { type: 'string', enum: ['Material', 'UserDefined'], description: 'Damage model type.' },
+        clusterConnectionType: {
+          type: 'string',
+          enum: ['PointImplicit', 'PointImplicitAugmentedGrid', 'DelaunayTriangulation', 'MinimalSpanningSubsetDelaunayTriangulation', 'PointImplicitConvex', 'None'],
+          description: 'Cluster connection type.'
+        },
+        collisionParticlesFraction: { type: 'number', description: 'Fraction of particles for collision (0.0-1.0).' },
+        removeOnBreak: { type: 'boolean', description: 'Remove pieces on break.' },
+        removeOnSleep: { type: 'boolean', description: 'Remove pieces on sleep.' },
+        maxBreakTime: { type: 'number', description: 'Max time before removal after break.' },
+        dynamicState: { type: 'string', enum: ['Static', 'Kinematic', 'Dynamic', 'Sleeping'], description: 'Dynamic state for geometry.' },
+        clusteringEnabled: { type: 'boolean', description: 'Enable/disable clustering.' },
+        maxClusterLevel: { type: 'number', description: 'Maximum cluster level.' },
+
+        // === Field System Parameters ===
+        fieldSystemName: { type: 'string', description: 'Field system actor name.' },
+        fieldType: {
+          type: 'string',
+          enum: ['RadialFalloff', 'RadialVector', 'UniformVector', 'Noise', 'Strain', 'AnchorField'],
+          description: 'Type of field to add.'
+        },
+        fieldMagnitude: { type: 'number', description: 'Field magnitude/strength.' },
+        fieldPosition: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Field center position.'
+        },
+        fieldDirection: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Field direction vector.'
+        },
+        fieldRadius: { type: 'number', description: 'Field effect radius.' },
+        fieldFalloff: { type: 'string', enum: ['None', 'Linear', 'Squared', 'Inverse', 'Logarithmic'], description: 'Field falloff type.' },
+
+        // === Geometry Collection Cache Parameters ===
+        cacheName: { type: 'string', description: 'Cache asset name.' },
+        cachePath: { type: 'string', description: 'Cache asset path.' },
+        recordDuration: { type: 'number', description: 'Recording duration in seconds.' },
+        startFrame: { type: 'number', description: 'Start frame for cache.' },
+        endFrame: { type: 'number', description: 'End frame for cache.' },
+
+        // === Vehicle Parameters ===
+        vehicleBlueprintPath: { type: 'string', description: 'Vehicle blueprint asset path.' },
+        vehicleName: { type: 'string', description: 'Vehicle blueprint name.' },
+        skeletalMeshPath: { type: 'string', description: 'Vehicle skeletal mesh path.' },
+        wheelIndex: { type: 'number', description: 'Wheel index (0-based).' },
+        wheelBoneName: { type: 'string', description: 'Wheel bone name in skeleton.' },
+        wheelClass: { type: 'string', description: 'Wheel class name or path.' },
+        wheelOffset: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Wheel attachment offset.'
+        },
+        wheelRadius: { type: 'number', description: 'Wheel radius in cm.' },
+        wheelWidth: { type: 'number', description: 'Wheel width in cm.' },
+        wheelMass: { type: 'number', description: 'Wheel mass in kg.' },
+        suspensionMaxRaise: { type: 'number', description: 'Max suspension raise in cm.' },
+        suspensionMaxDrop: { type: 'number', description: 'Max suspension drop in cm.' },
+        suspensionNaturalFrequency: { type: 'number', description: 'Suspension frequency (Hz).' },
+        suspensionDampingRatio: { type: 'number', description: 'Suspension damping ratio.' },
+        brakeForce: { type: 'number', description: 'Brake force in Newtons.' },
+        handbrakeForce: { type: 'number', description: 'Handbrake force in Newtons.' },
+        engineSetup: {
+          type: 'object',
+          properties: {
+            maxRPM: { type: 'number' },
+            idleRPM: { type: 'number' },
+            maxTorque: { type: 'number' },
+            torqueCurve: { type: 'array', items: { type: 'object', properties: { inVal: { type: 'number' }, outVal: { type: 'number' } } } }
+          },
+          description: 'Engine configuration.'
+        },
+        transmissionSetup: {
+          type: 'object',
+          properties: {
+            gearRatios: { type: 'array', items: { type: 'number' } },
+            reverseGearRatio: { type: 'number' },
+            finalDriveRatio: { type: 'number' },
+            gearChangeTime: { type: 'number' },
+            gearAutoBox: { type: 'boolean' }
+          },
+          description: 'Transmission configuration.'
+        },
+        steeringSetup: {
+          type: 'object',
+          properties: {
+            steeringCurve: { type: 'array', items: { type: 'object', properties: { inVal: { type: 'number' }, outVal: { type: 'number' } } } },
+            steeringType: { type: 'string', enum: ['SingleAngle', 'AngleRatio', 'Ackermann'] }
+          },
+          description: 'Steering configuration.'
+        },
+        differentialSetup: {
+          type: 'object',
+          properties: {
+            differentialType: { type: 'string', enum: ['LimitedSlip_4W', 'LimitedSlip_FrontDrive', 'LimitedSlip_RearDrive', 'Open_4W', 'Open_FrontDrive', 'Open_RearDrive'] },
+            frontRearSplit: { type: 'number' }
+          },
+          description: 'Differential configuration.'
+        },
+        vehicleMass: { type: 'number', description: 'Vehicle mass in kg.' },
+        dragCoefficient: { type: 'number', description: 'Aerodynamic drag coefficient.' },
+        centerOfMass: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'Center of mass offset.'
+        },
+        animationBPPath: { type: 'string', description: 'Vehicle animation blueprint path.' },
+
+        // === Cloth Parameters ===
+        clothConfigName: { type: 'string', description: 'Cloth config asset name.' },
+        clothConfigPath: { type: 'string', description: 'Cloth config asset path.' },
+        skeletalMeshAssetPath: { type: 'string', description: 'Skeletal mesh to apply cloth to.' },
+        clothLODIndex: { type: 'number', description: 'LOD index for cloth binding.' },
+        clothSectionIndex: { type: 'number', description: 'Mesh section index for cloth.' },
+        clothMass: { type: 'number', description: 'Cloth mass (kg/m^2).' },
+        clothGravityScale: { type: 'number', description: 'Cloth gravity scale (1.0 = normal gravity).' },
+        clothLinearDamping: { type: 'number', description: 'Linear velocity damping.' },
+        clothAngularDamping: { type: 'number', description: 'Angular velocity damping.' },
+        clothCollisionThickness: { type: 'number', description: 'Collision thickness in cm.' },
+        clothFriction: { type: 'number', description: 'Cloth friction coefficient.' },
+        clothSelfCollision: { type: 'boolean', description: 'Enable self-collision.' },
+        clothSelfCollisionRadius: { type: 'number', description: 'Self-collision radius.' },
+        clothEdgeStiffness: { type: 'number', description: 'Edge constraint stiffness.' },
+        clothBendingStiffness: { type: 'number', description: 'Bending constraint stiffness.' },
+        clothAreaStiffness: { type: 'number', description: 'Area constraint stiffness.' },
+        clothTetherStiffness: { type: 'number', description: 'Tether constraint stiffness.' },
+        clothTetherLimit: { type: 'number', description: 'Tether limit scale.' },
+        clothDragCoefficient: { type: 'number', description: 'Aerodynamic drag coefficient.' },
+        clothLiftCoefficient: { type: 'number', description: 'Aerodynamic lift coefficient.' },
+        clothAnimDriveStiffness: { type: 'number', description: 'Animation drive stiffness.' },
+        clothAnimDriveDamping: { type: 'number', description: 'Animation drive damping.' },
+        clothLongRangeAttachment: { type: 'boolean', description: 'Enable long-range attachment.' },
+        clothLongRangeStiffness: { type: 'number', description: 'Long-range attachment stiffness.' },
+
+        // === Flesh Parameters ===
+        fleshAssetName: { type: 'string', description: 'Flesh asset name.' },
+        fleshAssetPath: { type: 'string', description: 'Flesh asset path.' },
+        fleshMass: { type: 'number', description: 'Flesh mass in kg.' },
+        fleshStiffness: { type: 'number', description: 'Flesh stiffness value.' },
+        fleshDamping: { type: 'number', description: 'Flesh damping value.' },
+        fleshIncompressibility: { type: 'number', description: 'Incompressibility stiffness.' },
+        fleshInflation: { type: 'number', description: 'Inflation pressure.' },
+        fleshSolverIterations: { type: 'number', description: 'Number of solver iterations.' },
+        fleshSubstepCount: { type: 'number', description: 'Number of simulation substeps.' },
+        skeletonMeshPath: { type: 'string', description: 'Skeleton mesh path for binding.' },
+        fleshCacheName: { type: 'string', description: 'Flesh cache asset name.' },
+        fleshCachePath: { type: 'string', description: 'Flesh cache asset path.' },
+
+        // === Query Parameters ===
+        filter: commonSchemas.filter,
+        pluginName: { type: 'string', description: 'Plugin name to check status.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        message: { type: 'string', description: 'Status message.' },
+
+        // === Geometry Collection Outputs ===
+        geometryCollectionCreated: { type: 'boolean', description: 'Whether geometry collection was created.' },
+        geometryCollectionPath: { type: 'string', description: 'Created geometry collection path.' },
+        fractureApplied: { type: 'boolean', description: 'Whether fracture was applied.' },
+        fragmentCount: { type: 'number', description: 'Number of fragments after fracture.' },
+        clusterCount: { type: 'number', description: 'Number of clusters.' },
+        geometryCollectionStats: {
+          type: 'object',
+          properties: {
+            numTransforms: { type: 'number' },
+            numGeometries: { type: 'number' },
+            numClusters: { type: 'number' },
+            numRootBones: { type: 'number' },
+            boundingBox: {
+              type: 'object',
+              properties: {
+                min: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+                max: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
+              }
+            }
+          },
+          description: 'Geometry collection statistics.'
+        },
+
+        // === Field System Outputs ===
+        fieldSystemCreated: { type: 'boolean', description: 'Whether field system was created.' },
+        fieldAdded: { type: 'boolean', description: 'Whether field was added.' },
+        fieldSystemName: { type: 'string', description: 'Field system actor name.' },
+
+        // === Cache Outputs ===
+        cacheCreated: { type: 'boolean', description: 'Whether cache was created.' },
+        cachePath: { type: 'string', description: 'Cache asset path.' },
+        recordingStarted: { type: 'boolean', description: 'Whether recording started.' },
+        cacheApplied: { type: 'boolean', description: 'Whether cache was applied.' },
+
+        // === Vehicle Outputs ===
+        vehicleCreated: { type: 'boolean', description: 'Whether vehicle was created.' },
+        vehicleBlueprintPath: { type: 'string', description: 'Created vehicle blueprint path.' },
+        wheelAdded: { type: 'boolean', description: 'Whether wheel was added.' },
+        wheelRemoved: { type: 'boolean', description: 'Whether wheel was removed.' },
+        configApplied: { type: 'boolean', description: 'Whether config was applied.' },
+        vehicleConfig: {
+          type: 'object',
+          properties: {
+            wheelCount: { type: 'number' },
+            vehicleMass: { type: 'number' },
+            maxSpeed: { type: 'number' },
+            engineMaxRPM: { type: 'number' },
+            gearCount: { type: 'number' },
+            differentialType: { type: 'string' }
+          },
+          description: 'Current vehicle configuration.'
+        },
+
+        // === Cloth Outputs ===
+        clothConfigCreated: { type: 'boolean', description: 'Whether cloth config was created.' },
+        clothConfigPath: { type: 'string', description: 'Cloth config asset path.' },
+        clothApplied: { type: 'boolean', description: 'Whether cloth was applied.' },
+        clothRemoved: { type: 'boolean', description: 'Whether cloth was removed.' },
+        clothConfig: {
+          type: 'object',
+          properties: {
+            mass: { type: 'number' },
+            gravityScale: { type: 'number' },
+            edgeStiffness: { type: 'number' },
+            bendingStiffness: { type: 'number' },
+            selfCollision: { type: 'boolean' }
+          },
+          description: 'Current cloth configuration.'
+        },
+        clothStats: {
+          type: 'object',
+          properties: {
+            vertexCount: { type: 'number' },
+            triangleCount: { type: 'number' },
+            constraintCount: { type: 'number' },
+            simulationTime: { type: 'number' }
+          },
+          description: 'Cloth simulation statistics.'
+        },
+
+        // === Flesh Outputs ===
+        fleshAssetCreated: { type: 'boolean', description: 'Whether flesh asset was created.' },
+        fleshAssetPath: { type: 'string', description: 'Flesh asset path.' },
+        fleshComponentCreated: { type: 'boolean', description: 'Whether flesh component was created.' },
+        fleshBound: { type: 'boolean', description: 'Whether flesh was bound to skeleton.' },
+        fleshAssetInfo: {
+          type: 'object',
+          properties: {
+            nodeCount: { type: 'number' },
+            tetCount: { type: 'number' },
+            vertexCount: { type: 'number' },
+            mass: { type: 'number' },
+            stiffness: { type: 'number' }
+          },
+          description: 'Flesh asset information.'
+        },
+
+        // === Lists ===
+        geometryCollections: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              path: { type: 'string' },
+              fragmentCount: { type: 'number' }
+            }
+          },
+          description: 'List of geometry collections.'
+        },
+        chaosVehicles: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              path: { type: 'string' },
+              wheelCount: { type: 'number' }
+            }
+          },
+          description: 'List of Chaos vehicles.'
+        },
+
+        // === Plugin Info ===
+        physicsDestructionInfo: {
+          type: 'object',
+          properties: {
+            chaosDestructionAvailable: { type: 'boolean' },
+            chaosVehiclesAvailable: { type: 'boolean' },
+            chaosClothAvailable: { type: 'boolean' },
+            chaosFleshAvailable: { type: 'boolean' },
+            geometryCollectionCount: { type: 'number' },
+            fieldSystemCount: { type: 'number' },
+            vehicleCount: { type: 'number' }
+          },
+          description: 'Physics destruction plugin info.'
+        },
+        pluginStatus: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            available: { type: 'boolean' },
+            enabled: { type: 'boolean' },
+            version: { type: 'string' }
+          },
+          description: 'Plugin status.'
+        },
+
+        error: commonSchemas.stringProp
+      }
+    }
+  },
+
+  // ===== PHASE 45: ACCESSIBILITY SYSTEM =====
+  {
+    name: 'manage_accessibility',
+    category: 'utility',
+    description: 'Accessibility features: Visual (colorblind, high contrast, UI scale), Subtitles, Audio (mono, visualization), Motor (remapping, auto-aim), Cognitive (difficulty, navigation).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // VISUAL ACCESSIBILITY (10 actions)
+            'create_colorblind_filter', 'configure_colorblind_mode', 'set_colorblind_severity',
+            'configure_high_contrast_mode', 'set_high_contrast_colors', 'set_ui_scale',
+            'configure_text_to_speech', 'set_font_size', 'configure_screen_reader',
+            'set_visual_accessibility_preset',
+            // SUBTITLE ACCESSIBILITY (8 actions)
+            'create_subtitle_widget', 'configure_subtitle_style', 'set_subtitle_font_size',
+            'configure_subtitle_background', 'configure_speaker_identification',
+            'add_directional_indicators', 'configure_subtitle_timing', 'set_subtitle_preset',
+            // AUDIO ACCESSIBILITY (8 actions)
+            'configure_mono_audio', 'configure_audio_visualization', 'create_sound_indicator_widget',
+            'configure_visual_sound_cues', 'set_audio_ducking', 'configure_screen_narrator',
+            'set_audio_balance', 'set_audio_accessibility_preset',
+            // MOTOR ACCESSIBILITY (10 actions)
+            'configure_control_remapping', 'create_control_remapping_ui', 'configure_hold_vs_toggle',
+            'configure_auto_aim_strength', 'configure_one_handed_mode', 'set_input_timing_tolerance',
+            'configure_button_holds', 'configure_quick_time_events', 'set_cursor_size',
+            'set_motor_accessibility_preset',
+            // COGNITIVE ACCESSIBILITY (8 actions)
+            'configure_difficulty_presets', 'configure_objective_reminders', 'configure_navigation_assistance',
+            'configure_motion_sickness_options', 'set_game_speed', 'configure_tutorial_options',
+            'configure_ui_simplification', 'set_cognitive_accessibility_preset',
+            // PRESETS & UTILITIES (6 actions)
+            'create_accessibility_preset', 'apply_accessibility_preset', 'export_accessibility_settings',
+            'import_accessibility_settings', 'get_accessibility_info', 'reset_accessibility_defaults'
+          ],
+          description: 'Accessibility action.'
+        },
+
+        // === Common Parameters ===
+        actorName: commonSchemas.actorName,
+        assetPath: commonSchemas.assetPath,
+        assetName: { type: 'string', description: 'Name for the new asset.' },
+        widgetName: { type: 'string', description: 'Widget name.' },
+        presetName: { type: 'string', description: 'Accessibility preset name.' },
+        save: commonSchemas.save,
+
+        // === Visual Accessibility Parameters ===
+        colorblindMode: {
+          type: 'string',
+          enum: ['None', 'Deuteranopia', 'Protanopia', 'Tritanopia'],
+          description: 'Colorblind filter mode.'
+        },
+        colorblindSeverity: { type: 'number', description: 'Colorblind filter severity (0.0-1.0).' },
+        highContrastEnabled: { type: 'boolean', description: 'Enable high contrast mode.' },
+        highContrastColors: {
+          type: 'object',
+          properties: {
+            background: { type: 'string', description: 'Background color (hex).' },
+            foreground: { type: 'string', description: 'Foreground/text color (hex).' },
+            highlight: { type: 'string', description: 'Highlight color (hex).' },
+            interactive: { type: 'string', description: 'Interactive elements color (hex).' }
+          },
+          description: 'High contrast color scheme.'
+        },
+        uiScale: { type: 'number', description: 'UI scale factor (0.5-3.0).' },
+        textToSpeechEnabled: { type: 'boolean', description: 'Enable text-to-speech.' },
+        textToSpeechRate: { type: 'number', description: 'TTS speech rate (0.5-2.0).' },
+        textToSpeechVolume: { type: 'number', description: 'TTS volume (0.0-1.0).' },
+        fontSize: { type: 'number', description: 'Font size in points.' },
+        fontSizeMultiplier: { type: 'number', description: 'Font size multiplier.' },
+        screenReaderEnabled: { type: 'boolean', description: 'Enable screen reader support.' },
+
+        // === Subtitle Parameters ===
+        subtitleEnabled: { type: 'boolean', description: 'Enable subtitles.' },
+        subtitleFontSize: { type: 'number', description: 'Subtitle font size.' },
+        subtitleFontFamily: { type: 'string', description: 'Subtitle font family.' },
+        subtitleColor: { type: 'string', description: 'Subtitle text color (hex).' },
+        subtitleBackgroundEnabled: { type: 'boolean', description: 'Enable subtitle background.' },
+        subtitleBackgroundColor: { type: 'string', description: 'Subtitle background color (hex).' },
+        subtitleBackgroundOpacity: { type: 'number', description: 'Background opacity (0.0-1.0).' },
+        speakerIdentificationEnabled: { type: 'boolean', description: 'Show speaker names.' },
+        speakerColorCodingEnabled: { type: 'boolean', description: 'Color-code speakers.' },
+        directionalIndicatorsEnabled: { type: 'boolean', description: 'Show directional indicators for sounds.' },
+        subtitleDisplayTime: { type: 'number', description: 'Minimum display time in seconds.' },
+        subtitlePosition: {
+          type: 'string',
+          enum: ['Bottom', 'Top', 'BottomLeft', 'BottomRight'],
+          description: 'Subtitle position on screen.'
+        },
+
+        // === Audio Accessibility Parameters ===
+        monoAudioEnabled: { type: 'boolean', description: 'Enable mono audio.' },
+        audioVisualizationEnabled: { type: 'boolean', description: 'Enable visual audio cues.' },
+        visualSoundCuesEnabled: { type: 'boolean', description: 'Show visual indicators for sounds.' },
+        soundIndicatorPosition: {
+          type: 'string',
+          enum: ['TopRight', 'TopLeft', 'BottomRight', 'BottomLeft', 'Center'],
+          description: 'Sound indicator widget position.'
+        },
+        audioDuckingEnabled: { type: 'boolean', description: 'Enable audio ducking for speech.' },
+        audioDuckingAmount: { type: 'number', description: 'Audio ducking amount (0.0-1.0).' },
+        screenNarratorEnabled: { type: 'boolean', description: 'Enable screen narrator.' },
+        audioBalance: { type: 'number', description: 'Audio balance (-1.0 left to 1.0 right).' },
+
+        // === Motor Accessibility Parameters ===
+        holdToToggleEnabled: { type: 'boolean', description: 'Convert hold actions to toggle.' },
+        autoAimEnabled: { type: 'boolean', description: 'Enable auto-aim assistance.' },
+        autoAimStrength: { type: 'number', description: 'Auto-aim strength (0.0-1.0).' },
+        oneHandedModeEnabled: { type: 'boolean', description: 'Enable one-handed mode.' },
+        oneHandedModeHand: { type: 'string', enum: ['Left', 'Right'], description: 'Which hand for one-handed mode.' },
+        inputTimingTolerance: { type: 'number', description: 'Input timing tolerance multiplier.' },
+        buttonHoldTime: { type: 'number', description: 'Button hold time in seconds.' },
+        qteTimeMultiplier: { type: 'number', description: 'QTE time multiplier.' },
+        qteAutoComplete: { type: 'boolean', description: 'Auto-complete QTEs.' },
+        cursorSize: { type: 'number', description: 'Cursor size multiplier.' },
+        cursorHighContrastEnabled: { type: 'boolean', description: 'High contrast cursor.' },
+
+        // === Cognitive Accessibility Parameters ===
+        difficultyPreset: {
+          type: 'string',
+          enum: ['Easy', 'Normal', 'Hard', 'Custom', 'Assisted'],
+          description: 'Difficulty preset.'
+        },
+        objectiveRemindersEnabled: { type: 'boolean', description: 'Enable objective reminders.' },
+        objectiveReminderInterval: { type: 'number', description: 'Reminder interval in seconds.' },
+        navigationAssistanceEnabled: { type: 'boolean', description: 'Enable navigation assistance.' },
+        navigationAssistanceType: {
+          type: 'string',
+          enum: ['Waypoint', 'PathLine', 'Compass', 'All'],
+          description: 'Type of navigation assistance.'
+        },
+        motionSicknessReductionEnabled: { type: 'boolean', description: 'Enable motion sickness reduction.' },
+        cameraShakeEnabled: { type: 'boolean', description: 'Enable camera shake effects.' },
+        headBobEnabled: { type: 'boolean', description: 'Enable head bob.' },
+        motionBlurEnabled: { type: 'boolean', description: 'Enable motion blur.' },
+        fovAdjustment: { type: 'number', description: 'FOV adjustment in degrees.' },
+        gameSpeedMultiplier: { type: 'number', description: 'Game speed multiplier (0.5-2.0).' },
+        tutorialHintsEnabled: { type: 'boolean', description: 'Enable tutorial hints.' },
+        simplifiedUIEnabled: { type: 'boolean', description: 'Enable simplified UI mode.' },
+
+        // === Control Remapping Parameters ===
+        actionName: { type: 'string', description: 'Input action name to remap.' },
+        newBinding: { type: 'string', description: 'New key/button binding.' },
+        inputMappingContext: { type: 'string', description: 'Input mapping context path.' },
+
+        // === Preset Parameters ===
+        presetPath: { type: 'string', description: 'Preset asset or file path.' },
+        exportPath: { type: 'string', description: 'Export file path.' },
+        importPath: { type: 'string', description: 'Import file path.' },
+        exportFormat: { type: 'string', enum: ['json', 'ini'], description: 'Export format.' },
+
+        // === Filter ===
+        category: {
+          type: 'string',
+          enum: ['Visual', 'Subtitle', 'Audio', 'Motor', 'Cognitive', 'All'],
+          description: 'Accessibility category filter.'
+        }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        message: { type: 'string', description: 'Status message.' },
+
+        // === Visual Outputs ===
+        colorblindFilterApplied: { type: 'boolean', description: 'Whether colorblind filter was applied.' },
+        currentColorblindMode: { type: 'string', description: 'Current colorblind mode.' },
+        highContrastApplied: { type: 'boolean', description: 'Whether high contrast was applied.' },
+        uiScaleApplied: { type: 'boolean', description: 'Whether UI scale was applied.' },
+        currentUIScale: { type: 'number', description: 'Current UI scale.' },
+
+        // === Subtitle Outputs ===
+        subtitleWidgetCreated: { type: 'boolean', description: 'Whether subtitle widget was created.' },
+        subtitleWidgetPath: { type: 'string', description: 'Subtitle widget asset path.' },
+        subtitleConfigApplied: { type: 'boolean', description: 'Whether subtitle config was applied.' },
+
+        // === Audio Outputs ===
+        monoAudioApplied: { type: 'boolean', description: 'Whether mono audio was applied.' },
+        audioVisualizationEnabled: { type: 'boolean', description: 'Whether audio visualization is enabled.' },
+        soundIndicatorWidgetCreated: { type: 'boolean', description: 'Whether sound indicator widget was created.' },
+
+        // === Motor Outputs ===
+        remappingApplied: { type: 'boolean', description: 'Whether control remapping was applied.' },
+        remappingUICreated: { type: 'boolean', description: 'Whether remapping UI was created.' },
+        autoAimApplied: { type: 'boolean', description: 'Whether auto-aim was applied.' },
+        currentAutoAimStrength: { type: 'number', description: 'Current auto-aim strength.' },
+
+        // === Cognitive Outputs ===
+        difficultyApplied: { type: 'boolean', description: 'Whether difficulty was applied.' },
+        currentDifficulty: { type: 'string', description: 'Current difficulty preset.' },
+        navigationAssistanceApplied: { type: 'boolean', description: 'Whether navigation assistance was applied.' },
+        motionSicknessOptionsApplied: { type: 'boolean', description: 'Whether motion sickness options were applied.' },
+
+        // === Preset Outputs ===
+        presetCreated: { type: 'boolean', description: 'Whether preset was created.' },
+        presetApplied: { type: 'boolean', description: 'Whether preset was applied.' },
+        presetPath: { type: 'string', description: 'Preset asset path.' },
+        settingsExported: { type: 'boolean', description: 'Whether settings were exported.' },
+        settingsImported: { type: 'boolean', description: 'Whether settings were imported.' },
+        exportPath: { type: 'string', description: 'Export file path.' },
+
+        // === Info Output ===
+        accessibilityInfo: {
+          type: 'object',
+          properties: {
+            visualSettings: {
+              type: 'object',
+              properties: {
+                colorblindMode: { type: 'string' },
+                colorblindSeverity: { type: 'number' },
+                highContrastEnabled: { type: 'boolean' },
+                uiScale: { type: 'number' },
+                textToSpeechEnabled: { type: 'boolean' }
+              }
+            },
+            subtitleSettings: {
+              type: 'object',
+              properties: {
+                enabled: { type: 'boolean' },
+                fontSize: { type: 'number' },
+                speakerIdentification: { type: 'boolean' },
+                directionalIndicators: { type: 'boolean' }
+              }
+            },
+            audioSettings: {
+              type: 'object',
+              properties: {
+                monoAudio: { type: 'boolean' },
+                audioVisualization: { type: 'boolean' },
+                audioBalance: { type: 'number' }
+              }
+            },
+            motorSettings: {
+              type: 'object',
+              properties: {
+                holdToToggle: { type: 'boolean' },
+                autoAimEnabled: { type: 'boolean' },
+                autoAimStrength: { type: 'number' },
+                oneHandedMode: { type: 'boolean' }
+              }
+            },
+            cognitiveSettings: {
+              type: 'object',
+              properties: {
+                difficultyPreset: { type: 'string' },
+                objectiveReminders: { type: 'boolean' },
+                navigationAssistance: { type: 'boolean' },
+                motionSicknessReduction: { type: 'boolean' }
+              }
+            }
+          },
+          description: 'Current accessibility settings.'
+        },
+
+        error: commonSchemas.stringProp
+      }
+    }
+  },
+  // Phase 46: Modding & UGC System
+  {
+    name: 'manage_modding',
+    category: 'utility',
+    description: 'Mod support and user-generated content. PAK loading, mod discovery, asset overrides, SDK generation, security.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // PAK Loading (6 actions)
+            'configure_mod_loading_paths', 'scan_for_mod_paks', 'load_mod_pak', 'unload_mod_pak',
+            'validate_mod_pak', 'configure_mod_load_order',
+            // Discovery (5 actions)
+            'list_installed_mods', 'enable_mod', 'disable_mod',
+            'check_mod_compatibility', 'get_mod_info',
+            // Asset Override (4 actions)
+            'configure_asset_override_paths', 'register_mod_asset_redirect',
+            'restore_original_asset', 'list_asset_overrides',
+            // SDK Generation (4 actions)
+            'export_moddable_headers', 'create_mod_template_project',
+            'configure_exposed_classes', 'get_sdk_config',
+            // Security (4 actions)
+            'configure_mod_sandbox', 'set_allowed_mod_operations',
+            'validate_mod_content', 'get_security_config',
+            // Utility (2 actions)
+            'get_modding_info', 'reset_mod_system'
+          ],
+          description: 'Modding action.'
+        },
+
+        // === PAK Loading Parameters ===
+        modPaths: { type: 'array', items: { type: 'string' }, description: 'List of mod directory paths to scan.' },
+        pakPath: { type: 'string', description: 'Path to PAK file to load/unload.' },
+        modId: { type: 'string', description: 'Unique mod identifier.' },
+        modName: { type: 'string', description: 'Display name for mod.' },
+        mountPoint: { type: 'string', description: 'Mount point for PAK (e.g., /Game/Mods/MyMod/).' },
+        loadPriority: { type: 'number', description: 'Load order priority (lower = loads first).' },
+        autoLoad: { type: 'boolean', description: 'Automatically load on startup.' },
+        loadOrder: { type: 'array', items: { type: 'string' }, description: 'Ordered list of mod IDs for load sequence.' },
+
+        // === Discovery Parameters ===
+        enabled: { type: 'boolean', description: 'Enable or disable the mod.' },
+        targetVersion: { type: 'string', description: 'Target game version for compatibility check.' },
+        dependencies: { type: 'array', items: { type: 'string' }, description: 'Required mod dependencies.' },
+
+        // === Asset Override Parameters ===
+        overridePaths: { type: 'array', items: { type: 'string' }, description: 'Paths that can be overridden by mods.' },
+        originalAssetPath: { type: 'string', description: 'Original asset path to redirect from.' },
+        modAssetPath: { type: 'string', description: 'Mod asset path to redirect to.' },
+        redirectType: { type: 'string', enum: ['Replace', 'Merge', 'Append'], description: 'Type of asset redirect.' },
+
+        // === SDK Generation Parameters ===
+        outputPath: { type: 'string', description: 'Output path for exported headers/templates.' },
+        templateName: { type: 'string', description: 'Name for mod template project.' },
+        exposedClasses: { type: 'array', items: { type: 'string' }, description: 'Classes to expose for modding.' },
+        exposedProperties: { type: 'array', items: { type: 'string' }, description: 'Properties to expose for modding.' },
+        includeSourceCode: { type: 'boolean', description: 'Include source code stubs in template.' },
+        sdkVersion: { type: 'string', description: 'SDK version string.' },
+
+        // === Security Parameters ===
+        sandboxEnabled: { type: 'boolean', description: 'Enable mod sandbox.' },
+        sandboxLevel: { type: 'string', enum: ['Minimal', 'Standard', 'Strict'], description: 'Sandbox restriction level.' },
+        allowedOperations: {
+          type: 'object',
+          properties: {
+            fileRead: { type: 'boolean' },
+            fileWrite: { type: 'boolean' },
+            networkAccess: { type: 'boolean' },
+            nativeCode: { type: 'boolean' },
+            blueprintExecution: { type: 'boolean' },
+            assetLoading: { type: 'boolean' }
+          },
+          description: 'Allowed mod operations.'
+        },
+        contentValidation: {
+          type: 'object',
+          properties: {
+            validateAssets: { type: 'boolean' },
+            validateBlueprints: { type: 'boolean' },
+            checkSignatures: { type: 'boolean' },
+            maxAssetSize: { type: 'number' },
+            blockedAssetTypes: { type: 'array', items: { type: 'string' } }
+          },
+          description: 'Content validation settings.'
+        },
+
+        // === Filter ===
+        filter: { type: 'string', description: 'Filter string for listings.' },
+        includeDisabled: { type: 'boolean', description: 'Include disabled mods in listings.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        message: { type: 'string', description: 'Status message.' },
+
+        // === PAK Loading Outputs ===
+        pakLoaded: { type: 'boolean', description: 'Whether PAK was loaded.' },
+        pakUnloaded: { type: 'boolean', description: 'Whether PAK was unloaded.' },
+        pakValid: { type: 'boolean', description: 'Whether PAK passed validation.' },
+        pakInfo: {
+          type: 'object',
+          properties: {
+            pakPath: { type: 'string' },
+            mountPoint: { type: 'string' },
+            size: { type: 'number' },
+            assetCount: { type: 'number' },
+            isEncrypted: { type: 'boolean' },
+            isCompressed: { type: 'boolean' }
+          },
+          description: 'PAK file information.'
+        },
+        discoveredPaks: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              path: { type: 'string' },
+              name: { type: 'string' },
+              size: { type: 'number' }
+            }
+          },
+          description: 'List of discovered PAK files.'
+        },
+
+        // === Mod Discovery Outputs ===
+        installedMods: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              modId: { type: 'string' },
+              name: { type: 'string' },
+              version: { type: 'string' },
+              author: { type: 'string' },
+              description: { type: 'string' },
+              enabled: { type: 'boolean' },
+              loadOrder: { type: 'number' },
+              dependencies: { type: 'array', items: { type: 'string' } }
+            }
+          },
+          description: 'List of installed mods.'
+        },
+        modEnabled: { type: 'boolean', description: 'Whether mod was enabled.' },
+        modDisabled: { type: 'boolean', description: 'Whether mod was disabled.' },
+        compatibilityResult: {
+          type: 'object',
+          properties: {
+            compatible: { type: 'boolean' },
+            issues: { type: 'array', items: { type: 'string' } },
+            missingDependencies: { type: 'array', items: { type: 'string' } },
+            versionConflicts: { type: 'array', items: { type: 'string' } }
+          },
+          description: 'Mod compatibility check result.'
+        },
+        modInfo: {
+          type: 'object',
+          properties: {
+            modId: { type: 'string' },
+            name: { type: 'string' },
+            version: { type: 'string' },
+            author: { type: 'string' },
+            description: { type: 'string' },
+            enabled: { type: 'boolean' },
+            pakPath: { type: 'string' },
+            assetCount: { type: 'number' },
+            dependencies: { type: 'array', items: { type: 'string' } }
+          },
+          description: 'Mod information.'
+        },
+
+        // === Asset Override Outputs ===
+        redirectRegistered: { type: 'boolean', description: 'Whether redirect was registered.' },
+        assetRestored: { type: 'boolean', description: 'Whether original asset was restored.' },
+        activeOverrides: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              originalPath: { type: 'string' },
+              modPath: { type: 'string' },
+              modId: { type: 'string' },
+              redirectType: { type: 'string' }
+            }
+          },
+          description: 'List of active asset overrides.'
+        },
+
+        // === SDK Generation Outputs ===
+        headersExported: { type: 'boolean', description: 'Whether headers were exported.' },
+        templateCreated: { type: 'boolean', description: 'Whether template was created.' },
+        exportPath: { type: 'string', description: 'Path to exported content.' },
+        exposedClassCount: { type: 'number', description: 'Number of exposed classes.' },
+        sdkConfig: {
+          type: 'object',
+          properties: {
+            version: { type: 'string' },
+            exposedClasses: { type: 'array', items: { type: 'string' } },
+            exposedProperties: { type: 'array', items: { type: 'string' } },
+            outputPath: { type: 'string' }
+          },
+          description: 'SDK configuration.'
+        },
+
+        // === Security Outputs ===
+        sandboxConfigured: { type: 'boolean', description: 'Whether sandbox was configured.' },
+        operationsSet: { type: 'boolean', description: 'Whether operations were set.' },
+        contentValidationResult: {
+          type: 'object',
+          properties: {
+            valid: { type: 'boolean' },
+            errors: { type: 'array', items: { type: 'string' } },
+            warnings: { type: 'array', items: { type: 'string' } },
+            blockedAssets: { type: 'array', items: { type: 'string' } }
+          },
+          description: 'Content validation result.'
+        },
+        securityConfig: {
+          type: 'object',
+          properties: {
+            sandboxEnabled: { type: 'boolean' },
+            sandboxLevel: { type: 'string' },
+            allowedOperations: { type: 'object' },
+            contentValidation: { type: 'object' }
+          },
+          description: 'Security configuration.'
+        },
+
+        // === Modding Info Output ===
+        moddingInfo: {
+          type: 'object',
+          properties: {
+            modSystemEnabled: { type: 'boolean' },
+            installedModCount: { type: 'number' },
+            enabledModCount: { type: 'number' },
+            loadedPakCount: { type: 'number' },
+            modPaths: { type: 'array', items: { type: 'string' } },
+            sandboxEnabled: { type: 'boolean' },
+            sdkVersion: { type: 'string' }
+          },
+          description: 'Modding system info.'
+        },
+
+        error: commonSchemas.stringProp
+      }
+    }
   }
 ];

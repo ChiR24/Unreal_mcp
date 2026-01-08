@@ -2318,3 +2318,495 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
   - `MCP_HAS_HOLOLENS` - Microsoft HoloLens
 - Graceful fallback messages when XR plugins not enabled
 - Hardware requirements: XR headsets, controllers, AR-capable devices
+
+---
+
+## 57. AI & NPC Manager (`manage_ai_npc`) - Phase 42
+
+> **Note:** These plugins require external cloud services for full functionality. Actions configure the UE-side integration only. Convai, Inworld AI, and NVIDIA ACE/Audio2Face require the respective external plugins to be installed.
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Convai (10 actions)** | | | |
+| `create_convai_character` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Creates Convai chatbot character component |
+| `configure_character_backstory` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Sets character backstory via UConvaiChatBotUpdateProxy |
+| `configure_character_voice` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Sets character voice ID |
+| `configure_convai_lipsync` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Configures IConvaiLipSyncInterface |
+| `start_convai_session` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Starts conversation session |
+| `stop_convai_session` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Ends conversation session |
+| `send_text_to_character` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Sends text message to character |
+| `get_character_response` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Gets character response state |
+| `configure_convai_actions` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Configures available character actions |
+| `get_convai_info` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Gets Convai plugin status |
+| **Inworld AI (10 actions)** | | | |
+| `create_inworld_character` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Creates Inworld character component |
+| `configure_inworld_settings` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Configures Inworld project settings |
+| `configure_inworld_scene` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Configures Inworld scene |
+| `start_inworld_session` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Starts Inworld session |
+| `stop_inworld_session` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Ends Inworld session |
+| `send_message_to_character` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Sends message to Inworld character |
+| `get_character_emotion` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Gets current emotion state |
+| `get_character_goals` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Gets character goals |
+| `trigger_inworld_event` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Triggers custom Inworld event |
+| `get_inworld_info` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Gets Inworld plugin status |
+| **NVIDIA ACE/Audio2Face (8 actions)** | | | |
+| `configure_audio2face` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Configures Audio2Face connection |
+| `process_audio_to_blendshapes` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Processes audio to facial blendshapes |
+| `configure_blendshape_mapping` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Maps A2F blendshapes to character |
+| `start_audio2face_stream` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Starts real-time A2F streaming |
+| `stop_audio2face_stream` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Stops A2F streaming |
+| `get_audio2face_status` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Gets A2F connection status |
+| `configure_ace_emotions` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Configures ACE emotion settings |
+| `get_ace_info` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Gets NVIDIA ACE plugin status |
+| **Utilities (2 actions)** | | | |
+| `get_ai_npc_info` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Gets AI NPC backends availability |
+| `list_available_ai_backends` | `McpAutomationBridge_AINPCHandlers.cpp` | `HandleManageAINPCAction` | Lists all available AI backends |
+
+### Phase 42 Action Summary
+
+| Platform | Actions |
+|----------|---------|
+| Convai | 10 |
+| Inworld AI | 10 |
+| NVIDIA ACE/Audio2Face | 8 |
+| Utilities | 2 |
+| **Total** | **30** |
+
+### Implementation Notes
+- All 30 actions fully implemented in both TypeScript and C++ handlers
+- AI NPC conditional compilation via `__has_include()` checks:
+  - `MCP_HAS_CONVAI` - Convai chatbot integration
+  - `MCP_HAS_INWORLD` - Inworld AI characters
+  - `MCP_HAS_ACE` - NVIDIA ACE/Audio2Face
+- Graceful fallback messages when AI NPC plugins not enabled
+- External requirements: Convai API key, Inworld workspace ID, NVIDIA ACE server
+
+---
+
+## 58. Utility Plugins Manager (`manage_utility_plugins`) - Phase 43
+
+> **Note:** These plugins provide editor and runtime utilities for various workflows. Some require the respective plugins to be enabled in your project. Python Scripting, Editor Scripting, Modeling Tools are editor-only. Common UI, Paper2D, Procedural Mesh are runtime-capable. Variant Manager is editor-only for authoring.
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Python Scripting (15 actions)** | | | |
+| `execute_python_script` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Executes Python script with output capture |
+| `execute_python_file` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Executes Python file by path |
+| `execute_python_command` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Executes single Python command |
+| `configure_python_paths` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Configures sys.path |
+| `add_python_path` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Adds single path to sys.path |
+| `remove_python_path` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Removes path from sys.path |
+| `get_python_paths` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets current sys.path |
+| `create_python_editor_utility` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates Python utility script |
+| `run_startup_scripts` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Runs startup scripts |
+| `get_python_output` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets Python output |
+| `clear_python_output` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Clears Python output |
+| `is_python_available` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Checks Python availability |
+| `get_python_version` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets Python version |
+| `reload_python_module` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Reloads Python module |
+| `get_python_info` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets Python plugin info |
+| **Editor Scripting (12 actions)** | | | |
+| `create_editor_utility_widget` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates Editor Utility Widget Blueprint |
+| `create_editor_utility_blueprint` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates Editor Utility Blueprint |
+| `add_menu_entry` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Adds menu entry |
+| `remove_menu_entry` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Removes menu entry |
+| `add_toolbar_button` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Adds toolbar button |
+| `remove_toolbar_button` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Removes toolbar button |
+| `register_editor_command` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Registers editor command |
+| `unregister_editor_command` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Unregisters editor command |
+| `execute_editor_command` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Executes editor command |
+| `create_blutility_action` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates Blutility action |
+| `run_editor_utility` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Runs editor utility |
+| `get_editor_scripting_info` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets editor scripting info |
+| **Modeling Tools (18 actions)** | | | |
+| `activate_modeling_tool` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Activates modeling tool by name |
+| `deactivate_modeling_tool` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Deactivates current tool |
+| `get_active_tool` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets active tool info |
+| `select_mesh_elements` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Selects mesh elements |
+| `clear_mesh_selection` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Clears mesh selection |
+| `get_mesh_selection` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets mesh selection |
+| `set_sculpt_brush` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets sculpt brush type |
+| `configure_sculpt_brush` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Configures brush settings |
+| `execute_sculpt_stroke` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Executes sculpt stroke |
+| `apply_mesh_operation` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Applies mesh operation |
+| `undo_mesh_operation` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Undoes mesh operation |
+| `accept_tool_result` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Accepts tool result |
+| `cancel_tool` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Cancels tool |
+| `set_tool_property` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets tool property |
+| `get_tool_properties` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets tool properties |
+| `list_available_tools` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Lists available tools |
+| `enter_modeling_mode` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Enters modeling mode |
+| `get_modeling_tools_info` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets modeling tools info |
+| **Common UI (10 actions)** | | | |
+| `configure_ui_input_config` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Configures UI input config |
+| `create_common_activatable_widget` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates common activatable widget |
+| `configure_navigation_rules` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Configures navigation rules |
+| `set_input_action_data` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets input action data |
+| `get_ui_input_config` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets UI input config |
+| `register_common_input_metadata` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Registers common input metadata |
+| `configure_gamepad_navigation` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Configures gamepad navigation |
+| `set_default_focus_widget` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets default focus widget |
+| `configure_analog_cursor` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Configures analog cursor |
+| `get_common_ui_info` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets Common UI info |
+| **Paper2D (12 actions)** | | | |
+| `create_sprite` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates Paper sprite |
+| `create_flipbook` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates flipbook animation |
+| `add_flipbook_keyframe` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Adds flipbook keyframe |
+| `create_tile_map` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates tile map |
+| `create_tile_set` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates tile set |
+| `set_tile_map_layer` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets tile map layer |
+| `spawn_paper_sprite_actor` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Spawns Paper sprite actor |
+| `spawn_paper_flipbook_actor` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Spawns Paper flipbook actor |
+| `configure_sprite_collision` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Configures sprite collision |
+| `configure_sprite_material` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Configures sprite material |
+| `get_sprite_info` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets sprite info |
+| `get_paper2d_info` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets Paper2D plugin info |
+| **Procedural Mesh (15 actions)** | | | |
+| `create_procedural_mesh_component` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates procedural mesh component |
+| `create_mesh_section` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates mesh section |
+| `update_mesh_section` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Updates mesh section |
+| `clear_mesh_section` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Clears mesh section |
+| `clear_all_mesh_sections` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Clears all mesh sections |
+| `set_mesh_section_visible` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets mesh section visibility |
+| `set_mesh_collision` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets mesh collision |
+| `set_mesh_vertices` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets mesh vertices |
+| `set_mesh_triangles` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets mesh triangles |
+| `set_mesh_normals` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets mesh normals |
+| `set_mesh_uvs` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets mesh UVs |
+| `set_mesh_colors` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets mesh vertex colors |
+| `set_mesh_tangents` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Sets mesh tangents |
+| `convert_procedural_to_static_mesh` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Converts procedural to static mesh |
+| `get_procedural_mesh_info` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets procedural mesh info |
+| **Variant Manager (15 actions)** | | | |
+| `create_level_variant_sets` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates level variant sets asset |
+| `create_variant_set` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Creates variant set |
+| `delete_variant_set` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Deletes variant set |
+| `add_variant` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Adds variant to set |
+| `remove_variant` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Removes variant |
+| `duplicate_variant` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Duplicates variant |
+| `activate_variant` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Activates variant |
+| `deactivate_variant` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Deactivates variant |
+| `get_active_variant` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets active variant |
+| `add_actor_binding` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Adds actor binding |
+| `remove_actor_binding` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Removes actor binding |
+| `capture_property` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Captures property value |
+| `configure_variant_dependency` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Configures variant dependency |
+| `export_variant_configuration` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Exports variant configuration |
+| `get_variant_manager_info` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets Variant Manager info |
+| **Utilities (3 actions)** | | | |
+| `get_utility_plugins_info` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets all utility plugins info |
+| `list_utility_plugins` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Lists available utility plugins |
+| `get_plugin_status` | `McpAutomationBridge_UtilityPluginsHandlers.cpp` | `HandleManageUtilityPluginsAction` | Gets specific plugin status |
+
+### Phase 43 Action Summary
+
+| Plugin | Actions |
+|--------|---------|
+| Python Scripting | 15 |
+| Editor Scripting | 12 |
+| Modeling Tools | 18 |
+| Common UI | 10 |
+| Paper2D | 12 |
+| Procedural Mesh | 15 |
+| Variant Manager | 15 |
+| Utilities | 3 |
+| **Total** | **100** |
+
+### Implementation Notes
+- All 100 actions fully implemented in both TypeScript and C++ handlers
+- Utility Plugins conditional compilation via `__has_include()` checks:
+  - `MCP_HAS_PYTHON` - Python Scripting plugin (IPythonScriptPlugin)
+  - `MCP_HAS_EDITOR_UTILITY_WIDGET` - Editor Utility Widget/Blutility
+  - `MCP_HAS_MODELING_TOOLS` - Modeling Tools Editor Mode
+  - `MCP_HAS_COMMON_UI` - Common UI plugin
+  - `MCP_HAS_COMMON_INPUT` - Common Input subsystem
+  - `MCP_HAS_PAPER_SPRITE` - Paper2D sprites
+  - `MCP_HAS_PAPER_FLIPBOOK` - Paper2D flipbooks
+  - `MCP_HAS_PAPER_TILEMAP` - Paper2D tile maps
+  - `MCP_HAS_PROCEDURAL_MESH` - Procedural Mesh Component
+  - `MCP_HAS_VARIANT_MANAGER_BP` - Variant Manager Blueprint Library
+- Graceful fallback messages when plugins not enabled
+- Python Scripting, Editor Scripting, Modeling Tools are Editor-only
+- Common UI, Paper2D, Procedural Mesh are Runtime-capable
+
+---
+
+## Phase 44: Physics & Destruction Plugins
+
+**Tool**: `manage_physics_destruction`  
+**TypeScript Handler**: `src/tools/handlers/physics-destruction-handlers.ts`  
+**C++ Handler**: `McpAutomationBridge_PhysicsDestructionHandlers.cpp`
+
+### Actions (80 total)
+
+| Action | C++ File | C++ Function | Description |
+|--------|----------|--------------|-------------|
+| **Chaos Destruction (29 actions)** | | | |
+| `create_geometry_collection` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Creates geometry collection from static mesh |
+| `fracture_uniform` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Applies uniform Voronoi fracture |
+| `fracture_clustered` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Applies clustered Voronoi fracture |
+| `fracture_radial` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Applies radial fracture |
+| `fracture_slice` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Applies planar/slice fracture |
+| `fracture_brick` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Applies brick/grid fracture |
+| `flatten_fracture` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Resets/flattens fracture hierarchy |
+| `set_geometry_collection_materials` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets materials on geometry collection |
+| `set_damage_thresholds` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Configures damage thresholds |
+| `set_cluster_connection_type` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets cluster connection type |
+| `set_collision_particles_fraction` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets collision particles fraction |
+| `set_remove_on_break` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Configures remove on break behavior |
+| `create_field_system_actor` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Creates field system actor |
+| `add_transient_field` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Adds transient field |
+| `add_persistent_field` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Adds persistent field |
+| `add_construction_field` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Adds construction field |
+| `add_field_radial_falloff` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Adds radial falloff field |
+| `add_field_radial_vector` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Adds radial vector field |
+| `add_field_uniform_vector` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Adds uniform vector field |
+| `add_field_noise` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Adds noise field |
+| `add_field_strain` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Adds strain field |
+| `create_anchor_field` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Creates anchor field |
+| `set_dynamic_state` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets dynamic state (Static/Kinematic/Dynamic) |
+| `enable_clustering` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Enables/disables clustering |
+| `get_geometry_collection_stats` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Gets geometry collection statistics |
+| `create_geometry_collection_cache` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Creates GC cache asset |
+| `record_geometry_collection_cache` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Records simulation to cache |
+| `apply_cache_to_collection` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Applies cache to GC |
+| `remove_geometry_collection_cache` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Removes GC cache |
+| **Chaos Vehicles (19 actions)** | | | |
+| `create_wheeled_vehicle_bp` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Creates wheeled vehicle blueprint |
+| `add_vehicle_wheel` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Adds wheel to vehicle |
+| `remove_wheel_from_vehicle` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Removes wheel from vehicle |
+| `configure_engine_setup` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Configures engine torque/RPM |
+| `configure_transmission_setup` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Configures transmission gears |
+| `configure_steering_setup` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Configures steering |
+| `configure_differential_setup` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Configures differential (FWD/RWD/AWD) |
+| `configure_suspension_setup` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Configures suspension |
+| `configure_brake_setup` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Configures brakes |
+| `set_vehicle_mesh` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets vehicle skeletal mesh |
+| `set_wheel_class` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets wheel class |
+| `set_wheel_offset` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets wheel offset |
+| `set_wheel_radius` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets wheel radius |
+| `set_vehicle_mass` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets vehicle mass |
+| `set_drag_coefficient` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets aerodynamic drag |
+| `set_center_of_mass` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets center of mass |
+| `create_vehicle_animation_instance` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Creates vehicle anim BP |
+| `set_vehicle_animation_bp` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets vehicle animation BP |
+| `get_vehicle_config` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Gets vehicle configuration |
+| **Chaos Cloth (15 actions)** | | | |
+| `create_chaos_cloth_config` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Creates cloth config asset |
+| `create_chaos_cloth_shared_sim_config` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Creates shared sim config |
+| `apply_cloth_to_skeletal_mesh` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Applies cloth to mesh |
+| `remove_cloth_from_skeletal_mesh` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Removes cloth from mesh |
+| `set_cloth_mass_properties` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets cloth mass |
+| `set_cloth_gravity` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets cloth gravity scale |
+| `set_cloth_damping` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets cloth damping |
+| `set_cloth_collision_properties` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets collision properties |
+| `set_cloth_stiffness` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets cloth stiffness |
+| `set_cloth_tether_stiffness` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets tether stiffness |
+| `set_cloth_aerodynamics` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets aerodynamic properties |
+| `set_cloth_anim_drive` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets animation drive |
+| `set_cloth_long_range_attachment` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets long-range attachment |
+| `get_cloth_config` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Gets cloth configuration |
+| `get_cloth_stats` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Gets cloth statistics |
+| **Chaos Flesh (13 actions)** | | | |
+| `create_flesh_asset` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Creates flesh asset |
+| `create_flesh_component` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Creates flesh component |
+| `set_flesh_simulation_properties` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets simulation properties |
+| `set_flesh_stiffness` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets flesh stiffness |
+| `set_flesh_damping` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets flesh damping |
+| `set_flesh_incompressibility` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets incompressibility |
+| `set_flesh_inflation` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets inflation pressure |
+| `set_flesh_solver_iterations` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets solver iterations |
+| `bind_flesh_to_skeleton` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Binds flesh to skeleton |
+| `set_flesh_rest_state` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Sets rest state |
+| `create_flesh_cache` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Creates flesh cache |
+| `record_flesh_simulation` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Records flesh simulation |
+| `get_flesh_asset_info` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Gets flesh asset info |
+| **Utilities (4 actions)** | | | |
+| `get_physics_destruction_info` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Gets all physics plugin info |
+| `list_geometry_collections` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Lists geometry collections |
+| `list_chaos_vehicles` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Lists chaos vehicles |
+| `get_chaos_plugin_status` | `McpAutomationBridge_PhysicsDestructionHandlers.cpp` | `HandleManagePhysicsDestructionAction` | Gets plugin status |
+
+### Phase 44 Action Summary
+
+| Plugin | Actions |
+|--------|---------|
+| Chaos Destruction | 29 |
+| Chaos Vehicles | 19 |
+| Chaos Cloth | 15 |
+| Chaos Flesh | 13 |
+| Utilities | 4 |
+| **Total** | **80** |
+
+### Implementation Notes
+- All 80 actions fully implemented in both TypeScript and C++ handlers
+- Conditional compilation via `__has_include()` for optional plugins:
+  - `MCP_HAS_GEOMETRY_COLLECTION` - Geometry Collection Engine
+  - `MCP_HAS_GEOMETRY_COLLECTION_OBJECT` - Geometry Collection Object
+  - `MCP_HAS_FIELD_SYSTEM` - Field System Component
+  - `MCP_HAS_FIELD_SYSTEM_ACTOR` - Field System Actor
+  - `MCP_HAS_FIELD_SYSTEM_NODES` - Field System Nodes
+  - `MCP_HAS_CHAOS_VEHICLES` - Chaos Vehicles plugin
+  - `MCP_HAS_CHAOS_VEHICLE_WHEEL` - Chaos Vehicle Wheel
+  - `MCP_HAS_CHAOS_CLOTH` - Chaos Cloth simulation
+  - `MCP_HAS_CLOTHING_ASSET` - Clothing Asset base
+  - `MCP_HAS_CHAOS_CLOTH_CONFIG` - Chaos Cloth Config
+  - `MCP_HAS_CHAOS_FLESH` - Chaos Flesh plugin
+  - `MCP_HAS_FLESH_COMPONENT` - Flesh Component
+  - `MCP_HAS_FLESH_ASSET` - Flesh Asset
+- Graceful fallback messages when plugins not enabled
+- Geometry Collection fracturing requires Editor (WITH_EDITOR)
+- Field System is Runtime-capable for gameplay effects
+
+---
+
+## Phase 45: Accessibility System
+
+**Tool**: `manage_accessibility`  
+**TypeScript Handler**: `src/tools/handlers/accessibility-handlers.ts`  
+**C++ Handler**: `McpAutomationBridge_AccessibilityHandlers.cpp`
+
+### Actions (50 total)
+
+| Action | C++ File | C++ Function | Description |
+|--------|----------|--------------|-------------|
+| **Visual Accessibility (10 actions)** | | | |
+| `set_colorblind_mode` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets colorblind filter (Protanopia, Deuteranopia, Tritanopia) |
+| `set_colorblind_severity` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets colorblind filter intensity (0.0-1.0) |
+| `enable_high_contrast` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables/disables high contrast mode |
+| `set_ui_scale` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets UI scale multiplier |
+| `enable_text_to_speech` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables/disables text-to-speech |
+| `set_large_text` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables/disables large text mode |
+| `set_font_scale` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets global font scale |
+| `set_screen_reader` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables/disables screen reader |
+| `set_screen_flash_reduction` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Reduces screen flash effects |
+| `get_visual_settings` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Gets current visual accessibility settings |
+| **Subtitle Accessibility (8 actions)** | | | |
+| `enable_subtitles` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables/disables subtitles |
+| `set_subtitle_font_size` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets subtitle font size |
+| `set_subtitle_color` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets subtitle text color |
+| `enable_subtitle_background` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables subtitle background |
+| `set_subtitle_background_color` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets subtitle background color/opacity |
+| `enable_speaker_identification` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Shows speaker names in subtitles |
+| `enable_directional_indicators` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Shows directional indicators for sounds |
+| `set_subtitle_position` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets subtitle position (Bottom, Top, etc.) |
+| **Audio Accessibility (8 actions)** | | | |
+| `enable_mono_audio` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables mono audio output |
+| `enable_audio_visualization` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables visual audio cues |
+| `enable_visual_sound_cues` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Shows visual indicators for sounds |
+| `set_audio_balance` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets left/right audio balance |
+| `enable_audio_ducking` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Ducks audio during speech |
+| `set_audio_ducking_amount` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets audio ducking intensity |
+| `enable_screen_narrator` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables screen narrator |
+| `get_audio_settings` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Gets current audio accessibility settings |
+| **Motor Accessibility (10 actions)** | | | |
+| `enable_hold_to_toggle` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Converts hold actions to toggle |
+| `enable_auto_aim` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables auto-aim assistance |
+| `set_auto_aim_strength` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets auto-aim strength (0.0-1.0) |
+| `enable_one_handed_mode` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables one-handed mode |
+| `set_one_handed_mode_hand` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets which hand for one-handed mode |
+| `set_input_timing_tolerance` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets input timing tolerance |
+| `set_qte_options` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Configures QTE timing/auto-complete |
+| `set_cursor_size` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets cursor size multiplier |
+| `remap_control` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Remaps a control binding |
+| `get_motor_settings` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Gets current motor accessibility settings |
+| **Cognitive Accessibility (8 actions)** | | | |
+| `set_difficulty_preset` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets difficulty preset |
+| `enable_objective_reminders` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables objective reminders |
+| `set_objective_reminder_interval` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets reminder interval |
+| `enable_navigation_assistance` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Enables navigation assistance |
+| `set_navigation_assistance_type` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets navigation type (Waypoint, Path, Compass) |
+| `set_motion_sickness_options` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Configures motion sickness reduction |
+| `set_game_speed` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Sets game speed multiplier |
+| `get_cognitive_settings` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Gets current cognitive accessibility settings |
+| **Presets & Utilities (6 actions)** | | | |
+| `create_accessibility_preset` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Creates accessibility preset |
+| `apply_accessibility_preset` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Applies accessibility preset |
+| `list_presets` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Lists available presets |
+| `export_accessibility_settings` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Exports settings to file |
+| `import_accessibility_settings` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Imports settings from file |
+| `get_accessibility_info` | `McpAutomationBridge_AccessibilityHandlers.cpp` | `HandleManageAccessibilityAction` | Gets all accessibility settings |
+
+### Phase 45 Action Summary
+
+| Category | Actions |
+|----------|---------|
+| Visual Accessibility | 10 |
+| Subtitle Accessibility | 8 |
+| Audio Accessibility | 8 |
+| Motor Accessibility | 10 |
+| Cognitive Accessibility | 8 |
+| Presets & Utilities | 6 |
+| **Total** | **50** |
+
+### Implementation Notes
+- All 50 actions fully implemented in both TypeScript and C++ handlers
+- Uses `GConfig->SetString/Bool/Float()` with `GGameUserSettingsIni` for persistence
+- Colorblind filters via Post Process Volume ColorGrading settings
+- Subtitle system integrates with UE's built-in subtitle subsystem
+- Motor accessibility modifies Enhanced Input system bindings
+- Motion sickness options disable camera shake, head bob, and motion blur
+- Preset system stores settings in JSON format for import/export
+
+---
+
+## Phase 46: Modding & UGC System
+
+**Tool**: `manage_modding`  
+**Handler File**: `McpAutomationBridge_ModdingHandlers.cpp`  
+**Handler Function**: `HandleManageModdingAction`  
+**Total Actions**: 25
+
+| Action | C++ File | C++ Handler | Description |
+|--------|----------|-------------|-------------|
+| **PAK Loading (6 actions)** | | | |
+| `configure_mod_loading_paths` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Configures paths to scan for mod PAK files |
+| `scan_for_mod_paks` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Scans configured paths for PAK files |
+| `load_mod_pak` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Mounts a PAK file at specified mount point |
+| `unload_mod_pak` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Unmounts a loaded PAK file |
+| `validate_mod_pak` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Validates PAK file integrity |
+| `configure_mod_load_order` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Sets mod load priority order |
+| **Discovery (5 actions)** | | | |
+| `list_installed_mods` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Lists all mounted mods |
+| `enable_mod` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Enables a mod for loading |
+| `disable_mod` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Disables and unloads a mod |
+| `check_mod_compatibility` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Checks mod compatibility with engine |
+| `get_mod_info` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Gets detailed mod information |
+| **Asset Override (4 actions)** | | | |
+| `configure_asset_override_paths` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Configures asset override search paths |
+| `register_mod_asset_redirect` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Registers asset redirect (original -> mod) |
+| `restore_original_asset` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Removes asset redirect |
+| `list_asset_overrides` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Lists all active asset overrides |
+| **SDK Generation (4 actions)** | | | |
+| `export_moddable_headers` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Exports C++ headers for mod development |
+| `create_mod_template_project` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Creates mod template project structure |
+| `configure_exposed_classes` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Configures classes exposed to modders |
+| `get_sdk_config` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Gets current SDK configuration |
+| **Security (4 actions)** | | | |
+| `configure_mod_sandbox` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Configures mod sandbox settings |
+| `set_allowed_mod_operations` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Sets allowed mod operations |
+| `validate_mod_content` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Validates mod content for security |
+| `get_security_config` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Gets security configuration |
+| **Utility (2 actions)** | | | |
+| `get_modding_info` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Gets modding system status |
+| `reset_mod_system` | `McpAutomationBridge_ModdingHandlers.cpp` | `HandleManageModdingAction` | Resets mod system to defaults |
+
+### Phase 46 Action Summary
+
+| Category | Actions |
+|----------|---------|
+| PAK Loading | 6 |
+| Discovery | 5 |
+| Asset Override | 4 |
+| SDK Generation | 4 |
+| Security | 4 |
+| Utility | 2 |
+| **Total** | **25** |
+
+### Implementation Notes
+- All 25 actions fully implemented in both TypeScript and C++ handlers
+- Uses `FPakPlatformFile` for PAK mounting/unmounting
+- Mod paths and settings persisted via `GConfig` with `GGameUserSettingsIni`
+- Asset redirects stored in runtime map for quick lookups
+- Security sandbox settings control file system and network access
+- Mod templates include mod.json manifest and directory structure

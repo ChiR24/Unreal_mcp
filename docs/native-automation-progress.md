@@ -445,7 +445,18 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 15. ~~Continue implementation of Phase 32 (Build & Deployment) per Roadmap.~~ ✅ Done
 16. ~~Continue implementation of Phase 33 (Testing & Quality) per Roadmap.~~ ✅ Done
 17. ~~Continue implementation of Phase 34 (Editor Utilities) per Roadmap.~~ ✅ Done
-18. Continue implementation of Phase 35 (Additional Gameplay Systems) per Roadmap.
+18. ~~Continue implementation of Phase 35 (Additional Gameplay Systems) per Roadmap.~~ ✅ Done
+19. ~~Continue implementation of Phase 36 (Character & Avatar Plugins) per Roadmap.~~ ✅ Done
+20. ~~Continue implementation of Phase 37 (Asset & Content Plugins) per Roadmap.~~ ✅ Done
+21. ~~Continue implementation of Phase 38 (Audio Middleware Plugins) per Roadmap.~~ ✅ Done
+22. ~~Continue implementation of Phase 39 (Live Link & Motion Capture) per Roadmap.~~ ✅ Done
+23. ~~Continue implementation of Phase 40 (Virtual Production) per Roadmap.~~ ✅ Done
+24. ~~Continue implementation of Phase 41 (XR Plugins) per Roadmap.~~ ✅ Done
+25. ~~Continue implementation of Phase 42 (AI & NPC Plugins) per Roadmap.~~ ✅ Done
+26. ~~Continue implementation of Phase 43 (Utility Plugins) per Roadmap.~~ ✅ Done
+27. Continue implementation of Phase 44 (Physics & Destruction Plugins) per Roadmap.
+28. Continue implementation of Phase 45 (Accessibility System) per Roadmap.
+29. Continue implementation of Phase 46 (Modding & UGC System) per Roadmap.
 
 ---
 
@@ -977,3 +988,265 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 - Blueprint interfaces created via `FKismetEditorUtilities::CreateBlueprint()` with `BPTYPE_Interface`
 - Event dispatchers added via `Blueprint->NewVariables` with `PC_MCDelegate` pin category
 - Collection management uses `ICollectionManager` from `CollectionManagerModule`
+
+---
+
+## Phase 43: Utility Plugins - Implementation Details
+
+**Status**: ✅ Complete (100 actions)
+
+**Files**: 
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_UtilityPluginsHandlers.cpp` (~2,700 lines)
+- `src/tools/handlers/utility-plugins-handlers.ts`
+
+| Action | Status | Description |
+|--------|--------|-------------|
+| **Python Scripting (15 actions)** | | |
+| `execute_python_script` | ✅ Done | Executes Python script via `IPythonScriptPlugin::ExecPythonCommandEx()` |
+| `execute_python_file` | ✅ Done | Executes Python file by path |
+| `execute_python_command` | ✅ Done | Executes single Python command |
+| `configure_python_paths` | ✅ Done | Configures `sys.path` |
+| `add_python_path` | ✅ Done | Adds path to `sys.path.insert(0, path)` |
+| `remove_python_path` | ✅ Done | Removes path from `sys.path` |
+| `get_python_paths` | ✅ Done | Gets current `sys.path` list |
+| `create_python_editor_utility` | ✅ Done | Creates Python utility script file |
+| `run_startup_scripts` | ✅ Done | Runs Python startup scripts |
+| `get_python_output` | ✅ Done | Gets Python output |
+| `clear_python_output` | ✅ Done | Clears Python output buffer |
+| `is_python_available` | ✅ Done | Checks Python availability |
+| `get_python_version` | ✅ Done | Gets Python version info |
+| `reload_python_module` | ✅ Done | Reloads Python module via `importlib.reload()` |
+| `get_python_info` | ✅ Done | Gets Python plugin status |
+| **Editor Scripting (12 actions)** | | |
+| `create_editor_utility_widget` | ✅ Done | Creates `UEditorUtilityWidgetBlueprint` asset |
+| `create_editor_utility_blueprint` | ✅ Done | Creates `UEditorUtilityBlueprint` asset |
+| `add_menu_entry` | ✅ Done | Menu entry registration guidance |
+| `remove_menu_entry` | ✅ Done | Menu entry removal |
+| `add_toolbar_button` | ✅ Done | Toolbar button registration |
+| `remove_toolbar_button` | ✅ Done | Toolbar button removal |
+| `register_editor_command` | ✅ Done | Editor command registration |
+| `unregister_editor_command` | ✅ Done | Editor command unregistration |
+| `execute_editor_command` | ✅ Done | Uses `GEditor->Exec()` |
+| `create_blutility_action` | ✅ Done | Blutility action guidance |
+| `run_editor_utility` | ✅ Done | Uses `UEditorUtilitySubsystem::SpawnAndRegisterTab()` |
+| `get_editor_scripting_info` | ✅ Done | Returns available features |
+| **Modeling Tools (18 actions)** | | |
+| `activate_modeling_tool` | ✅ Done | Uses `UModelingToolsEditorMode::GetToolManager()->SelectActiveToolType()` |
+| `deactivate_modeling_tool` | ✅ Done | Uses `ToolManager->DeactivateTool()` |
+| `get_active_tool` | ✅ Done | Returns active tool info |
+| `select_mesh_elements` | ✅ Done | Mesh element selection |
+| `clear_mesh_selection` | ✅ Done | Clears mesh selection |
+| `get_mesh_selection` | ✅ Done | Returns mesh selection |
+| `set_sculpt_brush` | ✅ Done | Sets sculpt brush type |
+| `configure_sculpt_brush` | ✅ Done | Configures brush radius, strength, falloff |
+| `execute_sculpt_stroke` | ✅ Done | Sculpt stroke guidance |
+| `apply_mesh_operation` | ✅ Done | Mesh operation guidance |
+| `undo_mesh_operation` | ✅ Done | Uses `GEditor->UndoTransaction()` |
+| `accept_tool_result` | ✅ Done | Uses `ToolManager->DeactivateTool(Accept)` |
+| `cancel_tool` | ✅ Done | Uses `ToolManager->DeactivateTool(Cancel)` |
+| `set_tool_property` | ✅ Done | Tool property modification |
+| `get_tool_properties` | ✅ Done | Returns tool properties |
+| `list_available_tools` | ✅ Done | Lists 30+ modeling tools |
+| `enter_modeling_mode` | ✅ Done | Uses `GLevelEditorModeTools().ActivateMode()` |
+| `get_modeling_tools_info` | ✅ Done | Returns modeling mode status |
+| **Common UI (10 actions)** | | |
+| `configure_ui_input_config` | ✅ Done | UI input configuration |
+| `create_common_activatable_widget` | ✅ Done | Widget creation guidance |
+| `configure_navigation_rules` | ✅ Done | Navigation rules configuration |
+| `set_input_action_data` | ✅ Done | Input action data setting |
+| `get_ui_input_config` | ✅ Done | Returns UI input config |
+| `register_common_input_metadata` | ✅ Done | Input metadata registration |
+| `configure_gamepad_navigation` | ✅ Done | Gamepad navigation config |
+| `set_default_focus_widget` | ✅ Done | Default focus widget setting |
+| `configure_analog_cursor` | ✅ Done | Analog cursor configuration |
+| `get_common_ui_info` | ✅ Done | Returns Common UI plugin status |
+| **Paper2D (12 actions)** | | |
+| `create_sprite` | ✅ Done | Creates `UPaperSprite` asset |
+| `create_flipbook` | ✅ Done | Creates `UPaperFlipbook` asset |
+| `add_flipbook_keyframe` | ✅ Done | Adds `FPaperFlipbookKeyFrame` |
+| `create_tile_map` | ✅ Done | Creates `UPaperTileMap` asset |
+| `create_tile_set` | ✅ Done | Creates `UPaperTileSet` asset |
+| `set_tile_map_layer` | ✅ Done | Sets tile map layer |
+| `spawn_paper_sprite_actor` | ✅ Done | Spawns `APaperSpriteActor` |
+| `spawn_paper_flipbook_actor` | ✅ Done | Spawns `APaperFlipbookActor` |
+| `configure_sprite_collision` | ✅ Done | Configures sprite collision |
+| `configure_sprite_material` | ✅ Done | Sets sprite material |
+| `get_sprite_info` | ✅ Done | Returns sprite properties |
+| `get_paper2d_info` | ✅ Done | Returns Paper2D plugin status |
+| **Procedural Mesh (15 actions)** | | |
+| `create_procedural_mesh_component` | ✅ Done | Creates `UProceduralMeshComponent` |
+| `create_mesh_section` | ✅ Done | Uses `CreateMeshSection()` |
+| `update_mesh_section` | ✅ Done | Uses `UpdateMeshSection()` |
+| `clear_mesh_section` | ✅ Done | Uses `ClearMeshSection()` |
+| `clear_all_mesh_sections` | ✅ Done | Uses `ClearAllMeshSections()` |
+| `set_mesh_section_visible` | ✅ Done | Uses `SetMeshSectionVisible()` |
+| `set_mesh_collision` | ✅ Done | Uses `SetCollisionEnabled()` |
+| `set_mesh_vertices` | ✅ Done | Vertex update guidance |
+| `set_mesh_triangles` | ✅ Done | Triangle update guidance |
+| `set_mesh_normals` | ✅ Done | Normal update guidance |
+| `set_mesh_uvs` | ✅ Done | UV update guidance |
+| `set_mesh_colors` | ✅ Done | Vertex color update guidance |
+| `set_mesh_tangents` | ✅ Done | Tangent update guidance |
+| `convert_procedural_to_static_mesh` | ✅ Done | Static mesh conversion guidance |
+| `get_procedural_mesh_info` | ✅ Done | Returns component status |
+| **Variant Manager (15 actions)** | | |
+| `create_level_variant_sets` | ✅ Done | Uses `UVariantManagerBlueprintLibrary::CreateLevelVariantSetsAsset()` |
+| `create_variant_set` | ✅ Done | Creates `UVariantSet` in LVS |
+| `delete_variant_set` | ✅ Done | Removes variant set |
+| `add_variant` | ✅ Done | Creates `UVariant` in set |
+| `remove_variant` | ✅ Done | Removes variant from set |
+| `duplicate_variant` | ✅ Done | Duplicates variant |
+| `activate_variant` | ✅ Done | Uses `ALevelVariantSetsActor->SwitchOnVariantByName()` |
+| `deactivate_variant` | ✅ Done | Variant deactivation guidance |
+| `get_active_variant` | ✅ Done | Returns active variant info |
+| `add_actor_binding` | ✅ Done | Adds actor binding to variant |
+| `remove_actor_binding` | ✅ Done | Removes actor binding |
+| `capture_property` | ✅ Done | Uses `CaptureProperty()` |
+| `configure_variant_dependency` | ✅ Done | Configures variant dependency |
+| `export_variant_configuration` | ✅ Done | Exports config to JSON file |
+| `get_variant_manager_info` | ✅ Done | Returns Variant Manager status |
+| **Utilities (3 actions)** | | |
+| `get_utility_plugins_info` | ✅ Done | Returns all plugin statuses |
+| `list_utility_plugins` | ✅ Done | Lists available utility plugins |
+| `get_plugin_status` | ✅ Done | Returns specific plugin status |
+
+### Implementation Notes
+
+- Uses conditional compilation via `__has_include()` for optional plugins:
+  - `MCP_HAS_PYTHON` - IPythonScriptPlugin
+  - `MCP_HAS_EDITOR_UTILITY_WIDGET` - EditorUtilityWidgetBlueprint
+  - `MCP_HAS_MODELING_TOOLS` - ModelingToolsEditorMode
+  - `MCP_HAS_COMMON_UI` - CommonUITypes
+  - `MCP_HAS_PAPER_SPRITE` - PaperSprite, PaperFlipbook
+  - `MCP_HAS_PROCEDURAL_MESH` - ProceduralMeshComponent
+  - `MCP_HAS_VARIANT_MANAGER_BP` - VariantManagerBlueprintLibrary
+- Python Scripting uses `FPythonCommandEx` for output capture
+- Modeling Tools mode activated via `GLevelEditorModeTools().ActivateMode()`
+- Procedural Mesh uses standard `CreateMeshSection()/UpdateMeshSection()` APIs
+- Variant Manager uses `UVariantManagerBlueprintLibrary` for asset creation
+- All actions gracefully fallback when plugins not available
+
+---
+
+## Phase 44: Physics & Destruction Plugins (80 actions)
+
+**Status**: ✅ Complete  
+**Tool**: `manage_physics_destruction`  
+**Handler File**: `McpAutomationBridge_PhysicsDestructionHandlers.cpp`
+
+### Implemented Actions
+
+| Action | Status | API Used |
+|--------|--------|----------|
+| **Chaos Destruction (29 actions)** | | |
+| `create_geometry_collection` | ✅ Done | `NewObject<UGeometryCollection>()` |
+| `fracture_uniform` | ✅ Done | Editor fracture tools (Voronoi) |
+| `fracture_clustered` | ✅ Done | Editor fracture tools (Clustered Voronoi) |
+| `fracture_radial` | ✅ Done | Editor fracture tools (Radial) |
+| `fracture_slice` | ✅ Done | Editor fracture tools (Planar) |
+| `fracture_brick` | ✅ Done | Editor fracture tools (Brick/Grid) |
+| `flatten_fracture` | ✅ Done | Reset fracture hierarchy |
+| `set_geometry_collection_materials` | ✅ Done | `UGeometryCollection::Materials` |
+| `set_damage_thresholds` | ✅ Done | Damage threshold configuration |
+| `set_cluster_connection_type` | ✅ Done | Cluster connection type |
+| `set_collision_particles_fraction` | ✅ Done | Collision particles fraction |
+| `set_remove_on_break` | ✅ Done | Remove on break/sleep settings |
+| `create_field_system_actor` | ✅ Done | `SpawnActor<AFieldSystemActor>()` |
+| `add_transient_field` | ✅ Done | Transient field components |
+| `add_persistent_field` | ✅ Done | Persistent field components |
+| `add_construction_field` | ✅ Done | Construction field components |
+| `add_field_radial_falloff` | ✅ Done | `URadialFalloff` node |
+| `add_field_radial_vector` | ✅ Done | `URadialVector` node |
+| `add_field_uniform_vector` | ✅ Done | `UUniformVector` node |
+| `add_field_noise` | ✅ Done | `UNoiseField` node |
+| `add_field_strain` | ✅ Done | Strain field node |
+| `create_anchor_field` | ✅ Done | Anchor field for fixed pieces |
+| `set_dynamic_state` | ✅ Done | Static/Kinematic/Dynamic state |
+| `enable_clustering` | ✅ Done | Clustering enable/disable |
+| `get_geometry_collection_stats` | ✅ Done | Returns GC statistics |
+| `create_geometry_collection_cache` | ✅ Done | Creates GC cache asset |
+| `record_geometry_collection_cache` | ✅ Done | Records simulation to cache |
+| `apply_cache_to_collection` | ✅ Done | Applies cache to GC actor |
+| `remove_geometry_collection_cache` | ✅ Done | Removes GC cache |
+| **Chaos Vehicles (19 actions)** | | |
+| `create_wheeled_vehicle_bp` | ✅ Done | Blueprint with `UChaosWheeledVehicleMovementComponent` |
+| `add_vehicle_wheel` | ✅ Done | `WheelSetups.Add()` |
+| `remove_wheel_from_vehicle` | ✅ Done | `WheelSetups.RemoveAt()` |
+| `configure_engine_setup` | ✅ Done | Engine torque curve, RPM |
+| `configure_transmission_setup` | ✅ Done | Gear ratios, auto/manual |
+| `configure_steering_setup` | ✅ Done | Steering curve, type |
+| `configure_differential_setup` | ✅ Done | FWD/RWD/AWD differential |
+| `configure_suspension_setup` | ✅ Done | Spring, damping, travel |
+| `configure_brake_setup` | ✅ Done | Brake force, handbrake |
+| `set_vehicle_mesh` | ✅ Done | Skeletal mesh reference |
+| `set_wheel_class` | ✅ Done | Wheel blueprint class |
+| `set_wheel_offset` | ✅ Done | Wheel attachment offset |
+| `set_wheel_radius` | ✅ Done | Wheel radius in cm |
+| `set_vehicle_mass` | ✅ Done | Vehicle mass in kg |
+| `set_drag_coefficient` | ✅ Done | Aerodynamic drag |
+| `set_center_of_mass` | ✅ Done | Center of mass offset |
+| `create_vehicle_animation_instance` | ✅ Done | Vehicle animation BP |
+| `set_vehicle_animation_bp` | ✅ Done | Animation BP reference |
+| `get_vehicle_config` | ✅ Done | Returns vehicle configuration |
+| **Chaos Cloth (15 actions)** | | |
+| `create_chaos_cloth_config` | ✅ Done | Creates `UChaosClothConfig` |
+| `create_chaos_cloth_shared_sim_config` | ✅ Done | Creates shared sim config |
+| `apply_cloth_to_skeletal_mesh` | ✅ Done | Applies cloth to mesh section |
+| `remove_cloth_from_skeletal_mesh` | ✅ Done | Removes cloth from mesh |
+| `set_cloth_mass_properties` | ✅ Done | Mass per unit area |
+| `set_cloth_gravity` | ✅ Done | Gravity scale |
+| `set_cloth_damping` | ✅ Done | Linear/angular damping |
+| `set_cloth_collision_properties` | ✅ Done | Thickness, friction, self-collision |
+| `set_cloth_stiffness` | ✅ Done | Edge/bending/area stiffness |
+| `set_cloth_tether_stiffness` | ✅ Done | Tether constraint stiffness |
+| `set_cloth_aerodynamics` | ✅ Done | Drag/lift coefficients |
+| `set_cloth_anim_drive` | ✅ Done | Animation drive stiffness |
+| `set_cloth_long_range_attachment` | ✅ Done | Long-range attachment |
+| `get_cloth_config` | ✅ Done | Returns cloth configuration |
+| `get_cloth_stats` | ✅ Done | Returns cloth statistics |
+| **Chaos Flesh (13 actions)** | | |
+| `create_flesh_asset` | ✅ Done | Creates `UFleshAsset` |
+| `create_flesh_component` | ✅ Done | Creates `UFleshComponent` |
+| `set_flesh_simulation_properties` | ✅ Done | Mass, substeps |
+| `set_flesh_stiffness` | ✅ Done | Flesh stiffness |
+| `set_flesh_damping` | ✅ Done | Flesh damping |
+| `set_flesh_incompressibility` | ✅ Done | Incompressibility stiffness |
+| `set_flesh_inflation` | ✅ Done | Inflation pressure |
+| `set_flesh_solver_iterations` | ✅ Done | Solver iterations |
+| `bind_flesh_to_skeleton` | ✅ Done | Binds flesh to skeleton |
+| `set_flesh_rest_state` | ✅ Done | Sets rest state |
+| `create_flesh_cache` | ✅ Done | Creates flesh cache |
+| `record_flesh_simulation` | ✅ Done | Records flesh simulation |
+| `get_flesh_asset_info` | ✅ Done | Returns flesh asset info |
+| **Utilities (4 actions)** | | |
+| `get_physics_destruction_info` | ✅ Done | Returns all plugin statuses |
+| `list_geometry_collections` | ✅ Done | Lists geometry collections via Asset Registry |
+| `list_chaos_vehicles` | ✅ Done | Lists vehicle blueprints |
+| `get_chaos_plugin_status` | ✅ Done | Returns specific plugin status |
+
+### Implementation Notes
+
+- Uses conditional compilation via `__has_include()` for optional plugins:
+  - `MCP_HAS_GEOMETRY_COLLECTION` - Geometry Collection Component
+  - `MCP_HAS_GEOMETRY_COLLECTION_OBJECT` - Geometry Collection Object
+  - `MCP_HAS_FIELD_SYSTEM` - Field System Component
+  - `MCP_HAS_FIELD_SYSTEM_ACTOR` - Field System Actor
+  - `MCP_HAS_CHAOS_VEHICLES` - Chaos Vehicles Movement Component
+  - `MCP_HAS_CHAOS_CLOTH` - Chaos Cloth Simulation Factory
+  - `MCP_HAS_CLOTHING_ASSET` - Clothing Asset Base
+  - `MCP_HAS_CHAOS_FLESH` - Chaos Flesh Actor/Component
+- Geometry Collection fracturing requires Editor (WITH_EDITOR)
+- Field System is Runtime-capable for gameplay effects
+- Vehicle physics uses Chaos physics backend (UE 5.0+)
+- All actions gracefully fallback when plugins not available
+
+---
+
+## Next Steps
+
+- **Phase 45**: Accessibility System (~40 actions)
+  - Visual accessibility (colorblind filters, high contrast, UI scale)
+  - Subtitle configuration and speaker identification
+  - Audio visualization and mono audio
+  - Motor accessibility (control remapping, auto-aim)
+  - Cognitive accessibility (difficulty presets, navigation assistance)
