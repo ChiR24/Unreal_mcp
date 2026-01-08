@@ -233,14 +233,8 @@ namespace
         return Payload->HasField(Field) ? static_cast<int32>(Payload->GetNumberField(Field)) : Default;
     }
 
-    UWorld* GetActiveWorld()
-    {
-        if (GEditor)
-        {
-            return GEditor->GetEditorWorldContext().World();
-        }
-        return nullptr;
-    }
+    // NOTE: GetActiveWorld() is provided by McpAutomationBridgeHelpers.h
+    // Do not define a local duplicate here
 }
 
 // ============================================================================

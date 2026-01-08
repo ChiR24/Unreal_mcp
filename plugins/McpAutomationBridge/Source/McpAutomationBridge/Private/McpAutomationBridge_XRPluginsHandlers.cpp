@@ -329,9 +329,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
     
     EControllerHand Hand = Controller == TEXT("left") ? EControllerHand::Left : EControllerHand::Right;
     
-    if (APlayerController* PC = GEngine->GetFirstLocalPlayerController(GEditor->GetEditorWorldContext().World()))
+    // Use SetHapticsByValue instead of PlayHapticEffect with nullptr
+    // PlayHapticEffect requires a valid UHapticFeedbackEffect_Base*
+    if (GEditor)
     {
-      PC->PlayHapticEffect(nullptr, Hand, Amplitude, Frequency);
+      UWorld* World = GEditor->GetEditorWorldContext().World();
+      if (APlayerController* PC = GEngine->GetFirstLocalPlayerController(World))
+      {
+        PC->SetHapticsByValue(Amplitude * Frequency, Amplitude, Hand);
+      }
     }
     XR_SUCCESS_RESPONSE("Haptic feedback triggered");
 #else
@@ -346,9 +352,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
     Payload->TryGetStringField(TEXT("controller"), Controller);
     EControllerHand Hand = Controller == TEXT("left") ? EControllerHand::Left : EControllerHand::Right;
     
-    if (APlayerController* PC = GEngine->GetFirstLocalPlayerController(GEditor->GetEditorWorldContext().World()))
+    // Use SetHapticsByValue with zero to stop haptics
+    if (GEditor)
     {
-      PC->StopHapticEffect(Hand);
+      UWorld* World = GEditor->GetEditorWorldContext().World();
+      if (APlayerController* PC = GEngine->GetFirstLocalPlayerController(World))
+      {
+        PC->StopHapticEffect(Hand);
+      }
     }
     XR_SUCCESS_RESPONSE("Haptic feedback stopped");
 #else
@@ -506,10 +517,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
     TSharedPtr<FJsonObject> ViewConfig = MakeShared<FJsonObject>();
     ViewConfig->SetNumberField(TEXT("viewCount"), 2); // Stereo
     
-    int32 Width, Height;
-    UHeadMountedDisplayFunctionLibrary::GetDeviceWorldPose(nullptr, nullptr, Width, Height, nullptr);
-    ViewConfig->SetNumberField(TEXT("recommendedWidth"), Width > 0 ? Width : 2160);
-    ViewConfig->SetNumberField(TEXT("recommendedHeight"), Height > 0 ? Height : 2160);
+    // Get recommended render target dimensions via IHeadMountedDisplay
+    int32 Width = 2160, Height = 2160; // Defaults
+#if MCP_HAS_XR_TRACKING
+    if (GEngine && GEngine->XRSystem.IsValid())
+    {
+      IHeadMountedDisplay* HMD = GEngine->XRSystem->GetHMDDevice();
+      if (HMD)
+      {
+        HMD->GetIdealRenderTargetSize(Width, Height);
+      }
+    }
+#endif
+    ViewConfig->SetNumberField(TEXT("recommendedWidth"), Width);
+    ViewConfig->SetNumberField(TEXT("recommendedHeight"), Height);
     
     Result->SetObjectField(TEXT("viewConfiguration"), ViewConfig);
     Result->SetStringField(TEXT("message"), TEXT("View configuration retrieved"));
