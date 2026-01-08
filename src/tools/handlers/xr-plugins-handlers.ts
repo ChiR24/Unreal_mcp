@@ -1191,6 +1191,10 @@ export async function handleXRPluginsTools(
       ));
 
     default:
-      throw new Error(`Unknown manage_xr action: ${action}`);
+      return {
+        success: false,
+        error: `Unknown manage_xr action: ${action}`,
+        hint: 'Check available actions in the tool schema'
+      };
   }
 }

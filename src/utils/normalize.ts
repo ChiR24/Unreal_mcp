@@ -126,9 +126,12 @@ export function normalizePartialVector(value: unknown, alternateKeys: string[] =
     if (value.length > 2) assignIfPresent('z', value[2]);
   } else if (typeof value === 'object') {
     const obj = value as Record<string, unknown>;
-    assignIfPresent('x', obj.x ?? obj[alternateKeys[0]]);
-    assignIfPresent('y', obj.y ?? obj[alternateKeys[1]]);
-    assignIfPresent('z', obj.z ?? obj[alternateKeys[2]]);
+    const altX = alternateKeys[0] ?? 'x';
+    const altY = alternateKeys[1] ?? 'y';
+    const altZ = alternateKeys[2] ?? 'z';
+    assignIfPresent('x', obj.x ?? obj[altX]);
+    assignIfPresent('y', obj.y ?? obj[altY]);
+    assignIfPresent('z', obj.z ?? obj[altZ]);
   } else {
     assignIfPresent('x', value);
   }

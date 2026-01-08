@@ -283,6 +283,21 @@ export async function handleAINPCTools(
       ));
 
     default:
-      throw new Error(`Unknown manage_ai_npc action: ${action}`);
+      // Consistent error handling pattern: return error object instead of throwing
+      return {
+        success: false,
+        error: `Unknown manage_ai_npc action: ${action}`,
+        availableActions: [
+          'create_convai_character', 'configure_character_backstory', 'configure_character_voice',
+          'configure_convai_lipsync', 'start_convai_session', 'stop_convai_session',
+          'send_convai_message', 'get_convai_response', 'configure_convai_emotions', 'get_convai_status',
+          'create_inworld_character', 'configure_inworld_personality', 'configure_inworld_voice',
+          'start_inworld_session', 'stop_inworld_session', 'send_inworld_message', 'get_inworld_response',
+          'configure_inworld_emotions', 'configure_inworld_goals', 'get_inworld_status',
+          'configure_audio2face', 'process_audio_to_blendshapes', 'configure_blendshape_mapping',
+          'start_audio2face_stream', 'stop_audio2face_stream', 'get_audio2face_status',
+          'configure_ace_emotions', 'get_ai_npc_info', 'list_available_ai_backends'
+        ]
+      };
   }
 }

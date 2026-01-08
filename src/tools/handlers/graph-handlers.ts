@@ -217,10 +217,12 @@ async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools
     // Map human-friendly node type names to BT class names
     if (processedArgs.nodeType && BT_NODE_ALIASES[processedArgs.nodeType]) {
         const alias = BT_NODE_ALIASES[processedArgs.nodeType];
-        processedArgs.nodeType = alias.class;
-        // Set nodeCategory if not already set
-        if (!processedArgs.nodeCategory) {
-            processedArgs.nodeCategory = alias.type;
+        if (alias) {
+            processedArgs.nodeType = alias.class;
+            // Set nodeCategory if not already set
+            if (!processedArgs.nodeCategory) {
+                processedArgs.nodeCategory = alias.type;
+            }
         }
     }
     

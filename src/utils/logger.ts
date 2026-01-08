@@ -1,5 +1,6 @@
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
+/* eslint-disable no-console */
 export class Logger {
   private level: LogLevel;
 

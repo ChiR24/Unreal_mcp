@@ -214,10 +214,11 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
     }
 
     // Convert FAssetData to UObjectRedirector* for AssetTools
+    // UE 5.1+ compatible: Use GetSoftObjectPath().TryLoad() instead of deprecated GetAsset()
     TArray<UObjectRedirector *> Redirectors;
     for (const FAssetData &Asset : RedirectorAssets) {
       if (UObjectRedirector *Redirector =
-              Cast<UObjectRedirector>(Asset.GetAsset())) {
+              Cast<UObjectRedirector>(Asset.GetSoftObjectPath().TryLoad())) {
         Redirectors.Add(Redirector);
       }
     }
@@ -232,10 +233,11 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
     }
 
     // Delete the now-unused redirectors
+    // UE 5.1+ compatible: Use GetSoftObjectPath().TryLoad() instead of deprecated GetAsset()
     int32 DeletedCount = 0;
     TArray<UObject *> ObjectsToDelete;
     for (const FAssetData &Asset : RedirectorAssets) {
-      if (UObject *Obj = Asset.GetAsset()) {
+      if (UObject *Obj = Asset.GetSoftObjectPath().TryLoad()) {
         ObjectsToDelete.Add(Obj);
       }
     }
@@ -694,10 +696,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     AssetRegistry.GetAssets(Filter, RedirectorAssets);
 
     if (RedirectorAssets.Num() > 0) {
+      // UE 5.1+ compatible: Use GetSoftObjectPath().TryLoad() instead of deprecated GetAsset()
       TArray<UObjectRedirector *> Redirectors;
       for (const FAssetData &Asset : RedirectorAssets) {
         if (UObjectRedirector *Redirector =
-                Cast<UObjectRedirector>(Asset.GetAsset())) {
+                Cast<UObjectRedirector>(Asset.GetSoftObjectPath().TryLoad())) {
           Redirectors.Add(Redirector);
         }
       }

@@ -101,6 +101,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
   FString Message = FString::Printf(TEXT("Editor utilities action '%s' completed"), *LowerSub);
   FString ErrorCode;
 
+  if (!GEditor) {
+    bSuccess = false;
+    Message = TEXT("Editor not available");
+    ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+    Resp->SetStringField(TEXT("error"), Message);
+    SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);
+    return true;
+  }
+
   // ==================== EDITOR MODES ====================
   if (LowerSub == TEXT("set_editor_mode")) {
     FString ModeName;

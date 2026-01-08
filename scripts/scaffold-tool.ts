@@ -1,12 +1,11 @@
+/* eslint-disable no-console */
 import fs from 'fs/promises';
 import path from 'path';
 
 function usageAndExit(message?: string): never {
   if (message) {
-    // eslint-disable-next-line no-console
     console.error(message);
   }
-  // eslint-disable-next-line no-console
   console.error(
     [
       'Usage:',
@@ -63,7 +62,6 @@ function getRepoRootFromImportMeta(importMetaUrl: string): string {
 }
 
 function escapeRegExp(text: string): string {
-  // eslint-disable-next-line no-useless-escape
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
@@ -158,19 +156,14 @@ async function main(): Promise<void> {
   await insertActionIntoEnum(defsPath, args.tool, args.action);
   await insertActionCaseIntoHandler(handlerPath, args.action);
 
-  // eslint-disable-next-line no-console
   console.log('Scaffold complete:');
-  // eslint-disable-next-line no-console
   console.log(`- Updated: ${path.relative(repoRoot, defsPath)}`);
-  // eslint-disable-next-line no-console
   console.log(`- Updated: ${path.relative(repoRoot, handlerPath)}`);
-  // eslint-disable-next-line no-console
   console.log('Next: implement corresponding C++ sub-action in plugin handlers and run scripts/verify-handler-sync.ts');
 }
 
 main().catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);
-  // eslint-disable-next-line no-console
   console.error(`scaffold-tool failed: ${message}`);
   process.exit(1);
 });

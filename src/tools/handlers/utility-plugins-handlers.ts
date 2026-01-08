@@ -855,6 +855,10 @@ export async function handleUtilityPluginsTools(
       ));
 
     default:
-      throw new Error(`Unknown manage_utility_plugins action: ${action}`);
+      return {
+        success: false,
+        error: `Unknown manage_utility_plugins action: ${action}`,
+        hint: 'Check available actions in the tool schema'
+      };
   }
 }

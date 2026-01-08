@@ -44,11 +44,13 @@ function routeStdoutLogsToStderr(): void {
     process.stderr.write(`${line}\n`);
   };
 
+  /* eslint-disable no-console */
   console.log = (...args: unknown[]): void => { writeToStderr(...args); };
   console.info = (...args: unknown[]): void => { writeToStderr(...args); };
   if (typeof console.debug === 'function') {
     console.debug = (...args: unknown[]): void => { writeToStderr(...args); };
   }
+  /* eslint-enable no-console */
 }
 
 const log = new Logger('UE-MCP');

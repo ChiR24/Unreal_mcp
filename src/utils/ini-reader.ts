@@ -20,9 +20,12 @@ export async function readIniFile(filePath: string): Promise<Record<string, Reco
       } else if (currentSection) {
         const parts = trimmed.split('=');
         if (parts.length >= 2) {
-          const key = parts[0].trim();
+          const key = parts[0]?.trim();
           const value = parts.slice(1).join('=').trim();
-          result[currentSection][key] = value;
+          const section = result[currentSection];
+          if (key && section) {
+            section[key] = value;
+          }
         }
       }
     }
@@ -66,8 +69,8 @@ export async function getProjectSetting(projectPath: string, category: string, s
             if (sectionName) {
                 const section = iniData[sectionName];
                 if (section) {
-                    if (key) {
-                        return section[key];
+                if (key) {
+                        return section[key] ?? null;
                     }
                     return section;
                 }

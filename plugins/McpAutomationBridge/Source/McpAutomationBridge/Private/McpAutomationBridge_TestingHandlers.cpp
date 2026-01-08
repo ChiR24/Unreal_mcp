@@ -79,6 +79,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTestingAction(
   FString Message = FString::Printf(TEXT("Testing action '%s' completed"), *LowerSub);
   FString ErrorCode;
 
+  if (!GEditor) {
+    bSuccess = false;
+    Message = TEXT("Editor not available");
+    ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+    Resp->SetStringField(TEXT("error"), Message);
+    SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);
+    return true;
+  }
+
   // =========================================
   // AUTOMATION TESTS
   // =========================================
@@ -475,7 +484,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTestingAction(
     
     for (const FAssetData& AssetData : AssetDataList)
     {
-      UObject* Asset = AssetData.GetAsset();
+      // UE 5.1+ compatible: Use GetSoftObjectPath().TryLoad() instead of deprecated GetAsset()
+      UObject* Asset = AssetData.GetSoftObjectPath().TryLoad();
       if (!Asset) continue;
       
       FDataValidationContext Context;
@@ -623,7 +633,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTestingAction(
       TSharedPtr<FJsonObject> RedirObj = MakeShared<FJsonObject>();
       RedirObj->SetStringField(TEXT("redirectorPath"), AssetData.GetObjectPathString());
       
-      UObjectRedirector* Redirector = Cast<UObjectRedirector>(AssetData.GetAsset());
+      // UE 5.1+ compatible: Use GetSoftObjectPath().TryLoad() instead of deprecated GetAsset()
+      UObjectRedirector* Redirector = Cast<UObjectRedirector>(AssetData.GetSoftObjectPath().TryLoad());
       if (Redirector)
       {
         if (Redirector->DestinationObject)
@@ -704,7 +715,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTestingAction(
       TSharedPtr<FJsonObject> RedirObj = MakeShared<FJsonObject>();
       RedirObj->SetStringField(TEXT("redirectorPath"), AssetData.GetObjectPathString());
       
-      UObjectRedirector* Redirector = Cast<UObjectRedirector>(AssetData.GetAsset());
+      // UE 5.1+ compatible: Use GetSoftObjectPath().TryLoad() instead of deprecated GetAsset()
+      UObjectRedirector* Redirector = Cast<UObjectRedirector>(AssetData.GetSoftObjectPath().TryLoad());
       if (Redirector && Redirector->DestinationObject)
       {
         RedirObj->SetStringField(TEXT("targetPath"), Redirector->DestinationObject->GetPathName());

@@ -119,8 +119,9 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
             ErrorCode = TEXT("ASSET_CREATION_FAILED");
             Resp->SetStringField(TEXT("error"), Message);
           } else {
-            // Force immediate save and registry scan
-            SaveLoadedAssetThrottled(WidgetBlueprint, -1.0, true);
+            // UE 5.7+ safety: do not force immediate disk save here.
+            // Mark the asset dirty and notify the registry so it appears in the content browser.
+            McpSafeAssetSave(WidgetBlueprint);
             ScanPathSynchronous(WidgetBlueprint->GetOutermost()->GetName());
 
             bSuccess = true;
@@ -168,22 +169,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
           ErrorCode = TEXT("INVALID_ARGUMENT");
           Resp->SetStringField(TEXT("error"), Message);
         } else {
-          UClass *WidgetClass =
-              UEditorAssetLibrary::FindAssetData(ChildClassPath)
-                      .GetAsset()
-                      .IsValid()
-                  ? LoadClass<UObject>(nullptr, *ChildClassPath)
-                  : FindObject<UClass>(nullptr, *ChildClassPath);
-
-          // Try partial search for common UMG widgets
-          if (!WidgetClass) {
-            if (ChildClassPath.Contains(TEXT(".")))
-              WidgetClass = FindObject<UClass>(nullptr, *ChildClassPath);
-            else
-              WidgetClass = FindObject<UClass>(
-                  nullptr,
-                  *FString::Printf(TEXT("/Script/UMG.%s"), *ChildClassPath));
-          }
+          UClass* WidgetClass = ResolveClassByName(ChildClassPath);
 
           if (!WidgetClass || !WidgetClass->IsChildOf(UWidget::StaticClass())) {
             Message = FString::Printf(
@@ -464,9 +450,10 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     }
   } else if (LowerSub == TEXT("create_hud")) {
     FString WidgetPath;
-    Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
-    UClass *WidgetClass = LoadClass<UUserWidget>(nullptr, *WidgetPath);
-    if (WidgetClass && GEngine && GEngine->GameViewport) {
+     Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
+     UClass *WidgetClass = ResolveClassByName(WidgetPath);
+     if (WidgetClass && WidgetClass->IsChildOf(UUserWidget::StaticClass()) &&
+         GEngine && GEngine->GameViewport) {
       UWorld *World = GEngine->GameViewport->GetWorld();
       if (World) {
         UUserWidget *Widget = CreateWidget<UUserWidget>(World, WidgetClass);
@@ -528,7 +515,9 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     if (!bFound) {
       // Fallback: Use TObjectIterator to find ANY UTextBlock with that name,
       // risky but covers cases
+      // Safety: Skip CDOs which have no World and would crash on GetWorld()
       for (TObjectIterator<UTextBlock> It; It; ++It) {
+        if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
         if (It->GetName() == Key && It->GetWorld()) {
           It->SetText(FText::FromString(Value));
           bFound = true;
@@ -550,7 +539,9 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     UTexture2D *Texture = LoadObject<UTexture2D>(nullptr, *TexturePath);
     if (Texture) {
       bool bFound = false;
+      // Safety: Skip CDOs which have no World and would crash on GetWorld()
       for (TObjectIterator<UImage> It; It; ++It) {
+        if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
         if (It->GetName() == Key && It->GetWorld()) {
           It->SetBrushFromTexture(Texture);
           bFound = true;
@@ -575,7 +566,9 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
 
     bool bFound = false;
     // Try UserWidgets
+    // Safety: Skip CDOs which have no World and would crash on GetWorld()
     for (TObjectIterator<UUserWidget> It; It; ++It) {
+      if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
       if (It->GetName() == Key && It->GetWorld()) {
         It->SetVisibility(bVisible ? ESlateVisibility::Visible
                                    : ESlateVisibility::Collapsed);
@@ -585,8 +578,10 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       }
     }
     // If not found, try generic UWidget
+    // Safety: Skip CDOs which have no World and would crash on GetWorld()
     if (!bFound) {
       for (TObjectIterator<UWidget> It; It; ++It) {
+        if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
         if (It->GetName() == Key && It->GetWorld()) {
           It->SetVisibility(bVisible ? ESlateVisibility::Visible
                                      : ESlateVisibility::Collapsed);

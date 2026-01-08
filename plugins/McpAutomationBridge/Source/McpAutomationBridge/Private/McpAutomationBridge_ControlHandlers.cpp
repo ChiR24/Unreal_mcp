@@ -2189,7 +2189,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
-  if (!GEditor->PlayWorld) {
+  if (!GEditor || !GEditor->PlayWorld) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), false);
     Resp->SetBoolField(TEXT("notPlaying"), true);

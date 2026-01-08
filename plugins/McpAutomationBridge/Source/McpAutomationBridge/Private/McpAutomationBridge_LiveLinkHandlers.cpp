@@ -378,11 +378,26 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
         const FString RequestIdCopy = RequestId;
         const TSharedPtr<FMcpBridgeWebSocket> SocketCopy = RequestingSocket;
 
+        // CRITICAL: Use TWeakObjectPtr to prevent GC crash if Finder is collected during timer delay
+        TWeakObjectPtr<ULiveLinkMessageBusFinder> WeakFinder(Finder);
+        TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+
         FTimerDelegate TimerDelegate;
-        TimerDelegate.BindLambda([this, Finder, RequestIdCopy, SocketCopy]()
+        TimerDelegate.BindLambda([WeakThis, WeakFinder, RequestIdCopy, SocketCopy]()
         {
+            // Validate pointers are still valid after GC
+            if (!WeakThis.IsValid() || !WeakFinder.IsValid())
+            {
+                // Objects were garbage collected - cannot send response since subsystem may be gone
+                // Client will timeout; this is the safest behavior
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+                    TEXT("LiveLink timer callback: UObject(s) garbage collected before timer fired. RequestId=%s"), 
+                    *RequestIdCopy);
+                return;
+            }
+
             TArray<FProviderPollResult> Providers;
-            Finder->GetPollResults(Providers);
+            WeakFinder->GetPollResults(Providers);
 
             TArray<TSharedPtr<FJsonValue>> ProvidersArray;
             ProvidersArray.Reserve(Providers.Num());
@@ -410,7 +425,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             TSharedPtr<FJsonObject> TimerResult = MakeLiveLinkSuccess(FString::Printf(TEXT("Found %d message bus providers"), Providers.Num()));
             TimerResult->SetArrayField(TEXT("providers"), ProvidersArray);
 
-            SendAutomationResponse(SocketCopy, RequestIdCopy, TimerResult->GetBoolField(TEXT("success")), TimerResult->GetStringField(TEXT("message")), TimerResult);
+            WeakThis->SendAutomationResponse(SocketCopy, RequestIdCopy, TimerResult->GetBoolField(TEXT("success")), TimerResult->GetStringField(TEXT("message")), TimerResult);
         });
 
         FTimerHandle Handle;

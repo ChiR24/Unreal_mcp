@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -16,7 +17,6 @@ type Output = {
 };
 
 function usageAndExit(): never {
-  // eslint-disable-next-line no-console
   console.error(
     [
       'Usage:',
@@ -130,19 +130,14 @@ async function main(): Promise<void> {
   const output: Output = { root: toPosixPath(path.relative(process.cwd(), pluginRoot)), findings };
 
   if (format === 'json') {
-    // eslint-disable-next-line no-console
     console.log(JSON.stringify(output, null, 2));
   } else {
     if (findings.length === 0) {
-      // eslint-disable-next-line no-console
       console.log('OK: No forbidden UE safety patterns found.');
     } else {
-      // eslint-disable-next-line no-console
       console.log(`Found ${findings.length} issue(s):`);
       for (const f of findings) {
-        // eslint-disable-next-line no-console
         console.log(`- ${f.file}:${f.line}:${f.column} [${f.pattern}] ${f.lineText.trim()}`);
-        // eslint-disable-next-line no-console
         console.log(`  -> ${f.recommendation}`);
       }
     }
@@ -153,7 +148,6 @@ async function main(): Promise<void> {
 
 main().catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);
-  // eslint-disable-next-line no-console
   console.error(`lint-cpp-safety failed: ${message}`);
   process.exit(1);
 });

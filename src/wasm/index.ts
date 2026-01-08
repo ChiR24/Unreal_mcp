@@ -653,11 +653,16 @@ export class WASMIntegration {
   }
 
   private fallbackDecomposeMatrix(matrix: Float32Array): number[] {
-    const location = [matrix[12], matrix[13], matrix[14]];
+    const m0 = matrix[0] ?? 0, m1 = matrix[1] ?? 0, m2 = matrix[2] ?? 0;
+    const m4 = matrix[4] ?? 0, m5 = matrix[5] ?? 0, m6 = matrix[6] ?? 0;
+    const m8 = matrix[8] ?? 0, m9 = matrix[9] ?? 0, m10 = matrix[10] ?? 0;
+    const m12 = matrix[12] ?? 0, m13 = matrix[13] ?? 0, m14 = matrix[14] ?? 0;
+    
+    const location = [m12, m13, m14];
     const scale = [
-      Math.sqrt(matrix[0] * matrix[0] + matrix[1] * matrix[1] + matrix[2] * matrix[2]),
-      Math.sqrt(matrix[4] * matrix[4] + matrix[5] * matrix[5] + matrix[6] * matrix[6]),
-      Math.sqrt(matrix[8] * matrix[8] + matrix[9] * matrix[9] + matrix[10] * matrix[10])
+      Math.sqrt(m0 * m0 + m1 * m1 + m2 * m2),
+      Math.sqrt(m4 * m4 + m5 * m5 + m6 * m6),
+      Math.sqrt(m8 * m8 + m9 * m9 + m10 * m10)
     ];
 
     const rotation = [0, 0, 0]; // Simplified

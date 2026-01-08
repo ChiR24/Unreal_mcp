@@ -6,19 +6,22 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
-function validateUbtArgumentsString(extraArgs: string): void {
+function validateUbtArgumentsString(extraArgs: string): { ok: true } | { ok: false; error: string } {
   if (!extraArgs || typeof extraArgs !== 'string') {
-    return;
+    return { ok: true };
   }
 
   const forbiddenChars = ['\n', '\r', ';', '|', '`', '&&', '||', '>', '<'];
   for (const char of forbiddenChars) {
     if (extraArgs.includes(char)) {
-      throw new Error(
-        `UBT arguments contain forbidden character(s) and are blocked for safety. Blocked: ${JSON.stringify(char)}.`
-      );
+      return {
+        ok: false,
+        error: `UBT arguments contain forbidden character(s) and are blocked for safety. Blocked: ${JSON.stringify(char)}.`
+      };
     }
   }
+
+  return { ok: true };
 }
 
 function tokenizeArgs(extraArgs: string): string[] {
@@ -32,7 +35,7 @@ function tokenizeArgs(extraArgs: string): string[] {
   let escapeNext = false;
 
   for (let i = 0; i < extraArgs.length; i++) {
-    const ch = extraArgs[i];
+    const ch = extraArgs[i] ?? '';
 
     if (escapeNext) {
       current += ch;
@@ -76,10 +79,13 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
       const extraArgs = args.arguments || '';
 
       if (!target) {
-        throw new Error('Target is required for run_ubt');
+        return cleanObject({ success: false, error: 'INVALID_ARGUMENT', message: 'Target is required for run_ubt' });
       }
-
-      validateUbtArgumentsString(extraArgs);
+ 
+      const ubtArgsValidation = validateUbtArgumentsString(extraArgs);
+      if (!ubtArgsValidation.ok) {
+        return cleanObject({ success: false, error: 'INVALID_ARGUMENT', message: ubtArgsValidation.error });
+      }
 
       let ubtPath = 'UnrealBuildTool';
       const enginePath = process.env.UE_ENGINE_PATH || process.env.UNREAL_ENGINE_PATH;
@@ -97,7 +103,11 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
       }
 
       if (!projectPath) {
-        throw new Error('UE_PROJECT_PATH environment variable is not set and no projectPath argument was provided.');
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'UE_PROJECT_PATH environment variable is not set and no projectPath argument was provided.'
+        });
       }
 
       let uprojectFile = projectPath;
@@ -109,7 +119,11 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
             uprojectFile = path.join(projectPath, found);
           }
         } catch (_e) {
-          throw new Error(`Could not read project directory: ${projectPath}`);
+          return cleanObject({
+            success: false,
+            error: 'INVALID_ARGUMENT',
+            message: `Could not read project directory: ${projectPath}`
+          });
         }
       }
 

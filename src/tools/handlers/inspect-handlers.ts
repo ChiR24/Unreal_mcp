@@ -34,10 +34,10 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
 
   const actorName = await resolveObjectPath(args, tools, { pathKeys: [], actorKeys: ['actorName', 'name', 'objectPath'] });
   if (!actorName) {
-    throw new Error('Invalid actorName: required to resolve componentName');
+    return '';
   }
   if (!componentName) {
-    throw new Error('Invalid componentName: must be a non-empty string');
+    return '';
   }
 
   // Use inspect:get_components to find the exact component path
@@ -98,7 +98,11 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     case 'inspect_object': {
       const objectPath = await resolveObjectPath(args, tools);
       if (!objectPath) {
-        throw new Error('Invalid objectPath: must be a non-empty string');
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Invalid objectPath: must be a non-empty string'
+        });
       }
 
       const payload = {
@@ -321,7 +325,9 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'get_metadata': {
       const actorName = await resolveObjectPath(args, tools);
-      if (!actorName) throw new Error('Invalid actorName');
+      if (!actorName) {
+        return cleanObject({ success: false, error: 'INVALID_ARGUMENT', message: 'Invalid actorName' });
+      }
       return cleanObject(await tools.actorTools.getMetadata(actorName));
     }
     case 'add_tag': {
@@ -330,8 +336,10 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
         { key: 'tag', required: true }
       ]);
       const tag = extractString(params, 'tag');
-
-      if (!actorName) throw new Error('Invalid actorName');
+ 
+      if (!actorName) {
+        return cleanObject({ success: false, error: 'INVALID_ARGUMENT', message: 'Invalid actorName' });
+      }
       return cleanObject(await tools.actorTools.addTag({
         actorName,
         tag
@@ -346,7 +354,9 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'create_snapshot': {
       const actorName = await resolveObjectPath(args, tools);
-      if (!actorName) throw new Error('actorName is required for create_snapshot');
+      if (!actorName) {
+        return cleanObject({ success: false, error: 'INVALID_ARGUMENT', message: 'actorName is required for create_snapshot' });
+      }
       const snapshotName = typeof argsTyped.snapshotName === 'string' ? argsTyped.snapshotName : '';
       return cleanObject(await tools.actorTools.createSnapshot({
         actorName,
@@ -355,7 +365,9 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'restore_snapshot': {
       const actorName = await resolveObjectPath(args, tools);
-      if (!actorName) throw new Error('actorName is required for restore_snapshot');
+      if (!actorName) {
+        return cleanObject({ success: false, error: 'INVALID_ARGUMENT', message: 'actorName is required for restore_snapshot' });
+      }
       const snapshotName = typeof argsTyped.snapshotName === 'string' ? argsTyped.snapshotName : '';
       return cleanObject(await tools.actorTools.restoreSnapshot({
         actorName,
@@ -364,7 +376,13 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'export': {
       const actorName = await resolveObjectPath(args, tools);
-      if (!actorName) throw new Error('actorName may be required for export depending on context (exporting actor requires it)');
+      if (!actorName) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'actorName may be required for export depending on context (exporting actor requires it)'
+        });
+      }
       const params = normalizeArgs(args, [
         { key: 'destinationPath', aliases: ['outputPath'] }
       ]);
@@ -376,8 +394,10 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'delete_object': {
       const actorName = await resolveObjectPath(args, tools);
+      if (!actorName) {
+        return cleanObject({ success: false, error: 'INVALID_ARGUMENT', message: 'actorName is required for delete_object' });
+      }
       try {
-        if (!actorName) throw new Error('actorName is required for delete_object');
         const res = await tools.actorTools.delete({
           actorName
         });
@@ -395,7 +415,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
             notFound: true
           });
         }
-        throw err;
+        return cleanObject({ success: false, error: 'OPERATION_FAILED', message: msg });
       }
     }
     case 'list_objects':
@@ -421,8 +441,10 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'get_bounding_box': {
       const actorName = await resolveObjectPath(args, tools);
+      if (!actorName) {
+        return cleanObject({ success: false, error: 'INVALID_ARGUMENT', message: 'actorName is required for get_bounding_box' });
+      }
       try {
-        if (!actorName) throw new Error('actorName is required for get_bounding_box');
         const res = await tools.actorTools.getBoundingBox(actorName);
         return cleanObject(res);
       } catch (err: unknown) {
@@ -438,7 +460,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
             notFound: true
           });
         }
-        throw err;
+        return cleanObject({ success: false, error: 'OPERATION_FAILED', message: msg });
       }
     }
     case 'inspect_class': {

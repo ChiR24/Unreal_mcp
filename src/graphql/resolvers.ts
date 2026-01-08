@@ -356,8 +356,8 @@ export const resolvers = {
         pageInfo: {
           hasNextPage: (pagination?.offset || 0) + assets.length < totalCount,
           hasPreviousPage: (pagination?.offset || 0) > 0,
-          startCursor: edges.length > 0 ? edges[0].cursor : null,
-          endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null
+          startCursor: edges[0]?.cursor ?? null,
+          endCursor: edges.at(-1)?.cursor ?? null
         },
         totalCount
       };
@@ -394,8 +394,8 @@ export const resolvers = {
         pageInfo: {
           hasNextPage: offset + paginatedActors.length < actors.length,
           hasPreviousPage: offset > 0,
-          startCursor: edges.length > 0 ? edges[0].cursor : null,
-          endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null
+          startCursor: edges[0]?.cursor ?? null,
+          endCursor: edges.at(-1)?.cursor ?? null
         },
         totalCount: actors.length
       };
@@ -441,8 +441,8 @@ export const resolvers = {
           pageInfo: {
             hasNextPage: (pagination?.offset || 0) + blueprints.length < totalCount,
             hasPreviousPage: (pagination?.offset || 0) > 0,
-            startCursor: edges.length > 0 ? edges[0].cursor : null,
-            endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null
+            startCursor: edges[0]?.cursor ?? null,
+            endCursor: edges.at(-1)?.cursor ?? null
           },
           totalCount: blueprints.length
         };
@@ -530,8 +530,8 @@ export const resolvers = {
           pageInfo: {
             hasNextPage: (pagination?.offset || 0) + assets.length < totalCount,
             hasPreviousPage: (pagination?.offset || 0) > 0,
-            startCursor: edges.length > 0 ? edges[0].cursor : null,
-            endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null
+            startCursor: edges[0]?.cursor ?? null,
+            endCursor: edges.at(-1)?.cursor ?? null
           },
           totalCount
         };
@@ -571,8 +571,8 @@ export const resolvers = {
           pageInfo: {
             hasNextPage: (pagination?.offset || 0) + assets.length < totalCount,
             hasPreviousPage: (pagination?.offset || 0) > 0,
-            startCursor: edges.length > 0 ? edges[0].cursor : null,
-            endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null
+            startCursor: edges[0]?.cursor ?? null,
+            endCursor: edges.at(-1)?.cursor ?? null
           },
           totalCount
         };
@@ -636,8 +636,8 @@ export const resolvers = {
           pageInfo: {
             hasNextPage: (pagination?.offset || 0) + assets.length < totalCount,
             hasPreviousPage: (pagination?.offset || 0) > 0,
-            startCursor: edges.length > 0 ? edges[0].cursor : null,
-            endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null
+            startCursor: edges[0]?.cursor ?? null,
+            endCursor: edges.at(-1)?.cursor ?? null
           },
           totalCount
         };

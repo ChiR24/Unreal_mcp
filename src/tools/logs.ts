@@ -156,7 +156,8 @@ export class LogTools {
       }
       if (candidates.length) {
         candidates.sort((a, b) => b.m - a.m);
-        return this.cacheLogPath(candidates[0].p);
+        const first = candidates[0];
+        return first ? this.cacheLogPath(first.p) : undefined;
       }
     } catch { }
     return undefined;
@@ -212,24 +213,24 @@ export class LogTools {
   private parseLine(line: string): Entry {
     const m1 = line.match(/^\[?(\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}:\d+)\]?\s*\[(.*?)\]\s*(.*)$/);
     if (m1) {
-      const rest = m1[3];
+      const rest = m1[3] ?? '';
       const m2 = rest.match(/^(\w+):\s*(Error|Warning|Display|Log|Verbose|VeryVerbose):\s*(.*)$/);
       if (m2) {
-        return { timestamp: m1[1], category: m2[1], level: m2[2] === 'Display' ? 'Log' : m2[2], message: m2[3] };
+        return { timestamp: m1[1] ?? '', category: m2[1] ?? '', level: m2[2] === 'Display' ? 'Log' : (m2[2] ?? 'Log'), message: m2[3] ?? '' };
       }
       const m3 = rest.match(/^(\w+):\s*(.*)$/);
       if (m3) {
-        return { timestamp: m1[1], category: m3[1], level: 'Log', message: m3[2] };
+        return { timestamp: m1[1] ?? '', category: m3[1] ?? '', level: 'Log', message: m3[2] ?? '' };
       }
-      return { timestamp: m1[1], message: rest };
+      return { timestamp: m1[1] ?? '', message: rest };
     }
     const m = line.match(/^(\w+):\s*(Error|Warning|Display|Log|Verbose|VeryVerbose):\s*(.*)$/);
     if (m) {
-      return { category: m[1], level: m[2] === 'Display' ? 'Log' : m[2], message: m[3] };
+      return { category: m[1] ?? '', level: m[2] === 'Display' ? 'Log' : (m[2] ?? 'Log'), message: m[3] ?? '' };
     }
     const mAlt = line.match(/^(\w+):\s*(.*)$/);
     if (mAlt) {
-      return { category: mAlt[1], level: 'Log', message: mAlt[2] };
+      return { category: mAlt[1] ?? '', level: 'Log', message: mAlt[2] ?? '' };
     }
     return { message: line };
   }

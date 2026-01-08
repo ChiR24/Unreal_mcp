@@ -72,7 +72,7 @@ public class McpAutomationBridge : ModuleRules
             PrivateDependencyModuleNames.AddRange(new string[]
             {
                 "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings","EngineSettings",
-                "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph",
+                "Sockets","Networking","WebSockets","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph",
                 "Kismet","KismetCompiler","AssetRegistry","AssetTools","MaterialEditor","SourceControl",
                 "AudioEditor", "DataValidation", "NiagaraEditor",
                 // Phase 24: GAS, Audio, and missing module dependencies

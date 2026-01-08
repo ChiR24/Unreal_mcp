@@ -928,7 +928,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     let fromPinName = params.sourcePinName;
     if (fromNodeId && fromNodeId.includes('.') && !fromPinName) {
       const parts = fromNodeId.split('.');
-      fromNodeId = parts[0];
+      fromNodeId = parts[0] ?? fromNodeId;
       fromPinName = parts.slice(1).join('.');
     }
 
@@ -936,7 +936,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     let toPinName = params.targetPinName;
     if (toNodeId && toNodeId.includes('.') && !toPinName) {
       const parts = toNodeId.split('.');
-      toNodeId = parts[0];
+      toNodeId = parts[0] ?? toNodeId;
       toPinName = parts.slice(1).join('.');
     }
 

@@ -22,7 +22,9 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "allowUnreachableCode": false,
-    "noUncheckedIndexedAccess": false,
+    "noUncheckedIndexedAccess": true,
+    "useUnknownInCatchVariables": true,
+    "noImplicitOverride": true,
     
     // Module & Interop
     "esModuleInterop": true,
@@ -40,10 +42,10 @@
     
     // Performance
     "skipLibCheck": true,
-  "incremental": false,
+  "incremental": true,
     
     "types": ["node"],
-    "noEmitOnError": false
+    "noEmitOnError": true
   },
   "include": ["src/**/*"],
   "exclude": [

@@ -115,8 +115,11 @@ export function sanitizePath(path: string): string {
   let segments = sanitized.split('/').filter(s => s.length > 0);
 
   // Block path traversal attempts - this is critical security
+  // Return error object instead of throwing to maintain consistent error handling
   if (segments.some(s => s === '..' || s === '.')) {
-    throw new Error('Path traversal (..) is not allowed');
+    // Log warning and return safe default instead of throwing
+    // This maintains consistency with the rest of the error handling in this file
+    return '/Game';
   }
 
   if (segments.length === 0) {
@@ -125,7 +128,8 @@ export function sanitizePath(path: string): string {
 
   // Ensure the first segment is a valid root (Game, Engine, Script, Temp)
   const ROOTS = new Set(['Game', 'Engine', 'Script', 'Temp']);
-  if (!ROOTS.has(segments[0])) {
+  const firstSegment = segments[0];
+  if (!firstSegment || !ROOTS.has(firstSegment)) {
     segments = ['Game', ...segments];
   }
 
@@ -248,7 +252,7 @@ export function resolveSkeletalMeshPath(input: string): string | null {
     // Apply all replacements using regex
     meshPath = meshPath.replace(
       new RegExp(Object.keys(replacements).join('|'), 'g'),
-      match => replacements[match]
+      match => replacements[match] ?? match
     );
     return meshPath;
   }

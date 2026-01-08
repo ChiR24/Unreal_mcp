@@ -122,7 +122,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       if (!name && widgetPathRaw) {
         const parts = widgetPathRaw.split('/').filter((p: string) => p.length > 0);
         if (parts.length > 0) {
-          effectiveName = parts[parts.length - 1];
+          effectiveName = parts[parts.length - 1] ?? effectiveName;
           // If path was provided as widgetPath, use the directory as savePath if savePath wasn't explicit
           if (!effectivePath) {
             effectivePath = '/' + parts.slice(0, parts.length - 1).join('/');

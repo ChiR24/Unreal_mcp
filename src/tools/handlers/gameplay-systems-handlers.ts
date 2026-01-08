@@ -18,6 +18,14 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
 
+/** Quest reward structure */
+export interface QuestReward {
+  type: 'item' | 'currency' | 'experience' | 'reputation' | 'custom';
+  id?: string;
+  amount?: number;
+  data?: Record<string, unknown>;
+}
+
 export interface GameplaySystemsArgs {
   action?: string;
   
@@ -116,7 +124,7 @@ export interface GameplaySystemsArgs {
   questName?: string;
   questType?: string;
   prerequisites?: string[];
-  rewards?: unknown[];
+  rewards?: QuestReward[];
   dialogueName?: string;
   startNodeId?: string;
   nodeId?: string;
@@ -195,7 +203,11 @@ export async function handleGameplaySystemsTools(
   tools: ITools
 ) {
   if (!action || typeof action !== 'string' || action.trim() === '') {
-    throw new Error('manage_gameplay_systems: Missing required parameter: action');
+    return {
+      success: false,
+      error: 'manage_gameplay_systems: Missing required parameter: action',
+      hint: 'Check available actions in the tool schema'
+    };
   }
   
   switch (action) {
@@ -696,19 +708,22 @@ export async function handleGameplaySystemsTools(
     }
     
     default:
-      throw new Error(`manage_gameplay_systems: Unknown action '${action}'. Available actions: ` +
-        'create_targeting_component, configure_lock_on_target, configure_aim_assist, ' +
-        'create_checkpoint_actor, save_checkpoint, load_checkpoint, ' +
-        'create_objective, set_objective_state, configure_objective_markers, ' +
-        'create_world_marker, create_ping_system, configure_marker_widget, ' +
-        'enable_photo_mode, configure_photo_mode_camera, take_photo_mode_screenshot, ' +
-        'create_quest_data_asset, create_dialogue_tree, add_dialogue_node, play_dialogue, ' +
-        'create_instanced_static_mesh_component, create_hierarchical_instanced_static_mesh, ' +
-        'add_instance, remove_instance, get_instance_count, ' +
-        'create_hlod_layer, configure_hlod_settings, build_hlod, assign_actor_to_hlod, ' +
-        'create_string_table, add_string_entry, get_string_entry, import_localization, ' +
-        'export_localization, set_culture, get_available_cultures, ' +
-        'create_device_profile, configure_scalability_group, set_quality_level, ' +
-        'get_scalability_settings, set_resolution_scale, get_gameplay_systems_info');
+      return {
+        success: false,
+        error: `manage_gameplay_systems: Unknown action '${action}'`,
+        hint: 'Available actions: create_targeting_component, configure_lock_on_target, configure_aim_assist, ' +
+          'create_checkpoint_actor, save_checkpoint, load_checkpoint, ' +
+          'create_objective, set_objective_state, configure_objective_markers, ' +
+          'create_world_marker, create_ping_system, configure_marker_widget, ' +
+          'enable_photo_mode, configure_photo_mode_camera, take_photo_mode_screenshot, ' +
+          'create_quest_data_asset, create_dialogue_tree, add_dialogue_node, play_dialogue, ' +
+          'create_instanced_static_mesh_component, create_hierarchical_instanced_static_mesh, ' +
+          'add_instance, remove_instance, get_instance_count, ' +
+          'create_hlod_layer, configure_hlod_settings, build_hlod, assign_actor_to_hlod, ' +
+          'create_string_table, add_string_entry, get_string_entry, import_localization, ' +
+          'export_localization, set_culture, get_available_cultures, ' +
+          'create_device_profile, configure_scalability_group, set_quality_level, ' +
+          'get_scalability_settings, set_resolution_scale, get_gameplay_systems_info'
+      };
   }
 }

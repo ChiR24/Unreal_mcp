@@ -345,9 +345,11 @@ export async function resolveObjectPath(
         const actors = container && Array.isArray(container.actors) ? container.actors : [];
         if (actors.length > 0) {
           const first = actors[0];
-          const resolvedPath = first.path || first.objectPath || first.levelPath;
-          if (typeof resolvedPath === 'string' && resolvedPath.trim().length > 0) {
-            return resolvedPath.trim();
+          if (first) {
+            const resolvedPath = first.path || first.objectPath || first.levelPath;
+            if (typeof resolvedPath === 'string' && resolvedPath.trim().length > 0) {
+              return resolvedPath.trim();
+            }
           }
         }
       } catch {

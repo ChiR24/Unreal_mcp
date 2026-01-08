@@ -1045,6 +1045,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
       UTILITY_ERROR_RESPONSE("Missing assetPath parameter");
     }
 
+    if (!GEditor)
+    {
+      UTILITY_ERROR_RESPONSE("Editor not available");
+    }
+
     UEditorUtilitySubsystem* UtilitySubsystem = GEditor->GetEditorSubsystem<UEditorUtilitySubsystem>();
     if (!UtilitySubsystem)
     {

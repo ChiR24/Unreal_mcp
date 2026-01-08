@@ -12,7 +12,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "UObject/SavePackage.h"
+// SavePackage.h removed - use McpSafeAssetSave() helper instead (UE 5.7+ compatible)
 #include "Misc/PackageName.h"
 #include "Engine/Engine.h"
 #include "Editor.h"

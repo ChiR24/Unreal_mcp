@@ -463,7 +463,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageBuildAction(
       AssetObj->SetStringField(TEXT("class"), AssetData.AssetClassPath.ToString());
       
       // Check if asset can be loaded
-      UObject* LoadedAsset = AssetData.GetAsset();
+      // UE 5.1+ compatible: Use GetSoftObjectPath().TryLoad() instead of deprecated GetAsset()
+      UObject* LoadedAsset = AssetData.GetSoftObjectPath().TryLoad();
       if (LoadedAsset) {
         AssetObj->SetBoolField(TEXT("valid"), true);
         ValidCount++;

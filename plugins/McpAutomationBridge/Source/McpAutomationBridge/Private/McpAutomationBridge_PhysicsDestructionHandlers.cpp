@@ -362,13 +362,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePhysicsDestructionAction(
             Response->SetBoolField(TEXT("fractureApplied"), true);
             Response->SetNumberField(TEXT("fragmentCount"), SeedCount);
 #else
-            // Fracture tool not available - return warning
+            // Fracture tool not available - return honest NOT_IMPLEMENTED error
+            // Do NOT lie about success when no work was done
             Response = MakeShared<FJsonObject>();
-            Response->SetBoolField(TEXT("success"), true);
-            Response->SetStringField(TEXT("message"), TEXT("Geometry collection loaded but fracture tool not available in this build"));
+            Response->SetBoolField(TEXT("success"), false);
+            Response->SetStringField(TEXT("error"), TEXT("Fracture tool plugin not available. Enable FractureEditorMode plugin to use fracturing."));
             Response->SetBoolField(TEXT("fractureApplied"), false);
-            Response->SetStringField(TEXT("warning"), TEXT("FractureEditorMode plugin required for actual fracturing"));
+            Response->SetStringField(TEXT("geometryCollectionPath"), GCPath);
             Response->SetNumberField(TEXT("requestedFragmentCount"), SeedCount);
+            Response->SetStringField(TEXT("hint"), TEXT("For runtime destruction, use apply_strain action on a spawned GeometryCollectionActor instead."));
 #endif
 
             bool bSaveRequested = false;
@@ -405,11 +407,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePhysicsDestructionAction(
             Response->SetNumberField(TEXT("clusterCount"), ClusterCount);
             Response->SetNumberField(TEXT("fragmentCount"), SeedCount);
 #else
+            // Fracture tool not available - return honest NOT_IMPLEMENTED error
             Response = MakeShared<FJsonObject>();
-            Response->SetBoolField(TEXT("success"), true);
-            Response->SetStringField(TEXT("message"), TEXT("Geometry collection loaded but fracture tool not available"));
+            Response->SetBoolField(TEXT("success"), false);
+            Response->SetStringField(TEXT("error"), TEXT("Fracture tool plugin not available. Enable FractureEditorMode plugin to use fracturing."));
             Response->SetBoolField(TEXT("fractureApplied"), false);
-            Response->SetStringField(TEXT("warning"), TEXT("FractureEditorMode plugin required for actual fracturing"));
+            Response->SetStringField(TEXT("hint"), TEXT("For runtime destruction, use apply_strain action on a spawned GeometryCollectionActor instead."));
 #endif
 
             bool bSaveRequested = false;
@@ -444,11 +447,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePhysicsDestructionAction(
             Response = MakeSuccessResponse(TEXT("Radial fracture applied"));
             Response->SetBoolField(TEXT("fractureApplied"), true);
 #else
+            // Fracture tool not available - return honest NOT_IMPLEMENTED error
             Response = MakeShared<FJsonObject>();
-            Response->SetBoolField(TEXT("success"), true);
-            Response->SetStringField(TEXT("message"), TEXT("Geometry collection loaded but fracture tool not available"));
+            Response->SetBoolField(TEXT("success"), false);
+            Response->SetStringField(TEXT("error"), TEXT("Fracture tool plugin not available. Enable FractureEditorMode plugin to use fracturing."));
             Response->SetBoolField(TEXT("fractureApplied"), false);
-            Response->SetStringField(TEXT("warning"), TEXT("FractureEditorMode plugin required for actual fracturing"));
+            Response->SetStringField(TEXT("hint"), TEXT("For runtime destruction, use apply_strain action on a spawned GeometryCollectionActor instead."));
 #endif
             // Include the requested parameters in response
             TSharedPtr<FJsonObject> ParamsObj = MakeShared<FJsonObject>();

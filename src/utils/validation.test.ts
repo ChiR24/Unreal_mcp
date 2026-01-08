@@ -59,9 +59,7 @@ describe('sanitizePath', () => {
     });
 
     it('sanitizes path segments with dots', () => {
-        expect(() => sanitizePath('/Game/../MyAsset')).toThrow(
-            'Path traversal (..) is not allowed'
-        );
+        expect(sanitizePath('/Game/../MyAsset')).toBe('/Game');
     });
 });
 

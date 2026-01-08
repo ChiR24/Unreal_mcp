@@ -145,7 +145,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     SpawnParams.SpawnCollisionHandlingOverride =
         ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-    // Fix: Declare NewLight before use
+    // Safety check: Validate ActorSS and World before spawning
+    if (!ActorSS || !ActorSS->GetWorld()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("No valid world context available for spawning light"),
+                          TEXT("NO_WORLD"));
+      return true;
+    }
+
     AActor *NewLight = ActorSS->GetWorld()->SpawnActor(LightClass, &Location,
                                                        &Rotation, SpawnParams);
 

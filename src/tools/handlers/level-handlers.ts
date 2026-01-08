@@ -176,8 +176,10 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       if (!origin && argsTyped.min && argsTyped.max) {
         const min = argsTyped.min;
         const max = argsTyped.max;
-        origin = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
-        extent = [(max[0] - min[0]) / 2, (max[1] - min[1]) / 2, (max[2] - min[2]) / 2];
+        const minX = min[0] ?? 0, minY = min[1] ?? 0, minZ = min[2] ?? 0;
+        const maxX = max[0] ?? 0, maxY = max[1] ?? 0, maxZ = max[2] ?? 0;
+        origin = [(minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2];
+        extent = [(maxX - minX) / 2, (maxY - minY) / 2, (maxZ - minZ) / 2];
       }
 
       const payload = {

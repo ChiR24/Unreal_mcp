@@ -1,12 +1,11 @@
+/* eslint-disable no-console */
 import fs from 'fs/promises';
 import path from 'path';
 
 function usageAndExit(message?: string): never {
   if (message) {
-    // eslint-disable-next-line no-console
     console.error(message);
   }
-  // eslint-disable-next-line no-console
   console.error(
     [
       'Usage:',
@@ -98,13 +97,11 @@ async function main(): Promise<void> {
   const newText = integrationText.slice(0, lineBreakIndex + 1) + block + integrationText.slice(lineBreakIndex + 1);
   await fs.writeFile(integrationPath, newText, 'utf8');
 
-  // eslint-disable-next-line no-console
   console.log(`Appended test case to ${path.relative(repoRoot, integrationPath)}`);
 }
 
 main().catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);
-  // eslint-disable-next-line no-console
   console.error(`scaffold-test failed: ${message}`);
   process.exit(1);
 });

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import fs from 'fs/promises';
 import path from 'path';
 import ts from 'typescript';
@@ -27,10 +28,8 @@ async function fileExists(filePath: string): Promise<boolean> {
 function usageAndExit(message?: string): never {
   if (message) {
     // scripts are allowed to print to stdout
-    // eslint-disable-next-line no-console
     console.error(message);
   }
-  // eslint-disable-next-line no-console
   console.error(
     [
       'Usage:',
@@ -214,7 +213,7 @@ async function listCppHandlerFiles(repoRoot: string): Promise<string[]> {
 
 function extractRegisteredToolsFromSubsystemCpp(subsystemCppText: string): Set<string> {
   const toolNames = new Set<string>();
-  const re = /RegisterHandler\(TEXT\("([a-z0-9_\-]+)"\)/g;
+  const re = /RegisterHandler\(TEXT\("([a-z0-9_-]+)"\)/g;
   for (let m = re.exec(subsystemCppText); m; m = re.exec(subsystemCppText)) {
     toolNames.add(m[1]);
   }
@@ -370,24 +369,18 @@ async function main(): Promise<void> {
   };
 
   if (format === 'json') {
-    // eslint-disable-next-line no-console
     console.log(JSON.stringify(result, null, 2));
   } else {
-    // eslint-disable-next-line no-console
     console.log(`Checked ${checkedTools.length} tool(s).`);
     if (violations.length === 0) {
-      // eslint-disable-next-line no-console
       console.log('OK: No mismatches found.');
     } else {
       for (const v of violations) {
-        // eslint-disable-next-line no-console
         console.log(`\n[${v.kind}] ${v.tool}: ${v.message}`);
         if (v.details) {
-          // eslint-disable-next-line no-console
           console.log(JSON.stringify(v.details, null, 2));
         }
       }
-      // eslint-disable-next-line no-console
       console.log(`\nFound ${violations.length} issue(s).`);
     }
   }
@@ -397,7 +390,6 @@ async function main(): Promise<void> {
 
 main().catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);
-  // eslint-disable-next-line no-console
   console.error(`verify-handler-sync failed: ${message}`);
   process.exit(1);
 });

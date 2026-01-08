@@ -251,6 +251,10 @@ export async function handleModdingTools(
       ));
 
     default:
-      throw new Error(`Unknown manage_modding action: ${action}`);
+      return {
+        success: false,
+        error: `Unknown manage_modding action: ${action}`,
+        hint: 'Check available actions in the tool schema'
+      };
   }
 }

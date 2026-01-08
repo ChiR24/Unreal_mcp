@@ -61,10 +61,11 @@ interface ErrorLike {
  */
 function normalizeErrorToLike(error: unknown): ErrorLike {
   // Handle ZodError (duck-typing)
-  const isZodError = typeof error === 'object' && error !== null && 'issues' in error && Array.isArray((error as any).issues);
+  const zodLike = error as { issues?: unknown[] } | null;
+  const isZodError = typeof error === 'object' && error !== null && 'issues' in error && Array.isArray(zodLike?.issues);
   const details = isZodError 
-    ? (error as any).issues 
-    : (typeof error === 'object' && error !== null && 'details' in error ? (error as any).details : undefined);
+    ? zodLike?.issues 
+    : (typeof error === 'object' && error !== null && 'details' in error ? (error as { details?: unknown }).details : undefined);
 
   if (error instanceof Error) {
     return {
@@ -150,7 +151,7 @@ export class ErrorHandler {
 
       // Heuristics: parse common "Missing required parameter: X" patterns.
       if (typeof errorMessage === 'string') {
-        const missingMatch = errorMessage.match(/Missing required parameter:\s*([A-Za-z0-9_\-\.]+)/);
+        const missingMatch = errorMessage.match(/Missing required parameter:\s*([A-Za-z0-9_\-.]+)/);
         if (missingMatch?.[1]) missing.push(missingMatch[1]);
       }
 

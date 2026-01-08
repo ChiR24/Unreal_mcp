@@ -167,8 +167,11 @@ export class PhysicsTools {
       // Auto-fix common incorrect paths
       let actualSkeletonPath = params.skeletonPath;
       if (actualSkeletonPath && skeletonToMeshMap[actualSkeletonPath]) {
-        log.warn(`Auto-correcting path from ${actualSkeletonPath} to ${skeletonToMeshMap[actualSkeletonPath]}`);
-        actualSkeletonPath = skeletonToMeshMap[actualSkeletonPath];
+        const mappedPath = skeletonToMeshMap[actualSkeletonPath];
+        if (mappedPath) {
+          log.warn(`Auto-correcting path from ${actualSkeletonPath} to ${mappedPath}`);
+          actualSkeletonPath = mappedPath;
+        }
       }
 
       if (actualSkeletonPath && (actualSkeletonPath.includes('_Skeleton') || actualSkeletonPath.includes('SK_Mannequin'))) {

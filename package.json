@@ -7,6 +7,13 @@
   "module": "src/index.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "bin": {
     "unreal-engine-mcp-server": "dist/cli.js"
   },
@@ -23,8 +30,8 @@
     "build:watch": "tsc -p tsconfig.json --watch",
     "start": "node dist/cli.js",
     "dev": "ts-node-esm src/cli.ts",
-    "lint": "echo \"Lint: typescript/javascript, C, C++, C#\" && eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
+    "lint": "echo \"Lint: typescript/javascript, C, C++, C#\" && eslint .",
+    "lint:fix": "eslint . --fix",
     "lint:cpp": "echo \"Running C/C++ lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C/C++ lint')",
     "lint:c": "echo \"Running C lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C lint')",
     "lint:csharp": "echo \"Running C# lint (dotnet format)\" && (dotnet tool run dotnet-format --verify-no-changes || echo 'dotnet-format not available or formatting required; skipping C# lint')",

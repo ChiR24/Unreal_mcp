@@ -90,7 +90,11 @@ export async function handleEditorUtilitiesTools(
   tools: ITools
 ) {
   if (!action || typeof action !== 'string' || action.trim() === '') {
-    throw new Error('manage_editor_utilities: Missing required parameter: action');
+    return {
+      success: false,
+      error: 'manage_editor_utilities: Missing required parameter: action',
+      hint: 'Check available actions in the tool schema'
+    };
   }
   
   switch (action) {
@@ -160,7 +164,11 @@ export async function handleEditorUtilitiesTools(
       const collectionName = requireNonEmptyString(args.collectionName, 'collectionName');
       const assetPaths = args.assetPaths ?? (args.assetPath ? [args.assetPath] : []);
       if (assetPaths.length === 0) {
-        throw new Error('add_to_collection requires assetPaths or assetPath');
+        return {
+          success: false,
+          error: 'add_to_collection requires assetPaths or assetPath',
+          hint: 'Provide at least one asset path'
+        };
       }
       return cleanObject(await executeAutomationRequest(tools, 'manage_editor_utilities', {
         action: 'add_to_collection',
@@ -492,7 +500,12 @@ export async function handleEditorUtilitiesTools(
     }
     
     default:
-      // Pass through to C++ for any unhandled actions
-      return cleanObject(await executeAutomationRequest(tools, 'manage_editor_utilities', { ...args, action }));
+      // Explicit error for unknown actions instead of pass-through
+      // This prevents bypassing TypeScript validation layer
+      return {
+        success: false,
+        error: `Unknown manage_editor_utilities action: ${action}`,
+        hint: 'Check available actions in the tool schema'
+      };
   }
 }

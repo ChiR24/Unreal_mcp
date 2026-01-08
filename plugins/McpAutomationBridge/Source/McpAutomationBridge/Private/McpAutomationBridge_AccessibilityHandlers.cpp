@@ -58,7 +58,7 @@
 #include "IAssetTools.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
-#include "UObject/SavePackage.h"
+// SavePackage.h removed - use McpSafeAssetSave() helper instead (UE 5.7+ compatible)
 #include "Materials/MaterialInstanceConstant.h"
 #include "Materials/Material.h"
 #endif

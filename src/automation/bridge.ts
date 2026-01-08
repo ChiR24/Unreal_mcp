@@ -114,7 +114,7 @@ export class AutomationBridge extends EventEmitter {
                 .filter((token) => token.length > 0)
             : [];
         this.negotiatedProtocols = Array.from(new Set([...userProtocols, ...envProtocols, ...defaultProtocols]));
-        this.port = this.ports[0];
+        this.port = this.ports[0] ?? DEFAULT_AUTOMATION_PORT;
         this.serverLegacyEnabled =
             options.serverLegacyEnabled ?? process.env.MCP_AUTOMATION_SERVER_LEGACY !== 'false';
         this.capabilityToken =
@@ -409,9 +409,9 @@ export class AutomationBridge extends EventEmitter {
             configuredPorts: [...this.ports],
             listeningPorts: [], // We are client-only now
             connected: this.isConnected(),
-            connectedAt: connectionInfos.length > 0 ? connectionInfos[0].connectedAt : null,
-            activePort: connectionInfos.length > 0 ? connectionInfos[0].port : null,
-            negotiatedProtocol: connectionInfos.length > 0 ? connectionInfos[0].protocol : null,
+            connectedAt: connectionInfos[0]?.connectedAt ?? null,
+            activePort: connectionInfos[0]?.port ?? null,
+            negotiatedProtocol: connectionInfos[0]?.protocol ?? null,
             supportedProtocols: [...this.negotiatedProtocols],
             supportedOpcodes: ['automation_request'],
             expectedResponseOpcodes: ['automation_response'],
