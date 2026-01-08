@@ -11,7 +11,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Factories/DataTableFactory.h"
 #include "Factories/DataAssetFactory.h"
-#include "UObject/SavePackage.h"
+// Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 
 // Data Assets & Tables
 #include "Engine/DataTable.h"

@@ -16,7 +16,7 @@
 #include "Components/ActorComponent.h"
 #include "Misc/PackageName.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "UObject/SavePackage.h"
+// Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 #include "MeshDescription.h"
 
 #if WITH_EDITOR

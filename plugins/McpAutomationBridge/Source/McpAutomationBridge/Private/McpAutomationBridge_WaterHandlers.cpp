@@ -36,6 +36,42 @@
 #define MCP_HAS_WATER_PLUGIN 0
 #endif
 
+// Helper function to find water body actors more efficiently
+// Uses class-based filtering instead of iterating all actors
+namespace {
+#if MCP_HAS_WATER_PLUGIN
+static AWaterBody* FindWaterBodyByName(UWorld* World, const FString& ActorName)
+{
+    if (!World || ActorName.IsEmpty()) return nullptr;
+    
+    // Use TActorIterator for more efficient typed iteration
+    for (TActorIterator<AWaterBody> It(World); It; ++It)
+    {
+        AWaterBody* WaterActor = *It;
+        if (WaterActor && WaterActor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
+        {
+            return WaterActor;
+        }
+    }
+    return nullptr;
+}
+
+static void CollectAllWaterBodies(UWorld* World, TArray<AWaterBody*>& OutWaterBodies)
+{
+    if (!World) return;
+    
+    // Use TActorIterator for more efficient typed iteration
+    for (TActorIterator<AWaterBody> It(World); It; ++It)
+    {
+        if (AWaterBody* WaterActor = *It)
+        {
+            OutWaterBodies.Add(WaterActor);
+        }
+    }
+}
+#endif
+} // namespace
+
 #endif // WITH_EDITOR
 
 bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
@@ -246,16 +282,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // Find the water body actor by name (must match AND be a WaterBody)
-      AActor *WaterActor = nullptr;
-      for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-        if (!Actor) continue;
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) &&
-            Actor->GetClass()->GetName().Contains(TEXT("WaterBody"))) {
-          WaterActor = Actor;
-          break;
-        }
-      }
+      // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -330,16 +359,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // Find the water body actor by name (must match AND be a WaterBody)
-      AActor *WaterActor = nullptr;
-      for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-        if (!Actor) continue;
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) &&
-            Actor->GetClass()->GetName().Contains(TEXT("WaterBody"))) {
-          WaterActor = Actor;
-          break;
-        }
-      }
+      // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -499,16 +521,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // Find the water body actor by name (must match AND be a WaterBody)
-      AActor *WaterActor = nullptr;
-      for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-        if (!Actor) continue;
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) &&
-            Actor->GetClass()->GetName().Contains(TEXT("WaterBody"))) {
-          WaterActor = Actor;
-          break;
-        }
-      }
+      // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -610,16 +625,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // Find the water body actor
-      AActor *WaterActor = nullptr;
-      for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-        if (!Actor) continue;
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) &&
-            Actor->GetClass()->GetName().Contains(TEXT("WaterBody"))) {
-          WaterActor = Actor;
-          break;
-        }
-      }
+      // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
 
       if (WaterActor) {
         // Must be a river component for depth/width control
@@ -696,16 +704,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // Find the water body actor
-      AActor *WaterActor = nullptr;
-      for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-        if (!Actor) continue;
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) &&
-            Actor->GetClass()->GetName().Contains(TEXT("WaterBody"))) {
-          WaterActor = Actor;
-          break;
-        }
-      }
+      // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
 
       if (WaterActor) {
         // Must be an ocean component for extent control
@@ -776,16 +777,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // Find the water body actor
-      AActor *WaterActor = nullptr;
-      for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-        if (!Actor) continue;
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) &&
-            Actor->GetClass()->GetName().Contains(TEXT("WaterBody"))) {
-          WaterActor = Actor;
-          break;
-        }
-      }
+      // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -854,16 +848,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // Find the water body actor
-      AActor *WaterActor = nullptr;
-      for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-        if (!Actor) continue;
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) &&
-            Actor->GetClass()->GetName().Contains(TEXT("WaterBody"))) {
-          WaterActor = Actor;
-          break;
-        }
-      }
+      // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
 
       if (WaterActor) {
         // Must be a river component for transition materials
@@ -926,28 +913,23 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // Find the water body actor
-      AActor *WaterActor = nullptr;
-      for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-        if (!Actor) continue;
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) &&
-            Actor->GetClass()->GetName().Contains(TEXT("WaterBody"))) {
-          WaterActor = Actor;
-          break;
-        }
-      }
+      // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
         if (WaterComp) {
           FString WaterZonePath;
           if (Payload->TryGetStringField(TEXT("waterZonePath"), WaterZonePath) && !WaterZonePath.IsEmpty()) {
-            // Find the water zone actor in the level by name
+            // Use TActorIterator for efficient AWaterZone lookup instead of O(N) loop
             AWaterZone *WaterZone = nullptr;
-            for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-              if (!Actor) continue;
-              if (AWaterZone *Zone = Cast<AWaterZone>(Actor)) {
-                if (Zone->GetActorLabel().Equals(WaterZonePath, ESearchCase::IgnoreCase)) {
+            for (TActorIterator<AWaterZone> It(World); It; ++It)
+            {
+              if (AWaterZone* Zone = *It)
+              {
+                if (Zone->GetActorLabel().Equals(WaterZonePath, ESearchCase::IgnoreCase))
+                {
                   WaterZone = Zone;
                   break;
                 }
@@ -997,16 +979,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // Find the water body actor
-      AActor *WaterActor = nullptr;
-      for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-        if (!Actor) continue;
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) &&
-            Actor->GetClass()->GetName().Contains(TEXT("WaterBody"))) {
-          WaterActor = Actor;
-          break;
-        }
-      }
+      // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -1083,16 +1058,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // Find the water body actor
-      AActor *WaterActor = nullptr;
-      for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-        if (!Actor) continue;
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) &&
-            Actor->GetClass()->GetName().Contains(TEXT("WaterBody"))) {
-          WaterActor = Actor;
-          break;
-        }
-      }
+      // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -1160,16 +1128,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // Find the water body actor
-      AActor *WaterActor = nullptr;
-      for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-        if (!Actor) continue;
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) &&
-            Actor->GetClass()->GetName().Contains(TEXT("WaterBody"))) {
-          WaterActor = Actor;
-          break;
-        }
-      }
+      // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();

@@ -37,8 +37,25 @@ export async function readIniFile(filePath: string): Promise<Record<string, Reco
 }
 
 export async function getProjectSetting(projectPath: string, category: string, sectionName: string, key?: string): Promise<Record<string, unknown> | string | null> {
+    // Security: Validate projectPath to prevent path traversal
+    if (!projectPath || typeof projectPath !== 'string') {
+        return null;
+    }
+    
+    // Normalize and check for traversal attempts
+    const normalizedPath = path.normalize(projectPath);
+    if (normalizedPath.includes('..')) {
+        // Path traversal attempt detected
+        return null;
+    }
+    
+    // Ensure it's an absolute path
+    if (!path.isAbsolute(normalizedPath)) {
+        return null;
+    }
+
     // Normalize project path to directory
-    let dirPath = projectPath;
+    let dirPath = normalizedPath;
     if (dirPath.toLowerCase().endsWith('.uproject')) {
         dirPath = path.dirname(dirPath);
     }

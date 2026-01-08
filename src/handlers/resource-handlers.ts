@@ -75,8 +75,8 @@ export class ResourceHandler {
         let versionInfo: Record<string, unknown> = {};
         let featureFlags: Record<string, unknown> = {};
         if (this.bridge.isConnected) {
-          try { versionInfo = await this.bridge.getEngineVersion(); } catch { }
-          try { featureFlags = await this.bridge.getFeatureFlags(); } catch { }
+          try { versionInfo = await this.bridge.getEngineVersion(); } catch { /* Version info unavailable - non-critical for health check */ }
+          try { featureFlags = await this.bridge.getFeatureFlags(); } catch { /* Feature flags unavailable - non-critical for health check */ }
         }
 
         const responseTimes = this.healthMonitor.metrics.responseTimes.slice(-25);

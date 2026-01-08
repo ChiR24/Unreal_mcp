@@ -14,7 +14,7 @@
 #include "ProceduralFoliageComponent.h"
 #include "ProceduralFoliageSpawner.h"
 #include "ProceduralFoliageVolume.h"
-#include "UObject/SavePackage.h"
+// Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 #include "WorldPartition/WorldPartition.h"
 
 #if __has_include("Subsystems/EditorActorSubsystem.h")

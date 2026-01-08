@@ -68,6 +68,26 @@
 // Actor Grouping (UE 5.7+)
 #include "ActorGroupingUtils.h"
 
+// ============================================================================
+// Helper: O(N) → O(1) Actor Lookup by Name/Label using TActorIterator
+// ============================================================================
+namespace {
+  /**
+   * Find an actor by name or label in the world using typed TActorIterator.
+   * More efficient than GetAllActorsOfClass for single lookups.
+   */
+  template<typename T>
+  T* FindActorByNameOrLabel(UWorld* World, const FString& NameOrLabel) {
+    if (!World || NameOrLabel.IsEmpty()) return nullptr;
+    for (TActorIterator<T> It(World); It; ++It) {
+      if (It->GetName() == NameOrLabel || It->GetActorLabel() == NameOrLabel) {
+        return *It;
+      }
+    }
+    return nullptr;
+  }
+}
+
 #endif // WITH_EDITOR
 
 bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
@@ -414,13 +434,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
     } else {
       UWorld* World = GetActiveWorld();
       if (World) {
-        AActor* FoundActor = nullptr;
-        for (TActorIterator<AActor> It(World); It; ++It) {
-          if (It->GetName() == ActorName || It->GetActorLabel() == ActorName) {
-            FoundActor = *It;
-            break;
-          }
-        }
+        AActor* FoundActor = FindActorByNameOrLabel<AActor>(World, ActorName);
         
         if (FoundActor) {
           if (!bAddToSelection) {
@@ -571,13 +585,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
     if (!GroupName.IsEmpty()) {
       UWorld* World = GetActiveWorld();
       if (World) {
-        AGroupActor* FoundGroup = nullptr;
-        for (TActorIterator<AGroupActor> It(World); It; ++It) {
-          if (It->GetActorLabel() == GroupName || It->GetName() == GroupName) {
-            FoundGroup = *It;
-            break;
-          }
-        }
+        AGroupActor* FoundGroup = FindActorByNameOrLabel<AGroupActor>(World, GroupName);
         if (FoundGroup) {
           GEditor->SelectNone(false, true);
           GEditor->SelectActor(FoundGroup, true, true);

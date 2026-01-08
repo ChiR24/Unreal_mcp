@@ -77,12 +77,13 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
 
     const payload = {
       ...args,
+      subAction: 'create_anim_blueprint',  // Must match C++ SubAction handler
       name,
       skeletonPath,
       savePath
     };
 
-    const res = await executeAutomationRequest(tools, 'create_animation_blueprint', payload, 'Automation bridge not available for animation blueprint creation');
+    const res = await executeAutomationRequest(tools, 'manage_animation_authoring', payload, 'Automation bridge not available for animation blueprint creation');
     return res as Record<string, unknown>;
   }
 

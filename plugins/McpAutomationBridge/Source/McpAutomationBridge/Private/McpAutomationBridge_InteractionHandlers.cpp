@@ -8,7 +8,7 @@
 #include "EngineUtils.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
-#include "UObject/SavePackage.h"
+// Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -26,6 +26,49 @@
 #include "Factories/BlueprintFactory.h"
 #include "UObject/Interface.h"
 #include "EditorAssetLibrary.h"
+
+// ============================================================================
+// Helper functions to reduce O(N²) variable lookups to O(N)
+// ============================================================================
+namespace {
+#if WITH_EDITOR
+// Build a TSet of existing variable names in a single pass for O(1) lookups
+inline TSet<FName> BuildVariableNameSet(const UBlueprint* Blueprint)
+{
+    TSet<FName> VariableNames;
+    if (Blueprint)
+    {
+        VariableNames.Reserve(Blueprint->NewVariables.Num());
+        for (const FBPVariableDescription& Var : Blueprint->NewVariables)
+        {
+            VariableNames.Add(Var.VarName);
+        }
+    }
+    return VariableNames;
+}
+
+// Check if a variable exists in O(1) using pre-built set
+inline bool HasVariable(const TSet<FName>& VariableSet, const TCHAR* VarName)
+{
+    return VariableSet.Contains(FName(VarName));
+}
+
+// Find a variable description by name (for setting default values)
+inline FBPVariableDescription* FindVariableDescription(UBlueprint* Blueprint, const TCHAR* VarName)
+{
+    if (!Blueprint) return nullptr;
+    FName TargetName(VarName);
+    for (FBPVariableDescription& Var : Blueprint->NewVariables)
+    {
+        if (Var.VarName == TargetName)
+        {
+            return &Var;
+        }
+    }
+    return nullptr;
+}
+#endif
+} // namespace
 
 // ============================================================================
 // Main Interaction Handler Dispatcher
@@ -136,27 +179,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     FEdGraphPinType NameType;
     NameType.PinCategory = UEdGraphSchema_K2::PC_Name;
 
-    // Add TraceDistance variable
-    bool bDistanceExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("TraceDistance")) {
-        bDistanceExists = true;
-        break;
-      }
-    }
-    if (!bDistanceExists) {
+    // Build variable name set once for O(1) lookups (optimization from O(N²) to O(N))
+    TSet<FName> ExistingVars = BuildVariableNameSet(Blueprint);
+
+    // Add TraceDistance variable if not exists
+    if (!HasVariable(ExistingVars, TEXT("TraceDistance"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("TraceDistance"), FloatType);
     }
 
-    // Add TraceType variable
-    bool bTypeExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("TraceType")) {
-        bTypeExists = true;
-        break;
-      }
-    }
-    if (!bTypeExists) {
+    // Add TraceType variable if not exists
+    if (!HasVariable(ExistingVars, TEXT("TraceType"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("TraceType"), NameType);
     }
 
@@ -201,86 +233,50 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     FEdGraphPinType ClassType;
     ClassType.PinCategory = UEdGraphSchema_K2::PC_Class;
 
+    // Build variable name set once for O(1) existence checks (avoids O(N²) loops)
+    TSet<FName> ExistingVars = BuildVariableNameSet(Blueprint);
+
     // Add bShowOnHover variable
-    bool bShowOnHoverExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bShowOnHover")) {
-        bShowOnHoverExists = true;
-        break;
-      }
-    }
-    if (!bShowOnHoverExists) {
+    if (!HasVariable(ExistingVars, TEXT("bShowOnHover"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bShowOnHover"), BoolType);
     }
     // Set default value for bShowOnHover
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bShowOnHover")) {
-        Var.DefaultValue = ShowOnHover ? TEXT("true") : TEXT("false");
-        break;
-      }
+    if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("bShowOnHover"))) {
+      Var->DefaultValue = ShowOnHover ? TEXT("true") : TEXT("false");
     }
 
     // Add bShowPromptText variable
-    bool bShowPromptTextExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bShowPromptText")) {
-        bShowPromptTextExists = true;
-        break;
-      }
-    }
-    if (!bShowPromptTextExists) {
+    if (!HasVariable(ExistingVars, TEXT("bShowPromptText"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bShowPromptText"), BoolType);
     }
     // Set default value for bShowPromptText
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bShowPromptText")) {
-        Var.DefaultValue = ShowPromptText ? TEXT("true") : TEXT("false");
-        break;
-      }
+    if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("bShowPromptText"))) {
+      Var->DefaultValue = ShowPromptText ? TEXT("true") : TEXT("false");
     }
 
     // Add PromptTextFormat variable
-    bool bPromptFormatExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("PromptTextFormat")) {
-        bPromptFormatExists = true;
-        break;
-      }
-    }
-    if (!bPromptFormatExists) {
+    if (!HasVariable(ExistingVars, TEXT("PromptTextFormat"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("PromptTextFormat"), StringType);
     }
     // Set default value for PromptTextFormat
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("PromptTextFormat")) {
-        Var.DefaultValue = PromptTextFormat;
-        break;
-      }
+    if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("PromptTextFormat"))) {
+      Var->DefaultValue = PromptTextFormat;
     }
 
     // Add InteractionWidgetClass variable (soft class reference)
     FEdGraphPinType SoftClassType;
     SoftClassType.PinCategory = UEdGraphSchema_K2::PC_SoftClass;
 
-    bool bWidgetClassExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("InteractionWidgetClass")) {
-        bWidgetClassExists = true;
-        break;
-      }
-    }
-    if (!bWidgetClassExists) {
+    if (!HasVariable(ExistingVars, TEXT("InteractionWidgetClass"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("InteractionWidgetClass"), SoftClassType);
     }
     // Set default value for InteractionWidgetClass if provided
     if (!WidgetClass.IsEmpty()) {
-      for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-        if (Var.VarName == TEXT("InteractionWidgetClass")) {
-          Var.DefaultValue = WidgetClass;
-          break;
-        }
+      if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("InteractionWidgetClass"))) {
+        Var->DefaultValue = WidgetClass;
       }
     }
+
 
     TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     Result->SetStringField(TEXT("widgetClass"), WidgetClass);
@@ -707,80 +703,43 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     FloatType.PinCategory = UEdGraphSchema_K2::PC_Real;
     FloatType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
 
+    // Build variable name set once for O(1) existence checks (avoids O(N²) loops)
+    TSet<FName> ExistingVars = BuildVariableNameSet(Blueprint);
+
     // Add SwitchType variable
-    bool bSwitchTypeExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("SwitchType")) {
-        bSwitchTypeExists = true;
-        break;
-      }
-    }
-    if (!bSwitchTypeExists) {
+    if (!HasVariable(ExistingVars, TEXT("SwitchType"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("SwitchType"), NameType);
     }
     // Set default value for SwitchType
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("SwitchType")) {
-        Var.DefaultValue = SwitchType;
-        break;
-      }
+    if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("SwitchType"))) {
+      Var->DefaultValue = SwitchType;
     }
 
     // Add bCanToggle variable
-    bool bCanToggleExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bCanToggle")) {
-        bCanToggleExists = true;
-        break;
-      }
-    }
-    if (!bCanToggleExists) {
+    if (!HasVariable(ExistingVars, TEXT("bCanToggle"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bCanToggle"), BoolType);
     }
     // Set default value for bCanToggle
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bCanToggle")) {
-        Var.DefaultValue = CanToggle ? TEXT("true") : TEXT("false");
-        break;
-      }
+    if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("bCanToggle"))) {
+      Var->DefaultValue = CanToggle ? TEXT("true") : TEXT("false");
     }
 
     // Add bIsActivated variable
-    bool bIsActivatedExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bIsActivated")) {
-        bIsActivatedExists = true;
-        break;
-      }
-    }
-    if (!bIsActivatedExists) {
+    if (!HasVariable(ExistingVars, TEXT("bIsActivated"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bIsActivated"), BoolType);
     }
     // Set default value for bIsActivated (default to false)
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bIsActivated")) {
-        Var.DefaultValue = TEXT("false");
-        break;
-      }
+    if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("bIsActivated"))) {
+      Var->DefaultValue = TEXT("false");
     }
 
     // Add ResetTime variable
-    bool bResetTimeExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("ResetTime")) {
-        bResetTimeExists = true;
-        break;
-      }
-    }
-    if (!bResetTimeExists) {
+    if (!HasVariable(ExistingVars, TEXT("ResetTime"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("ResetTime"), FloatType);
     }
     // Set default value for ResetTime
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("ResetTime")) {
-        Var.DefaultValue = FString::Printf(TEXT("%f"), ResetTime);
-        break;
-      }
+    if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("ResetTime"))) {
+      Var->DefaultValue = FString::Printf(TEXT("%f"), ResetTime);
     }
 
     TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -898,100 +857,53 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     FEdGraphPinType SoftObjectType;
     SoftObjectType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
 
+    // Build variable name set once for O(1) existence checks (avoids O(N²) loops)
+    TSet<FName> ExistingVars = BuildVariableNameSet(Blueprint);
+
     // Add bIsLocked variable
-    bool bLockedExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bIsLocked")) {
-        bLockedExists = true;
-        break;
-      }
-    }
-    if (!bLockedExists) {
+    if (!HasVariable(ExistingVars, TEXT("bIsLocked"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bIsLocked"), BoolType);
     }
     // Set default value for bIsLocked
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bIsLocked")) {
-        Var.DefaultValue = Locked ? TEXT("true") : TEXT("false");
-        break;
-      }
+    if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("bIsLocked"))) {
+      Var->DefaultValue = Locked ? TEXT("true") : TEXT("false");
     }
 
     // Add bIsOpen variable
-    bool bIsOpenExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bIsOpen")) {
-        bIsOpenExists = true;
-        break;
-      }
-    }
-    if (!bIsOpenExists) {
+    if (!HasVariable(ExistingVars, TEXT("bIsOpen"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bIsOpen"), BoolType);
     }
     // Set default value for bIsOpen (default to false - chest starts closed)
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("bIsOpen")) {
-        Var.DefaultValue = TEXT("false");
-        break;
-      }
+    if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("bIsOpen"))) {
+      Var->DefaultValue = TEXT("false");
     }
 
     // Add LidOpenAngle variable
-    bool bLidAngleExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("LidOpenAngle")) {
-        bLidAngleExists = true;
-        break;
-      }
-    }
-    if (!bLidAngleExists) {
+    if (!HasVariable(ExistingVars, TEXT("LidOpenAngle"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("LidOpenAngle"), FloatType);
     }
     // Set default value for LidOpenAngle
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("LidOpenAngle")) {
-        Var.DefaultValue = FString::Printf(TEXT("%f"), OpenAngle);
-        break;
-      }
+    if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("LidOpenAngle"))) {
+      Var->DefaultValue = FString::Printf(TEXT("%f"), OpenAngle);
     }
 
     // Add OpenTime variable
-    bool bOpenTimeExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("OpenTime")) {
-        bOpenTimeExists = true;
-        break;
-      }
-    }
-    if (!bOpenTimeExists) {
+    if (!HasVariable(ExistingVars, TEXT("OpenTime"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("OpenTime"), FloatType);
     }
     // Set default value for OpenTime
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("OpenTime")) {
-        Var.DefaultValue = FString::Printf(TEXT("%f"), OpenTime);
-        break;
-      }
+    if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("OpenTime"))) {
+      Var->DefaultValue = FString::Printf(TEXT("%f"), OpenTime);
     }
 
     // Add LootTable soft reference
-    bool bLootTableExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("LootTable")) {
-        bLootTableExists = true;
-        break;
-      }
-    }
-    if (!bLootTableExists) {
+    if (!HasVariable(ExistingVars, TEXT("LootTable"))) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("LootTable"), SoftObjectType);
     }
     // Set default value for LootTable if provided
     if (!LootTablePath.IsEmpty()) {
-      for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-        if (Var.VarName == TEXT("LootTable")) {
-          Var.DefaultValue = LootTablePath;
-          break;
-        }
+      if (FBPVariableDescription* Var = FindVariableDescription(Blueprint, TEXT("LootTable"))) {
+        Var->DefaultValue = LootTablePath;
       }
     }
 

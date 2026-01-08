@@ -11,7 +11,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "UObject/SavePackage.h"
+// Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 
 // PCG includes - conditionally compiled based on PCG plugin availability
 #if __has_include("PCGGraph.h")
@@ -96,6 +96,22 @@ static int32 GetJsonIntField(const TSharedPtr<FJsonObject>& Payload, const TCHAR
         return static_cast<int32>(Value);
     }
     return Default;
+}
+
+// ============================================================================
+// Helper: O(N) Actor Lookup by Name/Label
+// ============================================================================
+namespace {
+  template<typename T>
+  T* FindPCGActorByNameOrLabel(UWorld* World, const FString& NameOrLabel) {
+    if (!World || NameOrLabel.IsEmpty()) return nullptr;
+    for (TActorIterator<T> It(World); It; ++It) {
+      if (It->GetName() == NameOrLabel || It->GetActorLabel() == NameOrLabel) {
+        return *It;
+      }
+    }
+    return nullptr;
+  }
 }
 
 static FVector GetJsonVectorField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FVector& Default = FVector::ZeroVector)
@@ -906,40 +922,27 @@ static bool HandleExecutePCGGraph(
     AActor* TargetActor = nullptr;
     UPCGComponent* PCGComp = nullptr;
 
-    for (TActorIterator<AActor> It(World); It; ++It)
-    {
-        AActor* Actor = *It;
-        if (Actor->GetActorLabel() == ActorName || Actor->GetName() == ActorName)
-        {
-            TargetActor = Actor;
-            TArray<UPCGComponent*> PCGComponents;
-            Actor->GetComponents<UPCGComponent>(PCGComponents);
-            if (PCGComponents.Num() > 0)
-            {
-                PCGComp = ComponentName.IsEmpty() ? PCGComponents[0] : nullptr;
-                if (!PCGComp)
-                {
-                    for (UPCGComponent* Comp : PCGComponents)
-                    {
-                        if (Comp->GetName() == ComponentName) { PCGComp = Comp; break; }
-                    }
+    // First try to find actor by name/label using optimized lookup
+    TargetActor = FindPCGActorByNameOrLabel<AActor>(World, ActorName);
+    if (TargetActor) {
+        TArray<UPCGComponent*> PCGComponents;
+        TargetActor->GetComponents<UPCGComponent>(PCGComponents);
+        if (PCGComponents.Num() > 0) {
+            PCGComp = ComponentName.IsEmpty() ? PCGComponents[0] : nullptr;
+            if (!PCGComp) {
+                for (UPCGComponent* Comp : PCGComponents) {
+                    if (Comp->GetName() == ComponentName) { PCGComp = Comp; break; }
                 }
             }
-            break;
         }
     }
 
-    if (!PCGComp)
-    {
-        for (TActorIterator<APCGVolume> It(World); It; ++It)
-        {
-            APCGVolume* Volume = *It;
-            if (Volume->GetActorLabel() == ActorName || Volume->GetName() == ActorName)
-            {
-                PCGComp = Volume->FindComponentByClass<UPCGComponent>();
-                TargetActor = Volume;
-                break;
-            }
+    // Fallback: check PCGVolume actors specifically
+    if (!PCGComp) {
+        APCGVolume* Volume = FindPCGActorByNameOrLabel<APCGVolume>(World, ActorName);
+        if (Volume) {
+            PCGComp = Volume->FindComponentByClass<UPCGComponent>();
+            TargetActor = Volume;
         }
     }
 

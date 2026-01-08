@@ -59,7 +59,7 @@
 #define MCP_HAS_LEVEL_SEQUENCE_FACTORY 0
 #endif
 #include "UObject/Package.h"
-#include "UObject/SavePackage.h"
+// Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 #include "Misc/PackageName.h"
 
 // Spawnable
@@ -80,6 +80,22 @@
 
 // Exporter
 #include "Exporters/Exporter.h"
+
+// ============================================================================
+// Helper: O(N) → O(1) Actor Lookup by Name/Label using TActorIterator
+// ============================================================================
+namespace {
+  template<typename T>
+  T* FindSequencerActorByNameOrLabel(UWorld* World, const FString& NameOrLabel) {
+    if (!World || NameOrLabel.IsEmpty()) return nullptr;
+    for (TActorIterator<T> It(World); It; ++It) {
+      if (It->GetName() == NameOrLabel || It->GetActorLabel() == NameOrLabel) {
+        return *It;
+      }
+    }
+    return nullptr;
+  }
+}
 
 // Helper: Find existing binding for an object by iterating possessables
 // This avoids the deprecated FindBindingFromObject(UObject*, UObject*) API in UE 5.5+
@@ -392,15 +408,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
     
     UWorld* World = GetActiveWorld();
     if (World && !CameraActorName.IsEmpty()) {
-      AActor* FoundActor = nullptr;
-      for (TActorIterator<ACineCameraActor> It(World); It; ++It) {
-        if (It->GetName() == CameraActorName || It->GetActorLabel() == CameraActorName) {
-          FoundActor = *It;
-          break;
-        }
-      }
+      ACineCameraActor* CineCam = FindSequencerActorByNameOrLabel<ACineCameraActor>(World, CameraActorName);
       
-      if (ACineCameraActor* CineCam = Cast<ACineCameraActor>(FoundActor)) {
+      if (CineCam) {
         UCineCameraComponent* CineCameraComp = CineCam->GetCineCameraComponent();
         if (CineCameraComp) {
           double FocalLength, Aperture, SensorWidth, SensorHeight;
@@ -474,13 +484,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
       
       if (CameraCutTrack) {
         // Find camera actor and get/create binding
-        ACineCameraActor* CameraActor = nullptr;
-        for (TActorIterator<ACineCameraActor> It(World); It; ++It) {
-          if (It->GetName() == CameraActorName || It->GetActorLabel() == CameraActorName) {
-            CameraActor = *It;
-            break;
-          }
-        }
+        ACineCameraActor* CameraActor = FindSequencerActorByNameOrLabel<ACineCameraActor>(World, CameraActorName);
         
         if (CameraActor) {
           // Get or create binding for camera (using non-deprecated helper)
@@ -532,13 +536,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
     UWorld* World = GetActiveWorld();
     
     if (Sequence && World && !ActorName.IsEmpty()) {
-      AActor* TargetActor = nullptr;
-      for (TActorIterator<AActor> It(World); It; ++It) {
-        if (It->GetName() == ActorName || It->GetActorLabel() == ActorName) {
-          TargetActor = *It;
-          break;
-        }
-      }
+      AActor* TargetActor = FindSequencerActorByNameOrLabel<AActor>(World, ActorName);
       
       if (TargetActor) {
         UMovieScene* MovieScene = Sequence->GetMovieScene();

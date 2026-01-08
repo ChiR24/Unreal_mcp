@@ -39,6 +39,29 @@
 
 #endif // WITH_EDITOR
 
+// ============================================================================
+// Helper function for efficient actor lookup by label
+// Uses TActorIterator to avoid O(N) GetAllLevelActors()
+// ============================================================================
+namespace {
+#if WITH_EDITOR
+static AActor* FindActorByLabel(UWorld* World, const FString& ActorLabel)
+{
+    if (!World || ActorLabel.IsEmpty()) return nullptr;
+    
+    for (TActorIterator<AActor> It(World); It; ++It)
+    {
+        AActor* Actor = *It;
+        if (Actor && Actor->GetActorLabel().Equals(ActorLabel, ESearchCase::IgnoreCase))
+        {
+            return Actor;
+        }
+    }
+    return nullptr;
+}
+#endif
+} // namespace
+
 bool UMcpAutomationBridgeSubsystem::HandleWeatherAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -273,15 +296,10 @@ bool UMcpAutomationBridgeSubsystem::HandleWeatherAction(
     FString NiagaraSystemPath;
     Payload->TryGetStringField(TEXT("niagaraSystemPath"), NiagaraSystemPath);
 
-    // Find or spawn Niagara actor for rain
-    AActor *RainActor = nullptr;
-    for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-      if (!Actor) continue;
-      if (Actor->GetActorLabel().Equals(ActorName.IsEmpty() ? TEXT("RainParticles") : ActorName, ESearchCase::IgnoreCase)) {
-        RainActor = Actor;
-        break;
-      }
-    }
+    // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+    UWorld* World = GetActiveWorld();
+    FString SearchLabel = ActorName.IsEmpty() ? TEXT("RainParticles") : ActorName;
+    AActor* RainActor = FindActorByLabel(World, SearchLabel);
 
     if (!RainActor) {
       // Create new actor with Niagara component
@@ -386,15 +404,10 @@ bool UMcpAutomationBridgeSubsystem::HandleWeatherAction(
     FString NiagaraSystemPath;
     Payload->TryGetStringField(TEXT("niagaraSystemPath"), NiagaraSystemPath);
 
-    // Find or spawn Niagara actor for snow
-    AActor *SnowActor = nullptr;
-    for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-      if (!Actor) continue;
-      if (Actor->GetActorLabel().Equals(ActorName.IsEmpty() ? TEXT("SnowParticles") : ActorName, ESearchCase::IgnoreCase)) {
-        SnowActor = Actor;
-        break;
-      }
-    }
+    // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
+    UWorld* World = GetActiveWorld();
+    FString SearchLabel = ActorName.IsEmpty() ? TEXT("SnowParticles") : ActorName;
+    AActor* SnowActor = FindActorByLabel(World, SearchLabel);
 
     if (!SnowActor) {
       // Create new actor with Niagara component

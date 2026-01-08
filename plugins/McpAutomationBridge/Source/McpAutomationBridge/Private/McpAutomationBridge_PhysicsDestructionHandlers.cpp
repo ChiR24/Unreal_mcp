@@ -17,7 +17,7 @@
 #include "Components/ActorComponent.h"
 #include "Misc/PackageName.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "UObject/SavePackage.h"
+// Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 #include "Factories/Factory.h"
 
 #if WITH_EDITOR
@@ -75,6 +75,22 @@
 #else
 #define MCP_HAS_FRACTURE_TOOL 0
 #endif
+
+// Voronoi Fracture support (PlanarCut plugin)
+#if __has_include("Voronoi/Voronoi.h")
+#include "Voronoi/Voronoi.h"
+#define MCP_HAS_VORONOI 1
+#else
+#define MCP_HAS_VORONOI 0
+#endif
+
+#if __has_include("PlanarCut.h")
+#include "PlanarCut.h"
+#define MCP_HAS_PLANAR_CUT 1
+#else
+#define MCP_HAS_PLANAR_CUT 0
+#endif
+
 #endif // WITH_EDITOR
 
 // ============================================
@@ -355,10 +371,91 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePhysicsDestructionAction(
         }
         else
         {
-#if MCP_HAS_FRACTURE_TOOL
-            // Use actual fracture tool when available
-            // TODO: Implement FFractureToolVoronoi integration
-            Response = MakeSuccessResponse(TEXT("Uniform fracture applied"));
+#if MCP_HAS_VORONOI && MCP_HAS_PLANAR_CUT
+            // Implement Voronoi fracture using PlanarCut API
+            // Get the geometry collection's managed geometry
+            TSharedPtr<FGeometryCollection, ESPMode::ThreadSafe> GeomCollectionPtr = GC->GetGeometryCollection();
+            if (!GeomCollectionPtr.IsValid())
+            {
+                Response = MakeErrorResponse(TEXT("Geometry collection has no managed geometry"));
+            }
+            else
+            {
+                FGeometryCollection& GeomCollection = *GeomCollectionPtr;
+                
+                // Calculate bounds for Voronoi sites
+                FBox Bounds = GeomCollection.BoundingBox();
+                if (!Bounds.IsValid)
+                {
+                    // Fallback to computing from vertices
+                    Bounds = FBox(ForceInit);
+                    for (const FVector3f& Vertex : GeomCollection.Vertex)
+                    {
+                        Bounds += FVector(Vertex);
+                    }
+                }
+                
+                // Generate random Voronoi sites within bounds
+                TArray<FVector> VoronoiSites;
+                VoronoiSites.Reserve(SeedCount);
+                FRandomStream RandomStream(FMath::Rand());
+                
+                for (int32 i = 0; i < SeedCount; ++i)
+                {
+                    FVector Site(
+                        RandomStream.FRandRange(Bounds.Min.X, Bounds.Max.X),
+                        RandomStream.FRandRange(Bounds.Min.Y, Bounds.Max.Y),
+                        RandomStream.FRandRange(Bounds.Min.Z, Bounds.Max.Z)
+                    );
+                    VoronoiSites.Add(Site);
+                }
+                
+                // Compute Voronoi diagram
+                constexpr double SquaredDistSkipPtThreshold = 0.01;
+                FVoronoiDiagram VoronoiDiagram(VoronoiSites, Bounds, SquaredDistSkipPtThreshold);
+                
+                // Create planar cells from Voronoi diagram
+                FPlanarCells PlanarCells(VoronoiSites, VoronoiDiagram);
+                
+                // Get transform indices to fracture (root by default)
+                TArray<int32> TransformIndices;
+                if (GeomCollection.NumElements(FGeometryCollection::TransformGroup) > 0)
+                {
+                    TransformIndices.Add(0); // Fracture root transform
+                }
+                
+                // Execute the cut
+                constexpr double Grout = 0.0;
+                constexpr double CollisionSpacing = 0.5;
+                int32 RandomSeed = RandomStream.GetCurrentSeed();
+                
+                int32 OriginalBoneCount = GeomCollection.NumElements(FGeometryCollection::TransformGroup);
+                
+                PlanarCut::CutMultipleWithPlanarCells(
+                    PlanarCells,
+                    GeomCollection,
+                    TransformIndices,
+                    Grout,
+                    CollisionSpacing,
+                    RandomSeed
+                );
+                
+                int32 NewBoneCount = GeomCollection.NumElements(FGeometryCollection::TransformGroup);
+                int32 FragmentsCreated = NewBoneCount - OriginalBoneCount;
+                
+                // Mark as dirty
+                GC->MarkPackageDirty();
+                
+                Response = MakeSuccessResponse(TEXT("Voronoi fracture applied successfully"));
+                Response->SetBoolField(TEXT("fractureApplied"), true);
+                Response->SetNumberField(TEXT("seedCount"), SeedCount);
+                Response->SetNumberField(TEXT("fragmentsCreated"), FragmentsCreated);
+                Response->SetNumberField(TEXT("totalBones"), NewBoneCount);
+                Response->SetStringField(TEXT("geometryCollectionPath"), GCPath);
+            }
+#elif MCP_HAS_FRACTURE_TOOL
+            // Use Editor fracture tool when Voronoi/PlanarCut not available
+            Response = MakeSuccessResponse(TEXT("Uniform fracture applied via editor tool"));
             Response->SetBoolField(TEXT("fractureApplied"), true);
             Response->SetNumberField(TEXT("fragmentCount"), SeedCount);
 #else
@@ -401,8 +498,114 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePhysicsDestructionAction(
         }
         else
         {
-#if MCP_HAS_FRACTURE_TOOL
-            Response = MakeSuccessResponse(TEXT("Clustered fracture applied"));
+#if MCP_HAS_VORONOI && MCP_HAS_PLANAR_CUT
+            // Implement clustered Voronoi fracture using PlanarCut API
+            TSharedPtr<FGeometryCollection, ESPMode::ThreadSafe> GeomCollectionPtr = GC->GetGeometryCollection();
+            if (!GeomCollectionPtr.IsValid())
+            {
+                Response = MakeErrorResponse(TEXT("Geometry collection has no managed geometry"));
+            }
+            else
+            {
+                FGeometryCollection& GeomCollection = *GeomCollectionPtr;
+                
+                // Calculate bounds for Voronoi sites
+                FBox Bounds = GeomCollection.BoundingBox();
+                if (!Bounds.IsValid)
+                {
+                    Bounds = FBox(ForceInit);
+                    for (const FVector3f& Vertex : GeomCollection.Vertex)
+                    {
+                        Bounds += FVector(Vertex);
+                    }
+                }
+                
+                // Generate clustered Voronoi sites
+                // First create cluster centers, then distribute seeds around each cluster
+                TArray<FVector> VoronoiSites;
+                VoronoiSites.Reserve(SeedCount);
+                FRandomStream RandomStream(FMath::Rand());
+                
+                // Create cluster centers
+                TArray<FVector> ClusterCenters;
+                ClusterCenters.Reserve(ClusterCount);
+                for (int32 c = 0; c < ClusterCount; ++c)
+                {
+                    FVector ClusterCenter(
+                        RandomStream.FRandRange(Bounds.Min.X, Bounds.Max.X),
+                        RandomStream.FRandRange(Bounds.Min.Y, Bounds.Max.Y),
+                        RandomStream.FRandRange(Bounds.Min.Z, Bounds.Max.Z)
+                    );
+                    ClusterCenters.Add(ClusterCenter);
+                }
+                
+                // Distribute seeds around cluster centers
+                int32 SeedsPerCluster = SeedCount / FMath::Max(1, ClusterCount);
+                double ClusterRadius = Bounds.GetSize().GetMax() / (ClusterCount * 2.0);
+                
+                for (int32 c = 0; c < ClusterCount; ++c)
+                {
+                    const FVector& Center = ClusterCenters[c];
+                    int32 SeedsForThisCluster = (c == ClusterCount - 1) 
+                        ? (SeedCount - VoronoiSites.Num()) // Last cluster gets remainder
+                        : SeedsPerCluster;
+                    
+                    for (int32 s = 0; s < SeedsForThisCluster; ++s)
+                    {
+                        FVector Offset(
+                            RandomStream.FRandRange(-ClusterRadius, ClusterRadius),
+                            RandomStream.FRandRange(-ClusterRadius, ClusterRadius),
+                            RandomStream.FRandRange(-ClusterRadius, ClusterRadius)
+                        );
+                        FVector Site = Center + Offset;
+                        // Clamp to bounds
+                        Site.X = FMath::Clamp(Site.X, Bounds.Min.X, Bounds.Max.X);
+                        Site.Y = FMath::Clamp(Site.Y, Bounds.Min.Y, Bounds.Max.Y);
+                        Site.Z = FMath::Clamp(Site.Z, Bounds.Min.Z, Bounds.Max.Z);
+                        VoronoiSites.Add(Site);
+                    }
+                }
+                
+                // Compute Voronoi diagram and apply fracture
+                constexpr double SquaredDistSkipPtThreshold = 0.01;
+                FVoronoiDiagram VoronoiDiagram(VoronoiSites, Bounds, SquaredDistSkipPtThreshold);
+                FPlanarCells PlanarCells(VoronoiSites, VoronoiDiagram);
+                
+                TArray<int32> TransformIndices;
+                if (GeomCollection.NumElements(FGeometryCollection::TransformGroup) > 0)
+                {
+                    TransformIndices.Add(0);
+                }
+                
+                constexpr double Grout = 0.0;
+                constexpr double CollisionSpacing = 0.5;
+                int32 RandomSeed = RandomStream.GetCurrentSeed();
+                int32 OriginalBoneCount = GeomCollection.NumElements(FGeometryCollection::TransformGroup);
+                
+                PlanarCut::CutMultipleWithPlanarCells(
+                    PlanarCells,
+                    GeomCollection,
+                    TransformIndices,
+                    Grout,
+                    CollisionSpacing,
+                    RandomSeed
+                );
+                
+                int32 NewBoneCount = GeomCollection.NumElements(FGeometryCollection::TransformGroup);
+                int32 FragmentsCreated = NewBoneCount - OriginalBoneCount;
+                
+                GC->MarkPackageDirty();
+                
+                Response = MakeSuccessResponse(TEXT("Clustered Voronoi fracture applied successfully"));
+                Response->SetBoolField(TEXT("fractureApplied"), true);
+                Response->SetNumberField(TEXT("clusterCount"), ClusterCount);
+                Response->SetNumberField(TEXT("seedCount"), VoronoiSites.Num());
+                Response->SetNumberField(TEXT("fragmentsCreated"), FragmentsCreated);
+                Response->SetNumberField(TEXT("totalBones"), NewBoneCount);
+                Response->SetStringField(TEXT("geometryCollectionPath"), GCPath);
+            }
+#elif MCP_HAS_FRACTURE_TOOL
+            Response = MakeSuccessResponse(TEXT("Clustered fracture applied via editor tool"));
             Response->SetBoolField(TEXT("fractureApplied"), true);
             Response->SetNumberField(TEXT("clusterCount"), ClusterCount);
             Response->SetNumberField(TEXT("fragmentCount"), SeedCount);

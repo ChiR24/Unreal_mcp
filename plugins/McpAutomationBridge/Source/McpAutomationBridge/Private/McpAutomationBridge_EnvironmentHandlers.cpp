@@ -46,6 +46,41 @@
 // SkyAtmosphere/ExponentialHeightFog/VolumetricCloud actors - use forward declaration + class lookup
 // These actor headers may not exist in all engine versions
 
+// ============================================================================
+// Helper functions for efficient environment actor lookups
+// Uses component-based TActorIterator to avoid O(N) GetAllLevelActors()
+// ============================================================================
+namespace {
+// Find actor with a specific component type, optionally filtered by name
+template<typename ComponentType>
+AActor* FindActorWithComponent(UWorld* World, const FString& ActorName)
+{
+    if (!World) return nullptr;
+    
+    for (TActorIterator<AActor> It(World); It; ++It)
+    {
+        AActor* Actor = *It;
+        if (!Actor) continue;
+        
+        // Check if actor has the component type
+        if (ComponentType* Comp = Actor->FindComponentByClass<ComponentType>())
+        {
+            // If no name filter, return first match
+            if (ActorName.IsEmpty())
+            {
+                return Actor;
+            }
+            // If name filter matches, return this actor
+            if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
+            {
+                return Actor;
+            }
+        }
+    }
+    return nullptr;
+}
+} // namespace
+
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
@@ -389,18 +424,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         ErrorCode = TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING");
         Resp->SetStringField(TEXT("error"), Message);
       } else {
-        // Find existing SkyAtmosphere actor (optionally filtered by name)
-        AActor *SkyAtmosphereActor = nullptr;
-        for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-          if (!Actor) continue;
-          FString ClassName = Actor->GetClass()->GetName();
-          // Must be SkyAtmosphere class AND match name if specified
-          if (ClassName.Contains(TEXT("SkyAtmosphere")) &&
-              (ActorName.IsEmpty() || Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))) {
-            SkyAtmosphereActor = Actor;
-            break;
-          }
-        }
+        // Use optimized component-based TActorIterator lookup instead of O(N) GetAllLevelActors()
+        UWorld* World = GetActiveWorld();
+        AActor* SkyAtmosphereActor = FindActorWithComponent<USkyAtmosphereComponent>(World, ActorName);
 
         if (!SkyAtmosphereActor) {
           // Spawn new SkyAtmosphere if not found
@@ -577,18 +603,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         ErrorCode = TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING");
         Resp->SetStringField(TEXT("error"), Message);
       } else {
-        // Find existing ExponentialHeightFog actor (optionally filtered by name)
-        AActor *FogActor = nullptr;
-        for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-          if (!Actor) continue;
-          FString ClassName = Actor->GetClass()->GetName();
-          // Must be ExponentialHeightFog class AND match name if specified
-          if (ClassName.Contains(TEXT("ExponentialHeightFog")) &&
-              (ActorName.IsEmpty() || Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))) {
-            FogActor = Actor;
-            break;
-          }
-        }
+        // Use optimized component-based TActorIterator lookup instead of O(N) GetAllLevelActors()
+        UWorld* World = GetActiveWorld();
+        AActor* FogActor = FindActorWithComponent<UExponentialHeightFogComponent>(World, ActorName);
 
         if (!FogActor) {
           // Spawn new ExponentialHeightFog if not found
@@ -831,18 +848,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         ErrorCode = TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING");
         Resp->SetStringField(TEXT("error"), Message);
       } else {
-        // Find existing VolumetricCloud actor (optionally filtered by name)
-        AActor *CloudActor = nullptr;
-        for (AActor *Actor : ActorSS->GetAllLevelActors()) {
-          if (!Actor) continue;
-          FString ClassName = Actor->GetClass()->GetName();
-          // Must be VolumetricCloud class AND match name if specified
-          if (ClassName.Contains(TEXT("VolumetricCloud")) &&
-              (ActorName.IsEmpty() || Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))) {
-            CloudActor = Actor;
-            break;
-          }
-        }
+        // Use optimized component-based TActorIterator lookup instead of O(N) GetAllLevelActors()
+        UWorld* World = GetActiveWorld();
+        AActor* CloudActor = FindActorWithComponent<UVolumetricCloudComponent>(World, ActorName);
 
         if (!CloudActor) {
           // Spawn new VolumetricCloud if not found

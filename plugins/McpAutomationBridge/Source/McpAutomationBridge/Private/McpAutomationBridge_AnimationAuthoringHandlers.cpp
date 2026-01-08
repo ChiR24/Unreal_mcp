@@ -30,7 +30,7 @@
 #include "Factories/AnimMontageFactory.h"
 #include "Factories/AnimBlueprintFactory.h"
 #include "EditorAssetLibrary.h"
-#include "UObject/SavePackage.h"
+// Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 #include "Misc/PackageName.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 

@@ -126,7 +126,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 #include "UObject/MetaData.h"
 #include "UObject/ObjectRedirector.h"
 #include "UObject/Package.h"
-#include "UObject/SavePackage.h"
+// Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 
 #endif
 

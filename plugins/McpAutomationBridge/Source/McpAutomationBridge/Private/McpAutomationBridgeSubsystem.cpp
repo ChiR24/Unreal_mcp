@@ -1146,6 +1146,28 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageModdingAction(R, A, P, S);
                   });
+
+  // Animation & Physics actions (direct access to top-level handlers)
+  RegisterHandler(TEXT("animation_physics"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleAnimationPhysicsAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("play_anim_montage"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandlePlayAnimMontage(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("setup_ragdoll"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleSetupRagdoll(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

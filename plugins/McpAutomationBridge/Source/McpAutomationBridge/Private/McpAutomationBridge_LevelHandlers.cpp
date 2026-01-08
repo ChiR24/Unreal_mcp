@@ -154,6 +154,89 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       EffectiveAction = TEXT("import_level");
     } else if (LowerSub == TEXT("add_sublevel")) {
       EffectiveAction = TEXT("add_sublevel");
+    } else if (LowerSub == TEXT("delete")) {
+      // Handle level deletion
+      const TArray<TSharedPtr<FJsonValue>>* LevelPathsArray = nullptr;
+      FString SingleLevelPath;
+      TArray<FString> LevelPaths;
+      
+      if (Payload->TryGetArrayField(TEXT("levelPaths"), LevelPathsArray)) {
+        for (const auto& Val : *LevelPathsArray) {
+          FString PathStr;
+          if (Val->TryGetString(PathStr) && !PathStr.IsEmpty()) {
+            LevelPaths.Add(PathStr);
+          }
+        }
+      } else if (Payload->TryGetStringField(TEXT("levelPath"), SingleLevelPath) && !SingleLevelPath.IsEmpty()) {
+        LevelPaths.Add(SingleLevelPath);
+      }
+      
+      if (LevelPaths.Num() == 0) {
+        SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("levelPath or levelPaths required for delete"),
+                           TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
+      
+#if WITH_EDITOR
+      TArray<FString> DeletedLevels;
+      TArray<FString> FailedLevels;
+      
+      for (const FString& LevelPath : LevelPaths) {
+        // Normalize path to package name
+        FString PackagePath = LevelPath;
+        if (!PackagePath.StartsWith(TEXT("/"))) {
+          PackagePath = FString::Printf(TEXT("/Game/Maps/%s"), *LevelPath);
+        }
+        
+        // Check if package exists
+        if (!FPackageName::DoesPackageExist(PackagePath)) {
+          FailedLevels.Add(FString::Printf(TEXT("%s (not found)"), *LevelPath));
+          continue;
+        }
+        
+        // Use UEditorAssetLibrary to delete the level asset
+        bool bDeleted = UEditorAssetLibrary::DeleteAsset(PackagePath);
+        if (bDeleted) {
+          DeletedLevels.Add(LevelPath);
+        } else {
+          FailedLevels.Add(FString::Printf(TEXT("%s (delete failed)"), *LevelPath));
+        }
+      }
+      
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      
+      TArray<TSharedPtr<FJsonValue>> DeletedArr;
+      for (const FString& D : DeletedLevels) {
+        DeletedArr.Add(MakeShared<FJsonValueString>(D));
+      }
+      Resp->SetArrayField(TEXT("deleted"), DeletedArr);
+      
+      if (FailedLevels.Num() > 0) {
+        TArray<TSharedPtr<FJsonValue>> FailedArr;
+        for (const FString& F : FailedLevels) {
+          FailedArr.Add(MakeShared<FJsonValueString>(F));
+        }
+        Resp->SetArrayField(TEXT("failed"), FailedArr);
+      }
+      
+      Resp->SetNumberField(TEXT("deletedCount"), DeletedLevels.Num());
+      
+      if (DeletedLevels.Num() > 0) {
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                              FString::Printf(TEXT("Deleted %d level(s)"), DeletedLevels.Num()),
+                              Resp, FString());
+      } else {
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                              TEXT("No levels deleted"), Resp, TEXT("DELETE_FAILED"));
+      }
+      return true;
+#else
+      SendAutomationError(RequestingSocket, RequestId,
+                         TEXT("Level deletion requires editor"),
+                         TEXT("EDITOR_REQUIRED"));
+      return true;
+#endif
     } else {
       SendAutomationError(
           RequestingSocket, RequestId,

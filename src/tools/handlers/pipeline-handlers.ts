@@ -6,6 +6,42 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
+/**
+ * Validates that a project path is safe and exists.
+ * Prevents directory traversal attacks.
+ */
+function validateProjectPath(projectPath: string): { ok: true; normalized: string } | { ok: false; error: string } {
+  if (!projectPath || typeof projectPath !== 'string') {
+    return { ok: false, error: 'Project path must be a non-empty string' };
+  }
+
+  // Normalize path separators
+  const normalized = path.normalize(projectPath);
+
+  // Check for directory traversal attempts
+  if (normalized.includes('..')) {
+    return { ok: false, error: 'Directory traversal (..) is not allowed in project path' };
+  }
+
+  // Verify it's an absolute path
+  if (!path.isAbsolute(normalized)) {
+    return { ok: false, error: 'Project path must be an absolute path' };
+  }
+
+  // Verify the path exists
+  if (!fs.existsSync(normalized)) {
+    return { ok: false, error: `Project path does not exist: ${normalized}` };
+  }
+
+  // Verify it's a directory (unless it's a .uproject file)
+  const stats = fs.statSync(normalized);
+  if (!stats.isDirectory() && !normalized.endsWith('.uproject')) {
+    return { ok: false, error: 'Project path must be a directory or .uproject file' };
+  }
+
+  return { ok: true, normalized };
+}
+
 function validateUbtArgumentsString(extraArgs: string): { ok: true } | { ok: false; error: string } {
   if (!extraArgs || typeof extraArgs !== 'string') {
     return { ok: true };
@@ -99,7 +135,16 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
 
       let projectPath = process.env.UE_PROJECT_PATH;
       if (!projectPath && args.projectPath) {
-        projectPath = args.projectPath;
+        // Validate user-provided path to prevent directory traversal
+        const pathValidation = validateProjectPath(args.projectPath);
+        if (!pathValidation.ok) {
+          return cleanObject({
+            success: false,
+            error: 'INVALID_ARGUMENT',
+            message: pathValidation.error
+          });
+        }
+        projectPath = pathValidation.normalized;
       }
 
       if (!projectPath) {

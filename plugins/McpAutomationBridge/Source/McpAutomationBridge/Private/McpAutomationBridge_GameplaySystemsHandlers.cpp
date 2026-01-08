@@ -43,7 +43,7 @@
 // Asset creation
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "UObject/Package.h"
-#include "UObject/SavePackage.h"
+// Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 #include "Factories/DataAssetFactory.h"
 #include "Engine/DataAsset.h"
 
