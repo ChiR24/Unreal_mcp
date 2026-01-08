@@ -12,6 +12,10 @@
 #include "GameFramework/Actor.h"
 #include "Kismet/GameplayStatics.h"
 
+#if WITH_EDITOR
+#include "Editor.h"
+#endif
+
 // Conditional XR plugin includes
 #if __has_include("HeadMountedDisplayFunctionLibrary.h")
 #include "HeadMountedDisplayFunctionLibrary.h"
@@ -199,10 +203,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
       XR_ERROR_RESPONSE("Missing trackingOrigin parameter");
     }
     
-    EHMDTrackingOrigin::Type TrackingOrigin = EHMDTrackingOrigin::Eye;
-    if (Origin == TEXT("floor"))
+    // UE 5.7 uses Local (was Eye), LocalFloor (was Floor), Stage
+    EHMDTrackingOrigin::Type TrackingOrigin = EHMDTrackingOrigin::Local;
+    if (Origin == TEXT("floor") || Origin == TEXT("localfloor"))
     {
-      TrackingOrigin = EHMDTrackingOrigin::Floor;
+      TrackingOrigin = EHMDTrackingOrigin::LocalFloor;
     }
     else if (Origin == TEXT("stage"))
     {
@@ -223,8 +228,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
     Result->SetBoolField(TEXT("success"), true);
     
     EHMDTrackingOrigin::Type Origin = UHeadMountedDisplayFunctionLibrary::GetTrackingOrigin();
-    FString OriginStr = TEXT("eye");
-    if (Origin == EHMDTrackingOrigin::Floor)
+    FString OriginStr = TEXT("local"); // Was "eye" in older UE versions
+    if (Origin == EHMDTrackingOrigin::LocalFloor)
     {
       OriginStr = TEXT("floor");
     }
@@ -331,6 +336,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
     
     // Use SetHapticsByValue instead of PlayHapticEffect with nullptr
     // PlayHapticEffect requires a valid UHapticFeedbackEffect_Base*
+#if WITH_EDITOR
     if (GEditor)
     {
       UWorld* World = GEditor->GetEditorWorldContext().World();
@@ -339,6 +345,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
         PC->SetHapticsByValue(Amplitude * Frequency, Amplitude, Hand);
       }
     }
+#endif
     XR_SUCCESS_RESPONSE("Haptic feedback triggered");
 #else
     XR_NOT_AVAILABLE("HMD");
@@ -353,6 +360,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
     EControllerHand Hand = Controller == TEXT("left") ? EControllerHand::Left : EControllerHand::Right;
     
     // Use SetHapticsByValue with zero to stop haptics
+#if WITH_EDITOR
     if (GEditor)
     {
       UWorld* World = GEditor->GetEditorWorldContext().World();
@@ -361,6 +369,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
         PC->StopHapticEffect(Hand);
       }
     }
+#endif
     XR_SUCCESS_RESPONSE("Haptic feedback stopped");
 #else
     XR_NOT_AVAILABLE("HMD");
@@ -525,7 +534,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
       IHeadMountedDisplay* HMD = GEngine->XRSystem->GetHMDDevice();
       if (HMD)
       {
-        HMD->GetIdealRenderTargetSize(Width, Height);
+        // UE 5.7: GetIdealRenderTargetSize now returns FIntPoint instead of out params
+        FIntPoint RenderSize = HMD->GetIdealRenderTargetSize();
+        Width = RenderSize.X;
+        Height = RenderSize.Y;
       }
     }
 #endif

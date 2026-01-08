@@ -17,6 +17,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Components/ActorComponent.h"
 #include "Components/AudioComponent.h"
+#include "Sound/SoundWave.h"
 
 // ============================================
 // Conditional Plugin Includes - Convai
@@ -189,7 +190,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
     if (VoiceType.IsEmpty()) VoiceType = TEXT("Male");
 
     // Find or create target actor
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -253,7 +254,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing backstory parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -308,7 +309,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -353,7 +354,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -390,7 +391,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -429,7 +430,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -468,7 +469,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing message or textInput parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -537,7 +538,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -570,7 +571,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -650,7 +651,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -772,7 +773,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -803,7 +804,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -832,7 +833,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing message parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -862,7 +863,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -904,7 +905,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -941,7 +942,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing eventName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -1039,7 +1040,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
 
     FString SoundWavePath = Payload->GetStringField(TEXT("soundWavePath"));
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -1091,7 +1092,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -1129,7 +1130,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -1165,7 +1166,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -1203,7 +1204,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
 
     if (!ActorName.IsEmpty())
     {
-      AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
       if (TargetActor)
       {
         UACEAudioCurveSourceComponent* ACEComp = TargetActor->FindComponentByClass<UACEAudioCurveSourceComponent>();
@@ -1238,7 +1239,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));
@@ -1312,7 +1313,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       AINPC_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       AINPC_ERROR_RESPONSE(FString::Printf(TEXT("Actor '%s' not found"), *ActorName));

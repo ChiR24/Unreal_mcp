@@ -43,8 +43,6 @@ import { handleVolumeTools } from './handlers/volume-handlers.js';
 import { handleNavigationTools } from './handlers/navigation-handlers.js';
 import { handleSplineTools } from './handlers/spline-handlers.js';
 import { handlePCGTools } from './handlers/pcg-handlers.js';
-import { handleWaterTools } from './handlers/water-handlers.js';
-import { handleWeatherTools } from './handlers/weather-handlers.js';
 import { handlePostProcessTools } from './handlers/post-process-handlers.js';
 import { handleSequencerTools } from './handlers/sequencer-handlers.js';
 import { handleMovieRenderTools } from './handlers/movie-render-handlers.js';
@@ -80,6 +78,11 @@ interface DeprecationFlags {
   __audioAuthoringDeprecationLogged?: boolean;
   __niagaraAuthoringDeprecationLogged?: boolean;
   __animationAuthoringDeprecationLogged?: boolean;
+  __sequencerDeprecationLogged?: boolean;
+  __movieRenderDeprecationLogged?: boolean;
+  __levelStructureDeprecationLogged?: boolean;
+  __waterDeprecationLogged?: boolean;
+  __weatherDeprecationLogged?: boolean;
 }
 
 const MATERIAL_GRAPH_ACTION_MAP: Record<string, string> = {
@@ -153,10 +156,8 @@ function normalizeToolCall(
     normalizedName = 'system_control';
     action = 'console_command';
   }
-  if (normalizedName === 'manage_pipeline') {
-    normalizedName = 'system_control';
-    action = 'run_ubt';
-  }
+  // manage_pipeline is a standalone tool - do NOT reroute to system_control
+  // It has its own actions: list_categories, set_categories, get_status
   if (normalizedName === 'manage_tests') {
     normalizedName = 'system_control';
     action = 'run_tests';
@@ -238,12 +239,23 @@ function registerDefaultHandlers() {
     return await handleEditorTools(action, args, tools);
   });
 
-  // 5. LEVEL MANAGER
+  // 5. LEVEL MANAGER (consolidated: includes manage_level_structure - Phase 54)
+  const LEVEL_STRUCTURE_ACTIONS = new Set([
+    'create_sublevel', 'configure_level_streaming', 'set_streaming_distance', 'configure_level_bounds',
+    'enable_world_partition', 'configure_grid_size', 'create_data_layer', 'assign_actor_to_data_layer',
+    'configure_hlod_layer', 'create_minimap_volume', 'open_level_blueprint', 'add_level_blueprint_node',
+    'connect_level_blueprint_nodes', 'create_level_instance', 'create_packed_level_actor', 'get_level_structure_info'
+  ]);
   toolRegistry.register('manage_level', async (args, tools) => {
     const action = getAction(args);
+    // Route World Partition actions
     if (['load_cells', 'set_datalayer'].includes(action)) {
       const payload = { ...args, subAction: action };
       return cleanObject(await executeAutomationRequest(tools, 'manage_world_partition', payload, 'Automation bridge not available'));
+    }
+    // Route level structure actions (merged from manage_level_structure - Phase 54)
+    if (LEVEL_STRUCTURE_ACTIONS.has(action)) {
+      return await handleLevelStructureTools(action, args, tools);
     }
     return await handleLevelTools(action, args, tools);
   });
@@ -312,8 +324,26 @@ function registerDefaultHandlers() {
     return await handleEffectTools(action, args, tools);
   });
 
-  // 8. ENVIRONMENT BUILDER
-  toolRegistry.register('build_environment', async (args, tools) => await handleEnvironmentTools(getAction(args), args, tools));
+  // 8. ENVIRONMENT BUILDER (consolidated: includes manage_water + manage_weather - Phase 54)
+  // Water actions merged from manage_water (Phase 54) - kept for documentation
+  const _WATER_ACTIONS = new Set([
+    'create_water_body_ocean', 'create_water_body_lake', 'create_water_body_river',
+    'configure_water_body', 'configure_water_waves', 'get_water_body_info', 'list_water_bodies',
+    'set_river_depth', 'set_ocean_extent', 'set_water_static_mesh', 'set_river_transitions',
+    'set_water_zone', 'get_water_surface_info', 'get_wave_info'
+  ]);
+  // Weather actions merged from manage_weather (Phase 54) - kept for documentation
+  const _WEATHER_ACTIONS = new Set([
+    'configure_wind', 'create_weather_system',
+    'configure_rain_particles', 'configure_snow_particles', 'configure_lightning'
+  ]);
+  // Suppress unused variable warnings (these are documentation-only)
+  void _WATER_ACTIONS; void _WEATHER_ACTIONS;
+  // All water/weather/environment actions route to the same handler.
+  // Action sets (WATER_ACTIONS, WEATHER_ACTIONS) defined above for documentation purposes.
+  toolRegistry.register('build_environment', async (args, tools) => {
+    return await handleEnvironmentTools(getAction(args), args, tools);
+  });
 
   // 9. SYSTEM CONTROL
   toolRegistry.register('system_control', async (args, tools) => {
@@ -330,8 +360,38 @@ function registerDefaultHandlers() {
     return await handleSystemTools(action, args, tools);
   });
 
-  // 10. SEQUENCER
-  toolRegistry.register('manage_sequence', async (args, tools) => await handleSequenceTools(getAction(args), args, tools));
+// 10. SEQUENCER (consolidated: includes manage_sequencer + manage_movie_render - Phase 54)
+  const MOVIE_RENDER_ACTIONS = new Set([
+    'create_queue', 'add_job', 'remove_job', 'clear_queue', 'get_queue', 'configure_job', 'set_sequence', 'set_map',
+    'configure_output', 'set_resolution', 'set_frame_rate', 'set_output_directory', 'set_file_name_format',
+    'add_render_pass', 'remove_render_pass', 'get_render_passes', 'configure_render_pass',
+    'configure_anti_aliasing', 'set_spatial_sample_count', 'set_temporal_sample_count',
+    'add_burn_in', 'remove_burn_in', 'configure_burn_in',
+    'start_render', 'stop_render', 'get_render_status', 'get_render_progress',
+    'add_console_variable', 'remove_console_variable', 'configure_high_res_settings', 'set_tile_count'
+  ]);
+  const SEQUENCER_ACTIONS = new Set([
+    'create_master_sequence', 'add_subsequence', 'remove_subsequence', 'get_subsequences',
+    'add_shot_track', 'add_shot', 'remove_shot', 'get_shots',
+    'create_cine_camera_actor', 'configure_camera_settings', 'add_camera_cut_track', 'add_camera_cut',
+    'bind_actor', 'unbind_actor', 'remove_section', 'get_tracks',
+    'remove_keyframe', 'get_keyframes', 'set_playback_range', 'get_playback_range', 'get_sequence_info',
+    'play_sequence', 'pause_sequence', 'stop_sequence', 'scrub_to_time',
+    'list_sequences', 'duplicate_sequence', 'delete_sequence', 'export_sequence'
+  ]);
+  toolRegistry.register('manage_sequence', async (args, tools) => {
+    const action = getAction(args);
+    // Route MRQ actions to movie render handler
+    if (MOVIE_RENDER_ACTIONS.has(action)) {
+      return await handleMovieRenderTools(action, args, tools);
+    }
+    // Route advanced sequencer actions to sequencer handler
+    if (SEQUENCER_ACTIONS.has(action)) {
+      return await handleSequencerTools(action, args, tools);
+    }
+    // Default: core sequence operations
+    return await handleSequenceTools(action, args, tools);
+  });
 
   // 11. INTROSPECTION
   toolRegistry.register('inspect', async (args, tools) => await handleInspectTools(getAction(args), args, tools));
@@ -462,8 +522,17 @@ function registerDefaultHandlers() {
   // 36. SESSIONS & LOCAL MULTIPLAYER (Phase 22)
   toolRegistry.register('manage_sessions', async (args, tools) => await handleSessionsTools(getAction(args), args, tools));
 
-  // 37. LEVEL STRUCTURE (Phase 23)
-  toolRegistry.register('manage_level_structure', async (args, tools) => await handleLevelStructureTools(getAction(args), args, tools));
+  // 37. [DEPRECATED] LEVEL STRUCTURE - now merged into manage_level (Phase 54)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_level_structure', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__levelStructureDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_level_structure is deprecated and merged into manage_level. Use manage_level instead.');
+      globalObj.__levelStructureDeprecationLogged = true;
+    }
+    return await handleLevelStructureTools(getAction(args), args, tools);
+  });
 
   // 38. VOLUMES & ZONES (Phase 24)
   toolRegistry.register('manage_volumes', async (args, tools) => await handleVolumeTools(getAction(args), args, tools));
@@ -477,20 +546,56 @@ function registerDefaultHandlers() {
   // 41. PCG FRAMEWORK (Phase 27)
   toolRegistry.register('manage_pcg', async (args, tools) => await handlePCGTools(getAction(args), args, tools));
 
-  // 42. WATER SYSTEM (Phase 28)
-  toolRegistry.register('manage_water', async (args, tools) => await handleWaterTools(getAction(args), args, tools));
+  // 42. [DEPRECATED] WATER SYSTEM - now merged into build_environment (Phase 54)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_water', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__waterDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_water is deprecated and merged into build_environment. Use build_environment instead.');
+      globalObj.__waterDeprecationLogged = true;
+    }
+    return await handleEnvironmentTools(getAction(args), args, tools);
+  });
 
-  // 43. WEATHER SYSTEM (Phase 28)
-  toolRegistry.register('manage_weather', async (args, tools) => await handleWeatherTools(getAction(args), args, tools));
+  // 43. [DEPRECATED] WEATHER SYSTEM - now merged into build_environment (Phase 54)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_weather', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__weatherDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_weather is deprecated and merged into build_environment. Use build_environment instead.');
+      globalObj.__weatherDeprecationLogged = true;
+    }
+    return await handleEnvironmentTools(getAction(args), args, tools);
+  });
 
   // 44. POST-PROCESS & RENDERING SYSTEM (Phase 29)
   toolRegistry.register('manage_post_process', async (args, tools) => await handlePostProcessTools(getAction(args), args, tools));
 
-  // 45. SEQUENCER (Phase 30 - Cinematics & Media)
-  toolRegistry.register('manage_sequencer', async (args, tools) => await handleSequencerTools(getAction(args), args, tools));
+  // 45. [DEPRECATED] SEQUENCER - now merged into manage_sequence (Phase 54)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_sequencer', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__sequencerDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_sequencer is deprecated and merged into manage_sequence. Use manage_sequence instead.');
+      globalObj.__sequencerDeprecationLogged = true;
+    }
+    return await handleSequencerTools(getAction(args), args, tools);
+  });
 
-  // 46. MOVIE RENDER QUEUE (Phase 30 - Cinematics & Media)
-  toolRegistry.register('manage_movie_render', async (args, tools) => await handleMovieRenderTools(getAction(args), args, tools));
+  // 46. [DEPRECATED] MOVIE RENDER QUEUE - now merged into manage_sequence (Phase 54)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_movie_render', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__movieRenderDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_movie_render is deprecated and merged into manage_sequence. Use manage_sequence instead.');
+      globalObj.__movieRenderDeprecationLogged = true;
+    }
+    return await handleMovieRenderTools(getAction(args), args, tools);
+  });
 
   // 47. MEDIA FRAMEWORK (Phase 30 - Cinematics & Media)
   toolRegistry.register('manage_media', async (args, tools) => await handleMediaTools(getAction(args), args, tools));
@@ -542,6 +647,9 @@ function registerDefaultHandlers() {
 
   // 63. MODDING & UGC SYSTEM (Phase 46)
   toolRegistry.register('manage_modding', async (args, tools) => await handleModdingTools(getAction(args), args, tools));
+
+  // 64. PIPELINE MANAGEMENT
+  toolRegistry.register('manage_pipeline', async (args, tools) => await handlePipelineTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

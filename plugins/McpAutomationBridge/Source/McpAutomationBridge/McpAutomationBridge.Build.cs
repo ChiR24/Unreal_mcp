@@ -92,7 +92,13 @@ public class McpAutomationBridge : ModuleRules
                 // Phase 6: Geometry Script (GeometryScripting plugin dependency in .uplugin ensures availability)
                 "GeometryCore", "GeometryScriptingCore", "GeometryScriptingEditor", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription",
                 // Phase 24: Navigation volumes
-                "NavigationSystem"
+                "NavigationSystem",
+                // Phase 44: Chaos Physics & Destruction
+                "FieldSystemEngine", "GeometryCollectionEngine",
+                // Phase 46: Modding & UGC
+                "PakFile",
+                // Phase 37: Interchange Framework (Runtime/Interchange/Engine)
+                "InterchangeCore", "InterchangeEngine"
             });
 
             // --- Feature Detection Logic ---
@@ -125,144 +131,94 @@ public class McpAutomationBridge : ModuleRules
             TryAddConditionalModule(Target, EngineDir, "PCG", "PCG");
             TryAddConditionalModule(Target, EngineDir, "PCGEditor", "PCGEditor");
 
-            // Phase 28: Water Plugin (conditional - experimental plugin)
-            TryAddConditionalModule(Target, EngineDir, "Water", "Water");
-            TryAddConditionalModule(Target, EngineDir, "WaterEditor", "WaterEditor");
+            // ============================================================================
+            // OPTIONAL PLUGIN MODULES - DEFINE MACROS ONLY, NO LINK-TIME DEPENDENCIES
+            // ============================================================================
+            // These modules may exist in the engine but NOT be enabled in the current project.
+            // Adding them as dependencies would cause DLL load failures at runtime.
+            // Instead, we only define compile-time macros and use __has_include() in C++.
+            // ============================================================================
 
-            // Phase 30: Movie Render Pipeline (conditional - for cinematics/rendering)
-            TryAddConditionalModule(Target, EngineDir, "MovieRenderPipelineCore", "MovieRenderPipelineCore");
-            TryAddConditionalModule(Target, EngineDir, "MovieRenderPipelineSettings", "MovieRenderPipelineSettings");
-            TryAddConditionalModule(Target, EngineDir, "MovieRenderPipelineRenderPasses", "MovieRenderPipelineRenderPasses");
+            // Phase 28: Water Plugin (experimental)
+            DefineOptionalPluginMacro(EngineDir, "Water", "MCP_HAS_WATER");
 
-            // Phase 30: Media Framework
+            // Phase 30: Movie Render Pipeline (usually enabled, but still optional)
+            DefineOptionalPluginMacro(EngineDir, "MovieRenderPipelineCore", "MCP_HAS_MOVIE_RENDER_PIPELINE");
+
+            // Phase 30: Media Framework (built-in, safe to add)
             TryAddConditionalModule(Target, EngineDir, "MediaAssets", "MediaAssets");
 
             // Phase 36: Character & Avatar Plugins
-            // Groom/HairStrands (conditional - requires HairStrands plugin)
-            TryAddConditionalModule(Target, EngineDir, "HairStrandsCore", "HairStrandsCore");
-            TryAddConditionalModule(Target, EngineDir, "HairStrandsEditor", "HairStrandsEditor");
-            // Note: Niagara is already added as a public dependency on line 67, no duplicate needed
-            // Mutable/Customizable (conditional - requires Mutable plugin)
-            TryAddConditionalModule(Target, EngineDir, "MutableRuntime", "MutableRuntime");
-            TryAddConditionalModule(Target, EngineDir, "MutableTools", "MutableTools");
+            DefineOptionalPluginMacro(EngineDir, "HairStrandsCore", "MCP_HAS_GROOM");
+            DefineOptionalPluginMacro(EngineDir, "MutableRuntime", "MCP_HAS_MUTABLE");
 
             // Phase 37: Asset & Content Plugins
-            // Interchange Framework (built-in for UE 5.0+)
-            TryAddConditionalModule(Target, EngineDir, "InterchangeCore", "InterchangeCore");
-            TryAddConditionalModule(Target, EngineDir, "InterchangeEngine", "InterchangeEngine");
-            TryAddConditionalModule(Target, EngineDir, "InterchangeNodes", "InterchangeNodes");
-            TryAddConditionalModule(Target, EngineDir, "InterchangePipelines", "InterchangePipelines");
-            // USD (built-in plugin) - Module names match directory names
-            TryAddConditionalModule(Target, EngineDir, "USDClasses", "USDClasses");
-            TryAddConditionalModule(Target, EngineDir, "USDStage", "USDStage");
-            TryAddConditionalModule(Target, EngineDir, "USDStageEditor", "USDStageEditor");
-            TryAddConditionalModule(Target, EngineDir, "USDSchemas", "USDSchemas");
-            TryAddConditionalModule(Target, EngineDir, "USDExporter", "USDExporter");
-            // Note: No USDImporter module - it's a plugin folder, not a module
-            // Alembic (built-in plugin)
-            TryAddConditionalModule(Target, EngineDir, "AlembicLibrary", "AlembicLibrary");
-            // Note: No AlembicImporter module - functionality is in AlembicLibrary
-            // glTF (built-in Enterprise plugin)
-            TryAddConditionalModule(Target, EngineDir, "GLTFExporter", "GLTFExporter");
-            TryAddConditionalModule(Target, EngineDir, "GLTFCore", "GLTFCore");
-            // Datasmith (built-in Enterprise plugin)
-            TryAddConditionalModule(Target, EngineDir, "DatasmithCore", "DatasmithCore");
-            TryAddConditionalModule(Target, EngineDir, "DatasmithContent", "DatasmithContent");
-            // Note: DatasmithTranslator, DatasmithImporter, DatasmithExporter may not exist as separate modules
-            // SpeedTree (built-in)
-            TryAddConditionalModule(Target, EngineDir, "SpeedTree", "SpeedTree");
-            // Fab/Quixel (external - Epic Games Launcher installed)
-            TryAddConditionalModule(Target, EngineDir, "QuixelBridge", "QuixelBridge");
-            // Houdini Engine (external - SideFX installed)
-            TryAddConditionalModule(Target, EngineDir, "HoudiniEngineRuntime", "HoudiniEngineRuntime");
-            TryAddConditionalModule(Target, EngineDir, "HoudiniEngineEditor", "HoudiniEngineEditor");
-            // Substance (external - Adobe installed)
-            TryAddConditionalModule(Target, EngineDir, "SubstanceCore", "SubstanceCore");
-            TryAddConditionalModule(Target, EngineDir, "SubstanceEditor", "SubstanceEditor");
+            // Interchange is built-in and always enabled in UE 5.0+, safe to keep
+            // (Already added in PrivateDependencyModuleNames above)
+            // USD - optional plugin
+            DefineOptionalPluginMacro(EngineDir, "USDStage", "MCP_HAS_USD");
+            // Alembic - optional plugin  
+            DefineOptionalPluginMacro(EngineDir, "AlembicLibrary", "MCP_HAS_ALEMBIC");
+            // glTF - optional Enterprise plugin
+            DefineOptionalPluginMacro(EngineDir, "GLTFExporter", "MCP_HAS_GLTF");
+            // Datasmith - optional Enterprise plugin
+            DefineOptionalPluginMacro(EngineDir, "DatasmithCore", "MCP_HAS_DATASMITH");
+            // SpeedTree - optional
+            DefineOptionalPluginMacro(EngineDir, "SpeedTree", "MCP_HAS_SPEEDTREE");
+            // Houdini Engine - external SideFX plugin
+            DefineOptionalPluginMacro(EngineDir, "HoudiniEngineRuntime", "MCP_HAS_HOUDINI");
+            // Substance - external Adobe plugin
+            DefineOptionalPluginMacro(EngineDir, "SubstanceCore", "MCP_HAS_SUBSTANCE");
 
             // Phase 38: Audio Middleware Plugins
-            // Bink Video (built-in for UE 5.0+)
-            TryAddConditionalModule(Target, EngineDir, "BinkMediaPlayer", "BinkMediaPlayer");
-            // Wwise (external - Audiokinetic installed)
-            TryAddConditionalModule(Target, EngineDir, "AkAudio", "AkAudio");
-            TryAddConditionalModule(Target, EngineDir, "AkAudioEditor", "AkAudioEditor");
-            // FMOD (external - Firelight Technologies installed)
-            TryAddConditionalModule(Target, EngineDir, "FMODStudio", "FMODStudio");
-            TryAddConditionalModule(Target, EngineDir, "FMODStudioEditor", "FMODStudioEditor");
+            // Bink Video - optional media plugin
+            DefineOptionalPluginMacro(EngineDir, "BinkMediaPlayer", "MCP_HAS_BINK");
+            // Wwise - external Audiokinetic plugin
+            DefineOptionalPluginMacro(EngineDir, "AkAudio", "MCP_HAS_WWISE");
+            // FMOD - external Firelight plugin
+            DefineOptionalPluginMacro(EngineDir, "FMODStudio", "MCP_HAS_FMOD");
 
             // Phase 39: Live Link & Motion Capture
-            // LiveLinkInterface (built-in since UE 4.19+)
-            TryAddConditionalModule(Target, EngineDir, "LiveLinkInterface", "LiveLinkInterface");
-            // LiveLink (main plugin module)
-            TryAddConditionalModule(Target, EngineDir, "LiveLink", "LiveLink");
-            // LiveLinkComponents (component controllers)
-            TryAddConditionalModule(Target, EngineDir, "LiveLinkComponents", "LiveLinkComponents");
-            // LiveLinkEditor (editor integration)
-            TryAddConditionalModule(Target, EngineDir, "LiveLinkEditor", "LiveLinkEditor");
-            // LiveLinkMessageBusFramework (network discovery)
-            TryAddConditionalModule(Target, EngineDir, "LiveLinkMessageBusFramework", "LiveLinkMessageBusFramework");
+            // LiveLink is built-in and commonly enabled, but still check
+            DefineOptionalPluginMacro(EngineDir, "LiveLinkInterface", "MCP_HAS_LIVELINK");
 
             // Phase 40: Virtual Production Plugins
-            // nDisplay (built-in for UE 4.22+)
-            TryAddConditionalModule(Target, EngineDir, "DisplayCluster", "DisplayCluster");
-            TryAddConditionalModule(Target, EngineDir, "DisplayClusterConfiguration", "DisplayClusterConfiguration");
-            // Composure (built-in compositing plugin)
-            TryAddConditionalModule(Target, EngineDir, "Composure", "Composure");
-            TryAddConditionalModule(Target, EngineDir, "CompositorSources", "CompositorSources");
-            // OpenColorIO (built-in for UE 4.27+)
-            TryAddConditionalModule(Target, EngineDir, "OpenColorIO", "OpenColorIO");
-            // Remote Control (built-in for UE 4.25+)
-            TryAddConditionalModule(Target, EngineDir, "RemoteControl", "RemoteControl");
-            TryAddConditionalModule(Target, EngineDir, "RemoteControlCommon", "RemoteControlCommon");
-            TryAddConditionalModule(Target, EngineDir, "WebRemoteControl", "WebRemoteControl");
-            // DMX (built-in for UE 4.27+)
-            TryAddConditionalModule(Target, EngineDir, "DMXProtocol", "DMXProtocol");
-            TryAddConditionalModule(Target, EngineDir, "DMXProtocolArtNet", "DMXProtocolArtNet");
-            TryAddConditionalModule(Target, EngineDir, "DMXProtocolSACN", "DMXProtocolSACN");
-            TryAddConditionalModule(Target, EngineDir, "DMXRuntime", "DMXRuntime");
-            // OSC (built-in)
-            TryAddConditionalModule(Target, EngineDir, "OSC", "OSC");
-            // MIDI (built-in for UE 4.21+)
-            TryAddConditionalModule(Target, EngineDir, "MIDIDevice", "MIDIDevice");
-            // Timecode/Genlock (built-in)
+            // nDisplay - optional virtual production plugin
+            DefineOptionalPluginMacro(EngineDir, "DisplayCluster", "MCP_HAS_NDISPLAY");
+            // Composure - optional compositing plugin
+            DefineOptionalPluginMacro(EngineDir, "Composure", "MCP_HAS_COMPOSURE");
+            // OpenColorIO - optional color management
+            DefineOptionalPluginMacro(EngineDir, "OpenColorIO", "MCP_HAS_OCIO");
+            // Remote Control - optional
+            DefineOptionalPluginMacro(EngineDir, "RemoteControl", "MCP_HAS_REMOTE_CONTROL");
+            // DMX - optional lighting control
+            DefineOptionalPluginMacro(EngineDir, "DMXRuntime", "MCP_HAS_DMX");
+            // OSC - optional networking
+            DefineOptionalPluginMacro(EngineDir, "OSC", "MCP_HAS_OSC");
+            // MIDI - optional
+            DefineOptionalPluginMacro(EngineDir, "MIDIDevice", "MCP_HAS_MIDI");
+            // Timecode/Genlock - commonly available
             TryAddConditionalModule(Target, EngineDir, "TimeManagement", "TimeManagement");
-            // AJA Media (optional - professional I/O)
-            TryAddConditionalModule(Target, EngineDir, "AjaMedia", "AjaMedia");
-            TryAddConditionalModule(Target, EngineDir, "AjaMediaOutput", "AjaMediaOutput");
-            // Blackmagic Media (optional - professional I/O)
-            TryAddConditionalModule(Target, EngineDir, "BlackmagicMedia", "BlackmagicMedia");
-            TryAddConditionalModule(Target, EngineDir, "BlackmagicMediaOutput", "BlackmagicMediaOutput");
 
             // Phase 41: XR Plugins (VR/AR/MR)
-            // HeadMountedDisplay (built-in core XR)
-            TryAddConditionalModule(Target, EngineDir, "HeadMountedDisplay", "HeadMountedDisplay");
-            // OpenXR (built-in for UE 4.27+)
-            TryAddConditionalModule(Target, EngineDir, "OpenXRHMD", "OpenXRHMD");
-            TryAddConditionalModule(Target, EngineDir, "OpenXRInput", "OpenXRInput");
-            // OculusXR / Meta Quest (optional - Meta plugin)
-            TryAddConditionalModule(Target, EngineDir, "OculusXRHMD", "OculusXRHMD");
-            TryAddConditionalModule(Target, EngineDir, "OculusXRInput", "OculusXRInput");
-            TryAddConditionalModule(Target, EngineDir, "OculusXRPassthrough", "OculusXRPassthrough");
-            TryAddConditionalModule(Target, EngineDir, "OculusXRAnchors", "OculusXRAnchors");
-            // SteamVR (optional - Valve plugin)
-            TryAddConditionalModule(Target, EngineDir, "SteamVR", "SteamVR");
-            TryAddConditionalModule(Target, EngineDir, "SteamVRInputDevice", "SteamVRInputDevice");
-            // Apple ARKit (built-in for iOS)
-            TryAddConditionalModule(Target, EngineDir, "AppleARKit", "AppleARKit");
-            TryAddConditionalModule(Target, EngineDir, "AppleARKitFaceSupport", "AppleARKitFaceSupport");
-            // Google ARCore (built-in for Android)
-            TryAddConditionalModule(Target, EngineDir, "GoogleARCore", "GoogleARCore");
-            TryAddConditionalModule(Target, EngineDir, "GoogleARCoreBase", "GoogleARCoreBase");
-            // Varjo (optional - Varjo plugin)
-            TryAddConditionalModule(Target, EngineDir, "VarjoHMD", "VarjoHMD");
-            TryAddConditionalModule(Target, EngineDir, "VarjoEyeTracker", "VarjoEyeTracker");
-            // Windows Mixed Reality / HoloLens (built-in for UE 4.18+)
-            TryAddConditionalModule(Target, EngineDir, "WindowsMixedRealityHMD", "WindowsMixedRealityHMD");
-            TryAddConditionalModule(Target, EngineDir, "WindowsMixedRealityHandTracking", "WindowsMixedRealityHandTracking");
+            // HeadMountedDisplay - core XR, usually available
+            DefineOptionalPluginMacro(EngineDir, "HeadMountedDisplay", "MCP_HAS_HMD");
+            // OpenXR - optional
+            DefineOptionalPluginMacro(EngineDir, "OpenXRHMD", "MCP_HAS_OPENXR");
+            // Meta Quest / OculusXR - external Meta plugin
+            DefineOptionalPluginMacro(EngineDir, "OculusXRHMD", "MCP_HAS_OCULUSXR");
+            // SteamVR - external Valve plugin
+            DefineOptionalPluginMacro(EngineDir, "SteamVR", "MCP_HAS_STEAMVR");
+            // Apple ARKit - platform-specific
+            DefineOptionalPluginMacro(EngineDir, "AppleARKit", "MCP_HAS_ARKIT");
+            // Varjo - external plugin
+            DefineOptionalPluginMacro(EngineDir, "VarjoHMD", "MCP_HAS_VARJO");
+            // Windows Mixed Reality / HoloLens
+            DefineOptionalPluginMacro(EngineDir, "WindowsMixedRealityHMD", "MCP_HAS_WMR");
             // Common AR module
-            TryAddConditionalModule(Target, EngineDir, "AugmentedReality", "AugmentedReality");
-            // XRBase (core XR functionality)
-            TryAddConditionalModule(Target, EngineDir, "XRBase", "XRBase");
+            DefineOptionalPluginMacro(EngineDir, "AugmentedReality", "MCP_HAS_AR");
+            // XRBase - core XR functionality  
+            DefineOptionalPluginMacro(EngineDir, "XRBase", "MCP_HAS_XRBASE");
 
             // Ensure editor builds expose full Blueprint graph editing APIs.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
@@ -512,7 +468,7 @@ public class McpAutomationBridge : ModuleRules
                     Path.Combine(PluginsDir, "Runtime", "OculusVR", "Source", SearchName),
                     Path.Combine(PluginsDir, "Runtime", "SteamVR", "Source", SearchName),
                     Path.Combine(PluginsDir, "Runtime", "AppleARKit", "Source", SearchName),
-                    Path.Combine(PluginsDir, "Runtime", "GoogleARCore", "Source", SearchName),
+                    // GoogleARCore removed - not available in UE 5.7
                     Path.Combine(PluginsDir, "Runtime", "Varjo", "Source", SearchName),
                     Path.Combine(PluginsDir, "Runtime", "WindowsMixedReality", "Source", SearchName),
                     Path.Combine(PluginsDir, "Runtime", "AR", "Source", SearchName),
@@ -538,5 +494,49 @@ public class McpAutomationBridge : ModuleRules
             }
         }
         catch { /* Module not available - this is expected for optional modules */ }
+    }
+
+    /// <summary>
+    /// Defines a compile-time macro for an optional plugin WITHOUT adding it as a link-time dependency.
+    /// This is critical for plugins that may exist in the engine but not be enabled in the project.
+    /// The C++ code should use __has_include() or the defined macro to conditionally compile.
+    /// </summary>
+    /// <param name="EngineDir">Absolute path to the engine root directory.</param>
+    /// <param name="ModuleName">The module name to search for.</param>
+    /// <param name="MacroName">The macro to define if the module exists (e.g., "MCP_HAS_WATER").</param>
+    private void DefineOptionalPluginMacro(string EngineDir, string ModuleName, string MacroName)
+    {
+        try
+        {
+            bool bFound = false;
+
+            // Check Runtime modules
+            string RuntimePath = Path.Combine(EngineDir, "Source", "Runtime", ModuleName);
+            if (Directory.Exists(RuntimePath)) bFound = true;
+
+            // Check Editor modules
+            if (!bFound)
+            {
+                string EditorPath = Path.Combine(EngineDir, "Source", "Editor", ModuleName);
+                if (Directory.Exists(EditorPath)) bFound = true;
+            }
+
+            // Check Plugins directory with bounded depth
+            if (!bFound)
+            {
+                string PluginsDir = Path.Combine(EngineDir, "Plugins");
+                if (Directory.Exists(PluginsDir) && SearchDirectoryBounded(PluginsDir, ModuleName, 4))
+                {
+                    bFound = true;
+                }
+            }
+
+            // Define macro indicating availability (for __has_include fallback in C++)
+            if (!string.IsNullOrEmpty(MacroName))
+            {
+                PublicDefinitions.Add(MacroName + "=" + (bFound ? "1" : "0"));
+            }
+        }
+        catch { /* Ignore errors - just don't define the macro */ }
     }
 }

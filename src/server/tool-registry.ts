@@ -41,6 +41,69 @@ import { getProjectSetting } from '../utils/ini-reader.js';
 import { config } from '../config.js';
 import { mcpClients } from 'mcp-client-capabilities';
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+const TOOLLIST_SCHEMA_DROP_KEYS = new Set([
+    // pure decoration
+    'title',
+    'examples',
+    'default',
+    '$comment',
+    // draft-specific or noisy
+    'deprecated',
+    'readOnly',
+    'writeOnly'
+]);
+
+const TOOLLIST_DESCRIPTION_KEEP_KEYS = new Set([
+    // path format guidance
+    'assetPath', 'assetPaths',
+    'blueprintPath', 'meshPath', 'materialPath', 'texturePath', 'soundPath', 'animationPath',
+    'levelPath', 'sequencePath', 'directoryPath', 'directory', 'path', 'packagePath', 'exportPath', 'sourcePath', 'destinationPath', 'outputPath', 'savePath',
+    // unit-sensitive
+    'duration', 'timeoutMs', 'fadeTime', 'startTime', 'endTime', 'blendTime',
+    // safety knobs
+    'overwrite', 'delete', 'delete_assets', 'delete_asset', 'confirm', 'force'
+]);
+
+function shouldKeepDescription(parentKey: string | undefined): boolean {
+    if (!parentKey) return false;
+    if (parentKey === 'action') return true;
+    return TOOLLIST_DESCRIPTION_KEEP_KEYS.has(parentKey);
+}
+
+function pruneSchemaForToolList(schema: unknown, parentKey?: string): unknown {
+    if (Array.isArray(schema)) {
+        return schema.map(v => pruneSchemaForToolList(v, parentKey));
+    }
+
+    if (!isPlainObject(schema)) return schema;
+
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(schema)) {
+        if (TOOLLIST_SCHEMA_DROP_KEYS.has(k)) continue;
+
+        if (k === 'description' && !shouldKeepDescription(parentKey)) {
+            continue;
+        }
+
+        // Recurse with current key as parent
+        out[k] = pruneSchemaForToolList(v, k);
+    }
+
+    return out;
+}
+
+function safeJsonByteLength(value: unknown): number {
+    try {
+        return Buffer.byteLength(JSON.stringify(value), 'utf8');
+    } catch {
+        return -1;
+    }
+}
+
 // Parse default categories from config
 function parseDefaultCategories(): string[] {
     const raw = config.MCP_DEFAULT_CATEGORIES || 'core';
@@ -90,6 +153,63 @@ export class ToolRegistry {
         private ensureConnected: () => Promise<boolean>
     ) { }
     
+    private normalizeToolArgs(_toolName: string, args: Record<string, unknown>): Record<string, unknown> {
+        // Normalize common path-like parameters and accept a few common aliases.
+        // This is intentionally conservative to avoid surprising behavior.
+        const out: Record<string, unknown> = { ...args };
+
+        const coerceStringPath = (value: unknown): string | undefined => {
+            if (typeof value !== 'string') return undefined;
+            let normalized = value.trim();
+            if (normalized.length === 0) return undefined;
+
+            normalized = normalized.replace(/\\/g, '/');
+            normalized = normalized.replace(/\/+/g, '/');
+            // Prefer Unreal roots; convert Content -> Game when obvious
+            if (normalized.startsWith('/Content/')) {
+                normalized = '/Game/' + normalized.slice('/Content/'.length);
+            }
+            if (!normalized.startsWith('/')) {
+                normalized = '/' + normalized;
+            }
+            if (normalized.startsWith('/Game') && normalized !== '/Game' && !normalized.startsWith('/Game/')) {
+                normalized = '/Game/' + normalized.slice('/Game'.length);
+            }
+            return normalized;
+        };
+
+        const pathKeys = [
+            'assetPath', 'blueprintPath', 'meshPath', 'texturePath', 'materialPath', 'soundPath', 'animationPath', 'levelPath', 'sequencePath',
+            'directoryPath', 'directory', 'path', 'packagePath', 'exportPath', 'sourcePath', 'destinationPath', 'outputPath', 'savePath',
+            'actorPath', 'systemPath', 'emitterPath', 'wavePath'
+        ];
+
+        for (const k of pathKeys) {
+            const v = out[k];
+            const normalized = coerceStringPath(v);
+            if (normalized) out[k] = normalized;
+        }
+
+        // Normalize arrays of paths when present
+        const arrayPathKeys = ['assetPaths', 'levelPaths', 'packagePaths', 'classNames'];
+        for (const k of arrayPathKeys) {
+            const v = out[k];
+            if (Array.isArray(v)) {
+                out[k] = v.map(item => coerceStringPath(item) ?? item);
+            }
+        }
+
+        // Aliases: map common alternative names to canonical ones when canonical not provided
+        // Example: some callers use "uePath" or "asset"; accept as assetPath.
+        if (out.assetPath === undefined) {
+            const alias = out.uePath ?? out.asset ?? out.asset_path;
+            const normalized = coerceStringPath(alias);
+            if (normalized) out.assetPath = normalized;
+        }
+
+        return out;
+    }
+
     private async handlePipelineCall(args: Record<string, unknown>) {
         const action = args.action as string;
         if (action === 'set_categories') {
@@ -294,25 +414,50 @@ export class ToolRegistry {
                     supportsListChanged || t.name !== 'manage_pipeline'
                 );
             
-            const sanitized = filtered.map((t: ToolDefinition) => {
-                try {
-                    const copy = JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
-                    delete copy.outputSchema;
-                    return copy;
-                } catch (_e) {
-                    return t;
-                }
-            });
-            return { tools: sanitized };
+             const sanitized = filtered.map((t: ToolDefinition) => {
+                 try {
+                     const copy = JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
+                     delete copy.outputSchema;
+
+                     if (copy.inputSchema) {
+                         copy.inputSchema = pruneSchemaForToolList(copy.inputSchema) as Record<string, unknown>;
+                     }
+
+                     // NOTE: outputSchema is removed from tools/list, but we still prune in case any client/tooling
+                     // changes re-introduce it in the future.
+                     if (copy.outputSchema) {
+                         copy.outputSchema = pruneSchemaForToolList(copy.outputSchema) as Record<string, unknown>;
+                     }
+
+                     return copy;
+                 } catch (_e) {
+                     return t;
+                 }
+             });
+
+             const totalBytes = safeJsonByteLength({ tools: sanitized });
+             if (totalBytes > 0) {
+                 this.logger.info(`tools/list payload size: ${totalBytes} bytes (tools=${sanitized.length})`);
+             }
+
+             return { tools: sanitized };
+
         });
 
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-            const { name } = request.params;
-            let args: Record<string, unknown> = request.params.arguments || {};
+             const { name } = request.params;
+             let args: Record<string, unknown> = request.params.arguments || {};
 
-            if (name === 'manage_pipeline') {
-                return { content: [{ type: 'text', text: JSON.stringify(await this.handlePipelineCall(args)) }] };
-            }
+             // ---------------------------------
+             // Argument normalization (quality):
+             // - reduce invalid calls with corrected /Game paths and common aliases
+             // ---------------------------------
+             args = this.normalizeToolArgs(name, args);
+
+             if (name === 'manage_pipeline') {
+                 return { content: [{ type: 'text', text: JSON.stringify(await this.handlePipelineCall(args)) }] };
+             }
+
 
             const startTime = Date.now();
 

@@ -280,20 +280,26 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_level',
     category: 'core',
-    description: 'Load/save levels, configure streaming, manage World Partition cells, and build lighting.',
+    description: 'Load/save levels, streaming, World Partition, data layers, HLOD, sublevels, level instances.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
+            // Core level operations
             'load', 'save', 'save_as', 'save_level_as', 'stream', 'create_level', 'create_light', 'build_lighting',
-            'set_metadata', 'load_cells', 'set_datalayer',
-            'export_level', 'import_level', 'list_levels', 'get_summary', 'delete', 'validate_level',
-            'cleanup_invalid_datalayers', 'add_sublevel'
+            'set_metadata', 'load_cells', 'set_datalayer', 'export_level', 'import_level', 'list_levels', 'get_summary',
+            'delete', 'validate_level', 'cleanup_invalid_datalayers', 'add_sublevel',
+            // Level structure (merged from manage_level_structure)
+            'create_sublevel', 'configure_level_streaming', 'set_streaming_distance', 'configure_level_bounds',
+            'enable_world_partition', 'configure_grid_size', 'create_data_layer', 'assign_actor_to_data_layer',
+            'configure_hlod_layer', 'create_minimap_volume', 'open_level_blueprint', 'add_level_blueprint_node',
+            'connect_level_blueprint_nodes', 'create_level_instance', 'create_packed_level_actor', 'get_level_structure_info'
           ],
-          description: 'Action'
+          description: 'Level action'
         },
+        // Core properties
         levelPath: commonSchemas.levelPath,
         levelName: commonSchemas.stringProp,
         streaming: commonSchemas.booleanProp,
@@ -315,7 +321,54 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         levelPaths: commonSchemas.arrayOfStrings,
         subLevelPath: commonSchemas.levelPath,
         parentLevel: commonSchemas.stringProp,
-        streamingMethod: { type: 'string', enum: ['Blueprint', 'AlwaysLoaded'] }
+        streamingMethod: { type: 'string', enum: ['Blueprint', 'AlwaysLoaded', 'Disabled'] },
+        // Level structure properties (merged)
+        templateLevel: commonSchemas.templateLevel,
+        bCreateWorldPartition: { type: 'boolean', description: 'Create with World Partition.' },
+        sublevelName: commonSchemas.sublevelName,
+        sublevelPath: commonSchemas.levelPath,
+        bShouldBeVisible: { type: 'boolean', description: 'Level visible when loaded.' },
+        bShouldBlockOnLoad: { type: 'boolean', description: 'Block until loaded.' },
+        bDisableDistanceStreaming: { type: 'boolean', description: 'Disable distance streaming.' },
+        streamingDistance: { type: 'number', description: 'Streaming volume distance.' },
+        streamingUsage: { type: 'string', enum: ['Loading', 'LoadingAndVisibility', 'VisibilityBlockingOnLoad', 'BlockingOnLoad', 'LoadingNotVisible'], description: 'Streaming usage.' },
+        createVolume: { type: 'boolean', description: 'Create streaming volume.' },
+        boundsOrigin: commonSchemas.location,
+        boundsExtent: commonSchemas.location,
+        bAutoCalculateBounds: { type: 'boolean', description: 'Auto-calculate bounds.' },
+        bEnableWorldPartition: { type: 'boolean', description: 'Enable World Partition.' },
+        gridCellSize: { type: 'number', description: 'WP grid cell size.' },
+        loadingRange: { type: 'number', description: 'WP loading range.' },
+        dataLayerName: commonSchemas.dataLayerName,
+        bIsInitiallyVisible: { type: 'boolean', description: 'Data layer visible.' },
+        bIsInitiallyLoaded: { type: 'boolean', description: 'Data layer loaded.' },
+        dataLayerType: { type: 'string', enum: ['Runtime', 'Editor'], description: 'Data layer type.' },
+        actorName: commonSchemas.actorName,
+        actorPath: commonSchemas.actorPath,
+        hlodLayerName: { type: 'string', description: 'HLOD layer name.' },
+        hlodLayerPath: commonSchemas.hlodLayerPath,
+        bIsSpatiallyLoaded: { type: 'boolean', description: 'HLOD spatially loaded.' },
+        cellSize: { type: 'number', description: 'HLOD cell size.' },
+        loadingDistance: { type: 'number', description: 'HLOD loading distance.' },
+        volumeName: commonSchemas.volumeName,
+        volumeLocation: commonSchemas.location,
+        volumeExtent: commonSchemas.location,
+        nodeClass: commonSchemas.nodeClass,
+        nodePosition: commonSchemas.vector2,
+        nodeName: commonSchemas.nodeName,
+        sourceNodeName: commonSchemas.sourceNode,
+        sourcePinName: commonSchemas.sourcePin,
+        targetNodeName: commonSchemas.targetNode,
+        targetPinName: commonSchemas.targetPin,
+        levelInstanceName: commonSchemas.levelInstanceName,
+        levelAssetPath: { type: 'string', description: 'Level asset for instancing.' },
+        instanceLocation: commonSchemas.location,
+        instanceRotation: commonSchemas.rotation,
+        instanceScale: commonSchemas.scale,
+        packedLevelName: { type: 'string', description: 'Packed level actor name.' },
+        bPackBlueprints: { type: 'boolean', description: 'Include blueprints.' },
+        bPackStaticMeshes: { type: 'boolean', description: 'Include static meshes.' },
+        save: commonSchemas.save
       },
       required: ['action']
     },
@@ -323,7 +376,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       type: 'object',
       properties: {
         ...commonSchemas.outputBase,
-        data: commonSchemas.objectProp
+        data: commonSchemas.objectProp,
+        levelPath: commonSchemas.levelPath,
+        sublevelPath: commonSchemas.levelPath
       }
     }
   },
@@ -616,7 +671,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'build_environment',
     category: 'world',
-    description: 'Create/sculpt landscapes, paint foliage, generate procedural terrain/biomes, configure sky/fog/clouds.',
+    description: 'Create/sculpt landscapes, paint foliage, generate procedural terrain/biomes, configure sky/fog/clouds, water bodies, and weather systems.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -636,7 +691,15 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             // Phase 28: Clouds
             'create_volumetric_cloud', 'configure_volumetric_cloud',
             // Time of Day
-            'set_time_of_day'
+            'set_time_of_day',
+            // Water (merged from manage_water - Phase 54)
+            'create_water_body_ocean', 'create_water_body_lake', 'create_water_body_river',
+            'configure_water_body', 'configure_water_waves', 'get_water_body_info', 'list_water_bodies',
+            'set_river_depth', 'set_ocean_extent', 'set_water_static_mesh', 'set_river_transitions',
+            'set_water_zone', 'get_water_surface_info', 'get_wave_info',
+            // Weather (merged from manage_weather - Phase 54)
+            'configure_wind', 'create_weather_system',
+            'configure_rain_particles', 'configure_snow_particles', 'configure_lightning'
           ],
           description: 'Action'
         },
@@ -861,60 +924,148 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_sequence',
     category: 'utility',
-    description: 'Edit Level Sequences: add tracks, bind actors, set keyframes, control playback, and record camera.',
+    description: 'Sequencer, cinematics, and Movie Render Queue. Create/edit Level Sequences, bind actors, keyframes, camera cuts, render jobs.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: [
-            'create', 'open', 'add_camera', 'add_actor', 'add_actors', 'remove_actors',
-            'get_bindings', 'play', 'pause', 'stop', 'set_playback_speed', 'add_keyframe',
-            'get_properties', 'set_properties', 'duplicate', 'rename', 'delete', 'list', 'get_metadata', 'set_metadata',
-            'add_spawnable_from_class', 'add_track', 'add_section', 'set_display_rate', 'set_tick_resolution',
-            'set_work_range', 'set_view_range', 'set_track_muted', 'set_track_solo', 'set_track_locked',
-            'list_tracks', 'remove_track', 'list_track_types'
+            // Core sequence management
+            'create', 'open', 'duplicate', 'rename', 'delete', 'list', 'get_metadata', 'set_metadata',
+            'create_master_sequence', 'add_subsequence', 'remove_subsequence', 'get_subsequences', 'export_sequence',
+            // Actor binding
+            'add_actor', 'add_actors', 'remove_actors', 'bind_actor', 'unbind_actor', 'get_bindings',
+            'add_spawnable_from_class',
+            // Tracks & sections
+            'add_track', 'remove_track', 'list_tracks', 'list_track_types', 'add_section', 'remove_section', 'get_tracks',
+            'set_track_muted', 'set_track_solo', 'set_track_locked',
+            // Shot tracks
+            'add_shot_track', 'add_shot', 'remove_shot', 'get_shots',
+            // Camera
+            'add_camera', 'create_cine_camera_actor', 'configure_camera_settings', 'add_camera_cut_track', 'add_camera_cut',
+            // Keyframes
+            'add_keyframe', 'remove_keyframe', 'get_keyframes',
+            // Properties & timing
+            'get_properties', 'set_properties', 'set_display_rate', 'set_tick_resolution',
+            'set_work_range', 'set_view_range', 'set_playback_range', 'get_playback_range', 'get_sequence_info',
+            // Playback control
+            'play', 'pause', 'stop', 'set_playback_speed', 'play_sequence', 'pause_sequence', 'stop_sequence', 'scrub_to_time',
+            // Movie Render Queue
+            'create_queue', 'add_job', 'remove_job', 'clear_queue', 'get_queue', 'configure_job', 'set_sequence', 'set_map',
+            'configure_output', 'set_resolution', 'set_frame_rate', 'set_output_directory', 'set_file_name_format',
+            'add_render_pass', 'remove_render_pass', 'get_render_passes', 'configure_render_pass',
+            'configure_anti_aliasing', 'set_spatial_sample_count', 'set_temporal_sample_count',
+            'add_burn_in', 'remove_burn_in', 'configure_burn_in',
+            'start_render', 'stop_render', 'get_render_status', 'get_render_progress',
+            'add_console_variable', 'remove_console_variable', 'configure_high_res_settings', 'set_tile_count'
           ],
-          description: 'Action'
+          description: 'Sequencer/MRQ action'
         },
+        // Sequence identification
         name: commonSchemas.name,
         path: commonSchemas.assetPath,
-        actorName: commonSchemas.actorName,
-        actorNames: commonSchemas.arrayOfStrings,
-        frame: commonSchemas.numberProp,
-        value: commonSchemas.objectProp,
-        property: commonSchemas.propertyName,
+        sequencePath: commonSchemas.sequencePath,
+        sequenceName: commonSchemas.name,
+        savePath: commonSchemas.savePath,
+        assetPath: commonSchemas.assetPath,
         destinationPath: commonSchemas.destinationPath,
         newName: commonSchemas.newName,
-        overwrite: commonSchemas.overwrite,
-        speed: commonSchemas.numberProp,
-        startTime: commonSchemas.numberProp,
-        loopMode: commonSchemas.stringProp,
-        className: commonSchemas.stringProp,
+        // Actor binding
+        actorName: commonSchemas.actorName,
+        actorNames: commonSchemas.arrayOfStrings,
+        bindingName: { type: 'string', description: 'Binding display name.' },
+        bindingId: { type: 'string', description: 'Binding GUID.' },
         spawnable: commonSchemas.booleanProp,
-        trackType: commonSchemas.stringProp,
+        className: commonSchemas.stringProp,
+        // Tracks
+        trackType: { type: 'string', enum: ['Transform', 'Animation', 'Audio', 'Event', 'Property', 'Fade', 'LevelVisibility', 'CameraCut', 'Skeletal', 'Material'], description: 'Track type.' },
         trackName: commonSchemas.stringProp,
+        propertyPath: { type: 'string', description: 'Property path for tracks.' },
         muted: commonSchemas.booleanProp,
         solo: commonSchemas.booleanProp,
         locked: commonSchemas.booleanProp,
-        assetPath: commonSchemas.assetPath,
+        // Shots & subsequences
+        subsequencePath: { type: 'string', description: 'Subsequence path.' },
+        shotName: { type: 'string', description: 'Shot name.' },
+        shotNumber: { type: 'number', description: 'Shot ordering number.' },
+        // Camera settings
+        cameraActorName: commonSchemas.actorName,
+        filmbackPreset: { type: 'string', enum: ['16:9_DSLR', '16:9_Film', '35mm_Academy', '35mm_VistaVision', '65mm_IMAX', 'Super_35', 'Custom'], description: 'Filmback preset.' },
+        sensorWidth: { type: 'number', description: 'Sensor width mm.' },
+        sensorHeight: { type: 'number', description: 'Sensor height mm.' },
+        focalLength: { type: 'number', description: 'Focal length mm.' },
+        aperture: { type: 'number', description: 'Aperture f-stop.' },
+        focusDistance: { type: 'number', description: 'Focus distance.' },
+        autoFocus: { type: 'boolean', description: 'Enable auto focus.' },
+        focusMethod: { type: 'string', enum: ['DoNotOverride', 'Manual', 'Tracking'], description: 'Focus method.' },
+        focusTarget: { type: 'string', description: 'Focus target actor.' },
+        // Keyframes & timing
+        frame: commonSchemas.numberProp,
+        time: { type: 'number', description: 'Time in seconds.' },
+        value: commonSchemas.value,
+        property: commonSchemas.propertyName,
+        interpolation: { type: 'string', enum: ['Auto', 'User', 'Break', 'Linear', 'Constant'], description: 'Interpolation mode.' },
         startFrame: commonSchemas.numberProp,
         endFrame: commonSchemas.numberProp,
-        frameRate: commonSchemas.stringProp,
-        resolution: commonSchemas.stringProp,
+        startTime: commonSchemas.numberProp,
+        endTime: commonSchemas.numberProp,
         start: commonSchemas.numberProp,
         end: commonSchemas.numberProp,
+        displayRate: { type: 'number', description: 'Display rate FPS.' },
+        tickResolution: { type: 'number', description: 'Tick resolution.' },
         lengthInFrames: commonSchemas.numberProp,
         playbackStart: commonSchemas.numberProp,
         playbackEnd: commonSchemas.numberProp,
-        metadata: commonSchemas.objectProp
+        // Playback
+        speed: commonSchemas.numberProp,
+        loopMode: commonSchemas.stringProp,
+        // Movie Render Queue
+        jobName: { type: 'string', description: 'Render job name.' },
+        jobIndex: { type: 'number', description: 'Job index.' },
+        mapPath: { type: 'string', description: 'Map path to render.' },
+        outputDirectory: { type: 'string', description: 'Output directory.' },
+        fileNameFormat: { type: 'string', description: 'Filename format with tokens.' },
+        outputFormat: { type: 'string', enum: ['PNG', 'JPG', 'EXR', 'BMP', 'ProRes', 'AVI'], description: 'Output format.' },
+        resolutionX: { type: 'number', description: 'Resolution width.' },
+        resolutionY: { type: 'number', description: 'Resolution height.' },
+        frameRate: commonSchemas.numberProp,
+        resolution: commonSchemas.stringProp,
+        passType: { type: 'string', enum: ['FinalImage', 'ObjectId', 'MaterialId', 'Depth', 'WorldNormal', 'BaseColor', 'Roughness', 'Metallic', 'AmbientOcclusion', 'Cryptomatte'], description: 'Render pass type.' },
+        passName: { type: 'string', description: 'Render pass name.' },
+        passEnabled: { type: 'boolean', description: 'Enable pass.' },
+        spatialSampleCount: { type: 'number', description: 'Spatial AA samples.' },
+        temporalSampleCount: { type: 'number', description: 'Temporal samples.' },
+        overrideAntiAliasing: { type: 'boolean', description: 'Override AA.' },
+        antiAliasingMethod: { type: 'string', enum: ['None', 'FXAA', 'TAA', 'MSAA'], description: 'AA method.' },
+        burnInClass: { type: 'string', description: 'Burn-in widget class.' },
+        burnInText: { type: 'string', description: 'Burn-in text.' },
+        burnInPosition: { type: 'string', enum: ['TopLeft', 'TopCenter', 'TopRight', 'BottomLeft', 'BottomCenter', 'BottomRight'], description: 'Burn-in position.' },
+        cvarName: { type: 'string', description: 'Console var name.' },
+        cvarValue: { type: 'string', description: 'Console var value.' },
+        tileCountX: { type: 'number', description: 'High-res tile count X.' },
+        tileCountY: { type: 'number', description: 'High-res tile count Y.' },
+        overlapRatio: { type: 'number', description: 'Tile overlap ratio.' },
+        // Common
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+        overwrite: commonSchemas.overwrite,
+        metadata: commonSchemas.objectProp,
+        exportPath: commonSchemas.exportPath,
+        exportFormat: { type: 'string', enum: ['FBX', 'USD'], description: 'Export format.' },
+        save: commonSchemas.save
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        ...commonSchemas.outputBase
+        ...commonSchemas.outputBase,
+        sequencePath: commonSchemas.sequencePath,
+        bindingId: commonSchemas.stringProp,
+        trackId: commonSchemas.stringProp,
+        jobName: commonSchemas.stringProp,
+        queueSize: commonSchemas.numberProp
       }
     }
   },
@@ -4824,187 +4975,6 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       }
     }
   },
-  // Phase 28: Water System Tool
-  {
-    name: 'manage_water',
-    category: 'world',
-    description: 'Create and manage Water Bodies (Ocean, Lake, River). Configure water materials, waves, and properties. Requires Water plugin.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            'create_water_body_ocean', 'create_water_body_lake', 'create_water_body_river',
-            'configure_water_body', 'configure_water_waves', 'get_water_body_info', 'list_water_bodies',
-            'set_river_depth', 'set_ocean_extent', 'set_water_static_mesh', 'set_river_transitions',
-            'set_water_zone', 'get_water_surface_info', 'get_wave_info'
-          ],
-          description: 'Water action to perform'
-        },
-        name: { type: 'string', description: 'Name for the water body actor.' },
-        actorName: { type: 'string', description: 'Name of existing water body actor to configure.' },
-        location: {
-          type: 'object',
-          properties: {
-            x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' }
-          },
-          description: 'Location for spawning water body.'
-        },
-        heightOffset: { type: 'number', description: 'Height offset for ocean water body.' },
-        materialPath: { type: 'string', description: 'Path to water material.' },
-        underwaterMaterialPath: { type: 'string', description: 'Path to underwater post-process material.' },
-        waterInfoMaterialPath: { type: 'string', description: 'Path to water info texture material.' },
-        staticMeshMaterialPath: { type: 'string', description: 'Path to static mesh water material.' },
-        // Wave parameters (for configure_water_waves with Gerstner wave generator)
-        numWaves: { type: 'number', description: 'Number of waves (1-128). Default varies by generator.' },
-        seed: { type: 'number', description: 'Random seed for wave generation.' },
-        randomness: { type: 'number', description: 'Randomness factor (0-1).' },
-        minWavelength: { type: 'number', description: 'Minimum wavelength in cm.' },
-        maxWavelength: { type: 'number', description: 'Maximum wavelength in cm.' },
-        wavelengthFalloff: { type: 'number', description: 'Wavelength falloff exponent.' },
-        minAmplitude: { type: 'number', description: 'Minimum amplitude in cm.' },
-        maxAmplitude: { type: 'number', description: 'Maximum amplitude in cm.' },
-        amplitudeFalloff: { type: 'number', description: 'Amplitude falloff exponent.' },
-        windAngle: { type: 'number', description: 'Wind direction in degrees.' },
-        directionSpread: { type: 'number', description: 'Direction angular spread in degrees.' },
-        smallWaveSteepness: { type: 'number', description: 'Steepness for small waves (0-1).' },
-        largeWaveSteepness: { type: 'number', description: 'Steepness for large waves (0-1).' },
-        steepnessFalloff: { type: 'number', description: 'Steepness falloff exponent.' },
-        // River depth parameters (for set_river_depth)
-        splineKey: { type: 'number', description: 'Spline input key (0-1) for river depth/width.' },
-        depth: { type: 'number', description: 'River depth at spline key.' },
-        width: { type: 'number', description: 'River width at spline key.' },
-        // Ocean extent parameters (for set_ocean_extent)
-        extentX: { type: 'number', description: 'Ocean extent X size.' },
-        extentY: { type: 'number', description: 'Ocean extent Y size.' },
-        collisionExtentX: { type: 'number', description: 'Ocean collision extent X.' },
-        collisionExtentY: { type: 'number', description: 'Ocean collision extent Y.' },
-        // Static mesh parameters (for set_water_static_mesh)
-        staticMeshEnabled: { type: 'boolean', description: 'Enable water body static mesh.' },
-        waterMeshPath: { type: 'string', description: 'Path to water mesh override.' },
-        // Transition material parameters (for set_river_transitions)
-        lakeTransitionMaterialPath: { type: 'string', description: 'Path to lake transition material.' },
-        oceanTransitionMaterialPath: { type: 'string', description: 'Path to ocean transition material.' },
-        // Water zone parameters (for set_water_zone)
-        waterZonePath: { type: 'string', description: 'Name of AWaterZone actor in level to use as override.' },
-        // Query location (for get_water_surface_info, get_wave_info)
-        queryLocation: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Location to query water surface or wave info.'
-        }
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', description: 'Whether the operation succeeded.' },
-        message: { type: 'string', description: 'Result message.' },
-        actorName: { type: 'string', description: 'Name of the created/modified water body.' },
-        waterBodyType: { type: 'string', description: 'Type of water body (Ocean, Lake, River).' },
-        supportsWaves: { type: 'boolean', description: 'Whether the water body supports waves.' },
-        hasWaves: { type: 'boolean', description: 'Whether waves are configured.' },
-        waveType: { type: 'string', description: 'Type of wave asset (e.g., GerstnerWaterWaves).' },
-        physicalMaterial: { type: 'string', description: 'Physical material name.' },
-        overlapMaterialPriority: { type: 'number', description: 'Overlap material priority.' },
-        channelDepth: { type: 'number', description: 'Channel depth.' },
-        count: { type: 'number', description: 'Number of water bodies found (for list_water_bodies).' },
-        waterBodies: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              name: { type: 'string' },
-              class: { type: 'string' },
-              type: { type: 'string' },
-              location: {
-                type: 'object',
-                properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }
-              }
-            }
-          },
-          description: 'List of water bodies (for list_water_bodies).'
-        },
-        // Surface info output (for get_water_surface_info)
-        surfaceLocation: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Water surface location at query point.'
-        },
-        surfaceNormal: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Water surface normal at query point.'
-        },
-        velocity: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Water velocity at query point.'
-        },
-        immersionDepth: { type: 'number', description: 'Immersion depth at query point.' },
-        // Wave info output (for get_wave_info)
-        waveHeight: { type: 'number', description: 'Wave height at query point.' },
-        waveMaxHeight: { type: 'number', description: 'Maximum wave height.' },
-        waveAttenuation: { type: 'number', description: 'Wave attenuation factor.' },
-        waveNormal: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Wave normal at query point.'
-        },
-        error: { type: 'string', description: 'Error message if failed.' }
-      }
-    }
-  },
-  // Phase 28: Weather System Tool
-  {
-    name: 'manage_weather',
-    category: 'world',
-    description: 'Configure weather and atmospheric effects. Wind, rain, snow, lightning systems.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            'configure_wind', 'create_weather_system',
-            'configure_rain_particles', 'configure_snow_particles', 'configure_lightning'
-          ],
-          description: 'Weather action to perform'
-        },
-        actorName: { type: 'string', description: 'Name for the weather actor.' },
-        location: {
-          type: 'object',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-          description: 'Location for spawning weather effects.'
-        },
-        // Wind properties
-        strength: { type: 'number', description: 'Wind strength.' },
-        speed: { type: 'number', description: 'Wind speed.' },
-        minGustAmount: { type: 'number', description: 'Minimum gust amount.' },
-        maxGustAmount: { type: 'number', description: 'Maximum gust amount.' },
-        // Particle properties
-        niagaraSystemPath: { type: 'string', description: 'Path to Niagara system for rain/snow.' },
-        intensity: { type: 'number', description: 'Precipitation intensity.' },
-        coverage: { type: 'number', description: 'Precipitation coverage area.' },
-        // Lightning properties
-        flashIntensity: { type: 'number', description: 'Lightning flash intensity.' },
-        flashDuration: { type: 'number', description: 'Lightning flash duration.' }
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', description: 'Whether the operation succeeded.' },
-        message: { type: 'string', description: 'Result message.' },
-        actorName: { type: 'string', description: 'Name of the weather actor.' },
-        propertiesSet: { type: 'number', description: 'Number of properties configured.' },
-        error: { type: 'string', description: 'Error message if failed.' }
-      }
-    }
-  },
   // Phase 29: Advanced Lighting & Rendering
   {
     name: 'manage_post_process',
@@ -5247,241 +5217,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   // ============================================================================
   // Phase 30: Cinematics & Media
   // ============================================================================
-  {
-    name: 'manage_sequencer',
-    category: 'authoring',
-    description: 'Manage Level Sequences and cinematics. Create master sequences, add subsequences, shot tracks, bind actors, control playback, and manage camera cuts.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            // Sequence creation & management
-            'create_master_sequence', 'add_subsequence', 'remove_subsequence', 'get_subsequences',
-            // Shot tracks
-            'add_shot_track', 'add_shot', 'remove_shot', 'get_shots',
-            // Camera
-            'create_cine_camera_actor', 'configure_camera_settings', 'add_camera_cut_track', 'add_camera_cut',
-            // Actor binding
-            'bind_actor', 'unbind_actor', 'get_bindings',
-            // Tracks & sections
-            'add_track', 'remove_track', 'add_section', 'remove_section', 'get_tracks',
-            // Keyframes
-            'add_keyframe', 'remove_keyframe', 'get_keyframes',
-            // Playback
-            'set_playback_range', 'get_playback_range', 'set_display_rate', 'get_sequence_info',
-            // Runtime control
-            'play_sequence', 'pause_sequence', 'stop_sequence', 'scrub_to_time',
-            // Utilities
-            'list_sequences', 'duplicate_sequence', 'delete_sequence', 'export_sequence'
-          ],
-          description: 'Sequencer action to perform.'
-        },
-        // Sequence identification
-        sequencePath: commonSchemas.sequencePath,
-        sequenceName: commonSchemas.name,
-        savePath: commonSchemas.savePath,
-        
-        // Subsequence & shots
-        subsequencePath: { type: 'string', description: 'Path to subsequence asset.' },
-        shotName: { type: 'string', description: 'Name for shot section.' },
-        shotNumber: { type: 'number', description: 'Shot number for ordering.' },
-        startFrame: { type: 'number', description: 'Start frame of section.' },
-        endFrame: { type: 'number', description: 'End frame of section.' },
-        
-        // Camera settings
-        cameraActorName: commonSchemas.actorName,
-        filmbackPreset: { type: 'string', enum: ['16:9_DSLR', '16:9_Film', '35mm_Academy', '35mm_VistaVision', '65mm_IMAX', 'Super_35', 'Custom'], description: 'Filmback preset.' },
-        sensorWidth: { type: 'number', description: 'Custom sensor width in mm.' },
-        sensorHeight: { type: 'number', description: 'Custom sensor height in mm.' },
-        focalLength: { type: 'number', description: 'Focal length in mm.' },
-        aperture: { type: 'number', description: 'Aperture (f-stop).' },
-        focusDistance: { type: 'number', description: 'Manual focus distance.' },
-        autoFocus: { type: 'boolean', description: 'Enable auto focus.' },
-        focusMethod: { type: 'string', enum: ['DoNotOverride', 'Manual', 'Tracking'], description: 'Focus method.' },
-        focusTarget: { type: 'string', description: 'Actor name for focus tracking.' },
-        
-        // Actor binding
-        actorName: commonSchemas.actorName,
-        bindingName: { type: 'string', description: 'Binding display name.' },
-        bindingId: { type: 'string', description: 'Binding GUID.' },
-        spawnable: { type: 'boolean', description: 'Bind as spawnable (true) or possessable (false).' },
-        
-        // Tracks
-        trackType: {
-          type: 'string',
-          enum: ['Transform', 'Animation', 'Audio', 'Event', 'Property', 'Fade', 'LevelVisibility', 'CameraCut', 'Skeletal', 'Material'],
-          description: 'Type of track to add.'
-        },
-        trackName: { type: 'string', description: 'Track display name.' },
-        propertyPath: { type: 'string', description: 'Property path for property tracks.' },
-        
-        // Keyframes
-        time: { type: 'number', description: 'Time in seconds for keyframe.' },
-        frame: { type: 'number', description: 'Frame number for keyframe.' },
-        value: commonSchemas.value,
-        interpolation: { type: 'string', enum: ['Auto', 'User', 'Break', 'Linear', 'Constant'], description: 'Keyframe interpolation mode.' },
-        
-        // Playback range
-        startTime: { type: 'number', description: 'Playback start time in seconds.' },
-        endTime: { type: 'number', description: 'Playback end time in seconds.' },
-        displayRate: { type: 'number', description: 'Display rate in FPS.' },
-        tickResolution: { type: 'number', description: 'Tick resolution (ticks per second).' },
-        
-        // Export
-        exportPath: commonSchemas.exportPath,
-        exportFormat: { type: 'string', enum: ['FBX', 'USD'], description: 'Export format.' },
-        
-        // Common
-        location: commonSchemas.location,
-        rotation: commonSchemas.rotation,
-        save: commonSchemas.save
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        ...commonSchemas.outputBase,
-        sequencePath: commonSchemas.sequencePath,
-        sequenceName: commonSchemas.stringProp,
-        bindingId: commonSchemas.stringProp,
-        trackId: commonSchemas.stringProp,
-        sectionId: commonSchemas.stringProp,
-        cameraActorName: commonSchemas.actorName,
-        sequences: commonSchemas.arrayOfStrings,
-        bindings: commonSchemas.arrayOfObjects,
-        tracks: commonSchemas.arrayOfObjects,
-        sections: commonSchemas.arrayOfObjects,
-        keyframes: commonSchemas.arrayOfObjects,
-        playbackRange: {
-          type: 'object',
-          properties: {
-            startFrame: commonSchemas.numberProp,
-            endFrame: commonSchemas.numberProp,
-            startTime: commonSchemas.numberProp,
-            endTime: commonSchemas.numberProp
-          }
-        },
-        sequenceInfo: {
-          type: 'object',
-          properties: {
-            displayRate: commonSchemas.numberProp,
-            tickResolution: commonSchemas.numberProp,
-            duration: commonSchemas.numberProp,
-            bindingCount: commonSchemas.numberProp,
-            trackCount: commonSchemas.numberProp
-          }
-        },
-        error: commonSchemas.stringProp
-      }
-    }
-  },
-  {
-    name: 'manage_movie_render',
-    category: 'authoring',
-    description: 'Manage Movie Render Queue. Create render jobs, configure output settings, add render passes, and execute renders.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: [
-            // Queue management
-            'create_queue', 'add_job', 'remove_job', 'clear_queue', 'get_queue',
-            // Job configuration
-            'configure_job', 'set_sequence', 'set_map',
-            // Output settings
-            'configure_output', 'set_resolution', 'set_frame_rate', 'set_output_directory', 'set_file_name_format',
-            // Render passes
-            'add_render_pass', 'remove_render_pass', 'get_render_passes', 'configure_render_pass',
-            // Anti-aliasing
-            'configure_anti_aliasing', 'set_spatial_sample_count', 'set_temporal_sample_count',
-            // Burn-ins
-            'add_burn_in', 'remove_burn_in', 'configure_burn_in',
-            // Execution
-            'start_render', 'stop_render', 'get_render_status', 'get_render_progress',
-            // Console variables
-            'add_console_variable', 'remove_console_variable',
-            // High-resolution
-            'configure_high_res_settings', 'set_tile_count'
-          ],
-          description: 'Movie render action to perform.'
-        },
-        // Job identification
-        jobName: { type: 'string', description: 'Render job name.' },
-        jobIndex: { type: 'number', description: 'Job index in queue.' },
-        sequencePath: commonSchemas.sequencePath,
-        mapPath: { type: 'string', description: 'Map/level path to render.' },
-        
-        // Output settings
-        outputDirectory: { type: 'string', description: 'Output directory path.' },
-        fileNameFormat: { type: 'string', description: 'File name format string with tokens like {sequence_name}, {frame_number}.' },
-        outputFormat: { type: 'string', enum: ['PNG', 'JPG', 'EXR', 'BMP', 'ProRes', 'AVI'], description: 'Output image/video format.' },
-        resolutionX: { type: 'number', description: 'Output resolution width.' },
-        resolutionY: { type: 'number', description: 'Output resolution height.' },
-        frameRate: { type: 'number', description: 'Output frame rate.' },
-        
-        // Render passes
-        passType: {
-          type: 'string',
-          enum: ['FinalImage', 'ObjectId', 'MaterialId', 'Depth', 'WorldNormal', 'BaseColor', 'Roughness', 'Metallic', 'AmbientOcclusion', 'Cryptomatte'],
-          description: 'Type of render pass.'
-        },
-        passName: { type: 'string', description: 'Custom name for render pass.' },
-        passEnabled: { type: 'boolean', description: 'Enable/disable render pass.' },
-        
-        // Anti-aliasing
-        spatialSampleCount: { type: 'number', description: 'Spatial sample count for AA.' },
-        temporalSampleCount: { type: 'number', description: 'Temporal sample count for motion blur.' },
-        overrideAntiAliasing: { type: 'boolean', description: 'Override engine AA settings.' },
-        antiAliasingMethod: { type: 'string', enum: ['None', 'FXAA', 'TAA', 'MSAA'], description: 'Anti-aliasing method.' },
-        
-        // Burn-ins
-        burnInClass: { type: 'string', description: 'Burn-in widget blueprint class path.' },
-        burnInText: { type: 'string', description: 'Text content for burn-in.' },
-        burnInPosition: { type: 'string', enum: ['TopLeft', 'TopCenter', 'TopRight', 'BottomLeft', 'BottomCenter', 'BottomRight'], description: 'Burn-in position.' },
-        
-        // Console variables
-        cvarName: { type: 'string', description: 'Console variable name.' },
-        cvarValue: { type: 'string', description: 'Console variable value.' },
-        
-        // High-resolution
-        tileCountX: { type: 'number', description: 'Tile count X for high-res rendering.' },
-        tileCountY: { type: 'number', description: 'Tile count Y for high-res rendering.' },
-        overlapRatio: { type: 'number', description: 'Tile overlap ratio (0.0-0.5).' },
-        
-        // Common
-        save: commonSchemas.save
-      },
-      required: ['action']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        ...commonSchemas.outputBase,
-        jobName: commonSchemas.stringProp,
-        jobIndex: commonSchemas.numberProp,
-        queueSize: commonSchemas.numberProp,
-        jobs: commonSchemas.arrayOfObjects,
-        renderPasses: commonSchemas.arrayOfObjects,
-        renderStatus: {
-          type: 'object',
-          properties: {
-            state: { type: 'string', enum: ['Idle', 'Rendering', 'Paused', 'Finished', 'Error'] },
-            currentFrame: commonSchemas.numberProp,
-            totalFrames: commonSchemas.numberProp,
-            progress: commonSchemas.numberProp,
-            elapsedTime: commonSchemas.numberProp,
-            estimatedTimeRemaining: commonSchemas.numberProp
-          }
-        },
-        outputPath: commonSchemas.stringProp,
-        error: commonSchemas.stringProp
-      }
-    }
-  },
+  // NOTE: manage_sequencer and manage_movie_render have been merged into manage_sequence
   {
     name: 'manage_media',
     category: 'authoring',
@@ -6750,7 +6486,14 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
                 properties: {
                   name: commonSchemas.stringProp,
                   type: commonSchemas.stringProp,
-                  defaultValue: { type: ['string', 'number', 'boolean', 'object'] },
+                  defaultValue: {
+                    anyOf: [
+                      { type: 'string' },
+                      { type: 'number' },
+                      { type: 'boolean' },
+                      { type: 'object', additionalProperties: true }
+                    ]
+                  },
                   options: commonSchemas.arrayOfStrings
                 }
               }
@@ -7118,7 +6861,14 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             properties: {
               name: commonSchemas.stringProp,
               type: commonSchemas.stringProp,
-              value: { type: ['string', 'number', 'boolean', 'array'] },
+              value: {
+                anyOf: [
+                  { type: 'string' },
+                  { type: 'number' },
+                  { type: 'boolean' },
+                  { type: 'array', items: true }
+                ]
+              },
               label: commonSchemas.stringProp
             }
           },
@@ -7145,7 +6895,14 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             properties: {
               name: commonSchemas.stringProp,
               type: { type: 'string', enum: ['Float', 'Int', 'Bool', 'Color', 'String', 'Image'] },
-              defaultValue: { type: ['string', 'number', 'boolean', 'object'] },
+              defaultValue: {
+                anyOf: [
+                  { type: 'string' },
+                  { type: 'number' },
+                  { type: 'boolean' },
+                  { type: 'object', additionalProperties: true }
+                ]
+              },
               minValue: commonSchemas.numberProp,
               maxValue: commonSchemas.numberProp
             }

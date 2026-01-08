@@ -798,7 +798,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePhysicsDestructionAction(
         }
         else
         {
-            AFieldSystemActor* FieldActor = FindActorByLabelOrName<AFieldSystemActor>(World, FieldSystemName);
+            AFieldSystemActor* FieldActor = FindActorByLabelOrName<AFieldSystemActor>(FieldSystemName);
 
             if (!FieldActor)
             {
@@ -927,7 +927,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePhysicsDestructionAction(
         }
         else
         {
-            AGeometryCollectionActor* GCActor = FindActorByLabelOrName<AGeometryCollectionActor>(World, ActorName);
+            AGeometryCollectionActor* GCActor = FindActorByLabelOrName<AGeometryCollectionActor>(ActorName);
             if (!GCActor)
             {
                 Response = MakeErrorResponse(FString::Printf(TEXT("Geometry collection actor not found: %s"), *ActorName));
@@ -1729,7 +1729,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePhysicsDestructionAction(
         }
         else
         {
-            AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+            AActor* Actor = FindActorByLabelOrName<AActor>(ActorName);
             if (!Actor)
             {
                 Response = MakeErrorResponse(FString::Printf(TEXT("Actor not found: %s"), *ActorName));

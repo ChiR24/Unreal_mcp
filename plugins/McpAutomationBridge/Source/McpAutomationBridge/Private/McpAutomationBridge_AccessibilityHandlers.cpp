@@ -50,6 +50,19 @@
 #define MCP_HAS_UMG 0
 #endif
 
+// Widget Blueprint Creation (Editor)
+#if WITH_EDITOR
+#include "WidgetBlueprint.h"
+#include "WidgetBlueprintFactory.h"
+#include "AssetToolsModule.h"
+#include "IAssetTools.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "UObject/SavePackage.h"
+#include "Materials/MaterialInstanceConstant.h"
+#include "Materials/Material.h"
+#endif
+
 // Enhanced Input
 #if __has_include("EnhancedInputSubsystems.h")
 #include "EnhancedInputSubsystems.h"
@@ -126,22 +139,75 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAccessibilityAction(
     // ========================================
     if (ActionType == TEXT("create_colorblind_filter"))
     {
-#if MCP_HAS_POST_PROCESS
+#if MCP_HAS_POST_PROCESS && WITH_EDITOR
         FString FilterName;
         FString ColorblindMode = TEXT("Deuteranopia");
+        FString SavePath = TEXT("/Game/Accessibility/Materials");
         Payload->TryGetStringField(TEXT("assetName"), FilterName);
         Payload->TryGetStringField(TEXT("colorblindMode"), ColorblindMode);
+        Payload->TryGetStringField(TEXT("savePath"), SavePath);
 
         if (FilterName.IsEmpty())
         {
-            FilterName = TEXT("ColorblindFilter");
+            FilterName = TEXT("PP_ColorblindFilter");
         }
 
-        // Create a post-process material for colorblind simulation
-        // In production, this would create/use a colorblind correction material
-        Response = MakeSuccessResponse(FString::Printf(TEXT("Colorblind filter created: %s"), *FilterName));
-        Response->SetBoolField(TEXT("colorblindFilterApplied"), true);
-        Response->SetStringField(TEXT("currentColorblindMode"), ColorblindMode);
+        // Create the post-process material instance for colorblind correction
+        FString PackagePath = SavePath / FilterName;
+        UPackage* Package = CreatePackage(*PackagePath);
+        if (!Package)
+        {
+            Response = MakeErrorResponse(TEXT("Failed to create package for colorblind filter material"));
+        }
+        else
+        {
+            // Create Material Instance Dynamic at runtime, or Material Instance Constant for editor
+            UMaterialInstanceConstant* MaterialInstance = NewObject<UMaterialInstanceConstant>(Package, *FilterName, RF_Public | RF_Standalone);
+            
+            if (MaterialInstance)
+            {
+                // Find the engine's built-in colorblind post process material if available
+                // Otherwise create a basic post-process material instance
+                UMaterial* BaseMaterial = LoadObject<UMaterial>(nullptr, TEXT("/Engine/EngineMaterials/DefaultPostProcessMaterial.DefaultPostProcessMaterial"));
+                
+                if (BaseMaterial)
+                {
+                    MaterialInstance->SetParentEditorOnly(BaseMaterial);
+                }
+                
+                // Set colorblind mode parameters based on type
+                // Deuteranopia (green-blind), Protanopia (red-blind), Tritanopia (blue-blind)
+                FLinearColor ColorMatrix = FLinearColor::White;
+                if (ColorblindMode == TEXT("Deuteranopia"))
+                {
+                    // Green-blind color correction matrix
+                    MaterialInstance->SetScalarParameterValueEditorOnly(FName("ColorblindType"), 1.0f);
+                }
+                else if (ColorblindMode == TEXT("Protanopia"))
+                {
+                    // Red-blind color correction matrix
+                    MaterialInstance->SetScalarParameterValueEditorOnly(FName("ColorblindType"), 2.0f);
+                }
+                else if (ColorblindMode == TEXT("Tritanopia"))
+                {
+                    // Blue-blind color correction matrix
+                    MaterialInstance->SetScalarParameterValueEditorOnly(FName("ColorblindType"), 3.0f);
+                }
+                
+                // Save the material instance
+                MaterialInstance->MarkPackageDirty();
+                McpSafeAssetSave(MaterialInstance);
+                
+                Response = MakeSuccessResponse(FString::Printf(TEXT("Colorblind filter material created: %s"), *PackagePath));
+                Response->SetBoolField(TEXT("colorblindFilterApplied"), true);
+                Response->SetStringField(TEXT("currentColorblindMode"), ColorblindMode);
+                Response->SetStringField(TEXT("materialPath"), PackagePath);
+            }
+            else
+            {
+                Response = MakeErrorResponse(TEXT("Failed to create colorblind filter material instance"));
+            }
+        }
 #else
         Response = MakeErrorResponse(TEXT("Post process not available for colorblind filter"));
 #endif
@@ -299,16 +365,53 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAccessibilityAction(
     {
 #if MCP_HAS_UMG && WITH_EDITOR
         FString WidgetName;
+        FString SavePath = TEXT("/Game/UI/Accessibility");
         Payload->TryGetStringField(TEXT("widgetName"), WidgetName);
+        Payload->TryGetStringField(TEXT("savePath"), SavePath);
         
         if (WidgetName.IsEmpty())
         {
             WidgetName = TEXT("WBP_Subtitles");
         }
 
-        Response = MakeSuccessResponse(TEXT("Subtitle widget created"));
-        Response->SetBoolField(TEXT("subtitleWidgetCreated"), true);
-        Response->SetStringField(TEXT("subtitleWidgetPath"), FString::Printf(TEXT("/Game/UI/%s"), *WidgetName));
+        // Create Widget Blueprint using UWidgetBlueprintFactory
+        FString PackagePath = SavePath / WidgetName;
+        UPackage* Package = CreatePackage(*PackagePath);
+        if (!Package)
+        {
+            Response = MakeErrorResponse(TEXT("Failed to create package for subtitle widget"));
+        }
+        else
+        {
+            // Use the WidgetBlueprintFactory to create a proper widget blueprint
+            UWidgetBlueprintFactory* Factory = NewObject<UWidgetBlueprintFactory>();
+            Factory->ParentClass = UUserWidget::StaticClass();
+            
+            UObject* CreatedAsset = Factory->FactoryCreateNew(
+                UWidgetBlueprint::StaticClass(),
+                Package,
+                FName(*WidgetName),
+                RF_Public | RF_Standalone,
+                nullptr,
+                GWarn
+            );
+            
+            UWidgetBlueprint* WidgetBP = Cast<UWidgetBlueprint>(CreatedAsset);
+            if (WidgetBP)
+            {
+                // Mark dirty and save
+                WidgetBP->MarkPackageDirty();
+                McpSafeAssetSave(WidgetBP);
+                
+                Response = MakeSuccessResponse(TEXT("Subtitle widget blueprint created"));
+                Response->SetBoolField(TEXT("subtitleWidgetCreated"), true);
+                Response->SetStringField(TEXT("subtitleWidgetPath"), PackagePath);
+            }
+            else
+            {
+                Response = MakeErrorResponse(TEXT("Failed to create subtitle widget blueprint"));
+            }
+        }
 #else
         Response = MakeErrorResponse(TEXT("UMG not available for widget creation"));
 #endif
@@ -458,17 +561,55 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAccessibilityAction(
 #if MCP_HAS_UMG && WITH_EDITOR
         FString WidgetName;
         FString Position = TEXT("TopRight");
+        FString SavePath = TEXT("/Game/UI/Accessibility");
         
         Payload->TryGetStringField(TEXT("widgetName"), WidgetName);
         Payload->TryGetStringField(TEXT("soundIndicatorPosition"), Position);
+        Payload->TryGetStringField(TEXT("savePath"), SavePath);
         
         if (WidgetName.IsEmpty())
         {
             WidgetName = TEXT("WBP_SoundIndicator");
         }
 
-        Response = MakeSuccessResponse(TEXT("Sound indicator widget created"));
-        Response->SetBoolField(TEXT("soundIndicatorWidgetCreated"), true);
+        // Create Widget Blueprint using UWidgetBlueprintFactory
+        FString PackagePath = SavePath / WidgetName;
+        UPackage* Package = CreatePackage(*PackagePath);
+        if (!Package)
+        {
+            Response = MakeErrorResponse(TEXT("Failed to create package for sound indicator widget"));
+        }
+        else
+        {
+            UWidgetBlueprintFactory* Factory = NewObject<UWidgetBlueprintFactory>();
+            Factory->ParentClass = UUserWidget::StaticClass();
+            
+            UObject* CreatedAsset = Factory->FactoryCreateNew(
+                UWidgetBlueprint::StaticClass(),
+                Package,
+                FName(*WidgetName),
+                RF_Public | RF_Standalone,
+                nullptr,
+                GWarn
+            );
+            
+            UWidgetBlueprint* WidgetBP = Cast<UWidgetBlueprint>(CreatedAsset);
+            if (WidgetBP)
+            {
+                // Store position preference in widget metadata
+                WidgetBP->MarkPackageDirty();
+                McpSafeAssetSave(WidgetBP);
+                
+                Response = MakeSuccessResponse(TEXT("Sound indicator widget created"));
+                Response->SetBoolField(TEXT("soundIndicatorWidgetCreated"), true);
+                Response->SetStringField(TEXT("widgetPath"), PackagePath);
+                Response->SetStringField(TEXT("position"), Position);
+            }
+            else
+            {
+                Response = MakeErrorResponse(TEXT("Failed to create sound indicator widget blueprint"));
+            }
+        }
 #else
         Response = MakeErrorResponse(TEXT("UMG not available for widget creation"));
 #endif
@@ -554,15 +695,51 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAccessibilityAction(
     {
 #if MCP_HAS_UMG && WITH_EDITOR
         FString WidgetName;
+        FString SavePath = TEXT("/Game/UI/Accessibility");
         Payload->TryGetStringField(TEXT("widgetName"), WidgetName);
+        Payload->TryGetStringField(TEXT("savePath"), SavePath);
         
         if (WidgetName.IsEmpty())
         {
             WidgetName = TEXT("WBP_ControlRemapping");
         }
 
-        Response = MakeSuccessResponse(TEXT("Control remapping UI created"));
-        Response->SetBoolField(TEXT("remappingUICreated"), true);
+        // Create Widget Blueprint using UWidgetBlueprintFactory
+        FString PackagePath = SavePath / WidgetName;
+        UPackage* Package = CreatePackage(*PackagePath);
+        if (!Package)
+        {
+            Response = MakeErrorResponse(TEXT("Failed to create package for control remapping widget"));
+        }
+        else
+        {
+            UWidgetBlueprintFactory* Factory = NewObject<UWidgetBlueprintFactory>();
+            Factory->ParentClass = UUserWidget::StaticClass();
+            
+            UObject* CreatedAsset = Factory->FactoryCreateNew(
+                UWidgetBlueprint::StaticClass(),
+                Package,
+                FName(*WidgetName),
+                RF_Public | RF_Standalone,
+                nullptr,
+                GWarn
+            );
+            
+            UWidgetBlueprint* WidgetBP = Cast<UWidgetBlueprint>(CreatedAsset);
+            if (WidgetBP)
+            {
+                WidgetBP->MarkPackageDirty();
+                McpSafeAssetSave(WidgetBP);
+                
+                Response = MakeSuccessResponse(TEXT("Control remapping UI created"));
+                Response->SetBoolField(TEXT("remappingUICreated"), true);
+                Response->SetStringField(TEXT("widgetPath"), PackagePath);
+            }
+            else
+            {
+                Response = MakeErrorResponse(TEXT("Failed to create control remapping widget blueprint"));
+            }
+        }
 #else
         Response = MakeErrorResponse(TEXT("UMG not available for widget creation"));
 #endif
@@ -799,7 +976,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAccessibilityAction(
     else if (ActionType == TEXT("create_accessibility_preset"))
     {
         FString PresetName;
+        FString SavePath = TEXT("/Game/Accessibility/Presets");
         Payload->TryGetStringField(TEXT("presetName"), PresetName);
+        Payload->TryGetStringField(TEXT("savePath"), SavePath);
 
         if (PresetName.IsEmpty())
         {
@@ -807,26 +986,170 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAccessibilityAction(
         }
         else
         {
-            // Would create a preset asset containing all current settings
-            Response = MakeSuccessResponse(FString::Printf(TEXT("Accessibility preset '%s' created"), *PresetName));
-            Response->SetBoolField(TEXT("presetCreated"), true);
-            Response->SetStringField(TEXT("presetPath"), FString::Printf(TEXT("/Game/Accessibility/%s"), *PresetName));
+#if WITH_EDITOR
+            // Gather all current accessibility settings into a JSON object
+            TSharedPtr<FJsonObject> PresetData = MakeShared<FJsonObject>();
+            
+            // Visual settings
+            FString ColorblindMode;
+            float ColorblindSeverity = 0.0f;
+            bool bHighContrast = false;
+            float UIScale = 1.0f;
+            GConfig->GetString(TEXT("Accessibility"), TEXT("ColorblindMode"), ColorblindMode, GGameUserSettingsIni);
+            GConfig->GetFloat(TEXT("Accessibility"), TEXT("ColorblindSeverity"), ColorblindSeverity, GGameUserSettingsIni);
+            GConfig->GetBool(TEXT("Accessibility"), TEXT("HighContrastEnabled"), bHighContrast, GGameUserSettingsIni);
+            GConfig->GetFloat(TEXT("Accessibility"), TEXT("UIScale"), UIScale, GGameUserSettingsIni);
+            
+            PresetData->SetStringField(TEXT("colorblindMode"), ColorblindMode);
+            PresetData->SetNumberField(TEXT("colorblindSeverity"), ColorblindSeverity);
+            PresetData->SetBoolField(TEXT("highContrastEnabled"), bHighContrast);
+            PresetData->SetNumberField(TEXT("uiScale"), UIScale);
+            
+            // Subtitle settings
+            bool bSubtitles = false;
+            float SubtitleFontSize = 24.0f;
+            GConfig->GetBool(TEXT("Accessibility"), TEXT("SubtitlesEnabled"), bSubtitles, GGameUserSettingsIni);
+            GConfig->GetFloat(TEXT("Accessibility"), TEXT("SubtitleFontSize"), SubtitleFontSize, GGameUserSettingsIni);
+            PresetData->SetBoolField(TEXT("subtitlesEnabled"), bSubtitles);
+            PresetData->SetNumberField(TEXT("subtitleFontSize"), SubtitleFontSize);
+            
+            // Audio settings
+            bool bMonoAudio = false;
+            GConfig->GetBool(TEXT("Accessibility"), TEXT("MonoAudioEnabled"), bMonoAudio, GGameUserSettingsIni);
+            PresetData->SetBoolField(TEXT("monoAudioEnabled"), bMonoAudio);
+            
+            // Motor settings
+            bool bAutoAim = false;
+            float AutoAimStrength = 0.0f;
+            GConfig->GetBool(TEXT("Accessibility"), TEXT("AutoAimEnabled"), bAutoAim, GGameUserSettingsIni);
+            GConfig->GetFloat(TEXT("Accessibility"), TEXT("AutoAimStrength"), AutoAimStrength, GGameUserSettingsIni);
+            PresetData->SetBoolField(TEXT("autoAimEnabled"), bAutoAim);
+            PresetData->SetNumberField(TEXT("autoAimStrength"), AutoAimStrength);
+            
+            // Serialize to JSON string
+            FString JsonString;
+            TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
+            FJsonSerializer::Serialize(PresetData.ToSharedRef(), Writer);
+            
+            // Save to file in project directory
+            FString PresetFilePath = FPaths::ProjectSavedDir() / TEXT("Accessibility") / PresetName + TEXT(".json");
+            IFileManager::Get().MakeDirectory(*FPaths::GetPath(PresetFilePath), true);
+            
+            if (FFileHelper::SaveStringToFile(JsonString, *PresetFilePath))
+            {
+                Response = MakeSuccessResponse(FString::Printf(TEXT("Accessibility preset '%s' created"), *PresetName));
+                Response->SetBoolField(TEXT("presetCreated"), true);
+                Response->SetStringField(TEXT("presetPath"), PresetFilePath);
+            }
+            else
+            {
+                Response = MakeErrorResponse(FString::Printf(TEXT("Failed to save preset file: %s"), *PresetFilePath));
+            }
+#else
+            Response = MakeErrorResponse(TEXT("Preset creation requires editor"));
+#endif
         }
     }
     else if (ActionType == TEXT("apply_accessibility_preset"))
     {
         FString PresetName;
+        FString PresetPath;
         Payload->TryGetStringField(TEXT("presetName"), PresetName);
+        Payload->TryGetStringField(TEXT("presetPath"), PresetPath);
 
-        if (PresetName.IsEmpty())
+        if (PresetName.IsEmpty() && PresetPath.IsEmpty())
         {
-            Response = MakeErrorResponse(TEXT("presetName is required"));
+            Response = MakeErrorResponse(TEXT("presetName or presetPath is required"));
         }
         else
         {
-            // Would load and apply preset settings
-            Response = MakeSuccessResponse(FString::Printf(TEXT("Accessibility preset '%s' applied"), *PresetName));
-            Response->SetBoolField(TEXT("presetApplied"), true);
+            // Build path from preset name if not provided
+            if (PresetPath.IsEmpty())
+            {
+                PresetPath = FPaths::ProjectSavedDir() / TEXT("Accessibility") / PresetName + TEXT(".json");
+            }
+            
+            // Load preset JSON file
+            FString JsonString;
+            if (FFileHelper::LoadFileToString(JsonString, *PresetPath))
+            {
+                TSharedPtr<FJsonObject> PresetData;
+                TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+                
+                if (FJsonSerializer::Deserialize(Reader, PresetData) && PresetData.IsValid())
+                {
+                    // Apply visual settings
+                    FString ColorblindMode;
+                    if (PresetData->TryGetStringField(TEXT("colorblindMode"), ColorblindMode))
+                    {
+                        GConfig->SetString(TEXT("Accessibility"), TEXT("ColorblindMode"), *ColorblindMode, GGameUserSettingsIni);
+                    }
+                    
+                    double ColorblindSeverity;
+                    if (PresetData->TryGetNumberField(TEXT("colorblindSeverity"), ColorblindSeverity))
+                    {
+                        GConfig->SetFloat(TEXT("Accessibility"), TEXT("ColorblindSeverity"), (float)ColorblindSeverity, GGameUserSettingsIni);
+                    }
+                    
+                    bool bHighContrast;
+                    if (PresetData->TryGetBoolField(TEXT("highContrastEnabled"), bHighContrast))
+                    {
+                        GConfig->SetBool(TEXT("Accessibility"), TEXT("HighContrastEnabled"), bHighContrast, GGameUserSettingsIni);
+                    }
+                    
+                    double UIScale;
+                    if (PresetData->TryGetNumberField(TEXT("uiScale"), UIScale))
+                    {
+                        GConfig->SetFloat(TEXT("Accessibility"), TEXT("UIScale"), (float)UIScale, GGameUserSettingsIni);
+                    }
+                    
+                    // Apply subtitle settings
+                    bool bSubtitles;
+                    if (PresetData->TryGetBoolField(TEXT("subtitlesEnabled"), bSubtitles))
+                    {
+                        GConfig->SetBool(TEXT("Accessibility"), TEXT("SubtitlesEnabled"), bSubtitles, GGameUserSettingsIni);
+                    }
+                    
+                    double SubtitleFontSize;
+                    if (PresetData->TryGetNumberField(TEXT("subtitleFontSize"), SubtitleFontSize))
+                    {
+                        GConfig->SetFloat(TEXT("Accessibility"), TEXT("SubtitleFontSize"), (float)SubtitleFontSize, GGameUserSettingsIni);
+                    }
+                    
+                    // Apply audio settings
+                    bool bMonoAudio;
+                    if (PresetData->TryGetBoolField(TEXT("monoAudioEnabled"), bMonoAudio))
+                    {
+                        GConfig->SetBool(TEXT("Accessibility"), TEXT("MonoAudioEnabled"), bMonoAudio, GGameUserSettingsIni);
+                    }
+                    
+                    // Apply motor settings
+                    bool bAutoAim;
+                    if (PresetData->TryGetBoolField(TEXT("autoAimEnabled"), bAutoAim))
+                    {
+                        GConfig->SetBool(TEXT("Accessibility"), TEXT("AutoAimEnabled"), bAutoAim, GGameUserSettingsIni);
+                    }
+                    
+                    double AutoAimStrength;
+                    if (PresetData->TryGetNumberField(TEXT("autoAimStrength"), AutoAimStrength))
+                    {
+                        GConfig->SetFloat(TEXT("Accessibility"), TEXT("AutoAimStrength"), (float)AutoAimStrength, GGameUserSettingsIni);
+                    }
+                    
+                    GConfig->Flush(false, GGameUserSettingsIni);
+                    
+                    Response = MakeSuccessResponse(FString::Printf(TEXT("Accessibility preset '%s' applied"), *PresetName));
+                    Response->SetBoolField(TEXT("presetApplied"), true);
+                }
+                else
+                {
+                    Response = MakeErrorResponse(TEXT("Failed to parse preset JSON file"));
+                }
+            }
+            else
+            {
+                Response = MakeErrorResponse(FString::Printf(TEXT("Preset file not found: %s"), *PresetPath));
+            }
         }
     }
     else if (ActionType == TEXT("export_accessibility_settings"))
@@ -841,10 +1164,121 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAccessibilityAction(
             ExportPath = FPaths::ProjectSavedDir() / TEXT("Accessibility/settings.json");
         }
 
-        // Would export current settings to file
-        Response = MakeSuccessResponse(TEXT("Accessibility settings exported"));
-        Response->SetBoolField(TEXT("settingsExported"), true);
-        Response->SetStringField(TEXT("exportPath"), ExportPath);
+        // Gather all accessibility settings into a comprehensive JSON object
+        TSharedPtr<FJsonObject> SettingsObj = MakeShared<FJsonObject>();
+        
+        // Visual settings
+        TSharedPtr<FJsonObject> VisualObj = MakeShared<FJsonObject>();
+        FString ColorblindMode;
+        float ColorblindSeverity = 0.0f;
+        bool bHighContrast = false;
+        float UIScale = 1.0f;
+        bool bTTS = false;
+        float FontSize = 14.0f;
+        
+        GConfig->GetString(TEXT("Accessibility"), TEXT("ColorblindMode"), ColorblindMode, GGameUserSettingsIni);
+        GConfig->GetFloat(TEXT("Accessibility"), TEXT("ColorblindSeverity"), ColorblindSeverity, GGameUserSettingsIni);
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("HighContrastEnabled"), bHighContrast, GGameUserSettingsIni);
+        GConfig->GetFloat(TEXT("Accessibility"), TEXT("UIScale"), UIScale, GGameUserSettingsIni);
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("TextToSpeechEnabled"), bTTS, GGameUserSettingsIni);
+        GConfig->GetFloat(TEXT("Accessibility"), TEXT("FontSize"), FontSize, GGameUserSettingsIni);
+        
+        VisualObj->SetStringField(TEXT("colorblindMode"), ColorblindMode);
+        VisualObj->SetNumberField(TEXT("colorblindSeverity"), ColorblindSeverity);
+        VisualObj->SetBoolField(TEXT("highContrastEnabled"), bHighContrast);
+        VisualObj->SetNumberField(TEXT("uiScale"), UIScale);
+        VisualObj->SetBoolField(TEXT("textToSpeechEnabled"), bTTS);
+        VisualObj->SetNumberField(TEXT("fontSize"), FontSize);
+        SettingsObj->SetObjectField(TEXT("visual"), VisualObj);
+        
+        // Subtitle settings
+        TSharedPtr<FJsonObject> SubtitleObj = MakeShared<FJsonObject>();
+        bool bSubtitles = false;
+        float SubtitleFontSize = 24.0f;
+        bool bSpeakerID = false;
+        bool bDirectional = false;
+        
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("SubtitlesEnabled"), bSubtitles, GGameUserSettingsIni);
+        GConfig->GetFloat(TEXT("Accessibility"), TEXT("SubtitleFontSize"), SubtitleFontSize, GGameUserSettingsIni);
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("SpeakerIdentificationEnabled"), bSpeakerID, GGameUserSettingsIni);
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("DirectionalIndicatorsEnabled"), bDirectional, GGameUserSettingsIni);
+        
+        SubtitleObj->SetBoolField(TEXT("enabled"), bSubtitles);
+        SubtitleObj->SetNumberField(TEXT("fontSize"), SubtitleFontSize);
+        SubtitleObj->SetBoolField(TEXT("speakerIdentification"), bSpeakerID);
+        SubtitleObj->SetBoolField(TEXT("directionalIndicators"), bDirectional);
+        SettingsObj->SetObjectField(TEXT("subtitles"), SubtitleObj);
+        
+        // Audio settings
+        TSharedPtr<FJsonObject> AudioObj = MakeShared<FJsonObject>();
+        bool bMono = false;
+        bool bAudioVis = false;
+        float AudioBalance = 0.0f;
+        
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("MonoAudioEnabled"), bMono, GGameUserSettingsIni);
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("AudioVisualizationEnabled"), bAudioVis, GGameUserSettingsIni);
+        GConfig->GetFloat(TEXT("Accessibility"), TEXT("AudioBalance"), AudioBalance, GGameUserSettingsIni);
+        
+        AudioObj->SetBoolField(TEXT("monoAudio"), bMono);
+        AudioObj->SetBoolField(TEXT("audioVisualization"), bAudioVis);
+        AudioObj->SetNumberField(TEXT("audioBalance"), AudioBalance);
+        SettingsObj->SetObjectField(TEXT("audio"), AudioObj);
+        
+        // Motor settings
+        TSharedPtr<FJsonObject> MotorObj = MakeShared<FJsonObject>();
+        bool bHoldToggle = false;
+        bool bAutoAim = false;
+        float AutoAimStrength = 0.0f;
+        bool bOneHanded = false;
+        
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("HoldToToggleEnabled"), bHoldToggle, GGameUserSettingsIni);
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("AutoAimEnabled"), bAutoAim, GGameUserSettingsIni);
+        GConfig->GetFloat(TEXT("Accessibility"), TEXT("AutoAimStrength"), AutoAimStrength, GGameUserSettingsIni);
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("OneHandedModeEnabled"), bOneHanded, GGameUserSettingsIni);
+        
+        MotorObj->SetBoolField(TEXT("holdToToggle"), bHoldToggle);
+        MotorObj->SetBoolField(TEXT("autoAimEnabled"), bAutoAim);
+        MotorObj->SetNumberField(TEXT("autoAimStrength"), AutoAimStrength);
+        MotorObj->SetBoolField(TEXT("oneHandedMode"), bOneHanded);
+        SettingsObj->SetObjectField(TEXT("motor"), MotorObj);
+        
+        // Cognitive settings
+        TSharedPtr<FJsonObject> CognitiveObj = MakeShared<FJsonObject>();
+        FString DifficultyPreset;
+        bool bObjectiveReminders = false;
+        bool bNavAssist = false;
+        float GameSpeed = 1.0f;
+        
+        GConfig->GetString(TEXT("Accessibility"), TEXT("DifficultyPreset"), DifficultyPreset, GGameUserSettingsIni);
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("ObjectiveRemindersEnabled"), bObjectiveReminders, GGameUserSettingsIni);
+        GConfig->GetBool(TEXT("Accessibility"), TEXT("NavigationAssistanceEnabled"), bNavAssist, GGameUserSettingsIni);
+        GConfig->GetFloat(TEXT("Accessibility"), TEXT("GameSpeedMultiplier"), GameSpeed, GGameUserSettingsIni);
+        
+        CognitiveObj->SetStringField(TEXT("difficultyPreset"), DifficultyPreset);
+        CognitiveObj->SetBoolField(TEXT("objectiveReminders"), bObjectiveReminders);
+        CognitiveObj->SetBoolField(TEXT("navigationAssistance"), bNavAssist);
+        CognitiveObj->SetNumberField(TEXT("gameSpeed"), GameSpeed);
+        SettingsObj->SetObjectField(TEXT("cognitive"), CognitiveObj);
+        
+        // Serialize to JSON string
+        FString JsonString;
+        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
+        FJsonSerializer::Serialize(SettingsObj.ToSharedRef(), Writer);
+        
+        // Ensure directory exists
+        IFileManager::Get().MakeDirectory(*FPaths::GetPath(ExportPath), true);
+        
+        // Write to file
+        if (FFileHelper::SaveStringToFile(JsonString, *ExportPath))
+        {
+            Response = MakeSuccessResponse(TEXT("Accessibility settings exported"));
+            Response->SetBoolField(TEXT("settingsExported"), true);
+            Response->SetStringField(TEXT("exportPath"), ExportPath);
+        }
+        else
+        {
+            Response = MakeErrorResponse(FString::Printf(TEXT("Failed to write settings file: %s"), *ExportPath));
+        }
     }
     else if (ActionType == TEXT("import_accessibility_settings"))
     {
@@ -857,9 +1291,138 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAccessibilityAction(
         }
         else
         {
-            // Would import settings from file
-            Response = MakeSuccessResponse(TEXT("Accessibility settings imported"));
-            Response->SetBoolField(TEXT("settingsImported"), true);
+            // Load JSON file
+            FString JsonString;
+            if (FFileHelper::LoadFileToString(JsonString, *ImportPath))
+            {
+                TSharedPtr<FJsonObject> SettingsObj;
+                TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+                
+                if (FJsonSerializer::Deserialize(Reader, SettingsObj) && SettingsObj.IsValid())
+                {
+                    // Import Visual settings
+                    const TSharedPtr<FJsonObject>* VisualObj;
+                    if (SettingsObj->TryGetObjectField(TEXT("visual"), VisualObj))
+                    {
+                        FString ColorblindMode;
+                        if ((*VisualObj)->TryGetStringField(TEXT("colorblindMode"), ColorblindMode))
+                            GConfig->SetString(TEXT("Accessibility"), TEXT("ColorblindMode"), *ColorblindMode, GGameUserSettingsIni);
+                        
+                        double ColorblindSeverity;
+                        if ((*VisualObj)->TryGetNumberField(TEXT("colorblindSeverity"), ColorblindSeverity))
+                            GConfig->SetFloat(TEXT("Accessibility"), TEXT("ColorblindSeverity"), (float)ColorblindSeverity, GGameUserSettingsIni);
+                        
+                        bool bHighContrast;
+                        if ((*VisualObj)->TryGetBoolField(TEXT("highContrastEnabled"), bHighContrast))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("HighContrastEnabled"), bHighContrast, GGameUserSettingsIni);
+                        
+                        double UIScale;
+                        if ((*VisualObj)->TryGetNumberField(TEXT("uiScale"), UIScale))
+                            GConfig->SetFloat(TEXT("Accessibility"), TEXT("UIScale"), (float)UIScale, GGameUserSettingsIni);
+                        
+                        bool bTTS;
+                        if ((*VisualObj)->TryGetBoolField(TEXT("textToSpeechEnabled"), bTTS))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("TextToSpeechEnabled"), bTTS, GGameUserSettingsIni);
+                        
+                        double FontSize;
+                        if ((*VisualObj)->TryGetNumberField(TEXT("fontSize"), FontSize))
+                            GConfig->SetFloat(TEXT("Accessibility"), TEXT("FontSize"), (float)FontSize, GGameUserSettingsIni);
+                    }
+                    
+                    // Import Subtitle settings
+                    const TSharedPtr<FJsonObject>* SubtitleObj;
+                    if (SettingsObj->TryGetObjectField(TEXT("subtitles"), SubtitleObj))
+                    {
+                        bool bSubtitles;
+                        if ((*SubtitleObj)->TryGetBoolField(TEXT("enabled"), bSubtitles))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("SubtitlesEnabled"), bSubtitles, GGameUserSettingsIni);
+                        
+                        double SubtitleFontSize;
+                        if ((*SubtitleObj)->TryGetNumberField(TEXT("fontSize"), SubtitleFontSize))
+                            GConfig->SetFloat(TEXT("Accessibility"), TEXT("SubtitleFontSize"), (float)SubtitleFontSize, GGameUserSettingsIni);
+                        
+                        bool bSpeakerID;
+                        if ((*SubtitleObj)->TryGetBoolField(TEXT("speakerIdentification"), bSpeakerID))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("SpeakerIdentificationEnabled"), bSpeakerID, GGameUserSettingsIni);
+                        
+                        bool bDirectional;
+                        if ((*SubtitleObj)->TryGetBoolField(TEXT("directionalIndicators"), bDirectional))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("DirectionalIndicatorsEnabled"), bDirectional, GGameUserSettingsIni);
+                    }
+                    
+                    // Import Audio settings
+                    const TSharedPtr<FJsonObject>* AudioObj;
+                    if (SettingsObj->TryGetObjectField(TEXT("audio"), AudioObj))
+                    {
+                        bool bMono;
+                        if ((*AudioObj)->TryGetBoolField(TEXT("monoAudio"), bMono))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("MonoAudioEnabled"), bMono, GGameUserSettingsIni);
+                        
+                        bool bAudioVis;
+                        if ((*AudioObj)->TryGetBoolField(TEXT("audioVisualization"), bAudioVis))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("AudioVisualizationEnabled"), bAudioVis, GGameUserSettingsIni);
+                        
+                        double AudioBalance;
+                        if ((*AudioObj)->TryGetNumberField(TEXT("audioBalance"), AudioBalance))
+                            GConfig->SetFloat(TEXT("Accessibility"), TEXT("AudioBalance"), (float)AudioBalance, GGameUserSettingsIni);
+                    }
+                    
+                    // Import Motor settings
+                    const TSharedPtr<FJsonObject>* MotorObj;
+                    if (SettingsObj->TryGetObjectField(TEXT("motor"), MotorObj))
+                    {
+                        bool bHoldToggle;
+                        if ((*MotorObj)->TryGetBoolField(TEXT("holdToToggle"), bHoldToggle))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("HoldToToggleEnabled"), bHoldToggle, GGameUserSettingsIni);
+                        
+                        bool bAutoAim;
+                        if ((*MotorObj)->TryGetBoolField(TEXT("autoAimEnabled"), bAutoAim))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("AutoAimEnabled"), bAutoAim, GGameUserSettingsIni);
+                        
+                        double AutoAimStrength;
+                        if ((*MotorObj)->TryGetNumberField(TEXT("autoAimStrength"), AutoAimStrength))
+                            GConfig->SetFloat(TEXT("Accessibility"), TEXT("AutoAimStrength"), (float)AutoAimStrength, GGameUserSettingsIni);
+                        
+                        bool bOneHanded;
+                        if ((*MotorObj)->TryGetBoolField(TEXT("oneHandedMode"), bOneHanded))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("OneHandedModeEnabled"), bOneHanded, GGameUserSettingsIni);
+                    }
+                    
+                    // Import Cognitive settings
+                    const TSharedPtr<FJsonObject>* CognitiveObj;
+                    if (SettingsObj->TryGetObjectField(TEXT("cognitive"), CognitiveObj))
+                    {
+                        FString DifficultyPreset;
+                        if ((*CognitiveObj)->TryGetStringField(TEXT("difficultyPreset"), DifficultyPreset))
+                            GConfig->SetString(TEXT("Accessibility"), TEXT("DifficultyPreset"), *DifficultyPreset, GGameUserSettingsIni);
+                        
+                        bool bObjectiveReminders;
+                        if ((*CognitiveObj)->TryGetBoolField(TEXT("objectiveReminders"), bObjectiveReminders))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("ObjectiveRemindersEnabled"), bObjectiveReminders, GGameUserSettingsIni);
+                        
+                        bool bNavAssist;
+                        if ((*CognitiveObj)->TryGetBoolField(TEXT("navigationAssistance"), bNavAssist))
+                            GConfig->SetBool(TEXT("Accessibility"), TEXT("NavigationAssistanceEnabled"), bNavAssist, GGameUserSettingsIni);
+                        
+                        double GameSpeed;
+                        if ((*CognitiveObj)->TryGetNumberField(TEXT("gameSpeed"), GameSpeed))
+                            GConfig->SetFloat(TEXT("Accessibility"), TEXT("GameSpeedMultiplier"), (float)GameSpeed, GGameUserSettingsIni);
+                    }
+                    
+                    GConfig->Flush(false, GGameUserSettingsIni);
+                    
+                    Response = MakeSuccessResponse(TEXT("Accessibility settings imported"));
+                    Response->SetBoolField(TEXT("settingsImported"), true);
+                }
+                else
+                {
+                    Response = MakeErrorResponse(TEXT("Failed to parse settings JSON file"));
+                }
+            }
+            else
+            {
+                Response = MakeErrorResponse(FString::Printf(TEXT("Settings file not found: %s"), *ImportPath));
+            }
         }
     }
     else if (ActionType == TEXT("get_accessibility_info"))

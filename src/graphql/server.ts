@@ -109,6 +109,19 @@ export class GraphQLServer {
         }
 
         this.server.on('error', (error) => {
+          const errorObj = error as unknown as { code?: unknown };
+          const errorCode = typeof errorObj?.code === 'string' ? errorObj.code : undefined;
+
+          // GraphQL is optional; treat port-in-use as non-fatal (common in dev + CI smoke).
+          if (errorCode === 'EADDRINUSE') {
+            this.log.warn(
+              `GraphQL server port ${this.config.host}:${this.config.port} is already in use; skipping GraphQL startup. ` +
+                'Set GRAPHQL_ENABLED=false to disable, or change GRAPHQL_PORT to a free port.'
+            );
+            resolve();
+            return;
+          }
+
           this.log.error('GraphQL server error:', error);
           reject(error);
         });

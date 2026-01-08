@@ -371,8 +371,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
         
         FImportAssetParameters ImportParams;
         ImportParams.bIsAutomated = true;
-        // Configure import params based on user-specified options
-        ImportParams.bAllowAsync = false;
+        // Note: bAllowAsync was removed in UE 5.7 - Interchange runs synchronously by default
         // Note: Specific asset type filtering is handled by Interchange pipelines, not ImportParams
         // The bImportMesh, bImportAnimation, etc. flags are used for result reporting
         bool bImportSuccess = Manager.ImportAsset(DestPath, SourceData, ImportParams);

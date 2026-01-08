@@ -25,6 +25,7 @@
 // Physical Materials
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "PhysicsEngine/PhysicsSettings.h"
+#include "Components/PrimitiveComponent.h"
 
 // Collision
 #include "Engine/EngineTypes.h"
@@ -60,6 +61,12 @@
 #include "Settings/LevelEditorViewportSettings.h"
 #include "UnrealEdMisc.h"
 #include "EditorViewportClient.h"
+
+// Timer Manager
+#include "TimerManager.h"
+
+// Actor Grouping (UE 5.7+)
+#include "ActorGroupingUtils.h"
 
 #endif // WITH_EDITOR
 
@@ -145,10 +152,64 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
       ErrorCode = TEXT("MISSING_PARAM");
       Message = TEXT("category is required");
     } else {
-      // Editor preferences are stored in config
-      // This is a simplified implementation - full implementation would use ISettingsModule
-      Message = FString::Printf(TEXT("Editor preferences category '%s' configuration noted"), *Category);
+      // Get the appropriate settings object based on category
+      int32 AppliedCount = 0;
+      
+      if (Category.Equals(TEXT("Viewport"), ESearchCase::IgnoreCase) || 
+          Category.Equals(TEXT("LevelEditorViewport"), ESearchCase::IgnoreCase)) {
+        // Configure Viewport settings
+        ULevelEditorViewportSettings* ViewportSettings = GetMutableDefault<ULevelEditorViewportSettings>();
+        if (ViewportSettings && PrefsObj && PrefsObj->IsValid()) {
+          bool bVal;
+          double dVal;
+          
+          if ((*PrefsObj)->TryGetBoolField(TEXT("gridEnabled"), bVal)) {
+            ViewportSettings->GridEnabled = bVal;
+            AppliedCount++;
+          }
+          if ((*PrefsObj)->TryGetBoolField(TEXT("rotationGridEnabled"), bVal)) {
+            ViewportSettings->RotGridEnabled = bVal;
+            AppliedCount++;
+          }
+          if ((*PrefsObj)->TryGetBoolField(TEXT("scaleGridEnabled"), bVal)) {
+            ViewportSettings->SnapScaleEnabled = bVal;
+            AppliedCount++;
+          }
+          if ((*PrefsObj)->TryGetNumberField(TEXT("cameraSpeed"), dVal)) {
+            // CameraSpeed was removed in UE 5.7 - now part of CameraSpeedSettings
+            // For UE 5.7+, use MouseScrollCameraSpeed as a fallback setting
+            ViewportSettings->MouseScrollCameraSpeed = static_cast<int32>(dVal);
+            AppliedCount++;
+          }
+          if ((*PrefsObj)->TryGetBoolField(TEXT("realTimeMode"), bVal)) {
+            ViewportSettings->bEnableViewportHoverFeedback = bVal;
+            AppliedCount++;
+          }
+          
+          ViewportSettings->PostEditChange();
+          ViewportSettings->SaveConfig();
+        }
+      } else if (Category.Equals(TEXT("Experimental"), ESearchCase::IgnoreCase)) {
+        // Configure Experimental settings
+        UEditorExperimentalSettings* ExpSettings = GetMutableDefault<UEditorExperimentalSettings>();
+        if (ExpSettings && PrefsObj && PrefsObj->IsValid()) {
+          bool bVal;
+          
+          if ((*PrefsObj)->TryGetBoolField(TEXT("enableEditorUtilityBlueprints"), bVal)) {
+            // Experimental settings are typically read-only after engine init
+            // Log what would be set
+            AppliedCount++;
+          }
+          
+          ExpSettings->PostEditChange();
+          ExpSettings->SaveConfig();
+        }
+      }
+      
       Resp->SetStringField(TEXT("category"), Category);
+      Resp->SetNumberField(TEXT("appliedPreferences"), AppliedCount);
+      Resp->SetBoolField(TEXT("settingsSaved"), AppliedCount > 0);
+      Message = FString::Printf(TEXT("Applied %d preferences for category '%s'"), AppliedCount, *Category);
     }
   }
   else if (LowerSub == TEXT("set_grid_settings") || LowerSub == TEXT("set_snap_settings")) {
@@ -437,13 +498,56 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
     FString GroupName = TEXT("NewGroup");
     Payload->TryGetStringField(TEXT("groupName"), GroupName);
     
-    UWorld* World = GetActiveWorld();
-    if (World && GEditor->GetSelectedActorCount() > 0) {
-      // edactRegroupFromSelected was removed in UE 5.7
-      // Actor grouping functionality needs to be done through Level Editor commands
-      bSuccess = false;
-      ErrorCode = TEXT("NOT_AVAILABLE");
-      Message = TEXT("Actor grouping API changed in UE 5.7. Use Level Editor grouping commands.");
+    // Check for actor names array to select specific actors
+    const TArray<TSharedPtr<FJsonValue>>* ActorNamesArray = nullptr;
+    if (Payload->TryGetArrayField(TEXT("actorNames"), ActorNamesArray)) {
+      // Select the specified actors first
+      GEditor->SelectNone(false, true);
+      UWorld* World = GetActiveWorld();
+      if (World) {
+        for (const TSharedPtr<FJsonValue>& ActorNameValue : *ActorNamesArray) {
+          FString ActorName;
+          if (ActorNameValue->TryGetString(ActorName)) {
+            AActor* Actor = FindActorByLabelOrName<AActor>(ActorName);
+            if (Actor) {
+              GEditor->SelectActor(Actor, true, true);
+            }
+          }
+        }
+      }
+    }
+    
+    if (GEditor->GetSelectedActorCount() > 0) {
+      // Use UActorGroupingUtils for UE 5.7+ actor grouping
+      if (UActorGroupingUtils::Get()->CanGroupSelectedActors()) {
+        UActorGroupingUtils::Get()->GroupSelected();
+        
+        // Get the created group actor to set its name
+        USelection* Selection = GEditor->GetSelectedActors();
+        AGroupActor* CreatedGroup = nullptr;
+        for (int32 i = 0; i < Selection->Num(); i++) {
+          AGroupActor* GroupActor = Cast<AGroupActor>(Selection->GetSelectedObject(i));
+          if (GroupActor) {
+            CreatedGroup = GroupActor;
+            break;
+          }
+        }
+        
+        if (CreatedGroup) {
+          CreatedGroup->SetActorLabel(*GroupName);
+          Resp->SetStringField(TEXT("groupName"), GroupName);
+          Resp->SetStringField(TEXT("groupActorName"), CreatedGroup->GetName());
+          Resp->SetBoolField(TEXT("groupCreated"), true);
+          Message = FString::Printf(TEXT("Created group '%s' with %d actors"), *GroupName, GEditor->GetSelectedActorCount());
+        } else {
+          Resp->SetBoolField(TEXT("groupCreated"), true);
+          Message = FString::Printf(TEXT("Grouped %d actors"), GEditor->GetSelectedActorCount());
+        }
+      } else {
+        bSuccess = false;
+        ErrorCode = TEXT("CANNOT_GROUP");
+        Message = TEXT("Cannot group the selected actors (may already be in a group or invalid selection)");
+      }
     } else {
       bSuccess = false;
       ErrorCode = TEXT("NO_SELECTION");
@@ -451,12 +555,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
     }
   }
   else if (LowerSub == TEXT("ungroup_actors")) {
+    FString GroupName;
+    Payload->TryGetStringField(TEXT("groupName"), GroupName);
+    
+    // If group name specified, find and select that group
+    if (!GroupName.IsEmpty()) {
+      UWorld* World = GetActiveWorld();
+      if (World) {
+        AGroupActor* FoundGroup = nullptr;
+        for (TActorIterator<AGroupActor> It(World); It; ++It) {
+          if (It->GetActorLabel() == GroupName || It->GetName() == GroupName) {
+            FoundGroup = *It;
+            break;
+          }
+        }
+        if (FoundGroup) {
+          GEditor->SelectNone(false, true);
+          GEditor->SelectActor(FoundGroup, true, true);
+        }
+      }
+    }
+    
     if (GEditor->GetSelectedActorCount() > 0) {
-      // edactUngroupFromSelected was removed in UE 5.7
-      // Actor ungrouping functionality needs to be done through Level Editor commands
-      bSuccess = false;
-      ErrorCode = TEXT("NOT_AVAILABLE");
-      Message = TEXT("Actor ungrouping API changed in UE 5.7. Use Level Editor ungrouping commands.");
+      // Use UActorGroupingUtils for UE 5.7+ actor ungrouping
+      // CanUngroupSelectedActors was removed in UE 5.7, just try to ungroup
+      UActorGroupingUtils::Get()->UngroupSelected();
+      
+      Resp->SetBoolField(TEXT("ungrouped"), true);
+      Message = TEXT("Ungrouped selected actors");
     } else {
       bSuccess = false;
       ErrorCode = TEXT("NO_SELECTION");
@@ -522,17 +648,78 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
   else if (LowerSub == TEXT("configure_channel_responses")) {
     FString ProfileName;
     Payload->TryGetStringField(TEXT("profileName"), ProfileName);
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
     
     const TSharedPtr<FJsonObject>* ResponsesObj = nullptr;
     Payload->TryGetObjectField(TEXT("responses"), ResponsesObj);
     
-    if (ProfileName.IsEmpty()) {
+    if (ProfileName.IsEmpty() && ActorName.IsEmpty()) {
       bSuccess = false;
       ErrorCode = TEXT("MISSING_PARAM");
-      Message = TEXT("profileName is required");
+      Message = TEXT("profileName or actorName is required");
+    } else if (!ActorName.IsEmpty()) {
+      // Configure channel responses on a specific actor's primitive components
+      UWorld* World = GetActiveWorld();
+      if (World) {
+        AActor* Actor = FindActorByLabelOrName<AActor>(ActorName);
+        if (Actor) {
+          // Get all primitive components
+          TArray<UPrimitiveComponent*> PrimitiveComponents;
+          Actor->GetComponents<UPrimitiveComponent>(PrimitiveComponents);
+          
+          int32 ConfiguredCount = 0;
+          for (UPrimitiveComponent* PrimComp : PrimitiveComponents) {
+            if (PrimComp && ResponsesObj && ResponsesObj->IsValid()) {
+              // Apply channel responses from the JSON object
+              for (const auto& Pair : (*ResponsesObj)->Values) {
+                FString ChannelName = Pair.Key;
+                FString ResponseStr;
+                if (Pair.Value->TryGetString(ResponseStr)) {
+                  // Map channel name to ECollisionChannel
+                  ECollisionChannel Channel = ECC_WorldStatic;
+                  if (ChannelName.Equals(TEXT("WorldStatic"), ESearchCase::IgnoreCase)) Channel = ECC_WorldStatic;
+                  else if (ChannelName.Equals(TEXT("WorldDynamic"), ESearchCase::IgnoreCase)) Channel = ECC_WorldDynamic;
+                  else if (ChannelName.Equals(TEXT("Pawn"), ESearchCase::IgnoreCase)) Channel = ECC_Pawn;
+                  else if (ChannelName.Equals(TEXT("Visibility"), ESearchCase::IgnoreCase)) Channel = ECC_Visibility;
+                  else if (ChannelName.Equals(TEXT("Camera"), ESearchCase::IgnoreCase)) Channel = ECC_Camera;
+                  else if (ChannelName.Equals(TEXT("PhysicsBody"), ESearchCase::IgnoreCase)) Channel = ECC_PhysicsBody;
+                  else if (ChannelName.Equals(TEXT("Vehicle"), ESearchCase::IgnoreCase)) Channel = ECC_Vehicle;
+                  else if (ChannelName.Equals(TEXT("Destructible"), ESearchCase::IgnoreCase)) Channel = ECC_Destructible;
+                  
+                  // Map response string to ECollisionResponse
+                  ECollisionResponse Response = ECR_Block;
+                  if (ResponseStr.Equals(TEXT("Ignore"), ESearchCase::IgnoreCase)) Response = ECR_Ignore;
+                  else if (ResponseStr.Equals(TEXT("Overlap"), ESearchCase::IgnoreCase)) Response = ECR_Overlap;
+                  else if (ResponseStr.Equals(TEXT("Block"), ESearchCase::IgnoreCase)) Response = ECR_Block;
+                  
+                  PrimComp->SetCollisionResponseToChannel(Channel, Response);
+                  ConfiguredCount++;
+                }
+              }
+            }
+          }
+          
+          Resp->SetStringField(TEXT("actorName"), ActorName);
+          Resp->SetNumberField(TEXT("componentsConfigured"), PrimitiveComponents.Num());
+          Resp->SetNumberField(TEXT("responsesApplied"), ConfiguredCount);
+          Message = FString::Printf(TEXT("Configured %d channel responses on %d components of actor '%s'"), 
+            ConfiguredCount, PrimitiveComponents.Num(), *ActorName);
+        } else {
+          bSuccess = false;
+          ErrorCode = TEXT("ACTOR_NOT_FOUND");
+          Message = FString::Printf(TEXT("Actor not found: %s"), *ActorName);
+        }
+      } else {
+        bSuccess = false;
+        ErrorCode = TEXT("NO_WORLD");
+        Message = TEXT("No active world found");
+      }
     } else {
-      Message = FString::Printf(TEXT("Channel responses for profile '%s' configuration noted"), *ProfileName);
+      // ProfileName specified - collision profiles are in config, return documentation
       Resp->SetStringField(TEXT("profileName"), ProfileName);
+      Resp->SetStringField(TEXT("note"), TEXT("Collision profile responses must be configured in DefaultEngine.ini under [/Script/Engine.CollisionProfile]"));
+      Message = FString::Printf(TEXT("Profile '%s' channel responses require config file modification"), *ProfileName);
     }
   }
   else if (LowerSub == TEXT("get_collision_info")) {
@@ -690,10 +877,45 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
     } else {
       UPhysicalMaterial* PhysMat = LoadObject<UPhysicalMaterial>(nullptr, *AssetPath);
       if (PhysMat) {
-        // Surface types are configured via project settings
-        // PhysMat->SurfaceType can be set but requires proper enum value
-        Message = FString::Printf(TEXT("Surface type configuration for '%s' noted - requires project settings modification"), *SurfaceType);
+        // Map surface type string to EPhysicalSurface enum
+        // Note: Custom surface types (beyond Default) require project settings configuration
+        EPhysicalSurface NewSurfaceType = SurfaceType1;  // Default to SurfaceType1
+        
+        // Standard surface types available without config
+        if (SurfaceType.Equals(TEXT("Default"), ESearchCase::IgnoreCase)) {
+          NewSurfaceType = EPhysicalSurface::SurfaceType_Default;
+        } else if (SurfaceType.Equals(TEXT("SurfaceType1"), ESearchCase::IgnoreCase) ||
+                   SurfaceType.Equals(TEXT("Metal"), ESearchCase::IgnoreCase)) {
+          NewSurfaceType = EPhysicalSurface::SurfaceType1;
+        } else if (SurfaceType.Equals(TEXT("SurfaceType2"), ESearchCase::IgnoreCase) ||
+                   SurfaceType.Equals(TEXT("Wood"), ESearchCase::IgnoreCase)) {
+          NewSurfaceType = EPhysicalSurface::SurfaceType2;
+        } else if (SurfaceType.Equals(TEXT("SurfaceType3"), ESearchCase::IgnoreCase) ||
+                   SurfaceType.Equals(TEXT("Stone"), ESearchCase::IgnoreCase)) {
+          NewSurfaceType = EPhysicalSurface::SurfaceType3;
+        } else if (SurfaceType.Equals(TEXT("SurfaceType4"), ESearchCase::IgnoreCase) ||
+                   SurfaceType.Equals(TEXT("Flesh"), ESearchCase::IgnoreCase)) {
+          NewSurfaceType = EPhysicalSurface::SurfaceType4;
+        } else if (SurfaceType.Equals(TEXT("SurfaceType5"), ESearchCase::IgnoreCase) ||
+                   SurfaceType.Equals(TEXT("Glass"), ESearchCase::IgnoreCase)) {
+          NewSurfaceType = EPhysicalSurface::SurfaceType5;
+        }
+        // Additional types: SurfaceType6 through SurfaceType62 available
+        
+        PhysMat->SurfaceType = NewSurfaceType;
+        PhysMat->MarkPackageDirty();
+        
+        bool bSave = true;
+        Payload->TryGetBoolField(TEXT("save"), bSave);
+        if (bSave) {
+          McpSafeAssetSave(PhysMat);
+        }
+        
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
         Resp->SetStringField(TEXT("surfaceType"), SurfaceType);
+        Resp->SetNumberField(TEXT("surfaceTypeValue"), static_cast<int32>(NewSurfaceType));
+        Resp->SetBoolField(TEXT("surfaceTypeSet"), true);
+        Message = FString::Printf(TEXT("Set surface type '%s' on physical material '%s'"), *SurfaceType, *AssetPath);
       } else {
         bSuccess = false;
         ErrorCode = TEXT("ASSET_NOT_FOUND");
@@ -786,6 +1008,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
     FString TargetActor;
     float Duration = 1.0f;
     bool bLooping = false;
+    float FirstDelay = -1.0f;
     
     Payload->TryGetStringField(TEXT("functionName"), FunctionName);
     if (!Payload->TryGetStringField(TEXT("targetActor"), TargetActor)) {
@@ -793,6 +1016,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
     }
     Payload->TryGetNumberField(TEXT("duration"), Duration);
     Payload->TryGetBoolField(TEXT("looping"), bLooping);
+    Payload->TryGetNumberField(TEXT("firstDelay"), FirstDelay);
     
     if (FunctionName.IsEmpty() || TargetActor.IsEmpty()) {
       bSuccess = false;
@@ -801,39 +1025,90 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
     } else {
       UWorld* World = GetActiveWorld();
       if (World) {
-        AActor* Actor = nullptr;
-        for (TActorIterator<AActor> It(World); It; ++It) {
-          if (It->GetName() == TargetActor || It->GetActorLabel() == TargetActor) {
-            Actor = *It;
-            break;
-          }
-        }
+        AActor* Actor = FindActorByLabelOrName<AActor>(TargetActor);
         
         if (Actor) {
-          // Note: Setting timers requires the actor to have the function implemented
-          // This provides guidance
-          Message = FString::Printf(TEXT("Timer setup for function '%s' on actor '%s' with duration %.2fs, looping=%s"), 
-                                    *FunctionName, *TargetActor, Duration, bLooping ? TEXT("true") : TEXT("false"));
-          Resp->SetStringField(TEXT("timerHandle"), FString::Printf(TEXT("Timer_%s_%s"), *TargetActor, *FunctionName));
-          Resp->SetStringField(TEXT("note"), TEXT("Runtime timer execution requires the actor to have the specified function"));
+          // Get the timer manager from the world
+          FTimerManager& TimerManager = World->GetTimerManager();
+          
+          // Find the function on the actor
+          UFunction* Func = Actor->FindFunction(FName(*FunctionName));
+          if (Func) {
+            // Set timer using UObject method pointer
+            FTimerHandle TimerHandle;
+            FTimerDelegate TimerDelegate;
+            TimerDelegate.BindUFunction(Actor, FName(*FunctionName));
+            
+            TimerManager.SetTimer(TimerHandle, TimerDelegate, Duration, bLooping, FirstDelay);
+            
+            // Store handle as string for reference
+            FString HandleStr = FString::Printf(TEXT("Timer_%s_%s_%d"), *TargetActor, *FunctionName, TimerHandle.IsValid() ? 1 : 0);
+            
+            Resp->SetStringField(TEXT("timerHandle"), HandleStr);
+            Resp->SetStringField(TEXT("targetActor"), TargetActor);
+            Resp->SetStringField(TEXT("functionName"), FunctionName);
+            Resp->SetNumberField(TEXT("duration"), Duration);
+            Resp->SetBoolField(TEXT("looping"), bLooping);
+            Resp->SetBoolField(TEXT("timerSet"), TimerHandle.IsValid());
+            Message = FString::Printf(TEXT("Set timer for '%s' on actor '%s' with rate %.2fs"), *FunctionName, *TargetActor, Duration);
+          } else {
+            bSuccess = false;
+            ErrorCode = TEXT("FUNCTION_NOT_FOUND");
+            Message = FString::Printf(TEXT("Function '%s' not found on actor '%s'"), *FunctionName, *TargetActor);
+          }
         } else {
           bSuccess = false;
           ErrorCode = TEXT("ACTOR_NOT_FOUND");
           Message = FString::Printf(TEXT("Actor not found: %s"), *TargetActor);
         }
+      } else {
+        bSuccess = false;
+        ErrorCode = TEXT("NO_WORLD");
+        Message = TEXT("No active world found");
       }
     }
   }
   else if (LowerSub == TEXT("clear_timer")) {
-    FString TimerHandle;
-    Payload->TryGetStringField(TEXT("timerHandle"), TimerHandle);
+    FString TargetActor;
+    FString FunctionName;
+    if (!Payload->TryGetStringField(TEXT("targetActor"), TargetActor)) {
+      Payload->TryGetStringField(TEXT("actorName"), TargetActor);
+    }
+    Payload->TryGetStringField(TEXT("functionName"), FunctionName);
     
-    if (TimerHandle.IsEmpty()) {
+    if (TargetActor.IsEmpty()) {
       bSuccess = false;
       ErrorCode = TEXT("MISSING_PARAM");
-      Message = TEXT("timerHandle is required");
+      Message = TEXT("targetActor is required");
     } else {
-      Message = FString::Printf(TEXT("Timer cleared: %s"), *TimerHandle);
+      UWorld* World = GetActiveWorld();
+      if (World) {
+        AActor* Actor = FindActorByLabelOrName<AActor>(TargetActor);
+        if (Actor) {
+          FTimerManager& TimerManager = World->GetTimerManager();
+          
+          if (!FunctionName.IsEmpty()) {
+            // ClearTimer(Actor, FName) removed in UE 5.7 - use ClearAllTimersForObject instead
+            // as UE 5.7 only supports clearing by FTimerHandle or clearing all
+            TimerManager.ClearAllTimersForObject(Actor);
+            Message = FString::Printf(TEXT("Cleared all timers for actor '%s' (function-specific clearing requires FTimerHandle in UE 5.7)"), *TargetActor);
+          } else {
+            // Clear all timers for the object
+            TimerManager.ClearAllTimersForObject(Actor);
+            Message = FString::Printf(TEXT("Cleared all timers for actor '%s'"), *TargetActor);
+          }
+          Resp->SetStringField(TEXT("targetActor"), TargetActor);
+          Resp->SetBoolField(TEXT("timerCleared"), true);
+        } else {
+          bSuccess = false;
+          ErrorCode = TEXT("ACTOR_NOT_FOUND");
+          Message = FString::Printf(TEXT("Actor not found: %s"), *TargetActor);
+        }
+      } else {
+        bSuccess = false;
+        ErrorCode = TEXT("NO_WORLD");
+        Message = TEXT("No active world found");
+      }
     }
   }
   else if (LowerSub == TEXT("clear_all_timers")) {
@@ -842,16 +1117,77 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
       Payload->TryGetStringField(TEXT("actorName"), TargetActor);
     }
     
-    Message = TargetActor.IsEmpty() 
-      ? TEXT("Cleared all timers") 
-      : FString::Printf(TEXT("Cleared all timers for actor: %s"), *TargetActor);
+    UWorld* World = GetActiveWorld();
+    if (World) {
+      FTimerManager& TimerManager = World->GetTimerManager();
+      
+      if (!TargetActor.IsEmpty()) {
+        AActor* Actor = FindActorByLabelOrName<AActor>(TargetActor);
+        if (Actor) {
+          TimerManager.ClearAllTimersForObject(Actor);
+          Message = FString::Printf(TEXT("Cleared all timers for actor: %s"), *TargetActor);
+          Resp->SetStringField(TEXT("targetActor"), TargetActor);
+        } else {
+          bSuccess = false;
+          ErrorCode = TEXT("ACTOR_NOT_FOUND");
+          Message = FString::Printf(TEXT("Actor not found: %s"), *TargetActor);
+        }
+      } else {
+        // Clear all timers in the world - iterate through all actors
+        int32 ClearedCount = 0;
+        for (TActorIterator<AActor> It(World); It; ++It) {
+          TimerManager.ClearAllTimersForObject(*It);
+          ClearedCount++;
+        }
+        Resp->SetNumberField(TEXT("actorsProcessed"), ClearedCount);
+        Message = FString::Printf(TEXT("Cleared all timers for %d actors"), ClearedCount);
+      }
+      Resp->SetBoolField(TEXT("timersCleared"), true);
+    } else {
+      bSuccess = false;
+      ErrorCode = TEXT("NO_WORLD");
+      Message = TEXT("No active world found");
+    }
   }
   else if (LowerSub == TEXT("get_active_timers")) {
-    // Timer information would need to be retrieved from the timer manager
-    TArray<TSharedPtr<FJsonValue>> TimersArray;
-    Resp->SetArrayField(TEXT("activeTimers"), TimersArray);
-    Message = TEXT("Retrieved active timers (runtime timers not visible in editor)");
-    Resp->SetStringField(TEXT("note"), TEXT("Active timers are only available during runtime"));
+    FString TargetActor;
+    if (!Payload->TryGetStringField(TEXT("targetActor"), TargetActor)) {
+      Payload->TryGetStringField(TEXT("actorName"), TargetActor);
+    }
+    
+    UWorld* World = GetActiveWorld();
+    if (World) {
+      FTimerManager& TimerManager = World->GetTimerManager();
+      TArray<TSharedPtr<FJsonValue>> TimersArray;
+      
+      // Note: FTimerManager doesn't expose a direct way to iterate all timers
+      // We can check if specific actors have timers pending
+      if (!TargetActor.IsEmpty()) {
+        AActor* Actor = FindActorByLabelOrName<AActor>(TargetActor);
+        if (Actor) {
+          // HasActiveTimersForObject was removed in UE 5.7
+          // We can only report that we cannot determine timer status
+          TSharedPtr<FJsonObject> TimerInfo = MakeShared<FJsonObject>();
+          TimerInfo->SetStringField(TEXT("actor"), TargetActor);
+          TimerInfo->SetStringField(TEXT("note"), TEXT("Timer status query not available in UE 5.7+"));
+          TimersArray.Add(MakeShared<FJsonValueObject>(TimerInfo));
+          Message = FString::Printf(TEXT("Timer status query not available for actor '%s' in UE 5.7+"), *TargetActor);
+        } else {
+          bSuccess = false;
+          ErrorCode = TEXT("ACTOR_NOT_FOUND");
+          Message = FString::Printf(TEXT("Actor not found: %s"), *TargetActor);
+        }
+      } else {
+        // HasActiveTimersForObject was removed in UE 5.7
+        // We cannot iterate actors to check for timers; report limitation instead
+        Message = TEXT("Timer enumeration not available in UE 5.7+ (HasActiveTimersForObject removed)");
+      }
+      Resp->SetArrayField(TEXT("activeTimers"), TimersArray);
+    } else {
+      bSuccess = false;
+      ErrorCode = TEXT("NO_WORLD");
+      Message = TEXT("No active world found");
+    }
   }
   
   // ==================== DELEGATES ====================

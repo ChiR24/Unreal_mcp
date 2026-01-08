@@ -17,6 +17,7 @@
 #include "Misc/PackageName.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "UObject/SavePackage.h"
+#include "MeshDescription.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -2212,7 +2213,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
       UTILITY_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       // Create a new actor with the procedural mesh component
@@ -2264,7 +2265,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
 
     int32 SectionIndex = static_cast<int32>(Payload->GetNumberField(TEXT("sectionIndex")));
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       UTILITY_ERROR_RESPONSE(FString::Printf(TEXT("Actor not found: %s"), *ActorName));
@@ -2343,7 +2344,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
 
     int32 SectionIndex = static_cast<int32>(Payload->GetNumberField(TEXT("sectionIndex")));
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       UTILITY_ERROR_RESPONSE(FString::Printf(TEXT("Actor not found: %s"), *ActorName));
@@ -2409,7 +2410,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
 
     int32 SectionIndex = static_cast<int32>(Payload->GetNumberField(TEXT("sectionIndex")));
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       UTILITY_ERROR_RESPONSE(FString::Printf(TEXT("Actor not found: %s"), *ActorName));
@@ -2443,7 +2444,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
       UTILITY_ERROR_RESPONSE("Missing actorName parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       UTILITY_ERROR_RESPONSE(FString::Printf(TEXT("Actor not found: %s"), *ActorName));
@@ -2480,7 +2481,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
     int32 SectionIndex = static_cast<int32>(Payload->GetNumberField(TEXT("sectionIndex")));
     bool bVisible = Payload->GetBoolField(TEXT("visible"));
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       UTILITY_ERROR_RESPONSE(FString::Printf(TEXT("Actor not found: %s"), *ActorName));
@@ -2517,7 +2518,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
 
     bool bEnableCollision = Payload->GetBoolField(TEXT("enableCollision"));
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       UTILITY_ERROR_RESPONSE(FString::Printf(TEXT("Actor not found: %s"), *ActorName));
@@ -2622,7 +2623,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
       UTILITY_ERROR_RESPONSE("Missing actorName or outputPath parameter");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       UTILITY_ERROR_RESPONSE(FString::Printf(TEXT("Actor not found: %s"), *ActorName));
@@ -2947,7 +2948,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
       UTILITY_ERROR_RESPONSE("Missing required parameters");
     }
 
-    ALevelVariantSetsActor* LvsActor = FindActorByLabelOrName<ALevelVariantSetsActor>(World, LvsActorName);
+    ALevelVariantSetsActor* LvsActor = FindActorByLabelOrName<ALevelVariantSetsActor>(LvsActorName);
     if (!LvsActor)
     {
       UTILITY_ERROR_RESPONSE(FString::Printf(TEXT("LevelVariantSetsActor not found: %s"), *LvsActorName));
@@ -2994,7 +2995,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
       UTILITY_ERROR_RESPONSE("Missing actorName or setName parameter");
     }
 
-    ALevelVariantSetsActor* LvsActor = FindActorByLabelOrName<ALevelVariantSetsActor>(World, LvsActorName);
+    ALevelVariantSetsActor* LvsActor = FindActorByLabelOrName<ALevelVariantSetsActor>(LvsActorName);
     if (!LvsActor)
     {
       UTILITY_ERROR_RESPONSE(FString::Printf(TEXT("LevelVariantSetsActor not found: %s"), *LvsActorName));
@@ -3031,7 +3032,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
       UTILITY_ERROR_RESPONSE("No active world available");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       UTILITY_ERROR_RESPONSE(FString::Printf(TEXT("Actor not found: %s"), *ActorName));
@@ -3101,7 +3102,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
       UTILITY_ERROR_RESPONSE("No active world available");
     }
 
-    AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+    AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor)
     {
       UTILITY_ERROR_RESPONSE(FString::Printf(TEXT("Actor not found: %s"), *ActorName));

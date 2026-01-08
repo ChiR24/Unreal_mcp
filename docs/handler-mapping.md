@@ -1148,7 +1148,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_pcg_info` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleGetPCGInfo` | Lists graphs or returns node/connection info |
 
-## 40. Water Manager (`manage_water`) - Phase 28
+## 40. Water Manager (`manage_water`) - Phase 28 (Deprecated alias → `build_environment`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -1176,7 +1176,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `get_water_surface_info` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Query surface location, normal, velocity at point |
 | `get_wave_info` | `McpAutomationBridge_WaterHandlers.cpp` | `HandleWaterAction` | Query wave height, max height, attenuation, normal at point |
 
-## 41. Weather Manager (`manage_weather`) - Phase 28
+## 41. Weather Manager (`manage_weather`) - Phase 28 (Deprecated alias → `build_environment`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -1234,7 +1234,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `configure_indirect_lighting_cache` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | ILC quality settings |
 | `configure_volumetric_lightmap` | `McpAutomationBridge_PostProcessHandlers.cpp` | `HandlePostProcessAction` | Volumetric lightmap detail cell size |
 
-## 43. Sequencer Manager (`manage_sequencer`) - Phase 30
+## 43. Sequencer Manager (`manage_sequencer`) - Phase 30 (Deprecated alias → `manage_sequence`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -1282,7 +1282,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Export** | | | |
 | `export_sequence` | `McpAutomationBridge_SequencerConsolidatedHandlers.cpp` | `HandleSequencerAction` | FBX/USD export support |
 
-## 44. Movie Render Manager (`manage_movie_render`) - Phase 30
+## 44. Movie Render Manager (`manage_movie_render`) - Phase 30 (Deprecated alias → `manage_sequence`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |

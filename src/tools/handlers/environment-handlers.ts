@@ -16,12 +16,100 @@ function vec3ToArray(v: Vector3 | undefined): [number, number, number] | undefin
   return [v.x ?? 0, v.y ?? 0, v.z ?? 0];
 }
 
+function getTimeoutMs(): number {
+  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
+  return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
+}
+
+/**
+ * Normalize path fields to ensure they start with /Game/ and use forward slashes.
+ * Returns a copy of the args with normalized paths.
+ */
+function normalizePathFields(args: Record<string, unknown>): Record<string, unknown> {
+  const result = { ...args };
+  const pathFields = [
+    // Water fields
+    'actorPath', 'waterMaterial', 'underwaterPostProcessMaterial',
+    'waterInfoMaterial', 'waterMeshPath', 'materialPath',
+    'lakeTransitionMaterialPath', 'oceanTransitionMaterialPath', 'waterZonePath',
+    // Weather fields
+    'niagaraSystemPath', 'particleSystemPath'
+  ];
+
+  for (const field of pathFields) {
+    const value = result[field];
+    if (typeof value === 'string' && value.length > 0) {
+      // Replace backslashes with forward slashes
+      let normalized = value.split('\\').join('/');
+      // Replace /Content/ with /Game/ for common user mistake
+      if (normalized.startsWith('/Content/')) {
+        normalized = '/Game/' + normalized.slice('/Content/'.length);
+      }
+      // Allow /Script/ paths for built-in UE classes
+      // Allow plugin paths like /MyPlugin/Assets to pass through unchanged
+      if (!normalized.startsWith('/')) {
+        normalized = '/Game/' + normalized;
+      }
+      result[field] = normalized;
+    }
+  }
+
+  return result;
+}
+
 export async function handleEnvironmentTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as EnvironmentArgs;
   const argsRecord = args as Record<string, unknown>;
   const envAction = String(action || '').toLowerCase();
+  const timeoutMs = getTimeoutMs();
+
+  // Helper for Water/Weather requests
+  const sendAutomationRequest = async (targetTool: string, actionName: string, requestArgs: Record<string, unknown>): Promise<Record<string, unknown>> => {
+    const normalizedArgs = normalizePathFields(requestArgs);
+    const payload = { ...normalizedArgs, action: actionName };
+    const result = await executeAutomationRequest(
+      tools,
+      targetTool,
+      payload as HandlerArgs,
+      `Automation bridge not available for ${targetTool} action: ${actionName}`,
+      { timeoutMs }
+    );
+    return cleanObject(result) as Record<string, unknown>;
+  };
   
   switch (envAction) {
+    // ========================================================================
+    // Water Actions (Phase 54 Consolidation)
+    // ========================================================================
+    case 'create_water_body_ocean':
+    case 'create_water_body_lake':
+    case 'create_water_body_river':
+    case 'configure_water_body':
+    case 'configure_water_waves':
+    case 'get_water_body_info':
+    case 'list_water_bodies':
+    case 'set_river_depth':
+    case 'set_ocean_extent':
+    case 'set_water_static_mesh':
+    case 'set_river_transitions':
+    case 'set_water_zone':
+    case 'get_water_surface_info':
+    case 'get_wave_info':
+      return sendAutomationRequest('manage_water', envAction, argsRecord);
+
+    // ========================================================================
+    // Weather Actions (Phase 54 Consolidation)
+    // ========================================================================
+    case 'configure_wind':
+    case 'create_weather_system':
+    case 'configure_rain_particles':
+    case 'configure_snow_particles':
+    case 'configure_lightning':
+      return sendAutomationRequest('manage_weather', envAction, argsRecord);
+
+    // ========================================================================
+    // Landscape & Foliage Actions
+    // ========================================================================
     case 'create_landscape':
       return cleanObject(await tools.landscapeTools.createLandscape({
         name: argsTyped.name ?? '',

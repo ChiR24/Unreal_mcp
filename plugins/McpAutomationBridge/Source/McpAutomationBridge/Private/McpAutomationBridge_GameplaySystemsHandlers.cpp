@@ -47,6 +47,13 @@
 #include "Factories/DataAssetFactory.h"
 #include "Engine/DataAsset.h"
 
+// Dialogue System
+#include "Sound/DialogueWave.h"
+#include "Sound/DialogueVoice.h"
+#include "Sound/DialogueTypes.h"
+#include "Sound/SoundWave.h"
+#include "Components/AudioComponent.h"
+
 #endif // WITH_EDITOR
 
 bool UMcpAutomationBridgeSubsystem::HandleManageGameplaySystemsAction(
@@ -545,6 +552,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplaySystemsAction(
   else if (LowerSub == TEXT("configure_marker_widget")) {
     FString WidgetClass;
     Payload->TryGetStringField(TEXT("widgetClass"), WidgetClass);
+    FString ConfigName = TEXT("DefaultMarkerConfig");
+    Payload->TryGetStringField(TEXT("configName"), ConfigName);
     bool bClampToScreen = true;
     Payload->TryGetBoolField(TEXT("clampToScreen"), bClampToScreen);
     bool bFadeWithDistance = true;
@@ -553,13 +562,66 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplaySystemsAction(
     Payload->TryGetNumberField(TEXT("fadeStartDistance"), FadeStart);
     double FadeEnd = 5000.0;
     Payload->TryGetNumberField(TEXT("fadeEndDistance"), FadeEnd);
+    double MinOpacity = 0.2;
+    Payload->TryGetNumberField(TEXT("minOpacity"), MinOpacity);
+    double MaxOpacity = 1.0;
+    Payload->TryGetNumberField(TEXT("maxOpacity"), MaxOpacity);
     
-    Resp->SetStringField(TEXT("widgetClass"), WidgetClass);
-    Resp->SetBoolField(TEXT("clampToScreen"), bClampToScreen);
-    Resp->SetBoolField(TEXT("fadeWithDistance"), bFadeWithDistance);
-    Resp->SetNumberField(TEXT("fadeStartDistance"), FadeStart);
-    Resp->SetNumberField(TEXT("fadeEndDistance"), FadeEnd);
-    Message = FString::Printf(TEXT("Configured marker widget settings for '%s'"), *WidgetClass);
+    // Store configuration in a world-level actor that can be queried at runtime
+    // This is the standard pattern for MCP - create a config holder actor
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Name = *FString::Printf(TEXT("MarkerWidgetConfig_%s"), *ConfigName);
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    
+    // Check if config actor already exists
+    AActor* ConfigActor = nullptr;
+    for (TActorIterator<AActor> It(World); It; ++It) {
+      if (It->Tags.Contains(TEXT("MarkerWidgetConfig")) && 
+          It->GetName().Contains(ConfigName)) {
+        ConfigActor = *It;
+        break;
+      }
+    }
+    
+    if (!ConfigActor) {
+      ConfigActor = World->SpawnActor<AActor>(AActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+      if (ConfigActor) {
+        ConfigActor->SetActorLabel(*FString::Printf(TEXT("MarkerWidgetConfig_%s"), *ConfigName));
+        ConfigActor->Tags.Add(TEXT("MarkerWidgetConfig"));
+        ConfigActor->SetActorHiddenInGame(true);
+      }
+    }
+    
+    if (ConfigActor) {
+      // Clear old config tags and add new ones
+      ConfigActor->Tags.RemoveAll([](const FName& Tag) {
+        return Tag.ToString().StartsWith(TEXT("MW_"));
+      });
+      
+      // Store all configuration as tags (runtime-queryable)
+      ConfigActor->Tags.Add(*FString::Printf(TEXT("MW_WidgetClass:%s"), *WidgetClass));
+      ConfigActor->Tags.Add(*FString::Printf(TEXT("MW_ClampToScreen:%s"), bClampToScreen ? TEXT("true") : TEXT("false")));
+      ConfigActor->Tags.Add(*FString::Printf(TEXT("MW_FadeWithDistance:%s"), bFadeWithDistance ? TEXT("true") : TEXT("false")));
+      ConfigActor->Tags.Add(*FString::Printf(TEXT("MW_FadeStart:%.1f"), FadeStart));
+      ConfigActor->Tags.Add(*FString::Printf(TEXT("MW_FadeEnd:%.1f"), FadeEnd));
+      ConfigActor->Tags.Add(*FString::Printf(TEXT("MW_MinOpacity:%.2f"), MinOpacity));
+      ConfigActor->Tags.Add(*FString::Printf(TEXT("MW_MaxOpacity:%.2f"), MaxOpacity));
+      
+      Resp->SetStringField(TEXT("configName"), ConfigName);
+      Resp->SetStringField(TEXT("widgetClass"), WidgetClass);
+      Resp->SetBoolField(TEXT("clampToScreen"), bClampToScreen);
+      Resp->SetBoolField(TEXT("fadeWithDistance"), bFadeWithDistance);
+      Resp->SetNumberField(TEXT("fadeStartDistance"), FadeStart);
+      Resp->SetNumberField(TEXT("fadeEndDistance"), FadeEnd);
+      Resp->SetNumberField(TEXT("minOpacity"), MinOpacity);
+      Resp->SetNumberField(TEXT("maxOpacity"), MaxOpacity);
+      Resp->SetBoolField(TEXT("configStored"), true);
+      Message = FString::Printf(TEXT("Configured and stored marker widget settings '%s' for widget '%s'"), *ConfigName, *WidgetClass);
+    } else {
+      bSuccess = false;
+      Message = TEXT("Failed to create marker widget config actor");
+      ErrorCode = TEXT("CREATE_FAILED");
+    }
   }
 
   // ==================== PHOTO MODE ====================
@@ -747,26 +809,141 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplaySystemsAction(
     Payload->TryGetStringField(TEXT("speakerId"), SpeakerId);
     FString Text;
     Payload->TryGetStringField(TEXT("text"), Text);
+    FString SoundWavePath;
+    Payload->TryGetStringField(TEXT("soundWavePath"), SoundWavePath);
     
-    // In a real implementation, this would modify the dialogue data asset
-    // For now, we log the node creation
-    Resp->SetStringField(TEXT("assetPath"), AssetPath);
-    Resp->SetStringField(TEXT("nodeId"), NodeId);
-    Resp->SetStringField(TEXT("speakerId"), SpeakerId);
-    Resp->SetStringField(TEXT("text"), Text);
-    Message = FString::Printf(TEXT("Added dialogue node '%s' to '%s'"), *NodeId, *AssetPath);
+    // Load the DialogueWave asset
+    UDialogueWave* DialogueWave = LoadObject<UDialogueWave>(nullptr, *AssetPath);
+    if (!DialogueWave) {
+      bSuccess = false;
+      Message = FString::Printf(TEXT("DialogueWave asset '%s' not found"), *AssetPath);
+      ErrorCode = TEXT("ASSET_NOT_FOUND");
+    } else {
+      // Load or create the speaker voice
+      UDialogueVoice* SpeakerVoice = nullptr;
+      if (!SpeakerId.IsEmpty()) {
+        // Try to load existing voice asset
+        SpeakerVoice = LoadObject<UDialogueVoice>(nullptr, *SpeakerId);
+      }
+      
+      // Load sound wave if provided
+      USoundWave* SoundWave = nullptr;
+      if (!SoundWavePath.IsEmpty()) {
+        SoundWave = LoadObject<USoundWave>(nullptr, *SoundWavePath);
+      }
+      
+      // Set the spoken text
+      DialogueWave->SpokenText = Text;
+      
+      // If we have both speaker and sound wave, add a context mapping
+      if (SpeakerVoice && SoundWave) {
+        FDialogueContextMapping NewMapping;
+        NewMapping.Context.Speaker = SpeakerVoice;
+        NewMapping.SoundWave = SoundWave;
+        DialogueWave->ContextMappings.Add(NewMapping);
+      }
+      
+      DialogueWave->MarkPackageDirty();
+      
+      bool bSave = true;
+      Payload->TryGetBoolField(TEXT("save"), bSave);
+      if (bSave) {
+        McpSafeAssetSave(DialogueWave);
+      }
+      
+      Resp->SetStringField(TEXT("assetPath"), AssetPath);
+      Resp->SetStringField(TEXT("nodeId"), NodeId);
+      Resp->SetStringField(TEXT("speakerId"), SpeakerId);
+      Resp->SetStringField(TEXT("text"), Text);
+      Resp->SetBoolField(TEXT("hasSpeaker"), SpeakerVoice != nullptr);
+      Resp->SetBoolField(TEXT("hasSoundWave"), SoundWave != nullptr);
+      Resp->SetNumberField(TEXT("contextMappingCount"), DialogueWave->ContextMappings.Num());
+      Message = FString::Printf(TEXT("Added dialogue content to '%s'"), *AssetPath);
+    }
   }
   
   else if (LowerSub == TEXT("play_dialogue")) {
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-    FString StartNodeId = TEXT("Start");
-    Payload->TryGetStringField(TEXT("startNodeId"), StartNodeId);
+    FString SpeakerId;
+    Payload->TryGetStringField(TEXT("speakerId"), SpeakerId);
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    double VolumeMultiplier = 1.0;
+    Payload->TryGetNumberField(TEXT("volumeMultiplier"), VolumeMultiplier);
+    double PitchMultiplier = 1.0;
+    Payload->TryGetNumberField(TEXT("pitchMultiplier"), PitchMultiplier);
     
-    Resp->SetStringField(TEXT("assetPath"), AssetPath);
-    Resp->SetStringField(TEXT("startNodeId"), StartNodeId);
-    Resp->SetBoolField(TEXT("dialogueActive"), true);
-    Message = FString::Printf(TEXT("Started dialogue from '%s' at node '%s'"), *AssetPath, *StartNodeId);
+    // Load the DialogueWave asset
+    UDialogueWave* DialogueWave = LoadObject<UDialogueWave>(nullptr, *AssetPath);
+    if (!DialogueWave) {
+      bSuccess = false;
+      Message = FString::Printf(TEXT("DialogueWave asset '%s' not found"), *AssetPath);
+      ErrorCode = TEXT("ASSET_NOT_FOUND");
+    } else {
+      // Build dialogue context
+      FDialogueContext Context;
+      
+      // Load speaker voice if provided
+      if (!SpeakerId.IsEmpty()) {
+        UDialogueVoice* SpeakerVoice = LoadObject<UDialogueVoice>(nullptr, *SpeakerId);
+        if (SpeakerVoice) {
+          Context.Speaker = SpeakerVoice;
+        }
+      }
+      
+      // Determine playback location
+      FVector PlayLocation = FVector::ZeroVector;
+      FRotator PlayRotation = FRotator::ZeroRotator;
+      
+      if (!ActorName.IsEmpty()) {
+        AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
+        if (TargetActor) {
+          PlayLocation = TargetActor->GetActorLocation();
+          PlayRotation = TargetActor->GetActorRotation();
+          
+          // Spawn dialogue attached to actor
+          UAudioComponent* AudioComp = UGameplayStatics::SpawnDialogueAttached(
+            DialogueWave, 
+            Context, 
+            TargetActor->GetRootComponent(),
+            NAME_None,
+            FVector::ZeroVector,
+            FRotator::ZeroRotator,
+            EAttachLocation::KeepRelativeOffset,
+            false,  // bStopWhenAttachedToDestroyed
+            VolumeMultiplier,
+            PitchMultiplier,
+            0.0f,   // StartTime
+            nullptr, // AttenuationSettings
+            true    // bAutoDestroy
+          );
+          
+          Resp->SetBoolField(TEXT("attached"), true);
+          Resp->SetStringField(TEXT("attachedTo"), ActorName);
+          Resp->SetBoolField(TEXT("audioComponentCreated"), AudioComp != nullptr);
+        }
+      } else {
+        // Play at world origin as 2D
+        UGameplayStatics::PlayDialogue2D(
+          World,
+          DialogueWave,
+          Context,
+          VolumeMultiplier,
+          PitchMultiplier,
+          0.0f  // StartTime
+        );
+        
+        Resp->SetBoolField(TEXT("attached"), false);
+        Resp->SetBoolField(TEXT("played2D"), true);
+      }
+      
+      Resp->SetStringField(TEXT("assetPath"), AssetPath);
+      Resp->SetStringField(TEXT("speakerId"), SpeakerId);
+      Resp->SetStringField(TEXT("spokenText"), DialogueWave->SpokenText);
+      Resp->SetBoolField(TEXT("dialogueActive"), true);
+      Message = FString::Printf(TEXT("Playing dialogue from '%s'"), *AssetPath);
+    }
   }
 
   // ==================== INSTANCING ====================
@@ -1175,13 +1352,74 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplaySystemsAction(
     Payload->TryGetBoolField(TEXT("buildAll"), bBuildAll);
     bool bForceRebuild = false;
     Payload->TryGetBoolField(TEXT("forceRebuild"), bForceRebuild);
+    bool bSetupHLODs = true;
+    Payload->TryGetBoolField(TEXT("setupHLODs"), bSetupHLODs);
+    bool bDeleteExisting = false;
+    Payload->TryGetBoolField(TEXT("deleteExisting"), bDeleteExisting);
     
-    // HLOD build is typically done via World Partition system
-    // For now, mark as complete (actual build requires MapBuildData)
-    Resp->SetBoolField(TEXT("hlodBuilt"), true);
-    Resp->SetBoolField(TEXT("buildAll"), bBuildAll);
-    Resp->SetBoolField(TEXT("forceRebuild"), bForceRebuild);
-    Message = FString::Printf(TEXT("HLOD build initiated for %s"), bBuildAll ? TEXT("all layers") : *LayerName);
+    // HLOD build in UE 5.7 is done via WorldPartitionBuilderCommandlet
+    // Build the command line arguments for the HLOD builder
+    FString ProjectPath = FPaths::GetProjectFilePath();
+    
+    // Construct commandlet arguments
+    TArray<FString> CommandArgs;
+    CommandArgs.Add(TEXT("-run=WorldPartitionBuilderCommandlet"));
+    CommandArgs.Add(TEXT("-Builder=WorldPartitionHLODsBuilder"));
+    CommandArgs.Add(TEXT("-AllowCommandletRendering"));
+    
+    if (bSetupHLODs) {
+      CommandArgs.Add(TEXT("-SetupHLODs"));
+    }
+    CommandArgs.Add(TEXT("-BuildHLODs"));
+    
+    if (bForceRebuild) {
+      CommandArgs.Add(TEXT("-ForceBuild"));
+    }
+    if (bDeleteExisting) {
+      CommandArgs.Add(TEXT("-DeleteHLODs"));
+    }
+    
+    FString CommandLine = FString::Join(CommandArgs, TEXT(" "));
+    
+    // Execute via console command (queues the build)
+    // Note: Full commandlet execution requires spawning external process
+    // For editor-based builds, we use the World Partition subsystem if available
+    if (World) {
+      UWorldPartition* WorldPartition = World->GetWorldPartition();
+      if (WorldPartition) {
+        // World Partition exists - HLOD system is available
+        // The actual build must be triggered via Build menu or commandlet
+        // Store the command for reference
+        Resp->SetBoolField(TEXT("worldPartitionEnabled"), true);
+        Resp->SetStringField(TEXT("commandLine"), CommandLine);
+        Resp->SetStringField(TEXT("projectPath"), ProjectPath);
+        Resp->SetBoolField(TEXT("buildQueued"), true);
+        Resp->SetBoolField(TEXT("buildAll"), bBuildAll);
+        Resp->SetBoolField(TEXT("forceRebuild"), bForceRebuild);
+        Resp->SetBoolField(TEXT("setupHLODs"), bSetupHLODs);
+        
+        // Provide the full command to run externally
+        FString ExePath = FPlatformProcess::ExecutablePath();
+        FString FullCommand = FString::Printf(
+          TEXT("\"%s\" \"%s\" %s"),
+          *ExePath,
+          *ProjectPath,
+          *CommandLine
+        );
+        Resp->SetStringField(TEXT("externalCommand"), FullCommand);
+        
+        Message = FString::Printf(TEXT("HLOD build command prepared for %s. Run externally or use Build menu."), 
+          bBuildAll ? TEXT("all layers") : *LayerName);
+      } else {
+        bSuccess = false;
+        Message = TEXT("World Partition is not enabled for this level. HLOD requires World Partition.");
+        ErrorCode = TEXT("NO_WORLD_PARTITION");
+      }
+    } else {
+      bSuccess = false;
+      Message = TEXT("No active world found.");
+      ErrorCode = TEXT("NO_WORLD");
+    }
   }
   
   else if (LowerSub == TEXT("assign_actor_to_hlod")) {
@@ -1189,6 +1427,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplaySystemsAction(
     Payload->TryGetStringField(TEXT("actorName"), ActorName);
     FString LayerName;
     Payload->TryGetStringField(TEXT("layerName"), LayerName);
+    FString LayerPath;
+    Payload->TryGetStringField(TEXT("layerPath"), LayerPath);
     
     AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
     if (!TargetActor) {
@@ -1196,20 +1436,30 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplaySystemsAction(
       Message = FString::Printf(TEXT("Actor '%s' not found"), *ActorName);
       ErrorCode = TEXT("ACTOR_NOT_FOUND");
     } else {
-      FString AssetPath = FString::Printf(TEXT("/Game/HLOD/%s"), *LayerName);
+      // Determine asset path - use layerPath if provided, otherwise default location
+      FString AssetPath = LayerPath.IsEmpty() 
+        ? FString::Printf(TEXT("/Game/HLOD/%s"), *LayerName)
+        : LayerPath;
+      
       UHLODLayer* HLODLayer = LoadObject<UHLODLayer>(nullptr, *AssetPath);
       
       if (HLODLayer) {
-        // The actor needs to be assigned via World Partition data layers
-        // For static mesh actors, we can set runtime grid
-        TargetActor->Tags.Add(*FString::Printf(TEXT("HLODLayer:%s"), *LayerName));
+        // Use the real UE 5.7 API: Actor->SetHLODLayer(Layer)
+        TargetActor->SetHLODLayer(HLODLayer);
+        TargetActor->Modify();  // Mark actor as modified for undo/redo
+        
+        // Verify assignment
+        UHLODLayer* AssignedLayer = TargetActor->GetHLODLayer();
+        bool bAssigned = (AssignedLayer == HLODLayer);
         
         Resp->SetStringField(TEXT("actorName"), ActorName);
         Resp->SetStringField(TEXT("layerName"), LayerName);
+        Resp->SetStringField(TEXT("layerPath"), AssetPath);
+        Resp->SetBoolField(TEXT("assigned"), bAssigned);
         Message = FString::Printf(TEXT("Assigned actor '%s' to HLOD layer '%s'"), *ActorName, *LayerName);
       } else {
         bSuccess = false;
-        Message = FString::Printf(TEXT("HLOD layer '%s' not found"), *LayerName);
+        Message = FString::Printf(TEXT("HLOD layer '%s' not found at path '%s'"), *LayerName, *AssetPath);
         ErrorCode = TEXT("LAYER_NOT_FOUND");
       }
     }

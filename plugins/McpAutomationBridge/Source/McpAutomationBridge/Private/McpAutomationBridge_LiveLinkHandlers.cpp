@@ -452,13 +452,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
                     FString ModeStr;
                     if ((*SettingsObj)->TryGetStringField(TEXT("mode"), ModeStr))
                     {
-                        if (ModeStr == TEXT("LatestFrame"))
+                        // UE 5.7 uses EngineTime, Timecode, Latest instead of LatestFrame, TimeSynchronized
+                        if (ModeStr == TEXT("LatestFrame") || ModeStr == TEXT("Latest"))
                         {
-                            Settings->Mode = ELiveLinkSourceMode::LatestFrame;
+                            Settings->Mode = ELiveLinkSourceMode::Latest;
                         }
-                        else if (ModeStr == TEXT("TimeSynchronized"))
+                        else if (ModeStr == TEXT("TimeSynchronized") || ModeStr == TEXT("Timecode"))
                         {
-                            Settings->Mode = ELiveLinkSourceMode::TimeSynchronized;
+                            Settings->Mode = ELiveLinkSourceMode::Timecode;
+                        }
+                        else if (ModeStr == TEXT("EngineTime"))
+                        {
+                            Settings->Mode = ELiveLinkSourceMode::EngineTime;
                         }
                     }
                     
@@ -466,7 +471,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
                     double BufferOffset;
                     if ((*SettingsObj)->TryGetNumberField(TEXT("bufferOffset"), BufferOffset))
                     {
-                        Settings->BufferSettings.LatestOffset = FFrameTime::FromDecimal(BufferOffset);
+                        // UE 5.7: LatestOffset is int32, not FFrameTime
+                        Settings->BufferSettings.LatestOffset = FMath::RoundToInt32(BufferOffset);
                     }
                 }
                 
@@ -782,7 +788,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
                     Result = MakeLiveLinkSuccess(TEXT("Frame data retrieved"));
                     
                     TSharedPtr<FJsonObject> FrameDataObj = MakeShareable(new FJsonObject());
-                    FrameDataObj->SetNumberField(TEXT("worldTime"), FrameData.FrameData.WorldTime.GetSourceTime());
+                    // UE 5.7: Access base data through GetBaseData() accessor
+                    if (const FLiveLinkBaseFrameData* BaseData = FrameData.FrameData.GetBaseData())
+                    {
+                        FrameDataObj->SetNumberField(TEXT("worldTime"), BaseData->WorldTime.GetSourceTime());
+                    }
+                    else
+                    {
+                        FrameDataObj->SetNumberField(TEXT("worldTime"), 0.0);
+                    }
                     
                     Result->SetObjectField(TEXT("frameData"), FrameDataObj);
                 }

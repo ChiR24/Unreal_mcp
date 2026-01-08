@@ -13,6 +13,7 @@ export interface BaseToolResponse {
   retriable?: boolean;
   /** Scope/context for the error (e.g., 'tool-call/manage_asset') */
   scope?: string;
+  details?: unknown;
 }
 
 // Asset Management Types

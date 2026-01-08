@@ -5,7 +5,7 @@
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.7-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
-[![Tools](https://img.shields.io/badge/Tools-61-purple)](docs/handler-mapping.md)
+[![Tools](https://img.shields.io/badge/Tools-53-purple)](docs/handler-mapping.md)
 [![Project Board](https://img.shields.io/badge/Project-Roadmap-blueviolet?logo=github)](https://github.com/users/ChiR24/projects/3)
 [![Discussions](https://img.shields.io/badge/Discussions-Join-brightgreen?logo=github)](https://github.com/ChiR24/Unreal_mcp/discussions)
 
@@ -115,7 +115,7 @@ Enable via **Edit → Plugins**, then restart the editor:
 | **Subobject Data Interface** | Blueprint components (UE 5.7+) |
 | **Geometry Script** | `manage_geometry` operations (procedural mesh) |
 | **PCG** | `manage_pcg` operations (procedural content generation) |
-| **Water** (Experimental) | `manage_water` operations (oceans, lakes, rivers) |
+| **Water** (Experimental) | `build_environment` water operations (oceans, lakes, rivers) |
 | **HairStrands** (Optional) | `manage_character_avatar` groom/hair operations |
 | **Mutable** (Optional) | `manage_character_avatar` customizable object operations |
 | **Interchange** (Built-in) | `manage_asset_plugins` Interchange Framework import/export |
@@ -192,7 +192,7 @@ ASSET_LIST_TTL_MS=10000
 
 ## Available Tools
 
-**61 Tools** organized by category:
+**53 Tools** organized by category:
 
 ### Core Tools
 | Tool | Description |
@@ -201,7 +201,7 @@ ASSET_LIST_TTL_MS=10000
 | `manage_asset` | Assets, Materials, Render Targets, Material graph editing |
 | `control_actor` | Spawn, delete, transform, physics, tags, components |
 | `control_editor` | PIE, Camera, viewport, screenshots, bookmarks |
-| `manage_level` | Load/Save, World Partition, streaming, data layers |
+| `manage_level` | Load/save + level structure (sublevels, World Partition, HLOD, data layers) |
 | `inspect` | Object introspection, property access, snapshots |
 | `system_control` | UBT, Tests, Logs, Project Settings, CVars |
 
@@ -209,14 +209,11 @@ ASSET_LIST_TTL_MS=10000
 | Tool | Description |
 |------|-------------|
 | `manage_lighting` | Spawn lights, GI, shadows, build lighting |
-| `build_environment` | Landscape, Foliage, Procedural generation |
-| `manage_level_structure` | Level creation, sublevels, World Partition, HLOD |
+| `build_environment` | Landscape, foliage, procedural generation; water + weather |
 | `manage_volumes` | Trigger, blocking, physics, audio, navigation volumes |
 | `manage_navigation` | NavMesh settings, nav modifiers, nav links, pathfinding |
 | `manage_splines` | Spline creation, spline meshes, road/river templates |
 | `manage_pcg` | PCG graphs, samplers, filters, spawners |
-| `manage_water` | Water bodies (ocean, lake, river), waves, materials |
-| `manage_weather` | Weather systems (wind, rain, snow, lightning) |
 | `manage_post_process` | Post-process volumes, bloom, DOF, color grading, reflections, ray tracing |
 
 ### Authoring Tools
@@ -228,7 +225,7 @@ ASSET_LIST_TTL_MS=10000
 | `manage_geometry` | Procedural mesh creation (Geometry Script) |
 | `manage_skeleton` | Skeleton, sockets, physics assets, cloth binding |
 | `manage_audio` | Sound Cues, MetaSounds, Attenuation, ambient audio |
-| `manage_sequence` | Sequencer / Cinematics, camera animations |
+| `manage_sequence` | Sequencer / cinematics + Movie Render Queue (MRQ) |
 | `manage_behavior_tree` | Behavior Tree graph editing |
 | `manage_widget_authoring` | UMG widget creation, layout, styling, animations |
 

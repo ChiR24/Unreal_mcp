@@ -35,7 +35,12 @@
 
 #if MCP_HAS_NDISPLAY && __has_include("IDisplayCluster.h")
 #include "IDisplayCluster.h"
+// UE 5.7: Cluster manager include path changed
+#if __has_include("Cluster/IDisplayClusterClusterManager.h")
+#include "Cluster/IDisplayClusterClusterManager.h"
+#elif __has_include("IDisplayClusterClusterManager.h")
 #include "IDisplayClusterClusterManager.h"
+#endif
 #define MCP_HAS_NDISPLAY_CLUSTER 1
 #else
 #define MCP_HAS_NDISPLAY_CLUSTER 0
@@ -389,7 +394,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVirtualProductionAction(
             UDisplayClusterConfigurationData* Config = LoadObject<UDisplayClusterConfigurationData>(nullptr, *ConfigPath);
             if (Config && Config->Cluster)
             {
-                UDisplayClusterConfigurationClusterNode** NodePtr = Config->Cluster->Nodes.Find(NodeId);
+                // UE 5.7: TMap::Find returns TObjectPtr* not raw pointer**
+                auto NodePtr = Config->Cluster->Nodes.Find(NodeId);
                 if (NodePtr && *NodePtr)
                 {
                     UDisplayClusterConfigurationClusterNode* Node = *NodePtr;
@@ -438,7 +444,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVirtualProductionAction(
             UDisplayClusterConfigurationData* Config = LoadObject<UDisplayClusterConfigurationData>(nullptr, *ConfigPath);
             if (Config && Config->Cluster)
             {
-                UDisplayClusterConfigurationClusterNode** NodePtr = Config->Cluster->Nodes.Find(NodeId);
+                // UE 5.7: TMap::Find returns TObjectPtr* not raw pointer**
+                auto NodePtr = Config->Cluster->Nodes.Find(NodeId);
                 if (NodePtr && *NodePtr)
                 {
                     if ((*NodePtr)->Viewports.Remove(ViewportId) > 0)
@@ -796,7 +803,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVirtualProductionAction(
                 {
                     TSharedPtr<FJsonObject> CSObj = MakeShareable(new FJsonObject());
                     CSObj->SetStringField(TEXT("name"), CS.ColorSpaceName);
-                    CSObj->SetNumberField(TEXT("index"), CS.ColorSpaceIndex);
+                    // UE 5.7: ColorSpaceIndex removed, just use the name
+                    CSObj->SetStringField(TEXT("colorSpace"), CS.ColorSpaceName);
                     ColorspacesArray.Add(MakeShareable(new FJsonValueObject(CSObj)));
                 }
                 
@@ -1123,12 +1131,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVirtualProductionAction(
     if (Action == TEXT("list_midi_devices"))
     {
 #if MCP_HAS_MIDI
-        TArray<FFoundMIDIDevice> InputDevices;
-        TArray<FFoundMIDIDevice> OutputDevices;
-        UMIDIDeviceManager::FindMIDIDevices(InputDevices, OutputDevices);
+        TArray<FMIDIDeviceInfo> InputDevices;
+        TArray<FMIDIDeviceInfo> OutputDevices;
+        // UE 5.7: Use FindAllMIDIDeviceInfo with FMIDIDeviceInfo arrays
+        UMIDIDeviceManager::FindAllMIDIDeviceInfo(InputDevices, OutputDevices);
         
         TArray<TSharedPtr<FJsonValue>> InputArray;
-        for (const FFoundMIDIDevice& Device : InputDevices)
+        for (const FMIDIDeviceInfo& Device : InputDevices)
         {
             TSharedPtr<FJsonObject> DevObj = MakeShareable(new FJsonObject());
             DevObj->SetStringField(TEXT("name"), Device.DeviceName);
@@ -1138,7 +1147,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVirtualProductionAction(
         }
         
         TArray<TSharedPtr<FJsonValue>> OutputArray;
-        for (const FFoundMIDIDevice& Device : OutputDevices)
+        for (const FMIDIDeviceInfo& Device : OutputDevices)
         {
             TSharedPtr<FJsonObject> DevObj = MakeShareable(new FJsonObject());
             DevObj->SetStringField(TEXT("name"), Device.DeviceName);
@@ -1220,9 +1229,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVirtualProductionAction(
     if (Action == TEXT("get_midi_info"))
     {
 #if MCP_HAS_MIDI
-        TArray<FFoundMIDIDevice> InputDevices;
-        TArray<FFoundMIDIDevice> OutputDevices;
-        UMIDIDeviceManager::FindMIDIDevices(InputDevices, OutputDevices);
+        TArray<FMIDIDeviceInfo> InputDevices;
+        TArray<FMIDIDeviceInfo> OutputDevices;
+        // UE 5.7: Use FindAllMIDIDeviceInfo with FMIDIDeviceInfo arrays
+        UMIDIDeviceManager::FindAllMIDIDeviceInfo(InputDevices, OutputDevices);
         
         TSharedPtr<FJsonObject> InfoObj = MakeShareable(new FJsonObject());
         InfoObj->SetBoolField(TEXT("isAvailable"), true);

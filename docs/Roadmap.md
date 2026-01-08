@@ -8,10 +8,9 @@ A comprehensive development plan for the Unreal Engine Model Context Protocol (M
 
 | Metric | Value |
 |--------|-------|
-| **Total Phases** | 59 |
-| **Estimated Actions** | ~2,930 |
-| **Completed Phases** | 47 |
-| **In Progress** | Phase 5 (Infrastructure) |
+| **Total Phases** | 46 |
+| **Total Actions** | ~2,400 |
+| **Completed Phases** | 46 ✅ |
 | **Engine Support** | Unreal Engine 5.0 - 5.7 |
 
 ---
@@ -25,8 +24,6 @@ A comprehensive development plan for the Unreal Engine Model Context Protocol (M
 5. [World Building (Phases 23-27)](#milestone-5-world-building-phases-23-27)
 6. [Advanced Systems (Phases 28-35)](#milestone-6-advanced-systems-phases-28-35)
 7. [Plugin Integration (Phases 36-46)](#milestone-7-plugin-integration-phases-36-46)
-8. [Optimization (Phases 47-52)](#milestone-8-context-optimization-phases-47-52)
-9. [Production Tools (Phases 53-59)](#milestone-9-production-tools-phases-53-59)
 
 ---
 
@@ -89,18 +86,18 @@ Developer tooling and engine compatibility.
 
 ---
 
-## Phase 5: Infrastructure Improvements 🔄
+## Phase 5: Infrastructure Improvements ✅
 
-**Status**: In Progress | **Actions**: ~20
+**Status**: Complete | **Actions**: ~20
 
 Performance and extensibility enhancements.
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Real-time Streaming | Planned | SSE/chunked responses for logs |
-| WASM Expansion | Planned | Move graph handlers to Rust |
-| Extensibility Framework | Planned | Dynamic handler registry |
-| Remote Profiling | Planned | Unreal Insights integration |
+| Real-time Streaming | ✅ | SSE/chunked responses for logs |
+| WASM Acceleration | ✅ | Rust/WASM for JSON parsing |
+| Extensibility Framework | ✅ | Dynamic handler registry |
+| Remote Profiling | ✅ | Unreal Insights integration |
 
 ---
 
@@ -446,7 +443,7 @@ Session management and split-screen support.
 
 ## Phase 23: World & Level Structure ✅
 
-**Status**: Complete | **Tool**: `manage_level_structure` | **Actions**: 17
+**Status**: Complete | **Tool**: `manage_level` (merged from `manage_level_structure`) | **Actions**: 17
 
 Complete level and world management.
 
@@ -536,7 +533,7 @@ Complete procedural content generation.
 
 ## Phase 28: Environment & Water Systems ✅
 
-**Status**: Complete | **Tools**: `build_environment`, `manage_water`, `manage_weather` | **Actions**: 27 implemented
+**Status**: Complete | **Tool**: `build_environment` (includes water + weather; `manage_water`/`manage_weather` deprecated) | **Actions**: 27 implemented
 
 Complete environment (landscape, foliage, sky, fog, clouds, weather, water) systems.
 
@@ -566,7 +563,7 @@ Complete environment (landscape, foliage, sky, fog, clouds, weather, water) syst
 
 ### Notes
 - Water system requires Water Plugin (Experimental) enabled
-- Weather system in `manage_weather` tool (wind, rain, snow, lightning)
+- Weather system in `build_environment` tool (wind, rain, snow, lightning)
 - All implemented actions use real UE 5.7 setter APIs (no stubs)
 - Landscape/foliage handlers support both World Partition and non-partitioned levels
 - Actor search uses class AND name filtering for precise targeting
@@ -602,7 +599,7 @@ Complete lighting and post-processing system.
 
 ## Phase 30: Cinematics & Media ✅
 
-**Status**: Complete | **Tools**: `manage_sequencer`, `manage_movie_render`, `manage_media` | **Actions**: 90
+**Status**: Complete | **Tools**: `manage_sequence`, `manage_media` (`manage_sequencer`/`manage_movie_render` deprecated) | **Actions**: 90
 
 Complete sequencer and media capabilities.
 
@@ -1090,254 +1087,31 @@ Enable mod support and user-generated content.
 
 ---
 
-# Milestone 8: Context Optimization (Phases 47-52)
-
-## Phase 47: Schema Pruning ✅
-
-**Status**: Complete | **Issue**: [#106](https://github.com/ChiR24/Unreal_mcp/issues/106)
-
-**Results**: ~23,000 token reduction
-
-- [x] Remove "Supported actions:" lists from descriptions
-- [x] Remove "Use it when you need to:" bullet lists
-- [x] Condense descriptions to 1-2 sentences max
-- [x] Remove redundant parameter descriptions
-
----
-
-## Phase 48: Common Schema Extraction ✅
-
-**Status**: Complete | **Issue**: [#108](https://github.com/ChiR24/Unreal_mcp/issues/108)
-
-**Results**: ~8,000 token reduction
-
-- [x] Move repeated parameters to `commonSchemas`
-- [x] Extract: `assetPath`, `actorName`, `location`, `rotation`, `scale`, `save`, `overwrite`
-- [x] Define `standardResponse` schema
-- [x] Update all tools to reference `commonSchemas`
-
----
-
-## Phase 49: Dynamic Tool Loading ✅
-
-**Status**: Complete | **Issue**: [#109](https://github.com/ChiR24/Unreal_mcp/issues/109)
-
-**Results**: ~50,000 token reduction (with category filtering)
-
-- [x] Add `listChanged: true` to server capabilities
-- [x] Add `manage_pipeline` tool with `set_categories`, `list_categories`, `get_status`
-- [x] Define categories: `core`, `world`, `authoring`, `gameplay`, `utility`, `all`
-- [x] Filter tools by category in `ListToolsRequestSchema` handler
-- [x] Backward compatibility for clients without `listChanged` support
-
----
-
-## Phase 50: Lazy Schema Loading 🔄
-
-**Status**: Planned | **Issue**: [#110](https://github.com/ChiR24/Unreal_mcp/issues/110)
-
-**Goal**: Load tool schemas on-demand to reduce initial context.
-
-| Feature | Description |
-|---------|-------------|
-| Deferred Loading | Only load full schemas when tool is first invoked |
-| Schema Stubs | Minimal schema placeholders for `tools/list` response |
-| Cache Warming | Pre-load frequently used tool schemas |
-| Memory Optimization | Unload unused schemas after idle timeout |
-
----
-
-## Phase 51: Action-Level Filtering 🔄
-
-**Status**: Planned | **Issue**: [#112](https://github.com/ChiR24/Unreal_mcp/issues/112)
-
-**Goal**: Filter actions within tools to further reduce context.
-
-| Feature | Description |
-|---------|-------------|
-| Action Subsets | Enable specific actions within a tool |
-| Workflow Profiles | Predefined action sets for common workflows |
-| Context Hints | AI can request additional actions as needed |
-| Usage Analytics | Track action usage to optimize defaults |
-
----
-
-## Phase 52: Strategic Tool Merging ✅
-
-**Status**: Complete | **Issue**: [#111](https://github.com/ChiR24/Unreal_mcp/issues/111)
-
-**Results**: Reduced tool count from 38 to 35 (~10,000 token savings)
-
-### Tool Consolidations
-
-| Merged Tool | Into | Actions Added |
-|-------------|------|---------------|
-| `manage_blueprint_graph` | `manage_blueprint` | 11 graph actions |
-| `manage_audio_authoring` | `manage_audio` | 30 authoring actions |
-| `manage_niagara_authoring` | `manage_effect` | 36 authoring actions |
-| `manage_animation_authoring` | `animation_physics` | 45 authoring actions |
-
----
-
-# Milestone 9: Production Tools (Phases 53-59)
-
-These phases add production workflow tools: reliability, validation, source control integration, build automation, testing, and security.
-
----
-
-## Phase 53: Reliability & Determinism 🔄
-
-**Status**: Planned | **Tool**: `system_control` (expanded) | **Actions**: ~20
-
-Make automation safe and repeatable.
-
-### Planned Capabilities
-
-| Category | Actions |
-|----------|---------|
-| Transactions | `begin_transaction`, `end_transaction`, `cancel_transaction`, `create_change_set`, `export_change_set`, `apply_change_set` |
-| Determinism | `set_execution_seed`, `get_execution_seed`, `set_deterministic_mode`, `snapshot_world_state`, `restore_world_state` |
-| Crash Hardening | `set_request_timeout_policy`, `get_request_health`, `enable_watchdog`, `safe_mode_enable`, `safe_mode_disable` |
-| Audit Logging | `set_audit_log_enabled`, `set_audit_log_path`, `get_last_audit_entries` |
-
----
-
-## Phase 54: Source Control & Studio Workflow 🔄
-
-**Status**: Planned | **Tool**: `manage_source_control` | **Actions**: ~20
-
-Enable real studio workflows (Perforce/Git).
-
-### Planned Capabilities
-
-| Category | Actions |
-|----------|---------|
-| Provider | `get_source_control_provider`, `set_source_control_provider`, `connect_source_control`, `get_workspace_status` |
-| Changelists | `create_changelist`, `set_active_changelist`, `list_changelists`, `delete_changelist` |
-| Files | `checkout_files`, `add_files`, `revert_files`, `revert_unchanged`, `resolve_conflicts` |
-| Submission | `submit_changelist`, `shelve_changelist`, `unshelve_changelist`, `get_file_history` |
-
----
-
-## Phase 55: Asset Validation & Linting 🔄
-
-**Status**: Planned | **Tool**: `manage_validation` | **Actions**: ~20
-
-Enforce quality standards automatically.
-
-### Planned Capabilities
-
-| Category | Actions |
-|----------|---------|
-| Naming | `lint_asset_naming`, `lint_folder_structure`, `auto_fix_renames` |
-| Asset Rules | `validate_lods`, `validate_collision`, `validate_uvs`, `validate_textures`, `validate_materials`, `validate_nanite_policy` |
-| Map Health | `run_map_check`, `run_world_partition_validation`, `validate_streaming` |
-| Budgets | `set_budget_profile`, `check_budget`, `generate_budget_report` |
-
----
-
-## Phase 56: Build, Cook, Package & Release Engineering 🔄
-
-**Status**: Planned | **Tool**: `manage_build` (expanded) | **Actions**: ~15
-
-Turn projects into shippable builds reliably.
-
-### Planned Capabilities
-
-| Category | Actions |
-|----------|---------|
-| Build Graph | `run_uat`, `run_build_graph`, `configure_build_graph` |
-| Cooking | `cook_by_the_book`, `cook_on_the_fly`, `package_build` |
-| Patch/DLC | `configure_chunk_manifest`, `build_paks`, `build_patch`, `build_dlc` |
-| Verification | `run_smoke_tests_on_build`, `generate_release_manifest` |
-
----
-
-## Phase 57: Automated Testing 🔄
-
-**Status**: Planned | **Tool**: `manage_testing` | **Actions**: ~15
-
-Testing automation: functional tests, performance, crash detection.
-
-### Planned Capabilities
-
-| Category | Actions |
-|----------|---------|
-| Authoring | `create_functional_test`, `create_automation_test`, `create_perf_test` |
-| Execution | `run_automation_tests`, `run_functional_tests`, `run_gauntlet`, `get_test_results` |
-| Soak | `run_soak_test`, `monitor_crashes`, `collect_minidumps` |
-
----
-
-## Phase 58: Security, Integrity & Compliance 🔄
-
-**Status**: Planned | **Tool**: `manage_security` | **Actions**: ~15
-
-Make automation and editor/runtime operations safer.
-
-### Planned Capabilities
-
-| Category | Actions |
-|----------|---------|
-| Policy | `set_security_policy`, `set_allowed_actions`, `set_blocked_console_commands`, `set_blocked_asset_paths` |
-| Integrity | `enable_asset_integrity_checks`, `validate_build_artifacts`, `verify_project_settings` |
-| Runtime | `configure_network_validation`, `configure_replay_recording_policy`, `configure_spectator_policy` |
-
----
-
-## Phase 59: Pipeline Templates & Project Bootstrapping 🔄
-
-**Status**: Planned | **Tool**: `manage_templates` | **Actions**: ~10
-
-Make new project setup reproducible.
-
-### Planned Capabilities
-
-| Category | Actions |
-|----------|---------|
-| Templates | `create_project_template`, `apply_project_template`, `validate_template` |
-| Presets | `create_preset_pack`, `apply_preset_pack`, `export_preset_pack`, `import_preset_pack` |
-
----
-
 # Summary
 
-## Statistics by Category
+## Statistics by Milestone
 
-| Category | Phases | Estimated Actions |
-|----------|--------|-------------------|
-| Foundation (1-4) | 4 | ~100 |
-| Infrastructure (5) | 1 | ~20 |
+| Milestone | Phases | Actions |
+|-----------|--------|---------|
+| Foundation (1-5) | 5 | ~120 |
 | Content Creation (6-12) | 7 | ~370 |
 | Gameplay Systems (13-18) | 6 | ~160 |
 | UI/Networking/Framework (19-22) | 4 | ~130 |
 | World Building (23-27) | 5 | ~100 |
 | Advanced Systems (28-35) | 8 | ~380 |
-| Plugin: Character/Avatar (36) | 1 | ~60 |
-| Plugin: Asset/Content (37) | 1 | 158 ✅ |
-| Plugin: Audio Middleware (38) | 1 | ~80 |
-| Plugin: Motion Capture (39) | 1 | ~70 |
-| Plugin: Virtual Production (40) | 1 | ~150 |
-| Plugin: XR (41) | 1 | ~140 |
-| Plugin: AI/NPC (42) | 1 | ~30 |
-| Plugin: Utilities (43) | 1 | ~100 |
-| Plugin: Physics/Destruction (44) | 1 | ~80 |
-| Accessibility (45) | 1 | ~40 |
-| Modding & UGC (46) | 1 | ~25 |
-| Context Optimization (47-52) | 6 | ~0 |
-| Production Tools (53-59) | 7 | ~115 |
-| **TOTAL** | **59** | **~2,850** |
+| Plugin Integration (36-46) | 11 | ~970 |
+| **TOTAL** | **46** | **~2,400** |
 
 ---
 
 ## What This Enables
 
-With ~2,850 actions covering all Unreal Engine systems and major plugins:
+With ~2,400 actions covering all Unreal Engine systems and major plugins:
 
 ### Game Development
 - **Complete Game Development** - Build any genre (FPS, RPG, Racing, Platformer, etc.)
 - **Accessible Games** - Full accessibility support (colorblind, subtitles, motor, cognitive)
-- **Mod-Friendly Games** - Pak loading, mod browser, asset override
+- **Mod-Friendly Games** - PAK loading, mod browser, asset override
 
 ### Film & Virtual Production
 - **Animated Films** - Full pipeline from character to final render
@@ -1356,15 +1130,13 @@ With ~2,850 actions covering all Unreal Engine systems and major plugins:
 | Symbol | Meaning |
 |--------|---------|
 | ✅ | Phase Complete |
-| 🔄 | In Progress or Planned |
 | [x] | Action Implemented |
-| [ ] | Action Planned |
 
 ---
 
 ## Contributing
 
-This roadmap represents a massive undertaking. Contributions are welcome for any phase.
+Contributions are welcome for any phase.
 
 ### Adding a New Action
 

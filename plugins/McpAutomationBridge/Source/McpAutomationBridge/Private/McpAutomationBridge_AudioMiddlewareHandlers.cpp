@@ -21,6 +21,7 @@
 #include "EditorAssetLibrary.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundBase.h"
+#include "Sound/SoundWave.h"
 #include "Kismet/GameplayStatics.h"
 
 // ============================================================================
@@ -848,7 +849,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioMiddlewareAction(
             UWorld* World = GetActiveWorld();
             if (World)
             {
-                TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+                TargetActor = FindActorByLabelOrName<AActor>(ActorName);
             }
         }
         
@@ -949,7 +950,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioMiddlewareAction(
         UWorld* World = GetActiveWorld();
         if (World && !ActorName.IsEmpty())
         {
-            TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+            TargetActor = FindActorByLabelOrName<AActor>(ActorName);
         }
         
         if (!TargetActor)
@@ -980,7 +981,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioMiddlewareAction(
         UWorld* World = GetActiveWorld();
         if (World && !ActorName.IsEmpty())
         {
-            TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+            TargetActor = FindActorByLabelOrName<AActor>(ActorName);
         }
         
         float Value = 0.0f;
@@ -1026,7 +1027,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioMiddlewareAction(
         UWorld* World = GetActiveWorld();
         if (World && !ActorName.IsEmpty())
         {
-            TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+            TargetActor = FindActorByLabelOrName<AActor>(ActorName);
         }
         
         if (!TargetActor)
@@ -1139,7 +1140,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioMiddlewareAction(
             return true;
         }
         
-        AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+        AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
         if (!TargetActor)
         {
             Result = MakeAudioMiddlewareError(FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
@@ -1236,7 +1237,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioMiddlewareAction(
         UWorld* World = GetActiveWorld();
         if (World && !ActorName.IsEmpty())
         {
-            TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+            TargetActor = FindActorByLabelOrName<AActor>(ActorName);
         }
         
         UFMODBlueprintStatics::PlayEvent2D(World, FmodEvent, true);
@@ -1295,7 +1296,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioMiddlewareAction(
         UWorld* World = GetActiveWorld();
         if (World && !ActorName.IsEmpty())
         {
-            AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+            AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
             if (TargetActor)
             {
                 TArray<UFMODAudioComponent*> Components;
@@ -1329,7 +1330,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioMiddlewareAction(
         UWorld* World = GetActiveWorld();
         if (World && !ActorName.IsEmpty())
         {
-            AActor* TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
+            AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
             if (TargetActor)
             {
                 TArray<UFMODAudioComponent*> Components;

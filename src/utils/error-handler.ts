@@ -32,6 +32,14 @@ interface ErrorResponseDebug {
  * Extended error response with optional debug info
  */
 interface ErrorToolResponse extends BaseToolResponse {
+  // When present, provides machine-actionable details to help callers (LLMs) repair the request.
+  errorDetails?: {
+    kind: 'validation' | 'parameter' | 'connection' | 'execution' | 'timeout' | 'unknown';
+    toolName: string;
+    missing?: string[];
+    invalid?: Array<{ path: string; message: string }>;
+    expected?: Array<{ path: string; hint: string }>;
+  };
   _debug?: ErrorResponseDebug;
 }
 
@@ -45,17 +53,25 @@ interface ErrorLike {
   errorType?: string;
   stack?: string;
   response?: { status?: number };
+  details?: unknown;
 }
 
 /**
  * Normalize any error type to ErrorLike interface
  */
 function normalizeErrorToLike(error: unknown): ErrorLike {
+  // Handle ZodError (duck-typing)
+  const isZodError = typeof error === 'object' && error !== null && 'issues' in error && Array.isArray((error as any).issues);
+  const details = isZodError 
+    ? (error as any).issues 
+    : (typeof error === 'object' && error !== null && 'details' in error ? (error as any).details : undefined);
+
   if (error instanceof Error) {
     return {
       message: error.message,
       stack: error.stack,
-      code: (error as NodeJS.ErrnoException).code
+      code: (error as NodeJS.ErrnoException).code,
+      details
     };
   }
   if (typeof error === 'object' && error !== null) {
@@ -72,7 +88,8 @@ function normalizeErrorToLike(error: unknown): ErrorLike {
             ? (obj.response as Record<string, unknown>).status as number
             : undefined
         }
-        : undefined
+        : undefined,
+      details: obj.details || details
     };
   }
   return { message: String(error) };
@@ -116,6 +133,62 @@ export class ErrorHandler {
       retriable,
       scope
     };
+
+    // Attach LLM-actionable details when possible.
+    try {
+      const kindFromType: NonNullable<ErrorToolResponse['errorDetails']>['kind'] =
+        errorType === ErrorType.VALIDATION ? 'validation'
+          : errorType === ErrorType.PARAMETER ? 'parameter'
+            : errorType === ErrorType.CONNECTION ? 'connection'
+              : errorType === ErrorType.TIMEOUT ? 'timeout'
+                : errorType === ErrorType.EXECUTION ? 'execution'
+                  : 'unknown';
+
+      const missing: string[] = [];
+      const invalid: Array<{ path: string; message: string }> = [];
+      const expected: Array<{ path: string; hint: string }> = [];
+
+      // Heuristics: parse common "Missing required parameter: X" patterns.
+      if (typeof errorMessage === 'string') {
+        const missingMatch = errorMessage.match(/Missing required parameter:\s*([A-Za-z0-9_\-\.]+)/);
+        if (missingMatch?.[1]) missing.push(missingMatch[1]);
+      }
+
+      // Duck-type Zod issues if provided (shape: [{ path, message, ... }]).
+      const details = errorObj.details;
+      if (Array.isArray(details)) {
+        for (const item of details) {
+          const it = item as { path?: unknown; message?: unknown };
+          const msg = typeof it.message === 'string' ? it.message : undefined;
+          const p = Array.isArray(it.path)
+            ? it.path.map(seg => String(seg)).join('.')
+            : typeof it.path === 'string'
+              ? it.path
+              : '';
+          if (msg) {
+            invalid.push({ path: p || 'root', message: msg });
+          }
+        }
+      }
+
+      // Provide some generic, high-confidence hints only for relevant tools.
+      if (toolName && (toolName.includes('asset') || toolName.includes('level') || toolName.includes('manage_') || toolName.includes('control_'))) {
+        expected.push({ path: '*/Path', hint: "Unreal paths should generally look like '/Game/Folder/Asset'" });
+        expected.push({ path: 'action', hint: 'Most tools require an action enum string such as "list", "create", "delete".' });
+      }
+
+      if (missing.length > 0 || invalid.length > 0 || expected.length > 0) {
+        response.errorDetails = {
+          kind: kindFromType,
+          toolName,
+          missing: missing.length > 0 ? missing : undefined,
+          invalid: invalid.length > 0 ? invalid : undefined,
+          expected: expected.length > 0 ? expected : undefined
+        };
+      }
+    } catch {
+      // best-effort only
+    }
 
     // Add debug info in development
     if (process.env.NODE_ENV === 'development') {

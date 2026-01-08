@@ -61,7 +61,7 @@ Covers 80+ scenarios across the 18 new Phase 6-27 tools:
 - Phase 20: Networking & Multiplayer (`manage_networking`)
 - Phase 21: Game Framework (`manage_game_framework`)
 - Phase 22: Sessions & Local Multiplayer (`manage_sessions`)
-- Phase 23: Level Structure (`manage_level_structure`)
+- Phase 23: Level Structure (merged into `manage_level`)
 - Phase 24: Volumes & Zones (`manage_volumes`)
 - Phase 25: Navigation System (`manage_navigation`)
 - Phase 26: Spline System (`manage_splines`)

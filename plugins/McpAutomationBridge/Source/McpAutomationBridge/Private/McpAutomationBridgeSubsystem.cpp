@@ -823,6 +823,102 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandlePerformanceAction(R, A, P, S);
                   });
 
+  // Phase 9: Texture Management
+  RegisterHandler(TEXT("manage_texture"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageTextureAction(R, A, P, S);
+                  });
+
+  // Phase 10: Animation Authoring
+  RegisterHandler(TEXT("manage_animation_authoring"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageAnimationAuthoringAction(R, A, P, S);
+                  });
+
+  // Phase 11: Audio Authoring
+  RegisterHandler(TEXT("manage_audio_authoring"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageAudioAuthoringAction(R, A, P, S);
+                  });
+
+  // Phase 12: Niagara Authoring
+  RegisterHandler(TEXT("manage_niagara_authoring"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageNiagaraAuthoringAction(R, A, P, S);
+                  });
+
+  // Phase 13: Gameplay Ability System (GAS)
+  RegisterHandler(TEXT("manage_gas"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageGASAction(R, A, P, S);
+                  });
+
+  // Phase 14: Character & Movement
+  RegisterHandler(TEXT("manage_character"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageCharacterAction(R, A, P, S);
+                  });
+
+  // Phase 15: Combat & Weapons
+  RegisterHandler(TEXT("manage_combat"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageCombatAction(R, A, P, S);
+                  });
+
+  // Phase 16: AI System
+  RegisterHandler(TEXT("manage_ai"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageAIAction(R, A, P, S);
+                  });
+
+  // Phase 17: Inventory & Items
+  RegisterHandler(TEXT("manage_inventory"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageInventoryAction(R, A, P, S);
+                  });
+
+  // Phase 18: Interaction System
+  RegisterHandler(TEXT("manage_interaction"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageInteractionAction(R, A, P, S);
+                  });
+
+  // Phase 19: Widget Authoring
+  RegisterHandler(TEXT("manage_widget_authoring"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageWidgetAuthoringAction(R, A, P, S);
+                  });
+
+  // Phase 20: Networking & Multiplayer
+  RegisterHandler(TEXT("manage_networking"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageNetworkingAction(R, A, P, S);
+                  });
+
   // Phase 21: Game Framework
   RegisterHandler(TEXT("manage_game_framework"),
                   [this](const FString &R, const FString &A,
