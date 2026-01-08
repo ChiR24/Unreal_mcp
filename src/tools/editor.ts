@@ -238,8 +238,10 @@ export class EditorTools extends BaseTool implements IEditorTools {
 
       // Security: Prevent path traversal by replacing directory separators and invalid chars
       // We use path.basename to strip any directory components, then sanitize the filename
+      // usage of new RegExp to avoid eslint no-useless-escape on forward slash in literal
+      const invalidChars = new RegExp('[<>:*?"|/\\\\]', 'g');
       const sanitizedFilename = filename
-        ? path.basename(filename).replace(/[<>:*?"|\/\\\\]/g, '_').trim()
+        ? path.basename(filename).replace(invalidChars, '_').trim()
         : `Screenshot_${Date.now()}`;
 
       const resString = resolution || DEFAULT_SCREENSHOT_RESOLUTION;
