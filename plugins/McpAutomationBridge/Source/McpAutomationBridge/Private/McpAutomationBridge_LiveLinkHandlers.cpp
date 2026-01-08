@@ -1,7 +1,7 @@
 // McpAutomationBridge_LiveLinkHandlers.cpp
 // Phase 39: Motion Capture & Live Link Handlers
 // Implements: Live Link sources, subjects, presets, face tracking, skeleton mapping
-// ~70 actions across core, face, and mocap categories
+// 64 actions across core, face, and mocap categories
 // ACTION NAMES ARE ALIGNED WITH TypeScript handler (livelink-handlers.ts)
 
 #include "McpAutomationBridgeSubsystem.h"
@@ -145,7 +145,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
 #if !MCP_HAS_LIVELINK
     // Live Link not available - return error for all actions
     Result = MakeLiveLinkNotAvailable();
-    SendJsonResponse(RequestId, Result, RequestingSocket);
+    SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
     return true;
 #else
 
@@ -179,7 +179,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Found %d sources"), SourceGuids.Num()));
             Result->SetArrayField(TEXT("sources"), SourcesArray);
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -209,7 +209,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             Result->SetStringField(TEXT("type"), Type.ToString());
             Result->SetBoolField(TEXT("isValid"), bValid);
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -233,7 +233,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             Result = MakeLiveLinkSuccess(TEXT("Source type retrieved"));
             Result->SetStringField(TEXT("sourceType"), Type.ToString());
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -256,7 +256,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             
             Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Removed source %s"), *SourceGuidStr));
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -276,7 +276,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
 #else
         Result = MakeLiveLinkError(TEXT("RemoveAllSources not available in this build"), TEXT("NOT_SUPPORTED"));
 #endif
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
 
@@ -322,7 +322,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
 #else
         Result = MakeLiveLinkError(TEXT("Source factory API not available"), TEXT("NOT_SUPPORTED"));
 #endif
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -330,7 +330,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
     {
         // Message Bus discovery is typically done through UI - provide info
         Result = MakeLiveLinkSuccess(TEXT("Message Bus discovery should be initiated through the Live Link panel. Use add_messagebus_source with a machine address to connect directly."));
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -386,7 +386,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
                 Result = MakeLiveLinkError(TEXT("Could not get source settings"), TEXT("SETTINGS_NOT_FOUND"));
             }
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
 
@@ -429,7 +429,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Found %d subjects"), SubjectKeys.Num()));
             Result->SetArrayField(TEXT("subjects"), SubjectsArray);
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -450,7 +450,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             Result = MakeLiveLinkSuccess(TEXT("Subject role retrieved"));
             Result->SetStringField(TEXT("subjectRole"), Role ? Role->GetName() : TEXT("Unknown"));
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -471,7 +471,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             Result = MakeLiveLinkSuccess(TEXT("Subject state retrieved"));
             Result->SetStringField(TEXT("subjectState"), SubjectStateToString(State));
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -501,7 +501,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             
             Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Subject '%s' enabled"), *SubjectName));
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -531,7 +531,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             
             Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Subject '%s' disabled"), *SubjectName));
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -551,7 +551,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             LiveLinkClient->PauseSubject_AnyThread(FLiveLinkSubjectName(*SubjectName));
             Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Subject '%s' paused"), *SubjectName));
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -571,7 +571,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             LiveLinkClient->UnpauseSubject_AnyThread(FLiveLinkSubjectName(*SubjectName));
             Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Subject '%s' unpaused"), *SubjectName));
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -591,7 +591,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             LiveLinkClient->ClearSubjectsFrames_AnyThread(FLiveLinkSubjectName(*SubjectName));
             Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Cleared frames for subject '%s'"), *SubjectName));
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -652,7 +652,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
                 Result = MakeLiveLinkError(TEXT("No static data available for subject"), TEXT("NO_DATA"));
             }
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -708,7 +708,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             Result = MakeLiveLinkError(TEXT("Live Link roles not available"), TEXT("NOT_SUPPORTED"));
 #endif
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -736,7 +736,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Retrieved %d frame times"), FrameTimes.Num()));
             Result->SetArrayField(TEXT("frameTimes"), TimesArray);
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -788,14 +788,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             Result = MakeLiveLinkError(TEXT("Live Link roles not available"), TEXT("NOT_SUPPORTED"));
 #endif
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
     if (Action == TEXT("add_virtual_subject") || Action == TEXT("remove_virtual_subject") || Action == TEXT("configure_subject_settings"))
     {
         Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Action '%s' acknowledged. Virtual subject management requires specific class setup."), *Action));
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
 
@@ -834,7 +834,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
 #else
         Result = MakeLiveLinkError(TEXT("Live Link presets not available"), TEXT("NOT_SUPPORTED"));
 #endif
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -863,7 +863,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
 #else
         Result = MakeLiveLinkError(TEXT("Live Link presets not available"), TEXT("NOT_SUPPORTED"));
 #endif
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -893,7 +893,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
 #else
         Result = MakeLiveLinkError(TEXT("Live Link presets not available"), TEXT("NOT_SUPPORTED"));
 #endif
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -930,7 +930,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
 #else
         Result = MakeLiveLinkError(TEXT("Live Link presets not available"), TEXT("NOT_SUPPORTED"));
 #endif
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -965,7 +965,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
 #else
         Result = MakeLiveLinkError(TEXT("Live Link presets not available"), TEXT("NOT_SUPPORTED"));
 #endif
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -1020,7 +1020,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
 #else
         Result = MakeLiveLinkError(TEXT("Live Link presets not available"), TEXT("NOT_SUPPORTED"));
 #endif
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
 
@@ -1079,7 +1079,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
 #else
         Result = MakeLiveLinkError(TEXT("Live Link components not available"), TEXT("NOT_SUPPORTED"));
 #endif
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -1093,7 +1093,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
         Action == TEXT("get_controller_info"))
     {
         Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Action '%s' acknowledged. Configure controllers through actor component settings."), *Action));
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
 
@@ -1109,7 +1109,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
         Action == TEXT("configure_frame_interpolation"))
     {
         Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Action '%s' acknowledged. Timecode configuration is typically done via Project Settings."), *Action));
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
 
@@ -1127,7 +1127,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
         Action == TEXT("get_face_tracking_status"))
     {
         Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Action '%s' acknowledged. Face tracking requires Live Link Face app and ARKit-compatible device."), *Action));
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
 
@@ -1143,7 +1143,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
         Action == TEXT("get_skeleton_mapping_info"))
     {
         Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Action '%s' acknowledged. Skeleton mapping is configured through Live Link Retarget Assets."), *Action));
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
 
@@ -1180,7 +1180,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             Result = MakeLiveLinkSuccess(TEXT("Live Link info retrieved"));
             Result->SetObjectField(TEXT("liveLinkInfo"), InfoObj);
         }
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -1198,7 +1198,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
         
         Result = MakeLiveLinkSuccess(FString::Printf(TEXT("Found %d roles"), RolesArray.Num()));
         Result->SetArrayField(TEXT("availableRoles"), RolesArray);
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
@@ -1223,21 +1223,28 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
 #else
         Result = MakeLiveLinkError(TEXT("Source factories not available"), TEXT("NOT_SUPPORTED"));
 #endif
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
     
     if (Action == TEXT("force_livelink_tick"))
     {
-        LiveLinkClient->ForceTick();
-        Result = MakeLiveLinkSuccess(TEXT("Live Link tick forced"));
-        SendJsonResponse(RequestId, Result, RequestingSocket);
+        if (!LiveLinkClient)
+        {
+            Result = MakeLiveLinkError(TEXT("Live Link client not available"), TEXT("CLIENT_NOT_FOUND"));
+        }
+        else
+        {
+            LiveLinkClient->ForceTick();
+            Result = MakeLiveLinkSuccess(TEXT("Live Link tick forced"));
+        }
+        SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
         return true;
     }
 
     // Unknown action
     Result = MakeLiveLinkError(FString::Printf(TEXT("Unknown Live Link action: %s"), *Action), TEXT("UNKNOWN_ACTION"));
-    SendJsonResponse(RequestId, Result, RequestingSocket);
+    SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
     return true;
 
 #endif // MCP_HAS_LIVELINK

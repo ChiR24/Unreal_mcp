@@ -7809,5 +7809,1322 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         }
       }
     }
+  },
+
+  // ===== PHASE 40: VIRTUAL PRODUCTION PLUGINS =====
+  {
+    name: 'manage_virtual_production',
+    category: 'utility',
+    description: 'Virtual production plugins: nDisplay clusters, Composure compositing, OCIO color management, Remote Control, DMX lighting, OSC, MIDI, and Timecode/Genlock.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // nDISPLAY - Cluster (10)
+            'create_ndisplay_config', 'add_cluster_node', 'remove_cluster_node',
+            'add_viewport', 'remove_viewport', 'set_viewport_camera',
+            'configure_viewport_region', 'set_projection_policy', 'configure_warp_blend', 'list_cluster_nodes',
+            // nDISPLAY - LED/ICVFX (10)
+            'create_led_wall', 'configure_led_wall_size', 'configure_icvfx_camera',
+            'add_icvfx_camera', 'remove_icvfx_camera', 'configure_inner_frustum',
+            'configure_outer_viewport', 'set_chromakey_settings', 'configure_light_cards', 'set_stage_settings',
+            // nDISPLAY - Sync (5)
+            'set_sync_policy', 'configure_genlock', 'set_primary_node',
+            'configure_network_settings', 'get_ndisplay_info',
+            // COMPOSURE (12)
+            'create_composure_element', 'delete_composure_element', 'add_composure_layer',
+            'remove_composure_layer', 'attach_child_layer', 'detach_child_layer',
+            'add_input_pass', 'add_transform_pass', 'add_output_pass',
+            'configure_chroma_keyer', 'bind_render_target', 'get_composure_info',
+            // OCIO (10)
+            'create_ocio_config', 'load_ocio_config', 'get_ocio_colorspaces',
+            'get_ocio_displays', 'set_display_view', 'add_colorspace_transform',
+            'apply_ocio_look', 'configure_viewport_ocio', 'set_ocio_working_colorspace', 'get_ocio_info',
+            // REMOTE CONTROL (15)
+            'create_remote_control_preset', 'load_remote_control_preset', 'expose_property',
+            'unexpose_property', 'expose_function', 'create_controller',
+            'bind_controller', 'get_exposed_properties', 'set_exposed_property_value',
+            'get_exposed_property_value', 'start_web_server', 'stop_web_server',
+            'get_web_server_status', 'create_layout_group', 'get_remote_control_info',
+            // DMX (20)
+            'create_dmx_library', 'import_gdtf', 'create_fixture_type',
+            'add_fixture_mode', 'add_fixture_function', 'create_fixture_patch',
+            'assign_fixture_to_universe', 'configure_dmx_port', 'create_artnet_port',
+            'create_sacn_port', 'send_dmx', 'receive_dmx',
+            'set_fixture_channel_value', 'get_fixture_channel_value', 'add_dmx_component',
+            'configure_dmx_component', 'list_dmx_universes', 'list_dmx_fixtures',
+            'create_dmx_sequencer_track', 'get_dmx_info',
+            // OSC (12)
+            'create_osc_server', 'stop_osc_server', 'create_osc_client',
+            'send_osc_message', 'send_osc_bundle', 'bind_osc_address',
+            'unbind_osc_address', 'bind_osc_to_property', 'list_osc_servers',
+            'list_osc_clients', 'configure_osc_dispatcher', 'get_osc_info',
+            // MIDI (15)
+            'list_midi_devices', 'open_midi_input', 'close_midi_input',
+            'open_midi_output', 'close_midi_output', 'send_midi_note_on',
+            'send_midi_note_off', 'send_midi_cc', 'send_midi_pitch_bend',
+            'send_midi_program_change', 'bind_midi_to_property', 'unbind_midi',
+            'configure_midi_learn', 'add_midi_device_component', 'get_midi_info',
+            // TIMECODE (18)
+            'create_timecode_provider', 'set_timecode_provider', 'get_current_timecode',
+            'set_frame_rate', 'configure_ltc_timecode', 'configure_aja_timecode',
+            'configure_blackmagic_timecode', 'configure_system_time_timecode', 'enable_timecode_genlock',
+            'disable_timecode_genlock', 'set_custom_timestep', 'configure_genlock_source',
+            'get_timecode_provider_status', 'synchronize_timecode', 'create_timecode_synchronizer',
+            'add_timecode_source', 'list_timecode_providers', 'get_timecode_info',
+            // UTILITY (3)
+            'get_virtual_production_info', 'list_active_vp_sessions', 'reset_vp_state'
+          ],
+          description: 'Virtual production action.'
+        },
+
+        // Common identifiers
+        name: commonSchemas.name,
+        actorName: commonSchemas.actorName,
+        assetPath: commonSchemas.assetPath,
+
+        // nDisplay configuration
+        configPath: { type: 'string', description: 'nDisplay configuration asset path.' },
+        nodeName: { type: 'string', description: 'Cluster node name.' },
+        nodeId: { type: 'string', description: 'Cluster node ID.' },
+        viewportId: { type: 'string', description: 'Viewport ID.' },
+        viewportName: { type: 'string', description: 'Viewport name.' },
+        cameraComponent: { type: 'string', description: 'Camera component name for viewport.' },
+        projectionPolicy: {
+          type: 'string',
+          enum: ['simple', 'mesh', 'mpcdi', 'camera', 'manual', 'link'],
+          description: 'Projection policy type.'
+        },
+        projectionMesh: { type: 'string', description: 'Projection mesh path for mesh policy.' },
+        mpcdiFilePath: { type: 'string', description: 'MPCDI file path.' },
+        mpcdiBufferId: { type: 'string', description: 'MPCDI buffer ID.' },
+        mpcdiRegionId: { type: 'string', description: 'MPCDI region ID.' },
+        viewportRegion: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' }, y: { type: 'number' },
+            width: { type: 'number' }, height: { type: 'number' }
+          },
+          description: 'Viewport region (normalized 0-1).'
+        },
+
+        // nDisplay cluster settings
+        hostAddress: { type: 'string', description: 'Node host IP address.' },
+        hostPort: { type: 'number', description: 'Node port number.' },
+        isPrimary: { type: 'boolean', description: 'Mark as primary/master node.' },
+        syncPolicy: {
+          type: 'string',
+          enum: ['ethernet', 'nvidia', 'none'],
+          description: 'Render sync policy.'
+        },
+        swapSyncType: {
+          type: 'string',
+          enum: ['none', 'soft', 'nvidia'],
+          description: 'Swap synchronization type.'
+        },
+
+        // LED Wall / ICVFX
+        ledWallSize: {
+          type: 'object',
+          properties: {
+            width: { type: 'number' }, height: { type: 'number' }
+          },
+          description: 'LED wall dimensions in cm.'
+        },
+        icvfxCameraName: { type: 'string', description: 'ICVFX camera name.' },
+        innerFrustumSettings: {
+          type: 'object',
+          properties: {
+            enabled: { type: 'boolean' },
+            fov: { type: 'number' },
+            renderTargetRatio: { type: 'number' },
+            overscanPercent: { type: 'number' }
+          },
+          description: 'Inner frustum settings.'
+        },
+        chromakeySettings: {
+          type: 'object',
+          properties: {
+            enabled: { type: 'boolean' },
+            color: { type: 'object', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } } },
+            markerColor: { type: 'object', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } } }
+          },
+          description: 'Chromakey/greenscreen settings.'
+        },
+        lightCardActor: { type: 'string', description: 'Light card actor name.' },
+
+        // Composure
+        elementName: { type: 'string', description: 'Composure element name.' },
+        elementClass: {
+          type: 'string',
+          enum: ['CompositingElement', 'CompositingCaptureBase', 'CompositingMediaCaptureOutput'],
+          description: 'Composure element class.'
+        },
+        parentElement: { type: 'string', description: 'Parent composure element.' },
+        childElement: { type: 'string', description: 'Child composure element.' },
+        passType: {
+          type: 'string',
+          enum: ['MediaCapture', 'SceneCapture', 'Texture'],
+          description: 'Input pass type.'
+        },
+        transformPassClass: {
+          type: 'string',
+          enum: ['ChromaKeying', 'ColorCorrect', 'SetAlpha', 'Custom'],
+          description: 'Transform pass type.'
+        },
+        chromaKeyerSettings: {
+          type: 'object',
+          properties: {
+            keyColorA: { type: 'object', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } } },
+            keyColorB: { type: 'object', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } } },
+            luminanceRangeMin: { type: 'number' },
+            luminanceRangeMax: { type: 'number' },
+            clipBlack: { type: 'number' },
+            clipWhite: { type: 'number' }
+          },
+          description: 'Chroma keyer settings.'
+        },
+        renderTargetPath: { type: 'string', description: 'Render target asset path.' },
+
+        // OCIO
+        ocioConfigPath: { type: 'string', description: 'Path to OCIO .ocio config file.' },
+        sourceColorspace: { type: 'string', description: 'Source colorspace name.' },
+        destColorspace: { type: 'string', description: 'Destination colorspace name.' },
+        displayName: { type: 'string', description: 'OCIO display name.' },
+        viewName: { type: 'string', description: 'OCIO view name.' },
+        lookName: { type: 'string', description: 'OCIO look name.' },
+        workingColorspace: { type: 'string', description: 'Working colorspace for project.' },
+
+        // Remote Control
+        presetName: { type: 'string', description: 'Remote Control preset name.' },
+        presetPath: { type: 'string', description: 'Remote Control preset asset path.' },
+        propertyPath: { type: 'string', description: 'Property path to expose.' },
+        propertyLabel: { type: 'string', description: 'Display label for exposed property.' },
+        functionPath: { type: 'string', description: 'Function path to expose.' },
+        controllerType: {
+          type: 'string',
+          enum: ['Slider', 'Toggle', 'ColorPicker', 'Dropdown', 'TextBox'],
+          description: 'Remote control UI widget type.'
+        },
+        controllerSettings: {
+          type: 'object',
+          properties: {
+            min: { type: 'number' },
+            max: { type: 'number' },
+            step: { type: 'number' }
+          },
+          description: 'Controller widget settings.'
+        },
+        webServerPort: { type: 'number', description: 'Web server port (default 30010).' },
+        layoutGroupName: { type: 'string', description: 'Layout group name.' },
+
+        // DMX
+        libraryPath: { type: 'string', description: 'DMX library asset path.' },
+        gdtfFilePath: { type: 'string', description: 'GDTF file path to import.' },
+        fixtureTypeName: { type: 'string', description: 'Fixture type name.' },
+        fixtureMode: { type: 'string', description: 'Fixture mode name.' },
+        channelCount: { type: 'number', description: 'Number of DMX channels.' },
+        fixtureFunction: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            channel: { type: 'number' },
+            channelSpan: { type: 'number' },
+            defaultValue: { type: 'number' },
+            functionType: { type: 'string', enum: ['Intensity', 'Color', 'Pan', 'Tilt', 'Gobo', 'Other'] }
+          },
+          description: 'Fixture function definition.'
+        },
+        patchName: { type: 'string', description: 'Fixture patch name.' },
+        fixtureId: { type: 'number', description: 'Fixture ID in patch.' },
+        universeId: { type: 'number', description: 'DMX universe ID.' },
+        startingChannel: { type: 'number', description: 'Starting DMX channel (1-512).' },
+        portType: {
+          type: 'string',
+          enum: ['Input', 'Output'],
+          description: 'DMX port direction.'
+        },
+        protocol: {
+          type: 'string',
+          enum: ['ArtNet', 'sACN'],
+          description: 'DMX protocol.'
+        },
+        networkInterface: { type: 'string', description: 'Network interface IP.' },
+        dmxData: {
+          type: 'array',
+          items: { type: 'number' },
+          description: 'Array of DMX channel values (0-255).'
+        },
+        channelIndex: { type: 'number', description: 'DMX channel index (0-511).' },
+        channelValue: { type: 'number', description: 'DMX channel value (0-255).' },
+        sequencePath: { type: 'string', description: 'Level sequence path for DMX track.' },
+
+        // OSC
+        oscServerName: { type: 'string', description: 'OSC server name.' },
+        oscClientName: { type: 'string', description: 'OSC client name.' },
+        ipAddress: { type: 'string', description: 'IP address for OSC.' },
+        port: { type: 'number', description: 'Port number.' },
+        oscAddress: { type: 'string', description: 'OSC address pattern (e.g., /my/address).' },
+        oscArgs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', enum: ['float', 'int', 'string', 'bool', 'blob'] },
+              value: {}
+            }
+          },
+          description: 'OSC message arguments.'
+        },
+        targetProperty: { type: 'string', description: 'Target property path for OSC binding.' },
+        multicast: { type: 'boolean', description: 'Enable multicast.' },
+        loopback: { type: 'boolean', description: 'Enable loopback.' },
+
+        // MIDI
+        midiDeviceId: { type: 'number', description: 'MIDI device ID.' },
+        midiDeviceName: { type: 'string', description: 'MIDI device name.' },
+        midiChannel: { type: 'number', description: 'MIDI channel (0-15).' },
+        noteNumber: { type: 'number', description: 'MIDI note number (0-127).' },
+        velocity: { type: 'number', description: 'MIDI velocity (0-127).' },
+        controlNumber: { type: 'number', description: 'MIDI CC number (0-127).' },
+        controlValue: { type: 'number', description: 'MIDI CC value (0-127).' },
+        pitchBendValue: { type: 'number', description: 'MIDI pitch bend (-8192 to 8191).' },
+        programNumber: { type: 'number', description: 'MIDI program number (0-127).' },
+        midiLearnEnabled: { type: 'boolean', description: 'Enable MIDI learn mode.' },
+
+        // Timecode
+        timecodeProviderType: {
+          type: 'string',
+          enum: ['System', 'LTC', 'AJA', 'Blackmagic', 'Custom'],
+          description: 'Timecode provider type.'
+        },
+        frameRate: {
+          type: 'string',
+          enum: ['23.976', '24', '25', '29.97', '29.97df', '30', '30df', '48', '50', '59.94', '60'],
+          description: 'Frame rate.'
+        },
+        ltcSettings: {
+          type: 'object',
+          properties: {
+            audioInputDevice: { type: 'string' },
+            channel: { type: 'number' },
+            volume: { type: 'number' }
+          },
+          description: 'LTC timecode settings.'
+        },
+        ajaSettings: {
+          type: 'object',
+          properties: {
+            deviceIndex: { type: 'number' },
+            inputChannel: { type: 'number' },
+            ltcSource: { type: 'boolean' }
+          },
+          description: 'AJA timecode settings.'
+        },
+        blackmagicSettings: {
+          type: 'object',
+          properties: {
+            deviceIndex: { type: 'number' },
+            timecodeFormat: { type: 'string' }
+          },
+          description: 'Blackmagic timecode settings.'
+        },
+        genlockEnabled: { type: 'boolean', description: 'Enable genlock.' },
+        genlockSource: {
+          type: 'string',
+          enum: ['Internal', 'External', 'AJA', 'Blackmagic', 'nDisplay'],
+          description: 'Genlock source.'
+        },
+        customTimestepClass: { type: 'string', description: 'Custom timestep class path.' },
+        synchronizerId: { type: 'string', description: 'Timecode synchronizer ID.' },
+
+        // Common
+        save: commonSchemas.save
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        error: commonSchemas.stringProp,
+
+        // nDisplay outputs
+        configPath: { type: 'string', description: 'Created config path.' },
+        nodeId: { type: 'string', description: 'Created/modified node ID.' },
+        viewportId: { type: 'string', description: 'Created/modified viewport ID.' },
+        clusterNodes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              hostAddress: { type: 'string' },
+              isPrimary: { type: 'boolean' },
+              viewports: { type: 'array', items: { type: 'string' } }
+            }
+          },
+          description: 'List of cluster nodes.'
+        },
+        ndisplayInfo: {
+          type: 'object',
+          properties: {
+            configPath: { type: 'string' },
+            nodeCount: { type: 'number' },
+            viewportCount: { type: 'number' },
+            syncPolicy: { type: 'string' },
+            primaryNode: { type: 'string' }
+          },
+          description: 'nDisplay configuration info.'
+        },
+
+        // Composure outputs
+        elementPath: { type: 'string', description: 'Created composure element path.' },
+        passIndex: { type: 'number', description: 'Created pass index.' },
+        composureInfo: {
+          type: 'object',
+          properties: {
+            elementCount: { type: 'number' },
+            elements: { type: 'array', items: { type: 'string' } },
+            activeElement: { type: 'string' }
+          },
+          description: 'Composure elements info.'
+        },
+
+        // OCIO outputs
+        colorspaces: { type: 'array', items: { type: 'string' }, description: 'Available colorspaces.' },
+        displays: { type: 'array', items: { type: 'string' }, description: 'Available displays.' },
+        views: { type: 'array', items: { type: 'string' }, description: 'Available views.' },
+        ocioInfo: {
+          type: 'object',
+          properties: {
+            configPath: { type: 'string' },
+            workingColorspace: { type: 'string' },
+            colorspaceCount: { type: 'number' },
+            displayCount: { type: 'number' }
+          },
+          description: 'OCIO configuration info.'
+        },
+
+        // Remote Control outputs
+        presetPath: { type: 'string', description: 'Preset path.' },
+        exposedProperties: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              label: { type: 'string' },
+              path: { type: 'string' },
+              type: { type: 'string' }
+            }
+          },
+          description: 'Exposed properties.'
+        },
+        propertyValue: { description: 'Retrieved property value.' },
+        webServerStatus: {
+          type: 'object',
+          properties: {
+            running: { type: 'boolean' },
+            port: { type: 'number' },
+            url: { type: 'string' }
+          },
+          description: 'Web server status.'
+        },
+        remoteControlInfo: {
+          type: 'object',
+          properties: {
+            presetCount: { type: 'number' },
+            webServerRunning: { type: 'boolean' },
+            webServerPort: { type: 'number' }
+          },
+          description: 'Remote control info.'
+        },
+
+        // DMX outputs
+        libraryPath: { type: 'string', description: 'DMX library path.' },
+        fixtureTypeId: { type: 'string', description: 'Created fixture type ID.' },
+        patchId: { type: 'string', description: 'Created fixture patch ID.' },
+        universes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'number' },
+              name: { type: 'string' },
+              protocol: { type: 'string' }
+            }
+          },
+          description: 'DMX universes.'
+        },
+        fixtures: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'number' },
+              name: { type: 'string' },
+              type: { type: 'string' },
+              universe: { type: 'number' },
+              startChannel: { type: 'number' }
+            }
+          },
+          description: 'DMX fixtures.'
+        },
+        dmxData: { type: 'array', items: { type: 'number' }, description: 'Received DMX data.' },
+        dmxInfo: {
+          type: 'object',
+          properties: {
+            universeCount: { type: 'number' },
+            fixtureCount: { type: 'number' },
+            artnetPortCount: { type: 'number' },
+            sacnPortCount: { type: 'number' }
+          },
+          description: 'DMX system info.'
+        },
+
+        // OSC outputs
+        serverId: { type: 'string', description: 'OSC server ID.' },
+        clientId: { type: 'string', description: 'OSC client ID.' },
+        oscServers: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              port: { type: 'number' },
+              listening: { type: 'boolean' }
+            }
+          },
+          description: 'OSC servers.'
+        },
+        oscClients: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              address: { type: 'string' },
+              port: { type: 'number' }
+            }
+          },
+          description: 'OSC clients.'
+        },
+        oscInfo: {
+          type: 'object',
+          properties: {
+            serverCount: { type: 'number' },
+            clientCount: { type: 'number' },
+            bindingCount: { type: 'number' }
+          },
+          description: 'OSC system info.'
+        },
+
+        // MIDI outputs
+        midiDevices: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'number' },
+              name: { type: 'string' },
+              isInput: { type: 'boolean' },
+              isOutput: { type: 'boolean' }
+            }
+          },
+          description: 'Available MIDI devices.'
+        },
+        midiInputId: { type: 'number', description: 'Opened MIDI input controller ID.' },
+        midiOutputId: { type: 'number', description: 'Opened MIDI output controller ID.' },
+        midiInfo: {
+          type: 'object',
+          properties: {
+            inputDeviceCount: { type: 'number' },
+            outputDeviceCount: { type: 'number' },
+            activeInputs: { type: 'number' },
+            activeOutputs: { type: 'number' }
+          },
+          description: 'MIDI system info.'
+        },
+
+        // Timecode outputs
+        currentTimecode: { type: 'string', description: 'Current timecode (HH:MM:SS:FF).' },
+        frameRate: { type: 'string', description: 'Current frame rate.' },
+        providerStatus: {
+          type: 'object',
+          properties: {
+            type: { type: 'string' },
+            synchronized: { type: 'boolean' },
+            frameRate: { type: 'string' },
+            dropFrame: { type: 'boolean' }
+          },
+          description: 'Timecode provider status.'
+        },
+        timecodeProviders: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string' },
+              active: { type: 'boolean' }
+            }
+          },
+          description: 'Available timecode providers.'
+        },
+        timecodeInfo: {
+          type: 'object',
+          properties: {
+            providerType: { type: 'string' },
+            frameRate: { type: 'string' },
+            genlockEnabled: { type: 'boolean' },
+            genlockSource: { type: 'string' }
+          },
+          description: 'Timecode system info.'
+        },
+
+        // Virtual Production info
+        vpInfo: {
+          type: 'object',
+          properties: {
+            ndisplayAvailable: { type: 'boolean' },
+            composureAvailable: { type: 'boolean' },
+            ocioAvailable: { type: 'boolean' },
+            remoteControlAvailable: { type: 'boolean' },
+            dmxAvailable: { type: 'boolean' },
+            oscAvailable: { type: 'boolean' },
+            midiAvailable: { type: 'boolean' },
+            timecodeAvailable: { type: 'boolean' }
+          },
+          description: 'Virtual production plugin availability.'
+        },
+        activeSessions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string' },
+              name: { type: 'string' },
+              status: { type: 'string' }
+            }
+          },
+          description: 'Active VP sessions.'
+        }
+      }
+    }
+  },
+
+  // ============================================
+  // Phase 41: XR Plugins (VR/AR/MR) - manage_xr
+  // ============================================
+  {
+    name: 'manage_xr',
+    description: `XR Plugins (VR/AR/MR) management - OpenXR, Meta Quest, SteamVR, ARKit, ARCore, Varjo, HoloLens.
+Supports ~140 actions across 7 XR platform subsystems.
+
+OPENXR (20 actions): Core runtime, tracking, actions, haptics, hand/eye tracking
+META QUEST (22 actions): Passthrough, scene capture, hand/face/body tracking, spatial anchors
+STEAMVR (18 actions): Chaperone, overlays, lighthouse, skeletal input
+ARKIT (22 actions): World tracking, planes, images, face/body tracking, scene reconstruction
+ARCORE (18 actions): Planes, anchors, depth, geospatial, cloud anchors
+VARJO (16 actions): Passthrough, eye tracking, foveated rendering, mixed reality
+HOLOLENS (20 actions): Spatial mapping, scene understanding, QR tracking, voice commands
+UTILITIES (6 actions): System info, device management`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // OpenXR Core (20 actions)
+            'get_openxr_info', 'configure_openxr_settings', 'set_tracking_origin', 'get_tracking_origin',
+            'create_xr_action_set', 'add_xr_action', 'bind_xr_action', 'get_xr_action_state',
+            'trigger_haptic_feedback', 'stop_haptic_feedback', 'get_hmd_pose', 'get_controller_pose',
+            'get_hand_tracking_data', 'enable_hand_tracking', 'disable_hand_tracking',
+            'get_eye_tracking_data', 'enable_eye_tracking', 'get_view_configuration',
+            'set_render_scale', 'get_supported_extensions',
+            // Meta Quest (22 actions)
+            'get_quest_info', 'configure_quest_settings', 'enable_passthrough', 'disable_passthrough',
+            'configure_passthrough_style', 'enable_scene_capture', 'get_scene_anchors', 'get_room_layout',
+            'enable_quest_hand_tracking', 'get_quest_hand_pose', 'enable_quest_face_tracking',
+            'get_quest_face_state', 'enable_quest_eye_tracking', 'get_quest_eye_gaze',
+            'enable_quest_body_tracking', 'get_quest_body_state', 'create_spatial_anchor',
+            'save_spatial_anchor', 'load_spatial_anchors', 'delete_spatial_anchor',
+            'configure_guardian_bounds', 'get_guardian_geometry',
+            // SteamVR (18 actions)
+            'get_steamvr_info', 'configure_steamvr_settings', 'configure_chaperone_bounds',
+            'get_chaperone_geometry', 'create_steamvr_overlay', 'set_overlay_texture',
+            'show_overlay', 'hide_overlay', 'destroy_overlay', 'get_tracked_device_count',
+            'get_tracked_device_info', 'get_lighthouse_info', 'trigger_steamvr_haptic',
+            'get_steamvr_action_manifest', 'set_steamvr_action_manifest', 'enable_steamvr_skeletal_input',
+            'get_skeletal_bone_data', 'configure_steamvr_render',
+            // Apple ARKit (22 actions)
+            'get_arkit_info', 'configure_arkit_session', 'start_arkit_session', 'pause_arkit_session',
+            'configure_world_tracking', 'get_tracked_planes', 'get_tracked_images', 'add_reference_image',
+            'enable_people_occlusion', 'disable_people_occlusion', 'enable_arkit_face_tracking',
+            'get_arkit_face_blendshapes', 'get_arkit_face_geometry', 'enable_body_tracking',
+            'get_body_skeleton', 'create_arkit_anchor', 'remove_arkit_anchor', 'get_light_estimation',
+            'enable_scene_reconstruction', 'get_scene_mesh', 'perform_raycast', 'get_camera_intrinsics',
+            // Google ARCore (18 actions)
+            'get_arcore_info', 'configure_arcore_session', 'start_arcore_session', 'pause_arcore_session',
+            'get_arcore_planes', 'get_arcore_points', 'create_arcore_anchor', 'remove_arcore_anchor',
+            'enable_depth_api', 'get_depth_image', 'enable_geospatial', 'get_geospatial_pose',
+            'create_geospatial_anchor', 'resolve_cloud_anchor', 'host_cloud_anchor',
+            'enable_arcore_augmented_images', 'get_arcore_light_estimate', 'perform_arcore_raycast',
+            // Varjo (16 actions)
+            'get_varjo_info', 'configure_varjo_settings', 'enable_varjo_passthrough',
+            'disable_varjo_passthrough', 'configure_varjo_depth_test', 'enable_varjo_eye_tracking',
+            'get_varjo_gaze_data', 'calibrate_varjo_eye_tracking', 'enable_foveated_rendering',
+            'configure_foveated_rendering', 'enable_varjo_mixed_reality', 'configure_varjo_chroma_key',
+            'get_varjo_camera_intrinsics', 'enable_varjo_depth_estimation',
+            'get_varjo_environment_cubemap', 'configure_varjo_markers',
+            // HoloLens (20 actions)
+            'get_hololens_info', 'configure_hololens_settings', 'enable_spatial_mapping',
+            'disable_spatial_mapping', 'get_spatial_mesh', 'configure_spatial_mapping_quality',
+            'enable_scene_understanding', 'get_scene_objects', 'enable_qr_tracking',
+            'get_tracked_qr_codes', 'create_world_anchor', 'save_world_anchor', 'load_world_anchors',
+            'enable_hololens_hand_tracking', 'get_hololens_hand_mesh', 'enable_hololens_eye_tracking',
+            'get_hololens_gaze_ray', 'register_voice_command', 'unregister_voice_command',
+            'get_registered_voice_commands',
+            // Utilities (6 actions)
+            'get_xr_system_info', 'list_xr_devices', 'set_xr_device_priority',
+            'reset_xr_orientation', 'configure_xr_spectator', 'get_xr_runtime_name'
+          ],
+          description: 'XR action to perform.'
+        },
+
+        // === Common Parameters ===
+        device: { type: 'string', description: 'XR device name or ID.' },
+        hand: { type: 'string', enum: ['left', 'right', 'both'], description: 'Hand specifier.' },
+        controller: { type: 'string', enum: ['left', 'right'], description: 'Controller side.' },
+
+        // === OpenXR Parameters ===
+        trackingOrigin: { type: 'string', enum: ['floor', 'eye', 'stage'], description: 'Tracking origin mode.' },
+        actionSetName: { type: 'string', description: 'Name for action set.' },
+        actionName: { type: 'string', description: 'Name for XR action.' },
+        actionType: { type: 'string', enum: ['boolean', 'float', 'vector2', 'pose', 'vibration'], description: 'Action type.' },
+        bindingPath: { type: 'string', description: 'OpenXR binding path (e.g., /user/hand/left/input/trigger/value).' },
+        hapticDuration: { type: 'number', description: 'Haptic duration in milliseconds.' },
+        hapticFrequency: { type: 'number', description: 'Haptic frequency in Hz.' },
+        hapticAmplitude: { type: 'number', description: 'Haptic amplitude (0.0-1.0).' },
+        renderScale: { type: 'number', description: 'Render scale multiplier.' },
+
+        // === Quest Parameters ===
+        passthroughEnabled: { type: 'boolean', description: 'Enable passthrough.' },
+        passthroughOpacity: { type: 'number', description: 'Passthrough opacity (0.0-1.0).' },
+        passthroughContrast: { type: 'number', description: 'Passthrough contrast adjustment.' },
+        passthroughBrightness: { type: 'number', description: 'Passthrough brightness adjustment.' },
+        passthroughSaturation: { type: 'number', description: 'Passthrough saturation adjustment.' },
+        anchorId: { type: 'string', description: 'Spatial anchor ID.' },
+        anchorLocation: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' }
+          },
+          description: 'Anchor world location.'
+        },
+        saveToCloud: { type: 'boolean', description: 'Save anchor to cloud storage.' },
+
+        // === SteamVR Parameters ===
+        overlayName: { type: 'string', description: 'Overlay identifier.' },
+        overlayKey: { type: 'string', description: 'Unique overlay key.' },
+        overlayTexture: { type: 'string', description: 'Texture path for overlay.' },
+        overlayWidth: { type: 'number', description: 'Overlay width in meters.' },
+        overlayTransform: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' },
+            pitch: { type: 'number' },
+            yaw: { type: 'number' },
+            roll: { type: 'number' }
+          },
+          description: 'Overlay transform.'
+        },
+        deviceIndex: { type: 'number', description: 'Tracked device index.' },
+        actionManifestPath: { type: 'string', description: 'Path to action manifest JSON.' },
+
+        // === ARKit Parameters ===
+        sessionType: { type: 'string', enum: ['world', 'face', 'body', 'geo'], description: 'ARKit session type.' },
+        planeDetection: { type: 'string', enum: ['horizontal', 'vertical', 'both', 'none'], description: 'Plane detection mode.' },
+        referenceImageName: { type: 'string', description: 'Reference image name for tracking.' },
+        referenceImagePath: { type: 'string', description: 'Path to reference image.' },
+        physicalWidth: { type: 'number', description: 'Physical width of reference image in meters.' },
+        peopleOcclusionEnabled: { type: 'boolean', description: 'Enable people occlusion.' },
+        sceneReconstructionEnabled: { type: 'boolean', description: 'Enable scene reconstruction.' },
+        raycastOrigin: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' } },
+          description: 'Screen-space raycast origin.'
+        },
+        raycastTypes: {
+          type: 'array',
+          items: { type: 'string', enum: ['plane', 'featurePoint', 'mesh'] },
+          description: 'Raycast target types.'
+        },
+
+        // === ARCore Parameters ===
+        depthEnabled: { type: 'boolean', description: 'Enable depth API.' },
+        geospatialEnabled: { type: 'boolean', description: 'Enable geospatial API.' },
+        latitude: { type: 'number', description: 'Latitude for geospatial anchor.' },
+        longitude: { type: 'number', description: 'Longitude for geospatial anchor.' },
+        altitude: { type: 'number', description: 'Altitude for geospatial anchor.' },
+        heading: { type: 'number', description: 'Heading for geospatial anchor.' },
+        cloudAnchorId: { type: 'string', description: 'Cloud anchor ID.' },
+        cloudAnchorTtlDays: { type: 'number', description: 'Cloud anchor time-to-live in days.' },
+
+        // === Varjo Parameters ===
+        depthTestEnabled: { type: 'boolean', description: 'Enable video pass-through depth testing.' },
+        depthTestRange: { type: 'number', description: 'Depth test range in meters.' },
+        foveatedRenderingEnabled: { type: 'boolean', description: 'Enable foveated rendering.' },
+        foveatedInnerRadius: { type: 'number', description: 'Inner foveated region radius.' },
+        foveatedOuterRadius: { type: 'number', description: 'Outer foveated region radius.' },
+        foveatedInnerQuality: { type: 'number', description: 'Inner region render quality (0.0-1.0).' },
+        foveatedOuterQuality: { type: 'number', description: 'Outer region render quality (0.0-1.0).' },
+        chromaKeyEnabled: { type: 'boolean', description: 'Enable chroma key.' },
+        chromaKeyColor: {
+          type: 'object',
+          properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' } },
+          description: 'Chroma key color.'
+        },
+        chromaKeyTolerance: { type: 'number', description: 'Chroma key color tolerance.' },
+        markerEnabled: { type: 'boolean', description: 'Enable marker tracking.' },
+        markerIds: { type: 'array', items: { type: 'number' }, description: 'Marker IDs to track.' },
+
+        // === HoloLens Parameters ===
+        spatialMappingEnabled: { type: 'boolean', description: 'Enable spatial mapping.' },
+        spatialMappingQuality: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Spatial mapping quality.' },
+        trianglesPerCubicMeter: { type: 'number', description: 'Target triangle density.' },
+        sceneUnderstandingEnabled: { type: 'boolean', description: 'Enable scene understanding.' },
+        sceneQueryTypes: {
+          type: 'array',
+          items: { type: 'string', enum: ['wall', 'floor', 'ceiling', 'platform', 'background', 'world'] },
+          description: 'Scene object types to query.'
+        },
+        qrTrackingEnabled: { type: 'boolean', description: 'Enable QR code tracking.' },
+        worldAnchorName: { type: 'string', description: 'World anchor name.' },
+        worldAnchorStore: { type: 'string', description: 'World anchor store name.' },
+        voiceCommand: { type: 'string', description: 'Voice command phrase.' },
+        voiceCommandId: { type: 'string', description: 'Voice command identifier.' },
+
+        // === Device Priority ===
+        devicePriority: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'XR device priority order.'
+        },
+
+        // === Spectator ===
+        spectatorEnabled: { type: 'boolean', description: 'Enable spectator screen.' },
+        spectatorMode: { type: 'string', enum: ['disabled', 'singleEye', 'texture', 'mirror'], description: 'Spectator mode.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', description: 'Whether the operation succeeded.' },
+        message: { type: 'string', description: 'Status message.' },
+
+        // OpenXR outputs
+        openxrInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            runtimeName: { type: 'string' },
+            runtimeVersion: { type: 'string' },
+            apiVersion: { type: 'string' },
+            extensions: { type: 'array', items: { type: 'string' } }
+          },
+          description: 'OpenXR runtime info.'
+        },
+        trackingOrigin: { type: 'string', description: 'Current tracking origin.' },
+        actionSetId: { type: 'string', description: 'Created action set ID.' },
+        actionId: { type: 'string', description: 'Created action ID.' },
+        actionState: {
+          type: 'object',
+          properties: {
+            isActive: { type: 'boolean' },
+            currentState: { type: 'number' },
+            changedSinceLastSync: { type: 'boolean' }
+          },
+          description: 'XR action state.'
+        },
+        hmdPose: {
+          type: 'object',
+          properties: {
+            position: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+            rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } } },
+            isTracking: { type: 'boolean' }
+          },
+          description: 'HMD pose.'
+        },
+        controllerPose: {
+          type: 'object',
+          properties: {
+            position: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+            rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } } },
+            isTracking: { type: 'boolean' }
+          },
+          description: 'Controller pose.'
+        },
+        handTrackingData: {
+          type: 'object',
+          properties: {
+            isTracking: { type: 'boolean' },
+            jointCount: { type: 'number' },
+            confidence: { type: 'number' }
+          },
+          description: 'Hand tracking data.'
+        },
+        eyeTrackingData: {
+          type: 'object',
+          properties: {
+            isTracking: { type: 'boolean' },
+            gazeDirection: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+            fixationPoint: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } }
+          },
+          description: 'Eye tracking data.'
+        },
+        viewConfiguration: {
+          type: 'object',
+          properties: {
+            viewCount: { type: 'number' },
+            recommendedWidth: { type: 'number' },
+            recommendedHeight: { type: 'number' }
+          },
+          description: 'View configuration.'
+        },
+        supportedExtensions: { type: 'array', items: { type: 'string' }, description: 'Supported OpenXR extensions.' },
+
+        // Quest outputs
+        questInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            deviceType: { type: 'string' },
+            handTrackingSupported: { type: 'boolean' },
+            faceTrackingSupported: { type: 'boolean' },
+            bodyTrackingSupported: { type: 'boolean' },
+            passthroughSupported: { type: 'boolean' }
+          },
+          description: 'Quest device info.'
+        },
+        sceneAnchors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              label: { type: 'string' },
+              position: { type: 'object' }
+            }
+          },
+          description: 'Scene anchors.'
+        },
+        roomLayout: {
+          type: 'object',
+          properties: {
+            floorUuid: { type: 'string' },
+            ceilingUuid: { type: 'string' },
+            wallUuids: { type: 'array', items: { type: 'string' } }
+          },
+          description: 'Room layout.'
+        },
+        handPose: {
+          type: 'object',
+          properties: {
+            isTracking: { type: 'boolean' },
+            pinchStrength: { type: 'number' },
+            pointerPose: { type: 'object' }
+          },
+          description: 'Quest hand pose.'
+        },
+        faceState: {
+          type: 'object',
+          properties: {
+            isTracking: { type: 'boolean' },
+            expressionWeights: { type: 'object' }
+          },
+          description: 'Quest face state.'
+        },
+        bodyState: {
+          type: 'object',
+          properties: {
+            isTracking: { type: 'boolean' },
+            jointCount: { type: 'number' },
+            confidence: { type: 'number' }
+          },
+          description: 'Quest body state.'
+        },
+        spatialAnchorId: { type: 'string', description: 'Created spatial anchor ID.' },
+        loadedAnchors: { type: 'array', items: { type: 'string' }, description: 'Loaded anchor IDs.' },
+        guardianGeometry: {
+          type: 'object',
+          properties: {
+            pointCount: { type: 'number' },
+            dimensions: { type: 'object' }
+          },
+          description: 'Guardian geometry.'
+        },
+
+        // SteamVR outputs
+        steamvrInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            runtimeVersion: { type: 'string' },
+            hmdPresent: { type: 'boolean' },
+            trackedDeviceCount: { type: 'number' }
+          },
+          description: 'SteamVR info.'
+        },
+        chaperoneGeometry: {
+          type: 'object',
+          properties: {
+            playAreaSize: { type: 'object' },
+            boundaryPoints: { type: 'array' }
+          },
+          description: 'Chaperone geometry.'
+        },
+        overlayHandle: { type: 'string', description: 'Created overlay handle.' },
+        trackedDeviceCount: { type: 'number', description: 'Number of tracked devices.' },
+        trackedDeviceInfo: {
+          type: 'object',
+          properties: {
+            index: { type: 'number' },
+            class: { type: 'string' },
+            serialNumber: { type: 'string' },
+            isConnected: { type: 'boolean' }
+          },
+          description: 'Tracked device info.'
+        },
+        lighthouseInfo: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              serialNumber: { type: 'string' },
+              mode: { type: 'string' },
+              position: { type: 'object' }
+            }
+          },
+          description: 'Lighthouse base station info.'
+        },
+        skeletalBoneData: {
+          type: 'object',
+          properties: {
+            boneCount: { type: 'number' },
+            isTracking: { type: 'boolean' }
+          },
+          description: 'Skeletal bone data.'
+        },
+
+        // ARKit outputs
+        arkitInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            worldTrackingSupported: { type: 'boolean' },
+            faceTrackingSupported: { type: 'boolean' },
+            bodyTrackingSupported: { type: 'boolean' },
+            sceneReconstructionSupported: { type: 'boolean' }
+          },
+          description: 'ARKit info.'
+        },
+        trackedPlanes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              classification: { type: 'string' },
+              center: { type: 'object' },
+              extent: { type: 'object' }
+            }
+          },
+          description: 'Tracked planes.'
+        },
+        trackedImages: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              isTracking: { type: 'boolean' },
+              transform: { type: 'object' }
+            }
+          },
+          description: 'Tracked images.'
+        },
+        faceBlendshapes: {
+          type: 'object',
+          description: 'Face blendshape weights.'
+        },
+        faceGeometry: {
+          type: 'object',
+          properties: {
+            vertexCount: { type: 'number' },
+            triangleCount: { type: 'number' }
+          },
+          description: 'Face geometry.'
+        },
+        bodySkeleton: {
+          type: 'object',
+          properties: {
+            isTracking: { type: 'boolean' },
+            jointCount: { type: 'number' }
+          },
+          description: 'Body skeleton.'
+        },
+        arkitAnchorId: { type: 'string', description: 'Created ARKit anchor ID.' },
+        lightEstimation: {
+          type: 'object',
+          properties: {
+            ambientIntensity: { type: 'number' },
+            ambientColorTemperature: { type: 'number' }
+          },
+          description: 'Light estimation.'
+        },
+        sceneMesh: {
+          type: 'object',
+          properties: {
+            vertexCount: { type: 'number' },
+            faceCount: { type: 'number' }
+          },
+          description: 'Scene mesh.'
+        },
+        raycastResults: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string' },
+              distance: { type: 'number' },
+              worldPosition: { type: 'object' }
+            }
+          },
+          description: 'Raycast results.'
+        },
+        cameraIntrinsics: {
+          type: 'object',
+          properties: {
+            focalLength: { type: 'object' },
+            principalPoint: { type: 'object' },
+            imageResolution: { type: 'object' }
+          },
+          description: 'Camera intrinsics.'
+        },
+
+        // ARCore outputs
+        arcoreInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            depthSupported: { type: 'boolean' },
+            geospatialSupported: { type: 'boolean' }
+          },
+          description: 'ARCore info.'
+        },
+        arcorePlanes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              type: { type: 'string' },
+              centerPose: { type: 'object' },
+              extentX: { type: 'number' },
+              extentZ: { type: 'number' }
+            }
+          },
+          description: 'ARCore planes.'
+        },
+        arcorePoints: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              position: { type: 'object' },
+              confidence: { type: 'number' }
+            }
+          },
+          description: 'ARCore feature points.'
+        },
+        arcoreAnchorId: { type: 'string', description: 'Created ARCore anchor ID.' },
+        depthImage: {
+          type: 'object',
+          properties: {
+            width: { type: 'number' },
+            height: { type: 'number' },
+            format: { type: 'string' }
+          },
+          description: 'Depth image info.'
+        },
+        geospatialPose: {
+          type: 'object',
+          properties: {
+            latitude: { type: 'number' },
+            longitude: { type: 'number' },
+            altitude: { type: 'number' },
+            heading: { type: 'number' },
+            horizontalAccuracy: { type: 'number' },
+            verticalAccuracy: { type: 'number' }
+          },
+          description: 'Geospatial pose.'
+        },
+        geospatialAnchorId: { type: 'string', description: 'Created geospatial anchor ID.' },
+        cloudAnchorId: { type: 'string', description: 'Hosted cloud anchor ID.' },
+
+        // Varjo outputs
+        varjoInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            deviceType: { type: 'string' },
+            eyeTrackingSupported: { type: 'boolean' },
+            passthroughSupported: { type: 'boolean' },
+            mixedRealitySupported: { type: 'boolean' }
+          },
+          description: 'Varjo info.'
+        },
+        varjoGazeData: {
+          type: 'object',
+          properties: {
+            isTracking: { type: 'boolean' },
+            leftEye: { type: 'object' },
+            rightEye: { type: 'object' },
+            combinedGaze: { type: 'object' },
+            focusDistance: { type: 'number' }
+          },
+          description: 'Varjo gaze data.'
+        },
+        varjoCameraIntrinsics: {
+          type: 'object',
+          properties: {
+            focalLength: { type: 'object' },
+            principalPoint: { type: 'object' }
+          },
+          description: 'Varjo camera intrinsics.'
+        },
+        varjoEnvironmentCubemap: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            resolution: { type: 'number' }
+          },
+          description: 'Environment cubemap info.'
+        },
+
+        // HoloLens outputs
+        hololensInfo: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            spatialMappingSupported: { type: 'boolean' },
+            sceneUnderstandingSupported: { type: 'boolean' },
+            handTrackingSupported: { type: 'boolean' },
+            eyeTrackingSupported: { type: 'boolean' }
+          },
+          description: 'HoloLens info.'
+        },
+        spatialMesh: {
+          type: 'object',
+          properties: {
+            surfaceCount: { type: 'number' },
+            totalVertices: { type: 'number' },
+            totalTriangles: { type: 'number' }
+          },
+          description: 'Spatial mesh info.'
+        },
+        sceneObjects: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              kind: { type: 'string' },
+              position: { type: 'object' },
+              extents: { type: 'object' }
+            }
+          },
+          description: 'Scene understanding objects.'
+        },
+        trackedQRCodes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              data: { type: 'string' },
+              size: { type: 'number' },
+              position: { type: 'object' }
+            }
+          },
+          description: 'Tracked QR codes.'
+        },
+        worldAnchorId: { type: 'string', description: 'Created world anchor ID.' },
+        loadedWorldAnchors: { type: 'array', items: { type: 'string' }, description: 'Loaded world anchor names.' },
+        hololensHandMesh: {
+          type: 'object',
+          properties: {
+            isTracking: { type: 'boolean' },
+            vertexCount: { type: 'number' },
+            indexCount: { type: 'number' }
+          },
+          description: 'HoloLens hand mesh.'
+        },
+        hololensGazeRay: {
+          type: 'object',
+          properties: {
+            origin: { type: 'object' },
+            direction: { type: 'object' },
+            isTracking: { type: 'boolean' }
+          },
+          description: 'HoloLens gaze ray.'
+        },
+        registeredVoiceCommands: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              phrase: { type: 'string' }
+            }
+          },
+          description: 'Registered voice commands.'
+        },
+
+        // Utility outputs
+        xrSystemInfo: {
+          type: 'object',
+          properties: {
+            hmdConnected: { type: 'boolean' },
+            hmdName: { type: 'string' },
+            trackingSystemName: { type: 'string' },
+            stereoRenderingMode: { type: 'string' }
+          },
+          description: 'XR system info.'
+        },
+        xrDevices: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              type: { type: 'string' },
+              isConnected: { type: 'boolean' },
+              priority: { type: 'number' }
+            }
+          },
+          description: 'Available XR devices.'
+        },
+        xrRuntimeName: { type: 'string', description: 'Active XR runtime name.' }
+      }
+    }
   }
 ];

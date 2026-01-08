@@ -1239,7 +1239,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioMiddlewareAction(
             TargetActor = FindActorByLabelOrName<AActor>(World, ActorName);
         }
         
-        UFMODAudioComponent* Comp = UFMODBlueprintStatics::PlayEvent2D(World, FmodEvent, true);
+        UFMODBlueprintStatics::PlayEvent2D(World, FmodEvent, true);
         
         Result = MakeAudioMiddlewareSuccess(TEXT("FMOD event playing"), TEXT("FMOD"));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Event playing"), Result);
@@ -1275,7 +1275,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioMiddlewareAction(
             return true;
         }
         
-        UFMODAudioComponent* Comp = UFMODBlueprintStatics::PlayEventAtLocation(GetActiveWorld(), FmodEvent, FTransform(Location), true);
+        UFMODBlueprintStatics::PlayEventAtLocation(GetActiveWorld(), FmodEvent, FTransform(Location), true);
         
         Result = MakeAudioMiddlewareSuccess(TEXT("FMOD event playing at location"), TEXT("FMOD"));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Event playing at location"), Result);

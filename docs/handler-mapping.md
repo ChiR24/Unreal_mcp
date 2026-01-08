@@ -1787,6 +1787,8 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 
 ## 53. Audio Middleware Manager (`manage_audio_middleware`) - Phase 38
 
+> **Note:** Bink Video actions are fully implemented. Wwise and FMOD require the respective external plugins (Audiokinetic Wwise, FMOD Studio) to be installed. Core actions for Wwise/FMOD (event posting, RTPC/parameter control, bank loading, switches, states) are fully implemented. Advanced actions (spatial audio configuration, room/portal setup, occlusion, aux sends) return acknowledgment status when the plugin is detected but require project-specific configuration.
+
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
 | **Wwise (30 actions)** | | | |
@@ -1951,3 +1953,368 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `list_available_roles` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Lists available roles |
 | `list_source_factories` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Lists source factories |
 | `force_livelink_tick` | `McpAutomationBridge_LiveLinkHandlers.cpp` | `HandleManageLiveLinkAction` | Forces tick update |
+
+---
+
+## 55. Virtual Production Manager (`manage_virtual_production`) - Phase 40
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **nDisplay Cluster (10 actions)** | | | |
+| `create_ndisplay_config` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates nDisplay config asset |
+| `add_cluster_node` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds cluster node to config |
+| `remove_cluster_node` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Removes cluster node |
+| `add_viewport` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds viewport to node |
+| `remove_viewport` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Removes viewport |
+| `set_viewport_camera` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets viewport camera |
+| `configure_viewport_region` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures viewport region |
+| `set_projection_policy` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets projection policy |
+| `configure_warp_blend` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures warp/blend |
+| `list_cluster_nodes` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Lists all cluster nodes |
+| **nDisplay LED/ICVFX (10 actions)** | | | |
+| `create_led_wall` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates LED wall |
+| `configure_led_wall_size` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures LED wall size |
+| `configure_icvfx_camera` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures ICVFX camera |
+| `add_icvfx_camera` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds ICVFX camera |
+| `remove_icvfx_camera` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Removes ICVFX camera |
+| `configure_inner_frustum` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures inner frustum |
+| `configure_outer_viewport` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures outer viewport |
+| `set_chromakey_settings` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets chromakey settings |
+| `configure_light_cards` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures light cards |
+| `set_stage_settings` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets stage settings |
+| **nDisplay Sync (5 actions)** | | | |
+| `set_sync_policy` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets sync policy |
+| `configure_genlock` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures genlock |
+| `set_primary_node` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets primary node |
+| `configure_network_settings` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures network settings |
+| `get_ndisplay_info` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets nDisplay info |
+| **Composure (12 actions)** | | | |
+| `create_composure_element` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates composure element |
+| `delete_composure_element` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Deletes composure element |
+| `add_composure_layer` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds composure layer |
+| `remove_composure_layer` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Removes composure layer |
+| `attach_child_layer` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Attaches child layer |
+| `detach_child_layer` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Detaches child layer |
+| `add_input_pass` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds input pass |
+| `add_transform_pass` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds transform pass |
+| `add_output_pass` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds output pass |
+| `configure_chroma_keyer` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures chroma keyer |
+| `bind_render_target` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Binds render target |
+| `get_composure_info` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets Composure info |
+| **OpenColorIO (10 actions)** | | | |
+| `create_ocio_config` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates OCIO config asset |
+| `load_ocio_config` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Loads OCIO config file |
+| `get_ocio_colorspaces` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets available colorspaces |
+| `get_ocio_displays` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets display transforms |
+| `set_display_view` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets display/view |
+| `add_colorspace_transform` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds colorspace transform |
+| `apply_ocio_look` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Applies OCIO look |
+| `configure_viewport_ocio` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures viewport OCIO |
+| `set_ocio_working_colorspace` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets working colorspace |
+| `get_ocio_info` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets OCIO info |
+| **Remote Control (15 actions)** | | | |
+| `create_remote_control_preset` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates RC preset |
+| `load_remote_control_preset` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Loads RC preset |
+| `expose_property` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Exposes property |
+| `unexpose_property` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Unexposes property |
+| `expose_function` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Exposes function |
+| `create_controller` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates controller |
+| `bind_controller` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Binds controller |
+| `get_exposed_properties` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets exposed properties |
+| `set_exposed_property_value` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets exposed value |
+| `get_exposed_property_value` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets exposed value |
+| `start_web_server` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Starts web server |
+| `stop_web_server` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Stops web server |
+| `get_web_server_status` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets web server status |
+| `create_layout_group` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates layout group |
+| `get_remote_control_info` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets RC info |
+| **DMX (20 actions)** | | | |
+| `create_dmx_library` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates DMX library |
+| `import_gdtf` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Imports GDTF file |
+| `create_fixture_type` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates fixture type |
+| `add_fixture_mode` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds fixture mode |
+| `add_fixture_function` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds fixture function |
+| `create_fixture_patch` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates fixture patch |
+| `assign_fixture_to_universe` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Assigns to universe |
+| `configure_dmx_port` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures DMX port |
+| `create_artnet_port` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates Art-Net port |
+| `create_sacn_port` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates sACN port |
+| `send_dmx` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sends DMX data |
+| `receive_dmx` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Receives DMX data |
+| `set_fixture_channel_value` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets channel value |
+| `get_fixture_channel_value` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets channel value |
+| `add_dmx_component` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds DMX component |
+| `configure_dmx_component` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures DMX component |
+| `list_dmx_universes` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Lists universes |
+| `list_dmx_fixtures` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Lists fixtures |
+| `create_dmx_sequencer_track` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates sequencer track |
+| `get_dmx_info` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets DMX info |
+| **OSC (12 actions)** | | | |
+| `create_osc_server` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates OSC server |
+| `stop_osc_server` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Stops OSC server |
+| `create_osc_client` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates OSC client |
+| `send_osc_message` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sends OSC message |
+| `send_osc_bundle` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sends OSC bundle |
+| `bind_osc_address` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Binds OSC address |
+| `unbind_osc_address` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Unbinds OSC address |
+| `bind_osc_to_property` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Binds OSC to property |
+| `list_osc_servers` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Lists OSC servers |
+| `list_osc_clients` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Lists OSC clients |
+| `configure_osc_dispatcher` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures dispatcher |
+| `get_osc_info` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets OSC info |
+| **MIDI (15 actions)** | | | |
+| `list_midi_devices` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Lists MIDI devices |
+| `open_midi_input` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Opens MIDI input |
+| `close_midi_input` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Closes MIDI input |
+| `open_midi_output` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Opens MIDI output |
+| `close_midi_output` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Closes MIDI output |
+| `send_midi_note_on` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sends note on |
+| `send_midi_note_off` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sends note off |
+| `send_midi_cc` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sends CC message |
+| `send_midi_pitch_bend` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sends pitch bend |
+| `send_midi_program_change` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sends program change |
+| `bind_midi_to_property` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Binds MIDI to property |
+| `unbind_midi` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Unbinds MIDI |
+| `configure_midi_learn` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures MIDI learn |
+| `add_midi_device_component` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds MIDI component |
+| `get_midi_info` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets MIDI info |
+| **Timecode (18 actions)** | | | |
+| `create_timecode_provider` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates timecode provider |
+| `set_timecode_provider` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets timecode provider |
+| `get_current_timecode` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets current timecode |
+| `set_frame_rate` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets frame rate |
+| `configure_ltc_timecode` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures LTC |
+| `configure_aja_timecode` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures AJA |
+| `configure_blackmagic_timecode` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures Blackmagic |
+| `configure_system_time_timecode` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures system time |
+| `enable_timecode_genlock` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Enables genlock |
+| `disable_timecode_genlock` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Disables genlock |
+| `set_custom_timestep` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Sets custom timestep |
+| `configure_genlock_source` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Configures genlock source |
+| `get_timecode_provider_status` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets provider status |
+| `synchronize_timecode` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Synchronizes timecode |
+| `create_timecode_synchronizer` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Creates synchronizer |
+| `add_timecode_source` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Adds timecode source |
+| `list_timecode_providers` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Lists providers |
+| `get_timecode_info` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets timecode info |
+| **Utility (3 actions)** | | | |
+| `get_virtual_production_info` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Gets VP availability |
+| `list_active_vp_sessions` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Lists active sessions |
+| `reset_vp_state` | `McpAutomationBridge_VirtualProductionHandlers.cpp` | `HandleManageVirtualProductionAction` | Resets VP state |
+
+### Phase 40 Action Summary
+
+| Subsystem | Actions |
+|-----------|---------|
+| nDisplay Cluster | 10 |
+| nDisplay LED/ICVFX | 10 |
+| nDisplay Sync | 5 |
+| Composure | 12 |
+| OpenColorIO | 10 |
+| Remote Control | 15 |
+| DMX | 20 |
+| OSC | 12 |
+| MIDI | 15 |
+| Timecode | 18 |
+| Utility | 3 |
+| **Total** | **130** |
+
+### Implementation Notes
+- All 130 actions fully implemented in both TypeScript and C++ handlers
+- Virtual Production conditional compilation via `__has_include()` checks:
+  - `MCP_HAS_NDISPLAY` - nDisplay cluster and ICVFX
+  - `MCP_HAS_COMPOSURE` - Composure compositing
+  - `MCP_HAS_OCIO` - OpenColorIO color management
+  - `MCP_HAS_REMOTE_CONTROL` - Remote Control API
+  - `MCP_HAS_DMX` - DMX lighting protocol
+  - `MCP_HAS_OSC` - OSC network protocol
+  - `MCP_HAS_MIDI` - MIDI device control
+  - `MCP_HAS_TIMECODE` - Timecode synchronization
+- Graceful fallback messages when plugins not enabled
+- Hardware requirements: LED walls, DMX fixtures, timecode generators, MIDI controllers
+
+---
+
+## 56. XR Manager (`manage_xr`) - Phase 41
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **OpenXR Core (20 actions)** | | | |
+| `get_openxr_info` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets OpenXR runtime info |
+| `configure_openxr_settings` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures OpenXR settings |
+| `set_tracking_origin` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Sets tracking origin |
+| `get_tracking_origin` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets tracking origin |
+| `create_xr_action_set` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Creates action set |
+| `add_xr_action` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Adds XR action |
+| `bind_xr_action` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Binds XR action |
+| `get_xr_action_state` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets action state |
+| `trigger_haptic_feedback` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Triggers haptics |
+| `stop_haptic_feedback` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Stops haptics |
+| `get_hmd_pose` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets HMD pose |
+| `get_controller_pose` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets controller pose |
+| `get_hand_tracking_data` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets hand tracking |
+| `enable_hand_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables hand tracking |
+| `disable_hand_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Disables hand tracking |
+| `get_eye_tracking_data` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets eye tracking |
+| `enable_eye_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables eye tracking |
+| `get_view_configuration` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets view config |
+| `set_render_scale` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Sets render scale |
+| `get_supported_extensions` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets extensions |
+| **Meta Quest (22 actions)** | | | |
+| `get_quest_info` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets Quest info |
+| `configure_quest_settings` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures Quest |
+| `enable_passthrough` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables passthrough |
+| `disable_passthrough` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Disables passthrough |
+| `configure_passthrough_style` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures passthrough style |
+| `enable_scene_capture` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables scene capture |
+| `get_scene_anchors` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets scene anchors |
+| `get_room_layout` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets room layout |
+| `enable_quest_hand_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables Quest hands |
+| `get_quest_hand_pose` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets Quest hand pose |
+| `enable_quest_face_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables Quest face |
+| `get_quest_face_state` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets Quest face state |
+| `enable_quest_eye_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables Quest eyes |
+| `get_quest_eye_gaze` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets Quest eye gaze |
+| `enable_quest_body_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables Quest body |
+| `get_quest_body_state` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets Quest body state |
+| `create_spatial_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Creates spatial anchor |
+| `save_spatial_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Saves spatial anchor |
+| `load_spatial_anchors` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Loads spatial anchors |
+| `delete_spatial_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Deletes spatial anchor |
+| `configure_guardian_bounds` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures guardian |
+| `get_guardian_geometry` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets guardian geometry |
+| **SteamVR (18 actions)** | | | |
+| `get_steamvr_info` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets SteamVR info |
+| `configure_steamvr_settings` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures SteamVR |
+| `configure_chaperone_bounds` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures chaperone |
+| `get_chaperone_geometry` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets chaperone geometry |
+| `create_steamvr_overlay` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Creates overlay |
+| `set_overlay_texture` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Sets overlay texture |
+| `show_overlay` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Shows overlay |
+| `hide_overlay` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Hides overlay |
+| `destroy_overlay` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Destroys overlay |
+| `get_tracked_device_count` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets device count |
+| `get_tracked_device_info` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets device info |
+| `get_lighthouse_info` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets lighthouse info |
+| `trigger_steamvr_haptic` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Triggers SteamVR haptic |
+| `get_steamvr_action_manifest` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets action manifest |
+| `set_steamvr_action_manifest` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Sets action manifest |
+| `enable_steamvr_skeletal_input` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables skeletal input |
+| `get_skeletal_bone_data` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets skeletal bones |
+| `configure_steamvr_render` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures SteamVR render |
+| **Apple ARKit (22 actions)** | | | |
+| `get_arkit_info` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets ARKit info |
+| `configure_arkit_session` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures ARKit session |
+| `start_arkit_session` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Starts ARKit session |
+| `pause_arkit_session` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Pauses ARKit session |
+| `configure_world_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures world tracking |
+| `get_tracked_planes` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets tracked planes |
+| `get_tracked_images` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets tracked images |
+| `add_reference_image` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Adds reference image |
+| `enable_people_occlusion` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables people occlusion |
+| `disable_people_occlusion` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Disables people occlusion |
+| `enable_arkit_face_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables ARKit face |
+| `get_arkit_face_blendshapes` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets face blendshapes |
+| `get_arkit_face_geometry` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets face geometry |
+| `enable_body_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables body tracking |
+| `get_body_skeleton` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets body skeleton |
+| `create_arkit_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Creates ARKit anchor |
+| `remove_arkit_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Removes ARKit anchor |
+| `get_light_estimation` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets light estimation |
+| `enable_scene_reconstruction` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables scene reconstruction |
+| `get_scene_mesh` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets scene mesh |
+| `perform_raycast` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Performs raycast |
+| `get_camera_intrinsics` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets camera intrinsics |
+| **Google ARCore (18 actions)** | | | |
+| `get_arcore_info` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets ARCore info |
+| `configure_arcore_session` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures ARCore session |
+| `start_arcore_session` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Starts ARCore session |
+| `pause_arcore_session` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Pauses ARCore session |
+| `get_arcore_planes` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets ARCore planes |
+| `get_arcore_points` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets ARCore points |
+| `create_arcore_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Creates ARCore anchor |
+| `remove_arcore_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Removes ARCore anchor |
+| `enable_depth_api` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables depth API |
+| `get_depth_image` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets depth image |
+| `enable_geospatial` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables geospatial |
+| `get_geospatial_pose` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets geospatial pose |
+| `create_geospatial_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Creates geospatial anchor |
+| `resolve_cloud_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Resolves cloud anchor |
+| `host_cloud_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Hosts cloud anchor |
+| `enable_arcore_augmented_images` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables augmented images |
+| `get_arcore_light_estimate` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets ARCore light estimate |
+| `perform_arcore_raycast` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Performs ARCore raycast |
+| **Varjo (16 actions)** | | | |
+| `get_varjo_info` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets Varjo info |
+| `configure_varjo_settings` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures Varjo |
+| `enable_varjo_passthrough` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables Varjo passthrough |
+| `disable_varjo_passthrough` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Disables Varjo passthrough |
+| `configure_varjo_depth_test` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures Varjo depth test |
+| `enable_varjo_eye_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables Varjo eye tracking |
+| `get_varjo_gaze_data` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets Varjo gaze data |
+| `calibrate_varjo_eye_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Calibrates Varjo eye tracking |
+| `enable_foveated_rendering` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables foveated rendering |
+| `configure_foveated_rendering` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures foveated rendering |
+| `enable_varjo_mixed_reality` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables Varjo mixed reality |
+| `configure_varjo_chroma_key` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures Varjo chroma key |
+| `get_varjo_camera_intrinsics` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets Varjo camera intrinsics |
+| `enable_varjo_depth_estimation` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables Varjo depth estimation |
+| `get_varjo_environment_cubemap` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets Varjo environment cubemap |
+| `configure_varjo_markers` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures Varjo markers |
+| **HoloLens (20 actions)** | | | |
+| `get_hololens_info` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets HoloLens info |
+| `configure_hololens_settings` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures HoloLens |
+| `enable_spatial_mapping` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables spatial mapping |
+| `disable_spatial_mapping` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Disables spatial mapping |
+| `get_spatial_mesh` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets spatial mesh |
+| `configure_spatial_mapping_quality` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures spatial mapping quality |
+| `enable_scene_understanding` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables scene understanding |
+| `get_scene_objects` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets scene objects |
+| `enable_qr_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables QR tracking |
+| `get_tracked_qr_codes` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets tracked QR codes |
+| `create_world_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Creates world anchor |
+| `save_world_anchor` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Saves world anchor |
+| `load_world_anchors` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Loads world anchors |
+| `enable_hololens_hand_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables HoloLens hand tracking |
+| `get_hololens_hand_mesh` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets HoloLens hand mesh |
+| `enable_hololens_eye_tracking` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Enables HoloLens eye tracking |
+| `get_hololens_gaze_ray` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets HoloLens gaze ray |
+| `register_voice_command` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Registers voice command |
+| `unregister_voice_command` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Unregisters voice command |
+| `get_registered_voice_commands` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets registered voice commands |
+| **Utilities (6 actions)** | | | |
+| `get_xr_system_info` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets XR system info |
+| `list_xr_devices` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Lists XR devices |
+| `set_xr_device_priority` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Sets XR device priority |
+| `reset_xr_orientation` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Resets XR orientation |
+| `configure_xr_spectator` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Configures XR spectator |
+| `get_xr_runtime_name` | `McpAutomationBridge_XRPluginsHandlers.cpp` | `HandleManageXRAction` | Gets XR runtime name |
+
+### Phase 41 Action Summary
+
+| Platform | Actions |
+|----------|---------|
+| OpenXR Core | 20 |
+| Meta Quest | 22 |
+| SteamVR | 18 |
+| Apple ARKit | 22 |
+| Google ARCore | 18 |
+| Varjo | 16 |
+| HoloLens | 20 |
+| Utilities | 6 |
+| **Total** | **142** |
+
+### Implementation Notes
+- All 142 actions fully implemented in both TypeScript and C++ handlers
+- XR conditional compilation via `__has_include()` checks:
+  - `MCP_HAS_HMD` - HeadMountedDisplay core
+  - `MCP_HAS_XR_TRACKING` - IXRTrackingSystem
+  - `MCP_HAS_OPENXR` - OpenXR runtime
+  - `MCP_HAS_OCULUSXR` - Meta Quest platform
+  - `MCP_HAS_STEAMVR` - SteamVR platform
+  - `MCP_HAS_ARKIT` - Apple ARKit
+  - `MCP_HAS_ARCORE` - Google ARCore
+  - `MCP_HAS_VARJO` - Varjo headsets
+  - `MCP_HAS_HOLOLENS` - Microsoft HoloLens
+- Graceful fallback messages when XR plugins not enabled
+- Hardware requirements: XR headsets, controllers, AR-capable devices

@@ -58,6 +58,8 @@ import { handleCharacterAvatarTools } from './handlers/character-avatar-handlers
 import { handleAssetPluginsTools } from './handlers/asset-plugins-handlers.js';
 import { handleAudioMiddlewareTools } from './handlers/audio-middleware-handlers.js';
 import { handleLiveLinkTools } from './handlers/livelink-handlers.js';
+import { handleVirtualProductionTools } from './handlers/virtual-production-handlers.js';
+import { handleXRPluginsTools } from './handlers/xr-plugins-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -514,6 +516,12 @@ function registerDefaultHandlers() {
 
   // 56. LIVE LINK & MOTION CAPTURE (Phase 39)
   toolRegistry.register('manage_livelink', async (args, tools) => await handleLiveLinkTools(getAction(args), args, tools));
+
+  // 57. VIRTUAL PRODUCTION PLUGINS (Phase 40)
+  toolRegistry.register('manage_virtual_production', async (args, tools) => await handleVirtualProductionTools(getAction(args), args, tools));
+
+  // 58. XR PLUGINS (Phase 41)
+  toolRegistry.register('manage_xr', async (args, tools) => await handleXRPluginsTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

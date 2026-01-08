@@ -994,6 +994,22 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageLiveLinkAction(R, A, P, S);
                   });
+
+  // Phase 40: Virtual Production Plugins
+  RegisterHandler(TEXT("manage_virtual_production"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageVirtualProductionAction(R, A, P, S);
+                  });
+
+  // Phase 41: XR Plugins (VR/AR/MR)
+  RegisterHandler(TEXT("manage_xr"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageXRAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

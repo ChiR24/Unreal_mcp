@@ -10,7 +10,7 @@ A comprehensive development plan for the Unreal Engine Model Context Protocol (M
 |--------|-------|
 | **Total Phases** | 59 |
 | **Estimated Actions** | ~2,850 |
-| **Completed Phases** | 38 |
+| **Completed Phases** | 44 |
 | **In Progress** | Phase 5 (Infrastructure) |
 | **Engine Support** | Unreal Engine 5.0 - 5.7 |
 
@@ -859,7 +859,7 @@ Wwise, FMOD, Bink Video integration.
 
 ## Phase 39: Motion Capture & Live Link ✅
 
-**Status**: Complete | **Tool**: `manage_livelink` | **Actions**: 70
+**Status**: Complete | **Tool**: `manage_livelink` | **Actions**: 64
 
 Live Link core, Face, Presets, Controllers, Timecode, Skeleton Mapping.
 
@@ -891,9 +891,9 @@ Live Link core, Face, Presets, Controllers, Timecode, Skeleton Mapping.
 
 ---
 
-## Phase 40: Virtual Production Plugins 🔄
+## Phase 40: Virtual Production Plugins ✅
 
-**Status**: Planned | **Actions**: ~150
+**Status**: Complete | **Tool**: `manage_virtual_production` | **Actions**: 130
 
 nDisplay, Composure, OCIO, Remote Control, DMX, OSC, MIDI, Timecode.
 
@@ -903,24 +903,32 @@ nDisplay, Composure, OCIO, Remote Control, DMX, OSC, MIDI, Timecode.
 > - **Timecode**: Timecode generator (LTC, MTC, or genlock source)
 > - **MIDI/OSC**: MIDI controllers or OSC-capable devices (optional)
 
-### Planned Capabilities
+### Implemented Capabilities
 
-| Plugin | Key Actions |
-|--------|-------------|
-| nDisplay | `create_ndisplay_config`, `add_cluster_node`, `create_viewport`, `create_icvfx_camera`, `configure_genlock` |
-| Composure | `create_composure_actor`, `add_composure_layer`, `add_chroma_keyer`, `configure_composure_output` |
-| OCIO | `load_ocio_config`, `set_working_color_space`, `configure_viewport_display_transform` |
-| Remote Control | `create_remote_control_preset`, `expose_actor_properties`, `start_web_remote_control_server` |
-| DMX | `create_dmx_library`, `add_dmx_fixture_type`, `create_dmx_output_port`, `import_gdtf_fixture` |
-| OSC | `create_osc_server`, `send_osc_message`, `bind_osc_to_property` |
-| MIDI | `list_midi_devices`, `send_midi_note_on`, `bind_midi_to_property` |
-| Timecode | `set_timecode_provider`, `configure_genlock_source`, `configure_ltc_input` |
+| Subsystem | Actions | Key Actions |
+|-----------|---------|-------------|
+| nDisplay Cluster | 10 | `create_ndisplay_config`, `add_cluster_node`, `add_viewport`, `set_projection_policy`, `configure_warp_blend` |
+| nDisplay LED/ICVFX | 10 | `create_led_wall`, `configure_icvfx_camera`, `add_icvfx_camera`, `configure_inner_frustum`, `configure_light_cards` |
+| nDisplay Sync | 5 | `set_sync_policy`, `configure_genlock`, `set_primary_node`, `configure_network_settings`, `get_ndisplay_info` |
+| Composure | 12 | `create_composure_element`, `add_composure_layer`, `add_input_pass`, `add_transform_pass`, `configure_chroma_keyer` |
+| OpenColorIO | 10 | `create_ocio_config`, `load_ocio_config`, `get_ocio_colorspaces`, `set_display_view`, `apply_ocio_look` |
+| Remote Control | 15 | `create_remote_control_preset`, `expose_property`, `expose_function`, `start_web_server`, `bind_controller` |
+| DMX | 20 | `create_dmx_library`, `import_gdtf`, `create_fixture_patch`, `send_dmx`, `create_artnet_port`, `create_sacn_port` |
+| OSC | 12 | `create_osc_server`, `create_osc_client`, `send_osc_message`, `send_osc_bundle`, `bind_osc_to_property` |
+| MIDI | 15 | `list_midi_devices`, `open_midi_input`, `send_midi_note_on`, `send_midi_cc`, `bind_midi_to_property` |
+| Timecode | 18 | `create_timecode_provider`, `set_timecode_provider`, `configure_ltc_timecode`, `configure_aja_timecode`, `enable_timecode_genlock` |
+| Utility | 3 | `get_virtual_production_info`, `list_active_vp_sessions`, `reset_vp_state` |
+
+### Implementation Notes
+- All 130 actions fully implemented in both TypeScript and C++ handlers
+- Conditional compilation via `__has_include()` for all 8 VP subsystems
+- Graceful fallback messages when plugins not enabled
 
 ---
 
-## Phase 41: XR Plugins (VR/AR/MR) 🔄
+## Phase 41: XR Plugins (VR/AR/MR) ✅
 
-**Status**: Planned | **Actions**: ~140
+**Status**: Complete | **Tool**: `manage_xr` | **Actions**: 142
 
 OpenXR, Meta Quest, SteamVR, Apple ARKit, Google ARCore, Varjo, HoloLens.
 
@@ -933,17 +941,23 @@ OpenXR, Meta Quest, SteamVR, Apple ARKit, Google ARCore, Varjo, HoloLens.
 > - **Varjo**: Varjo XR-3/VR-3 headset
 > - **HoloLens**: Microsoft HoloLens 2
 
-### Planned Capabilities
+### Implemented Capabilities
 
-| Plugin | Key Actions |
-|--------|-------------|
-| OpenXR | `configure_openxr_settings`, `configure_tracking_origin`, `create_openxr_action_set`, `trigger_haptic_feedback` |
-| Meta Quest | `configure_quest_settings`, `enable_passthrough`, `enable_scene_capture`, `enable_quest_hand_tracking`, `enable_quest_face_tracking` |
-| SteamVR | `configure_steamvr_settings`, `configure_chaperone_bounds`, `create_steamvr_overlay` |
-| ARKit | `configure_arkit_session`, `configure_world_tracking`, `get_tracked_planes`, `enable_people_occlusion`, `get_face_blendshapes` |
-| ARCore | `configure_arcore_session`, `get_arcore_planes`, `enable_geospatial`, `create_geospatial_anchor` |
-| Varjo | `configure_varjo_settings`, `enable_varjo_video_passthrough`, `enable_varjo_eye_tracking` |
-| HoloLens | `configure_hololens_settings`, `configure_spatial_mapping`, `enable_qr_tracking`, `register_voice_command` |
+| Platform | Actions | Key Actions |
+|----------|---------|-------------|
+| OpenXR Core | 20 | `get_openxr_info`, `set_tracking_origin`, `trigger_haptic_feedback`, `get_hmd_pose`, `get_hand_tracking_data` |
+| Meta Quest | 22 | `enable_passthrough`, `get_scene_anchors`, `enable_quest_hand_tracking`, `enable_quest_face_tracking`, `create_spatial_anchor` |
+| SteamVR | 18 | `configure_chaperone_bounds`, `create_steamvr_overlay`, `get_tracked_device_info`, `enable_steamvr_skeletal_input` |
+| Apple ARKit | 22 | `configure_arkit_session`, `get_tracked_planes`, `enable_arkit_face_tracking`, `get_arkit_face_blendshapes`, `enable_scene_reconstruction` |
+| Google ARCore | 18 | `configure_arcore_session`, `get_arcore_planes`, `enable_geospatial`, `create_geospatial_anchor`, `host_cloud_anchor` |
+| Varjo | 16 | `enable_varjo_passthrough`, `enable_varjo_eye_tracking`, `get_varjo_gaze_data`, `enable_foveated_rendering`, `enable_varjo_mixed_reality` |
+| HoloLens | 20 | `enable_spatial_mapping`, `enable_scene_understanding`, `enable_qr_tracking`, `create_world_anchor`, `register_voice_command` |
+| Utilities | 6 | `get_xr_system_info`, `list_xr_devices`, `reset_xr_orientation` |
+
+### Implementation Notes
+- All 142 actions fully implemented in both TypeScript and C++ handlers
+- Conditional compilation via `__has_include()` for all 7 XR platforms
+- Graceful fallback messages when XR plugins not enabled
 
 ---
 

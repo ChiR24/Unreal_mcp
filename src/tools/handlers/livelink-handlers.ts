@@ -1,7 +1,7 @@
 /**
  * Phase 39: Motion Capture & Live Link Handlers
  * Handles Live Link core, face tracking, and motion capture integrations.
- * ~70 actions covering source management, subjects, presets, face capture, and external mocap systems.
+ * 64 actions covering source management, subjects, presets, face capture, and external mocap systems.
  */
 
 import { cleanObject } from '../../utils/safe-json.js';

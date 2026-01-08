@@ -202,6 +202,68 @@ public class McpAutomationBridge : ModuleRules
             // LiveLinkMessageBusFramework (network discovery)
             TryAddConditionalModule(Target, EngineDir, "LiveLinkMessageBusFramework", "LiveLinkMessageBusFramework");
 
+            // Phase 40: Virtual Production Plugins
+            // nDisplay (built-in for UE 4.22+)
+            TryAddConditionalModule(Target, EngineDir, "DisplayCluster", "DisplayCluster");
+            TryAddConditionalModule(Target, EngineDir, "DisplayClusterConfiguration", "DisplayClusterConfiguration");
+            // Composure (built-in compositing plugin)
+            TryAddConditionalModule(Target, EngineDir, "Composure", "Composure");
+            TryAddConditionalModule(Target, EngineDir, "CompositorSources", "CompositorSources");
+            // OpenColorIO (built-in for UE 4.27+)
+            TryAddConditionalModule(Target, EngineDir, "OpenColorIO", "OpenColorIO");
+            // Remote Control (built-in for UE 4.25+)
+            TryAddConditionalModule(Target, EngineDir, "RemoteControl", "RemoteControl");
+            TryAddConditionalModule(Target, EngineDir, "RemoteControlCommon", "RemoteControlCommon");
+            TryAddConditionalModule(Target, EngineDir, "WebRemoteControl", "WebRemoteControl");
+            // DMX (built-in for UE 4.27+)
+            TryAddConditionalModule(Target, EngineDir, "DMXProtocol", "DMXProtocol");
+            TryAddConditionalModule(Target, EngineDir, "DMXProtocolArtNet", "DMXProtocolArtNet");
+            TryAddConditionalModule(Target, EngineDir, "DMXProtocolSACN", "DMXProtocolSACN");
+            TryAddConditionalModule(Target, EngineDir, "DMXRuntime", "DMXRuntime");
+            // OSC (built-in)
+            TryAddConditionalModule(Target, EngineDir, "OSC", "OSC");
+            // MIDI (built-in for UE 4.21+)
+            TryAddConditionalModule(Target, EngineDir, "MIDIDevice", "MIDIDevice");
+            // Timecode/Genlock (built-in)
+            TryAddConditionalModule(Target, EngineDir, "TimeManagement", "TimeManagement");
+            // AJA Media (optional - professional I/O)
+            TryAddConditionalModule(Target, EngineDir, "AjaMedia", "AjaMedia");
+            TryAddConditionalModule(Target, EngineDir, "AjaMediaOutput", "AjaMediaOutput");
+            // Blackmagic Media (optional - professional I/O)
+            TryAddConditionalModule(Target, EngineDir, "BlackmagicMedia", "BlackmagicMedia");
+            TryAddConditionalModule(Target, EngineDir, "BlackmagicMediaOutput", "BlackmagicMediaOutput");
+
+            // Phase 41: XR Plugins (VR/AR/MR)
+            // HeadMountedDisplay (built-in core XR)
+            TryAddConditionalModule(Target, EngineDir, "HeadMountedDisplay", "HeadMountedDisplay");
+            // OpenXR (built-in for UE 4.27+)
+            TryAddConditionalModule(Target, EngineDir, "OpenXRHMD", "OpenXRHMD");
+            TryAddConditionalModule(Target, EngineDir, "OpenXRInput", "OpenXRInput");
+            // OculusXR / Meta Quest (optional - Meta plugin)
+            TryAddConditionalModule(Target, EngineDir, "OculusXRHMD", "OculusXRHMD");
+            TryAddConditionalModule(Target, EngineDir, "OculusXRInput", "OculusXRInput");
+            TryAddConditionalModule(Target, EngineDir, "OculusXRPassthrough", "OculusXRPassthrough");
+            TryAddConditionalModule(Target, EngineDir, "OculusXRAnchors", "OculusXRAnchors");
+            // SteamVR (optional - Valve plugin)
+            TryAddConditionalModule(Target, EngineDir, "SteamVR", "SteamVR");
+            TryAddConditionalModule(Target, EngineDir, "SteamVRInputDevice", "SteamVRInputDevice");
+            // Apple ARKit (built-in for iOS)
+            TryAddConditionalModule(Target, EngineDir, "AppleARKit", "AppleARKit");
+            TryAddConditionalModule(Target, EngineDir, "AppleARKitFaceSupport", "AppleARKitFaceSupport");
+            // Google ARCore (built-in for Android)
+            TryAddConditionalModule(Target, EngineDir, "GoogleARCore", "GoogleARCore");
+            TryAddConditionalModule(Target, EngineDir, "GoogleARCoreBase", "GoogleARCoreBase");
+            // Varjo (optional - Varjo plugin)
+            TryAddConditionalModule(Target, EngineDir, "VarjoHMD", "VarjoHMD");
+            TryAddConditionalModule(Target, EngineDir, "VarjoEyeTracker", "VarjoEyeTracker");
+            // Windows Mixed Reality / HoloLens (built-in for UE 4.18+)
+            TryAddConditionalModule(Target, EngineDir, "WindowsMixedRealityHMD", "WindowsMixedRealityHMD");
+            TryAddConditionalModule(Target, EngineDir, "WindowsMixedRealityHandTracking", "WindowsMixedRealityHandTracking");
+            // Common AR module
+            TryAddConditionalModule(Target, EngineDir, "AugmentedReality", "AugmentedReality");
+            // XRBase (core XR functionality)
+            TryAddConditionalModule(Target, EngineDir, "XRBase", "XRBase");
+
             // Ensure editor builds expose full Blueprint graph editing APIs.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=1");
@@ -429,7 +491,33 @@ public class McpAutomationBridge : ModuleRules
                     Path.Combine(PluginsDir, "Interchange", "Editor", SearchName),
                     Path.Combine(PluginsDir, "Editor", SearchName),
                     Path.Combine(PluginsDir, "FX", SearchName),
-                    Path.Combine(PluginsDir, "Animation", SearchName)
+                    Path.Combine(PluginsDir, "Animation", SearchName),
+                    // Phase 40: Virtual Production Plugin paths
+                    Path.Combine(PluginsDir, "VirtualProduction", SearchName),
+                    Path.Combine(PluginsDir, "VirtualProduction", "DMX", "Source", SearchName),
+                    Path.Combine(PluginsDir, "VirtualProduction", "RemoteControl", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "nDisplay", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "Composure", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Compositing", SearchName),
+                    Path.Combine(PluginsDir, "Media", SearchName),
+                    Path.Combine(PluginsDir, "Media", "AjaMedia", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Media", "BlackmagicMedia", "Source", SearchName),
+                    Path.Combine(PluginsDir, "VirtualProduction", "Composure", "Source", SearchName),
+                    Path.Combine(PluginsDir, "VirtualProduction", "OpenColorIO", "Source", SearchName),
+                    // Phase 41: XR Plugin paths (VR/AR/MR)
+                    Path.Combine(PluginsDir, "Runtime", "XR", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "OpenXR", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "OpenXRHMD", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "OculusXR", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "OculusVR", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "SteamVR", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "AppleARKit", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "GoogleARCore", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "Varjo", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "WindowsMixedReality", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "AR", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "AugmentedReality", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "HeadMountedDisplay", "Source", SearchName)
                 };
 
                 foreach (string SearchPath in SearchPaths)
