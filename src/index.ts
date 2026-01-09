@@ -264,25 +264,25 @@ export async function startStdioServer() {
   process.once('beforeExit', () => {
     try {
       automationBridge.stop();
-    } catch { }
+    } catch { /* Best-effort cleanup - ignore errors */ }
     try {
       bridge.dispose();
-    } catch { }
+    } catch { /* Best-effort cleanup - ignore errors */ }
     try {
       metricsServer?.close();
-    } catch { }
+    } catch { /* Best-effort cleanup - ignore errors */ }
   });
  
   process.once('exit', () => {
     try {
       automationBridge.stop();
-    } catch { }
+    } catch { /* Best-effort cleanup - ignore errors */ }
     try {
       bridge.dispose();
-    } catch { }
+    } catch { /* Best-effort cleanup - ignore errors */ }
     try {
       metricsServer?.close();
-    } catch { }
+    } catch { /* Best-effort cleanup - ignore errors */ }
   });
 
 

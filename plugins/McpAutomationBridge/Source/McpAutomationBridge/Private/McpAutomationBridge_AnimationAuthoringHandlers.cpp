@@ -1292,14 +1292,20 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         NewParam.bSnapToGrid = false;
         NewParam.bWrapInput = false;
         
-        // Use FProperty reflection to set the protected BlendParameters array
-        if (FProperty* BlendParamsProp = UBlendSpace::StaticClass()->FindPropertyByName(TEXT("BlendParameters")))
+        // Use FArrayProperty + FScriptArrayHelper to safely set the protected BlendParameters array
+        // NOTE: ContainerPtrToValuePtr on a TArray returns the TArray header, NOT the element data!
+        if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(UBlendSpace::StaticClass()->FindPropertyByName(TEXT("BlendParameters"))))
         {
             NewBlendSpace->Modify();
-            FBlendParameter* BlendParamsPtr = BlendParamsProp->ContainerPtrToValuePtr<FBlendParameter>(NewBlendSpace);
-            if (BlendParamsPtr)
+            FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(NewBlendSpace));
+            // BlendSpace1D uses index 0 for its single axis
+            if (ArrayHelper.Num() > 0)
             {
-                BlendParamsPtr[0] = NewParam;
+                FBlendParameter* ParamPtr = reinterpret_cast<FBlendParameter*>(ArrayHelper.GetRawPtr(0));
+                if (ParamPtr)
+                {
+                    *ParamPtr = NewParam;
+                }
             }
         }
         
@@ -1377,15 +1383,19 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         VParam.bSnapToGrid = false;
         VParam.bWrapInput = false;
         
-        // Use FProperty reflection to set the protected BlendParameters array
-        if (FProperty* BlendParamsProp = UBlendSpace::StaticClass()->FindPropertyByName(TEXT("BlendParameters")))
+        // Use FArrayProperty + FScriptArrayHelper to safely set the protected BlendParameters array
+        // NOTE: ContainerPtrToValuePtr on a TArray returns the TArray header, NOT the element data!
+        if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(UBlendSpace::StaticClass()->FindPropertyByName(TEXT("BlendParameters"))))
         {
             NewBlendSpace->Modify();
-            FBlendParameter* BlendParamsPtr = BlendParamsProp->ContainerPtrToValuePtr<FBlendParameter>(NewBlendSpace);
-            if (BlendParamsPtr)
+            FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(NewBlendSpace));
+            // BlendSpace2D uses index 0 for horizontal axis and index 1 for vertical axis
+            if (ArrayHelper.Num() > 1)
             {
-                BlendParamsPtr[0] = HParam;
-                BlendParamsPtr[1] = VParam;
+                FBlendParameter* HParamPtr = reinterpret_cast<FBlendParameter*>(ArrayHelper.GetRawPtr(0));
+                FBlendParameter* VParamPtr = reinterpret_cast<FBlendParameter*>(ArrayHelper.GetRawPtr(1));
+                if (HParamPtr) *HParamPtr = HParam;
+                if (VParamPtr) *VParamPtr = VParam;
             }
         }
         

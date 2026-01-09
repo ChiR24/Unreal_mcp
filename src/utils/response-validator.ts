@@ -305,7 +305,7 @@ export class ResponseValidator {
           responseObj.structuredContent = structuredPayload && typeof structuredPayload === 'object'
             ? cleanObject(structuredPayload)
             : structuredPayload;
-        } catch { }
+        } catch { /* Structured content assignment failed - continue */ }
       }
       // Promote failure semantics to top-level isError when obvious
       try {
@@ -314,11 +314,11 @@ export class ResponseValidator {
         if (hasExplicitFailure && responseObj.isError !== true) {
           responseObj.isError = true;
         }
-      } catch { }
+      } catch { /* Failure promotion failed - non-critical */ }
       if (!validation.valid) {
         try {
           responseObj._validation = { valid: false, errors: validation.errors };
-        } catch { }
+        } catch { /* Validation metadata assignment failed - non-critical */ }
       }
       return responseObj;
     }
@@ -346,20 +346,20 @@ export class ResponseValidator {
       } else if (safeResponseObj && typeof safeResponseObj.success === 'boolean') {
         wrapped.success = Boolean(safeResponseObj.success);
       }
-    } catch { }
+    } catch { /* Success extraction failed - non-critical */ }
 
     if (structuredPayload !== undefined) {
       try {
         wrapped.structuredContent = structuredPayload && typeof structuredPayload === 'object'
           ? cleanObject(structuredPayload)
           : structuredPayload;
-      } catch {
+      } catch { /* Clean failed - use original */
         wrapped.structuredContent = structuredPayload;
       }
     } else if (safeResponse && typeof safeResponse === 'object') {
       try {
         wrapped.structuredContent = cleanObject(safeResponse);
-      } catch {
+      } catch { /* Clean failed - use original */
         wrapped.structuredContent = safeResponse;
       }
     }
@@ -371,7 +371,7 @@ export class ResponseValidator {
       if (hasExplicitFailure) {
         wrapped.isError = true;
       }
-    } catch { }
+    } catch { /* Failure promotion failed - non-critical */ }
 
     if (!validation.valid) {
       wrapped._validation = { valid: false, errors: validation.errors };
@@ -384,7 +384,7 @@ export class ResponseValidator {
       if (typeof s === 'boolean' && s === false) {
         wrapped.isError = true;
       }
-    } catch { }
+    } catch { /* Error marking failed - non-critical */ }
 
     return wrapped;
   }

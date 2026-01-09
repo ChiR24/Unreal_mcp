@@ -109,7 +109,7 @@ export class LogTools {
         if (st.isFile()) {
           return this.cacheLogPath(resolvedPath);
         }
-      } catch { }
+      } catch { /* File check failed - continue searching */ }
     }
 
     if (this.cachedLogPath && (await this.fileExists(this.cachedLogPath))) {
@@ -152,14 +152,14 @@ export class LogTools {
         try {
           const st = await fs.stat(fp);
           candidates.push({ p: fp, m: st.mtimeMs });
-        } catch { }
+        } catch { /* Stat failed - skip this candidate */ }
       }
       if (candidates.length) {
         candidates.sort((a, b) => b.m - a.m);
         const first = candidates[0];
         return first ? this.cacheLogPath(first.p) : undefined;
       }
-    } catch { }
+    } catch { /* Directory scan failed - no logs found */ }
     return undefined;
   }
 
@@ -206,7 +206,7 @@ export class LogTools {
       }
       return lines.slice(0, maxLines).join('\n');
     } finally {
-      try { await handle.close(); } catch { }
+      try { await handle.close(); } catch { /* Best-effort file handle close */ }
     }
   }
 

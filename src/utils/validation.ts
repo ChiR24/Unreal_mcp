@@ -4,6 +4,10 @@
 
 import { toRotTuple, toVec3Tuple } from './normalize.js';
 import { sanitizePath as sanitizePathStrict } from './path-security.js';
+import { Logger } from './logger.js';
+
+// Security logger for path validation
+const securityLogger = new Logger('security', 'warn');
 
 /**
  * Maximum path length allowed in Unreal Engine
@@ -77,7 +81,55 @@ export function sanitizeAssetName(name: string): string {
 }
 
 /**
- * Sanitize a path for Unreal Engine
+ * Result type for path sanitization operations
+ */
+export type SanitizePathResult = 
+  | { success: true; path: string }
+  | { success: false; error: string };
+
+/**
+ * Sanitize a path for Unreal Engine with explicit error reporting
+ * 
+ * This version returns an error object instead of silently falling back to safe defaults,
+ * which is critical for security to ensure callers know when input was rejected.
+ * 
+ * @param path The path to sanitize
+ * @returns Result object with either sanitized path or error message
+ */
+export function sanitizePathSafe(path: string): SanitizePathResult {
+  if (!path || typeof path !== 'string') {
+    return { success: false, error: 'Path is empty or not a string' };
+  }
+
+  // Normalize slashes first (backslash to forward, remove doubles)
+  let normalized = path.replace(/\\/g, '/');
+  // Remove consecutive slashes but preserve the leading one
+  normalized = normalized.replace(/\/+/g, '/');
+
+  // Try strict validation first
+  try {
+    // sanitizePathStrict validates and normalizes, allowing /Game, /Engine, /Script, /Temp
+    const result = sanitizePathStrict(normalized, ['/Game', '/Engine', '/Script', '/Temp']);
+    return { success: true, path: result };
+  } catch (err) {
+    // Strict validation failed - check for specific security issues
+    const errorMessage = err instanceof Error ? err.message : 'Unknown validation error';
+    
+    // Check for path traversal - this is a security issue that must be reported
+    if (normalized.includes('..')) {
+      return { success: false, error: 'Path traversal sequences (..) are not allowed' };
+    }
+    
+    // For other errors, return the specific error message
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Sanitize a path for Unreal Engine (LEGACY - use sanitizePathSafe for new code)
+ * 
+ * WARNING: This function silently returns '/Game' for invalid paths, which can mask
+ * security issues. For new code, prefer sanitizePathSafe() which returns explicit errors.
  * 
  * NOTE: This is a lenient wrapper around sanitizePathStrict from path-security.ts.
  * It catches validation errors and returns a safe default ('/Game') instead of throwing.
@@ -85,6 +137,7 @@ export function sanitizeAssetName(name: string): string {
  * 
  * @param path The path to sanitize
  * @returns Sanitized path or '/Game' if invalid
+ * @deprecated Use sanitizePathSafe() for explicit error handling
  */
 export function sanitizePath(path: string): string {
   if (!path || typeof path !== 'string') {
@@ -114,11 +167,12 @@ export function sanitizePath(path: string): string {
   // Split path into segments and sanitize each
   let segments = sanitized.split('/').filter(s => s.length > 0);
 
-  // Block path traversal attempts - this is critical security
-  // Return error object instead of throwing to maintain consistent error handling
+  // SECURITY: Block path traversal attempts
+  // NOTE: This silently returns /Game which can mask attacks.
+  // For security-critical code, use sanitizePathSafe() instead.
   if (segments.some(s => s === '..' || s === '.')) {
-    // Log warning and return safe default instead of throwing
-    // This maintains consistency with the rest of the error handling in this file
+    // Log warning for security monitoring
+    securityLogger.warn('[SECURITY] Path traversal attempt blocked:', path);
     return '/Game';
   }
 

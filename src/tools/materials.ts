@@ -190,7 +190,7 @@ export class MaterialTools {
           // Save asset (plugin-first via SAVE_ASSET template)
           try {
             await this.bridge.executeEditorFunction('SAVE_ASSET', { path: createdPath });
-          } catch (_) { }
+          } catch (_) { /* Best-effort save - continue even if save fails */ }
           return { success: true, path: createdPath, message: `Material instance ${name} created at ${createdPath}` };
         }
         // If plugin indicated unknown action and python fallback not allowed, surface explicit failure

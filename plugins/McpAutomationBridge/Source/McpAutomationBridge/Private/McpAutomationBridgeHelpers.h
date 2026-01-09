@@ -1791,7 +1791,8 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
   }
 
   if (Found.IsValid()) {
-    UBlueprint* BP = Cast<UBlueprint>(Found.GetAsset());
+    // UE 5.1+ compatible: Use GetSoftObjectPath().TryLoad() instead of deprecated GetAsset()
+    UBlueprint* BP = Cast<UBlueprint>(Found.GetSoftObjectPath().TryLoad());
     if (!BP) {
       const FString PathStr = Found.ToSoftObjectPath().ToString();
       BP = LoadObject<UBlueprint>(nullptr, *PathStr);

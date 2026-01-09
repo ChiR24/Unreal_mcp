@@ -65,7 +65,7 @@ export class HealthMonitor {
           retriable: Boolean(errorResponse.retriable)
         });
         if (this.metrics.recentErrors.length > 20) this.metrics.recentErrors.splice(0, this.metrics.recentErrors.length - 20);
-      } catch { }
+      } catch { /* Metrics tracking failed - non-critical */ }
   }
 
   async performHealthCheck(bridge: UnrealBridge): Promise<boolean> {

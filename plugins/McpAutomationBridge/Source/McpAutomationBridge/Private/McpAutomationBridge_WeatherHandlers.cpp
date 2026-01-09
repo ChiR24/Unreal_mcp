@@ -297,7 +297,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWeatherAction(
     Payload->TryGetStringField(TEXT("niagaraSystemPath"), NiagaraSystemPath);
 
     // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
-    UWorld* World = GetActiveWorld();
+    // Note: World already available from function scope (line 112)
     FString SearchLabel = ActorName.IsEmpty() ? TEXT("RainParticles") : ActorName;
     AActor* RainActor = FindActorByLabel(World, SearchLabel);
 
@@ -405,7 +405,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWeatherAction(
     Payload->TryGetStringField(TEXT("niagaraSystemPath"), NiagaraSystemPath);
 
     // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
-    UWorld* World = GetActiveWorld();
+    // Note: World already available from function scope (line 112)
     FString SearchLabel = ActorName.IsEmpty() ? TEXT("SnowParticles") : ActorName;
     AActor* SnowActor = FindActorByLabel(World, SearchLabel);
 

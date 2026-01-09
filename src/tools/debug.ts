@@ -477,7 +477,7 @@ export class DebugVisualizationTools {
     ];
     if (UNSAFE_VIEWMODES.includes(params.mode)) {
       log.warn(`Viewmode '${params.mode}' may be unstable in some UE configurations.`);
-      try { await this.bridge.executeConsoleCommand('stop'); } catch { }
+      try { await this.bridge.executeConsoleCommand('stop'); } catch { /* Best-effort stop before viewmode change */ }
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 

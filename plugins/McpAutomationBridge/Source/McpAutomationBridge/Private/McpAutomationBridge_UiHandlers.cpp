@@ -513,16 +513,21 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     }
 
     if (!bFound) {
-      // Fallback: Use TObjectIterator to find ANY UTextBlock with that name,
-      // risky but covers cases
+      // PERFORMANCE WARNING: TObjectIterator fallback iterates ALL UTextBlock objects in memory.
+      // This is O(N) where N = total objects, not just widgets in the active world.
+      // Consider using UWidgetBlueprintLibrary::GetAllWidgetsOfClass for world-specific lookup.
       // Safety: Skip CDOs which have no World and would crash on GetWorld()
+      UWorld* ActiveWorld = GetActiveWorld();
       for (TObjectIterator<UTextBlock> It; It; ++It) {
         if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
-        if (It->GetName() == Key && It->GetWorld()) {
+        UWorld* WidgetWorld = It->GetWorld();
+        // Only match widgets in the active play world to avoid editor/preview widgets
+        if (It->GetName() == Key && WidgetWorld && WidgetWorld == ActiveWorld) {
           It->SetText(FText::FromString(Value));
           bFound = true;
           bSuccess = true;
-          Message = FString::Printf(TEXT("Set text on global '%s'"), *Key);
+          Message = FString::Printf(TEXT("Set text on global '%s' (fallback lookup)"), *Key);
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("TObjectIterator fallback used for widget '%s'"), *Key);
           break;
         }
       }
@@ -539,10 +544,14 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     UTexture2D *Texture = LoadObject<UTexture2D>(nullptr, *TexturePath);
     if (Texture) {
       bool bFound = false;
+      // PERFORMANCE WARNING: TObjectIterator fallback iterates ALL UImage objects in memory.
       // Safety: Skip CDOs which have no World and would crash on GetWorld()
+      UWorld* ActiveWorld = GetActiveWorld();
       for (TObjectIterator<UImage> It; It; ++It) {
         if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
-        if (It->GetName() == Key && It->GetWorld()) {
+        UWorld* WidgetWorld = It->GetWorld();
+        // Only match widgets in the active play world to avoid editor/preview widgets
+        if (It->GetName() == Key && WidgetWorld && WidgetWorld == ActiveWorld) {
           It->SetBrushFromTexture(Texture);
           bFound = true;
           bSuccess = true;
@@ -565,28 +574,37 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     Payload->TryGetBoolField(TEXT("visible"), bVisible);
 
     bool bFound = false;
-    // Try UserWidgets
+    // PERFORMANCE WARNING: TObjectIterator fallback iterates ALL UUserWidget objects in memory.
+    // This is O(N) where N = total objects. Consider UWidgetBlueprintLibrary::GetAllWidgetsOfClass.
     // Safety: Skip CDOs which have no World and would crash on GetWorld()
+    UWorld* ActiveWorld = GetActiveWorld();
     for (TObjectIterator<UUserWidget> It; It; ++It) {
       if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
-      if (It->GetName() == Key && It->GetWorld()) {
+      UWorld* WidgetWorld = It->GetWorld();
+      // Only match widgets in the active play world to avoid editor/preview widgets
+      if (It->GetName() == Key && WidgetWorld && WidgetWorld == ActiveWorld) {
         It->SetVisibility(bVisible ? ESlateVisibility::Visible
                                    : ESlateVisibility::Collapsed);
         bFound = true;
         bSuccess = true;
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("TObjectIterator fallback used for UserWidget '%s'"), *Key);
         break;
       }
     }
     // If not found, try generic UWidget
+    // PERFORMANCE WARNING: TObjectIterator fallback iterates ALL UWidget objects in memory.
     // Safety: Skip CDOs which have no World and would crash on GetWorld()
     if (!bFound) {
       for (TObjectIterator<UWidget> It; It; ++It) {
         if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
-        if (It->GetName() == Key && It->GetWorld()) {
+        UWorld* WidgetWorld = It->GetWorld();
+        // Only match widgets in the active play world to avoid editor/preview widgets
+        if (It->GetName() == Key && WidgetWorld && WidgetWorld == ActiveWorld) {
           It->SetVisibility(bVisible ? ESlateVisibility::Visible
                                      : ESlateVisibility::Collapsed);
           bFound = true;
           bSuccess = true;
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("TObjectIterator fallback used for UWidget '%s'"), *Key);
           break;
         }
       }

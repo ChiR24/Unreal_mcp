@@ -30,6 +30,24 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(const FString& RequestI
         FString ExtraArgs;
         Payload->TryGetStringField(TEXT("extraArgs"), ExtraArgs);
 
+        // Defense-in-depth: Sanitize ExtraArgs to prevent command injection
+        // Block shell metacharacters that could be used for command chaining
+        static const TCHAR* DangerousPatterns[] = {
+            TEXT(";"), TEXT("&&"), TEXT("||"), TEXT("|"), TEXT("`"),
+            TEXT("$("), TEXT("$`"), TEXT("\n"), TEXT("\r"),
+            TEXT(">"), TEXT("<"), TEXT(">>"), TEXT("<<")
+        };
+        for (const TCHAR* Pattern : DangerousPatterns)
+        {
+            if (ExtraArgs.Contains(Pattern))
+            {
+                SendAutomationError(RequestingSocket, RequestId, 
+                    FString::Printf(TEXT("ExtraArgs contains forbidden pattern: %s"), Pattern), 
+                    TEXT("INVALID_ARGS"));
+                return true;
+            }
+        }
+
         // Construct UBT command line
         // Path to UBT... usually in Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.exe
         FString UBTPath = FPaths::ConvertRelativePathToFull(FPaths::EngineDir() / TEXT("Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.exe"));

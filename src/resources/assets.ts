@@ -90,7 +90,7 @@ export class AssetResources extends BaseTool implements IAssetResources {
         const cachedData = entry.data as Record<string, unknown>;
         return { success: true, ...cachedData };
       }
-    } catch { }
+    } catch { /* Cache miss - continue to fetch */ }
 
     // Check if bridge is connected
     if (!this.bridge.isConnected) {
@@ -227,7 +227,7 @@ export class AssetResources extends BaseTool implements IAssetResources {
           this.cache.set(key, { timestamp: Date.now(), data: result });
           return result;
         }
-      } catch { }
+      } catch { /* Fallback failed - continue to error handling */ }
 
       // No fallback available
     } catch (err: unknown) {

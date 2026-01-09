@@ -569,7 +569,7 @@ export class ToolRegistry {
                     const wrappedObj = wrappedResult as Record<string, unknown>;
                     const sc = wrappedObj.structuredContent as Record<string, unknown> | undefined;
                     if (sc && typeof sc.success === 'boolean') wrappedSuccess = Boolean(sc.success);
-                } catch { }
+                } catch { /* Success extraction failed - use fallback */ }
 
                 const wrappedResultObj = wrappedResult as Record<string, unknown>;
                 const isErrorResponse = Boolean(wrappedResultObj?.isError === true);
@@ -598,7 +598,7 @@ export class ToolRegistry {
                 const sanitizedError = cleanObject(errorResponse) as unknown as Record<string, unknown>;
                 try {
                     sanitizedError.isError = true;
-                } catch { }
+                } catch { /* isError assignment failed - continue */ }
                 return responseValidator.wrapResponse(name, sanitizedError);
             }
         });

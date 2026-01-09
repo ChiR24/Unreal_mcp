@@ -631,12 +631,16 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       }
 
       // Add basic lighting
-      SpawnActorInActiveWorld<AActor>(ADirectionalLight::StaticClass(),
+      AActor* SunActor = SpawnActorInActiveWorld<AActor>(ADirectionalLight::StaticClass(),
                                       FVector(0, 0, 500), FRotator(-45, 0, 0),
                                       TEXT("Sun"));
-      SpawnActorInActiveWorld<AActor>(ASkyLight::StaticClass(),
+      AActor* SkyLightActor = SpawnActorInActiveWorld<AActor>(ASkyLight::StaticClass(),
                                       FVector::ZeroVector,
                                       FRotator::ZeroRotator, TEXT("SkyLight"));
+      
+      if (!SunActor || !SkyLightActor) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Failed to spawn one or more lighting actors"));
+      }
 
       // Save the level
       bool bSaved = FEditorFileUtils::SaveLevel(

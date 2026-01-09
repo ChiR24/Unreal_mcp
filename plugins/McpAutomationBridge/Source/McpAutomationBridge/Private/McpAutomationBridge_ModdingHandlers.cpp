@@ -79,6 +79,90 @@ namespace ModdingHelpers
         return Response;
     }
 
+    /**
+     * Validates a PAK file path to prevent path traversal attacks.
+     * Checks for:
+     * - Path traversal sequences (../, ..\)
+     * - Null bytes
+     * - Invalid characters for security
+     * - Path must be within allowed mod directories
+     * 
+     * @param InPath The path to validate
+     * @param OutNormalizedPath The normalized, validated path (if valid)
+     * @param OutError Error message (if invalid)
+     * @return true if path is safe, false if it should be rejected
+     */
+    static bool ValidatePakPath(const FString& InPath, FString& OutNormalizedPath, FString& OutError)
+    {
+        if (InPath.IsEmpty())
+        {
+            OutError = TEXT("Path is empty");
+            return false;
+        }
+
+        // Check for null bytes (security)
+        if (InPath.Contains(TEXT("\0")))
+        {
+            OutError = TEXT("Path contains invalid null bytes");
+            return false;
+        }
+
+        // Check for path traversal attempts
+        if (InPath.Contains(TEXT("..")))
+        {
+            OutError = TEXT("Path traversal sequences (..) are not allowed");
+            return false;
+        }
+
+        // Normalize the path
+        OutNormalizedPath = InPath;
+        FPaths::NormalizeFilename(OutNormalizedPath);
+        FPaths::CollapseRelativeDirectories(OutNormalizedPath);
+
+        // After normalization, check again for traversal (in case of encoded sequences)
+        if (OutNormalizedPath.Contains(TEXT("..")))
+        {
+            OutError = TEXT("Path contains traversal sequences after normalization");
+            return false;
+        }
+
+        // Verify the path is within allowed mod directories
+        TArray<FString> AllowedPaths;
+        // Add default mod directories
+        AllowedPaths.Add(FPaths::ProjectModsDir());
+        AllowedPaths.Add(FPaths::Combine(FPaths::ProjectUserDir(), TEXT("Mods")));
+        AllowedPaths.Add(FPaths::ProjectContentDir());
+        AllowedPaths.Add(FPaths::ProjectDir());
+        
+        bool bIsAllowed = false;
+        for (const FString& AllowedPath : AllowedPaths)
+        {
+            FString NormalizedAllowed = AllowedPath;
+            FPaths::NormalizeDirectoryName(NormalizedAllowed);
+            
+            if (OutNormalizedPath.StartsWith(NormalizedAllowed))
+            {
+                bIsAllowed = true;
+                break;
+            }
+        }
+
+        if (!bIsAllowed)
+        {
+            OutError = TEXT("Path is outside allowed mod directories");
+            return false;
+        }
+
+        // Verify file extension is .pak
+        if (!OutNormalizedPath.EndsWith(TEXT(".pak"), ESearchCase::IgnoreCase))
+        {
+            OutError = TEXT("Only .pak files are allowed");
+            return false;
+        }
+
+        return true;
+    }
+
     static TArray<FString> GetModPaths()
     {
         TArray<FString> Paths;
@@ -233,16 +317,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageModdingAction(
         Payload->TryGetStringField(TEXT("mountPoint"), MountPoint);
         Payload->TryGetNumberField(TEXT("priority"), Priority);
         
-        if (PakPath.IsEmpty())
+        // SECURITY: Validate PAK path to prevent path traversal attacks
+        FString ValidatedPath;
+        FString ValidationError;
+        if (!ValidatePakPath(PakPath, ValidatedPath, ValidationError))
         {
-            Response = MakeErrorResponse(TEXT("pakPath is required"));
+            Response = MakeErrorResponse(FString::Printf(TEXT("Invalid PAK path: %s"), *ValidationError));
         }
-        else if (!FPaths::FileExists(PakPath))
+        else if (!FPaths::FileExists(ValidatedPath))
         {
-            Response = MakeErrorResponse(FString::Printf(TEXT("PAK file not found: %s"), *PakPath));
+            Response = MakeErrorResponse(FString::Printf(TEXT("PAK file not found: %s"), *ValidatedPath));
         }
         else
         {
+            PakPath = ValidatedPath; // Use the validated/normalized path
 #if MCP_HAS_PAK_FILE
             FPakPlatformFile* PakFileMgr = static_cast<FPakPlatformFile*>(
                 FPlatformFileManager::Get().FindPlatformFile(TEXT("PakFile")));
@@ -281,16 +369,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageModdingAction(
         FString PakPath;
         Payload->TryGetStringField(TEXT("pakPath"), PakPath);
         
-        if (PakPath.IsEmpty())
+        // SECURITY: Validate PAK path to prevent path traversal attacks
+        FString ValidatedPath;
+        FString ValidationError;
+        if (!ValidatePakPath(PakPath, ValidatedPath, ValidationError))
         {
-            Response = MakeErrorResponse(TEXT("pakPath is required"));
+            Response = MakeErrorResponse(FString::Printf(TEXT("Invalid PAK path: %s"), *ValidationError));
         }
-        else if (!MountedPaks.Contains(PakPath))
+        else if (!MountedPaks.Contains(ValidatedPath))
         {
-            Response = MakeErrorResponse(FString::Printf(TEXT("PAK not mounted: %s"), *PakPath));
+            Response = MakeErrorResponse(FString::Printf(TEXT("PAK not mounted: %s"), *ValidatedPath));
         }
         else
         {
+            PakPath = ValidatedPath; // Use the validated/normalized path
 #if MCP_HAS_PAK_FILE
             FPakPlatformFile* PakFileMgr = static_cast<FPakPlatformFile*>(
                 FPlatformFileManager::Get().FindPlatformFile(TEXT("PakFile")));
@@ -328,16 +420,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageModdingAction(
         Payload->TryGetStringField(TEXT("pakPath"), PakPath);
         Payload->TryGetBoolField(TEXT("checkSignature"), bCheckSignature);
         
-        if (PakPath.IsEmpty())
+        // SECURITY: Validate PAK path to prevent path traversal attacks
+        FString ValidatedPath;
+        FString ValidationError;
+        if (!ValidatePakPath(PakPath, ValidatedPath, ValidationError))
         {
-            Response = MakeErrorResponse(TEXT("pakPath is required"));
+            Response = MakeErrorResponse(FString::Printf(TEXT("Invalid PAK path: %s"), *ValidationError));
         }
-        else if (!FPaths::FileExists(PakPath))
+        else if (!FPaths::FileExists(ValidatedPath))
         {
-            Response = MakeErrorResponse(FString::Printf(TEXT("PAK file not found: %s"), *PakPath));
+            Response = MakeErrorResponse(FString::Printf(TEXT("PAK file not found: %s"), *ValidatedPath));
         }
         else
         {
+            PakPath = ValidatedPath; // Use the validated/normalized path
             // Basic validation: check file exists and has valid size
             int64 FileSize = IFileManager::Get().FileSize(*PakPath);
             bool bValid = FileSize > 0;
@@ -711,6 +807,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageModdingAction(
             OutputPath = FPaths::Combine(FPaths::ProjectDir(), TEXT("ModSDK"), TEXT("Headers"));
         }
         
+        // SECURITY: Validate output path to prevent directory traversal attacks
+        FString NormalizedPath = FPaths::ConvertRelativePathToFull(OutputPath);
+        if (!FPaths::IsUnderDirectory(NormalizedPath, FPaths::ProjectDir()) &&
+            !FPaths::IsUnderDirectory(NormalizedPath, FPaths::ProjectSavedDir()))
+        {
+            Response = MakeErrorResponse(TEXT("Invalid output path: must be within project directory"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Invalid output path: must be within project directory"), Response);
+            return false;
+        }
+        
         // Create output directory
         IFileManager::Get().MakeDirectory(*OutputPath, true);
         
@@ -751,6 +857,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageModdingAction(
         if (OutputPath.IsEmpty())
         {
             OutputPath = FPaths::Combine(FPaths::ProjectDir(), TEXT("ModSDK"), TEXT("Templates"), TemplateName);
+        }
+        
+        // SECURITY: Validate output path to prevent directory traversal attacks
+        FString NormalizedTemplatePath = FPaths::ConvertRelativePathToFull(OutputPath);
+        if (!FPaths::IsUnderDirectory(NormalizedTemplatePath, FPaths::ProjectDir()) &&
+            !FPaths::IsUnderDirectory(NormalizedTemplatePath, FPaths::ProjectSavedDir()))
+        {
+            Response = MakeErrorResponse(TEXT("Invalid output path: must be within project directory"));
+            SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Invalid output path: must be within project directory"), Response);
+            return false;
         }
         
         // Create template structure

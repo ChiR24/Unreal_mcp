@@ -185,8 +185,7 @@ function logAutomationFailure(source: string, response: Record<string, unknown> 
       return;
     }
     log.error(`${source} automation failure:`, errorText);
-  } catch {
-  }
+  } catch { /* Logging helper - swallow to prevent cascading errors */ }
 }
 
 /**

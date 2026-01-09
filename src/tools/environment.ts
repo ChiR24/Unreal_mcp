@@ -5,6 +5,44 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { DEFAULT_SKYLIGHT_INTENSITY, DEFAULT_SUN_INTENSITY, DEFAULT_TIME_OF_DAY } from '../constants.js';
 import { IEnvironmentTools, StandardActionResponse } from '../types/tool-interfaces.js';
 
+/**
+ * Validates a filesystem path for snapshot operations.
+ * Prevents directory traversal attacks and restricts to safe directories.
+ * @param targetPath - The resolved absolute path to validate
+ * @returns Object with success status and optional error message
+ */
+function validateSnapshotPath(targetPath: string): { valid: boolean; error?: string } {
+  const normalized = path.normalize(targetPath);
+  
+  // Block directory traversal attempts
+  if (normalized.includes('..')) {
+    return { valid: false, error: 'Path traversal (..) is not allowed' };
+  }
+  
+  // Get allowed base directories
+  const allowedBases = [
+    process.cwd(),
+    process.env.UE_PROJECT_PATH,
+    path.join(process.cwd(), 'tmp'),
+    path.join(process.cwd(), 'Saved'),
+  ].filter((p): p is string => typeof p === 'string' && p.length > 0);
+  
+  // Check if path is under an allowed directory
+  const isAllowed = allowedBases.some(base => {
+    const normalizedBase = path.normalize(base);
+    return normalized === normalizedBase || normalized.startsWith(normalizedBase + path.sep);
+  });
+  
+  if (!isAllowed) {
+    return { 
+      valid: false, 
+      error: `Path must be within project directory or cwd. Got: ${normalized}` 
+    };
+  }
+  
+  return { valid: true };
+}
+
 export class EnvironmentTools implements IEnvironmentTools {
   constructor(_bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
@@ -138,6 +176,15 @@ export class EnvironmentTools implements IEnvironmentTools {
         }
       }
 
+      // SECURITY: Validate path to prevent directory traversal attacks
+      const validation = validateSnapshotPath(targetPath);
+      if (!validation.valid) {
+        return {
+          success: false,
+          error: `Invalid path: ${validation.error}`
+        } as StandardActionResponse;
+      }
+
       await fs.mkdir(path.dirname(targetPath), { recursive: true });
       const snapshot = {
         generatedAt: new Date().toISOString(),
@@ -188,6 +235,15 @@ export class EnvironmentTools implements IEnvironmentTools {
           ? path.join(dir, filename)
           : path.join(process.cwd(), dir, filename);
       }
+    }
+
+    // SECURITY: Validate path to prevent directory traversal attacks
+    const validation = validateSnapshotPath(targetPath);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: `Invalid path: ${validation.error}`
+      } as StandardActionResponse;
     }
 
     try {

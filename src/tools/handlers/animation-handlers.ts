@@ -72,7 +72,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
             // Actually, checking args, if 'meshPath' is passed, we should pass it along.
           }
         }
-      } catch (_e) { }
+      } catch (_e) { /* Args parsing failed - use defaults */ }
     }
 
     const payload = {
