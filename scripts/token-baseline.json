@@ -1,0 +1,937 @@
+{
+  "generated_at": "2026-01-09T12:15:05.272Z",
+  "summary": {
+    "tool_count": 50,
+    "total_actions": 2246,
+    "raw": {
+      "chars": 321388,
+      "chars_div_4": 80347,
+      "tokens": 70878
+    },
+    "pruned": {
+      "chars": 210448,
+      "chars_div_4": 52612,
+      "tokens": 47990
+    },
+    "reduction": {
+      "chars_pct": "34.5",
+      "tokens_pct": "32.3"
+    },
+    "targets": {
+      "must_have": {
+        "tokens": 50000,
+        "reduction_needed_pct": "-4.2"
+      },
+      "should_have": {
+        "tokens": 40000,
+        "reduction_needed_pct": "16.6"
+      },
+      "stretch": {
+        "tokens": 30000,
+        "reduction_needed_pct": "37.5"
+      }
+    }
+  },
+  "per_tool": [
+    {
+      "name": "manage_virtual_production",
+      "actionCount": 130,
+      "raw": {
+        "chars": 12555,
+        "chars_div_4": 3139,
+        "tokens": 2855
+      },
+      "pruned": {
+        "chars": 8789,
+        "chars_div_4": 2198,
+        "tokens": 2048
+      },
+      "reduction": {
+        "chars_pct": "30.0",
+        "tokens_pct": "28.3"
+      }
+    },
+    {
+      "name": "manage_widget_authoring",
+      "actionCount": 65,
+      "raw": {
+        "chars": 14052,
+        "chars_div_4": 3513,
+        "tokens": 3026
+      },
+      "pruned": {
+        "chars": 8500,
+        "chars_div_4": 2125,
+        "tokens": 1953
+      },
+      "reduction": {
+        "chars_pct": "39.5",
+        "tokens_pct": "35.5"
+      }
+    },
+    {
+      "name": "manage_physics_destruction",
+      "actionCount": 80,
+      "raw": {
+        "chars": 12420,
+        "chars_div_4": 3105,
+        "tokens": 2730
+      },
+      "pruned": {
+        "chars": 8067,
+        "chars_div_4": 2017,
+        "tokens": 1876
+      },
+      "reduction": {
+        "chars_pct": "35.0",
+        "tokens_pct": "31.3"
+      }
+    },
+    {
+      "name": "manage_utility_plugins",
+      "actionCount": 100,
+      "raw": {
+        "chars": 11640,
+        "chars_div_4": 2910,
+        "tokens": 2493
+      },
+      "pruned": {
+        "chars": 8173,
+        "chars_div_4": 2044,
+        "tokens": 1802
+      },
+      "reduction": {
+        "chars_pct": "29.8",
+        "tokens_pct": "27.7"
+      }
+    },
+    {
+      "name": "manage_xr",
+      "actionCount": 142,
+      "raw": {
+        "chars": 10699,
+        "chars_div_4": 2675,
+        "tokens": 2372
+      },
+      "pruned": {
+        "chars": 7769,
+        "chars_div_4": 1943,
+        "tokens": 1785
+      },
+      "reduction": {
+        "chars_pct": "27.4",
+        "tokens_pct": "24.7"
+      }
+    },
+    {
+      "name": "manage_asset_plugins",
+      "actionCount": 158,
+      "raw": {
+        "chars": 9988,
+        "chars_div_4": 2497,
+        "tokens": 2269
+      },
+      "pruned": {
+        "chars": 7291,
+        "chars_div_4": 1823,
+        "tokens": 1726
+      },
+      "reduction": {
+        "chars_pct": "27.0",
+        "tokens_pct": "23.9"
+      }
+    },
+    {
+      "name": "manage_post_process",
+      "actionCount": 31,
+      "raw": {
+        "chars": 11860,
+        "chars_div_4": 2965,
+        "tokens": 2744
+      },
+      "pruned": {
+        "chars": 7129,
+        "chars_div_4": 1783,
+        "tokens": 1693
+      },
+      "reduction": {
+        "chars_pct": "39.9",
+        "tokens_pct": "38.3"
+      }
+    },
+    {
+      "name": "build_environment",
+      "actionCount": 48,
+      "raw": {
+        "chars": 10902,
+        "chars_div_4": 2726,
+        "tokens": 2563
+      },
+      "pruned": {
+        "chars": 7096,
+        "chars_div_4": 1774,
+        "tokens": 1687
+      },
+      "reduction": {
+        "chars_pct": "34.9",
+        "tokens_pct": "34.2"
+      }
+    },
+    {
+      "name": "manage_gameplay_systems",
+      "actionCount": 41,
+      "raw": {
+        "chars": 12492,
+        "chars_div_4": 3123,
+        "tokens": 2710
+      },
+      "pruned": {
+        "chars": 7015,
+        "chars_div_4": 1754,
+        "tokens": 1585
+      },
+      "reduction": {
+        "chars_pct": "43.8",
+        "tokens_pct": "41.5"
+      }
+    },
+    {
+      "name": "manage_ai",
+      "actionCount": 51,
+      "raw": {
+        "chars": 9799,
+        "chars_div_4": 2450,
+        "tokens": 2143
+      },
+      "pruned": {
+        "chars": 6822,
+        "chars_div_4": 1706,
+        "tokens": 1556
+      },
+      "reduction": {
+        "chars_pct": "30.4",
+        "tokens_pct": "27.4"
+      }
+    },
+    {
+      "name": "manage_audio_middleware",
+      "actionCount": 81,
+      "raw": {
+        "chars": 8723,
+        "chars_div_4": 2181,
+        "tokens": 2088
+      },
+      "pruned": {
+        "chars": 5952,
+        "chars_div_4": 1488,
+        "tokens": 1434
+      },
+      "reduction": {
+        "chars_pct": "31.8",
+        "tokens_pct": "31.3"
+      }
+    },
+    {
+      "name": "manage_character_avatar",
+      "actionCount": 60,
+      "raw": {
+        "chars": 8670,
+        "chars_div_4": 2168,
+        "tokens": 1972
+      },
+      "pruned": {
+        "chars": 6034,
+        "chars_div_4": 1509,
+        "tokens": 1397
+      },
+      "reduction": {
+        "chars_pct": "30.4",
+        "tokens_pct": "29.2"
+      }
+    },
+    {
+      "name": "manage_sequence",
+      "actionCount": 90,
+      "raw": {
+        "chars": 7447,
+        "chars_div_4": 1862,
+        "tokens": 1683
+      },
+      "pruned": {
+        "chars": 5347,
+        "chars_div_4": 1337,
+        "tokens": 1251
+      },
+      "reduction": {
+        "chars_pct": "28.2",
+        "tokens_pct": "25.7"
+      }
+    },
+    {
+      "name": "animation_physics",
+      "actionCount": 59,
+      "raw": {
+        "chars": 7159,
+        "chars_div_4": 1790,
+        "tokens": 1610
+      },
+      "pruned": {
+        "chars": 4993,
+        "chars_div_4": 1249,
+        "tokens": 1149
+      },
+      "reduction": {
+        "chars_pct": "30.3",
+        "tokens_pct": "28.6"
+      }
+    },
+    {
+      "name": "manage_splines",
+      "actionCount": 22,
+      "raw": {
+        "chars": 7159,
+        "chars_div_4": 1790,
+        "tokens": 1601
+      },
+      "pruned": {
+        "chars": 4636,
+        "chars_div_4": 1159,
+        "tokens": 1121
+      },
+      "reduction": {
+        "chars_pct": "35.2",
+        "tokens_pct": "30.0"
+      }
+    },
+    {
+      "name": "manage_networking",
+      "actionCount": 43,
+      "raw": {
+        "chars": 7589,
+        "chars_div_4": 1898,
+        "tokens": 1615
+      },
+      "pruned": {
+        "chars": 4877,
+        "chars_div_4": 1220,
+        "tokens": 1094
+      },
+      "reduction": {
+        "chars_pct": "35.7",
+        "tokens_pct": "32.3"
+      }
+    },
+    {
+      "name": "manage_combat",
+      "actionCount": 31,
+      "raw": {
+        "chars": 7817,
+        "chars_div_4": 1955,
+        "tokens": 1674
+      },
+      "pruned": {
+        "chars": 4777,
+        "chars_div_4": 1195,
+        "tokens": 1066
+      },
+      "reduction": {
+        "chars_pct": "38.9",
+        "tokens_pct": "36.3"
+      }
+    },
+    {
+      "name": "manage_effect",
+      "actionCount": 58,
+      "raw": {
+        "chars": 5688,
+        "chars_div_4": 1422,
+        "tokens": 1261
+      },
+      "pruned": {
+        "chars": 4786,
+        "chars_div_4": 1197,
+        "tokens": 1062
+      },
+      "reduction": {
+        "chars_pct": "15.9",
+        "tokens_pct": "15.8"
+      }
+    },
+    {
+      "name": "manage_inventory",
+      "actionCount": 27,
+      "raw": {
+        "chars": 7828,
+        "chars_div_4": 1957,
+        "tokens": 1626
+      },
+      "pruned": {
+        "chars": 4774,
+        "chars_div_4": 1194,
+        "tokens": 1056
+      },
+      "reduction": {
+        "chars_pct": "39.0",
+        "tokens_pct": "35.1"
+      }
+    },
+    {
+      "name": "manage_accessibility",
+      "actionCount": 50,
+      "raw": {
+        "chars": 8060,
+        "chars_div_4": 2015,
+        "tokens": 1686
+      },
+      "pruned": {
+        "chars": 4991,
+        "chars_div_4": 1248,
+        "tokens": 1051
+      },
+      "reduction": {
+        "chars_pct": "38.1",
+        "tokens_pct": "37.7"
+      }
+    },
+    {
+      "name": "manage_gas",
+      "actionCount": 27,
+      "raw": {
+        "chars": 7642,
+        "chars_div_4": 1911,
+        "tokens": 1607
+      },
+      "pruned": {
+        "chars": 4618,
+        "chars_div_4": 1155,
+        "tokens": 1044
+      },
+      "reduction": {
+        "chars_pct": "39.6",
+        "tokens_pct": "35.0"
+      }
+    },
+    {
+      "name": "manage_ai_npc",
+      "actionCount": 30,
+      "raw": {
+        "chars": 8021,
+        "chars_div_4": 2006,
+        "tokens": 1854
+      },
+      "pruned": {
+        "chars": 4467,
+        "chars_div_4": 1117,
+        "tokens": 1040
+      },
+      "reduction": {
+        "chars_pct": "44.3",
+        "tokens_pct": "43.9"
+      }
+    },
+    {
+      "name": "manage_geometry",
+      "actionCount": 74,
+      "raw": {
+        "chars": 7000,
+        "chars_div_4": 1750,
+        "tokens": 1562
+      },
+      "pruned": {
+        "chars": 4166,
+        "chars_div_4": 1042,
+        "tokens": 987
+      },
+      "reduction": {
+        "chars_pct": "40.5",
+        "tokens_pct": "36.8"
+      }
+    },
+    {
+      "name": "manage_pcg",
+      "actionCount": 31,
+      "raw": {
+        "chars": 7126,
+        "chars_div_4": 1782,
+        "tokens": 1581
+      },
+      "pruned": {
+        "chars": 4143,
+        "chars_div_4": 1036,
+        "tokens": 977
+      },
+      "reduction": {
+        "chars_pct": "41.9",
+        "tokens_pct": "38.2"
+      }
+    },
+    {
+      "name": "manage_level",
+      "actionCount": 35,
+      "raw": {
+        "chars": 6305,
+        "chars_div_4": 1577,
+        "tokens": 1431
+      },
+      "pruned": {
+        "chars": 4259,
+        "chars_div_4": 1065,
+        "tokens": 964
+      },
+      "reduction": {
+        "chars_pct": "32.5",
+        "tokens_pct": "32.6"
+      }
+    },
+    {
+      "name": "manage_texture",
+      "actionCount": 21,
+      "raw": {
+        "chars": 7735,
+        "chars_div_4": 1934,
+        "tokens": 1740
+      },
+      "pruned": {
+        "chars": 4043,
+        "chars_div_4": 1011,
+        "tokens": 960
+      },
+      "reduction": {
+        "chars_pct": "47.7",
+        "tokens_pct": "44.8"
+      }
+    },
+    {
+      "name": "manage_interaction",
+      "actionCount": 22,
+      "raw": {
+        "chars": 7179,
+        "chars_div_4": 1795,
+        "tokens": 1489
+      },
+      "pruned": {
+        "chars": 4072,
+        "chars_div_4": 1018,
+        "tokens": 897
+      },
+      "reduction": {
+        "chars_pct": "43.3",
+        "tokens_pct": "39.8"
+      }
+    },
+    {
+      "name": "manage_livelink",
+      "actionCount": 64,
+      "raw": {
+        "chars": 5972,
+        "chars_div_4": 1493,
+        "tokens": 1229
+      },
+      "pruned": {
+        "chars": 4063,
+        "chars_div_4": 1016,
+        "tokens": 866
+      },
+      "reduction": {
+        "chars_pct": "32.0",
+        "tokens_pct": "29.5"
+      }
+    },
+    {
+      "name": "manage_character",
+      "actionCount": 19,
+      "raw": {
+        "chars": 5833,
+        "chars_div_4": 1459,
+        "tokens": 1239
+      },
+      "pruned": {
+        "chars": 3750,
+        "chars_div_4": 938,
+        "tokens": 838
+      },
+      "reduction": {
+        "chars_pct": "35.7",
+        "tokens_pct": "32.4"
+      }
+    },
+    {
+      "name": "manage_audio",
+      "actionCount": 50,
+      "raw": {
+        "chars": 4573,
+        "chars_div_4": 1144,
+        "tokens": 1053
+      },
+      "pruned": {
+        "chars": 3495,
+        "chars_div_4": 874,
+        "tokens": 802
+      },
+      "reduction": {
+        "chars_pct": "23.6",
+        "tokens_pct": "23.8"
+      }
+    },
+    {
+      "name": "manage_skeleton",
+      "actionCount": 29,
+      "raw": {
+        "chars": 5090,
+        "chars_div_4": 1273,
+        "tokens": 1163
+      },
+      "pruned": {
+        "chars": 3260,
+        "chars_div_4": 815,
+        "tokens": 757
+      },
+      "reduction": {
+        "chars_pct": "36.0",
+        "tokens_pct": "34.9"
+      }
+    },
+    {
+      "name": "manage_level_structure",
+      "actionCount": 17,
+      "raw": {
+        "chars": 5585,
+        "chars_div_4": 1397,
+        "tokens": 1202
+      },
+      "pruned": {
+        "chars": 3328,
+        "chars_div_4": 832,
+        "tokens": 743
+      },
+      "reduction": {
+        "chars_pct": "40.4",
+        "tokens_pct": "38.2"
+      }
+    },
+    {
+      "name": "manage_material_authoring",
+      "actionCount": 39,
+      "raw": {
+        "chars": 4811,
+        "chars_div_4": 1203,
+        "tokens": 1054
+      },
+      "pruned": {
+        "chars": 3136,
+        "chars_div_4": 784,
+        "tokens": 728
+      },
+      "reduction": {
+        "chars_pct": "34.8",
+        "tokens_pct": "30.9"
+      }
+    },
+    {
+      "name": "manage_editor_utilities",
+      "actionCount": 45,
+      "raw": {
+        "chars": 4716,
+        "chars_div_4": 1179,
+        "tokens": 965
+      },
+      "pruned": {
+        "chars": 3008,
+        "chars_div_4": 752,
+        "tokens": 634
+      },
+      "reduction": {
+        "chars_pct": "36.2",
+        "tokens_pct": "34.3"
+      }
+    },
+    {
+      "name": "manage_game_framework",
+      "actionCount": 20,
+      "raw": {
+        "chars": 4086,
+        "chars_div_4": 1022,
+        "tokens": 869
+      },
+      "pruned": {
+        "chars": 2703,
+        "chars_div_4": 676,
+        "tokens": 597
+      },
+      "reduction": {
+        "chars_pct": "33.8",
+        "tokens_pct": "31.3"
+      }
+    },
+    {
+      "name": "manage_asset",
+      "actionCount": 38,
+      "raw": {
+        "chars": 3576,
+        "chars_div_4": 894,
+        "tokens": 777
+      },
+      "pruned": {
+        "chars": 2562,
+        "chars_div_4": 641,
+        "tokens": 554
+      },
+      "reduction": {
+        "chars_pct": "28.4",
+        "tokens_pct": "28.7"
+      }
+    },
+    {
+      "name": "manage_lighting",
+      "actionCount": 15,
+      "raw": {
+        "chars": 2667,
+        "chars_div_4": 667,
+        "tokens": 633
+      },
+      "pruned": {
+        "chars": 2300,
+        "chars_div_4": 575,
+        "tokens": 539
+      },
+      "reduction": {
+        "chars_pct": "13.8",
+        "tokens_pct": "14.8"
+      }
+    },
+    {
+      "name": "manage_data",
+      "actionCount": 37,
+      "raw": {
+        "chars": 4115,
+        "chars_div_4": 1029,
+        "tokens": 901
+      },
+      "pruned": {
+        "chars": 2387,
+        "chars_div_4": 597,
+        "tokens": 535
+      },
+      "reduction": {
+        "chars_pct": "42.0",
+        "tokens_pct": "40.6"
+      }
+    },
+    {
+      "name": "manage_modding",
+      "actionCount": 25,
+      "raw": {
+        "chars": 3709,
+        "chars_div_4": 928,
+        "tokens": 776
+      },
+      "pruned": {
+        "chars": 2406,
+        "chars_div_4": 602,
+        "tokens": 524
+      },
+      "reduction": {
+        "chars_pct": "35.1",
+        "tokens_pct": "32.5"
+      }
+    },
+    {
+      "name": "manage_volumes",
+      "actionCount": 19,
+      "raw": {
+        "chars": 3806,
+        "chars_div_4": 952,
+        "tokens": 810
+      },
+      "pruned": {
+        "chars": 2167,
+        "chars_div_4": 542,
+        "tokens": 477
+      },
+      "reduction": {
+        "chars_pct": "43.1",
+        "tokens_pct": "41.1"
+      }
+    },
+    {
+      "name": "manage_build",
+      "actionCount": 24,
+      "raw": {
+        "chars": 3444,
+        "chars_div_4": 861,
+        "tokens": 753
+      },
+      "pruned": {
+        "chars": 2112,
+        "chars_div_4": 528,
+        "tokens": 475
+      },
+      "reduction": {
+        "chars_pct": "38.7",
+        "tokens_pct": "36.9"
+      }
+    },
+    {
+      "name": "manage_blueprint",
+      "actionCount": 36,
+      "raw": {
+        "chars": 2572,
+        "chars_div_4": 643,
+        "tokens": 567
+      },
+      "pruned": {
+        "chars": 2002,
+        "chars_div_4": 501,
+        "tokens": 446
+      },
+      "reduction": {
+        "chars_pct": "22.2",
+        "tokens_pct": "21.3"
+      }
+    },
+    {
+      "name": "manage_performance",
+      "actionCount": 20,
+      "raw": {
+        "chars": 1776,
+        "chars_div_4": 444,
+        "tokens": 388
+      },
+      "pruned": {
+        "chars": 1676,
+        "chars_div_4": 419,
+        "tokens": 368
+      },
+      "reduction": {
+        "chars_pct": "5.6",
+        "tokens_pct": "5.2"
+      }
+    },
+    {
+      "name": "manage_testing",
+      "actionCount": 24,
+      "raw": {
+        "chars": 2367,
+        "chars_div_4": 592,
+        "tokens": 503
+      },
+      "pruned": {
+        "chars": 1586,
+        "chars_div_4": 397,
+        "tokens": 348
+      },
+      "reduction": {
+        "chars_pct": "33.0",
+        "tokens_pct": "30.8"
+      }
+    },
+    {
+      "name": "control_editor",
+      "actionCount": 29,
+      "raw": {
+        "chars": 1749,
+        "chars_div_4": 438,
+        "tokens": 407
+      },
+      "pruned": {
+        "chars": 1503,
+        "chars_div_4": 376,
+        "tokens": 338
+      },
+      "reduction": {
+        "chars_pct": "14.1",
+        "tokens_pct": "17.0"
+      }
+    },
+    {
+      "name": "control_actor",
+      "actionCount": 21,
+      "raw": {
+        "chars": 2050,
+        "chars_div_4": 513,
+        "tokens": 467
+      },
+      "pruned": {
+        "chars": 1506,
+        "chars_div_4": 377,
+        "tokens": 333
+      },
+      "reduction": {
+        "chars_pct": "26.5",
+        "tokens_pct": "28.7"
+      }
+    },
+    {
+      "name": "manage_media",
+      "actionCount": 25,
+      "raw": {
+        "chars": 1988,
+        "chars_div_4": 497,
+        "tokens": 423
+      },
+      "pruned": {
+        "chars": 1232,
+        "chars_div_4": 308,
+        "tokens": 266
+      },
+      "reduction": {
+        "chars_pct": "38.0",
+        "tokens_pct": "37.1"
+      }
+    },
+    {
+      "name": "system_control",
+      "actionCount": 23,
+      "raw": {
+        "chars": 1313,
+        "chars_div_4": 329,
+        "tokens": 282
+      },
+      "pruned": {
+        "chars": 1167,
+        "chars_div_4": 292,
+        "tokens": 248
+      },
+      "reduction": {
+        "chars_pct": "11.1",
+        "tokens_pct": "12.1"
+      }
+    },
+    {
+      "name": "inspect",
+      "actionCount": 17,
+      "raw": {
+        "chars": 1399,
+        "chars_div_4": 350,
+        "tokens": 301
+      },
+      "pruned": {
+        "chars": 952,
+        "chars_div_4": 238,
+        "tokens": 199
+      },
+      "reduction": {
+        "chars_pct": "32.0",
+        "tokens_pct": "33.9"
+      }
+    },
+    {
+      "name": "manage_pipeline",
+      "actionCount": 3,
+      "raw": {
+        "chars": 636,
+        "chars_div_4": 159,
+        "tokens": 131
+      },
+      "pruned": {
+        "chars": 561,
+        "chars_div_4": 141,
+        "tokens": 114
+      },
+      "reduction": {
+        "chars_pct": "11.8",
+        "tokens_pct": "13.0"
+      }
+    }
+  ]
+}
