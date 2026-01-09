@@ -4,6 +4,7 @@ import { toVec3Object, toRotObject } from '../utils/normalize.js';
 import { DEFAULT_SCREENSHOT_RESOLUTION } from '../constants.js';
 import { EditorResponse } from '../types/automation-responses.js';
 import { wasmIntegration } from '../wasm/index.js';
+import path from 'path';
 
 export class EditorTools extends BaseTool implements IEditorTools {
   private cameraBookmarks = new Map<string, { location: [number, number, number]; rotation: [number, number, number]; savedAt: number }>();
@@ -235,7 +236,14 @@ export class EditorTools extends BaseTool implements IEditorTools {
         return { success: false, error: 'Invalid resolution format. Use WxH (e.g. 1920x1080)' };
       }
 
-      const sanitizedFilename = filename ? filename.replace(/[<>:*?"|]/g, '_') : `Screenshot_${Date.now()}`;
+      // Security: Prevent path traversal by replacing directory separators and invalid chars
+      // We use path.basename to strip any directory components, then sanitize the filename
+      // usage of new RegExp to avoid eslint no-useless-escape on forward slash in literal
+      const invalidChars = new RegExp('[<>:*?"|/\\\\]', 'g');
+      const sanitizedFilename = filename
+        ? path.basename(filename).replace(invalidChars, '_').trim()
+        : `Screenshot_${Date.now()}`;
+
       const resString = resolution || DEFAULT_SCREENSHOT_RESOLUTION;
       const command = filename ? `highresshot ${resString} filename="${sanitizedFilename}"` : 'shot';
 
