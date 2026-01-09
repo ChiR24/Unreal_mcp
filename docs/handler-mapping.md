@@ -2,13 +2,78 @@
 
 This document maps the TypeScript tool definitions to their corresponding C++ handlers in the Unreal Engine plugin.
 
-> **Note (Phase 53):** The following tools have been merged and are now deprecated:
-> - `manage_blueprint_graph` → merged into `manage_blueprint`
-> - `manage_audio_authoring` → merged into `manage_audio`
-> - `manage_niagara_authoring` → merged into `manage_effect`
-> - `manage_animation_authoring` → merged into `animation_physics`
+## Current Tool Structure (30 Consolidated Tools)
+
+As of Phase 3 Token Optimization, the MCP server exposes **30 consolidated tools** with ~26,000 tokens and 1,600+ actions.
+
+### Core Tools
+- `manage_pipeline` - Filter tools by category
+- `manage_asset` - Assets, Materials, Blueprints (includes SCS, graph nodes)
+- `control_actor` - Spawn actors, transforms, physics, components, tags
+- `control_editor` - PIE, viewport, console, screenshots, CVars, UBT, input
+- `manage_level` - Levels, streaming, World Partition, HLOD; PCG graphs
+
+### World Building
+- `manage_lighting` - Lights, GI, shadows, volumetric fog, post-processing
+- `build_environment` - Landscapes, foliage, terrain, sky/fog, water, weather
+- `manage_volumes` - Volumes (trigger, physics, audio, nav) and splines
+
+### Authoring Tools
+- `manage_material_authoring` - Materials, expressions, landscape layers, textures
+- `manage_geometry` - Procedural meshes via Geometry Script
+- `manage_skeleton` - Skeletal meshes, sockets, physics assets; media
+- `manage_audio` - Audio playback, mixes, MetaSounds + Wwise/FMOD/Bink middleware (`mw_` prefixed actions)
+- `manage_sequence` - Sequencer cinematics, keyframes, MRQ renders
+- `manage_widget_authoring` - UMG widgets, layouts, bindings, HUDs
+
+### Gameplay Systems
+- `animation_physics` - Animation BPs, IK, retargeting + Chaos destruction/vehicles
+- `manage_effect` - Niagara/Cascade particles, debug shapes, VFX authoring
+- `manage_character` - Characters, movement, locomotion + Inventory (`inv_` prefixed actions)
+- `manage_combat` - Weapons, projectiles, damage, melee; GAS abilities
+- `manage_ai` - AI Controllers, BT, EQS, perception, State Trees, NPCs
+- `manage_networking` - Replication, RPCs, prediction, sessions; GameModes
+- `manage_gameplay_systems` - Targeting, checkpoints, objectives, photo mode, dialogue
+
+### Utility & Plugins
+- `manage_data` - Data assets, tables, save games, tags; modding/PAK/UGC
+- `manage_build` - UBT, cook/package, plugins, DDC; tests, validation
+- `manage_editor_utilities` - Editor modes, content browser, selection, subsystems
+- `manage_performance` - Profiling, benchmarks, scalability, LOD, Nanite
+- `manage_character_avatar` - MetaHuman, Groom/Hair, Mutable, Ready Player Me
+- `manage_asset_plugins` - Import plugins (USD, Alembic, glTF, Datasmith, Houdini)
+- `manage_livelink` - Live Link motion capture: sources, subjects, face tracking
+- `manage_xr` - XR (VR/AR/MR) + Virtual Production (nDisplay, DMX)
+- `manage_accessibility` - Accessibility: colorblind, subtitles, audio, motor, cognitive
+
+---
+
+## Deprecation Notes
+
+> **Tool Merges (Backward Compatible):**
+> The following deprecated tool names still work but log once-per-session warnings:
 >
-> The deprecated tools still work for backward compatibility but log deprecation warnings.
+> | Deprecated Tool | Merged Into | Notes |
+> |-----------------|-------------|-------|
+> | `manage_blueprint_graph` | `manage_blueprint` | Graph actions in manage_asset |
+> | `manage_audio_authoring` | `manage_audio` | All audio authoring actions |
+> | `manage_niagara_authoring` | `manage_effect` | VFX authoring actions |
+> | `manage_animation_authoring` | `animation_physics` | Animation authoring actions |
+> | `manage_sequencer` | `manage_sequence` | All sequencer actions |
+> | `manage_movie_render` | `manage_sequence` | MRQ actions with `mrq_` prefix |
+> | `manage_level_structure` | `manage_level` | Level structure actions |
+> | `manage_water` | `build_environment` | Water actions with `water_` prefix |
+> | `manage_weather` | `build_environment` | Weather actions with `weather_` prefix |
+> | `manage_input` | `control_editor` | Input actions |
+> | `manage_sessions` | `manage_networking` | Session actions with `session_` prefix |
+> | `manage_navigation` | `manage_ai` | NavMesh actions with `nav_` prefix |
+> | `manage_behavior_tree` | `manage_ai` | BT actions (no prefix, already in AI) |
+> | `manage_inventory` | `manage_character` | Inventory actions with `inv_` prefix |
+> | `manage_audio_middleware` | `manage_audio` | Middleware actions with `mw_` prefix |
+
+---
+
+## Handler Mappings by Tool
 
 ## 1. Asset Manager (`manage_asset`)
 

@@ -5,7 +5,7 @@
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.7-orange)](https://www.unrealengine.com/)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Published-green)](https://registry.modelcontextprotocol.io/)
-[![Tools](https://img.shields.io/badge/Tools-53-purple)](docs/handler-mapping.md)
+[![Tools](https://img.shields.io/badge/Tools-30-purple)](docs/handler-mapping.md)
 [![Project Board](https://img.shields.io/badge/Project-Roadmap-blueviolet?logo=github)](https://github.com/users/ChiR24/projects/3)
 [![Discussions](https://img.shields.io/badge/Discussions-Join-brightgreen?logo=github)](https://github.com/ChiR24/Unreal_mcp/discussions)
 
@@ -192,139 +192,57 @@ ASSET_LIST_TTL_MS=10000
 
 ## Available Tools
 
-**53 Tools** organized by category:
+**30 Consolidated Tools** with 1,600+ actions, organized by category:
 
 ### Core Tools
 | Tool | Description |
 |------|-------------|
-| `manage_pipeline` | Filter visible tools by category, enable/disable tool groups |
-| `manage_asset` | Assets, Materials, Render Targets, Material graph editing |
-| `control_actor` | Spawn, delete, transform, physics, tags, components |
-| `control_editor` | PIE, Camera, viewport, screenshots, bookmarks |
-| `manage_level` | Load/save + level structure (sublevels, World Partition, HLOD, data layers) |
-| `inspect` | Object introspection, property access, snapshots |
-| `system_control` | UBT, Tests, Logs, Project Settings, CVars |
+| `manage_pipeline` | Filter tools by category (core, world, authoring, gameplay, utility) |
+| `manage_asset` | Assets, Materials, Blueprints (SCS, graph nodes) |
+| `control_actor` | Spawn actors, transforms, physics, components, tags |
+| `control_editor` | PIE, viewport, console, screenshots, CVars, UBT, input |
+| `manage_level` | Levels, streaming, World Partition, HLOD; PCG graphs |
 
 ### World Building
 | Tool | Description |
 |------|-------------|
-| `manage_lighting` | Spawn lights, GI, shadows, build lighting |
-| `build_environment` | Landscape, foliage, procedural generation; water + weather |
-| `manage_volumes` | Trigger, blocking, physics, audio, navigation volumes |
-| `manage_navigation` | NavMesh settings, nav modifiers, nav links, pathfinding |
-| `manage_splines` | Spline creation, spline meshes, road/river templates |
-| `manage_pcg` | PCG graphs, samplers, filters, spawners |
-| `manage_post_process` | Post-process volumes, bloom, DOF, color grading, reflections, ray tracing |
+| `manage_lighting` | Lights, GI, shadows, volumetric fog, post-processing |
+| `build_environment` | Landscapes, foliage, terrain, sky/fog, water, weather |
+| `manage_volumes` | Volumes (trigger, physics, audio, nav) and splines |
 
 ### Authoring Tools
 | Tool | Description |
 |------|-------------|
-| `manage_blueprint` | Create, SCS components, Graph editing, Node manipulation |
-| `manage_material_authoring` | Material creation, expressions, landscape layers |
-| `manage_texture` | Texture creation, modification, compression |
-| `manage_geometry` | Procedural mesh creation (Geometry Script) |
-| `manage_skeleton` | Skeleton, sockets, physics assets, cloth binding |
-| `manage_audio` | Sound Cues, MetaSounds, Attenuation, ambient audio |
-| `manage_sequence` | Sequencer / cinematics + Movie Render Queue (MRQ) |
-| `manage_behavior_tree` | Behavior Tree graph editing |
-| `manage_widget_authoring` | UMG widget creation, layout, styling, animations |
+| `manage_material_authoring` | Materials, expressions, landscape layers, textures |
+| `manage_geometry` | Procedural meshes via Geometry Script |
+| `manage_skeleton` | Skeletal meshes, sockets, physics assets; media |
+| `manage_audio` | Audio playback, mixes, MetaSounds + Wwise/FMOD/Bink |
+| `manage_sequence` | Sequencer cinematics, keyframes, MRQ renders |
+| `manage_widget_authoring` | UMG widgets, layouts, bindings, HUDs |
 
 ### Gameplay Systems
 | Tool | Description |
 |------|-------------|
-| `animation_physics` | Animation BPs, Vehicles, Ragdolls, Control Rig, IK, Blend Spaces |
-| `manage_effect` | Niagara particles, GPU sim, debug shapes |
-| `manage_input` | Enhanced Input Actions & Contexts |
-| `manage_gas` | Gameplay Ability System: abilities, effects, attributes |
-| `manage_character` | Character creation, movement, advanced locomotion |
-| `manage_combat` | Weapons, projectiles, damage, melee combat |
-| `manage_ai` | AI controllers, EQS, perception, State Trees, Smart Objects |
-| `manage_inventory` | Items, equipment, loot tables, crafting |
-| `manage_interaction` | Interactables, destructibles, triggers |
+| `animation_physics` | Animation BPs, IK, retargeting + Chaos destruction/vehicles |
+| `manage_effect` | Niagara/Cascade particles, debug shapes, VFX authoring |
+| `manage_character` | Characters, movement, locomotion + Inventory (items, equipment) |
+| `manage_combat` | Weapons, projectiles, damage, melee; GAS abilities |
+| `manage_ai` | AI Controllers, BT, EQS, perception, State Trees, NPCs |
+| `manage_networking` | Replication, RPCs, prediction, sessions; GameModes |
+| `manage_gameplay_systems` | Targeting, checkpoints, objectives, photo mode, dialogue |
 
-### Utility Tools
+### Utility & Plugins
 | Tool | Description |
 |------|-------------|
-| `manage_performance` | Profiling, optimization, scalability |
-| `manage_networking` | Replication, RPCs, network prediction |
-| `manage_game_framework` | Game modes, game states, player controllers, match flow |
-| `manage_sessions` | Sessions, split-screen, LAN, voice chat |
-
-### Data & Persistence
-| Tool | Description |
-|------|-------------|
-| `manage_data` | Data assets, DataTables, CurveTables, SaveGame, Gameplay Tags, Config |
-
-### Build & Deployment
-| Tool | Description |
-|------|-------------|
-| `manage_build` | Build pipeline, platform config, asset validation, PAK/chunking, plugins, DDC |
-
-### Testing & Quality
-| Tool | Description |
-|------|-------------|
-| `manage_testing` | Automation tests, functional tests, profiling (trace, visual logger, stats), asset validation |
-
-### Editor Utilities
-| Tool | Description |
-|------|-------------|
-| `manage_editor_utilities` | Editor modes, content browser, selection, collision, physical materials, subsystems, timers, delegates, transactions |
-
-### Gameplay Systems
-| Tool | Description |
-|------|-------------|
-| `manage_gameplay_systems` | Targeting, checkpoints, objectives, world markers, photo mode, quest/dialogue, instancing (ISM/HISM), HLOD, localization, scalability |
-
-### Character & Avatar
-| Tool | Description |
-|------|-------------|
-| `manage_character_avatar` | MetaHuman, Groom/Hair (HairStrands), Mutable/Customizable objects, Ready Player Me avatar integration |
-
-### Asset & Content Plugins
-| Tool | Description |
-|------|-------------|
-| `manage_asset_plugins` | Interchange Framework, USD, Alembic, glTF, Datasmith, SpeedTree, Quixel/Fab, Houdini Engine, Substance (~158 actions) |
-
-### Audio Middleware Plugins
-| Tool | Description |
-|------|-------------|
-| `manage_audio_middleware` | Wwise (Audiokinetic), FMOD (Firelight), Bink Video (built-in) - 81 actions for audio middleware integration |
-
-### Motion Capture & Live Link
-| Tool | Description |
-|------|-------------|
-| `manage_livelink` | Live Link motion capture - sources, subjects, presets, face tracking, skeleton mapping - 64 actions |
-
-### Virtual Production & XR
-| Tool | Description |
-|------|-------------|
-| `manage_virtual_production` | nDisplay, Composure, LED walls, ICVFX camera, stage settings - 37 actions |
-| `manage_xr` | OpenXR, Meta Quest, SteamVR, ARKit, ARCore, Varjo, HoloLens - 142 actions |
-
-### AI & NPC Plugins
-| Tool | Description |
-|------|-------------|
-| `manage_ai_npc` | Convai, Inworld AI, NVIDIA ACE/Audio2Face - 30 actions for conversational AI NPCs |
-
-### Utility Plugins
-| Tool | Description |
-|------|-------------|
-| `manage_utility_plugins` | Python Scripting, Editor Scripting, Modeling Tools, Common UI, Paper2D, Procedural Mesh, Variant Manager - 100 actions |
-
-### Physics & Destruction
-| Tool | Description |
-|------|-------------|
-| `manage_physics_destruction` | Chaos Destruction (Geometry Collections, Field Systems), Chaos Vehicles, Chaos Cloth, Chaos Flesh - 80 actions |
-
-### Accessibility
-| Tool | Description |
-|------|-------------|
-| `manage_accessibility` | Visual (colorblind, high contrast, UI scale), Subtitles, Audio (mono, visualization), Motor (auto-aim, one-handed), Cognitive (difficulty, navigation) - 50 actions |
-
-### Modding & UGC
-| Tool | Description |
-|------|-------------|
-| `manage_modding` | PAK loading, mod discovery, asset overrides, SDK generation, security sandbox - 25 actions |
+| `manage_data` | Data assets, tables, save games, tags; modding/PAK/UGC |
+| `manage_build` | UBT, cook/package, plugins, DDC; tests, validation |
+| `manage_editor_utilities` | Editor modes, content browser, selection, subsystems |
+| `manage_performance` | Profiling, benchmarks, scalability, LOD, Nanite |
+| `manage_character_avatar` | MetaHuman, Groom/Hair, Mutable, Ready Player Me |
+| `manage_asset_plugins` | Import plugins (USD, Alembic, glTF, Datasmith, Houdini) |
+| `manage_livelink` | Live Link motion capture: sources, subjects, face tracking |
+| `manage_xr` | XR (VR/AR/MR) + Virtual Production (nDisplay, DMX) |
+| `manage_accessibility` | Accessibility: colorblind, subtitles, audio, motor, cognitive |
 
 ### Supported Asset Types
 

@@ -1,26 +1,49 @@
 # src/tools
 
-MCP tool implementations: 39 consolidated tools with action-based dispatch.
+30 consolidated MCP tools with action-based dispatch to native C++ handlers.
+Token-optimized: ~26k tokens for all 1,600+ actions visible to LLM.
 
 ## OVERVIEW
-Consolidated tool architecture using action-based dispatch to native C++ handlers.
+Consolidated tool architecture. Each tool groups related actions (e.g., `manage_asset` handles create, delete, duplicate). TS validates schema, dispatches to C++.
+
+## STRUCTURE
+```
+src/tools/
+├── consolidated-tool-definitions.ts  # All 30 tool schemas + action enums
+├── consolidated-tool-handlers.ts     # Registry dispatch + routing
+├── handlers/                          # Domain-specific implementations (61 files)
+├── tool-definition-utils.ts          # Schema helpers
+├── property-dictionary.ts            # UE property mappings
+└── *.ts                               # Legacy single-tool files (being consolidated)
+```
 
 ## WHERE TO LOOK
 | Task | File | Notes |
 |------|------|-------|
-| Add new tool | `consolidated-tool-definitions.ts` | Add JSON schema with action enum |
-| Add TS handler | `consolidated-tool-handlers.ts` | Register in `registerDefaultHandlers()` |
-| Implement logic | `handlers/*.ts` | Implement action and call `executeAutomationRequest()` |
-| Common utils | `handlers/common-handlers.ts` | `requireAction()`, `executeAutomationRequest()` |
+| Add tool schema | `consolidated-tool-definitions.ts` | Define inputSchema + action enum |
+| Register handler | `consolidated-tool-handlers.ts` | `toolRegistry.register()` in `registerDefaultHandlers()` |
+| Implement action | `handlers/*-handlers.ts` | Call `executeAutomationRequest()` |
+| Common utilities | `handlers/common-handlers.ts` | `requireAction()`, `executeAutomationRequest()` |
 
 ## CONVENTIONS
-- **Consolidated Pattern**: Tools are grouped by domain (e.g., `manage_asset`); switch on `args.action`.
-- **Registry Dispatch**: Always use `toolRegistry.register()` in `consolidated-tool-handlers.ts`.
-- **C++ Requirement**: Every TS action **must** have a corresponding C++ handler in the plugin.
-- **Error Context**: Add tool/action names to all error messages.
+- **Consolidated Pattern**: Group by domain, switch on `args.action`
+- **Registry First**: Always use `toolRegistry.register()`, never call handlers directly
+- **C++ Parity**: Every TS action MUST have corresponding C++ handler
+- **Error Context**: Include tool/action names in all error messages
+- **Path Sanitization**: Call `sanitizePathSafe()` before bridge calls
 
 ## ANTI-PATTERNS
-- **Bypassing Registry**: Do not call domain handler functions directly.
-- **Manual WS Calls**: Use `executeAutomationRequest()` instead of raw WebSocket calls.
-- **Stubbed Actions**: No placeholders allowed; 100% TS + C++ coverage required.
-- **Normalization**: Ensure paths are sanitized before sending to bridge.
+- **Bypassing Registry**: Never call domain handlers directly from outside
+- **Manual WS Calls**: Use `executeAutomationRequest()` exclusively
+- **Stubbed Actions**: No placeholders. 100% implementation required
+- **Missing Validation**: Always validate required params before dispatch
+
+## TOKEN OPTIMIZATION (Phase 54)
+Schema pruning removes:
+- Root `type: 'object'` (implied for tool inputs)
+- Primitive types (`string`, `number`, `boolean`) - LLM infers from param names
+- Array `items` details - simplified to `{ type: 'array' }`
+- Vector/color objects (x,y,z / r,g,b) - simplified to `{ type: 'object' }`
+- Descriptions on non-action properties
+
+Deprecated tools route to merged targets with once-per-session warnings.

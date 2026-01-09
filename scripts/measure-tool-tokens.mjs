@@ -114,7 +114,14 @@ function pruneSchemaForToolList(schema, parentKey) {
         if (k === 'description' && !shouldKeepDescription(parentKey)) continue;
         out[k] = pruneSchemaForToolList(v, k);
     }
-    return simplifySchemaObject(out, parentKey);
+    const simplified = simplifySchemaObject(out, parentKey);
+    
+    // ULTRA-AGGRESSIVE: Remove root type:object (implied for tool inputSchema)
+    if (parentKey === undefined && simplified.type === 'object') {
+        delete simplified.type;
+    }
+    
+    return simplified;
 }
 
 // ============================================================================

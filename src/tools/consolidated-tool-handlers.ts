@@ -83,6 +83,10 @@ interface DeprecationFlags {
   __levelStructureDeprecationLogged?: boolean;
   __waterDeprecationLogged?: boolean;
   __weatherDeprecationLogged?: boolean;
+  __inputDeprecationLogged?: boolean;
+  __sessionsDeprecationLogged?: boolean;
+  __navigationDeprecationLogged?: boolean;
+  __behaviorTreeDeprecationLogged?: boolean;
 }
 
 const MATERIAL_GRAPH_ACTION_MAP: Record<string, string> = {
@@ -229,12 +233,19 @@ function registerDefaultHandlers() {
     return await handleActorTools(getAction(args), args, tools);
   });
 
-  // 4. EDITOR CONTROL
+  // 4. EDITOR CONTROL (includes Enhanced Input - merged from manage_input Phase 54)
+  const INPUT_ACTIONS = new Set([
+    'create_input_action', 'create_input_mapping_context', 'add_mapping', 'remove_mapping'
+  ]);
   toolRegistry.register('control_editor', async (args, tools) => {
     const action = getAction(args);
     if (action === 'simulate_input') {
       const payload = { ...args, subAction: action };
       return cleanObject(await executeAutomationRequest(tools, 'manage_ui', payload, 'Automation bridge not available'));
+    }
+    // Route Enhanced Input actions (merged from manage_input - Phase 54)
+    if (INPUT_ACTIONS.has(action)) {
+      return await handleInputTools(action, args, tools);
     }
     return await handleEditorTools(action, args, tools);
   });
@@ -417,8 +428,28 @@ function registerDefaultHandlers() {
     return await handleAudioTools(action, args, tools);
   });
 
-  // 13. BEHAVIOR TREE
-  toolRegistry.register('manage_behavior_tree', async (args, tools) => await handleGraphTools('manage_behavior_tree', getAction(args), args, tools));
+  // 13. BEHAVIOR TREE - DEPRECATED: merged into manage_ai (Phase 54)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_behavior_tree', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__behaviorTreeDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_behavior_tree is deprecated and merged into manage_ai. Use manage_ai instead.');
+      globalObj.__behaviorTreeDeprecationLogged = true;
+    }
+    const action = getAction(args);
+    // Remap old actions to new prefixed actions
+    const actionMap: Record<string, string> = {
+      'create': 'create_behavior_tree',
+      'add_node': 'bt_add_node',
+      'connect_nodes': 'bt_connect_nodes',
+      'remove_node': 'bt_remove_node',
+      'break_connections': 'bt_break_connections',
+      'set_node_properties': 'bt_set_node_properties'
+    };
+    const newAction = actionMap[action] || action;
+    return await handleAITools(newAction, { ...args, action: newAction }, tools);
+  });
 
   // 14. [REMOVED] manage_blueprint_graph - now merged into manage_blueprint (Phase 53)
   // See registration after manage_blueprint for backward compatibility alias
@@ -441,8 +472,17 @@ function registerDefaultHandlers() {
   // 18. PERFORMANCE
   toolRegistry.register('manage_performance', async (args, tools) => await handlePerformanceTools(getAction(args), args, tools));
 
-  // 19. INPUT
-  toolRegistry.register('manage_input', async (args, tools) => await handleInputTools(getAction(args), args, tools));
+  // 19. INPUT - DEPRECATED: merged into control_editor (Phase 54)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_input', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__inputDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_input is deprecated and merged into control_editor. Use control_editor instead.');
+      globalObj.__inputDeprecationLogged = true;
+    }
+    return await handleInputTools(getAction(args), args, tools);
+  });
 
   // 20. GEOMETRY SCRIPT (Phase 6)
   toolRegistry.register('manage_geometry', async (args, tools) => await handleGeometryTools(getAction(args), args, tools));
@@ -501,8 +541,21 @@ function registerDefaultHandlers() {
   // 29. COMBAT & WEAPONS SYSTEM (Phase 15)
   toolRegistry.register('manage_combat', async (args, tools) => await handleCombatTools(getAction(args), args, tools));
 
-  // 30. AI SYSTEM (Phase 16)
-  toolRegistry.register('manage_ai', async (args, tools) => await handleAITools(getAction(args), args, tools));
+  // 30. AI SYSTEM (Phase 16) - includes Navigation (merged from manage_navigation Phase 54)
+  const NAVIGATION_ACTIONS = new Set([
+    'configure_nav_mesh_settings', 'set_nav_agent_properties', 'rebuild_navigation',
+    'create_nav_modifier_component', 'set_nav_area_class', 'configure_nav_area_cost',
+    'create_nav_link_proxy', 'configure_nav_link', 'set_nav_link_type',
+    'create_smart_link', 'configure_smart_link_behavior', 'get_navigation_info'
+  ]);
+  toolRegistry.register('manage_ai', async (args, tools) => {
+    const action = getAction(args);
+    // Route Navigation actions (merged from manage_navigation - Phase 54)
+    if (NAVIGATION_ACTIONS.has(action)) {
+      return await handleNavigationTools(action, args, tools);
+    }
+    return await handleAITools(action, args, tools);
+  });
 
   // 31. INVENTORY & ITEMS SYSTEM (Phase 17)
   toolRegistry.register('manage_inventory', async (args, tools) => await handleInventoryTools(getAction(args), args, tools));
@@ -513,14 +566,38 @@ function registerDefaultHandlers() {
   // 33. WIDGET AUTHORING SYSTEM (Phase 19)
   toolRegistry.register('manage_widget_authoring', async (args, tools) => await handleWidgetAuthoringTools(getAction(args), args, tools));
 
-  // 34. NETWORKING & MULTIPLAYER (Phase 20)
-  toolRegistry.register('manage_networking', async (args, tools) => await handleNetworkingTools(getAction(args), args, tools));
+  // 34. NETWORKING & MULTIPLAYER (Phase 20) - includes Sessions (merged from manage_sessions Phase 54)
+  const SESSIONS_ACTIONS = new Set([
+    'configure_local_session_settings', 'configure_session_interface',
+    'configure_split_screen', 'set_split_screen_type', 'add_local_player', 'remove_local_player',
+    'configure_lan_play', 'host_lan_server', 'join_lan_server',
+    'enable_voice_chat', 'configure_voice_settings', 'set_voice_channel',
+    'mute_player', 'set_voice_attenuation', 'configure_push_to_talk',
+    'get_sessions_info'
+  ]);
+  toolRegistry.register('manage_networking', async (args, tools) => {
+    const action = getAction(args);
+    // Route Sessions actions (merged from manage_sessions - Phase 54)
+    if (SESSIONS_ACTIONS.has(action)) {
+      return await handleSessionsTools(action, args, tools);
+    }
+    return await handleNetworkingTools(action, args, tools);
+  });
 
   // 35. GAME FRAMEWORK (Phase 21)
   toolRegistry.register('manage_game_framework', async (args, tools) => await handleGameFrameworkTools(getAction(args), args, tools));
 
-  // 36. SESSIONS & LOCAL MULTIPLAYER (Phase 22)
-  toolRegistry.register('manage_sessions', async (args, tools) => await handleSessionsTools(getAction(args), args, tools));
+  // 36. SESSIONS - DEPRECATED: merged into manage_networking (Phase 54)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_sessions', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__sessionsDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_sessions is deprecated and merged into manage_networking. Use manage_networking instead.');
+      globalObj.__sessionsDeprecationLogged = true;
+    }
+    return await handleSessionsTools(getAction(args), args, tools);
+  });
 
   // 37. [DEPRECATED] LEVEL STRUCTURE - now merged into manage_level (Phase 54)
   // Backward compatibility alias - logs deprecation warning once per session
@@ -537,8 +614,17 @@ function registerDefaultHandlers() {
   // 38. VOLUMES & ZONES (Phase 24)
   toolRegistry.register('manage_volumes', async (args, tools) => await handleVolumeTools(getAction(args), args, tools));
 
-  // 39. NAVIGATION SYSTEM (Phase 25)
-  toolRegistry.register('manage_navigation', async (args, tools) => await handleNavigationTools(getAction(args), args, tools));
+  // 39. NAVIGATION SYSTEM - DEPRECATED: merged into manage_ai (Phase 54)
+  // Backward compatibility alias - logs deprecation warning once per session
+  toolRegistry.register('manage_navigation', async (args, tools) => {
+    const globalObj = globalThis as unknown as DeprecationFlags;
+    if (!globalObj.__navigationDeprecationLogged) {
+      const deprecationLogger = new Logger('DeprecationWarning');
+      deprecationLogger.warn('manage_navigation is deprecated and merged into manage_ai. Use manage_ai instead.');
+      globalObj.__navigationDeprecationLogged = true;
+    }
+    return await handleNavigationTools(getAction(args), args, tools);
+  });
 
   // 40. SPLINE SYSTEM (Phase 26)
   toolRegistry.register('manage_splines', async (args, tools) => await handleSplineTools(getAction(args), args, tools));

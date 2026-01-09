@@ -54,24 +54,96 @@ const TOOLLIST_SCHEMA_DROP_KEYS = new Set([
     // draft-specific or noisy
     'deprecated',
     'readOnly',
-    'writeOnly'
-]);
-
-const TOOLLIST_DESCRIPTION_KEEP_KEYS = new Set([
-    // path format guidance
-    'assetPath', 'assetPaths',
-    'blueprintPath', 'meshPath', 'materialPath', 'texturePath', 'soundPath', 'animationPath',
-    'levelPath', 'sequencePath', 'directoryPath', 'directory', 'path', 'packagePath', 'exportPath', 'sourcePath', 'destinationPath', 'outputPath', 'savePath',
-    // unit-sensitive
-    'duration', 'timeoutMs', 'fadeTime', 'startTime', 'endTime', 'blendTime',
-    // safety knobs
-    'overwrite', 'delete', 'delete_assets', 'delete_asset', 'confirm', 'force'
+    'writeOnly',
+    // validation constraints (LLM doesn't need these for tool selection)
+    'minimum',
+    'maximum',
+    'minLength',
+    'maxLength',
+    'pattern',
+    'format',
+    'minItems',
+    'maxItems',
+    'uniqueItems',
+    'exclusiveMinimum',
+    'exclusiveMaximum',
+    'multipleOf',
+    // JSON Schema meta
+    '$schema',
+    '$id',
+    '$ref',
+    '$defs',
+    'definitions',
+    'additionalProperties',
+    'additionalItems',
+    'propertyNames',
+    // AGGRESSIVE: Remove outputSchema entirely - LLM only needs input
+    'outputSchema',
+    // ULTRA-AGGRESSIVE: Remove items spec from arrays, category (internal)
+    'category'
 ]);
 
 function shouldKeepDescription(parentKey: string | undefined): boolean {
     if (!parentKey) return false;
+    // ONLY keep action descriptions - critical for LLM to understand what actions do
     if (parentKey === 'action') return true;
-    return TOOLLIST_DESCRIPTION_KEEP_KEYS.has(parentKey);
+    return false;
+}
+
+// ULTRA-AGGRESSIVE: Simplify schema objects for minimal token usage
+// NOTE: MAX_ACTIONS_PER_TOOL truncation REMOVED - all actions must be visible to LLM
+
+function simplifySchemaObject(schema: Record<string, unknown>, _parentKey?: string): Record<string, unknown> {
+    const result = { ...schema };
+    
+    // Remove 'type: string' when enum is present (redundant)
+    if (result['enum'] && result['type'] === 'string') {
+        delete result['type'];
+    }
+    
+    // ULTRA-AGGRESSIVE: Remove primitive types - LLM can infer from param names
+    // Only keep type for arrays and objects, remove for string/number/boolean/integer
+    const primitiveTypes = ['string', 'number', 'boolean', 'integer'];
+    if (primitiveTypes.includes(result['type'] as string) && !result['enum']) {
+        delete result['type'];
+    }
+    
+    // Simplify arrays - just { type: 'array' } without items detail
+    if (result['type'] === 'array') {
+        delete result['items'];
+        return { type: 'array' };
+    }
+    
+    // Simplify location/rotation/scale/color objects - just { type: 'object' }
+    if (result['type'] === 'object' && result['properties']) {
+        const props = result['properties'] as Record<string, unknown>;
+        const propKeys = Object.keys(props);
+        // Common vector/color patterns - simplify to just type: object
+        if ((propKeys.length === 3 && 
+            (propKeys.every(k => ['x', 'y', 'z'].includes(k)) ||
+             propKeys.every(k => ['r', 'g', 'b'].includes(k)) ||
+             propKeys.every(k => ['pitch', 'yaw', 'roll'].includes(k)))) ||
+            (propKeys.length === 4 && propKeys.every(k => ['r', 'g', 'b', 'a'].includes(k))) ||
+            (propKeys.length === 2 && propKeys.every(k => ['x', 'y'].includes(k))) ||
+            (propKeys.length === 6 && propKeys.every(k => ['x', 'y', 'z', 'pitch', 'yaw', 'roll'].includes(k)))) {
+            return { type: 'object' };
+        }
+    }
+    
+    // Remove 'required' array if empty or only has 'action' (obvious requirement)
+    if (result['required']) {
+        const req = result['required'] as string[];
+        if (req.length === 0 || (req.length === 1 && req[0] === 'action')) {
+            delete result['required'];
+        }
+    }
+    
+    // Remove empty objects
+    if (Object.keys(result).length === 0) {
+        return {};
+    }
+    
+    return result;
 }
 
 function pruneSchemaForToolList(schema: unknown, parentKey?: string): unknown {
@@ -93,7 +165,15 @@ function pruneSchemaForToolList(schema: unknown, parentKey?: string): unknown {
         out[k] = pruneSchemaForToolList(v, k);
     }
 
-    return out;
+    // Apply simplification after pruning, passing parentKey for action truncation
+    const simplified = simplifySchemaObject(out, parentKey);
+    
+    // ULTRA-AGGRESSIVE: Remove root type:object (implied for tool inputSchema)
+    if (parentKey === undefined && (simplified as Record<string, unknown>)['type'] === 'object') {
+        delete (simplified as Record<string, unknown>)['type'];
+    }
+    
+    return simplified;
 }
 
 function safeJsonByteLength(value: unknown): number {
