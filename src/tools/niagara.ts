@@ -3,6 +3,7 @@ import { AutomationBridge } from '../automation/index.js';
 import { sanitizeAssetName, validateAssetParams } from '../utils/validation.js';
 import { wasmIntegration } from '../wasm/index.js';
 import { Logger } from '../utils/logger.js';
+import { requireBridge } from './base-tool.js';
 
 const log = new Logger('NiagaraTools');
 
@@ -24,9 +25,7 @@ export class NiagaraTools {
     emitters?: unknown[];  // Array of emitter configs
   }) {
     try {
-      if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
-        throw new Error('Automation Bridge not available. Niagara system creation requires plugin support.');
-      }
+      const bridge = requireBridge(this.automationBridge, 'Niagara system creation');
 
       // Process emitter params with WASM
       if (Array.isArray(params.emitters)) {
@@ -44,7 +43,7 @@ export class NiagaraTools {
 
       const systemName = params.name ?? 'NiagaraSystem';
       const path = params.savePath || '/Game/Effects/Niagara';
-      const response = await this.automationBridge.sendAutomationRequest(
+      const response = await bridge.sendAutomationRequest(
         'create_niagara_system',
         { name: systemName, savePath: path, template: params.template },
         { timeoutMs: 60000 }
@@ -461,30 +460,24 @@ export class NiagaraTools {
   }) {
     try {
       const loc = Array.isArray(params.location) ? { x: params.location[0], y: params.location[1], z: params.location[2] } : params.location;
-      // Prefer plugin transport when available
-      if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
-        try {
-          const resp = await this.automationBridge.sendAutomationRequest('spawn_niagara', {
-            systemPath: params.systemPath,
-            location: [loc.x ?? 0, loc.y ?? 0, loc.z ?? 0],
-            rotation: params.rotation,
-            scale: params.scale,
-            autoDestroy: params.autoDestroy,
-            attachToActor: params.attachToActor
-          }) as Record<string, unknown>;
-          if (resp && resp.success !== false) {
-            const result = (resp.result ?? {}) as Record<string, unknown>;
-            return { success: true, message: (resp.message || 'Niagara effect spawned') as string, actor: (resp.actor || result.actor || result.actorName) as string | undefined };
-          }
-          return { success: false, message: (resp?.message ?? 'Spawn failed') as string, error: (resp?.error ?? 'SPAWN_FAILED') as string };
-        } catch (error: unknown) {
-          return { success: false, error: `Failed to spawn effect: ${error instanceof Error ? error.message : String(error)}` };
-        }
+      const bridge = requireBridge(this.automationBridge, 'Niagara effect spawning');
+      
+      const resp = await bridge.sendAutomationRequest('spawn_niagara', {
+        systemPath: params.systemPath,
+        location: [loc.x ?? 0, loc.y ?? 0, loc.z ?? 0],
+        rotation: params.rotation,
+        scale: params.scale,
+        autoDestroy: params.autoDestroy,
+        attachToActor: params.attachToActor
+      }) as Record<string, unknown>;
+      
+      if (resp && resp.success !== false) {
+        const result = (resp.result ?? {}) as Record<string, unknown>;
+        return { success: true, message: (resp.message || 'Niagara effect spawned') as string, actor: (resp.actor || result.actor || result.actorName) as string | undefined };
       }
-
-      throw new Error('Automation Bridge not available. Niagara effect spawning requires plugin support.');
+      return { success: false, message: (resp?.message ?? 'Spawn failed') as string, error: (resp?.error ?? 'SPAWN_FAILED') as string };
     } catch (err: unknown) {
-      return { success: false, error: `Failed to spawn effect: ${err}` };
+      return { success: false, error: `Failed to spawn effect: ${err instanceof Error ? err.message : String(err)}` };
     }
   }
 

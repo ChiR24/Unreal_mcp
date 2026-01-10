@@ -311,19 +311,26 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVirtualProductionAction(
             if (Config && Config->Cluster)
             {
                 UDisplayClusterConfigurationClusterNode* NewNode = NewObject<UDisplayClusterConfigurationClusterNode>(Config->Cluster);
-                NewNode->Host = Host;
-                NewNode->bIsSoundEnabled = true;
-                
-                Config->Cluster->Nodes.Add(NodeId, NewNode);
-                
-                if (bIsPrimary)
+                if (!NewNode)
                 {
-                    Config->Cluster->PrimaryNode.Id = NodeId;
+                    Result = MakeVPError(TEXT("Failed to create cluster node object"), TEXT("CREATE_FAILED"));
                 }
-                
-                Config->MarkPackageDirty();
-                Result = MakeVPSuccess(FString::Printf(TEXT("Added cluster node '%s' to config"), *NodeId));
-                Result->SetStringField(TEXT("nodeId"), NodeId);
+                else
+                {
+                    NewNode->Host = Host;
+                    NewNode->bIsSoundEnabled = true;
+                    
+                    Config->Cluster->Nodes.Add(NodeId, NewNode);
+                    
+                    if (bIsPrimary)
+                    {
+                        Config->Cluster->PrimaryNode.Id = NodeId;
+                    }
+                    
+                    Config->MarkPackageDirty();
+                    Result = MakeVPSuccess(FString::Printf(TEXT("Added cluster node '%s' to config"), *NodeId));
+                    Result->SetStringField(TEXT("nodeId"), NodeId);
+                }
             }
             else
             {
@@ -400,16 +407,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVirtualProductionAction(
                 {
                     UDisplayClusterConfigurationClusterNode* Node = *NodePtr;
                     UDisplayClusterConfigurationViewport* NewViewport = NewObject<UDisplayClusterConfigurationViewport>(Node);
-                    NewViewport->Region.X = PosX;
-                    NewViewport->Region.Y = PosY;
-                    NewViewport->Region.W = Width;
-                    NewViewport->Region.H = Height;
-                    
-                    Node->Viewports.Add(ViewportId, NewViewport);
-                    Config->MarkPackageDirty();
-                    
-                    Result = MakeVPSuccess(FString::Printf(TEXT("Added viewport '%s' to node '%s'"), *ViewportId, *NodeId));
-                    Result->SetStringField(TEXT("viewportId"), ViewportId);
+                    if (!NewViewport)
+                    {
+                        Result = MakeVPError(TEXT("Failed to create viewport object"), TEXT("CREATE_FAILED"));
+                    }
+                    else
+                    {
+                        NewViewport->Region.X = PosX;
+                        NewViewport->Region.Y = PosY;
+                        NewViewport->Region.W = Width;
+                        NewViewport->Region.H = Height;
+                        
+                        Node->Viewports.Add(ViewportId, NewViewport);
+                        Config->MarkPackageDirty();
+                        
+                        Result = MakeVPSuccess(FString::Printf(TEXT("Added viewport '%s' to node '%s'"), *ViewportId, *NodeId));
+                        Result->SetStringField(TEXT("viewportId"), ViewportId);
+                    }
                 }
                 else
                 {

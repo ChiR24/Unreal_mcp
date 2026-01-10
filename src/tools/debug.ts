@@ -4,6 +4,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
+import { requireBridge } from './base-tool.js';
 
 const log = new Logger('DebugVisualizationTools');
 
@@ -21,12 +22,10 @@ export class DebugVisualizationTools {
 
   // Helper to use Automation Bridge for debug operations
   private async useAutomationBridge(action: string, params: Record<string, unknown>) {
-    if (!this.automationBridge) {
-      return { success: false, error: 'AUTOMATION_BRIDGE_NOT_AVAILABLE', message: 'Automation Bridge not available for debug operations' };
-    }
+    const bridge = requireBridge(this.automationBridge, 'Debug operations');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_effect', {
+      const response = await bridge.sendAutomationRequest('create_effect', {
         action: 'debug_shape',
         shapeType: action,
         ...params

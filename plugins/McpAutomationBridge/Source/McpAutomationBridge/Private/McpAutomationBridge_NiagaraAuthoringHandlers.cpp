@@ -1752,6 +1752,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Create the data interface
         UNiagaraDataInterfaceSkeletalMesh* SkeletalMeshDI = NewObject<UNiagaraDataInterfaceSkeletalMesh>(System, NAME_None, RF_Transactional);
+        if (!SkeletalMeshDI)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Skeletal Mesh data interface."), TEXT("CREATE_FAILED"));
+            return true;
+        }
         
         // Optionally set the default mesh if provided
         if (!SkeletalMeshPath.IsEmpty())
@@ -1817,6 +1822,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Create the data interface
         UNiagaraDataInterfaceStaticMesh* StaticMeshDI = NewObject<UNiagaraDataInterfaceStaticMesh>(System, NAME_None, RF_Transactional);
+        if (!StaticMeshDI)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Static Mesh data interface."), TEXT("CREATE_FAILED"));
+            return true;
+        }
         
         // Optionally set the default mesh if provided
         if (!StaticMeshPath.IsEmpty())
@@ -1880,6 +1890,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Create the spline data interface
         UNiagaraDataInterfaceSpline* SplineDI = NewObject<UNiagaraDataInterfaceSpline>(System, NAME_None, RF_Transactional);
+        if (!SplineDI)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Spline data interface."), TEXT("CREATE_FAILED"));
+            return true;
+        }
 
         // Add as a user parameter to the system
         FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
@@ -1927,6 +1942,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Create the audio spectrum data interface
         UNiagaraDataInterfaceAudioSpectrum* AudioSpectrumDI = NewObject<UNiagaraDataInterfaceAudioSpectrum>(System, NAME_None, RF_Transactional);
+        if (!AudioSpectrumDI)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Audio Spectrum data interface."), TEXT("CREATE_FAILED"));
+            return true;
+        }
         AudioSpectrumDI->Resolution = Resolution;
 
         // Add as a user parameter to the system
@@ -1975,6 +1995,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Create the collision query data interface
         UNiagaraDataInterfaceCollisionQuery* CollisionQueryDI = NewObject<UNiagaraDataInterfaceCollisionQuery>(System, NAME_None, RF_Transactional);
+        if (!CollisionQueryDI)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Collision Query data interface."), TEXT("CREATE_FAILED"));
+            return true;
+        }
 
         // Add as a user parameter to the system
         FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
@@ -2407,6 +2432,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Create the simulation stage
         UNiagaraSimulationStageGeneric* SimStage = NewObject<UNiagaraSimulationStageGeneric>(Emitter, NAME_None, RF_Transactional);
+        if (!SimStage)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create simulation stage."), TEXT("CREATE_FAILED"));
+            return true;
+        }
         SimStage->SimulationStageName = FName(*StageName);
         SimStage->bEnabled = true;
 

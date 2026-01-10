@@ -438,6 +438,11 @@ static bool HandleAddLandscapeDataNode(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGDataFromActorSettings* Settings = NewObject<UPCGDataFromActorSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create data from actor settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     Settings->Mode = EPCGGetDataFromActorMode::ParseActorComponents;
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
@@ -455,6 +460,11 @@ static bool HandleAddSplineDataNode(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGDataFromActorSettings* Settings = NewObject<UPCGDataFromActorSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create data from actor settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     Settings->Mode = EPCGGetDataFromActorMode::ParseActorComponents;
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
@@ -472,6 +482,11 @@ static bool HandleAddVolumeDataNode(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGDataFromActorSettings* Settings = NewObject<UPCGDataFromActorSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create data from actor settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     Settings->Mode = EPCGGetDataFromActorMode::ParseActorComponents;
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
@@ -489,6 +504,11 @@ static bool HandleAddActorDataNode(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGDataFromActorSettings* Settings = NewObject<UPCGDataFromActorSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create actor data settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     FString Mode = GetJsonStringField(Payload, TEXT("mode"), TEXT("ParseActorComponents"));
     if (Mode == TEXT("GetSinglePoint")) Settings->Mode = EPCGGetDataFromActorMode::GetSinglePoint;
     else if (Mode == TEXT("GetActorReference")) Settings->Mode = EPCGGetDataFromActorMode::GetActorReference;
@@ -510,6 +530,11 @@ static bool HandleAddTextureDataNode(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGPointFromMeshSettings* Settings = NewObject<UPCGPointFromMeshSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create texture data settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
     Graph->MarkPackageDirty();
@@ -530,6 +555,11 @@ static bool HandleAddSurfaceSampler(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGSurfaceSamplerSettings* Settings = NewObject<UPCGSurfaceSamplerSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create surface sampler settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     Settings->PointsPerSquaredMeter = static_cast<float>(GetJsonNumberField(Payload, TEXT("pointsPerSquaredMeter"), 0.1));
     Settings->PointExtents = GetJsonVectorField(Payload, TEXT("pointExtents"), FVector(50.0f));
     Settings->Looseness = static_cast<float>(GetJsonNumberField(Payload, TEXT("looseness"), 1.0));
@@ -553,6 +583,11 @@ static bool HandleAddMeshSampler(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGPointFromMeshSettings* Settings = NewObject<UPCGPointFromMeshSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create mesh sampler settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"), TEXT(""));
     if (!MeshPath.IsEmpty()) Settings->StaticMesh = TSoftObjectPtr<UStaticMesh>(FSoftObjectPath(MeshPath));
     Settings->MeshPathAttributeName = FName(*GetJsonStringField(Payload, TEXT("meshAttributeName"), TEXT("MeshPath")));
@@ -573,6 +608,11 @@ static bool HandleAddSplineSampler(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGSplineSamplerSettings* Settings = NewObject<UPCGSplineSamplerSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create spline sampler settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     FString DimStr = GetJsonStringField(Payload, TEXT("dimension"), TEXT("OnSpline"));
     if (DimStr == TEXT("OnHorizontal")) Settings->SamplerParams.Dimension = EPCGSplineSamplingDimension::OnHorizontal;
     else if (DimStr == TEXT("OnVertical")) Settings->SamplerParams.Dimension = EPCGSplineSamplingDimension::OnVertical;
@@ -604,6 +644,11 @@ static bool HandleAddVolumeSampler(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGVolumeSamplerSettings* Settings = NewObject<UPCGVolumeSamplerSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create volume sampler settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     Settings->VoxelSize = GetJsonVectorField(Payload, TEXT("voxelSize"), FVector(100.0));
     Settings->bUnbounded = GetJsonBoolField(Payload, TEXT("unbounded"), false);
     Settings->PointSteepness = static_cast<float>(GetJsonNumberField(Payload, TEXT("pointSteepness"), 0.5));
@@ -628,6 +673,11 @@ static bool HandleAddBoundsModifier(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGPointExtentsModifierSettings* Settings = NewObject<UPCGPointExtentsModifierSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create bounds modifier settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
     Graph->MarkPackageDirty();
@@ -644,6 +694,11 @@ static bool HandleAddDensityFilter(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGDensityFilterSettings* Settings = NewObject<UPCGDensityFilterSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create density filter settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     Settings->LowerBound = static_cast<float>(GetJsonNumberField(Payload, TEXT("lowerBound"), 0.5));
     Settings->UpperBound = static_cast<float>(GetJsonNumberField(Payload, TEXT("upperBound"), 1.0));
     Settings->bInvertFilter = GetJsonBoolField(Payload, TEXT("invertFilter"), false);
@@ -668,6 +723,11 @@ static bool HandleAddHeightFilter(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGFilterByAttributeSettings* Settings = NewObject<UPCGFilterByAttributeSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create height filter settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
     Graph->MarkPackageDirty();
@@ -700,6 +760,11 @@ static bool HandleAddDistanceFilter(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGFilterByIndexSettings* Settings = NewObject<UPCGFilterByIndexSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create distance filter settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
     Graph->MarkPackageDirty();
@@ -716,6 +781,11 @@ static bool HandleAddBoundsFilter(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGFilterByAttributeSettings* Settings = NewObject<UPCGFilterByAttributeSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create bounds filter settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
     Graph->MarkPackageDirty();
@@ -732,6 +802,11 @@ static bool HandleAddSelfPruning(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGSelfPruningSettings* Settings = NewObject<UPCGSelfPruningSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create self pruning settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     FString PruningType = GetJsonStringField(Payload, TEXT("pruningType"), TEXT("LargeToSmall"));
     if (PruningType == TEXT("SmallToLarge")) Settings->Parameters.PruningType = EPCGSelfPruningType::SmallToLarge;
     else if (PruningType == TEXT("AllEqual")) Settings->Parameters.PruningType = EPCGSelfPruningType::AllEqual;
@@ -761,6 +836,11 @@ static bool HandleAddTransformPoints(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGTransformPointsSettings* Settings = NewObject<UPCGTransformPointsSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create transform points settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     Settings->OffsetMin = GetJsonVectorField(Payload, TEXT("offsetMin"), FVector::ZeroVector);
     Settings->OffsetMax = GetJsonVectorField(Payload, TEXT("offsetMax"), FVector::ZeroVector);
     Settings->bAbsoluteOffset = GetJsonBoolField(Payload, TEXT("absoluteOffset"), false);
@@ -788,6 +868,11 @@ static bool HandleAddProjectToSurface(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGProjectionSettings* Settings = NewObject<UPCGProjectionSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create projection settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     Settings->bForceCollapseToPoint = GetJsonBoolField(Payload, TEXT("forceCollapseToPoint"), false);
     Settings->bKeepZeroDensityPoints = GetJsonBoolField(Payload, TEXT("keepZeroDensityPoints"), false);
     
@@ -807,6 +892,11 @@ static bool HandleAddCopyPoints(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGDuplicatePointSettings* Settings = NewObject<UPCGDuplicatePointSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create copy points settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
     Graph->MarkPackageDirty();
@@ -823,6 +913,11 @@ static bool HandleAddMergePoints(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGMergeSettings* Settings = NewObject<UPCGMergeSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create merge settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     Settings->bMergeMetadata = GetJsonBoolField(Payload, TEXT("mergeMetadata"), true);
     
     UPCGNode* Node = Graph->AddNode(Settings);
@@ -845,6 +940,11 @@ static bool HandleAddStaticMeshSpawner(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGStaticMeshSpawnerSettings* Settings = NewObject<UPCGStaticMeshSpawnerSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create static mesh spawner settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     Settings->bApplyMeshBoundsToPoints = GetJsonBoolField(Payload, TEXT("applyMeshBoundsToPoints"), true);
     Settings->bSynchronousLoad = GetJsonBoolField(Payload, TEXT("synchronousLoad"), false);
     FString OutAttr = GetJsonStringField(Payload, TEXT("outAttributeName"), TEXT(""));
@@ -866,6 +966,11 @@ static bool HandleAddActorSpawner(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGSpawnActorSettings* Settings = NewObject<UPCGSpawnActorSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create actor spawner settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     FString Option = GetJsonStringField(Payload, TEXT("option"), TEXT("NoMerging"));
     if (Option == TEXT("CollapseActors")) Settings->Option = EPCGSpawnActorOption::CollapseActors;
     else if (Option == TEXT("MergePCGOnly")) Settings->Option = EPCGSpawnActorOption::MergePCGOnly;
@@ -891,6 +996,11 @@ static bool HandleAddSplineSpawner(
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
     UPCGSpawnActorSettings* Settings = NewObject<UPCGSpawnActorSettings>(Graph);
+    if (!Settings)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create spline spawner settings"), nullptr, TEXT("CREATE_ERROR"));
+        return true;
+    }
     Settings->Option = EPCGSpawnActorOption::NoMerging;
     
     UPCGNode* Node = Graph->AddNode(Settings);
