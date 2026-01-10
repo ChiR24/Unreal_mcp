@@ -520,7 +520,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
           // If the existence check fails for any reason, fall back to the console command path below.
         }
 
-        await this.bridge.executeConsoleCommand(`Open ${params.levelPath}`);
+        await this.bridge.executeConsoleCommand(`Open ${normalizedPath}`);
         this.setCurrentLevel(normalizedPath);
         this.mutateRecord(normalizedPath, {
           streaming: false,
