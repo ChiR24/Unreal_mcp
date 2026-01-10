@@ -2,6 +2,30 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { IBaseTool } from '../types/tool-interfaces.js';
 
+/**
+ * Validates that the automation bridge is available and throws a descriptive error if not.
+ * 
+ * Use this helper in legacy tool classes that don't extend BaseTool to ensure
+ * consistent error messaging when the bridge is unavailable.
+ * 
+ * @param bridge - The AutomationBridge instance (may be undefined)
+ * @param operation - Description of the operation being attempted (for error message)
+ * @returns The validated AutomationBridge instance
+ * @throws Error if bridge is undefined or null
+ * 
+ * @example
+ * ```typescript
+ * const bridge = requireBridge(this.automationBridge, 'Audio operations');
+ * await bridge.sendAutomationRequest(...);
+ * ```
+ */
+export function requireBridge(bridge: AutomationBridge | undefined | null, operation: string): AutomationBridge {
+    if (!bridge) {
+        throw new Error(`Automation Bridge not available. ${operation} require plugin support.`);
+    }
+    return bridge;
+}
+
 export abstract class BaseTool implements IBaseTool {
     constructor(protected bridge: UnrealBridge) { }
 

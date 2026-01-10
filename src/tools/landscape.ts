@@ -5,6 +5,7 @@ import { ensureVector3 } from '../utils/validation.js';
 import { wasmIntegration } from '../wasm/index.js';
 import { ILandscapeTools, StandardActionResponse } from '../types/tool-interfaces.js';
 import { Logger } from '../utils/logger.js';
+import { requireBridge } from './base-tool.js';
 
 const log = new Logger('LandscapeTools');
 
@@ -46,9 +47,7 @@ export class LandscapeTools implements ILandscapeTools {
       };
     }
 
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Landscape operations');
 
     const [locX, locY, locZ] = ensureVector3(params.location ?? [0, 0, 0], 'landscape location');
     // Use WASM vectorAdd for landscape location processing
@@ -76,7 +75,7 @@ export class LandscapeTools implements ILandscapeTools {
         materialPath: params.materialPath || ''
       };
 
-      const response = await this.automationBridge.sendAutomationRequest('create_landscape', payload, {
+      const response = await bridge.sendAutomationRequest('create_landscape', payload, {
         timeoutMs: 60000
       });
 
@@ -111,7 +110,7 @@ export class LandscapeTools implements ILandscapeTools {
       }
 
       return result as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to create landscape actor: ${error instanceof Error ? error.message : String(error)}`
@@ -144,9 +143,7 @@ export class LandscapeTools implements ILandscapeTools {
       };
     }
 
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Landscape operations');
 
     const payload = {
       landscapeName: params.landscapeName?.trim(),
@@ -157,7 +154,7 @@ export class LandscapeTools implements ILandscapeTools {
       location: { x, y, z }
     };
 
-    const response = await this.automationBridge.sendAutomationRequest('sculpt_landscape', payload);
+    const response = await bridge.sendAutomationRequest('sculpt_landscape', payload);
 
     if (!response.success) {
       return {
@@ -184,9 +181,7 @@ export class LandscapeTools implements ILandscapeTools {
     radius?: number;
     density?: number;
   }): Promise<StandardActionResponse> {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Landscape operations');
 
     const [x, y] = ensureVector3(params.position, 'paint position');
     const radius = params.brushSize ?? params.radius ?? 1000;
@@ -204,7 +199,7 @@ export class LandscapeTools implements ILandscapeTools {
       strength: params.strength ?? 1.0
     };
 
-    const response = await this.automationBridge.sendAutomationRequest('paint_landscape_layer', payload);
+    const response = await bridge.sendAutomationRequest('paint_landscape_layer', payload);
 
     if (!response.success) {
       return {
@@ -231,9 +226,7 @@ export class LandscapeTools implements ILandscapeTools {
     material?: string;
     settings?: Record<string, unknown>;
   }): Promise<StandardActionResponse> {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Procedural terrain creation requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Procedural terrain creation');
 
     try {
       // Combine specific params with generic settings
@@ -248,7 +241,7 @@ export class LandscapeTools implements ILandscapeTools {
         ...params.settings
       };
 
-      const response = await this.automationBridge.sendAutomationRequest('create_procedural_terrain', payload, {
+      const response = await bridge.sendAutomationRequest('create_procedural_terrain', payload, {
         timeoutMs: 120000 // 2 minutes for mesh generation
       });
 
@@ -271,7 +264,7 @@ export class LandscapeTools implements ILandscapeTools {
         subdivisions: result.subdivisions,
         details: result
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to create procedural terrain: ${error instanceof Error ? error.message : String(error)}`
@@ -289,9 +282,7 @@ export class LandscapeTools implements ILandscapeTools {
     path?: string; // Legacy support
     staticMesh?: string; // Legacy support
   }): Promise<StandardActionResponse> {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Landscape operations');
 
     const name = typeof params.name === 'string' ? params.name.trim() : '';
     if (!name) {
@@ -312,7 +303,7 @@ export class LandscapeTools implements ILandscapeTools {
     }
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_landscape_grass_type', {
+      const response = await bridge.sendAutomationRequest('create_landscape_grass_type', {
         name,
         meshPath: meshPathRaw,
         density: params.density || 1.0,
@@ -333,7 +324,7 @@ export class LandscapeTools implements ILandscapeTools {
         message: (response.message as string) || `Landscape grass type '${name}' created`,
         assetPath: (result.asset_path as string) || (response.assetPath as string) || (response.asset_path as string)
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to create landscape grass type: ${error instanceof Error ? error.message : String(error)}`
@@ -353,12 +344,10 @@ export class LandscapeTools implements ILandscapeTools {
       return { success: false, error: 'materialPath is required' };
     }
 
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Landscape operations');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('set_landscape_material', {
+      const response = await bridge.sendAutomationRequest('set_landscape_material', {
         landscapeName,
         materialPath
       }, { timeoutMs: 60000 }) as Record<string, unknown>;
@@ -376,7 +365,7 @@ export class LandscapeTools implements ILandscapeTools {
         landscapeName: (response.landscapeName as string) || landscapeName,
         materialPath: (response.materialPath as string) || materialPath
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to set landscape material: ${error instanceof Error ? error.message : String(error)}`
@@ -485,12 +474,10 @@ export class LandscapeTools implements ILandscapeTools {
     dataLayers?: string[];
     streamingDistance?: number;
   }): Promise<StandardActionResponse> {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. World Partition operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'World Partition operations');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('configure_landscape_world_partition', {
+      const response = await bridge.sendAutomationRequest('configure_landscape_world_partition', {
         landscapeName: params.landscapeName,
         enableSpatialLoading: params.enableSpatialLoading,
         runtimeGrid: params.runtimeGrid || '',
@@ -512,7 +499,7 @@ export class LandscapeTools implements ILandscapeTools {
         message: response.message || 'World Partition configured',
         changes: response.changes
       } as StandardActionResponse;
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to configure World Partition: ${err instanceof Error ? err.message : String(err)}` };
     }
   }
@@ -545,7 +532,7 @@ export class LandscapeTools implements ILandscapeTools {
         message: `Data layers ${params.operation === 'add' ? 'added' : params.operation === 'remove' ? 'removed' : 'set'} for landscape`,
         layers: params.dataLayerNames
       } as StandardActionResponse;
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to manage data layers: ${err}` };
     }
   }
@@ -583,7 +570,7 @@ export class LandscapeTools implements ILandscapeTools {
           hlod: params.enableHLOD
         }
       } as StandardActionResponse;
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to configure streaming cells: ${err}` };
     }
   }
@@ -598,9 +585,7 @@ export class LandscapeTools implements ILandscapeTools {
     maxY: number;
     updateNormals?: boolean;
   }): Promise<StandardActionResponse> {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Landscape operations');
 
     const { landscapeName, heightData, minX, minY, maxX, maxY } = params;
 
@@ -621,7 +606,7 @@ export class LandscapeTools implements ILandscapeTools {
     }
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('modify_heightmap', {
+      const response = await bridge.sendAutomationRequest('modify_heightmap', {
         landscapeName,
         heightData,
         minX,
@@ -644,7 +629,7 @@ export class LandscapeTools implements ILandscapeTools {
         success: true,
         message: response.message || 'Heightmap modified successfully'
       } as StandardActionResponse;
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to modify heightmap: ${err instanceof Error ? err.message : String(err)}` };
     }
   }

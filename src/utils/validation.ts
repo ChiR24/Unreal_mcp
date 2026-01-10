@@ -111,7 +111,7 @@ export function sanitizePathSafe(path: string): SanitizePathResult {
     // sanitizePathStrict validates and normalizes, allowing /Game, /Engine, /Script, /Temp
     const result = sanitizePathStrict(normalized, ['/Game', '/Engine', '/Script', '/Temp']);
     return { success: true, path: result };
-  } catch (err) {
+  } catch (err: unknown) {
     // Strict validation failed - check for specific security issues
     const errorMessage = err instanceof Error ? err.message : 'Unknown validation error';
     

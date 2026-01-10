@@ -140,7 +140,7 @@ export async function handleSkeletonTools(
     );
 
     return cleanObject(response as Record<string, unknown>);
-  } catch (error) {
+  } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     return {
       success: false,

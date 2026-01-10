@@ -113,7 +113,7 @@ export class ConnectionManager extends EventEmitter {
                     try {
                         socket.ping();
                         socket.send(pingPayload);
-                    } catch (error) {
+                    } catch (error: unknown) {
                         this.log.error('Failed to send heartbeat', error);
                     }
                 }

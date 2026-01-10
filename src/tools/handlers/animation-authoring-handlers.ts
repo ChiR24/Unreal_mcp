@@ -1415,7 +1415,7 @@ export async function handleAnimationAuthoringTools(
       default:
         return ResponseFactory.error(`Unknown animation authoring action: ${action}`, 'UNKNOWN_ACTION');
     }
-  } catch (error) {
+  } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     return ResponseFactory.error(`Animation authoring operation failed: ${err.message}`, 'ANIMATION_AUTHORING_ERROR');
   }

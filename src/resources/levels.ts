@@ -26,7 +26,7 @@ export class LevelResources {
       }
 
       return { success: false, error: 'Failed to get current level' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { error: `Failed to get current level: ${err}`, success: false };
     }
   }
@@ -47,7 +47,7 @@ export class LevelResources {
       }
 
       return { success: false, error: 'Failed to get level name' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { error: `Failed to get level name: ${err}`, success: false };
     }
   }
@@ -64,7 +64,7 @@ export class LevelResources {
       }
 
       return { success: false, error: 'Failed to save level' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { error: `Failed to save level: ${err}`, success: false };
     }
   }

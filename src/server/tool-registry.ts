@@ -435,7 +435,7 @@ export class ToolRegistry {
                         section: category,
                         settings
                     };
-                } catch (e) {
+                } catch (e: unknown) {
                     // Fallback to reading from disk on error
                     if (process.env.UE_PROJECT_PATH) {
                         try {
@@ -631,7 +631,7 @@ export class ToolRegistry {
                             }
                         }
                     }
-                } catch (e) {
+                } catch (e: unknown) {
                     const errObj = e as Record<string, unknown> | null;
                     this.logger.debug('Generic elicitation prefill skipped', { err: errObj?.message ? String(errObj.message) : String(e) });
                 }
@@ -669,7 +669,7 @@ export class ToolRegistry {
                 this.logger.debug(`Returning response to MCP client: ${responsePreview}...`);
 
                 return wrappedResult;
-            } catch (error) {
+            } catch (error: unknown) {
                 this.healthMonitor.trackPerformance(startTime, false);
                 const errorResponse = ErrorHandler.createErrorResponse(error, name, { ...args, scope: `tool-call/${name}` });
                 this.logger.error(`Tool execution failed: ${name}`, errorResponse);

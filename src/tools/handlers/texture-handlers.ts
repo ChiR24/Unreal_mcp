@@ -810,7 +810,7 @@ export async function handleTextureTools(
       default:
         return ResponseFactory.error(`Unknown texture action: ${action}`, 'UNKNOWN_ACTION');
     }
-  } catch (error) {
+  } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     return ResponseFactory.error(`Texture operation failed: ${err.message}`, 'TEXTURE_ERROR');
   }

@@ -3,6 +3,7 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { coerceBoolean, coerceNumber, coerceString } from '../utils/result-helpers.js';
 import { IFoliageTools, StandardActionResponse } from '../types/tool-interfaces.js';
+import { requireBridge } from './base-tool.js';
 
 export class FoliageTools implements IFoliageTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
@@ -53,13 +54,11 @@ export class FoliageTools implements IFoliageTools {
       return { success: false, error: errors.join('; ') };
     }
 
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Foliage operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Foliage operations');
 
     try {
       const base = meshPath.includes('.') ? meshPath : `${meshPath}.${meshPath.split('/').filter(Boolean).pop()}`;
-      const response = await this.automationBridge.sendAutomationRequest('add_foliage_type', {
+      const response = await bridge.sendAutomationRequest('add_foliage_type', {
         name,
         meshPath: base,
         density: params.density ?? 100,
@@ -101,7 +100,7 @@ export class FoliageTools implements IFoliageTools {
           ? `Foliage type '${name}' ready (${method})`
           : `Created foliage '${name}' but verification did not find it yet`
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to add foliage type: ${error instanceof Error ? error.message : String(error)}`
@@ -142,13 +141,11 @@ export class FoliageTools implements IFoliageTools {
       return { success: false, error: errors.join('; ') };
     }
 
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Foliage operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Foliage operations');
 
     try {
       const typePath = foliageType.includes('/') ? foliageType : `/Game/Foliage/${foliageType}.${foliageType}`;
-      const response = await this.automationBridge.sendAutomationRequest('paint_foliage', {
+      const response = await bridge.sendAutomationRequest('paint_foliage', {
         foliageTypePath: typePath,
         locations: [{ x: pos[0], y: pos[1], z: pos[2] }],
         brushSize: Number.isFinite(params.brushSize as number) ? (params.brushSize as number) : 300,
@@ -176,7 +173,7 @@ export class FoliageTools implements IFoliageTools {
         note,
         message: `Painted ${added} instances for '${foliageType}' around (${pos[0]}, ${pos[1]}, ${pos[2]})`
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to paint foliage: ${error instanceof Error ? error.message : String(error)}`
@@ -186,12 +183,10 @@ export class FoliageTools implements IFoliageTools {
 
   // Query foliage instances (plugin-native)
   async getFoliageInstances(params: { foliageType?: string }): Promise<StandardActionResponse> {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Foliage operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Foliage operations');
     try {
       const typePath = params.foliageType ? (params.foliageType.includes('/') ? params.foliageType : `/Game/Foliage/${params.foliageType}.${params.foliageType}`) : undefined;
-      const response = await this.automationBridge.sendAutomationRequest('get_foliage_instances', {
+      const response = await bridge.sendAutomationRequest('get_foliage_instances', {
         foliageTypePath: typePath
       }, { timeoutMs: 60000 });
       if (response.success === false) {
@@ -204,19 +199,17 @@ export class FoliageTools implements IFoliageTools {
         instances: (payload.instances as Array<Record<string, unknown>>) ?? [],
         message: 'Foliage instances retrieved'
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to get foliage instances: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
 
   // Remove foliage (plugin-native)
   async removeFoliage(params: { foliageType?: string; removeAll?: boolean }): Promise<StandardActionResponse> {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Foliage operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Foliage operations');
     try {
       const typePath = params.foliageType ? (params.foliageType.includes('/') ? params.foliageType : `/Game/Foliage/${params.foliageType}.${params.foliageType}`) : undefined;
-      const response = await this.automationBridge.sendAutomationRequest('remove_foliage', {
+      const response = await bridge.sendAutomationRequest('remove_foliage', {
         foliageTypePath: typePath,
         removeAll: !!params.removeAll
       }, { timeoutMs: 60000 });
@@ -229,7 +222,7 @@ export class FoliageTools implements IFoliageTools {
         instancesRemoved: coerceNumber(payload.instancesRemoved) ?? 0,
         message: 'Foliage removed'
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to remove foliage: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -294,11 +287,9 @@ export class FoliageTools implements IFoliageTools {
   async addFoliage(params: { foliageType: string; locations: Array<{ x: number; y: number; z: number }> }): Promise<StandardActionResponse> {
     // Delegate to paintFoliage which handles placing instances at locations
     if (params.locations && params.locations.length > 0) {
-      if (!this.automationBridge) {
-        throw new Error('Automation Bridge not available.');
-      }
+      const bridge = requireBridge(this.automationBridge, 'Foliage operations');
 
-      const response = await this.automationBridge.sendAutomationRequest('paint_foliage', {
+      const response = await bridge.sendAutomationRequest('paint_foliage', {
         foliageTypePath: params.foliageType.includes('/') ? params.foliageType : `/Game/Foliage/${params.foliageType}.${params.foliageType}`,
         locations: params.locations,
         brushSize: 0, // Exact placement
@@ -335,9 +326,7 @@ export class FoliageTools implements IFoliageTools {
     seed?: number;
     tileSize?: number;
   }): Promise<StandardActionResponse> {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Procedural foliage');
 
     const volName = params.volumeName || params.name || 'ProceduralFoliageVolume';
     const loc = params.bounds?.location ? [params.bounds.location.x, params.bounds.location.y, params.bounds.location.z] : (params.position || [0, 0, 0]);
@@ -362,7 +351,7 @@ export class FoliageTools implements IFoliageTools {
       tileSize: params.tileSize ?? 1000
     };
 
-    const response = await this.automationBridge.sendAutomationRequest('create_procedural_foliage', payload);
+    const response = await bridge.sendAutomationRequest('create_procedural_foliage', payload);
 
     if (!response.success) {
       return {
@@ -394,13 +383,11 @@ export class FoliageTools implements IFoliageTools {
       scale?: [number, number, number];
     }>;
   }): Promise<StandardActionResponse> {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Foliage instance placement requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Foliage instance placement');
 
     try {
       const typePath = params.foliageType.includes('/') ? params.foliageType : `/Game/Foliage/${params.foliageType}.${params.foliageType}`;
-      const response = await this.automationBridge.sendAutomationRequest('add_foliage_instances', {
+      const response = await bridge.sendAutomationRequest('add_foliage_instances', {
         foliageType: typePath,
         transforms: params.transforms
       }, {
@@ -421,7 +408,7 @@ export class FoliageTools implements IFoliageTools {
           message: response.message || `Added ${result.instances_count ?? params.transforms.length} foliage instances`,
           instancesCount: result.instances_count
         } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to add foliage instances: ${error instanceof Error ? error.message : String(error)}`

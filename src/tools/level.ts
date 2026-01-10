@@ -455,7 +455,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         message: response.message || `Level saved as ${target.path}`,
         levelPath: target.path
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to save level as: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -499,7 +499,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
         error: response.error || response.message || 'Failed to delete levels',
         levelPaths: normalizedPaths
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to delete levels: ${error instanceof Error ? error.message : String(error)}`,
@@ -530,7 +530,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
           levelPath: normalizedPath,
           streaming: true
         } as StandardActionResponse;
-      } catch (err) {
+      } catch (err: unknown) {
         return {
           success: false,
           error: `Failed to load streaming level: ${err}`,
@@ -606,7 +606,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
           level: normalizedPath,
           streaming: false
         } as StandardActionResponse;
-      } catch (err) {
+      } catch (err: unknown) {
         return {
           success: false,
           error: `Failed to load level: ${err}`,
@@ -659,7 +659,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
       }
 
       return result as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to save level: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -716,7 +716,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
       });
 
       return result as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to create level: ${error instanceof Error ? error.message : String(error)}`,
@@ -1019,7 +1019,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
       }
 
       return result as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Navigation build not available: ${error instanceof Error ? error.message : String(error)}. Please ensure a NavMeshBoundsVolume exists in the level.`

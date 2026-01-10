@@ -129,7 +129,7 @@ export class AnimationTools {
             warnings,
             details
           };
-        } catch (err) {
+        } catch (err: unknown) {
           const error = String(err);
           return {
             success: false,
@@ -148,7 +148,7 @@ export class AnimationTools {
         path: fullPath,
         skeleton: params.skeletonPath
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const error = `Failed to create Animation Blueprint: ${err}`;
       return { success: false, message: error, error: String(err) };
     }
@@ -209,7 +209,7 @@ export class AnimationTools {
         success: true,
         message: `State machine ${params.machineName} added to ${params.blueprintPath}`
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to add state machine: ${err}` };
     }
   }
@@ -342,7 +342,7 @@ export class AnimationTools {
           const error = typeof resp?.error === 'string' ? resp.error : message;
 
           return { success: false, message, error };
-        } catch (err) {
+        } catch (err: unknown) {
           const error = String(err);
           return {
             success: false,
@@ -357,7 +357,7 @@ export class AnimationTools {
         message: 'Automation bridge not connected for createStateMachine',
         error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const error = String(err);
       return {
         success: false,
@@ -442,14 +442,14 @@ export class AnimationTools {
           const error = typeof resp?.error === 'string' ? resp.error : message;
 
           return { success: false, error };
-        } catch (err) {
+        } catch (err: unknown) {
           const error = String(err);
           return { success: false, error: `Failed to create blend space: ${error}` };
         }
       }
 
       return { success: false, error: 'Automation bridge not connected for createBlendSpace' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to create blend space: ${err}` };
     }
   }
@@ -515,14 +515,14 @@ export class AnimationTools {
           const error = typeof resp?.error === 'string' ? resp.error : message;
 
           return { success: false, error };
-        } catch (err) {
+        } catch (err: unknown) {
           const error = String(err);
           return { success: false, error: `Failed to setup control rig: ${error}` };
         }
       }
 
       return { success: false, error: 'Automation bridge not connected for setupControlRig' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to setup control rig: ${err}` };
     }
   }
@@ -577,7 +577,7 @@ export class AnimationTools {
       }
 
       return { success: false, message: 'Automation bridge not connected', error: 'AUTOMATION_BRIDGE_UNAVAILABLE' };
-    } catch (err) {
+    } catch (err: unknown) {
       const error = String(err);
       return {
         success: false,
@@ -648,7 +648,7 @@ export class AnimationTools {
           const error = typeof resp?.error === 'string' ? resp.error : message;
 
           return { success: false, message, error };
-        } catch (err) {
+        } catch (err: unknown) {
           const error = String(err);
           return {
             success: false,
@@ -663,7 +663,7 @@ export class AnimationTools {
         message: 'Automation bridge not connected for createProceduralAnim',
         error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const error = String(err);
       return {
         success: false,
@@ -736,7 +736,7 @@ export class AnimationTools {
           const error = typeof resp?.error === 'string' ? resp.error : message;
 
           return { success: false, message, error };
-        } catch (err) {
+        } catch (err: unknown) {
           const error = String(err);
           return {
             success: false,
@@ -751,7 +751,7 @@ export class AnimationTools {
         message: 'Automation bridge not connected for createBlendTree',
         error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const error = String(err);
       return {
         success: false,
@@ -803,7 +803,7 @@ export class AnimationTools {
           } else {
             bridgeMessage = ' (Engine assets deleted)';
           }
-        } catch (e) {
+        } catch (e: unknown) {
           bridgeMessage = ` (Engine connection failed: ${e})`;
         }
       } else {
@@ -838,7 +838,7 @@ export class AnimationTools {
         message: `Cleanup attempt processed for ${pathsToDelete.length} artifacts${bridgeMessage}`,
         removed
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const error = String(err);
       return {
         success: false,
@@ -916,7 +916,7 @@ export class AnimationTools {
           const error = typeof resp?.error === 'string' ? resp.error : message;
 
           return { success: false, message, error };
-        } catch (err) {
+        } catch (err: unknown) {
           const error = String(err);
           return {
             success: false,
@@ -931,7 +931,7 @@ export class AnimationTools {
         message: 'Automation bridge not connected for createAnimationAsset',
         error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const error = String(err);
       return {
         success: false,
@@ -991,7 +991,7 @@ export class AnimationTools {
               time
             };
           }
-        } catch (err) {
+        } catch (err: unknown) {
           const error = String(err);
           return {
             success: false,
@@ -1006,7 +1006,7 @@ export class AnimationTools {
         message: 'Automation bridge not connected for addNotify',
         error: 'AUTOMATION_BRIDGE_UNAVAILABLE'
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const error = String(err);
       return {
         success: false,
@@ -1063,7 +1063,7 @@ export class AnimationTools {
         message: `Level Sequence ${assetName} created`,
         path: `${assetPath}/${assetName}`
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to create level sequence: ${err}` };
     }
   }
@@ -1091,7 +1091,7 @@ export class AnimationTools {
         animationType: params.animationType,
         assetPath: params.animationPath
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const error = `Failed to play animation: ${err}`;
       return { success: false, message: error, error: String(err) };
     }

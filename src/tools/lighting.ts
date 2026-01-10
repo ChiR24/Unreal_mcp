@@ -4,6 +4,7 @@ import { AutomationBridge } from '../automation/index.js';
 import { ensureVector3 } from '../utils/validation.js';
 import { wasmIntegration } from '../wasm/index.js';
 import { Logger } from '../utils/logger.js';
+import { requireBridge } from './base-tool.js';
 
 const log = new Logger('LightingTools');
 
@@ -36,10 +37,8 @@ export class LightingTools {
    * List available light types (classes)
    */
   async listLightTypes() {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge required to list light types');
-    }
-    const response = await this.automationBridge.sendAutomationRequest('list_light_types', {});
+    const bridge = requireBridge(this.automationBridge, 'Light type listing');
+    const response = await bridge.sendAutomationRequest('list_light_types', {});
     return response;
   }
 
@@ -57,9 +56,7 @@ export class LightingTools {
       properties?: Record<string, unknown>;
     }
   ) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Cannot spawn lights without plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Light spawning');
 
     try {
       const payload: Record<string, unknown> = {
@@ -89,7 +86,7 @@ export class LightingTools {
         payload.properties = params.properties;
       }
 
-      const response = await this.automationBridge.sendAutomationRequest('spawn_light', payload, {
+      const response = await bridge.sendAutomationRequest('spawn_light', payload, {
         timeoutMs: 60000
       });
 
@@ -98,7 +95,7 @@ export class LightingTools {
       }
 
       return response;
-    } catch (error) {
+    } catch (error: unknown) {
       throw new Error(
         `Failed to spawn ${lightClass}: ${error instanceof Error ? error.message : String(error)}`
       );
@@ -118,9 +115,7 @@ export class LightingTools {
     properties?: Record<string, unknown>;
   }) {
     const name = this.normalizeName(params.name);
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge required for light spawning');
-    }
+    requireBridge(this.automationBridge, 'Light spawning');
 
     // Validate numeric parameters
     if (params.intensity !== undefined) {
@@ -210,9 +205,7 @@ export class LightingTools {
     rotation?: unknown;
   }) {
     const name = this.normalizeName(params.name);
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge required for light spawning');
-    }
+    requireBridge(this.automationBridge, 'Light spawning');
 
     // Validate location array
     let location: [number, number, number] = [0, 0, 0];
@@ -220,7 +213,7 @@ export class LightingTools {
       // Ensure location is valid array [x,y,z]
       try {
         location = ensureVector3(params.location, 'location');
-      } catch (e) {
+      } catch (e: unknown) {
         throw new Error(`Invalid location: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
@@ -306,9 +299,7 @@ export class LightingTools {
     castShadows?: boolean;
   }) {
     const name = this.normalizeName(params.name);
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge required for light spawning');
-    }
+    requireBridge(this.automationBridge, 'Light spawning');
 
     // Validate required location and rotation arrays
     if (!params.location || !Array.isArray(params.location) || params.location.length !== 3) {
@@ -431,9 +422,7 @@ export class LightingTools {
   }) {
 
     const name = this.normalizeName(params.name);
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge required for light spawning');
-    }
+    requireBridge(this.automationBridge, 'Light spawning');
 
     // Validate required location and rotation arrays
     if (!params.location || !Array.isArray(params.location) || params.location.length !== 3) {
@@ -585,7 +574,7 @@ export class LightingTools {
           return await this.createPointLight({ name, location: locArr, intensity: params.intensity, radius: undefined, color: colorArr, castShadows: undefined });
       }
 
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to create dynamic light: ${err}` };
     }
   }
@@ -609,9 +598,7 @@ export class LightingTools {
       return { success: false, error: message, message };
     }
 
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge required for sky light creation');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Sky light creation');
 
     try {
       const properties: Record<string, unknown> = {};
@@ -638,7 +625,7 @@ export class LightingTools {
         payload.recapture = params.recapture;
       }
 
-      const response = await this.automationBridge.sendAutomationRequest('spawn_sky_light', payload, {
+      const response = await bridge.sendAutomationRequest('spawn_sky_light', payload, {
         timeoutMs: 60000
       });
 
@@ -654,7 +641,7 @@ export class LightingTools {
         message: response.message || 'Sky light created',
         ...(response.result || {})
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to create sky light: ${error instanceof Error ? error.message : String(error)}`
@@ -668,12 +655,10 @@ export class LightingTools {
     const name = this.normalizeName(params?.name, defaultName);
     const recapture = !!params?.recapture;
 
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge required for sky light management');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Sky light management');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('ensure_single_sky_light', {
+      const response = await bridge.sendAutomationRequest('ensure_single_sky_light', {
         name,
         recapture
       }, {
@@ -693,7 +678,7 @@ export class LightingTools {
         message: response.message || `Ensured single SkyLight (removed ${resultObj.removed ?? 0})`,
         ...resultObj
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to ensure single sky light: ${error instanceof Error ? error.message : String(error)}`
@@ -822,12 +807,10 @@ export class LightingTools {
     buildReflectionCaptures?: boolean;
     levelPath?: string;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge required for lighting build');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Lighting build');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('bake_lightmap', {
+      const response = await bridge.sendAutomationRequest('bake_lightmap', {
         quality: params.quality || 'High',
         buildOnlySelected: params.buildOnlySelected || false,
         buildReflectionCaptures: params.buildReflectionCaptures !== false,
@@ -848,7 +831,7 @@ export class LightingTools {
         message: response.message || 'Lighting build started',
         ...(response.result || {})
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to build lighting: ${error instanceof Error ? error.message : String(error)}`
@@ -864,12 +847,10 @@ export class LightingTools {
   } | undefined) {
     const levelName = params?.levelName || 'LightingEnabledLevel';
 
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Level creation requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Level creation');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_lighting_enabled_level', {
+      const response = await bridge.sendAutomationRequest('create_lighting_enabled_level', {
         levelName,
         copyActors: params?.copyActors === true,
         useTemplate: params?.useTemplate === true,
@@ -890,7 +871,7 @@ export class LightingTools {
         message: response.message || `Created new level "${levelName}" with lighting enabled`,
         ...(response.result || {})
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to create lighting-enabled level: ${error}`
@@ -906,9 +887,7 @@ export class LightingTools {
   }) {
     const name = this.normalizeName(params.name);
 
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Lightmass volume creation requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Lightmass volume creation');
 
     // Normalize location and size to arrays
     const toVector3 = (val: unknown, defaultVal: [number, number, number]): [number, number, number] => {
@@ -926,7 +905,7 @@ export class LightingTools {
     const sizeArr = toVector3(params.size, [1000, 1000, 1000]);
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_lightmass_volume', {
+      const response = await bridge.sendAutomationRequest('create_lightmass_volume', {
         name,
         location: { x: locArr[0], y: locArr[1], z: locArr[2] },
         size: { x: sizeArr[0], y: sizeArr[1], z: sizeArr[2] }
@@ -946,7 +925,7 @@ export class LightingTools {
         message: `LightmassImportanceVolume '${name}' created`,
         ...(response.result || {})
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to create lightmass volume: ${error}`
@@ -1083,7 +1062,7 @@ export class LightingTools {
         message: 'Volumetric fog configured',
         ...(response.result || {})
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to setup volumetric fog: ${error}`

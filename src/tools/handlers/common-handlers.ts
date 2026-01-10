@@ -34,6 +34,27 @@ export function requireNonEmptyString(value: unknown, field: string, message?: s
 
 /**
  * Execute a request via the automation bridge.
+ * 
+ * This is the primary entry point for all Unreal Engine automation requests.
+ * It handles connection validation and dispatches the request to the C++ plugin.
+ * 
+ * @param tools - The tools interface containing the automation bridge
+ * @param toolName - Name of the C++ handler to invoke (e.g., 'manage_asset', 'control_actor')
+ * @param args - Arguments to pass to the C++ handler
+ * @param errorMessage - Custom error message if bridge is unavailable
+ * @param options - Optional configuration (timeoutMs for long operations)
+ * @returns Promise resolving to the C++ handler's response
+ * @throws Error if automation bridge is not connected or available
+ * 
+ * @example
+ * ```typescript
+ * const result = await executeAutomationRequest(
+ *   tools,
+ *   'manage_asset',
+ *   { action: 'list', path: '/Game/MyFolder' },
+ *   'Asset operation failed'
+ * );
+ * ```
  */
 export async function executeAutomationRequest(
   tools: ITools,
@@ -56,8 +77,20 @@ export async function executeAutomationRequest(
 }
 
 /**
- * Normalize location to [x, y, z] array format
- * Accepts both {x,y,z} object and [x,y,z] array formats
+ * Normalize location to [x, y, z] array format for C++ handlers.
+ * 
+ * Accepts multiple input formats and converts to a consistent tuple format
+ * that the C++ automation bridge expects.
+ * 
+ * @param location - Location in {x,y,z} object or [x,y,z] array format
+ * @returns Tuple [x, y, z] or undefined if input is falsy
+ * 
+ * @example
+ * ```typescript
+ * normalizeLocation({ x: 100, y: 200, z: 50 }) // [100, 200, 50]
+ * normalizeLocation([100, 200, 50])            // [100, 200, 50]
+ * normalizeLocation(undefined)                 // undefined
+ * ```
  */
 export function normalizeLocation(location: unknown): [number, number, number] | undefined {
   if (!location) return undefined;
@@ -76,12 +109,24 @@ export function normalizeLocation(location: unknown): [number, number, number] |
   return undefined;
 }
 
-/** Input type for rotation normalization */
+/** Input type for rotation normalization - accepts object or array format */
 type RotationInput = Rotator | [number, number, number] | number[] | null | undefined;
 
 /**
- * Normalize rotation to {pitch, yaw, roll} object format
- * Accepts both {pitch,yaw,roll} object and [pitch,yaw,roll] array formats
+ * Normalize rotation to {pitch, yaw, roll} object format for C++ handlers.
+ * 
+ * Converts array format [pitch, yaw, roll] to object format expected by
+ * many Unreal Engine APIs.
+ * 
+ * @param rotation - Rotation in {pitch,yaw,roll} object or [p,y,r] array format
+ * @returns Rotator object or undefined if input is falsy
+ * 
+ * @example
+ * ```typescript
+ * normalizeRotation([45, 90, 0])                    // { pitch: 45, yaw: 90, roll: 0 }
+ * normalizeRotation({ pitch: 45, yaw: 90, roll: 0 }) // { pitch: 45, yaw: 90, roll: 0 }
+ * normalizeRotation(null)                            // undefined
+ * ```
  */
 export function normalizeRotation(rotation: RotationInput): Rotator | undefined {
   if (!rotation) return undefined;

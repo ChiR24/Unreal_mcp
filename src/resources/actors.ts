@@ -52,7 +52,7 @@ export class ActorResources {
       }
 
       return { success: false, error: 'Failed to retrieve actor list from automation bridge' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to list actors: ${err}` };
     }
   }
@@ -82,7 +82,7 @@ export class ActorResources {
         success: false as const,
         error: `Actor not found: ${actorName}`
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to get actor: ${err}` };
     }
   }
@@ -93,7 +93,7 @@ export class ActorResources {
         objectPath: actorPath,
         propertyName: 'ActorTransform'
       });
-    } catch (err) {
+    } catch (err: unknown) {
       return { error: `Failed to get transform: ${err}` };
     }
   }
@@ -121,7 +121,7 @@ export class ActorResources {
         success: false as const,
         error: `Failed to resolve components for ${actorPath}`
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return {
         success: false as const,
         error: `Component lookup failed: ${err}`

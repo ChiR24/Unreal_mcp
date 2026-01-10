@@ -31,7 +31,7 @@ export async function readIniFile(filePath: string): Promise<Record<string, Reco
     }
 
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
     throw new Error(`Failed to read INI file at ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

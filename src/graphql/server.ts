@@ -134,7 +134,7 @@ export class GraphQLServer {
           resolve();
         });
       });
-    } catch (error) {
+    } catch (error: unknown) {
       this.log.error('Failed to start GraphQL server:', error);
       throw error;
     }

@@ -28,7 +28,7 @@ const require = createRequire(import.meta.url);
 const packageInfo: { name?: string; version?: string } = (() => {
     try {
         return require('../../package.json');
-    } catch (error) {
+    } catch (error: unknown) {
         const log = new Logger('AutomationBridge');
         log.debug('Unable to read package.json for version info', error);
         return {};
@@ -210,7 +210,7 @@ export class AutomationBridge extends EventEmitter {
             });
 
             this.handleClientConnection(socket);
-        } catch (error) {
+        } catch (error: unknown) {
             const errorObj = error instanceof Error ? error : new Error(String(error));
             this.lastError = { message: errorObj.message, at: new Date() };
             this.log.error('Failed to create WebSocket client connection', errorObj);
@@ -315,12 +315,12 @@ export class AutomationBridge extends EventEmitter {
                         this.connectionManager.updateLastMessageTime();
                         this.messageHandler.handleMessage(parsed);
                         this.emitAutomation('message', parsed);
-                    } catch (error) {
+                    } catch (error: unknown) {
                         this.log.error('Error handling message', error);
                     }
                 });
 
-            } catch (error) {
+            } catch (error: unknown) {
                 const err = error instanceof Error ? error : new Error(String(error));
                 this.lastHandshakeFailure = { reason: err.message, at: new Date() };
                 this.emitAutomation('handshakeFailed', { reason: err.message, port: this.clientPort });
@@ -500,7 +500,7 @@ export class AutomationBridge extends EventEmitter {
 
                         try {
                             this.startClient();
-                        } catch (e) {
+                        } catch (e: unknown) {
                             onError(e);
                         }
                     });
@@ -625,7 +625,7 @@ export class AutomationBridge extends EventEmitter {
         try {
             primarySocket.send(JSON.stringify(payload));
             return true;
-        } catch (error) {
+        } catch (error: unknown) {
             this.log.error('Failed to send automation message', error);
             const errObj = error instanceof Error ? error : new Error(String(error));
             const primaryInfo = this.connectionManager.getActiveSockets().get(primarySocket);
@@ -647,7 +647,7 @@ export class AutomationBridge extends EventEmitter {
                 try {
                     socket.send(JSON.stringify(payload));
                     sentCount++;
-                } catch (error) {
+                } catch (error: unknown) {
                     this.log.error('Failed to broadcast automation message to socket', error);
                 }
             }

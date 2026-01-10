@@ -138,7 +138,7 @@ export class MessageHandler {
 
                     this.log.info(`automation_event resolved pending request ${reqId} (event=${String(evt.event || '')})`);
                     this.requestTracker.resolveRequest(reqId, synthetic);
-                } catch (e) {
+                } catch (e: unknown) {
                     this.log.warn(`Failed to resolve pending automation request from automation_event ${reqId}: ${String(e)}`);
                 }
                 return;
@@ -184,7 +184,7 @@ export class MessageHandler {
                     return mutated as AutomationBridgeResponseMessage;
                 }
             }
-        } catch (e) {
+        } catch (e: unknown) {
             this.log.debug('enforceActionMatch check skipped', e instanceof Error ? e.message : String(e));
         }
         return response;

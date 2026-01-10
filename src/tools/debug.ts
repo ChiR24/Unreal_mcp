@@ -32,7 +32,7 @@ export class DebugVisualizationTools {
         ...params
       });
       return response;
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: 'AUTOMATION_BRIDGE_ERROR', message: String(error) };
     }
   }
@@ -491,7 +491,7 @@ export class DebugVisualizationTools {
         }, 2000);
       }
       return { ...result, warning: UNSAFE_VIEWMODES.includes(params.mode) ? `Viewmode '${params.mode}' applied. This mode may be unstable.` : undefined };
-    } catch (error) {
+    } catch (error: unknown) {
       await this.bridge.executeConsoleCommand('viewmode Lit');
       throw new Error(`Failed to set viewmode '${params.mode}': ${error}. Reverted to Lit mode.`);
     }
@@ -610,7 +610,7 @@ export class DebugVisualizationTools {
     try {
       await this.bridge.executeConsoleCommand('FlushPersistentDebugLines');
       return { success: true, message: 'Debug shapes cleared' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to clear debug shapes: ${err}` };
     }
   }

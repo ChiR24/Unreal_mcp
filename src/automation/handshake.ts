@@ -30,7 +30,7 @@ export class HandshakeHandler extends EventEmitter {
                 const text = typeof data === 'string' ? data : data.toString('utf8');
                 try {
                     parsed = JSON.parse(text) as AutomationBridgeMessage;
-                } catch (error) {
+                } catch (error: unknown) {
                     this.log.error('Received non-JSON automation message during handshake', error);
                     socket.close(4003, 'Invalid JSON payload');
                     cleanup();

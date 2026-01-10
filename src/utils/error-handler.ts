@@ -314,7 +314,7 @@ export class ErrorHandler {
       if (['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EPIPE'].includes(code)) return true;
       if (/timeout|timed out|network|connection|closed|unavailable|busy|temporar/.test(msg)) return true;
       if (!isNaN(status) && (status === 429 || (status >= 500 && status < 600))) return true;
-    } catch (err) {
+    } catch (err: unknown) {
       // Error checking retriability is uncommon; log at debug level
       log.debug('isRetriable check failed', err instanceof Error ? err.message : String(err));
     }
@@ -347,7 +347,7 @@ export class ErrorHandler {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         return await fn();
-      } catch (error) {
+      } catch (error: unknown) {
         if (attempt === maxRetries || !shouldRetry(error)) {
           throw error;
         }

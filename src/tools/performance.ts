@@ -127,7 +127,7 @@ export class PerformanceTools {
         fpsVisible: params.enabled,
         command: command
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to ${params.enabled ? 'enable' : 'disable'} FPS display: ${error}`,
@@ -258,7 +258,7 @@ export class PerformanceTools {
         message: `Resolution scale set to ${finalPercentage}%`,
         actualScale: finalPercentage / 100
       };
-    } catch (e) {
+    } catch (e: unknown) {
       return { success: false, error: `Failed to set resolution scale: ${e}` };
     }
   }
@@ -328,7 +328,7 @@ export class PerformanceTools {
         if (response.success) {
           return { success: true, message: response.message || 'Memory report generated' };
         }
-      } catch (error) {
+      } catch (error: unknown) {
         // Fallback only if no output path (since console can't save to file reliably)
         if (params.outputPath) {
           return { success: false, error: `Failed to generate memory report: ${error instanceof Error ? error.message : String(error)}` };
@@ -505,7 +505,7 @@ export class PerformanceTools {
           return response.success
             ? { success: true, message: response.message || 'Actors merged for optimization' }
             : { success: false, error: response.message || response.error || 'Failed to merge actors' };
-        } catch (error) {
+        } catch (error: unknown) {
           return { success: false, error: `Failed to merge actors: ${error instanceof Error ? error.message : String(error)}` };
         }
       }

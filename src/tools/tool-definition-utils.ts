@@ -534,26 +534,3 @@ export const commonSchemas = {
   nodeClass: { type: 'string', description: 'Node class path.' },
   animationName: { type: 'string', description: 'Animation name.' }
 };
-
-/**
- * Creates a standard tool output schema by merging custom properties with the base output fields.
- */
-export function createOutputSchema(additionalProperties: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    type: 'object',
-    properties: {
-      success: { type: 'boolean' },
-      message: { type: 'string' },
-      error: { type: 'string' },
-      ...additionalProperties
-    }
-  };
-}
-
-/**
- * Formats a tool description to include a list of supported actions.
- */
-export function actionDescription(description: string, actions: string[]): string {
-  if (!actions || actions.length === 0) return description;
-  return `${description}\n\nSupported actions: ${actions.join(', ')}.`;
-}

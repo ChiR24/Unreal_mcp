@@ -636,7 +636,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         return ResponseFactory.success(res, 'Asset action executed successfully');
       }
     }
-  } catch (error) {
+  } catch (error: unknown) {
     return ResponseFactory.error(error);
   }
 }

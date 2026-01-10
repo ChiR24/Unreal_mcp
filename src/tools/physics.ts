@@ -5,6 +5,7 @@ import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay } from '
 import { coerceString, coerceStringArray } from '../utils/result-helpers.js';
 import { wasmIntegration } from '../wasm/index.js';
 import { Logger } from '../utils/logger.js';
+import { requireBridge } from './base-tool.js';
 
 const log = new Logger('PhysicsTools');
 
@@ -51,7 +52,7 @@ export class PhysicsTools {
       if (alternate) {
         return alternate;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       log.warn('Failed to find skeletal mesh', error);
     }
 
@@ -180,12 +181,10 @@ export class PhysicsTools {
       }
 
       // Use Automation Bridge for physics asset creation
-      if (!this.automationBridge) {
-        throw new Error('Automation Bridge not available. Physics asset creation requires plugin support.');
-      }
+      const bridge = requireBridge(this.automationBridge, 'Physics asset creation');
 
       try {
-        const response = await this.automationBridge.sendAutomationRequest('setup_ragdoll', {
+        const response = await bridge.sendAutomationRequest('setup_ragdoll', {
           meshPath,
           physicsAssetName: sanitizedParams.name,
           savePath: path,
@@ -211,14 +210,14 @@ export class PhysicsTools {
           existingAsset: result.existingAsset,
           ...result
         };
-      } catch (error) {
+      } catch (error: unknown) {
         return {
           success: false,
           message: 'Failed to setup ragdoll physics',
           error: String(error)
         };
       }
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to setup ragdoll: ${err}` };
     }
   }
@@ -278,7 +277,7 @@ export class PhysicsTools {
         success: true,
         message: `Physics constraint ${params.name} created between ${params.actor1} and ${params.actor2}`
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to create constraint: ${err}` };
     }
   }
@@ -330,7 +329,7 @@ export class PhysicsTools {
         message: `Chaos destruction ${params.destructionName} created`,
         path: `${path}/${params.destructionName}`
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to setup destruction: ${err}` };
     }
   }
@@ -479,9 +478,7 @@ export class PhysicsTools {
     boneName?: string;
     isLocal?: boolean;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Physics force application requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Physics force application');
 
     try {
       // Use WASM for vector normalization/validation
@@ -489,7 +486,7 @@ export class PhysicsTools {
       const normalizedVector = wasmIntegration.vectorAdd(zeroVector, params.vector);
       log.debug('[WASM] Using vectorAdd for physics force vector processing');
 
-      const response = await this.automationBridge.sendAutomationRequest('apply_force', {
+      const response = await bridge.sendAutomationRequest('apply_force', {
         actorName: params.actorName,
         forceType: params.forceType,
         vector: normalizedVector,
@@ -516,7 +513,7 @@ export class PhysicsTools {
         availableActors: result.available_actors ? coerceStringArray(result.available_actors as unknown[]) : undefined,
         ...result
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to apply force: ${err}` };
     }
   }
@@ -572,7 +569,7 @@ export class PhysicsTools {
         success: true,
         message: `Cloth simulation enabled for ${params.meshName}`
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to setup cloth: ${err}` };
     }
   }
@@ -630,7 +627,7 @@ export class PhysicsTools {
         success: true,
         message: `Fluid simulation ${params.name} created`
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to create fluid simulation: ${err}` };
     }
   }
@@ -644,12 +641,10 @@ export class PhysicsTools {
     physicsAssetName?: string;
     savePath?: string;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Physics asset creation requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Physics asset creation');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('animation_physics', {
+      const response = await bridge.sendAutomationRequest('animation_physics', {
         action: 'setup_physics_simulation',
         ...params
       }, {
@@ -669,7 +664,7 @@ export class PhysicsTools {
         message: response.message || 'Physics simulation setup completed',
         ...(response.result || {})
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to setup physics simulation: ${err}` };
     }
   }

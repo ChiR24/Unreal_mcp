@@ -57,7 +57,7 @@ export function cleanObject<T = unknown>(obj: T, maxDepth: number = 10): T {
         if (cleanedValue !== undefined) {
           cleaned[key] = cleanedValue;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         // Skip properties that throw errors when accessed
         log.error(`Error cleaning property ${path}.${key}`, e);
       }

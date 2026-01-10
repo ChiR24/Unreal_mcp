@@ -2,6 +2,7 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
 import { lookupPropertyMetadata, normalizeDictionaryKey, PropertyDictionaryEntry } from './property-dictionary.js';
+import { requireBridge } from './base-tool.js';
 
 export interface ObjectSummary {
   name?: string;
@@ -349,14 +350,11 @@ export class IntrospectionTools {
       }
     }
 
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Introspection operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Introspection operations');
 
-    const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response = await automationBridge.sendAutomationRequest('inspect_object', {
+        const response = await bridge.sendAutomationRequest('inspect_object', {
           objectPath: params.objectPath,
           detailed: params.detailed ?? false
         }, {
@@ -384,7 +382,7 @@ export class IntrospectionTools {
         }
 
         return result;
-      } catch (error) {
+      } catch (error: unknown) {
         return {
           success: false,
           error: `Failed to inspect object: ${error instanceof Error ? error.message : String(error)}`
@@ -488,14 +486,11 @@ export class IntrospectionTools {
     functionName: string;
     parameters?: unknown[];
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Function call operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Function call operations');
 
-    const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response = await automationBridge.sendAutomationRequest('call_object_function', {
+        const response = await bridge.sendAutomationRequest('call_object_function', {
           objectPath: params.objectPath,
           functionName: params.functionName,
           parameters: params.parameters || []
@@ -514,7 +509,7 @@ export class IntrospectionTools {
           success: true,
           result: response.result
         };
-      } catch (error) {
+      } catch (error: unknown) {
         return {
           success: false,
           error: `Failed to call function: ${error instanceof Error ? error.message : String(error)}`
@@ -527,14 +522,11 @@ export class IntrospectionTools {
    * Get Class Default Object (CDO) for a class
    */
   async getCDO(className: string) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. CDO operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'CDO operations');
 
-    const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response = await automationBridge.sendAutomationRequest('inspect', {
+        const response = await bridge.sendAutomationRequest('inspect', {
           action: 'inspect_class',
           // C++ plugin expects `classPath` for inspect_class, but accepts both
           // short names and full paths (e.g. "Actor" or "/Script/Engine.Actor").
@@ -555,7 +547,7 @@ export class IntrospectionTools {
           // Plugin returns class inspection data under data/result depending on bridge version.
           cdo: response?.data ?? response?.result ?? response
         };
-      } catch (error) {
+      } catch (error: unknown) {
         return {
           success: false,
           error: `Failed to get CDO: ${error instanceof Error ? error.message : String(error)}`
@@ -568,14 +560,11 @@ export class IntrospectionTools {
    * Search for objects by class
    */
   async findObjectsByClass(className: string, limit: number = 100) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Object search operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Object search operations');
 
-    const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response = await automationBridge.sendAutomationRequest('inspect', {
+        const response = await bridge.sendAutomationRequest('inspect', {
           action: 'find_by_class',
           className,
           limit
@@ -600,7 +589,7 @@ export class IntrospectionTools {
           objects: validObjects,
           count: validObjects.length
         };
-      } catch (error) {
+      } catch (error: unknown) {
         return {
           success: false,
           error: `Failed to find objects: ${error instanceof Error ? error.message : String(error)}`
@@ -613,14 +602,11 @@ export class IntrospectionTools {
    * Get property value of a component
    */
   async getComponentProperty(params: { objectPath: string; componentName: string; propertyName: string }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Component property operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Component property operations');
 
-    const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response = await automationBridge.sendAutomationRequest('get_component_property', {
+        const response = await bridge.sendAutomationRequest('get_component_property', {
           objectPath: params.objectPath,
           componentName: params.componentName,
           propertyName: params.propertyName
@@ -640,7 +626,7 @@ export class IntrospectionTools {
           value: response.value,
           type: response.type
         };
-      } catch (error) {
+      } catch (error: unknown) {
         return {
           success: false,
           error: `Failed to get component property: ${error instanceof Error ? error.message : String(error)}`
@@ -653,14 +639,11 @@ export class IntrospectionTools {
    * Set property value of a component
    */
   async setComponentProperty(params: { objectPath: string; componentName: string; propertyName: string; value: unknown }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Component property operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Component property operations');
 
-    const automationBridge = this.automationBridge;
     return this.executeWithRetry(async () => {
       try {
-        const response = await automationBridge.sendAutomationRequest('set_component_property', {
+        const response = await bridge.sendAutomationRequest('set_component_property', {
           objectPath: params.objectPath,
           componentName: params.componentName,
           propertyName: params.propertyName,
@@ -680,7 +663,7 @@ export class IntrospectionTools {
           success: true,
           message: response.message || 'Property set successfully'
         };
-      } catch (error) {
+      } catch (error: unknown) {
         return {
           success: false,
           error: `Failed to set component property: ${error instanceof Error ? error.message : String(error)}`

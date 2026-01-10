@@ -19,7 +19,7 @@ const require = createRequire(import.meta.url);
 const packageInfo: { name?: string; version?: string } = (() => {
   try {
     return require('../package.json');
-  } catch (error) {
+  } catch (error: unknown) {
     const log = new Logger('UE-MCP');
     log.debug('Unable to read package.json for server metadata', error);
     return {};
@@ -47,6 +47,8 @@ function routeStdoutLogsToStderr(): void {
   /* eslint-disable no-console */
   console.log = (...args: unknown[]): void => { writeToStderr(...args); };
   console.info = (...args: unknown[]): void => { writeToStderr(...args); };
+  console.warn = (...args: unknown[]): void => { writeToStderr(...args); };
+  console.error = (...args: unknown[]): void => { writeToStderr(...args); };
   if (typeof console.debug === 'function') {
     console.debug = (...args: unknown[]): void => { writeToStderr(...args); };
   }
@@ -170,7 +172,7 @@ export default function createServerDefault({ config }: { config?: Record<string
       if (typeof config.logLevel === 'string') process.env.LOG_LEVEL = config.logLevel;
       if (typeof config.projectPath === 'string' && (config.projectPath as string).trim()) process.env.UE_PROJECT_PATH = config.projectPath as string;
     }
-  } catch (e) {
+  } catch (e: unknown) {
     const errObj = e as Record<string, unknown> | null;
     log.debug('[createServerDefault] Failed to apply config to environment:', errObj?.message ? String(errObj.message) : String(e));
   }
@@ -199,7 +201,7 @@ export async function startStdioServer() {
           }
           resolve();
         });
-      } catch (error) {
+      } catch (error: unknown) {
         const errorObj = error as Record<string, unknown> | null;
         const errorCode = errorObj?.code;
         if (errorCode !== 'ERR_SERVER_NOT_RUNNING') {
@@ -219,25 +221,25 @@ export async function startStdioServer() {
     log.info(`Shutting down MCP server${reason}`);
     try {
       automationBridge.stop();
-    } catch (error) {
+    } catch (error: unknown) {
       log.warn('Failed to stop automation bridge cleanly', error);
     }
 
     try {
       bridge.dispose();
-    } catch (error) {
+    } catch (error: unknown) {
       log.warn('Failed to dispose Unreal bridge cleanly', error);
     }
 
     try {
       await closeMetricsServer();
-    } catch (error) {
+    } catch (error: unknown) {
       log.warn('Failed to close metrics server cleanly', error);
     }
 
     try {
       await graphqlServer.stop();
-    } catch (error) {
+    } catch (error: unknown) {
       log.warn('Failed to stop GraphQL server cleanly', error);
     }
 
@@ -246,7 +248,7 @@ export async function startStdioServer() {
       if (typeof serverObj.close === 'function') {
         await (serverObj.close as () => Promise<void>)();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       log.warn('Failed to close MCP server transport cleanly', error);
     }
 

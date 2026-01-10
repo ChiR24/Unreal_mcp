@@ -15,7 +15,7 @@ const log = new Logger('CLI');
     } else {
       throw new Error('startStdioServer not exported from index.js');
     }
-  } catch (err) {
+  } catch (err: unknown) {
     // If index.js cannot be resolved, try importing the TypeScript source
     // at runtime (useful when running via ts-node-esm). Cast the error when
     // inspecting runtime-only properties like `code`.

@@ -815,7 +815,7 @@ export async function handleMaterialAuthoringTools(
           'UNKNOWN_ACTION'
         );
     }
-  } catch (error) {
+  } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     return ResponseFactory.error(`Material authoring error: ${err.message}`, 'MATERIAL_ERROR');
   }

@@ -186,7 +186,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       }
 
       return { success: false, error: resObj?.error as string ?? 'Failed to save asset' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to save asset: ${err} ` };
     }
   }
@@ -390,7 +390,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
         lodCount: (result.lodCount as number) ?? lodCount,
         ...result
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: `Failed to generate LODs: ${error instanceof Error ? error.message : String(error)} `

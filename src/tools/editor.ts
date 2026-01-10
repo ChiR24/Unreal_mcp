@@ -60,7 +60,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
         await this.bridge.executeConsoleCommand('PlayInViewport');
         return { success: true, message: 'PIE start command sent' };
       }
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to start PIE: ${err}` };
     }
   }
@@ -90,7 +90,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
         await this.bridge.executeConsoleCommand('stop');
         return { success: true, message: 'PIE stopped via console command' };
       }
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to stop PIE: ${err}` };
     }
   }
@@ -100,7 +100,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
       // Pause/Resume PIE
       await this.bridge.executeConsoleCommand('pause');
       return { success: true, message: 'PIE paused/resumed' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to pause PIE: ${err}` };
     }
   }
@@ -115,7 +115,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
       // Use console command to build lighting
       await this.bridge.executeConsoleCommand('BuildLighting');
       return { success: true, message: 'Lighting build started' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to build lighting: ${err}` };
     }
   }
@@ -142,7 +142,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
         return { success: true, location: locArr, rotation: rotArr };
       }
       return { success: false, error: 'Failed to get camera information' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Camera query failed: ${err}` };
     }
   }
@@ -206,7 +206,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
         return { success: true, message: resp.message || 'Camera set', location, rotation };
       }
       return { success: false, error: resp?.error || resp?.message || 'Failed to set camera' };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Camera control failed: ${err}` };
     }
   }
@@ -215,7 +215,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     try {
       await this.bridge.executeConsoleCommand(`camspeed ${speed}`);
       return { success: true, message: `Camera speed set to ${speed}` };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to set camera speed: ${err}` };
     }
   }
@@ -224,7 +224,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
     try {
       await this.bridge.executeConsoleCommand(`fov ${fov}`);
       return { success: true, message: `FOV set to ${fov}` };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to set FOV: ${err}` };
     }
   }
@@ -247,7 +247,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
         filename: sanitizedFilename,
         command
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to take screenshot: ${err}` };
     }
   }
@@ -260,7 +260,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
         success: true,
         message: 'PIE resume toggled via pause command'
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to resume PIE: ${err}` };
     }
   }
@@ -277,7 +277,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
         message: `Advanced PIE by ${clampedSteps} frame(s)`,
         steps: clampedSteps
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to step PIE: ${err}` };
     }
   }
@@ -403,7 +403,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
         width: clampedWidth,
         height: clampedHeight
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to set viewport resolution: ${err}` };
     }
   }
@@ -429,7 +429,7 @@ export class EditorTools extends BaseTool implements IEditorTools {
         message: `Console command executed: ${command}`,
         output: res
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to execute console command: ${err}` };
     }
   }

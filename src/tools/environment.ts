@@ -119,7 +119,7 @@ export class EnvironmentTools implements IEnvironmentTools {
         message: typeof response.message === 'string' ? response.message : 'Environment control action succeeded',
         details: resultPayload
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
@@ -199,7 +199,7 @@ export class EnvironmentTools implements IEnvironmentTools {
         message: `Environment snapshot exported to ${targetPath}`,
         details: { path: targetPath }
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
@@ -271,7 +271,7 @@ export class EnvironmentTools implements IEnvironmentTools {
         message: `Environment snapshot import handled from ${targetPath}`,
         details: parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : undefined
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
@@ -327,7 +327,7 @@ export class EnvironmentTools implements IEnvironmentTools {
           : `Environment actors deleted: ${cleaned.join(', ')}`,
         details: result ?? { names: cleaned }
       } as StandardActionResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,

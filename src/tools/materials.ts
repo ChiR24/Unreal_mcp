@@ -80,7 +80,7 @@ export class MaterialTools {
             success: false,
             error: (resp?.error ?? resp?.message ?? 'Failed to create material') as string
           };
-        } catch (err) {
+        } catch (err: unknown) {
           return {
             success: false,
             error: `Failed to create material: ${err}`
@@ -92,7 +92,7 @@ export class MaterialTools {
         success: false,
         error: 'Material creation requires Automation Bridge connection'
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to create material: ${err}` };
     }
   }
@@ -119,7 +119,7 @@ export class MaterialTools {
         error: result.error ?? `Failed to apply material to ${actorPath}`,
         transport: result.transport
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to apply material: ${err}` };
     }
   }
@@ -151,7 +151,7 @@ export class MaterialTools {
           if (!(errTxt.toLowerCase().includes('unknown') || errTxt.includes('UNKNOWN_PLUGIN_ACTION'))) {
             return { success: false, error: (resp?.error ?? resp?.message ?? 'CREATE_MATERIAL_INSTANCE_FAILED') as string };
           }
-        } catch (e) {
+        } catch (e: unknown) {
           // If the error is simply generic or unknown action, we fall back.
           // But if it's a specific error, we might log it.
           // For now, let's at least not silence everything.
@@ -200,12 +200,12 @@ export class MaterialTools {
           return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement create_material_instance' };
         }
         return { success: false, error: (resRecord?.error ?? resRecord?.message ?? 'CREATE_MATERIAL_INSTANCE_FAILED') as string };
-      } catch (err) {
+      } catch (err: unknown) {
         // If executeEditorFunction threw due to bridge not connected or python disabled,
         // preserve previous behavior by returning structured failure.
         return { success: false, error: String(err) || 'CREATE_MATERIAL_INSTANCE_FAILED' };
       }
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to create material instance: ${err}` };
     }
   }

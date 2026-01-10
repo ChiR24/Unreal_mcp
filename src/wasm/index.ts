@@ -225,7 +225,7 @@ export class WASMIntegration {
         hasVector: typeof wasmModule.Vector === 'function',
         hasUtils: typeof wasmModule.Utils === 'function'
       });
-    } catch (error) {
+    } catch (error: unknown) {
       this.log.error('Failed to initialize WebAssembly module:', error);
 
       const errorObj = error as Record<string, unknown> | null;
@@ -285,7 +285,7 @@ export class WASMIntegration {
         this.recordMetrics('parse_properties', duration, true);
 
         return result;
-      } catch (error) {
+      } catch (error: unknown) {
         this.log.warn('WASM property parsing failed, falling back to TypeScript:', error);
       }
     }
@@ -320,7 +320,7 @@ export class WASMIntegration {
         this.recordMetrics('compose_transform', duration, true);
 
         return new Float32Array(result);
-      } catch (error) {
+      } catch (error: unknown) {
         this.log.warn('WASM transform calculation failed, falling back to TypeScript:', error);
       }
     }
@@ -347,7 +347,7 @@ export class WASMIntegration {
         this.recordMetrics('decompose_matrix', duration, true);
 
         return Array.from(result);
-      } catch (error) {
+      } catch (error: unknown) {
         this.log.warn('WASM matrix decomposition failed, falling back to TypeScript:', error);
       }
     }
@@ -378,7 +378,7 @@ export class WASMIntegration {
         this.recordMetrics('vector_add', duration, true);
 
         return [result.x, result.y, result.z];
-      } catch (error) {
+      } catch (error: unknown) {
         this.log.warn('WASM vector addition failed, falling back to TypeScript:', error);
       }
     }
@@ -419,7 +419,7 @@ export class WASMIntegration {
         this.recordMetrics('resolve_dependencies', duration, true);
 
         return result;
-      } catch (error) {
+      } catch (error: unknown) {
         this.log.warn('WASM dependency resolution failed, falling back to TypeScript:', error);
       }
     }
@@ -456,7 +456,7 @@ export class WASMIntegration {
         this.recordMetrics('calculate_dependency_depth', duration, true);
 
         return result as number;
-      } catch (error) {
+      } catch (error: unknown) {
         this.log.warn('WASM dependency depth calculation failed, falling back to TypeScript:', error);
       }
     }
@@ -490,7 +490,7 @@ export class WASMIntegration {
         this.recordMetrics('find_circular_dependencies', duration, true);
 
         return result as string[][];
-      } catch (error) {
+      } catch (error: unknown) {
         this.log.warn('WASM circular dependency detection failed, falling back to TypeScript:', error);
       }
     }
@@ -520,7 +520,7 @@ export class WASMIntegration {
         this.recordMetrics('topological_sort', duration, true);
 
         return result as string[];
-      } catch (error) {
+      } catch (error: unknown) {
         this.log.warn('WASM topological sort failed, falling back to TypeScript:', error);
       }
     }
@@ -622,7 +622,7 @@ export class WASMIntegration {
   private fallbackParseProperties(jsonStr: string): unknown {
     try {
       return JSON.parse(jsonStr);
-    } catch (error) {
+    } catch (error: unknown) {
       this.log.error('Failed to parse JSON:', error);
       throw error;
     }

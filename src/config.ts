@@ -63,7 +63,7 @@ let config: Config;
 try {
   config = EnvSchema.parse(process.env);
   log.debug('Configuration loaded successfully');
-} catch (error) {
+} catch (error: unknown) {
   if (error instanceof z.ZodError) {
     log.error('❌ Invalid configuration:', error.format());
     log.warn('⚠️ Falling back to safe defaults.');

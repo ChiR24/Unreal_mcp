@@ -153,7 +153,7 @@ export function startMetricsServer(options: MetricsServerOptions): http.Server |
         res.statusCode = 200;
         res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
         res.end(body);
-      } catch (err) {
+      } catch (err: unknown) {
         logger.warn('Failed to render /metrics payload', err as Error);
         res.statusCode = 500;
         res.end('Internal Server Error');
@@ -169,7 +169,7 @@ export function startMetricsServer(options: MetricsServerOptions): http.Server |
     });
 
     return server;
-  } catch (err) {
+  } catch (err: unknown) {
     logger.warn('Failed to start metrics server', err);
     return null;
   }

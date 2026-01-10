@@ -202,7 +202,7 @@ async function getActorProperties(
       timeoutMs: 5000
     });
     return result.success ? (result.value as Record<string, unknown>) || {} : {};
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('Failed to get actor properties:', error);
     return {};
   }
@@ -237,7 +237,7 @@ async function listAssets(
     logAutomationFailure('list_assets', response);
     log.warn('Failed to list assets - returning empty set');
     return { assets: [], totalCount: 0 };
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('Failed to list assets:', error);
     throw createResolverError('listAssets', error);
   }
@@ -268,7 +268,7 @@ async function listActors(
 
     logAutomationFailure('list_actors', response);
     return { actors: [] };
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('Failed to list actors:', error);
     return { actors: [] };
   }
@@ -368,7 +368,7 @@ export const resolvers = {
           throw new Error('Loaders not initialized');
         }
         return await context.loaders.assetLoader.load(path);
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to get asset:', error);
         return null;
       }
@@ -406,7 +406,7 @@ export const resolvers = {
           throw new Error('Loaders not initialized');
         }
         return await context.loaders.actorLoader.load(name);
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to get actor:', error);
         return null;
       }
@@ -445,7 +445,7 @@ export const resolvers = {
           },
           totalCount: blueprints.length
         };
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to list blueprints:', error);
 
         return {
@@ -483,7 +483,7 @@ export const resolvers = {
         }
 
         return [];
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to list levels:', error);
         return [];
       }
@@ -502,7 +502,7 @@ export const resolvers = {
         }
 
         return null;
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to get current level:', error);
         return null;
       }
@@ -534,7 +534,7 @@ export const resolvers = {
           },
           totalCount
         };
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to list materials:', error);
         return {
           edges: [],
@@ -575,7 +575,7 @@ export const resolvers = {
           },
           totalCount
         };
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to list sequences:', error);
         return {
           edges: [],
@@ -603,7 +603,7 @@ export const resolvers = {
           return (resultObj.cells || []) as unknown[];
         }
         return [];
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to list world partition cells:', error);
         return [];
       }
@@ -640,7 +640,7 @@ export const resolvers = {
           },
           totalCount
         };
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to list niagara systems:', error);
         return {
           edges: [],
@@ -672,7 +672,7 @@ export const resolvers = {
           };
         }
         return null;
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to get niagara system:', error);
         return null;
       }
@@ -695,7 +695,7 @@ export const resolvers = {
         }
 
         return [];
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to search:', error);
         return [];
       }
@@ -720,7 +720,7 @@ export const resolvers = {
         }
 
         throw new Error(response.error || 'Failed to duplicate asset');
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to duplicate asset:', error);
         throw error;
       }
@@ -742,7 +742,7 @@ export const resolvers = {
         }
 
         throw new Error(response.error || 'Failed to move asset');
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to move asset:', error);
         throw error;
       }
@@ -759,7 +759,7 @@ export const resolvers = {
         );
 
         return response.success || false;
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to delete asset:', error);
         return false;
       }
@@ -778,7 +778,7 @@ export const resolvers = {
         }
 
         throw new Error(response.error || 'Failed to spawn actor');
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to spawn actor:', error);
         throw error;
       }
@@ -795,7 +795,7 @@ export const resolvers = {
         );
 
         return response.success || false;
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to delete actor:', error);
         return false;
       }
@@ -817,7 +817,7 @@ export const resolvers = {
         }
 
         throw new Error(response.error || 'Failed to set actor transform');
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to set actor transform:', error);
         throw error;
       }
@@ -836,7 +836,7 @@ export const resolvers = {
         }
 
         throw new Error(response.error || 'Failed to create blueprint');
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to create blueprint:', error);
         throw error;
       }
@@ -858,7 +858,7 @@ export const resolvers = {
         }
 
         throw new Error(response.error || 'Failed to add variable to blueprint');
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to add variable to blueprint:', error);
         throw error;
       }
@@ -880,7 +880,7 @@ export const resolvers = {
         }
 
         throw new Error(response.error || 'Failed to add function to blueprint');
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to add function to blueprint:', error);
         throw error;
       }
@@ -901,7 +901,7 @@ export const resolvers = {
         }
 
         throw new Error(response.error || 'Failed to load level');
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to load level:', error);
         throw error;
       }
@@ -918,7 +918,7 @@ export const resolvers = {
         );
 
         return response.success || false;
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to save level:', error);
         return false;
       }
@@ -941,7 +941,7 @@ export const resolvers = {
         }
 
         throw new Error(response.error || 'Failed to create material instance');
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to create material instance:', error);
         throw error;
       }
@@ -966,7 +966,7 @@ export const resolvers = {
         }
 
         return [];
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to get asset dependencies:', error);
         return [];
       }
@@ -988,7 +988,7 @@ export const resolvers = {
         }
 
         return [];
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to get asset dependents:', error);
         return [];
       }
@@ -1016,7 +1016,7 @@ export const resolvers = {
         }
 
         return [];
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to get actor components:', error);
         return [];
       }
@@ -1058,7 +1058,7 @@ export const resolvers = {
         }
 
         return [];
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to get material parameters:', error);
         return [];
       }
@@ -1082,7 +1082,7 @@ export const resolvers = {
         }
 
         return [];
-      } catch (error) {
+      } catch (error: unknown) {
         log.error('Failed to get sequence tracks:', error);
         return [];
       }

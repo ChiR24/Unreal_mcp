@@ -115,7 +115,7 @@ export async function handleGeometryTools(
       `Automation bridge not available for geometry action: ${action}`
     );
     return cleanObject(result) as Record<string, unknown>;
-  } catch (error) {
+  } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     return {
       success: false,

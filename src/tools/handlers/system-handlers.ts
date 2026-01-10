@@ -150,7 +150,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
           ...res,
           action: 'create_widget'
         });
-      } catch (error) {
+      } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : String(error);
         return {
           success: false,
@@ -193,7 +193,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
             action: 'show_widget',
             widgetId
           });
-        } catch (error) {
+        } catch (error: unknown) {
           const msg = error instanceof Error ? error.message : String(error);
           return {
             success: false,
@@ -244,7 +244,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
           ...res,
           action: 'add_widget_child'
         });
-      } catch (error) {
+      } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : String(error);
         return {
           success: false,
@@ -338,7 +338,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
             }
           }
           results.push({ assetPath, success: res.success, error: errorStr });
-        } catch (error) {
+        } catch (error: unknown) {
           results.push({
             assetPath,
             success: false,
@@ -430,7 +430,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
           volume,
           pitch
         });
-      } catch (error) {
+      } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : String(error);
         const lowered = msg.toLowerCase();
         const isMissingAsset = lowered.includes('asset_not_found') || lowered.includes('asset not found');
@@ -491,7 +491,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
 
         try {
           await tools.editorTools.takeScreenshot(baseName);
-        } catch (error) {
+        } catch (error: unknown) {
           const msg = error instanceof Error ? error.message : String(error);
           return {
             success: false,

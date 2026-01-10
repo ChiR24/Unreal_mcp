@@ -3,6 +3,7 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
 import { Logger } from '../utils/logger.js';
+import { requireBridge } from './base-tool.js';
 
 const log = new Logger('UITools');
 
@@ -47,7 +48,7 @@ export class UITools {
             ...(resultObj || {})
           };
         }
-      } catch (error) {
+      } catch (error: unknown) {
         log.warn('createWidget automation bridge request failed; falling back to editor function', error);
       }
     }
@@ -80,7 +81,7 @@ export class UITools {
 
       // Fallback: if no structured response, return generic failure
       return { success: false, error: 'Failed to create widget blueprint' };
-    } catch (e) {
+    } catch (e: unknown) {
       return { success: false, error: `Failed to create widget blueprint: ${e}` };
     }
   }
@@ -102,13 +103,11 @@ export class UITools {
       alignment?: [number, number];
     };
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation bridge required for widget component operations');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Widget component operations');
 
     try {
       // Map correctly to McpAutomationBridge_UiHandlers.cpp: add_widget_child
-      const response = await this.automationBridge.sendAutomationRequest('manage_ui', {
+      const response = await bridge.sendAutomationRequest('manage_ui', {
         action: 'add_widget_child', // Use 'action' inside payload for subAction
         widgetPath: _params.widgetName, // C++ expects 'widgetPath'
         childClass: _params.componentType, // C++ expects 'childClass'
@@ -118,7 +117,7 @@ export class UITools {
       return response.success
         ? { success: true, message: response.message || 'Widget component added', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to add widget component' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to add widget component: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -128,13 +127,11 @@ export class UITools {
     key: string; // The widget name to find
     value: string; // The text to set
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation bridge required for setting widget text');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Widget text operations');
 
     try {
       // Changed to 'system_control' with subAction
-      const response = await this.automationBridge.sendAutomationRequest('system_control', {
+      const response = await bridge.sendAutomationRequest('system_control', {
         subAction: 'set_widget_text',
         key: _params.key,
         value: _params.value
@@ -143,7 +140,7 @@ export class UITools {
       return response.success
         ? { success: true, message: response.message || 'Widget text set', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to set widget text' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to set widget text: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -153,12 +150,10 @@ export class UITools {
     key: string;
     texturePath: string;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation bridge required for setting widget images');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Widget image operations');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('system_control', {
+      const response = await bridge.sendAutomationRequest('system_control', {
         subAction: 'set_widget_image',
         key: _params.key,
         texturePath: _params.texturePath
@@ -167,7 +162,7 @@ export class UITools {
       return response.success
         ? { success: true, message: response.message || 'Widget image set', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to set widget image' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to set widget image: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -177,9 +172,7 @@ export class UITools {
     name: string;
     elements?: Array<Record<string, unknown>>;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation bridge required for creating HUDs');
-    }
+    const bridge = requireBridge(this.automationBridge, 'HUD creation');
 
     // Default path assumption or require full path?
     // C++ expects 'widgetPath'. If name is just "MyHUD", we might need to resolve it.
@@ -187,7 +180,7 @@ export class UITools {
     const widgetPath = _params.name.startsWith('/Game') ? _params.name : `/Game/UI/${_params.name}`;
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('system_control', {
+      const response = await bridge.sendAutomationRequest('system_control', {
         subAction: 'create_hud',
         widgetPath: widgetPath
       });
@@ -196,7 +189,7 @@ export class UITools {
       return response.success
         ? { success: true, message: response.message || 'HUD created', widgetName: resultObj.widgetName, ...resultObj }
         : { success: false, error: response.error || response.message || 'Failed to create HUD' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to create HUD: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -249,7 +242,7 @@ export class UITools {
         return { success: true, message: interpreted.message };
       }
       return { success: false, error: interpreted.error ?? 'Failed to add widget to viewport', details: bestEffortInterpretedText(interpreted) };
-    } catch (e) {
+    } catch (e: unknown) {
       return { success: false, error: `Failed to add widget to viewport: ${e}` };
     }
   }

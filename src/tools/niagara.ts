@@ -67,7 +67,7 @@ export class NiagaraTools {
         error: response?.error ?? 'CREATE_NIAGARA_SYSTEM_FAILED',
         message: response?.message ?? 'Niagara system creation failed'
       } as const;
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: `Failed to create Niagara system: ${message}` } as const;
     }
@@ -108,7 +108,7 @@ export class NiagaraTools {
         error: response?.error ?? 'CREATE_NIAGARA_EMITTER_FAILED',
         message: response?.message ?? 'Niagara emitter creation failed'
       } as const;
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: `Failed to create Niagara emitter: ${message}` } as const;
     }
@@ -169,7 +169,7 @@ export class NiagaraTools {
         error: response?.error ?? 'CREATE_NIAGARA_RIBBON_FAILED',
         message: response?.message ?? 'Niagara ribbon creation failed'
       } as const;
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: `Failed to create Niagara ribbon: ${message}` } as const;
     }
@@ -202,7 +202,7 @@ export class NiagaraTools {
         error: response?.error ?? 'CLEANUP_FAILED',
         message: response?.message ?? 'Niagara cleanup failed'
       } as const;
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: `Failed to cleanup Niagara effects: ${message}` } as const;
     }
@@ -268,7 +268,7 @@ export class NiagaraTools {
         error: (resp?.error || 'ADD_EMITTER_FAILED') as string,
         message: (resp?.message || 'Failed to add emitter') as string
       };
-    } catch (e) {
+    } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       return { success: false, error: 'ADD_EMITTER_FAILED', message };
     }
@@ -372,7 +372,7 @@ export class NiagaraTools {
         return { success: true, message: (resp.message || `Parameter ${params.parameterName} set on ${params.systemName}`) as string, applied: resp.applied ?? result.applied };
       }
       return { success: false, message: (resp?.message ?? 'Set parameter failed') as string, error: (resp?.error ?? 'SET_PARAMETER_FAILED') as string };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to set parameter: ${err}` };
     }
   }
@@ -414,7 +414,7 @@ export class NiagaraTools {
 
       // Asset created successfully
       return { success: true, message: `${params.effectType} effect ${safeName} created`, path: fullPath };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to create effect: ${err}` };
     }
   }
@@ -443,7 +443,7 @@ export class NiagaraTools {
       }
       await this.bridge.executeConsoleCommands(commands);
       return { success: true, message: `GPU simulation ${params.name} created`, path: `${path}/${params.name}` };
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to create GPU simulation: ${err}` };
     }
   }
@@ -477,13 +477,13 @@ export class NiagaraTools {
             return { success: true, message: (resp.message || 'Niagara effect spawned') as string, actor: (resp.actor || result.actor || result.actorName) as string | undefined };
           }
           return { success: false, message: (resp?.message ?? 'Spawn failed') as string, error: (resp?.error ?? 'SPAWN_FAILED') as string };
-        } catch (error) {
+        } catch (error: unknown) {
           return { success: false, error: `Failed to spawn effect: ${error instanceof Error ? error.message : String(error)}` };
         }
       }
 
       throw new Error('Automation Bridge not available. Niagara effect spawning requires plugin support.');
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: `Failed to spawn effect: ${err}` };
     }
   }

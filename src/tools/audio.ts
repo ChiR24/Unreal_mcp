@@ -1,6 +1,7 @@
 // Audio tools for Unreal Engine
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
+import { requireBridge } from './base-tool.js';
 
 export class AudioTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
@@ -28,15 +29,13 @@ export class AudioTools {
       attenuationSettings?: string;
     };
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Audio operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Audio operations');
 
     const path = params.savePath || '/Game/Audio/Cues';
     const { volume, pitch } = this.validateAudioParams(params.settings?.volume, params.settings?.pitch);
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_sound_cue', {
+      const response = await bridge.sendAutomationRequest('create_sound_cue', {
         name: params.name,
         packagePath: path,
         wavePath: params.wavePath,
@@ -57,7 +56,7 @@ export class AudioTools {
         message: response.message || 'Sound cue created',
         ...(response.result || {})
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to create sound cue: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -73,14 +72,12 @@ export class AudioTools {
     attenuationPath?: string;
     concurrencyPath?: string;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Audio operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Audio operations');
 
     const { volume, pitch } = this.validateAudioParams(params.volume, params.pitch);
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('play_sound_at_location', {
+      const response = await bridge.sendAutomationRequest('play_sound_at_location', {
         soundPath: params.soundPath,
         location: params.location,
         rotation: params.rotation ?? [0, 0, 0],
@@ -102,7 +99,7 @@ export class AudioTools {
         message: response.message || 'Sound played',
         ...(response.result || {})
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to play sound: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -114,12 +111,10 @@ export class AudioTools {
     pitch?: number;
     startTime?: number;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Audio operations require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Audio operations');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('play_sound_2d', {
+      const response = await bridge.sendAutomationRequest('play_sound_2d', {
         soundPath: params.soundPath,
         volume: params.volume ?? 1.0,
         pitch: params.pitch ?? 1.0,
@@ -137,7 +132,7 @@ export class AudioTools {
         message: response.message || '2D sound played',
         ...(response.result || {})
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to play 2D sound: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -159,12 +154,10 @@ export class AudioTools {
     autoPlay?: boolean;
     is3D?: boolean;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Creating audio components requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Creating audio components');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_audio_component', {
+      const response = await bridge.sendAutomationRequest('create_audio_component', {
         actorName: _params.actorName,
         componentName: _params.componentName,
         soundPath: _params.soundPath,
@@ -175,7 +168,7 @@ export class AudioTools {
       return response.success
         ? { success: true, message: response.message || 'Audio component created', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to create audio component' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to create audio component: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -188,12 +181,10 @@ export class AudioTools {
     attenuationShape?: string;  // 'Sphere' | 'Capsule' | 'Box' | 'Cone' - validated by C++
     falloffMode?: string;  // 'Linear' | 'Logarithmic' | 'Inverse' | 'LogReverse' | 'Natural' - validated by C++
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Setting sound attenuation requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Setting sound attenuation');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('set_sound_attenuation', {
+      const response = await bridge.sendAutomationRequest('set_sound_attenuation', {
         name: _params.name,
         innerRadius: _params.innerRadius,
         falloffDistance: _params.falloffDistance,
@@ -204,7 +195,7 @@ export class AudioTools {
       return response.success
         ? { success: true, message: response.message || 'Sound attenuation set', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to set sound attenuation' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to set sound attenuation: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -220,12 +211,10 @@ export class AudioTools {
       attenuationDistanceScale?: number;
     };
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Creating sound classes requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Creating sound classes');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_sound_class', {
+      const response = await bridge.sendAutomationRequest('create_sound_class', {
         name: _params.name,
         parentClass: _params.parentClass,
         properties: _params.properties
@@ -234,7 +223,7 @@ export class AudioTools {
       return response.success
         ? { success: true, message: response.message || 'Sound class created', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to create sound class' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to create sound class: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -250,12 +239,10 @@ export class AudioTools {
       fadeOutTime?: number;
     }>;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Creating sound mixes requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Creating sound mixes');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_sound_mix', {
+      const response = await bridge.sendAutomationRequest('create_sound_mix', {
         name: _params.name,
         classAdjusters: _params.classAdjusters
       });
@@ -263,7 +250,7 @@ export class AudioTools {
       return response.success
         ? { success: true, message: response.message || 'Sound mix created', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to create sound mix' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to create sound mix: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -272,19 +259,17 @@ export class AudioTools {
   async pushSoundMix(_params: {
     mixName: string;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Pushing sound mixes requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Pushing sound mixes');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('push_sound_mix', {
+      const response = await bridge.sendAutomationRequest('push_sound_mix', {
         mixName: _params.mixName
       });
 
       return response.success
         ? { success: true, message: response.message || 'Sound mix pushed', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to push sound mix' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to push sound mix: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -292,19 +277,17 @@ export class AudioTools {
   async popSoundMix(_params: {
     mixName: string;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Popping sound mixes requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Popping sound mixes');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('pop_sound_mix', {
+      const response = await bridge.sendAutomationRequest('pop_sound_mix', {
         mixName: _params.mixName
       });
 
       return response.success
         ? { success: true, message: response.message || 'Sound mix popped', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to pop sound mix' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to pop sound mix: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -323,7 +306,7 @@ export class AudioTools {
     try {
       await this.bridge.executeConsoleCommand(command);
       return { success: true, message: `Master volume set to ${vol}` };
-    } catch (e) {
+    } catch (e: unknown) {
       return { success: false, error: `Failed to set master volume: ${e instanceof Error ? e.message : String(e)}` };
     }
   }
@@ -338,12 +321,10 @@ export class AudioTools {
     attenuationPath?: string;
     concurrencyPath?: string;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Creating ambient sounds requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Creating ambient sounds');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_ambient_sound', {
+      const response = await bridge.sendAutomationRequest('create_ambient_sound', {
         soundPath: _params.soundPath,
         location: _params.location,
         volume: _params.volume ?? 1.0,
@@ -356,7 +337,7 @@ export class AudioTools {
       return response.success
         ? { success: true, message: response.message || 'Ambient sound created', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to create ambient sound' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to create ambient sound: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -370,12 +351,10 @@ export class AudioTools {
     volume?: number;
     fadeTime?: number;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Creating reverb zones requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Creating reverb zones');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_reverb_zone', {
+      const response = await bridge.sendAutomationRequest('create_reverb_zone', {
         name: _params.name,
         location: _params.location,
         size: _params.size,
@@ -387,7 +366,7 @@ export class AudioTools {
       return response.success
         ? { success: true, message: response.message || 'Reverb zone created', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to create reverb zone' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to create reverb zone: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -398,12 +377,10 @@ export class AudioTools {
     fftSize?: number;
     outputType?: string;  // 'Magnitude' | 'Decibel' | 'Normalized' - validated by C++
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Audio analysis controls require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Audio analysis controls');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('enable_audio_analysis', {
+      const response = await bridge.sendAutomationRequest('enable_audio_analysis', {
         enabled: _params.enabled,
         fftSize: _params.fftSize,
         outputType: _params.outputType
@@ -412,7 +389,7 @@ export class AudioTools {
       return response.success
         ? { success: true, message: response.message || `Audio analysis ${_params.enabled ? 'enabled' : 'disabled'}`, ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to enable audio analysis' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to enable audio analysis: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -429,12 +406,10 @@ export class AudioTools {
     fadeTime?: number;
     fadeType?: string;  // 'FadeIn' | 'FadeOut' | 'FadeTo' - validated by C++
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Fading sound requires plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Fading sound');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('fade_sound', {
+      const response = await bridge.sendAutomationRequest('fade_sound', {
         soundName: _params.soundName,
         targetVolume: _params.targetVolume,
         fadeTime: _params.fadeTime,
@@ -444,7 +419,7 @@ export class AudioTools {
       return response.success
         ? { success: true, message: response.message || 'Sound faded', ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to fade sound' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to fade sound: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -454,12 +429,10 @@ export class AudioTools {
     enabled?: boolean;
     scale?: number;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Doppler effect controls require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Doppler effect controls');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('set_doppler_effect', {
+      const response = await bridge.sendAutomationRequest('set_doppler_effect', {
         enabled: _params.enabled,
         scale: _params.scale ?? 1.0
       });
@@ -467,7 +440,7 @@ export class AudioTools {
       return response.success
         ? { success: true, message: response.message || `Doppler effect ${_params.enabled ? 'enabled' : 'disabled'}`, ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to set doppler effect' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to set doppler effect: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
@@ -478,12 +451,10 @@ export class AudioTools {
     lowPassFilterFrequency?: number;
     volumeAttenuation?: number;
   }) {
-    if (!this.automationBridge) {
-      throw new Error('Automation Bridge not available. Audio occlusion controls require plugin support.');
-    }
+    const bridge = requireBridge(this.automationBridge, 'Audio occlusion controls');
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('set_audio_occlusion', {
+      const response = await bridge.sendAutomationRequest('set_audio_occlusion', {
         enabled: _params.enabled,
         lowPassFilterFrequency: _params.lowPassFilterFrequency,
         volumeAttenuation: _params.volumeAttenuation
@@ -492,7 +463,7 @@ export class AudioTools {
       return response.success
         ? { success: true, message: response.message || `Audio occlusion ${_params.enabled ? 'enabled' : 'disabled'}`, ...(response.result || {}) }
         : { success: false, error: response.error || response.message || 'Failed to set audio occlusion' };
-    } catch (error) {
+    } catch (error: unknown) {
       return { success: false, error: `Failed to set audio occlusion: ${error instanceof Error ? error.message : String(error)}` };
     }
   }

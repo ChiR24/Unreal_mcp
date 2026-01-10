@@ -63,8 +63,6 @@ import { handleUtilityPluginsTools } from './handlers/utility-plugins-handlers.j
 import { handlePhysicsDestructionTools } from './handlers/physics-destruction-handlers.js';
 import { handleAccessibilityTools } from './handlers/accessibility-handlers.js';
 import { handleModdingTools } from './handlers/modding-handlers.js';
-// import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
-// import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
 type NormalizedToolCall = {
   name: string;

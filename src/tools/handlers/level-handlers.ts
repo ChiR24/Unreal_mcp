@@ -257,7 +257,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           error: exists ? undefined : 'NOT_FOUND',
           message: exists ? 'Level asset exists' : 'Level asset not found'
         });
-      } catch (err) {
+      } catch (err: unknown) {
         return cleanObject({
           success: false,
           error: 'VALIDATION_FAILED',

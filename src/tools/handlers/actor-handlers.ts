@@ -279,7 +279,7 @@ export async function handleActorTools(action: string, args: HandlerArgs, tools:
         // Fallback to direct bridge call or error
         const res = await executeAutomationRequest(tools, 'control_actor', args);
         return cleanObject(res) as Record<string, unknown>;
-    } catch (error) {
+    } catch (error: unknown) {
         return ResponseFactory.error(error);
     }
 }

@@ -113,7 +113,7 @@ export class ActorTools extends BaseTool implements IActorTools {
       }
 
       return result;
-    } catch (err) {
+    } catch (err: unknown) {
       throw new Error(`Failed to spawn actor: ${err}`);
     }
   }

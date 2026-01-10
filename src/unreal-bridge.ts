@@ -154,7 +154,7 @@ export class UnrealBridge {
     if (this.connectPromise) {
       try {
         await this.connectPromise;
-      } catch (err) {
+      } catch (err: unknown) {
         this.log.debug('Existing connect promise rejected', err instanceof Error ? err.message : String(err));
       }
       return this.connected;
@@ -371,7 +371,7 @@ export class UnrealBridge {
           error: response.error
         }
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       return {
         success: false,
@@ -474,7 +474,7 @@ export class UnrealBridge {
           error: response.error
         }
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       return {
         success: false,
@@ -535,7 +535,7 @@ export class UnrealBridge {
     try {
       const result = await this.executeThrottledCommand(executeCommand, priority);
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       this.log.error(`Console command failed: ${cmdTrimmed}`, error);
       throw error;
     }
@@ -557,7 +557,7 @@ export class UnrealBridge {
       try {
         const result = await this.executeConsoleCommand(command);
         results.push(result);
-      } catch (error) {
+      } catch (error: unknown) {
         if (!continueOnError) {
           throw error;
         }
@@ -623,7 +623,7 @@ export class UnrealBridge {
           ? raw.isUE56OrAbove
           : (major > 5 || (major === 5 && minor >= 6));
       return { version, major, minor, patch, isUE56OrAbove };
-    } catch (error) {
+    } catch (error: unknown) {
       this.log.warn('getEngineVersion failed', error);
       return {
         version: 'unknown',
@@ -667,7 +667,7 @@ export class UnrealBridge {
           editorActor: Boolean(subs.editorActor)
         }
       };
-    } catch (error) {
+    } catch (error: unknown) {
       this.log.warn('getFeatureFlags failed', error);
       return {
         subsystems: {
@@ -700,7 +700,7 @@ export class UnrealBridge {
   dispose(): void {
     try {
       this.commandQueue.stopProcessor();
-    } catch (error) {
+    } catch (error: unknown) {
       this.log.debug('Failed to stop command queue processor', error);
     }
   }
