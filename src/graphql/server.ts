@@ -1,5 +1,6 @@
-import { createYoga } from 'graphql-yoga';
+import { createYoga, type Plugin } from 'graphql-yoga';
 import { createServer, type RequestListener } from 'http';
+import { GraphQLError, type DocumentNode, Kind, type SelectionSetNode, type SelectionNode } from 'graphql';
 import { Logger } from '../utils/logger.js';
 import { createGraphQLSchema } from './schema.js';
 import type { GraphQLContext } from './types.js';
@@ -24,6 +25,14 @@ export class GraphQLServer {
   private config: Required<GraphQLServerConfig>;
   private bridge: UnrealBridge;
   private automationBridge: AutomationBridge;
+
+  // Rate limiting
+  private requestCounts = new Map<string, { count: number; resetAt: number }>();
+  private readonly RATE_LIMIT_WINDOW_MS = 60000;
+  private readonly RATE_LIMIT_MAX_REQUESTS = 60;
+
+  // Depth limiting
+  private static readonly MAX_QUERY_DEPTH = 10;
 
   constructor(
     bridge: UnrealBridge,
@@ -66,10 +75,11 @@ export class GraphQLServer {
 
     if (!isLoopback && allowRemote) {
       if (this.config.cors.origin === '*') {
-        this.log.warn(
-          "GraphQL server is binding to a remote host with permissive CORS origin '*'. " +
-            'Set GRAPHQL_CORS_ORIGIN to specific origins for production. Using permissive CORS for now.'
+        this.log.error(
+          'GraphQL server cannot bind to remote host with wildcard CORS origin. ' +
+            'Set GRAPHQL_CORS_ORIGIN to specific origins.'
         );
+        return; // Abort startup - security risk
       }
     }
 
@@ -79,17 +89,29 @@ export class GraphQLServer {
       const yoga = createYoga({
         schema,
         graphqlEndpoint: this.config.path,
+        plugins: [this.createDepthLimitPlugin()],
         cors: {
           origin: this.config.cors.origin,
           credentials: this.config.cors.credentials,
           methods: ['GET', 'POST', 'OPTIONS'],
           allowedHeaders: ['Content-Type', 'Authorization']
         },
-        context: (): GraphQLContext => ({
-          bridge: this.bridge,
-          automationBridge: this.automationBridge,
-          loaders: createLoaders(this.automationBridge)
-        }),
+        context: ({ request }): GraphQLContext => {
+          // Rate limiting check
+          const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+          if (!this.checkRateLimit(ip)) {
+            this.log.warn(`Rate limit exceeded for IP: ${ip}`);
+            throw new GraphQLError('Rate limit exceeded. Try again later.', {
+              extensions: { code: 'RATE_LIMITED', http: { status: 429 } }
+            });
+          }
+
+          return {
+            bridge: this.bridge,
+            automationBridge: this.automationBridge,
+            loaders: createLoaders(this.automationBridge)
+          };
+        },
         logging: {
           debug: (...args) => this.log.debug('[GraphQL]', ...args),
           info: (...args) => this.log.info('[GraphQL]', ...args),
@@ -165,5 +187,98 @@ export class GraphQLServer {
 
   isRunning(): boolean {
     return this.server !== null && this.server.listening;
+  }
+
+  /**
+   * Check rate limit for a given IP address
+   * @returns true if request is allowed, false if rate limited
+   */
+  private checkRateLimit(ip: string): boolean {
+    const now = Date.now();
+    const record = this.requestCounts.get(ip);
+    if (!record || now >= record.resetAt) {
+      this.requestCounts.set(ip, { count: 1, resetAt: now + this.RATE_LIMIT_WINDOW_MS });
+      return true;
+    }
+    if (record.count >= this.RATE_LIMIT_MAX_REQUESTS) {
+      return false;
+    }
+    record.count++;
+    return true;
+  }
+
+  /**
+   * Calculate the maximum depth of a GraphQL selection set
+   */
+  private static getQueryDepth(selectionSet: SelectionSetNode | undefined, currentDepth: number = 0): number {
+    if (!selectionSet || !selectionSet.selections) {
+      return currentDepth;
+    }
+
+    let maxDepth = currentDepth;
+    for (const selection of selectionSet.selections) {
+      if (selection.kind === Kind.FIELD) {
+        const fieldDepth = GraphQLServer.getQueryDepth(selection.selectionSet, currentDepth + 1);
+        maxDepth = Math.max(maxDepth, fieldDepth);
+      } else if (selection.kind === Kind.INLINE_FRAGMENT) {
+        const fragmentDepth = GraphQLServer.getQueryDepth(selection.selectionSet, currentDepth);
+        maxDepth = Math.max(maxDepth, fragmentDepth);
+      }
+      // FRAGMENT_SPREAD is rejected for security (fail closed)
+    }
+    return maxDepth;
+  }
+
+  /**
+   * Create a depth limiting plugin for graphql-yoga
+   */
+  private createDepthLimitPlugin(): Plugin {
+    const maxDepth = GraphQLServer.MAX_QUERY_DEPTH;
+    const logger = this.log;
+
+    return {
+      onParse() {
+        return ({ result }: { result: DocumentNode | Error }) => {
+          if (result instanceof Error) {
+            return; // Parse error, let it propagate
+          }
+
+          const document = result as DocumentNode;
+          for (const definition of document.definitions) {
+            if (definition.kind === Kind.OPERATION_DEFINITION) {
+              // Check for fragment spreads (reject for security)
+              const hasFragmentSpread = (selections: readonly SelectionNode[]): boolean => {
+                for (const sel of selections) {
+                  if (sel.kind === Kind.FRAGMENT_SPREAD) {
+                    return true;
+                  }
+                  if ((sel.kind === Kind.FIELD || sel.kind === Kind.INLINE_FRAGMENT) && sel.selectionSet) {
+                    if (hasFragmentSpread(sel.selectionSet.selections)) {
+                      return true;
+                    }
+                  }
+                }
+                return false;
+              };
+
+              if (definition.selectionSet && hasFragmentSpread(definition.selectionSet.selections)) {
+                logger.warn('Query rejected: fragment spreads not allowed for security');
+                throw new GraphQLError('Fragment spreads are not allowed for security reasons', {
+                  extensions: { code: 'FRAGMENT_SPREAD_NOT_ALLOWED' }
+                });
+              }
+
+              const depth = GraphQLServer.getQueryDepth(definition.selectionSet, 0);
+              if (depth > maxDepth) {
+                logger.warn(`Query rejected: depth ${depth} exceeds maximum ${maxDepth}`);
+                throw new GraphQLError(`Query depth ${depth} exceeds maximum allowed depth of ${maxDepth}`, {
+                  extensions: { code: 'QUERY_TOO_DEEP' }
+                });
+              }
+            }
+          }
+        };
+      }
+    };
   }
 }

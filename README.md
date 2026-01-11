@@ -320,6 +320,26 @@ npm run test:all    # Run all tests
 
 ---
 
+## Security
+
+### WebSocket Communication
+The automation bridge uses WebSocket for IPC with the Unreal Editor plugin.
+The default host binding is `127.0.0.1` (configurable via `MCP_AUTOMATION_HOST`).
+
+### GraphQL API
+The GraphQL API is disabled by default (`GRAPHQL_ENABLED` must be set to `true`).
+When enabled, it applies query depth limiting and per-IP rate limiting.
+
+### Command Validation
+Console commands pass through `src/utils/command-validator.ts` before execution.
+The validator applies pattern-based filtering.
+
+### Path Sanitization
+User-provided paths are processed by `sanitizePathSafe()` in `src/utils/validation.ts`.
+This function rejects directory traversal patterns and normalizes path separators.
+
+---
+
 ## Community
 
 | Resource | Description |

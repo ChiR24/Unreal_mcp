@@ -2,6 +2,7 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { loadEnv } from '../types/env.js';
 import { spawn } from 'child_process';
+import { requireBridge } from './base-tool.js';
 
 export class EngineTools {
   private env = loadEnv();
@@ -27,12 +28,10 @@ export class EngineTools {
   }
 
   async quitEditor() {
-    if (!this.automationBridge) {
-      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'Automation bridge is not available for quit_editor' };
-    }
+    const bridge = requireBridge(this.automationBridge, 'Engine operations');
 
     try {
-      const resp = await this.automationBridge.sendAutomationRequest('quit_editor', {}) as Record<string, unknown> | null;
+      const resp = await bridge.sendAutomationRequest('quit_editor', {}) as Record<string, unknown> | null;
       if (resp && resp.success === false) {
         return { success: false, error: (resp.error as string) || (resp.message as string) || 'Quit request failed' };
       }

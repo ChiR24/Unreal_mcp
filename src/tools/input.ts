@@ -1,6 +1,7 @@
 
 import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
+import { requireBridge } from './base-tool.js';
 
 const log = new Logger('InputTools');
 
@@ -57,8 +58,8 @@ export class InputTools {
     }
 
     async createInputAction(name: string, path: string) {
-        if (!this.automationBridge) throw new Error('Automation bridge not set');
-        return this.automationBridge.sendAutomationRequest('manage_input', {
+        const bridge = requireBridge(this.automationBridge, 'Input operations');
+        return bridge.sendAutomationRequest('manage_input', {
             action: 'create_input_action',
             name,
             path
@@ -66,8 +67,8 @@ export class InputTools {
     }
 
     async createInputMappingContext(name: string, path: string) {
-        if (!this.automationBridge) throw new Error('Automation bridge not set');
-        return this.automationBridge.sendAutomationRequest('manage_input', {
+        const bridge = requireBridge(this.automationBridge, 'Input operations');
+        return bridge.sendAutomationRequest('manage_input', {
             action: 'create_input_mapping_context',
             name,
             path
@@ -75,7 +76,7 @@ export class InputTools {
     }
 
     async addMapping(contextPath: string, actionPath: string, key: string) {
-        if (!this.automationBridge) throw new Error('Automation bridge not set');
+        const bridge = requireBridge(this.automationBridge, 'Input operations');
 
         // Validate key name
         if (!key || typeof key !== 'string' || key.trim().length === 0) {
@@ -98,7 +99,7 @@ export class InputTools {
             log.warn(`Key '${trimmedKey}' is not in the standard key list. Attempting mapping anyway.`);
         }
 
-        return this.automationBridge.sendAutomationRequest('manage_input', {
+        return bridge.sendAutomationRequest('manage_input', {
             action: 'add_mapping',
             contextPath,
             actionPath,
@@ -107,8 +108,8 @@ export class InputTools {
     }
 
     async removeMapping(contextPath: string, actionPath: string) {
-        if (!this.automationBridge) throw new Error('Automation bridge not set');
-        return this.automationBridge.sendAutomationRequest('manage_input', {
+        const bridge = requireBridge(this.automationBridge, 'Input operations');
+        return bridge.sendAutomationRequest('manage_input', {
             action: 'remove_mapping',
             contextPath,
             actionPath

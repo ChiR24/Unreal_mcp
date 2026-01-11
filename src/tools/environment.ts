@@ -4,6 +4,7 @@ import { AutomationBridge } from '../automation/index.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { DEFAULT_SKYLIGHT_INTENSITY, DEFAULT_SUN_INTENSITY, DEFAULT_TIME_OF_DAY } from '../constants.js';
 import { IEnvironmentTools, StandardActionResponse } from '../types/tool-interfaces.js';
+import { requireBridge } from './base-tool.js';
 
 /**
  * Validates a filesystem path for snapshot operations.
@@ -51,10 +52,7 @@ export class EnvironmentTools implements IEnvironmentTools {
   }
 
   private ensureAutomationBridge(): AutomationBridge {
-    if (!this.automationBridge) {
-      throw new Error('AUTOMATION_BRIDGE_UNAVAILABLE');
-    }
-    return this.automationBridge;
+    return requireBridge(this.automationBridge, 'Environment operations');
   }
 
   private getDefaultTimeOfDay(): number {

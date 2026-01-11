@@ -2,6 +2,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
+import { requireBridge } from './base-tool.js';
 
 export class PerformanceTools {
   private log = new Logger('PerformanceTools');
@@ -374,8 +375,8 @@ export class PerformanceTools {
       }
     }
 
-    if (params.boostPlayerLocation && !this.automationBridge) {
-      throw new Error('Boosting player location for streaming requires Automation Bridge support');
+    if (params.boostPlayerLocation) {
+      requireBridge(this.automationBridge, 'Performance boost player location');
     }
 
     const commands: string[] = [];

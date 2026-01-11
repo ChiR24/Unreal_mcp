@@ -78,9 +78,7 @@ export class NiagaraTools {
     systemPath?: string;
     template?: string;
   }) {
-    if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
-      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'createEmitter requires automation bridge' } as const;
-    }
+    const bridge = requireBridge(this.automationBridge, 'Niagara emitter creation');
 
     const emitterName = params.name ?? 'NiagaraEmitter';
     const requestPayload: Record<string, unknown> = {
@@ -91,7 +89,7 @@ export class NiagaraTools {
     if (params.template) requestPayload.template = params.template;
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_niagara_emitter', requestPayload, { timeoutMs: 60000 }) as Record<string, unknown>;
+      const response = await bridge.sendAutomationRequest('create_niagara_emitter', requestPayload, { timeoutMs: 60000 }) as Record<string, unknown>;
       if (response && response.success !== false) {
         const result = (response.result ?? {}) as Record<string, unknown>;
         return {
@@ -120,9 +118,7 @@ export class NiagaraTools {
     color?: [number, number, number, number];
     width?: number;
   }) {
-    if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
-      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'createRibbon requires automation bridge' } as const;
-    }
+    const bridge = requireBridge(this.automationBridge, 'Niagara ribbon creation');
 
     const toVector = (value?: { x: number; y: number; z: number } | Vector3): Vector3 | undefined => {
       if (!value) return undefined;
@@ -153,7 +149,7 @@ export class NiagaraTools {
     if (typeof params.width === 'number') requestPayload.width = params.width;
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('create_niagara_ribbon', requestPayload, { timeoutMs: 60000 }) as Record<string, unknown>;
+      const response = await bridge.sendAutomationRequest('create_niagara_ribbon', requestPayload, { timeoutMs: 60000 }) as Record<string, unknown>;
       if (response && response.success !== false) {
         const result = (response.result ?? {}) as Record<string, unknown>;
         return {
@@ -175,15 +171,13 @@ export class NiagaraTools {
   }
 
   async cleanupEffects(params: { filter: string }) {
-    if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
-      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'cleanupEffects requires automation bridge' } as const;
-    }
+    const bridge = requireBridge(this.automationBridge, 'Niagara cleanup');
     if (!params.filter || typeof params.filter !== 'string') {
       return { success: false, error: 'INVALID_ARGUMENT', message: 'filter is required' } as const;
     }
 
     try {
-      const response = await this.automationBridge.sendAutomationRequest('cleanup', { filter: params.filter }, { timeoutMs: 60000 }) as Record<string, unknown>;
+      const response = await bridge.sendAutomationRequest('cleanup', { filter: params.filter }, { timeoutMs: 60000 }) as Record<string, unknown>;
       if (response && response.success !== false) {
         const result = (response.result ?? {}) as Record<string, unknown>;
         const removedActors: string[] = (result.removedActors ?? response.removedActors ?? []) as string[];
@@ -225,9 +219,7 @@ export class NiagaraTools {
       mesh?: string;
     };
   }) {
-    if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
-      return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'addEmitter requires automation bridge' } as const;
-    }
+    const bridge = requireBridge(this.automationBridge, 'Niagara emitter addition');
 
     // Use WASM for velocity processing
     if (params.properties) {
@@ -245,7 +237,7 @@ export class NiagaraTools {
     }
 
     try {
-      const resp = await this.automationBridge.sendAutomationRequest('manage_niagara_graph', {
+      const resp = await bridge.sendAutomationRequest('manage_niagara_graph', {
         subAction: 'add_emitter',
         systemName: params.systemName,
         emitterName: params.emitterName,

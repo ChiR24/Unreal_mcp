@@ -198,28 +198,36 @@ export class UITools {
     key: string;
     visible: boolean;
   }) {
-    if (!this.automationBridge) return { success: false, error: 'NO_BRIDGE' };
-    const response = await this.automationBridge.sendAutomationRequest('system_control', {
-      subAction: 'set_widget_visibility',
-      key: params.key,
-      visible: params.visible
-    });
-    return response.success
-      ? { success: true, message: response.message || 'Widget visibility set', ...(response.result || {}) }
-      : { success: false, error: response.error || response.message || 'Failed to set widget visibility' };
+    try {
+      const bridge = requireBridge(this.automationBridge, 'UI operations');
+      const response = await bridge.sendAutomationRequest('system_control', {
+        subAction: 'set_widget_visibility',
+        key: params.key,
+        visible: params.visible
+      });
+      return response.success
+        ? { success: true, message: response.message || 'Widget visibility set', ...(response.result || {}) }
+        : { success: false, error: response.error || response.message || 'Failed to set widget visibility' };
+    } catch (error: unknown) {
+      return { success: false, error: `Failed to set widget visibility: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
   async removeWidgetFromViewport(params: {
     key?: string;
   }) {
-    if (!this.automationBridge) return { success: false, error: 'NO_BRIDGE' };
-    const response = await this.automationBridge.sendAutomationRequest('system_control', {
-      subAction: 'remove_widget_from_viewport',
-      key: params.key
-    });
-    return response.success
-      ? { success: true, message: response.message || 'Widget removed from viewport', ...(response.result || {}) }
-      : { success: false, error: response.error || response.message || 'Failed to remove widget from viewport' };
+    try {
+      const bridge = requireBridge(this.automationBridge, 'UI operations');
+      const response = await bridge.sendAutomationRequest('system_control', {
+        subAction: 'remove_widget_from_viewport',
+        key: params.key
+      });
+      return response.success
+        ? { success: true, message: response.message || 'Widget removed from viewport', ...(response.result || {}) }
+        : { success: false, error: response.error || response.message || 'Failed to remove widget from viewport' };
+    } catch (error: unknown) {
+      return { success: false, error: `Failed to remove widget from viewport: ${error instanceof Error ? error.message : String(error)}` };
+    }
   }
 
 
