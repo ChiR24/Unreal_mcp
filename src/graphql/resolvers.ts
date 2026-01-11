@@ -1,6 +1,8 @@
 import type { GraphQLContext } from './types.js';
 import type { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
+import { sanitizePath } from '../utils/path-security.js';
+import { sanitizeAssetName } from '../utils/validation.js';
 
 // GraphQL AST node types for parseLiteral
 interface ASTFieldNode {
@@ -368,7 +370,7 @@ export const resolvers = {
         if (!context.loaders) {
           throw new Error('Loaders not initialized');
         }
-        return await context.loaders.assetLoader.load(path);
+        return await context.loaders.assetLoader.load(sanitizePath(path));
       } catch (error) {
         log.error('Failed to get asset:', error);
         return null;
@@ -467,7 +469,7 @@ export const resolvers = {
       if (!context.loaders) {
         throw new Error('Loaders not initialized');
       }
-      return await context.loaders.blueprintLoader.load(path);
+      return await context.loaders.blueprintLoader.load(sanitizePath(path));
     },
 
     levels: async (_: unknown, __: unknown, context: GraphQLContext) => {
@@ -661,7 +663,7 @@ export const resolvers = {
         // Check if it's a niagara system
         const asset = await context.automationBridge.sendAutomationRequest(
           'get_asset',
-          { assetPath: path },
+          { assetPath: sanitizePath(path) },
           { timeoutMs: 10000 }
         );
         const resultObj = (asset.result ?? {}) as Record<string, unknown>;
@@ -710,8 +712,8 @@ export const resolvers = {
         const response = await context.automationBridge.sendAutomationRequest(
           'duplicate_asset',
           {
-            assetPath: path,
-            newName
+            assetPath: sanitizePath(path),
+            newName: sanitizeAssetName(newName)
           },
           { timeoutMs: 60000 }
         );
@@ -732,8 +734,8 @@ export const resolvers = {
         const response = await context.automationBridge.sendAutomationRequest(
           'move_asset',
           {
-            assetPath: path,
-            destinationPath: newPath
+            assetPath: sanitizePath(path),
+            destinationPath: sanitizePath(newPath)
           },
           { timeoutMs: 60000 }
         );
@@ -754,7 +756,7 @@ export const resolvers = {
         const response = await context.automationBridge.sendAutomationRequest(
           'delete_asset',
           {
-            assetPath: path
+            assetPath: sanitizePath(path)
           },
           { timeoutMs: 30000 }
         );
@@ -768,9 +770,14 @@ export const resolvers = {
 
     spawnActor: async (_: unknown, { input }: { input: SpawnActorInput }, context: GraphQLContext) => {
       try {
+        const safeInput = { ...input };
+        if (safeInput.name) {
+          safeInput.name = sanitizeAssetName(safeInput.name);
+        }
+
         const response = await context.automationBridge.sendAutomationRequest(
           'spawn_actor',
-          { ...input },
+          safeInput,
           { timeoutMs: 10000 }
         );
 
@@ -828,7 +835,12 @@ export const resolvers = {
       try {
         const response = await context.automationBridge.sendAutomationRequest(
           'create_blueprint',
-          { ...input },
+          {
+            ...input,
+            name: sanitizeAssetName(input.name),
+            // Sanitize input.savePath if present
+            savePath: sanitizePath(input.savePath || '/Game/Blueprints')
+          },
           { timeoutMs: 60000 }
         );
 
@@ -848,8 +860,9 @@ export const resolvers = {
         const response = await context.automationBridge.sendAutomationRequest(
           'add_variable_to_blueprint',
           {
-            blueprintPath: path,
-            ...input
+            blueprintPath: sanitizePath(path),
+            ...input,
+            variableName: sanitizeAssetName(input.name)
           },
           { timeoutMs: 30000 }
         );
@@ -870,8 +883,9 @@ export const resolvers = {
         const response = await context.automationBridge.sendAutomationRequest(
           'add_function_to_blueprint',
           {
-            blueprintPath: path,
-            ...input
+            blueprintPath: sanitizePath(path),
+            ...input,
+            functionName: sanitizeAssetName(input.name)
           },
           { timeoutMs: 30000 }
         );
@@ -892,7 +906,7 @@ export const resolvers = {
         const response = await context.automationBridge.sendAutomationRequest(
           'load_level',
           {
-            levelPath: path
+            levelPath: sanitizePath(path)
           },
           { timeoutMs: 30000 }
         );
@@ -913,7 +927,7 @@ export const resolvers = {
         const response = await context.automationBridge.sendAutomationRequest(
           'save_level',
           {
-            levelPath: path
+            levelPath: path ? sanitizePath(path) : undefined
           },
           { timeoutMs: 30000 }
         );
@@ -930,8 +944,8 @@ export const resolvers = {
         const response = await context.automationBridge.sendAutomationRequest(
           'create_material_instance',
           {
-            parentMaterialPath: parentPath,
-            instanceName: name,
+            parentMaterialPath: sanitizePath(parentPath),
+            instanceName: sanitizeAssetName(name),
             parameters: parameters || {}
           },
           { timeoutMs: 30000 }
