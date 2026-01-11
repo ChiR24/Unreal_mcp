@@ -1,3 +1,11 @@
+/**
+ * Strict path validation - throws on invalid input.
+ * Use for internal paths where invalid values indicate bugs.
+ * @param path - The path to validate
+ * @param allowedRoots - Allowed path prefixes (default: ['/Game', '/Engine'])
+ * @throws {Error} If path is invalid or outside allowed roots
+ * @see sanitizePathSafe - Safe version for user input (returns result object)
+ */
 export function sanitizePath(path: string, allowedRoots: string[] = ['/Game', '/Engine']): string {
     if (!path || typeof path !== 'string') {
         throw new Error('Invalid path: must be a non-empty string');

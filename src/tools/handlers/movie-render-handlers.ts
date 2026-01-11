@@ -5,6 +5,7 @@
  */
 
 import { cleanObject } from '../../utils/safe-json.js';
+import type { HandlerResult } from '../../types/handler-types.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
@@ -15,7 +16,7 @@ export async function handleMovieRenderTools(
   action: string,
   args: Record<string, unknown>,
   tools: ITools
-): Promise<unknown> {
+): Promise<HandlerResult> {
   // Build the payload for automation request
   const payload: Record<string, unknown> = {
     action: action,
@@ -39,7 +40,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for create_queue'
-      ));
+      )) as HandlerResult;
 
     case 'add_job':
       return cleanObject(await executeAutomationRequest(
@@ -47,7 +48,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for add_job'
-      ));
+      )) as HandlerResult;
 
     case 'remove_job':
       return cleanObject(await executeAutomationRequest(
@@ -55,7 +56,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for remove_job'
-      ));
+      )) as HandlerResult;
 
     case 'clear_queue':
       return cleanObject(await executeAutomationRequest(
@@ -63,7 +64,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for clear_queue'
-      ));
+      )) as HandlerResult;
 
     case 'get_queue':
       return cleanObject(await executeAutomationRequest(
@@ -71,7 +72,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for get_queue'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // JOB CONFIGURATION
@@ -82,7 +83,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for configure_job'
-      ));
+      )) as HandlerResult;
 
     case 'set_sequence':
       return cleanObject(await executeAutomationRequest(
@@ -90,7 +91,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for set_sequence'
-      ));
+      )) as HandlerResult;
 
     case 'set_map':
       return cleanObject(await executeAutomationRequest(
@@ -98,7 +99,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for set_map'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // OUTPUT SETTINGS
@@ -109,7 +110,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for configure_output'
-      ));
+      )) as HandlerResult;
 
     case 'set_resolution':
       return cleanObject(await executeAutomationRequest(
@@ -117,7 +118,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for set_resolution'
-      ));
+      )) as HandlerResult;
 
     case 'set_frame_rate':
       return cleanObject(await executeAutomationRequest(
@@ -125,7 +126,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for set_frame_rate'
-      ));
+      )) as HandlerResult;
 
     case 'set_output_directory':
       return cleanObject(await executeAutomationRequest(
@@ -133,7 +134,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for set_output_directory'
-      ));
+      )) as HandlerResult;
 
     case 'set_file_name_format':
       return cleanObject(await executeAutomationRequest(
@@ -141,7 +142,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for set_file_name_format'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // RENDER PASSES
@@ -152,7 +153,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for add_render_pass'
-      ));
+      )) as HandlerResult;
 
     case 'remove_render_pass':
       return cleanObject(await executeAutomationRequest(
@@ -160,7 +161,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for remove_render_pass'
-      ));
+      )) as HandlerResult;
 
     case 'get_render_passes':
       return cleanObject(await executeAutomationRequest(
@@ -168,7 +169,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for get_render_passes'
-      ));
+      )) as HandlerResult;
 
     case 'configure_render_pass':
       return cleanObject(await executeAutomationRequest(
@@ -176,7 +177,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for configure_render_pass'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // ANTI-ALIASING
@@ -187,7 +188,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for configure_anti_aliasing'
-      ));
+      )) as HandlerResult;
 
     case 'set_spatial_sample_count':
       return cleanObject(await executeAutomationRequest(
@@ -195,7 +196,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for set_spatial_sample_count'
-      ));
+      )) as HandlerResult;
 
     case 'set_temporal_sample_count':
       return cleanObject(await executeAutomationRequest(
@@ -203,7 +204,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for set_temporal_sample_count'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // BURN-INS
@@ -214,7 +215,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for add_burn_in'
-      ));
+      )) as HandlerResult;
 
     case 'remove_burn_in':
       return cleanObject(await executeAutomationRequest(
@@ -222,7 +223,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for remove_burn_in'
-      ));
+      )) as HandlerResult;
 
     case 'configure_burn_in':
       return cleanObject(await executeAutomationRequest(
@@ -230,7 +231,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for configure_burn_in'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // EXECUTION
@@ -241,7 +242,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for start_render'
-      ));
+      )) as HandlerResult;
 
     case 'stop_render':
       return cleanObject(await executeAutomationRequest(
@@ -249,7 +250,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for stop_render'
-      ));
+      )) as HandlerResult;
 
     case 'get_render_status':
       return cleanObject(await executeAutomationRequest(
@@ -257,7 +258,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for get_render_status'
-      ));
+      )) as HandlerResult;
 
     case 'get_render_progress':
       return cleanObject(await executeAutomationRequest(
@@ -265,7 +266,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for get_render_progress'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // CONSOLE VARIABLES
@@ -276,7 +277,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for add_console_variable'
-      ));
+      )) as HandlerResult;
 
     case 'remove_console_variable':
       return cleanObject(await executeAutomationRequest(
@@ -284,7 +285,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for remove_console_variable'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // HIGH-RESOLUTION
@@ -295,7 +296,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for configure_high_res_settings'
-      ));
+      )) as HandlerResult;
 
     case 'set_tile_count':
       return cleanObject(await executeAutomationRequest(
@@ -303,7 +304,7 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         'Automation bridge not available for set_tile_count'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // DEFAULT - PASS THROUGH
@@ -314,6 +315,6 @@ export async function handleMovieRenderTools(
         'manage_movie_render',
         payload,
         `Automation bridge not available for movie render action: ${action}`
-      ));
+      )) as HandlerResult;
   }
 }

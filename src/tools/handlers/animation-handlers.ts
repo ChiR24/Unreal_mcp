@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, AnimationArgs, ComponentInfo } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult, AnimationArgs, ComponentInfo } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
 /** Response from getComponents */
@@ -31,7 +31,17 @@ interface AutomationResponse {
   [key: string]: unknown;
 }
 
-export async function handleAnimationTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+/**
+ * Handle animation actions for the animation_physics MCP tool.
+ * Dispatches to specific action handlers based on args.action.
+ * 
+ * @param action - The action to perform (from tool schema enum: create_animation_blueprint, play_animation, set_state, blend, retarget, etc.)
+ * @param args - Handler arguments including action-specific parameters (actorName, animationPath, skeletonPath, stateName, etc.)
+ * @param tools - Tools interface with automation bridge access
+ * @returns Promise resolving to action-specific response
+ * @throws Error if action is unknown or required parameters are missing
+ */
+export async function handleAnimationTools(action: string, args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   const argsTyped = args as AnimationArgs;
   const animAction = String(action || '').toLowerCase();
 

@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { GraphArgs, HandlerArgs } from '../../types/handler-types.js';
+import type { GraphArgs, HandlerArgs, HandlerResult } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
 /** Response from automation requests */
@@ -77,7 +77,7 @@ const BT_NODE_ALIASES: Record<string, { class: string; type: string }> = {
     'SimpleParallel': { class: 'BTComposite_SimpleParallel', type: 'composite' }
 };
 
-export async function handleGraphTools(toolName: string, action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
+export async function handleGraphTools(toolName: string, action: string, args: GraphArgs, tools: ITools): Promise<HandlerResult> {
     // Common validation
     if (!args.assetPath && !args.blueprintPath && !args.systemPath) {
         // Some actions might not need a path if they operate on "currently open" asset, 
@@ -99,7 +99,7 @@ export async function handleGraphTools(toolName: string, action: string, args: G
     }
 }
 
-async function handleBlueprintGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
+async function handleBlueprintGraph(action: string, args: GraphArgs, tools: ITools): Promise<HandlerResult> {
     const processedArgs: ProcessedGraphArgs = { ...args, subAction: action };
 
     // Default graphName
@@ -175,7 +175,7 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
     return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
 }
 
-async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
+async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools): Promise<HandlerResult> {
     const payload: ProcessedGraphArgs = { ...args, subAction: action };
     // Map systemPath to assetPath if missing
     if (payload.systemPath && !payload.assetPath) {
@@ -185,7 +185,7 @@ async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools
     return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
 }
 
-async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
+async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITools): Promise<HandlerResult> {
     const payload: ProcessedGraphArgs = { ...args, subAction: action };
 
     // Map blueprint-style parameters to material graph parameters
@@ -211,7 +211,7 @@ async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITool
     return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
 }
 
-async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
+async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools): Promise<HandlerResult> {
     const processedArgs: ProcessedGraphArgs = { ...args, subAction: action };
     
     // Map human-friendly node type names to BT class names

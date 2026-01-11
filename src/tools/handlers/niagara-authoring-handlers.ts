@@ -13,7 +13,7 @@
 
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
-import type { HandlerArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult } from '../../types/handler-types.js';
 import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
 
 function getTimeoutMs(): number {
@@ -28,12 +28,12 @@ export async function handleNiagaraAuthoringTools(
   action: string,
   args: HandlerArgs,
   tools: ITools
-): Promise<Record<string, unknown>> {
-  const argsRecord = args as Record<string, unknown>;
+): Promise<HandlerResult> {
+  const argsRecord = args as HandlerResult;
   const timeoutMs = getTimeoutMs();
 
   // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
+  const sendRequest = async (subAction: string): Promise<HandlerResult> => {
     const payload = { ...argsRecord, subAction };
     const result = await executeAutomationRequest(
       tools,
@@ -42,7 +42,7 @@ export async function handleNiagaraAuthoringTools(
       `Automation bridge not available for Niagara authoring action: ${subAction}`,
       { timeoutMs }
     );
-    return cleanObject(result) as Record<string, unknown>;
+    return cleanObject(result) as HandlerResult;
   };
 
   switch (action) {

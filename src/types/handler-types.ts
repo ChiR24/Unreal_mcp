@@ -54,6 +54,12 @@ export interface AutomationResponse {
 }
 
 /**
+ * Standard handler return type - matches actual runtime behavior.
+ * Handlers return arbitrary JSON objects; errors are thrown, not returned.
+ */
+export type HandlerResult = Record<string, unknown>;
+
+/**
  * Component information returned from getComponents.
  */
 export interface ComponentInfo {

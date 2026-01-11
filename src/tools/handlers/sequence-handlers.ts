@@ -1,5 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools, StandardActionResponse } from '../../types/tool-interfaces.js';
+import type { HandlerResult } from '../../types/handler-types.js';
 import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
 
 /** Extended response with common sequence fields */
@@ -345,7 +346,7 @@ export async function handleSequenceTools(action: string, args: Record<string, u
     }
     case 'set_metadata': {
       const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
-      const metadata = (args.metadata && typeof args.metadata === 'object') ? args.metadata as Record<string, unknown> : {};
+      const metadata = (args.metadata && typeof args.metadata === 'object') ? args.metadata as HandlerResult : {};
       const res = await executeAutomationRequest(tools, 'set_metadata', { assetPath: path, metadata });
       return cleanObject(res);
     }

@@ -1,6 +1,6 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
-import type { HandlerArgs, AudioArgs, Vector3, Rotator } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult, AudioArgs, Vector3, Rotator } from '../../types/handler-types.js';
 import { requireNonEmptyString } from './common-handlers.js';
 
 function toVec3Array(v: Vector3 | undefined): [number, number, number] | undefined {
@@ -30,7 +30,7 @@ export async function handleAudioTools(
   action: string,
   args: HandlerArgs,
   tools: ITools
-): Promise<Record<string, unknown>> {
+): Promise<HandlerResult> {
   const argsTyped = args as AudioArgs;
   const argsRecord = args as Record<string, unknown>;
   

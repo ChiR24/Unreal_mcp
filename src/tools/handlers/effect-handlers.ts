@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, EffectArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, EffectArgs, HandlerResult } from '../../types/handler-types.js';
 import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
 
 function ensureActionAndSubAction(action: string, args: Record<string, unknown>): void {
@@ -32,7 +32,7 @@ interface AutomationResponse {
   [key: string]: unknown;
 }
 
-export async function handleEffectTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+export async function handleEffectTools(action: string, args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   const argsTyped = args as EffectArgs;
   const mutableArgs = { ...args } as Record<string, unknown>;
   
@@ -115,16 +115,16 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
 
   // Handle debug cleanup actions
   if (action === 'clear_debug_shapes') {
-    return executeAutomationRequest(tools, action, mutableArgs) as Promise<Record<string, unknown>>;
+    return executeAutomationRequest(tools, action, mutableArgs) as Promise<HandlerResult>;
   }
   // Discovery action: list available debug shape types
   if (action === 'list_debug_shapes') {
-    return executeAutomationRequest(tools, 'list_debug_shapes', mutableArgs) as Promise<Record<string, unknown>>;
+    return executeAutomationRequest(tools, 'list_debug_shapes', mutableArgs) as Promise<HandlerResult>;
   }
   if (action === 'cleanup') {
     mutableArgs.action = 'cleanup';
     mutableArgs.subAction = 'cleanup';
-    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
+    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<HandlerResult>;
   }
 
   // Map high-level actions to create_effect with subAction
@@ -137,7 +137,7 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
   ];
   if (createActions.includes(action)) {
     mutableArgs.action = action;
-    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
+    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<HandlerResult>;
   }
 
   // Map simulation control actions
@@ -146,26 +146,26 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     mutableArgs.systemName = (mutableArgs.actorName as string | undefined) || (mutableArgs.systemName as string | undefined);
     requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
     mutableArgs.reset = true;
-    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
+    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<HandlerResult>;
   }
   if (action === 'deactivate') {
     mutableArgs.action = 'deactivate_niagara';
     mutableArgs.systemName = (mutableArgs.actorName as string | undefined) || (mutableArgs.systemName as string | undefined);
     requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
-    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
+    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<HandlerResult>;
   }
   if (action === 'reset') {
     mutableArgs.action = 'activate_niagara';
     mutableArgs.systemName = (mutableArgs.actorName as string | undefined) || (mutableArgs.systemName as string | undefined);
     requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
     mutableArgs.reset = true;
-    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
+    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<HandlerResult>;
   }
   if (action === 'advance_simulation') {
     mutableArgs.action = 'advance_simulation';
     mutableArgs.systemName = (mutableArgs.actorName as string | undefined) || (mutableArgs.systemName as string | undefined);
     requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
-    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
+    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<HandlerResult>;
   }
 
   // Map parameter setting
@@ -183,7 +183,7 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
     requireNonEmptyString(mutableArgs.parameterName as string | undefined, 'parameterName', 'Missing required parameter: parameterName');
     requireNonEmptyString(mutableArgs.parameterType as string | undefined, 'parameterType', 'Missing required parameter: parameterType');
-    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
+    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<HandlerResult>;
   }
 
   const res = await executeAutomationRequest(

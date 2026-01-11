@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, SystemArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult, SystemArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
 /** Response from various operations */
@@ -22,7 +22,7 @@ interface AssetValidationResult {
   [key: string]: unknown;
 }
 
-export async function handleSystemTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+export async function handleSystemTools(action: string, args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   const argsTyped = args as SystemArgs;
   const sysAction = String(action || '').toLowerCase();
   
@@ -598,7 +598,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
   }
 }
 
-export async function handleConsoleCommand(args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+export async function handleConsoleCommand(args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   const rawCommand = typeof args?.command === 'string' ? args.command : '';
   const trimmed = rawCommand.trim();
 

@@ -5,6 +5,7 @@
  */
 
 import { cleanObject } from '../../utils/safe-json.js';
+import type { HandlerResult } from '../../types/handler-types.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
@@ -15,7 +16,7 @@ export async function handleAINPCTools(
   action: string,
   args: Record<string, unknown>,
   tools: ITools
-): Promise<unknown> {
+): Promise<HandlerResult> {
   // Build the payload for automation request
   const payload: Record<string, unknown> = {
     action_type: action,
@@ -39,7 +40,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for create_convai_character'
-      ));
+      )) as HandlerResult;
 
     case 'configure_character_backstory':
       return cleanObject(await executeAutomationRequest(
@@ -47,7 +48,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for configure_character_backstory'
-      ));
+      )) as HandlerResult;
 
     case 'configure_character_voice':
       return cleanObject(await executeAutomationRequest(
@@ -55,7 +56,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for configure_character_voice'
-      ));
+      )) as HandlerResult;
 
     case 'configure_convai_lipsync':
       return cleanObject(await executeAutomationRequest(
@@ -63,7 +64,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for configure_convai_lipsync'
-      ));
+      )) as HandlerResult;
 
     case 'start_convai_session':
       return cleanObject(await executeAutomationRequest(
@@ -71,7 +72,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for start_convai_session'
-      ));
+      )) as HandlerResult;
 
     case 'stop_convai_session':
       return cleanObject(await executeAutomationRequest(
@@ -79,7 +80,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for stop_convai_session'
-      ));
+      )) as HandlerResult;
 
     case 'send_text_to_character':
       return cleanObject(await executeAutomationRequest(
@@ -87,7 +88,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for send_text_to_character'
-      ));
+      )) as HandlerResult;
 
     case 'get_character_response':
       return cleanObject(await executeAutomationRequest(
@@ -95,7 +96,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for get_character_response'
-      ));
+      )) as HandlerResult;
 
     case 'configure_convai_actions':
       return cleanObject(await executeAutomationRequest(
@@ -103,7 +104,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for configure_convai_actions'
-      ));
+      )) as HandlerResult;
 
     case 'get_convai_info':
       return cleanObject(await executeAutomationRequest(
@@ -111,7 +112,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for get_convai_info'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // INWORLD AI - AI Character Experiences (10 actions)
@@ -122,7 +123,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for create_inworld_character'
-      ));
+      )) as HandlerResult;
 
     case 'configure_inworld_settings':
       return cleanObject(await executeAutomationRequest(
@@ -130,7 +131,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for configure_inworld_settings'
-      ));
+      )) as HandlerResult;
 
     case 'configure_inworld_scene':
       return cleanObject(await executeAutomationRequest(
@@ -138,7 +139,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for configure_inworld_scene'
-      ));
+      )) as HandlerResult;
 
     case 'start_inworld_session':
       return cleanObject(await executeAutomationRequest(
@@ -146,7 +147,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for start_inworld_session'
-      ));
+      )) as HandlerResult;
 
     case 'stop_inworld_session':
       return cleanObject(await executeAutomationRequest(
@@ -154,7 +155,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for stop_inworld_session'
-      ));
+      )) as HandlerResult;
 
     case 'send_message_to_character':
       return cleanObject(await executeAutomationRequest(
@@ -162,7 +163,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for send_message_to_character'
-      ));
+      )) as HandlerResult;
 
     case 'get_character_emotion':
       return cleanObject(await executeAutomationRequest(
@@ -170,7 +171,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for get_character_emotion'
-      ));
+      )) as HandlerResult;
 
     case 'get_character_goals':
       return cleanObject(await executeAutomationRequest(
@@ -178,7 +179,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for get_character_goals'
-      ));
+      )) as HandlerResult;
 
     case 'trigger_inworld_event':
       return cleanObject(await executeAutomationRequest(
@@ -186,7 +187,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for trigger_inworld_event'
-      ));
+      )) as HandlerResult;
 
     case 'get_inworld_info':
       return cleanObject(await executeAutomationRequest(
@@ -194,7 +195,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for get_inworld_info'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // NVIDIA ACE / Audio2Face (8 actions)
@@ -205,7 +206,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for configure_audio2face'
-      ));
+      )) as HandlerResult;
 
     case 'process_audio_to_blendshapes':
       return cleanObject(await executeAutomationRequest(
@@ -213,7 +214,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for process_audio_to_blendshapes'
-      ));
+      )) as HandlerResult;
 
     case 'configure_blendshape_mapping':
       return cleanObject(await executeAutomationRequest(
@@ -221,7 +222,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for configure_blendshape_mapping'
-      ));
+      )) as HandlerResult;
 
     case 'start_audio2face_stream':
       return cleanObject(await executeAutomationRequest(
@@ -229,7 +230,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for start_audio2face_stream'
-      ));
+      )) as HandlerResult;
 
     case 'stop_audio2face_stream':
       return cleanObject(await executeAutomationRequest(
@@ -237,7 +238,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for stop_audio2face_stream'
-      ));
+      )) as HandlerResult;
 
     case 'get_audio2face_status':
       return cleanObject(await executeAutomationRequest(
@@ -245,7 +246,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for get_audio2face_status'
-      ));
+      )) as HandlerResult;
 
     case 'configure_ace_emotions':
       return cleanObject(await executeAutomationRequest(
@@ -253,7 +254,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for configure_ace_emotions'
-      ));
+      )) as HandlerResult;
 
     case 'get_ace_info':
       return cleanObject(await executeAutomationRequest(
@@ -261,7 +262,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for get_ace_info'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // UTILITIES (2 actions)
@@ -272,7 +273,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for get_ai_npc_info'
-      ));
+      )) as HandlerResult;
 
     case 'list_available_ai_backends':
       return cleanObject(await executeAutomationRequest(
@@ -280,7 +281,7 @@ export async function handleAINPCTools(
         'manage_ai_npc',
         payload,
         'Automation bridge not available for list_available_ai_backends'
-      ));
+      )) as HandlerResult;
 
     default:
       // Consistent error handling pattern: return error object instead of throwing

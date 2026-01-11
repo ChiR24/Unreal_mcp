@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, AssetArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult, AssetArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean, extractOptionalArray } from './argument-helper.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
@@ -31,7 +31,7 @@ interface AssetOperationResponse {
   [key: string]: unknown;
 }
 
-export async function handleAssetTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+export async function handleAssetTools(action: string, args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   try {
     switch (action) {
       case 'list': {

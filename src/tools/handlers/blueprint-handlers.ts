@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, BlueprintArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult, BlueprintArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
 /** Response from blueprint operations */
@@ -11,7 +11,7 @@ interface BlueprintResponse {
   [key: string]: unknown;
 }
 
-export async function handleBlueprintTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+export async function handleBlueprintTools(action: string, args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   const argsTyped = args as BlueprintArgs;
   const argsRecord = args as Record<string, unknown>;
   
@@ -382,7 +382,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
   }
 }
 
-export async function handleBlueprintGet(args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+export async function handleBlueprintGet(args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   const argsTyped = args as BlueprintArgs;
   const argsRecord = args as Record<string, unknown>;
   

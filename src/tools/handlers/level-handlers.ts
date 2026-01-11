@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, LevelArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, LevelArgs, HandlerResult } from '../../types/handler-types.js';
 import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
 
 /** Response from automation request */
@@ -15,7 +15,7 @@ interface AutomationResponse {
   [key: string]: unknown;
 }
 
-export async function handleLevelTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+export async function handleLevelTools(action: string, args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   const argsTyped = args as LevelArgs;
   
   switch (action) {

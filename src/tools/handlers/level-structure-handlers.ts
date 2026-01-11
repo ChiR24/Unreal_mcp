@@ -12,7 +12,7 @@
 
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
-import type { HandlerArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
 function getTimeoutMs(): number {
@@ -57,13 +57,13 @@ export async function handleLevelStructureTools(
   action: string,
   args: HandlerArgs,
   tools: ITools
-): Promise<Record<string, unknown>> {
+): Promise<HandlerResult> {
   // Normalize path fields before sending to C++
   const argsRecord = normalizePathFields(args as Record<string, unknown>);
   const timeoutMs = getTimeoutMs();
 
   // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
+  const sendRequest = async (subAction: string): Promise<HandlerResult> => {
     const payload = { ...argsRecord, subAction };
     const result = await executeAutomationRequest(
       tools,

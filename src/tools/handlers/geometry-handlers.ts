@@ -7,7 +7,7 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import { executeAutomationRequest, normalizeLocation } from './common-handlers.js';
-import type { HandlerArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult } from '../../types/handler-types.js';
 
 // Valid actions for manage_geometry tool
 // These must match C++ dispatcher in McpAutomationBridge_GeometryHandlers.cpp
@@ -94,7 +94,7 @@ export async function handleGeometryTools(
   action: string,
   args: HandlerArgs,
   tools: ITools
-): Promise<Record<string, unknown>> {
+): Promise<HandlerResult> {
   // Validate action
   if (!GEOMETRY_ACTIONS.includes(action as GeometryAction)) {
     return {

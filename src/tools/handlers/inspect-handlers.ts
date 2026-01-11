@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, InspectArgs, ComponentInfo } from '../../types/handler-types.js';
+import type { HandlerArgs, InspectArgs, ComponentInfo, HandlerResult } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import { normalizeArgs, resolveObjectPath, extractString, extractOptionalString } from './argument-helper.js';
 
@@ -91,7 +91,7 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
 }
 
 
-export async function handleInspectTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+export async function handleInspectTools(action: string, args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   const argsTyped = args as InspectArgs;
   
   switch (action) {

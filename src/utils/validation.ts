@@ -88,13 +88,15 @@ export type SanitizePathResult =
   | { success: false; error: string };
 
 /**
- * Sanitize a path for Unreal Engine with explicit error reporting
+ * Safe path validation - returns result object instead of throwing.
+ * RECOMMENDED for all user-provided paths (MCP tool arguments).
  * 
  * This version returns an error object instead of silently falling back to safe defaults,
  * which is critical for security to ensure callers know when input was rejected.
  * 
  * @param path The path to sanitize
- * @returns Result object with either sanitized path or error message
+ * @returns {SanitizePathResult} Object with success, path?, and error? properties
+ * @see sanitizePath - Legacy version (silently normalizes invalid paths)
  */
 export function sanitizePathSafe(path: string): SanitizePathResult {
   if (!path || typeof path !== 'string') {

@@ -6,6 +6,7 @@
 
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
+import type { HandlerResult } from '../../types/handler-types.js';
 import { executeAutomationRequest, normalizeLocation, normalizeRotation } from './common-handlers.js';
 
 /**
@@ -15,7 +16,7 @@ export async function handlePostProcessTools(
   action: string,
   args: Record<string, unknown>,
   tools: ITools
-): Promise<unknown> {
+): Promise<HandlerResult> {
   // Normalize location/rotation if present
   const normalizedLocation = normalizeLocation(args.location);
   const normalizedRotation = normalizeRotation(args.rotation as [number, number, number] | { pitch: number; yaw: number; roll: number } | null | undefined);
@@ -47,7 +48,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for create_post_process_volume'
-      ));
+      )) as HandlerResult;
 
     case 'configure_pp_blend':
       return cleanObject(await executeAutomationRequest(
@@ -55,7 +56,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_pp_blend'
-      ));
+      )) as HandlerResult;
 
     case 'configure_pp_priority':
       return cleanObject(await executeAutomationRequest(
@@ -63,7 +64,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_pp_priority'
-      ));
+      )) as HandlerResult;
 
     case 'get_post_process_settings':
       return cleanObject(await executeAutomationRequest(
@@ -71,7 +72,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for get_post_process_settings'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // VISUAL EFFECTS (Bloom, DOF, Motion Blur)
@@ -82,7 +83,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_bloom'
-      ));
+      )) as HandlerResult;
 
     case 'configure_dof':
       return cleanObject(await executeAutomationRequest(
@@ -90,7 +91,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_dof'
-      ));
+      )) as HandlerResult;
 
     case 'configure_motion_blur':
       return cleanObject(await executeAutomationRequest(
@@ -98,7 +99,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_motion_blur'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // COLOR & LENS EFFECTS
@@ -109,7 +110,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_color_grading'
-      ));
+      )) as HandlerResult;
 
     case 'configure_white_balance':
       return cleanObject(await executeAutomationRequest(
@@ -117,7 +118,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_white_balance'
-      ));
+      )) as HandlerResult;
 
     case 'configure_vignette':
       return cleanObject(await executeAutomationRequest(
@@ -125,7 +126,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_vignette'
-      ));
+      )) as HandlerResult;
 
     case 'configure_chromatic_aberration':
       return cleanObject(await executeAutomationRequest(
@@ -133,7 +134,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_chromatic_aberration'
-      ));
+      )) as HandlerResult;
 
     case 'configure_film_grain':
       return cleanObject(await executeAutomationRequest(
@@ -141,7 +142,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_film_grain'
-      ));
+      )) as HandlerResult;
 
     case 'configure_lens_flares':
       return cleanObject(await executeAutomationRequest(
@@ -149,7 +150,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_lens_flares'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // REFLECTION CAPTURES
@@ -160,7 +161,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for create_sphere_reflection_capture'
-      ));
+      )) as HandlerResult;
 
     case 'create_box_reflection_capture':
       return cleanObject(await executeAutomationRequest(
@@ -168,7 +169,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for create_box_reflection_capture'
-      ));
+      )) as HandlerResult;
 
     case 'create_planar_reflection':
       return cleanObject(await executeAutomationRequest(
@@ -176,7 +177,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for create_planar_reflection'
-      ));
+      )) as HandlerResult;
 
     case 'recapture_scene':
       return cleanObject(await executeAutomationRequest(
@@ -184,7 +185,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for recapture_scene'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // RAY TRACING
@@ -195,7 +196,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_ray_traced_shadows'
-      ));
+      )) as HandlerResult;
 
     case 'configure_ray_traced_gi':
       return cleanObject(await executeAutomationRequest(
@@ -203,7 +204,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_ray_traced_gi'
-      ));
+      )) as HandlerResult;
 
     case 'configure_ray_traced_reflections':
       return cleanObject(await executeAutomationRequest(
@@ -211,7 +212,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_ray_traced_reflections'
-      ));
+      )) as HandlerResult;
 
     case 'configure_ray_traced_ao':
       return cleanObject(await executeAutomationRequest(
@@ -219,7 +220,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_ray_traced_ao'
-      ));
+      )) as HandlerResult;
 
     case 'configure_path_tracing':
       return cleanObject(await executeAutomationRequest(
@@ -227,7 +228,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_path_tracing'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // SCENE CAPTURES
@@ -238,7 +239,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for create_scene_capture_2d'
-      ));
+      )) as HandlerResult;
 
     case 'create_scene_capture_cube':
       return cleanObject(await executeAutomationRequest(
@@ -246,7 +247,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for create_scene_capture_cube'
-      ));
+      )) as HandlerResult;
 
     case 'capture_scene':
       return cleanObject(await executeAutomationRequest(
@@ -254,7 +255,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for capture_scene'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // LIGHT CHANNELS
@@ -265,7 +266,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for set_light_channel'
-      ));
+      )) as HandlerResult;
 
     case 'set_actor_light_channel':
       return cleanObject(await executeAutomationRequest(
@@ -273,7 +274,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for set_actor_light_channel'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // LIGHTMASS SETTINGS
@@ -284,7 +285,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_lightmass_settings'
-      ));
+      )) as HandlerResult;
 
     case 'build_lighting_quality':
       return cleanObject(await executeAutomationRequest(
@@ -292,7 +293,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for build_lighting_quality'
-      ));
+      )) as HandlerResult;
 
     case 'configure_indirect_lighting_cache':
       return cleanObject(await executeAutomationRequest(
@@ -300,7 +301,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_indirect_lighting_cache'
-      ));
+      )) as HandlerResult;
 
     case 'configure_volumetric_lightmap':
       return cleanObject(await executeAutomationRequest(
@@ -308,7 +309,7 @@ export async function handlePostProcessTools(
         'manage_post_process',
         payload,
         'Automation bridge not available for configure_volumetric_lightmap'
-      ));
+      )) as HandlerResult;
 
     // =========================================
     // DEFAULT / UNKNOWN ACTION

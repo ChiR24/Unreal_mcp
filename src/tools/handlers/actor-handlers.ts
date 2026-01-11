@@ -1,5 +1,5 @@
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, ActorArgs, Vector3, ComponentInfo } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult, ActorArgs, Vector3, ComponentInfo } from '../../types/handler-types.js';
 import { ACTOR_CLASS_ALIASES, getRequiredComponent } from '../../config/class-aliases.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
@@ -7,7 +7,7 @@ import { normalizeArgs, extractString, extractOptionalString, extractOptionalNum
 import { executeAutomationRequest } from './common-handlers.js';
 
 /** Actor handler function type */
-type ActorActionHandler = (args: ActorArgs, tools: ITools) => Promise<Record<string, unknown>>;
+type ActorActionHandler = (args: ActorArgs, tools: ITools) => Promise<HandlerResult>;
 
 /** Result from list actors with actor info */
 interface ListActorsResult {
@@ -267,7 +267,7 @@ const handlers: Record<string, ActorActionHandler> = {
     }
 };
 
-export async function handleActorTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+export async function handleActorTools(action: string, args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
     try {
         const handler = handlers[action];
         if (handler) {

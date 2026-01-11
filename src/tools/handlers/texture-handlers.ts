@@ -5,7 +5,7 @@
  */
 
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import {
   normalizeArgs,
@@ -50,7 +50,7 @@ export async function handleTextureTools(
   action: string,
   args: HandlerArgs,
   tools: ITools
-): Promise<Record<string, unknown>> {
+): Promise<HandlerResult> {
   try {
     switch (action) {
       // ===== 9.1 Procedural Generation =====

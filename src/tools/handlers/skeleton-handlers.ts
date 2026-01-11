@@ -7,7 +7,7 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import { executeAutomationRequest, normalizeLocation } from './common-handlers.js';
-import type { HandlerArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult } from '../../types/handler-types.js';
 
 // Valid actions for manage_skeleton tool
 // These must match C++ dispatcher in McpAutomationBridge_SkeletonHandlers.cpp
@@ -78,7 +78,7 @@ function normalizeSkeletonArgs(action: string, args: HandlerArgs): Record<string
   if (args.weights && Array.isArray(args.weights)) {
     normalized.weights = args.weights.map((w: unknown) => {
       if (typeof w === 'object' && w !== null) {
-        const wObj = w as Record<string, unknown>;
+        const wObj = w as HandlerResult;
         return {
           boneIndex: Number(wObj.boneIndex ?? wObj.bone ?? 0),
           boneName: String(wObj.boneName ?? wObj.name ?? ''),
@@ -91,7 +91,7 @@ function normalizeSkeletonArgs(action: string, args: HandlerArgs): Record<string
 
   // Normalize constraint limits
   if (args.limits && typeof args.limits === 'object' && args.limits !== null) {
-    const limits = args.limits as Record<string, unknown>;
+    const limits = args.limits as HandlerResult;
     normalized.limits = {
       swing1LimitAngle: Number(limits.swing1LimitAngle ?? limits.swing1 ?? 45),
       swing2LimitAngle: Number(limits.swing2LimitAngle ?? limits.swing2 ?? 45),
@@ -117,7 +117,7 @@ export async function handleSkeletonTools(
   action: string,
   args: HandlerArgs,
   tools: ITools
-): Promise<Record<string, unknown>> {
+): Promise<HandlerResult> {
   // Validate action
   if (!SKELETON_ACTIONS.includes(action as SkeletonAction)) {
     return {
@@ -139,7 +139,7 @@ export async function handleSkeletonTools(
       `Automation bridge not available for skeleton action: ${action}`
     );
 
-    return cleanObject(response as Record<string, unknown>);
+    return cleanObject(response as HandlerResult);
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     return {

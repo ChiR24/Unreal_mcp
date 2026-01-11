@@ -11,8 +11,12 @@ type VectorInput = Vec3Obj | Vec3Tuple | Record<string, unknown> | unknown[];
 type RotationInput = Rot3Obj | Rot3Tuple | Record<string, unknown> | unknown[];
 
 /**
- * Convert various input formats to a Vec3 object
+ * Convert various input formats to a Vec3 object.
+ * For generic vector operations without UE-specific requirements.
  * @param input - Array, object with x/y/z or X/Y/Z properties
+ * @returns Object with x, y, z properties or null if invalid
+ * @see toVec3Tuple - Array format version
+ * @see normalizeLocation - UE bridge-specific version (in common-handlers.ts)
  */
 export function toVec3Object(input: VectorInput | unknown): Vec3Obj | null {
   try {
@@ -69,7 +73,12 @@ export function toRotObject(input: RotationInput | unknown): Rot3Obj | null {
 }
 
 /**
- * Convert vector input to a tuple format [x, y, z]
+ * Convert vector input to a tuple format [x, y, z].
+ * For generic vector operations without UE-specific requirements.
+ * @param input - Vector as array, object, or scalar
+ * @returns Array with [x, y, z] values or null if invalid
+ * @see toVec3Object - Object format version
+ * @see normalizeLocation - UE bridge-specific version (in common-handlers.ts)
  */
 export function toVec3Tuple(input: VectorInput | unknown): Vec3Tuple | null {
   const vec = toVec3Object(input);

@@ -1,5 +1,6 @@
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, Vector3, Rotator } from '../../types/handler-types.js';
+import type { HandlerArgs, Vector3, Rotator, HandlerResult } from '../../types/handler-types.js';
+import { cleanObject } from '../../utils/safe-json.js';
 
 /**
  * Validates that args is not null/undefined.
@@ -74,6 +75,36 @@ export async function executeAutomationRequest(
   }
 
   return await automationBridge.sendAutomationRequest(toolName, args, options);
+}
+
+/**
+ * Execute an automation request and clean the response for return.
+ * Combines executeAutomationRequest() + cleanObject() with runtime type validation.
+ * 
+ * @param tools - The tools interface containing the automation bridge
+ * @param toolName - Name of the C++ handler to invoke
+ * @param args - Arguments to pass to the C++ handler
+ * @param errorMessage - Custom error message if bridge is unavailable
+ * @param options - Optional configuration (timeoutMs for long operations)
+ * @returns Promise resolving to cleaned response as HandlerResult
+ * @throws Error if bridge returns non-object response (protocol violation)
+ */
+export async function executeAndClean(
+  tools: ITools,
+  toolName: string,
+  args: HandlerArgs,
+  errorMessage?: string,
+  options?: { timeoutMs?: number }
+): Promise<HandlerResult> {
+  const result = await executeAutomationRequest(tools, toolName, args, errorMessage, options);
+  const cleaned = cleanObject(result);
+  
+  // Type guard: bridge protocol guarantees objects, but enforce at runtime
+  if (cleaned === null || typeof cleaned !== 'object' || Array.isArray(cleaned)) {
+    throw new Error(`Bridge returned non-object for ${toolName}: ${typeof cleaned}`);
+  }
+  
+  return cleaned as HandlerResult;
 }
 
 /**

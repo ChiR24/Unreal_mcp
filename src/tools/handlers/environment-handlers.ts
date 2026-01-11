@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, EnvironmentArgs, Vector3 } from '../../types/handler-types.js';
+import type { HandlerArgs, EnvironmentArgs, Vector3, HandlerResult } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
 /** Location item in foliage locations array */
@@ -57,14 +57,14 @@ function normalizePathFields(args: Record<string, unknown>): Record<string, unkn
   return result;
 }
 
-export async function handleEnvironmentTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+export async function handleEnvironmentTools(action: string, args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   const argsTyped = args as EnvironmentArgs;
   const argsRecord = args as Record<string, unknown>;
   const envAction = String(action || '').toLowerCase();
   const timeoutMs = getTimeoutMs();
 
   // Helper for Water/Weather requests
-  const sendAutomationRequest = async (targetTool: string, actionName: string, requestArgs: Record<string, unknown>): Promise<Record<string, unknown>> => {
+  const sendAutomationRequest = async (targetTool: string, actionName: string, requestArgs: Record<string, unknown>): Promise<HandlerResult> => {
     const normalizedArgs = normalizePathFields(requestArgs);
     const payload = { ...normalizedArgs, action: actionName };
     const result = await executeAutomationRequest(

@@ -7,7 +7,7 @@
  */
 
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, HandlerResult } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import {
   normalizeArgs,
@@ -52,7 +52,7 @@ export async function handleAnimationAuthoringTools(
   action: string,
   args: HandlerArgs,
   tools: ITools
-): Promise<Record<string, unknown>> {
+): Promise<HandlerResult> {
   try {
     switch (action) {
       // ===== 10.1 Animation Sequences =====
