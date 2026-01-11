@@ -17,11 +17,16 @@
 #endif
 
 // Conditional XR plugin includes
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_HMD
+  #undef MCP_HAS_HMD
+#endif
+
 #if __has_include("HeadMountedDisplayFunctionLibrary.h")
-#include "HeadMountedDisplayFunctionLibrary.h"
-#define MCP_HAS_HMD 1
+  #define MCP_HAS_HMD 1
+  #include "HeadMountedDisplayFunctionLibrary.h"
 #else
-#define MCP_HAS_HMD 0
+  #define MCP_HAS_HMD 0
 #endif
 
 #if __has_include("IXRTrackingSystem.h")
@@ -32,11 +37,16 @@
 #define MCP_HAS_XR_TRACKING 0
 #endif
 
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_OPENXR
+  #undef MCP_HAS_OPENXR
+#endif
+
 #if __has_include("OpenXRHMD.h")
-#include "OpenXRHMD.h"
-#define MCP_HAS_OPENXR 1
+  #define MCP_HAS_OPENXR 1
+  #include "OpenXRHMD.h"
 #else
-#define MCP_HAS_OPENXR 0
+  #define MCP_HAS_OPENXR 0
 #endif
 
 #if __has_include("OculusXRHMDModule.h")
@@ -67,11 +77,16 @@
 #define MCP_HAS_STEAMVR 0
 #endif
 
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_ARKIT
+  #undef MCP_HAS_ARKIT
+#endif
+
 #if __has_include("AppleARKitBlueprintLibrary.h")
-#include "AppleARKitBlueprintLibrary.h"
-#define MCP_HAS_ARKIT 1
+  #define MCP_HAS_ARKIT 1
+  #include "AppleARKitBlueprintLibrary.h"
 #else
-#define MCP_HAS_ARKIT 0
+  #define MCP_HAS_ARKIT 0
 #endif
 
 #if __has_include("GoogleARCoreBlueprintLibrary.h")
@@ -95,11 +110,16 @@
 #define MCP_HAS_HOLOLENS 0
 #endif
 
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_AR
+  #undef MCP_HAS_AR
+#endif
+
 #if __has_include("ARBlueprintLibrary.h")
-#include "ARBlueprintLibrary.h"
-#define MCP_HAS_AR 1
+  #define MCP_HAS_AR 1
+  #include "ARBlueprintLibrary.h"
 #else
-#define MCP_HAS_AR 0
+  #define MCP_HAS_AR 0
 #endif
 
 #if __has_include("XRMotionControllerBase.h")

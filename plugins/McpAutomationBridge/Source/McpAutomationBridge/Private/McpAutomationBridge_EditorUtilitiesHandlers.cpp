@@ -354,7 +354,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
       }
       
       FText ErrorText;
-      if (CollectionManager.CreateCollection(FName(*CollectionName), ShareType, ECollectionStorageMode::Static, &ErrorText)) {
+      // Note: CreateCollection is deprecated in UE 5.7+, use GetProjectCollectionContainer()->CreateCollection() instead
+      // We suppress the warning to maintain compatibility with UE 5.0-5.6
+      PRAGMA_DISABLE_DEPRECATION_WARNINGS
+      bool bCreated = CollectionManager.CreateCollection(FName(*CollectionName), ShareType, ECollectionStorageMode::Static, &ErrorText);
+      PRAGMA_ENABLE_DEPRECATION_WARNINGS
+      if (bCreated) {
         Message = FString::Printf(TEXT("Created collection: %s"), *CollectionName);
         Resp->SetStringField(TEXT("collectionName"), CollectionName);
         Resp->SetStringField(TEXT("collectionType"), CollectionTypeStr);

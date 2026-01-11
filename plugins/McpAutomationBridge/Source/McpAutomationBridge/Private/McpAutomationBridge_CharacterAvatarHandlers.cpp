@@ -18,25 +18,35 @@
 #include "Editor.h"
 
 // Conditional includes for plugins
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_GROOM
+  #undef MCP_HAS_GROOM
+#endif
+
 #if __has_include("GroomComponent.h")
-#include "GroomComponent.h"
-#include "GroomAsset.h"
-#include "GroomBindingAsset.h"
-#define MCP_HAS_GROOM 1
+  #define MCP_HAS_GROOM 1
+  #include "GroomComponent.h"
+  #include "GroomAsset.h"
+  #include "GroomBindingAsset.h"
 #else
-#define MCP_HAS_GROOM 0
+  #define MCP_HAS_GROOM 0
+#endif
+
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_MUTABLE
+  #undef MCP_HAS_MUTABLE
 #endif
 
 #if __has_include("MutableRuntime/Public/CustomizableObject.h")
-#include "MutableRuntime/Public/CustomizableObject.h"
-#include "MutableRuntime/Public/CustomizableObjectInstance.h"
-#define MCP_HAS_MUTABLE 1
+  #define MCP_HAS_MUTABLE 1
+  #include "MutableRuntime/Public/CustomizableObject.h"
+  #include "MutableRuntime/Public/CustomizableObjectInstance.h"
 #elif __has_include("CustomizableObject.h")
-#include "CustomizableObject.h"
-#include "CustomizableObjectInstance.h"
-#define MCP_HAS_MUTABLE 1
+  #define MCP_HAS_MUTABLE 1
+  #include "CustomizableObject.h"
+  #include "CustomizableObjectInstance.h"
 #else
-#define MCP_HAS_MUTABLE 0
+  #define MCP_HAS_MUTABLE 0
 #endif
 
 // Helper function to get groom component from actor

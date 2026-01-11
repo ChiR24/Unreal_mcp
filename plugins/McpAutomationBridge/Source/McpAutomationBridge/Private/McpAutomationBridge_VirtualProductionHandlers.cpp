@@ -23,14 +23,19 @@
 // ============================================================================
 // nDISPLAY (conditional - requires DisplayCluster plugin)
 // ============================================================================
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_NDISPLAY
+  #undef MCP_HAS_NDISPLAY
+#endif
+
 #if __has_include("DisplayClusterRootActor.h")
-#include "DisplayClusterRootActor.h"
-#include "DisplayClusterConfigurationTypes.h"
-#include "DisplayClusterConfigurationTypes_Viewport.h"
-#include "DisplayClusterConfigurationTypes_ICVFX.h"
-#define MCP_HAS_NDISPLAY 1
+  #define MCP_HAS_NDISPLAY 1
+  #include "DisplayClusterRootActor.h"
+  #include "DisplayClusterConfigurationTypes.h"
+  #include "DisplayClusterConfigurationTypes_Viewport.h"
+  #include "DisplayClusterConfigurationTypes_ICVFX.h"
 #else
-#define MCP_HAS_NDISPLAY 0
+  #define MCP_HAS_NDISPLAY 0
 #endif
 
 #if MCP_HAS_NDISPLAY && __has_include("IDisplayCluster.h")
@@ -49,12 +54,17 @@
 // ============================================================================
 // COMPOSURE (conditional - requires Composure plugin)
 // ============================================================================
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_COMPOSURE
+  #undef MCP_HAS_COMPOSURE
+#endif
+
 #if __has_include("CompositingElement.h")
-#include "CompositingElement.h"
-#include "ComposureBlueprintLibrary.h"
-#define MCP_HAS_COMPOSURE 1
+  #define MCP_HAS_COMPOSURE 1
+  #include "CompositingElement.h"
+  #include "ComposureBlueprintLibrary.h"
 #else
-#define MCP_HAS_COMPOSURE 0
+  #define MCP_HAS_COMPOSURE 0
 #endif
 
 #if MCP_HAS_COMPOSURE && __has_include("CompositingElements/CompositingElementOutputs.h")
@@ -69,12 +79,17 @@
 // ============================================================================
 // OCIO - OpenColorIO (conditional - requires OpenColorIO plugin)
 // ============================================================================
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_OCIO
+  #undef MCP_HAS_OCIO
+#endif
+
 #if __has_include("OpenColorIOConfiguration.h")
-#include "OpenColorIOConfiguration.h"
-#include "OpenColorIOColorSpace.h"
-#define MCP_HAS_OCIO 1
+  #define MCP_HAS_OCIO 1
+  #include "OpenColorIOConfiguration.h"
+  #include "OpenColorIOColorSpace.h"
 #else
-#define MCP_HAS_OCIO 0
+  #define MCP_HAS_OCIO 0
 #endif
 
 #if MCP_HAS_OCIO && __has_include("OpenColorIOBlueprintLibrary.h")
@@ -87,12 +102,17 @@
 // ============================================================================
 // REMOTE CONTROL (conditional - requires RemoteControl plugin)
 // ============================================================================
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_REMOTE_CONTROL
+  #undef MCP_HAS_REMOTE_CONTROL
+#endif
+
 #if __has_include("RemoteControlPreset.h")
-#include "RemoteControlPreset.h"
-#include "RemoteControlField.h"
-#define MCP_HAS_REMOTE_CONTROL 1
+  #define MCP_HAS_REMOTE_CONTROL 1
+  #include "RemoteControlPreset.h"
+  #include "RemoteControlField.h"
 #else
-#define MCP_HAS_REMOTE_CONTROL 0
+  #define MCP_HAS_REMOTE_CONTROL 0
 #endif
 
 #if MCP_HAS_REMOTE_CONTROL && __has_include("IRemoteControlModule.h")
@@ -105,11 +125,16 @@
 // ============================================================================
 // DMX (conditional - requires DMX plugin)
 // ============================================================================
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_DMX
+  #undef MCP_HAS_DMX
+#endif
+
 #if __has_include("DMXProtocolBlueprintLibrary.h")
-#include "DMXProtocolBlueprintLibrary.h"
-#define MCP_HAS_DMX 1
+  #define MCP_HAS_DMX 1
+  #include "DMXProtocolBlueprintLibrary.h"
 #else
-#define MCP_HAS_DMX 0
+  #define MCP_HAS_DMX 0
 #endif
 
 #if MCP_HAS_DMX && __has_include("Library/DMXLibrary.h")
@@ -133,27 +158,37 @@
 // ============================================================================
 // OSC (conditional - requires OSC plugin)
 // ============================================================================
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_OSC
+  #undef MCP_HAS_OSC
+#endif
+
 #if __has_include("OSCManager.h")
-#include "OSCManager.h"
-#include "OSCServer.h"
-#include "OSCClient.h"
-#include "OSCMessage.h"
-#define MCP_HAS_OSC 1
+  #define MCP_HAS_OSC 1
+  #include "OSCManager.h"
+  #include "OSCServer.h"
+  #include "OSCClient.h"
+  #include "OSCMessage.h"
 #else
-#define MCP_HAS_OSC 0
+  #define MCP_HAS_OSC 0
 #endif
 
 // ============================================================================
 // MIDI (conditional - requires MIDIDevice plugin)
 // ============================================================================
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_MIDI
+  #undef MCP_HAS_MIDI
+#endif
+
 #if __has_include("MIDIDeviceManager.h")
-#include "MIDIDeviceManager.h"
-#include "MIDIDeviceController.h"
-#include "MIDIDeviceInputController.h"
-#include "MIDIDeviceOutputController.h"
-#define MCP_HAS_MIDI 1
+  #define MCP_HAS_MIDI 1
+  #include "MIDIDeviceManager.h"
+  #include "MIDIDeviceController.h"
+  #include "MIDIDeviceInputController.h"
+  #include "MIDIDeviceOutputController.h"
 #else
-#define MCP_HAS_MIDI 0
+  #define MCP_HAS_MIDI 0
 #endif
 
 // ============================================================================

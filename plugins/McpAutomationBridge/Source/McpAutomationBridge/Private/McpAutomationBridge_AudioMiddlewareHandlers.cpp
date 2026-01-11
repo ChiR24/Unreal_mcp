@@ -27,12 +27,17 @@
 // ============================================================================
 // BINK VIDEO (built-in - UE 5.0+)
 // ============================================================================
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_BINK
+  #undef MCP_HAS_BINK
+#endif
+
 #if __has_include("BinkMediaPlayer.h")
-#include "BinkMediaPlayer.h"
-#include "BinkMediaTexture.h"
-#define MCP_HAS_BINK 1
+  #define MCP_HAS_BINK 1
+  #include "BinkMediaPlayer.h"
+  #include "BinkMediaTexture.h"
 #else
-#define MCP_HAS_BINK 0
+  #define MCP_HAS_BINK 0
 #endif
 
 // ============================================================================

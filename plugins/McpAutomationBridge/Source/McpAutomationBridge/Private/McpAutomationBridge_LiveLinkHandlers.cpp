@@ -21,24 +21,28 @@
 // ============================================================================
 // LIVE LINK (conditional - built-in since UE 4.19+)
 // ============================================================================
-#if __has_include("ILiveLinkClient.h")
-#include "ILiveLinkClient.h"
-#include "LiveLinkTypes.h"
-#include "LiveLinkSourceSettings.h"
-#include "LiveLinkSubjectSettings.h"
-#include "LiveLinkRole.h"
-
-#if __has_include("LiveLinkVirtualSubject.h")
-#include "LiveLinkVirtualSubject.h"
-#define MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS 1
-#else
-#define MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS 0
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_LIVELINK
+  #undef MCP_HAS_LIVELINK
 #endif
 
-#define MCP_HAS_LIVELINK 1
+#if __has_include("ILiveLinkClient.h")
+  #define MCP_HAS_LIVELINK 1
+  #include "ILiveLinkClient.h"
+  #include "LiveLinkTypes.h"
+  #include "LiveLinkSourceSettings.h"
+  #include "LiveLinkSubjectSettings.h"
+  #include "LiveLinkRole.h"
+
+  #if __has_include("LiveLinkVirtualSubject.h")
+    #include "LiveLinkVirtualSubject.h"
+    #define MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS 1
+  #else
+    #define MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS 0
+  #endif
 #else
-#define MCP_HAS_LIVELINK 0
-#define MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS 0
+  #define MCP_HAS_LIVELINK 0
+  #define MCP_HAS_LIVELINK_VIRTUAL_SUBJECTS 0
 #endif
 
 #if MCP_HAS_LIVELINK && __has_include("LiveLinkClient.h")

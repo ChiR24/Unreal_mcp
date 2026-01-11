@@ -64,43 +64,58 @@
 // ============================================================================
 // USD (conditional - USD plugin)
 // ============================================================================
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_USD
+  #undef MCP_HAS_USD
+#endif
+
 #if __has_include("USDStageActor.h")
-#include "USDStageActor.h"
-#include "USDPrimTwin.h"
-#include "USDTypesConversion.h"
-#define MCP_HAS_USD 1
+  #define MCP_HAS_USD 1
+  #include "USDStageActor.h"
+  #include "USDPrimTwin.h"
+  #include "USDTypesConversion.h"
 #else
-#define MCP_HAS_USD 0
+  #define MCP_HAS_USD 0
 #endif
 
 // ============================================================================
 // ALEMBIC (conditional - Alembic plugin)
 // ============================================================================
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_ALEMBIC
+  #undef MCP_HAS_ALEMBIC
+#endif
+
 #if __has_include("AbcImportSettings.h")
-#include "AbcImportSettings.h"
-#include "AbcAssetImportData.h"
-#include "AbcImporter.h"
-#include "AbcFile.h"
-#define MCP_HAS_ALEMBIC 1
+  #define MCP_HAS_ALEMBIC 1
+  #include "AbcImportSettings.h"
+  #include "AbcAssetImportData.h"
+  #include "AbcImporter.h"
+  #include "AbcFile.h"
 #elif __has_include("AlembicLibrary/AbcImportSettings.h")
-#include "AlembicLibrary/AbcImportSettings.h"
-#define MCP_HAS_ALEMBIC 1
+  #define MCP_HAS_ALEMBIC 1
+  #include "AlembicLibrary/AbcImportSettings.h"
 #else
-#define MCP_HAS_ALEMBIC 0
+  #define MCP_HAS_ALEMBIC 0
 #endif
 
 // ============================================================================
 // GLTF (conditional - GLTFExporter plugin)
 // ============================================================================
+// Override build system - use __has_include as source of truth
+#ifdef MCP_HAS_GLTF
+  #undef MCP_HAS_GLTF
+#endif
+
 #if __has_include("GLTFExporter.h")
-#include "GLTFExporter.h"
-#include "GLTFExportOptions.h"
-#define MCP_HAS_GLTF 1
+  #define MCP_HAS_GLTF 1
+  #include "GLTFExporter.h"
+  #include "GLTFExportOptions.h"
 #elif __has_include("Exporters/GLTFExporter.h")
-#include "Exporters/GLTFExporter.h"
-#define MCP_HAS_GLTF 1
+  #define MCP_HAS_GLTF 1
+  #include "Exporters/GLTFExporter.h"
 #else
-#define MCP_HAS_GLTF 0
+  #define MCP_HAS_GLTF 0
 #endif
 
 // ============================================================================
