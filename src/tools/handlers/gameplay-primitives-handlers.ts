@@ -192,9 +192,9 @@ export async function handleGameplayPrimitivesTools(
 
     // ==================== ATTACHMENT (6 actions) ====================
     case 'attach_to_socket': {
-      requireNonEmptyString(args.childActor, 'childActor');
-      requireNonEmptyString(args.parentActor, 'parentActor');
-      requireNonEmptyString(args.socketName, 'socketName');
+      requireNonEmptyString(args.actorName, 'actorName');
+      requireNonEmptyString(args.parentActorName, 'parentActorName');
+      // socketName is optional - empty string attaches to root
       return cleanObject(await executeAutomationRequest(
         tools, 'manage_gameplay_primitives', args,
         'Failed to attach to socket'
@@ -211,7 +211,6 @@ export async function handleGameplayPrimitivesTools(
 
     case 'transfer_control': {
       requireNonEmptyString(args.actorName, 'actorName');
-      requireNonEmptyString(args.newController, 'newController');
       return cleanObject(await executeAutomationRequest(
         tools, 'manage_gameplay_primitives', args,
         'Failed to transfer control'
@@ -321,9 +320,16 @@ export async function handleGameplayPrimitivesTools(
     // ==================== INTERACTION (6 actions) ====================
     case 'add_interactable_component':
     case 'configure_interaction':
-    case 'set_interaction_enabled':
-    case 'get_nearby_interactables': {
+    case 'set_interaction_enabled': {
       requireNonEmptyString(args.actorName, 'actorName');
+      return cleanObject(await executeAutomationRequest(
+        tools, 'manage_gameplay_primitives', args,
+        `Failed to ${action.replace(/_/g, ' ')}`
+      )) as HandlerResult;
+    }
+
+    case 'get_nearby_interactables': {
+      // location and radius based - no actorName required
       return cleanObject(await executeAutomationRequest(
         tools, 'manage_gameplay_primitives', args,
         `Failed to ${action.replace(/_/g, ' ')}`
@@ -333,7 +339,7 @@ export async function handleGameplayPrimitivesTools(
     case 'focus_interaction':
     case 'execute_interaction': {
       requireNonEmptyString(args.actorName, 'actorName');
-      requireNonEmptyString(args.targetActor, 'targetActor');
+      // focusingActorName/interactingActorName are optional in C++
       return cleanObject(await executeAutomationRequest(
         tools, 'manage_gameplay_primitives', args,
         `Failed to ${action.replace(/_/g, ' ')}`

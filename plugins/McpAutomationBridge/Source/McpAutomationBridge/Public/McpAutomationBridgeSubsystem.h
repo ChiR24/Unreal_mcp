@@ -751,7 +751,12 @@ private:
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-  // Phase 36: Character & Avatar handlers
+  // Phase 36 (Universal Gameplay Primitives): 62 actions for game development
+  bool HandleManageGameplayPrimitivesAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 37: Character & Avatar handlers
   bool HandleManageCharacterAvatarAction(
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,

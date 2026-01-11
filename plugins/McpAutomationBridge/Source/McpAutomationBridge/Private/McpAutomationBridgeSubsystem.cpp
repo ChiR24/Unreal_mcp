@@ -1059,7 +1059,15 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleManageGameplaySystemsAction(R, A, P, S);
                   });
 
-  // Phase 36: Character & Avatar Plugins
+  // Phase 36 (Universal Gameplay Primitives): 62 actions for game development
+  RegisterHandler(TEXT("manage_gameplay_primitives"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageGameplayPrimitivesAction(R, A, P, S);
+                  });
+
+  // Phase 37: Character & Avatar Plugins
   RegisterHandler(TEXT("manage_character_avatar"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
