@@ -108,7 +108,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       return { success: true, message: `${category} quality derived from '${quality}' set to ${qVal} via ${cvar}`, action: 'set_quality' };
     }
     case 'execute_command':
-      return cleanObject(await tools.systemTools.executeConsoleCommand(argsTyped.command ?? '') as Record<string, unknown>);
+      return cleanObject(await tools.systemTools.executeConsoleCommand(argsTyped.command ?? '') as HandlerResult);
     case 'create_widget': {
       const name = typeof argsTyped.name === 'string' ? argsTyped.name.trim() : '';
       const widgetPathRaw = typeof argsTyped.widgetPath === 'string' ? argsTyped.widgetPath.trim() : '';
@@ -526,7 +526,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       };
 
       const parsed = parseResolution(argsTyped.resolution);
-      const argsRecord = argsTyped as Record<string, unknown>;
+      const argsRecord = argsTyped as HandlerResult;
       const width = Number.isFinite(Number(argsRecord.width)) ? Number(argsRecord.width) : (parsed.width ?? NaN);
       const height = Number.isFinite(Number(argsRecord.height)) ? Number(argsRecord.height) : (parsed.height ?? NaN);
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
@@ -555,7 +555,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       };
 
       const parsed = parseResolution(argsTyped.resolution);
-      const argsRecord = argsTyped as Record<string, unknown>;
+      const argsRecord = argsTyped as HandlerResult;
       const width = Number.isFinite(Number(argsRecord.width)) ? Number(argsRecord.width) : (parsed.width ?? NaN);
       const height = Number.isFinite(Number(argsRecord.height)) ? Number(argsRecord.height) : (parsed.height ?? NaN);
 
@@ -593,7 +593,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       return cleanObject(await tools.logTools.readOutputLog(args as Record<string, unknown>));
     default: {
       const res = await executeAutomationRequest(tools, 'system_control', args, 'Automation bridge not available for system control operations');
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
   }
 }
@@ -617,5 +617,5 @@ export async function handleConsoleCommand(args: HandlerArgs, tools: ITools): Pr
     { ...args, command: trimmed },
     'Automation bridge not available for console command operations'
   );
-  return cleanObject(res) as Record<string, unknown>;
+  return cleanObject(res) as HandlerResult;
 }

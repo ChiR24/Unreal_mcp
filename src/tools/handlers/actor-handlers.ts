@@ -252,7 +252,7 @@ const handlers: Record<string, ActorActionHandler> = {
             const suffix = remaining > 0 ? `... and ${remaining} others` : '';
             (result as Record<string, unknown>).message = `Found ${count} actors: ${names}${suffix}`;
         }
-        return result as Record<string, unknown>;
+        return result as HandlerResult;
     },
     find_by_name: async (args, tools) => {
         // Support both actorName and name parameters for consistency
@@ -274,11 +274,11 @@ export async function handleActorTools(action: string, args: HandlerArgs, tools:
             const res = await handler(args as ActorArgs, tools);
             // The actor tool handlers already return a StandardActionResponse-like object.
             // Don't wrap into { data: ... } since tests and tool schemas expect actorName/actorPath at top-level.
-            return cleanObject(res) as Record<string, unknown>;
+            return cleanObject(res) as HandlerResult;
         }
         // Fallback to direct bridge call or error
         const res = await executeAutomationRequest(tools, 'control_actor', args);
-        return cleanObject(res) as Record<string, unknown>;
+        return cleanObject(res) as HandlerResult;
     } catch (error: unknown) {
         return ResponseFactory.error(error);
     }

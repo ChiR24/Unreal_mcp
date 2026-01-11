@@ -74,7 +74,7 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
       `Automation bridge not available for ${targetTool} action: ${actionName}`,
       { timeoutMs }
     );
-    return cleanObject(result) as Record<string, unknown>;
+    return cleanObject(result) as HandlerResult;
   };
   
   switch (envAction) {
@@ -124,7 +124,7 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         runtimeGrid: argsRecord.runtimeGrid as string | undefined,
         isSpatiallyLoaded: argsRecord.isSpatiallyLoaded as boolean | undefined,
         dataLayers: argsRecord.dataLayers as string[] | undefined
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     case 'modify_heightmap':
       return cleanObject(await tools.landscapeTools.modifyHeightmap({
         landscapeName: argsTyped.landscapeName || argsTyped.name || '',
@@ -134,7 +134,7 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         maxX: (argsRecord.maxX as number) ?? 0,
         maxY: (argsRecord.maxY as number) ?? 0,
         updateNormals: argsRecord.updateNormals as boolean | undefined
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     case 'sculpt':
     case 'sculpt_landscape': {
       // Default to 'Raise' tool if not specified
@@ -145,7 +145,7 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         location: vec3ToArray(argsTyped.location),
         radius: argsTyped.radius || 500,
         strength: (argsRecord.strength as number) || 0.5
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     }
     case 'add_foliage': {
       // Check if this is adding a foliage TYPE (has meshPath) or INSTANCES (has locations/position)
@@ -156,7 +156,7 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
           name: argsTyped.foliageType || argsTyped.name || defaultName || 'NewFoliageType',
           meshPath: argsTyped.meshPath,
           density: argsTyped.density
-        })) as Record<string, unknown>;
+        })) as HandlerResult;
       } else {
         // Validate foliageType is provided
         const foliageType = argsTyped.foliageType || argsTyped.foliageTypePath;
@@ -201,7 +201,7 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         return cleanObject(await tools.foliageTools.addFoliage({
           foliageType,
           locations
-        })) as Record<string, unknown>;
+        })) as HandlerResult;
       }
     }
 
@@ -212,7 +212,7 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
       return cleanObject(await tools.foliageTools.addFoliageInstances({
         foliageType: argsTyped.foliageType || argsTyped.foliageTypePath || argsTyped.meshPath || '',
         transforms: transformsRaw as { location: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number] }[]
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     }
     case 'paint_foliage':
       return cleanObject(await tools.foliageTools.paintFoliage({
@@ -221,14 +221,14 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         brushSize: (argsRecord.brushSize as number) || argsTyped.radius,
         paintDensity: argsTyped.density || (argsRecord.strength as number),
         eraseMode: argsRecord.eraseMode as boolean | undefined
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     case 'create_procedural_terrain':
       return cleanObject(await tools.landscapeTools.createProceduralTerrain({
         name: argsTyped.name || '',
         location: vec3ToArray(argsTyped.location),
         subdivisions: argsRecord.subdivisions as number | undefined,
         settings: argsRecord.settings as Record<string, unknown> | undefined
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     case 'create_procedural_foliage':
       return cleanObject(await tools.foliageTools.createProceduralFoliage({
         name: argsTyped.name || '',
@@ -237,42 +237,42 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         bounds: argsTyped.bounds ? { location: argsTyped.bounds.min, size: argsTyped.bounds.max } : undefined,
         seed: argsTyped.seed,
         tileSize: argsRecord.tileSize as number | undefined
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'bake_lightmap':
       return cleanObject(await tools.lightingTools.buildLighting({
         quality: (argsRecord.quality as string) || 'Preview',
         buildOnlySelected: false,
         buildReflectionCaptures: false
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     case 'create_landscape_grass_type':
       return cleanObject(await tools.landscapeTools.createLandscapeGrassType({
         name: argsTyped.name || '',
         meshPath: argsTyped.meshPath || (argsRecord.path as string) || (argsRecord.staticMesh as string),
         path: argsRecord.path as string | undefined,
         staticMesh: argsRecord.staticMesh as string | undefined
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     case 'export_snapshot':
       return cleanObject(await tools.environmentTools.exportSnapshot({
         path: argsRecord.path as string | undefined,
         filename: argsRecord.filename as string | undefined
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     case 'import_snapshot':
       return cleanObject(await tools.environmentTools.importSnapshot({
         path: argsRecord.path as string | undefined,
         filename: argsRecord.filename as string | undefined
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     case 'set_landscape_material':
       return cleanObject(await tools.landscapeTools.setLandscapeMaterial({
         landscapeName: argsTyped.landscapeName || argsTyped.name || '',
         materialPath: argsTyped.materialPath ?? ''
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     case 'generate_lods':
       return cleanObject(await executeAutomationRequest(tools, 'build_environment', {
         action: 'generate_lods',
         assetPaths: (argsRecord.assetPaths as string[]) || (argsRecord.assets as string[]) || (argsRecord.path ? [argsRecord.path as string] : []),
         numLODs: argsRecord.numLODs as number | undefined
-      }, 'Bridge unavailable')) as Record<string, unknown>;
+      }, 'Bridge unavailable')) as HandlerResult;
     case 'delete': {
       const names: string[] = Array.isArray(argsRecord.names)
         ? argsRecord.names as string[]
@@ -281,11 +281,11 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         names.push(argsTyped.name);
       }
       const res = await tools.environmentTools.cleanup({ names });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     default: {
       const res = await executeAutomationRequest(tools, 'build_environment', args, 'Automation bridge not available for environment building operations');
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
   }
 }

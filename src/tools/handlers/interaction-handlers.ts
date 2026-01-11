@@ -41,7 +41,7 @@ export async function handleInteractionTools(
       `Automation bridge not available for interaction action: ${subAction}`,
       { timeoutMs }
     );
-    return cleanObject(result) as Record<string, unknown>;
+    return cleanObject(result) as HandlerResult;
   };
 
   switch (action) {

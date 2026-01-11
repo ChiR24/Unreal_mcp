@@ -94,7 +94,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     };
 
     const res = await executeAutomationRequest(tools, 'manage_animation_authoring', payload, 'Automation bridge not available for animation blueprint creation');
-    return res as Record<string, unknown>;
+    return res as HandlerResult;
   }
 
   if (animAction === 'play_anim_montage' || animAction === 'play_montage') {
@@ -283,7 +283,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     }
     default: {
       const res = await executeAutomationRequest(tools, 'animation_physics', args, 'Automation bridge not available for animation/physics operations');
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
   }
 }

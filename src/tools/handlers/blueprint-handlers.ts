@@ -49,11 +49,11 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'ensure_exists': {
       const res = await tools.blueprintTools.waitForBlueprint(argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '', argsRecord.timeoutMs as number | undefined);
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'add_variable': {
       const res = await tools.blueprintTools.addVariable({
@@ -69,7 +69,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'set_variable_metadata': {
       const res = await tools.blueprintTools.setVariableMetadata({
@@ -78,7 +78,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         metadata: argsTyped.metadata ?? {},
         timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'remove_variable': {
       const res = await tools.blueprintTools.removeVariable({
@@ -88,7 +88,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'rename_variable': {
       const res = await tools.blueprintTools.renameVariable({
@@ -99,7 +99,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'set_metadata': {
       const assetPathRaw = typeof (argsRecord.assetPath) === 'string' ? (argsRecord.assetPath as string).trim() : '';
@@ -122,7 +122,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
 
       const metadata = (argsTyped.metadata && typeof argsTyped.metadata === 'object') ? argsTyped.metadata : {};
       const res = await executeAutomationRequest(tools, 'set_metadata', { assetPath, metadata });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'add_event': {
       const blueprintName = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name || '';
@@ -149,7 +149,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
           });
         }
       }
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'remove_event': {
       const res = await tools.blueprintTools.removeEvent({
@@ -160,7 +160,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'add_function': {
       // Prioritize explicit path for blueprint, allowing 'name' to be function name
@@ -178,7 +178,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'add_component': {
       const res = await tools.blueprintTools.addComponent({
@@ -194,7 +194,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'modify_scs': {
       const res = await tools.blueprintTools.modifyConstructionScript({
@@ -206,7 +206,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'set_scs_transform': {
       const loc = argsRecord.location as { x?: number; y?: number; z?: number } | undefined;
@@ -220,7 +220,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         scale: scl ? [scl.x ?? 1, scl.y ?? 1, scl.z ?? 1] : undefined,
         timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'add_construction_script': {
       const res = await tools.blueprintTools.addConstructionScript({
@@ -230,7 +230,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'add_node': {
       if ((argsTyped.nodeType === 'CallFunction' || argsTyped.nodeType === 'K2Node_CallFunction') && !(argsRecord.functionName as string | undefined) && !argsTyped.memberName) {
@@ -278,7 +278,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         posY: argsRecord.posY as number | undefined,
         timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'add_scs_component': {
       const res = await tools.blueprintTools.addSCSComponent({
@@ -289,7 +289,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         materialPath: argsRecord.materialPath as string | undefined,
         timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'reparent_scs_component': {
       const res = await tools.blueprintTools.reparentSCSComponent({
@@ -298,7 +298,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         newParent: (argsRecord.newParent as string) ?? '',
         timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'set_scs_property': {
       const res = await tools.blueprintTools.setSCSComponentProperty({
@@ -308,7 +308,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         propertyValue: argsRecord.propertyValue,
         timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'remove_scs_component': {
       const res = await tools.blueprintTools.removeSCSComponent({
@@ -316,14 +316,14 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         componentName: argsTyped.componentName ?? '',
         timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'get_scs': {
       const res = await tools.blueprintTools.getBlueprintSCS({
         blueprintPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
         timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'set_default': {
       const res = await tools.blueprintTools.setBlueprintDefault({
@@ -331,27 +331,27 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         propertyName: argsTyped.propertyName ?? '',
         value: argsTyped.value
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'compile': {
       const res = await tools.blueprintTools.compileBlueprint({
         blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
         saveAfterCompile: argsRecord.saveAfterCompile as boolean | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'probe_handle': {
       const res = await tools.blueprintTools.probeSubobjectDataHandle({
         componentClass: (argsRecord.componentClass as string) ?? ''
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'get': {
       const res = await tools.blueprintTools.getBlueprintInfo({
         blueprintPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
         timeoutMs: argsRecord.timeoutMs as number | undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'connect_pins':
     case 'break_pin_links':
@@ -367,17 +367,17 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         blueprintPath: argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name
       };
       const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs, 'Automation bridge not available for blueprint graph operations');
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     default: {
       // Translate applyAndSave to compile/save flags for modify_scs action
-      const processedArgs = { ...args } as Record<string, unknown>;
+      const processedArgs = { ...args } as HandlerResult;
       if ((argsRecord.action as string | undefined) === 'modify_scs' && argsRecord.applyAndSave === true) {
         processedArgs.compile = true;
         processedArgs.save = true;
       }
       const res = await executeAutomationRequest(tools, 'manage_blueprint', processedArgs, 'Automation bridge not available for blueprint operations');
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
   }
 }
@@ -393,7 +393,7 @@ export async function handleBlueprintGet(args: HandlerArgs, tools: ITools): Prom
       ...res,
       blueprintPath: typeof blueprintPath === 'string' ? blueprintPath : undefined,
       message: res.message || 'Blueprint fetched'
-    }) as Record<string, unknown>;
+    }) as HandlerResult;
   }
-  return cleanObject(res) as Record<string, unknown>;
+  return cleanObject(res) as HandlerResult;
 }

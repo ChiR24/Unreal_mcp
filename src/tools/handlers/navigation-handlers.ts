@@ -74,7 +74,7 @@ export async function handleNavigationTools(
       `Automation bridge not available for navigation action: ${subAction}`,
       { timeoutMs }
     );
-    return cleanObject(result) as Record<string, unknown>;
+    return cleanObject(result) as HandlerResult;
   };
 
   switch (action) {

@@ -48,7 +48,7 @@ export async function handleGameFrameworkTools(
       `Automation bridge not available for game framework action: ${subAction}`,
       { timeoutMs }
     );
-    return cleanObject(result) as Record<string, unknown>;
+    return cleanObject(result) as HandlerResult;
   };
 
   switch (action) {

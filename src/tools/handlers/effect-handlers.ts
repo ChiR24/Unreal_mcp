@@ -34,7 +34,7 @@ interface AutomationResponse {
 
 export async function handleEffectTools(action: string, args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   const argsTyped = args as EffectArgs;
-  const mutableArgs = { ...args } as Record<string, unknown>;
+  const mutableArgs = { ...args } as HandlerResult;
   
   if (!mutableArgs || typeof mutableArgs !== 'object') {
     // Create empty object
@@ -50,7 +50,7 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
       savePath: (mutableArgs.savePath as string | undefined),
       template: (mutableArgs.template as string | undefined)
     });
-    return cleanObject(res) as Record<string, unknown>;
+    return cleanObject(res) as HandlerResult;
   }
   if (action === 'create_niagara_emitter') {
     const res = await tools.niagaraTools.createEmitter({
@@ -59,7 +59,7 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
       systemPath: argsTyped.systemPath,
       template: (mutableArgs.template as string | undefined)
     });
-    return cleanObject(res) as Record<string, unknown>;
+    return cleanObject(res) as HandlerResult;
   }
 
   // Pre-process arguments for particle presets
@@ -86,7 +86,7 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     requireNonEmptyString(mutableArgs.shapeType as string | undefined, 'shapeType', 'Missing required parameter: shapeType');
     mutableArgs.action = 'debug_shape';
     mutableArgs.subAction = 'debug_shape';
-    return cleanObject(await executeAutomationRequest(tools, 'create_effect', mutableArgs)) as Record<string, unknown>;
+    return cleanObject(await executeAutomationRequest(tools, 'create_effect', mutableArgs)) as HandlerResult;
   }
 
   // Validate Niagara-related required parameters (keep errors explicit and early)
@@ -238,5 +238,5 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     }
   }
 
-  return cleanObject(res) as Record<string, unknown>;
+  return cleanObject(res) as HandlerResult;
 }

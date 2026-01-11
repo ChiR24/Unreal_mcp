@@ -505,6 +505,6 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     default:
       // Fallback to generic automation request if action not explicitly handled
       const res = await executeAutomationRequest(tools, 'inspect', args, 'Automation bridge not available for inspect operations');
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
   }
 }

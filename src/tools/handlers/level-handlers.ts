@@ -23,16 +23,16 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
     case 'load_level': {
       const levelPath = requireNonEmptyString(argsTyped.levelPath, 'levelPath', 'Missing required parameter: levelPath');
       const res = await tools.levelTools.loadLevel({ levelPath, streaming: !!argsTyped.streaming });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'save': {
       const targetPath = argsTyped.levelPath || argsTyped.savePath;
       if (targetPath) {
         const res = await tools.levelTools.saveLevelAs({ targetPath });
-        return cleanObject(res) as Record<string, unknown>;
+        return cleanObject(res) as HandlerResult;
       }
       const res = await tools.levelTools.saveLevel({ levelName: argsTyped.levelName });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'save_as':
     case 'save_level_as': {
@@ -47,13 +47,13 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         };
       }
       const res = await tools.levelTools.saveLevelAs({ targetPath });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'create_level': {
       const levelPathStr = typeof argsTyped.levelPath === 'string' ? argsTyped.levelPath : '';
       const levelName = requireNonEmptyString(argsTyped.levelName || levelPathStr.split('/').pop() || '', 'levelName', 'Missing required parameter: levelName');
       const res = await tools.levelTools.createLevel({ levelName, savePath: argsTyped.savePath || argsTyped.levelPath });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'add_sublevel': {
       const subLevelPath = requireNonEmptyString(argsTyped.subLevelPath || argsTyped.levelPath, 'subLevelPath', 'Missing required parameter: subLevelPath');
@@ -62,7 +62,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         parentLevel: argsTyped.parentLevel || argsTyped.parentPath,
         streamingMethod: argsTyped.streamingMethod
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'stream': {
       const levelPath = typeof argsTyped.levelPath === 'string' ? argsTyped.levelPath : undefined;
@@ -92,12 +92,12 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         shouldBeLoaded: argsTyped.shouldBeLoaded,
         shouldBeVisible: argsTyped.shouldBeVisible
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'create_light': {
       // Delegate directly to the plugin's manage_level.create_light handler.
       const res = await executeAutomationRequest(tools, 'manage_level', args);
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'spawn_light': {
       // Fallback to control_actor spawn if manage_level spawn_light is not supported
@@ -119,9 +119,9 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           location: argsTyped.location,
           rotation: argsTyped.rotation
         });
-        return { ...cleanObject(res) as Record<string, unknown>, action: 'spawn_light' };
+        return { ...cleanObject(res) as HandlerResult, action: 'spawn_light' };
       } catch (_e) {
-        return await executeAutomationRequest(tools, 'manage_level', args) as Record<string, unknown>;
+        return await executeAutomationRequest(tools, 'manage_level', args) as HandlerResult;
       }
     }
     case 'build_lighting': {
@@ -129,7 +129,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         quality: (argsTyped.quality as string) || 'Preview',
         buildOnlySelected: false,
         buildReflectionCaptures: false
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
     }
     case 'export_level': {
       const res = await tools.levelTools.exportLevel({
@@ -137,7 +137,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         exportPath: argsTyped.exportPath ?? argsTyped.destinationPath ?? '',
         timeoutMs: typeof argsTyped.timeoutMs === 'number' ? argsTyped.timeoutMs : undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'import_level': {
       const res = await tools.levelTools.importLevel({
@@ -145,28 +145,28 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         destinationPath: argsTyped.destinationPath,
         timeoutMs: typeof argsTyped.timeoutMs === 'number' ? argsTyped.timeoutMs : undefined
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'list_levels': {
       const res = await tools.levelTools.listLevels();
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'get_summary': {
       const res = await tools.levelTools.getLevelSummary(argsTyped.levelPath);
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'delete': {
       const levelPaths = Array.isArray(argsTyped.levelPaths) 
         ? argsTyped.levelPaths.filter((p): p is string => typeof p === 'string') 
         : (argsTyped.levelPath ? [argsTyped.levelPath] : []);
       const res = await tools.levelTools.deleteLevels({ levelPaths });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'set_metadata': {
       const levelPath = requireNonEmptyString(argsTyped.levelPath, 'levelPath', 'Missing required parameter: levelPath');
       const metadata = (argsTyped.metadata && typeof argsTyped.metadata === 'object') ? argsTyped.metadata : {};
       const res = await executeAutomationRequest(tools, 'set_metadata', { assetPath: levelPath, metadata });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'load_cells': {
       // Calculate origin/extent if min/max provided for C++ handler compatibility
@@ -190,7 +190,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       };
 
       const res = await executeAutomationRequest(tools, 'manage_world_partition', payload);
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'set_datalayer': {
       const dataLayerName = argsTyped.dataLayerName || argsTyped.dataLayerLabel;
@@ -218,34 +218,31 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         dataLayerName, // Map label to name
         ...args
       });
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'cleanup_invalid_datalayers': {
       // Route to manage_world_partition
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
         subAction: 'cleanup_invalid_datalayers'
       }, 'World Partition support not available');
-      return cleanObject(res) as Record<string, unknown>;
+      return cleanObject(res) as HandlerResult;
     }
     case 'validate_level': {
       const levelPath = requireNonEmptyString(argsTyped.levelPath, 'levelPath', 'Missing required parameter: levelPath');
 
-      // Prefer an editor-side existence check when the automation bridge is available.
-      const automationBridge = tools.automationBridge;
-      if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function' || !automationBridge.isConnected()) {
-        return cleanObject({
-          success: false,
-          error: 'BRIDGE_UNAVAILABLE',
-          message: 'Automation bridge not available; cannot validate level asset',
-          levelPath
-        });
-      }
+      // Sentinel prefix for reliable bridge error detection
+      const BRIDGE_ERROR_SENTINEL = '[BRIDGE_UNAVAILABLE]';
+      const bridgeErrorMessage = `${BRIDGE_ERROR_SENTINEL} Automation bridge not available; cannot validate level asset`;
 
       try {
-        const resp = await automationBridge.sendAutomationRequest('execute_editor_function', {
-          functionName: 'ASSET_EXISTS_SIMPLE',
-          path: levelPath
-        }) as AutomationResponse;
+        // executeAutomationRequest throws if bridge unavailable (common-handlers.ts:70,74)
+        const resp = await executeAutomationRequest(
+          tools,
+          'execute_editor_function',
+          { functionName: 'ASSET_EXISTS_SIMPLE', path: levelPath },
+          bridgeErrorMessage
+        ) as AutomationResponse;
+        
         const result = resp?.result ?? resp ?? {};
         const exists = Boolean(result.exists);
 
@@ -256,17 +253,25 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           classPath: result.class,
           error: exists ? undefined : 'NOT_FOUND',
           message: exists ? 'Level asset exists' : 'Level asset not found'
-        });
+        }) as HandlerResult;
       } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        
+        // Detect bridge errors via sentinel OR "not connected" substring (from executeAutomationRequest:74)
+        const isBridgeError = errorMessage.startsWith(BRIDGE_ERROR_SENTINEL) || 
+                              errorMessage.includes('not connected to Unreal Engine');
+        
         return cleanObject({
           success: false,
-          error: 'VALIDATION_FAILED',
-          message: `Level validation failed: ${err instanceof Error ? err.message : String(err)}`,
+          error: isBridgeError ? 'BRIDGE_UNAVAILABLE' : 'VALIDATION_FAILED',
+          message: isBridgeError 
+            ? 'Automation bridge not available; cannot validate level asset'  // Preserve original message
+            : `Level validation failed: ${errorMessage}`,
           levelPath
-        });
+        }) as HandlerResult;
       }
     }
     default:
-      return await executeAutomationRequest(tools, 'manage_level', args) as Record<string, unknown>;
+      return await executeAutomationRequest(tools, 'manage_level', args) as HandlerResult;
   }
 }

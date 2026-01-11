@@ -44,7 +44,7 @@ export async function handleAudioTools(
         wavePath: argsTyped.wavePath ?? argsTyped.soundPath ?? '',
         savePath: argsTyped.savePath,
         settings: argsTyped.settings
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'play_sound_at_location':
       requireNonEmptyString(argsTyped?.soundPath, 'soundPath', 'Missing required parameter: soundPath');
@@ -57,7 +57,7 @@ export async function handleAudioTools(
         startTime: argsTyped.startTime,
         attenuationPath: argsTyped.attenuationPath,
         concurrencyPath: argsTyped.concurrencyPath
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'play_sound_2d':
       requireNonEmptyString(argsTyped?.soundPath, 'soundPath', 'Missing required parameter: soundPath');
@@ -66,7 +66,7 @@ export async function handleAudioTools(
         volume: argsTyped.volume,
         pitch: argsTyped.pitch,
         startTime: argsTyped.startTime
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'create_audio_component':
       requireNonEmptyString(argsTyped?.actorName, 'actorName', 'Missing required parameter: actorName');
@@ -78,7 +78,7 @@ export async function handleAudioTools(
         soundPath: argsTyped.soundPath ?? '',
         autoPlay: argsTyped.autoPlay,
         is3D: argsTyped.is3D
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'set_sound_attenuation':
       requireNonEmptyString(argsTyped?.name, 'name', 'Missing required parameter: name');
@@ -88,7 +88,7 @@ export async function handleAudioTools(
         falloffDistance: argsTyped.falloffDistance,
         attenuationShape: argsTyped.attenuationShape,
         falloffMode: argsTyped.falloffMode
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'create_sound_class':
       requireNonEmptyString(argsTyped?.name, 'name', 'Missing required parameter: name');
@@ -96,26 +96,26 @@ export async function handleAudioTools(
         name: argsTyped.name ?? '',
         parentClass: argsTyped.parentClass,
         properties: argsTyped.properties
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'create_sound_mix':
       requireNonEmptyString(argsTyped?.name, 'name', 'Missing required parameter: name');
       return cleanObject(await tools.audioTools.createSoundMix({
         name: argsTyped.name ?? '',
         classAdjusters: argsTyped.classAdjusters as { soundClass: string; volumeAdjust: number }[] | undefined
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'push_sound_mix':
       requireNonEmptyString(argsTyped?.mixName ?? argsTyped?.name, 'mixName', 'Missing required parameter: mixName (or name)');
       return cleanObject(await tools.audioTools.pushSoundMix({
         mixName: argsTyped.mixName ?? argsTyped.name ?? ''
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'pop_sound_mix':
       requireNonEmptyString(argsTyped?.mixName ?? argsTyped?.name, 'mixName', 'Missing required parameter: mixName (or name)');
       return cleanObject(await tools.audioTools.popSoundMix({
         mixName: argsTyped.mixName ?? argsTyped.name ?? ''
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'create_ambient_sound':
       requireNonEmptyString(argsTyped?.soundPath, 'soundPath', 'Missing required parameter: soundPath');
@@ -127,7 +127,7 @@ export async function handleAudioTools(
         startTime: argsTyped.startTime,
         attenuationPath: argsTyped.attenuationPath,
         concurrencyPath: argsTyped.concurrencyPath
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'create_reverb_zone':
       requireNonEmptyString(argsTyped?.name, 'name', 'Missing required parameter: name');
@@ -138,14 +138,14 @@ export async function handleAudioTools(
         reverbEffect: argsTyped.reverbEffect,
         volume: argsTyped.volume,
         fadeTime: argsTyped.fadeTime
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'enable_audio_analysis':
       return cleanObject(await tools.audioTools.enableAudioAnalysis({
         enabled: argsTyped.enabled,
         fftSize: argsTyped.fftSize,
         outputType: argsTyped.outputType
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'fade_sound':
       requireNonEmptyString(argsTyped?.soundName, 'soundName', 'Missing required parameter: soundName');
@@ -154,43 +154,43 @@ export async function handleAudioTools(
         targetVolume: argsTyped.targetVolume,
         fadeTime: argsTyped.fadeTime,
         fadeType: argsTyped.fadeType
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'set_doppler_effect':
       return cleanObject(await tools.audioTools.setDopplerEffect({
         enabled: argsTyped.enabled,
         scale: argsTyped.scale
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'set_audio_occlusion':
       return cleanObject(await tools.audioTools.setAudioOcclusion({
         enabled: argsTyped.enabled,
         lowPassFilterFrequency: argsTyped.lowPassFilterFrequency,
         volumeAttenuation: argsTyped.volumeAttenuation
-      })) as Record<string, unknown>;
+      })) as HandlerResult;
 
     case 'spawn_sound_at_location':
       // Direct pass-through to C++ handler
-      return cleanObject(await tools.automationBridge?.sendAutomationRequest('spawn_sound_at_location', argsRecord, { timeoutMs: getTimeoutMs() })) as Record<string, unknown>;
+      return cleanObject(await tools.automationBridge?.sendAutomationRequest('spawn_sound_at_location', argsRecord, { timeoutMs: getTimeoutMs() })) as HandlerResult;
 
     case 'play_sound_attached':
-      return cleanObject(await tools.automationBridge?.sendAutomationRequest('play_sound_attached', argsRecord, { timeoutMs: getTimeoutMs() })) as Record<string, unknown>;
+      return cleanObject(await tools.automationBridge?.sendAutomationRequest('play_sound_attached', argsRecord, { timeoutMs: getTimeoutMs() })) as HandlerResult;
 
     case 'set_sound_mix_class_override':
-      return cleanObject(await tools.automationBridge?.sendAutomationRequest('set_sound_mix_class_override', argsRecord, { timeoutMs: getTimeoutMs() })) as Record<string, unknown>;
+      return cleanObject(await tools.automationBridge?.sendAutomationRequest('set_sound_mix_class_override', argsRecord, { timeoutMs: getTimeoutMs() })) as HandlerResult;
 
     case 'clear_sound_mix_class_override':
-      return cleanObject(await tools.automationBridge?.sendAutomationRequest('clear_sound_mix_class_override', argsRecord, { timeoutMs: getTimeoutMs() })) as Record<string, unknown>;
+      return cleanObject(await tools.automationBridge?.sendAutomationRequest('clear_sound_mix_class_override', argsRecord, { timeoutMs: getTimeoutMs() })) as HandlerResult;
 
     case 'set_base_sound_mix':
-      return cleanObject(await tools.automationBridge?.sendAutomationRequest('set_base_sound_mix', argsRecord, { timeoutMs: getTimeoutMs() })) as Record<string, unknown>;
+      return cleanObject(await tools.automationBridge?.sendAutomationRequest('set_base_sound_mix', argsRecord, { timeoutMs: getTimeoutMs() })) as HandlerResult;
 
     case 'prime_sound':
-      return cleanObject(await tools.automationBridge?.sendAutomationRequest('prime_sound', argsRecord, { timeoutMs: getTimeoutMs() })) as Record<string, unknown>;
+      return cleanObject(await tools.automationBridge?.sendAutomationRequest('prime_sound', argsRecord, { timeoutMs: getTimeoutMs() })) as HandlerResult;
 
     case 'fade_sound_in':
     case 'fade_sound_out':
-      return cleanObject(await tools.automationBridge?.sendAutomationRequest(action, argsRecord, { timeoutMs: getTimeoutMs() })) as Record<string, unknown>;
+      return cleanObject(await tools.automationBridge?.sendAutomationRequest(action, argsRecord, { timeoutMs: getTimeoutMs() })) as HandlerResult;
 
     default:
       return cleanObject({ success: false, error: 'UNKNOWN_ACTION', message: `Unknown audio action: ${action}` });

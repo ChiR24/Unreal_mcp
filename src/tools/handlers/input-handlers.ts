@@ -17,13 +17,13 @@ export async function handleInputTools(
 
     switch (action) {
         case 'create_input_action':
-            return cleanObject(await inputTools.createInputAction(argsTyped.name || '', argsTyped.path || '')) as Record<string, unknown>;
+            return cleanObject(await inputTools.createInputAction(argsTyped.name || '', argsTyped.path || '')) as HandlerResult;
         case 'create_input_mapping_context':
-            return cleanObject(await inputTools.createInputMappingContext(argsTyped.name || '', argsTyped.path || '')) as Record<string, unknown>;
+            return cleanObject(await inputTools.createInputMappingContext(argsTyped.name || '', argsTyped.path || '')) as HandlerResult;
         case 'add_mapping':
-            return cleanObject(await inputTools.addMapping(argsTyped.contextPath ?? '', argsTyped.actionPath ?? '', argsTyped.key ?? '')) as Record<string, unknown>;
+            return cleanObject(await inputTools.addMapping(argsTyped.contextPath ?? '', argsTyped.actionPath ?? '', argsTyped.key ?? '')) as HandlerResult;
         case 'remove_mapping':
-            return cleanObject(await inputTools.removeMapping(argsTyped.contextPath ?? '', argsTyped.actionPath ?? '')) as Record<string, unknown>;
+            return cleanObject(await inputTools.removeMapping(argsTyped.contextPath ?? '', argsTyped.actionPath ?? '')) as HandlerResult;
         default:
             return ResponseFactory.error(`Unknown input action: ${action}`);
     }

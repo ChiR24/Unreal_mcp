@@ -43,7 +43,7 @@ export async function handleAudioAuthoringTools(
       `Automation bridge not available for audio authoring action: ${subAction}`,
       { timeoutMs }
     );
-    return cleanObject(result) as Record<string, unknown>;
+    return cleanObject(result) as HandlerResult;
   };
 
   switch (action) {

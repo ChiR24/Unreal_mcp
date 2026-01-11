@@ -19,7 +19,7 @@ import {
 function extractOptionalObject(params: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
   const val = params[key];
   if (val === undefined || val === null) return undefined;
-  if (typeof val === 'object' && !Array.isArray(val)) return val as Record<string, unknown>;
+  if (typeof val === 'object' && !Array.isArray(val)) return val as HandlerResult;
   return undefined;
 }
 import { ResponseFactory } from '../../utils/response-factory.js';

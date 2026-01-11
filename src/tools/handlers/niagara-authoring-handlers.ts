@@ -29,7 +29,7 @@ export async function handleNiagaraAuthoringTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<HandlerResult> {
-  const argsRecord = args as HandlerResult;
+  const argsRecord = args as Record<string, unknown>;
   const timeoutMs = getTimeoutMs();
 
   // All actions are dispatched to C++ via automation bridge

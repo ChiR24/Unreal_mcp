@@ -74,7 +74,7 @@ export async function handleSplineTools(
       `Automation bridge not available for spline action: ${subAction}`,
       { timeoutMs }
     );
-    return cleanObject(result) as Record<string, unknown>;
+    return cleanObject(result) as HandlerResult;
   };
 
   switch (action) {

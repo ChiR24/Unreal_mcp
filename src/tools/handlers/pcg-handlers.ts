@@ -62,7 +62,7 @@ export async function handlePCGTools(
   tools: ITools
 ): Promise<HandlerResult> {
   // Normalize path fields before sending to C++
-  const argsRecord = normalizePathFields(args as HandlerResult);
+  const argsRecord = normalizePathFields(args as Record<string, unknown>);
   const timeoutMs = getTimeoutMs();
 
   // All actions are dispatched to C++ via automation bridge

@@ -41,7 +41,7 @@ export async function handleGASTools(
       `Automation bridge not available for GAS action: ${subAction}`,
       { timeoutMs }
     );
-    return cleanObject(result) as Record<string, unknown>;
+    return cleanObject(result) as HandlerResult;
   };
 
   switch (action) {

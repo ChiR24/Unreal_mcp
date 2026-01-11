@@ -11,7 +11,7 @@ const MAX_SCALABILITY_LEVEL = 4;
 
 export async function handlePerformanceTools(action: string, args: HandlerArgs, tools: ITools): Promise<HandlerResult> {
   const argsTyped = args as PerformanceArgs;
-  const argsRecord = args as HandlerResult;
+  const argsRecord = args as Record<string, unknown>;
   
   switch (action) {
     case 'start_profiling': {

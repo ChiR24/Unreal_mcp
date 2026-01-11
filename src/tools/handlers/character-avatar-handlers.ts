@@ -41,7 +41,7 @@ export async function handleCharacterAvatarTools(
       `Automation bridge not available for character avatar action: ${subAction}`,
       { timeoutMs }
     );
-    return cleanObject(result) as Record<string, unknown>;
+    return cleanObject(result) as HandlerResult;
   };
 
   switch (action) {

@@ -172,7 +172,7 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
     }
 
     const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    return cleanObject({ ...res, ...(res.result || {}) }) as HandlerResult;
 }
 
 async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools): Promise<HandlerResult> {
@@ -182,7 +182,7 @@ async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools
         payload.assetPath = payload.systemPath;
     }
     const res = await executeAutomationRequest(tools, 'manage_niagara_graph', payload as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    return cleanObject({ ...res, ...(res.result || {}) }) as HandlerResult;
 }
 
 async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITools): Promise<HandlerResult> {
@@ -208,7 +208,7 @@ async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITool
     }
 
     const res = await executeAutomationRequest(tools, 'manage_material_graph', payload as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    return cleanObject({ ...res, ...(res.result || {}) }) as HandlerResult;
 }
 
 async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools): Promise<HandlerResult> {
@@ -227,5 +227,5 @@ async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools
     }
     
     const res = await executeAutomationRequest(tools, 'manage_behavior_tree', processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    return cleanObject({ ...res, ...(res.result || {}) }) as HandlerResult;
 }
