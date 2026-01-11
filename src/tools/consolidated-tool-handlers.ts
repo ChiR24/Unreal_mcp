@@ -52,6 +52,7 @@ import { handleBuildTools } from './handlers/build-handlers.js';
 import { handleTestingTools } from './handlers/testing-handlers.js';
 import { handleEditorUtilitiesTools } from './handlers/editor-utilities-handlers.js';
 import { handleGameplaySystemsTools } from './handlers/gameplay-systems-handlers.js';
+import { handleGameplayPrimitivesTools } from './handlers/gameplay-primitives-handlers.js';
 import { handleCharacterAvatarTools } from './handlers/character-avatar-handlers.js';
 import { handleAssetPluginsTools } from './handlers/asset-plugins-handlers.js';
 import { handleAudioMiddlewareTools } from './handlers/audio-middleware-handlers.js';
@@ -698,6 +699,9 @@ function registerDefaultHandlers() {
 
   // 52. GAMEPLAY SYSTEMS (Phase 35)
   toolRegistry.register('manage_gameplay_systems', async (args, tools) => await handleGameplaySystemsTools(getAction(args), args, tools));
+
+  // 52B. GAMEPLAY PRIMITIVES (Phase 35B)
+  toolRegistry.register('manage_gameplay_primitives', async (args, tools) => await handleGameplayPrimitivesTools(getAction(args), args, tools));
 
   // 53. CHARACTER & AVATAR (Phase 36)
   toolRegistry.register('manage_character_avatar', async (args, tools) => await handleCharacterAvatarTools(getAction(args), args, tools));

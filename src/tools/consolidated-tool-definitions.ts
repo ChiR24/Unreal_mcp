@@ -4010,6 +4010,247 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     }
   },
 
+  // ===== PHASE 35B: UNIVERSAL GAMEPLAY PRIMITIVES =====
+  {
+    name: 'manage_gameplay_primitives',
+    category: 'gameplay',
+    description: 'Universal gameplay building blocks: state machines, values, factions, zones, conditions, spawners.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Value Tracker (8 actions)
+            'create_value_tracker', 'modify_value', 'set_value', 'get_value',
+            'add_value_threshold', 'configure_value_decay', 'configure_value_regen', 'pause_value_changes',
+            // State Machine (6 actions)
+            'create_actor_state_machine', 'add_actor_state', 'add_actor_state_transition',
+            'set_actor_state', 'get_actor_state', 'configure_state_timer',
+            // Faction/Reputation (8 actions)
+            'create_faction', 'set_faction_relationship', 'assign_to_faction', 'get_faction',
+            'modify_reputation', 'get_reputation', 'add_reputation_threshold', 'check_faction_relationship',
+            // Actor Attachment (6 actions)
+            'attach_to_socket', 'detach_from_parent', 'transfer_control',
+            'configure_attachment_rules', 'get_attached_actors', 'get_attachment_parent',
+            // Schedule System (5 actions)
+            'create_schedule', 'add_schedule_entry', 'set_schedule_active',
+            'get_current_schedule_entry', 'skip_to_schedule_entry',
+            // World Time (7 actions)
+            'create_world_time', 'set_world_time', 'get_world_time', 'set_time_scale',
+            'pause_world_time', 'add_time_event', 'get_time_period',
+            // Zone System (6 actions)
+            'create_zone', 'set_zone_property', 'get_zone_property',
+            'get_actor_zone', 'add_zone_enter_event', 'add_zone_exit_event',
+            // Condition/Rules (4 actions)
+            'create_condition', 'create_compound_condition', 'evaluate_condition', 'add_condition_listener',
+            // Interaction System (6 actions)
+            'add_interactable_component', 'configure_interaction', 'set_interaction_enabled',
+            'get_nearby_interactables', 'focus_interaction', 'execute_interaction',
+            // Spawn System (6 actions)
+            'create_spawner', 'configure_spawner', 'set_spawner_enabled',
+            'configure_spawn_conditions', 'despawn_managed_actors', 'get_spawned_count'
+          ],
+          description: 'Gameplay primitive action to perform.'
+        },
+        
+        // Common parameters
+        actorName: commonSchemas.actorName,
+        componentName: { type: 'string', description: 'Optional component name for disambiguation.' },
+        
+        // Value Tracker parameters
+        trackerKey: { type: 'string', description: 'Unique key for the value tracker (e.g., "Health", "Stamina").' },
+        value: { type: 'number', description: 'Value to set.' },
+        delta: { type: 'number', description: 'Delta to add/subtract from current value.' },
+        initialValue: { type: 'number', description: 'Initial value when creating tracker.' },
+        minValue: { type: 'number', description: 'Minimum allowed value.' },
+        maxValue: { type: 'number', description: 'Maximum allowed value.' },
+        threshold: { type: 'number', description: 'Threshold value for events.' },
+        direction: { type: 'string', enum: ['rising', 'falling', 'both'], description: 'Threshold crossing direction.' },
+        rate: { type: 'number', description: 'Rate per second for decay/regen.' },
+        interval: { type: 'number', description: 'Update interval in seconds.' },
+        paused: { type: 'boolean', description: 'Whether changes are paused.' },
+        
+        // State Machine parameters
+        stateName: { type: 'string', description: 'State name.' },
+        stateData: { type: 'object', additionalProperties: true, description: 'Custom state data.' },
+        fromState: { type: 'string', description: 'Source state for transition.' },
+        toState: { type: 'string', description: 'Target state for transition.' },
+        conditions: { type: 'object', description: 'Structured condition predicate (JSON AST).' },
+        force: { type: 'boolean', description: 'Force state change even if invalid transition.' },
+        duration: { type: 'number', description: 'Duration in seconds.' },
+        autoTransition: { type: 'boolean', description: 'Auto-transition when timer expires.' },
+        targetState: { type: 'string', description: 'Target state for auto-transition.' },
+        
+        // Faction parameters
+        factionId: { type: 'string', description: 'Unique faction identifier.' },
+        displayName: { type: 'string', description: 'Display name.' },
+        factionA: { type: 'string', description: 'First faction ID.' },
+        factionB: { type: 'string', description: 'Second faction ID.' },
+        relationship: { type: 'string', enum: ['friendly', 'neutral', 'hostile'], description: 'Faction relationship.' },
+        bidirectional: { type: 'boolean', description: 'Apply relationship in both directions.' },
+        actorA: { type: 'string', description: 'First actor name.' },
+        actorB: { type: 'string', description: 'Second actor name.' },
+        
+        // Attachment parameters
+        childActor: { type: 'string', description: 'Child actor to attach.' },
+        parentActor: { type: 'string', description: 'Parent actor to attach to.' },
+        socketName: { type: 'string', description: 'Socket name on parent.' },
+        attachRules: { type: 'object', description: 'Attachment rules (locationRule, rotationRule, scaleRule).' },
+        detachRules: { type: 'object', description: 'Detachment rules.' },
+        newController: { type: 'string', description: 'New controller actor for transfer.' },
+        locationRule: { type: 'string', enum: ['KeepRelative', 'KeepWorld', 'SnapToTarget'], description: 'Location rule.' },
+        rotationRule: { type: 'string', enum: ['KeepRelative', 'KeepWorld', 'SnapToTarget'], description: 'Rotation rule.' },
+        scaleRule: { type: 'string', enum: ['KeepRelative', 'KeepWorld', 'SnapToTarget'], description: 'Scale rule.' },
+        recursive: { type: 'boolean', description: 'Include recursively attached actors.' },
+        
+        // Schedule parameters
+        scheduleId: { type: 'string', description: 'Schedule identifier.' },
+        startTime: { type: 'number', description: 'Start time (world time units).' },
+        endTime: { type: 'number', description: 'End time (world time units).' },
+        scheduleAction: { type: 'string', description: 'Action to perform at schedule time.' },
+        location: commonSchemas.location,
+        active: { type: 'boolean', description: 'Whether schedule is active.' },
+        entryIndex: { type: 'number', description: 'Schedule entry index.' },
+        
+        // World Time parameters
+        time: { type: 'number', description: 'World time value.' },
+        dayLength: { type: 'number', description: 'Real seconds per in-game day.' },
+        timeScale: { type: 'number', description: 'Time scale multiplier.' },
+        startPaused: { type: 'boolean', description: 'Start with time paused.' },
+        eventId: { type: 'string', description: 'Time event identifier.' },
+        triggerTime: { type: 'number', description: 'Time to trigger event.' },
+        recurring: { type: 'boolean', description: 'Whether event recurs.' },
+        
+        // Zone parameters
+        zoneId: { type: 'string', description: 'Zone identifier.' },
+        zoneName: { type: 'string', description: 'Zone display name.' },
+        volumeActor: { type: 'string', description: 'Volume actor that defines zone bounds.' },
+        propertyKey: { type: 'string', description: 'Zone property key.' },
+        propertyValue: { type: ['string', 'number', 'boolean'], description: 'Zone property value.' },
+        properties: { type: 'object', additionalProperties: true, description: 'Zone properties.' },
+        
+        // Condition parameters
+        conditionId: { type: 'string', description: 'Condition identifier.' },
+        predicate: { type: 'object', description: 'Structured condition predicate (JSON AST).' },
+        operator: { type: 'string', enum: ['all', 'any', 'not'], description: 'Compound condition operator.' },
+        conditionIds: { type: 'array', items: { type: 'string' }, description: 'Array of condition IDs to combine.' },
+        context: { type: 'object', additionalProperties: true, description: 'Evaluation context.' },
+        listenerId: { type: 'string', description: 'Listener identifier.' },
+        oneShot: { type: 'boolean', description: 'Remove listener after first trigger.' },
+        
+        // Interaction parameters
+        interactionType: { type: 'string', enum: ['instant', 'hold', 'toggle'], description: 'Interaction type.' },
+        range: { type: 'number', description: 'Interaction range.' },
+        prompt: { type: 'string', description: 'Interaction prompt text.' },
+        enabled: { type: 'boolean', description: 'Whether interaction is enabled.' },
+        filterType: { type: 'string', description: 'Filter type for nearby interactables.' },
+        targetActor: { type: 'string', description: 'Target actor for interaction.' },
+        interactionData: { type: 'object', additionalProperties: true, description: 'Custom interaction data.' },
+        
+        // Spawner parameters
+        spawnClass: { type: 'string', description: 'Class to spawn.' },
+        spawnRadius: { type: 'number', description: 'Spawn radius around spawner.' },
+        maxSpawned: { type: 'number', description: 'Maximum spawned actors.' },
+        respawnDelay: { type: 'number', description: 'Respawn delay in seconds.' },
+        filter: { type: 'object', description: 'Filter for despawn operation.' },
+        
+        // Color (used by factions)
+        color: { type: 'object', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } }, description: 'Color (RGBA).' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        
+        // Value Tracker output
+        trackerKey: commonSchemas.stringProp,
+        value: commonSchemas.numberProp,
+        previousValue: commonSchemas.numberProp,
+        newValue: commonSchemas.numberProp,
+        percentage: commonSchemas.numberProp,
+        isPaused: commonSchemas.booleanProp,
+        thresholdId: commonSchemas.stringProp,
+        configured: commonSchemas.booleanProp,
+        
+        // State Machine output
+        currentState: commonSchemas.stringProp,
+        previousState: commonSchemas.stringProp,
+        stateStartTime: commonSchemas.numberProp,
+        stateId: commonSchemas.stringProp,
+        transitionId: commonSchemas.stringProp,
+        
+        // Faction output
+        factionId: commonSchemas.stringProp,
+        factionData: { type: 'object' },
+        reputation: commonSchemas.numberProp,
+        standing: commonSchemas.stringProp,
+        isFriendly: commonSchemas.booleanProp,
+        isHostile: commonSchemas.booleanProp,
+        
+        // Attachment output
+        attached: commonSchemas.booleanProp,
+        detached: commonSchemas.booleanProp,
+        transferred: commonSchemas.booleanProp,
+        attachedActors: commonSchemas.arrayOfStrings,
+        parentActorName: commonSchemas.stringProp,
+        
+        // Schedule output
+        entryId: commonSchemas.stringProp,
+        entry: { type: 'object' },
+        timeRemaining: commonSchemas.numberProp,
+        skipped: commonSchemas.booleanProp,
+        newEntry: { type: 'object' },
+        previousActive: commonSchemas.booleanProp,
+        newActive: commonSchemas.booleanProp,
+        
+        // World Time output
+        created: commonSchemas.booleanProp,
+        day: commonSchemas.numberProp,
+        hour: commonSchemas.numberProp,
+        minute: commonSchemas.numberProp,
+        period: commonSchemas.stringProp,
+        previousTime: commonSchemas.numberProp,
+        newTime: commonSchemas.numberProp,
+        previousScale: commonSchemas.numberProp,
+        newScale: commonSchemas.numberProp,
+        previousPaused: commonSchemas.booleanProp,
+        newPaused: commonSchemas.booleanProp,
+        periodStart: commonSchemas.numberProp,
+        periodEnd: commonSchemas.numberProp,
+        
+        // Zone output
+        zoneId: commonSchemas.stringProp,
+        zoneName: commonSchemas.stringProp,
+        updated: commonSchemas.booleanProp,
+        
+        // Condition output
+        conditionId: commonSchemas.stringProp,
+        result: commonSchemas.booleanProp,
+        evaluatedAt: commonSchemas.numberProp,
+        listenerId: commonSchemas.stringProp,
+        
+        // Interaction output
+        focused: commonSchemas.booleanProp,
+        interactables: { type: 'array', items: { type: 'object' } },
+        cooldownRemaining: commonSchemas.numberProp,
+        previousEnabled: commonSchemas.booleanProp,
+        newEnabled: commonSchemas.booleanProp,
+        
+        // Spawner output
+        count: commonSchemas.numberProp,
+        maxCount: commonSchemas.numberProp,
+        activeActors: commonSchemas.arrayOfStrings,
+        despawnedCount: commonSchemas.numberProp,
+        
+        // Common
+        componentId: commonSchemas.stringProp
+      }
+    }
+  },
+
   // ===== PHASE 36: CHARACTER & AVATAR PLUGINS =====
   {
     name: 'manage_character_avatar',
