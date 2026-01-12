@@ -1188,6 +1188,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplaySystemsAction(
         if (Payload->TryGetArrayField(TEXT("instanceIndices"), IndicesArray)) {
           // Sort descending to remove from end first
           TArray<int32> Indices;
+          Indices.Reserve(IndicesArray->Num());
           for (const TSharedPtr<FJsonValue>& Val : *IndicesArray) {
             Indices.Add((int32)Val->AsNumber());
           }

@@ -186,6 +186,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAvatarAction(
         Actor->GetComponents<USkeletalMeshComponent>(SkeletalComps);
         
         TArray<TSharedPtr<FJsonValue>> ComponentsArray;
+        ComponentsArray.Reserve(SkeletalComps.Num());
         for (USkeletalMeshComponent* Comp : SkeletalComps)
         {
             TSharedPtr<FJsonObject> CompInfo = MakeShareable(new FJsonObject());
@@ -427,6 +428,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAvatarAction(
         Result->SetBoolField(TEXT("success"), true);
         
         TArray<TSharedPtr<FJsonValue>> PresetsArray;
+        PresetsArray.Reserve(MetaHumanAssets.Num());
         for (const FAssetData& Asset : MetaHumanAssets)
         {
             TSharedPtr<FJsonObject> PresetInfo = MakeShareable(new FJsonObject());
@@ -495,6 +497,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAvatarAction(
         Actor->GetComponents<USkeletalMeshComponent>(SkelComps);
         
         TArray<TSharedPtr<FJsonValue>> MeshesArray;
+        MeshesArray.Reserve(SkelComps.Num());
         for (USkeletalMeshComponent* Comp : SkelComps)
         {
             TSharedPtr<FJsonObject> MeshInfo = MakeShareable(new FJsonObject());
