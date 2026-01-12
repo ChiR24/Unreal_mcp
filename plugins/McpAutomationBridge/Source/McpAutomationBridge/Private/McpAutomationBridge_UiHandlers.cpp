@@ -68,81 +68,45 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
 
 #if WITH_EDITOR
   if (LowerSub == TEXT("create_widget")) {
-#if WITH_EDITOR && MCP_HAS_WIDGET_FACTORY
-    FString WidgetName;
-    if (!Payload->TryGetStringField(TEXT("name"), WidgetName) ||
-        WidgetName.IsEmpty()) {
-      Message = TEXT("name field required for create_widget");
+    FString WidgetPath;
+    if (!Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath) || WidgetPath.IsEmpty()) {
+      Message = TEXT("widgetPath required for create_widget");
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      FString SavePath;
-      Payload->TryGetStringField(TEXT("savePath"), SavePath);
-      if (SavePath.IsEmpty()) {
-        SavePath = TEXT("/Game/UI/Widgets");
-      }
-
-      FString WidgetType;
-      Payload->TryGetStringField(TEXT("widgetType"), WidgetType);
-
-      const FString NormalizedPath = SavePath.TrimStartAndEnd();
-      const FString TargetPath =
-          FString::Printf(TEXT("%s/%s"), *NormalizedPath, *WidgetName);
-      if (UEditorAssetLibrary::DoesAssetExist(TargetPath)) {
-        bSuccess = true;
-        Message = FString::Printf(TEXT("Widget blueprint already exists at %s"),
-                                  *TargetPath);
-        Resp->SetStringField(TEXT("widgetPath"), TargetPath);
-        Resp->SetBoolField(TEXT("exists"), true);
-        if (!WidgetType.IsEmpty()) {
-          Resp->SetStringField(TEXT("widgetType"), WidgetType);
-        }
-        Resp->SetStringField(TEXT("widgetName"), WidgetName);
+      UClass* WidgetClass = ResolveClassByName(WidgetPath);
+      if (!WidgetClass || !WidgetClass->IsChildOf(UUserWidget::StaticClass())) {
+        Message = FString::Printf(TEXT("Could not resolve valid UUserWidget class from '%s'"), *WidgetPath);
+        ErrorCode = TEXT("CLASS_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
       } else {
-        UWidgetBlueprintFactory *Factory = NewObject<UWidgetBlueprintFactory>();
-        if (!Factory) {
-          Message = TEXT("Failed to create widget blueprint factory");
-          ErrorCode = TEXT("FACTORY_CREATION_FAILED");
-          Resp->SetStringField(TEXT("error"), Message);
-        } else {
-          UObject *NewAsset = Factory->FactoryCreateNew(
-              UWidgetBlueprint::StaticClass(),
-              UEditorAssetLibrary::DoesAssetExist(NormalizedPath)
-                  ? UEditorAssetLibrary::LoadAsset(NormalizedPath)
-                  : nullptr,
-              FName(*WidgetName), RF_Standalone, nullptr, GWarn);
-
-          UWidgetBlueprint *WidgetBlueprint = Cast<UWidgetBlueprint>(NewAsset);
-
-          if (!WidgetBlueprint) {
-            Message = TEXT("Failed to create widget blueprint asset");
-            ErrorCode = TEXT("ASSET_CREATION_FAILED");
-            Resp->SetStringField(TEXT("error"), Message);
-          } else {
-            // UE 5.7+ safety: do not force immediate disk save here.
-            // Mark the asset dirty and notify the registry so it appears in the content browser.
-            McpSafeAssetSave(WidgetBlueprint);
-            ScanPathSynchronous(WidgetBlueprint->GetOutermost()->GetName());
-
-            bSuccess = true;
-            Message = FString::Printf(TEXT("Widget blueprint created at %s"),
-                                      *WidgetBlueprint->GetPathName());
-            Resp->SetStringField(TEXT("widgetPath"),
-                                 WidgetBlueprint->GetPathName());
-            Resp->SetStringField(TEXT("widgetName"), WidgetName);
-            if (!WidgetType.IsEmpty()) {
-              Resp->SetStringField(TEXT("widgetType"), WidgetType);
+        UWorld* World = GetActiveWorld();
+        if (World) {
+          UUserWidget* Widget = CreateWidget<UUserWidget>(World, WidgetClass);
+          if (Widget) {
+            bool bAddToViewport = true;
+            Payload->TryGetBoolField(TEXT("addToViewport"), bAddToViewport);
+            if (bAddToViewport) {
+              int32 ZOrder = 0;
+              Payload->TryGetNumberField(TEXT("zOrder"), ZOrder);
+              Widget->AddToViewport(ZOrder);
             }
+            bSuccess = true;
+            Message = FString::Printf(TEXT("Widget created: %s"), *Widget->GetName());
+            Resp->SetStringField(TEXT("widgetName"), Widget->GetName());
+            Resp->SetStringField(TEXT("widgetPath"), Widget->GetPathName());
+          } else {
+            Message = TEXT("Failed to create widget instance");
+            ErrorCode = TEXT("CREATE_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
           }
+        } else {
+          Message = TEXT("No active world context found");
+          ErrorCode = TEXT("NO_WORLD");
+          Resp->SetStringField(TEXT("error"), Message);
         }
       }
     }
-#else
-    Message =
-        TEXT("create_widget requires editor build with widget factory support");
-    ErrorCode = TEXT("NOT_AVAILABLE");
-    Resp->SetStringField(TEXT("error"), Message);
-#endif
   } else if (LowerSub == TEXT("add_widget_child")) {
 #if WITH_EDITOR && MCP_HAS_WIDGET_FACTORY
     FString WidgetPath;
@@ -640,14 +604,20 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       }
     } else {
       bool bFound = false;
-      for (TObjectIterator<UUserWidget> It; It; ++It) {
-        if (It->GetName() == Key && It->GetWorld()) {
-          It->RemoveFromParent();
-          bFound = true;
-          bSuccess = true;
-          break;
+      UWorld* ActiveWorld = GetActiveWorld();
+      if (ActiveWorld) {
+        TArray<UUserWidget*> FoundWidgets;
+        UWidgetBlueprintLibrary::GetAllWidgetsOfClass(ActiveWorld, FoundWidgets, UUserWidget::StaticClass(), false);
+        for (UUserWidget* Widget : FoundWidgets) {
+          if (Widget->GetName() == Key) {
+            Widget->RemoveFromParent();
+            bFound = true;
+            bSuccess = true;
+            break;
+          }
         }
       }
+      
       if (bFound) {
         Message = FString::Printf(TEXT("Removed widget '%s'"), *Key);
       } else {

@@ -182,6 +182,12 @@ namespace WidgetAuthoringHelpers
         for (TObjectIterator<UWidgetBlueprint> It; It; ++It)
         {
             UWidgetBlueprint* WB = *It;
+            // Safety check: Skip CDOs to avoid ghost assets
+            if (WB->HasAnyFlags(RF_ClassDefaultObject))
+            {
+                continue;
+            }
+
             if (WB)
             {
                 FString WBPath = WB->GetPathName();
@@ -190,6 +196,7 @@ namespace WidgetAuthoringHelpers
                     WBPath.Equals(PackagePath, ESearchCase::IgnoreCase) ||
                     WBPath.Equals(Path, ESearchCase::IgnoreCase))
                 {
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("LoadWidgetBlueprint: Fallback iterator used for %s"), *Path);
                     return WB;
                 }
                 // Also check if the package paths match
@@ -200,6 +207,7 @@ namespace WidgetAuthoringHelpers
                 }
                 if (WBPackagePath.Equals(PackagePath, ESearchCase::IgnoreCase))
                 {
+                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("LoadWidgetBlueprint: Fallback iterator used for %s"), *Path);
                     return WB;
                 }
             }

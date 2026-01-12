@@ -193,6 +193,19 @@ const testCases = [
   // Delegates
   { scenario: 'EditorUtilities: Create blueprint interface', toolName: 'manage_editor_utilities', arguments: { action: 'create_blueprint_interface', interfaceName: `${TEST_FOLDER}/BPI_TestInterface` }, expected: 'success' },
   
+  // ==================== Manage UI (Phase 34 Extension) ====================
+  // 1. Create Widget Asset (Prerequisite)
+  { scenario: 'UI: Create test widget BP', toolName: 'manage_widget_authoring', arguments: { action: 'create_widget_blueprint', name: 'WBP_PerfTest', path: TEST_FOLDER }, expected: 'success|already exists' },
+  
+  // 2. Spawn Widget (Runtime)
+  { scenario: 'UI: Create widget instance', toolName: 'manage_ui', arguments: { action: 'create_widget', widgetPath: `${TEST_FOLDER}/WBP_PerfTest`, addToViewport: true }, expected: 'success' },
+  
+  // 3. Get All Widgets (Verify Spawn)
+  { scenario: 'UI: Get all widgets', toolName: 'manage_ui', arguments: { action: 'get_all_widgets' }, expected: 'success' },
+  
+  // 4. Remove Widget (Performance Fix Target)
+  { scenario: 'UI: Remove widget', toolName: 'manage_ui', arguments: { action: 'remove_widget_from_viewport', key: 'WBP_PerfTest' }, expected: 'success|not found' },
+
   // ==================== Phase 35: Gameplay Systems ====================
   // Targeting
   { scenario: 'GameplaySystems: Create targeting component', toolName: 'manage_gameplay_systems', arguments: { action: 'create_targeting_component', actorName: 'NonExistentActor' }, expected: 'error|not found' },

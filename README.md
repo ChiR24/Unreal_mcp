@@ -230,6 +230,7 @@ ASSET_LIST_TTL_MS=10000
 | `manage_ai` | AI Controllers, BT, EQS, perception, State Trees, NPCs |
 | `manage_networking` | Replication, RPCs, prediction, sessions; GameModes |
 | `manage_gameplay_systems` | Targeting, checkpoints, objectives, photo mode, dialogue |
+| `manage_gameplay_primitives` | Universal state machines, values, factions, zones, conditions, spawners |
 
 ### Utility & Plugins
 | Tool | Description |

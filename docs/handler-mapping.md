@@ -34,6 +34,7 @@ As of Phase 3 Token Optimization, the MCP server exposes **30 consolidated tools
 - `manage_ai` - AI Controllers, BT, EQS, perception, State Trees, NPCs
 - `manage_networking` - Replication, RPCs, prediction, sessions; GameModes
 - `manage_gameplay_systems` - Targeting, checkpoints, objectives, photo mode, dialogue
+- `manage_gameplay_primitives` - Universal state machines, values, factions, zones, conditions, spawners
 
 ### Utility & Plugins
 - `manage_data` - Data assets, tables, save games, tags; modding/PAK/UGC
@@ -248,6 +249,21 @@ As of Phase 3 Token Optimization, the MCP server exposes **30 consolidated tools
 | `get_foliage_instances` | `McpAutomationBridge_FoliageHandlers.cpp` | `HandleGetFoliageInstances` | |
 | `remove_foliage` | `McpAutomationBridge_FoliageHandlers.cpp` | `HandleRemoveFoliage` | |
 | `create_procedural_terrain` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleCreateProceduralTerrain` | |
+
+## 23. Gameplay Primitives (`manage_gameplay_primitives`) - Phase 38
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| `create_value_tracker` | `McpAutomationBridge_GameplayPrimitivesHandlers.cpp` | `HandleManageGameplayPrimitivesAction` | |
+| `create_actor_state_machine` | `McpAutomationBridge_GameplayPrimitivesHandlers.cpp` | `HandleManageGameplayPrimitivesAction` | |
+| `create_faction` | `McpAutomationBridge_GameplayPrimitivesHandlers.cpp` | `HandleManageGameplayPrimitivesAction` | |
+| `create_zone` | `McpAutomationBridge_GameplayPrimitivesHandlers.cpp` | `HandleManageGameplayPrimitivesAction` | |
+| `create_schedule` | `McpAutomationBridge_GameplayPrimitivesHandlers.cpp` | `HandleManageGameplayPrimitivesAction` | |
+| `create_spawner` | `McpAutomationBridge_GameplayPrimitivesHandlers.cpp` | `HandleManageGameplayPrimitivesAction` | |
+| `create_condition` | `McpAutomationBridge_GameplayPrimitivesHandlers.cpp` | `HandleManageGameplayPrimitivesAction` | |
+| `add_interactable_component` | `McpAutomationBridge_GameplayPrimitivesHandlers.cpp` | `HandleManageGameplayPrimitivesAction` | |
+| `create_world_time` | `McpAutomationBridge_GameplayPrimitivesHandlers.cpp` | `HandleManageGameplayPrimitivesAction` | |
+| `attach_to_socket` | `McpAutomationBridge_GameplayPrimitivesHandlers.cpp` | `HandleManageGameplayPrimitivesAction` | |
 
 ## 11. System Control (`system_control`)
 
