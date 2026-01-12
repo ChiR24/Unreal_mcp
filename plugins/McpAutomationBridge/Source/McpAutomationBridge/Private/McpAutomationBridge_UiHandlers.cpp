@@ -513,22 +513,22 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     }
 
     if (!bFound) {
-      // PERFORMANCE WARNING: TObjectIterator fallback iterates ALL UTextBlock objects in memory.
-      // This is O(N) where N = total objects, not just widgets in the active world.
-      // Consider using UWidgetBlueprintLibrary::GetAllWidgetsOfClass for world-specific lookup.
-      // Safety: Skip CDOs which have no World and would crash on GetWorld()
+      // Replaced TObjectIterator with world-scoped lookup using GetActiveWorld()
       UWorld* ActiveWorld = GetActiveWorld();
-      for (TObjectIterator<UTextBlock> It; It; ++It) {
-        if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
-        UWorld* WidgetWorld = It->GetWorld();
-        // Only match widgets in the active play world to avoid editor/preview widgets
-        if (It->GetName() == Key && WidgetWorld && WidgetWorld == ActiveWorld) {
-          It->SetText(FText::FromString(Value));
-          bFound = true;
-          bSuccess = true;
-          Message = FString::Printf(TEXT("Set text on global '%s' (fallback lookup)"), *Key);
-          UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("TObjectIterator fallback used for widget '%s'"), *Key);
-          break;
+      if (ActiveWorld) {
+        TArray<UUserWidget*> FoundWidgets;
+        UWidgetBlueprintLibrary::GetAllWidgetsOfClass(ActiveWorld, FoundWidgets, UUserWidget::StaticClass(), false);
+        for (UUserWidget* Widget : FoundWidgets) {
+          if (UWidget* Child = Widget->GetWidgetFromName(FName(*Key))) {
+            if (UTextBlock* TB = Cast<UTextBlock>(Child)) {
+              TB->SetText(FText::FromString(Value));
+              bFound = true;
+              bSuccess = true;
+              Message = FString::Printf(TEXT("Set text on '%s' (world-scoped lookup)"), *Key);
+              UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("World-scoped lookup used for widget '%s'"), *Key);
+              break;
+            }
+          }
         }
       }
     }
@@ -544,19 +544,22 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     UTexture2D *Texture = LoadObject<UTexture2D>(nullptr, *TexturePath);
     if (Texture) {
       bool bFound = false;
-      // PERFORMANCE WARNING: TObjectIterator fallback iterates ALL UImage objects in memory.
-      // Safety: Skip CDOs which have no World and would crash on GetWorld()
+      // Replaced TObjectIterator with world-scoped lookup using GetActiveWorld()
       UWorld* ActiveWorld = GetActiveWorld();
-      for (TObjectIterator<UImage> It; It; ++It) {
-        if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
-        UWorld* WidgetWorld = It->GetWorld();
-        // Only match widgets in the active play world to avoid editor/preview widgets
-        if (It->GetName() == Key && WidgetWorld && WidgetWorld == ActiveWorld) {
-          It->SetBrushFromTexture(Texture);
-          bFound = true;
-          bSuccess = true;
-          Message = FString::Printf(TEXT("Set image on '%s'"), *Key);
-          break;
+      if (ActiveWorld) {
+        TArray<UUserWidget*> FoundWidgets;
+        UWidgetBlueprintLibrary::GetAllWidgetsOfClass(ActiveWorld, FoundWidgets, UUserWidget::StaticClass(), false);
+        for (UUserWidget* Widget : FoundWidgets) {
+          if (UWidget* Child = Widget->GetWidgetFromName(FName(*Key))) {
+            if (UImage* Image = Cast<UImage>(Child)) {
+              Image->SetBrushFromTexture(Texture);
+              bFound = true;
+              bSuccess = true;
+              Message = FString::Printf(TEXT("Set image on '%s' (world-scoped lookup)"), *Key);
+              UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("World-scoped lookup used for widget '%s'"), *Key);
+              break;
+            }
+          }
         }
       }
       if (!bFound) {
@@ -574,37 +577,31 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     Payload->TryGetBoolField(TEXT("visible"), bVisible);
 
     bool bFound = false;
-    // PERFORMANCE WARNING: TObjectIterator fallback iterates ALL UUserWidget objects in memory.
-    // This is O(N) where N = total objects. Consider UWidgetBlueprintLibrary::GetAllWidgetsOfClass.
-    // Safety: Skip CDOs which have no World and would crash on GetWorld()
+    // Replaced TObjectIterator with world-scoped lookup using GetActiveWorld()
     UWorld* ActiveWorld = GetActiveWorld();
-    for (TObjectIterator<UUserWidget> It; It; ++It) {
-      if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
-      UWorld* WidgetWorld = It->GetWorld();
-      // Only match widgets in the active play world to avoid editor/preview widgets
-      if (It->GetName() == Key && WidgetWorld && WidgetWorld == ActiveWorld) {
-        It->SetVisibility(bVisible ? ESlateVisibility::Visible
-                                   : ESlateVisibility::Collapsed);
-        bFound = true;
-        bSuccess = true;
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("TObjectIterator fallback used for UserWidget '%s'"), *Key);
-        break;
-      }
-    }
-    // If not found, try generic UWidget
-    // PERFORMANCE WARNING: TObjectIterator fallback iterates ALL UWidget objects in memory.
-    // Safety: Skip CDOs which have no World and would crash on GetWorld()
-    if (!bFound) {
-      for (TObjectIterator<UWidget> It; It; ++It) {
-        if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
-        UWorld* WidgetWorld = It->GetWorld();
-        // Only match widgets in the active play world to avoid editor/preview widgets
-        if (It->GetName() == Key && WidgetWorld && WidgetWorld == ActiveWorld) {
-          It->SetVisibility(bVisible ? ESlateVisibility::Visible
-                                     : ESlateVisibility::Collapsed);
+    if (ActiveWorld) {
+      TArray<UUserWidget*> FoundWidgets;
+      UWidgetBlueprintLibrary::GetAllWidgetsOfClass(ActiveWorld, FoundWidgets, UUserWidget::StaticClass(), false);
+      for (UUserWidget* Widget : FoundWidgets) {
+        if (Widget->GetName() == Key) {
+          Widget->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
           bFound = true;
           bSuccess = true;
-          UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("TObjectIterator fallback used for UWidget '%s'"), *Key);
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("World-scoped lookup used for UserWidget '%s'"), *Key);
+          break;
+        }
+      }
+    }
+    // If not found, try generic UWidget (child widgets)
+    if (!bFound && ActiveWorld) {
+      TArray<UUserWidget*> FoundWidgets;
+      UWidgetBlueprintLibrary::GetAllWidgetsOfClass(ActiveWorld, FoundWidgets, UUserWidget::StaticClass(), false);
+      for (UUserWidget* Widget : FoundWidgets) {
+        if (UWidget* Child = Widget->GetWidgetFromName(FName(*Key))) {
+          Child->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+          bFound = true;
+          bSuccess = true;
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("World-scoped lookup used for UWidget '%s'"), *Key);
           break;
         }
       }
