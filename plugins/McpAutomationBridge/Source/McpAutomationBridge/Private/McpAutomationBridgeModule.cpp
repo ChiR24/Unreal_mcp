@@ -1,6 +1,8 @@
 #include "ISettingsModule.h"
 #include "ISettingsSection.h"
 #include "McpAutomationBridgeSettings.h"
+#include "McpAutomationBridgeHelpers.h"
+#include "McpAutomationBridgeGlobals.h"
 
 #define LOCTEXT_NAMESPACE "FMcpAutomationBridgeModule"
 #include "CoreMinimal.h"
@@ -21,6 +23,11 @@ public:
     {
         UE_LOG(LogMcpAutomationBridge, Log, TEXT("MCP Automation Bridge module initialized."));
 
+        // Initialize global log capture
+        GGlobalMcpLogCapture = new FMcpOutputCapture();
+        GGlobalMcpLogCapture->MaxLines = 1000;
+        GLog->AddOutputDevice(GGlobalMcpLogCapture);
+
 #if WITH_EDITOR
         // UDeveloperSettings (UMcpAutomationBridgeSettings) are auto-registered with the
         // Project Settings UI. Do not manually register them via ISettingsModule as this
@@ -38,6 +45,12 @@ public:
      */
     virtual void ShutdownModule() override
     {
+        if (GGlobalMcpLogCapture) {
+            GLog->RemoveOutputDevice(GGlobalMcpLogCapture);
+            delete GGlobalMcpLogCapture;
+            GGlobalMcpLogCapture = nullptr;
+        }
+
         UE_LOG(LogMcpAutomationBridge, Log, TEXT("MCP Automation Bridge module shut down."));
 
 #if WITH_EDITOR

@@ -481,6 +481,8 @@ static inline FString HexifyUtf8(const FString &In) {
  */
 struct FMcpOutputCapture : public FOutputDevice {
   TArray<FString> Lines;
+  int32 MaxLines = 1000;
+
   /**
    * Capture a log line, trim any trailing newline characters, and append the
    * result to the internal Lines buffer.
@@ -497,13 +499,24 @@ struct FMcpOutputCapture : public FOutputDevice {
     // Remove trailing newlines for cleaner payloads
     while (S.EndsWith(TEXT("\n")))
       S.RemoveAt(S.Len() - 1);
+    
     Lines.Add(S);
+
+    // Enforce MaxLines limit if set
+    if (MaxLines > 0 && Lines.Num() > MaxLines) {
+      int32 NumToRemove = Lines.Num() - MaxLines;
+      Lines.RemoveAt(0, NumToRemove, false); // false = no shrinking for perf
+    }
   }
 
   TArray<FString> Consume() {
     TArray<FString> Tmp = MoveTemp(Lines);
     Lines.Empty();
     return Tmp;
+  }
+
+  TArray<FString> GetCapturedLogs() const {
+    return Lines;
   }
 };
 

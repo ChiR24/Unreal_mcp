@@ -20,3 +20,6 @@ TMap<FString, TSharedPtr<FJsonObject>> GNiagaraRegistry;
 TMap<FString, double> GRecentAssetSaveTs;
 FCriticalSection GRecentAssetSaveMutex;
 double GRecentAssetSaveThrottleSeconds = 0.5;
+
+FMcpOutputCapture* GGlobalMcpLogCapture = nullptr;
+

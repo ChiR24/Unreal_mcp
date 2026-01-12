@@ -29,3 +29,7 @@ extern TMap<FString, TSharedPtr<FJsonObject>> GNiagaraRegistry;
 extern TMap<FString, double> GRecentAssetSaveTs;
 extern FCriticalSection GRecentAssetSaveMutex;
 extern double GRecentAssetSaveThrottleSeconds;
+
+struct FMcpOutputCapture;
+extern FMcpOutputCapture* GGlobalMcpLogCapture;
+
