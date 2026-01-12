@@ -605,6 +605,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
       UMovieScene* MovieScene = Sequence->GetMovieScene();
       if (MovieScene) {
         TArray<TSharedPtr<FJsonValue>> BindingsArray;
+        BindingsArray.Reserve(MovieScene->GetPossessableCount() + MovieScene->GetSpawnableCount());
         
         // Get possessables
         for (int32 i = 0; i < MovieScene->GetPossessableCount(); i++) {
@@ -749,6 +750,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
           }
         }
         
+        TArray<TSharedPtr<FJsonValue>> TracksArray;
+        TracksArray.Reserve(TracksToList.Num());
         for (UMovieSceneTrack* Track : TracksToList) {
           TSharedPtr<FJsonObject> TrackObj = MakeShared<FJsonObject>();
           TrackObj->SetStringField(TEXT("id"), Track->GetFName().ToString());

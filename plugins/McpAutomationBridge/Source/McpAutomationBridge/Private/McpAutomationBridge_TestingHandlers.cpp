@@ -628,6 +628,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTestingAction(
     int32 BrokenCount = 0;
     
     // Load all redirectors and identify which ones can be fixed
+    RedirectorsArray.Reserve(RedirectorList.Num());
     for (const FAssetData& AssetData : RedirectorList)
     {
       TSharedPtr<FJsonObject> RedirObj = MakeShared<FJsonObject>();
@@ -709,6 +710,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTestingAction(
     AssetRegistry.GetAssets(Filter, RedirectorList);
     
     TArray<TSharedPtr<FJsonValue>> RedirectorsArray;
+    RedirectorsArray.Reserve(RedirectorList.Num());
     
     for (const FAssetData& AssetData : RedirectorList)
     {

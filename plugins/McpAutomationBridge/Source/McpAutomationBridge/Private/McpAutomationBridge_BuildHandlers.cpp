@@ -210,6 +210,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageBuildAction(
   // ========================================================================
   else if (LowerSub == TEXT("get_target_platforms")) {
     TArray<TSharedPtr<FJsonValue>> PlatformsArray;
+    PlatformsArray.Reserve(PlatformNames.Num());
     
     // Get common target platforms
     TArray<FString> PlatformNames = {
@@ -319,6 +320,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageBuildAction(
         
         // Modules
         TArray<TSharedPtr<FJsonValue>> ModulesArray;
+        ModulesArray.Reserve(Descriptor.Modules.Num());
         for (const FModuleDescriptor& Module : Descriptor.Modules) {
           TSharedPtr<FJsonObject> ModuleObj = MakeShared<FJsonObject>();
           ModuleObj->SetStringField(TEXT("name"), Module.Name.ToString());
@@ -826,6 +828,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageBuildAction(
         TEXT("enable_plugin"), TEXT("disable_plugin"), TEXT("get_plugin_info"),
         TEXT("clear_ddc"), TEXT("get_ddc_stats"), TEXT("configure_ddc")
     };
+    AvailableActions.Reserve(Actions.Num());
     for (const FString& ActionName : Actions) {
       AvailableActions.Add(MakeShared<FJsonValueString>(ActionName));
     }

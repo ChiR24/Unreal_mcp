@@ -1030,6 +1030,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
     IFileManager::Get().FindFiles(SaveFiles, *(SaveDir / TEXT("*.sav")), true, false);
     
     TArray<TSharedPtr<FJsonValue>> SlotNames;
+    SlotNames.Reserve(SaveFiles.Num());
     for (const FString& File : SaveFiles) {
       FString SlotName = FPaths::GetBaseFilename(File);
       SlotNames.Add(MakeShared<FJsonValueString>(SlotName));
@@ -1136,6 +1137,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
       }
       
       TArray<TSharedPtr<FJsonValue>> AddedTags;
+      AddedTags.Reserve(Container.Num());
       for (const FGameplayTag& Tag : Container) {
         AddedTags.Add(MakeShared<FJsonValueString>(Tag.ToString()));
       }
@@ -1163,6 +1165,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
     Manager.RequestAllGameplayTags(AllTags, true);
     
     TArray<TSharedPtr<FJsonValue>> TagsArray;
+    TagsArray.Reserve(AllTags.Num());
     for (const FGameplayTag& Tag : AllTags) {
       TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
     }

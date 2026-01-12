@@ -186,6 +186,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             TArray<FGuid> SourceGuids = LiveLinkClient->GetSources(true);
             
             TArray<TSharedPtr<FJsonValue>> SourcesArray;
+            SourcesArray.Reserve(SourceGuids.Num());
             for (const FGuid& Guid : SourceGuids)
             {
                 TSharedPtr<FJsonObject> SourceObj = MakeShareable(new FJsonObject());
@@ -524,6 +525,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             TArray<FLiveLinkSubjectKey> SubjectKeys = LiveLinkClient->GetSubjects(bIncludeDisabled, bIncludeVirtual);
             
             TArray<TSharedPtr<FJsonValue>> SubjectsArray;
+            SubjectsArray.Reserve(SubjectKeys.Num());
             for (const FLiveLinkSubjectKey& Key : SubjectKeys)
             {
                 TSharedPtr<FJsonObject> SubjectObj = MakeShareable(new FJsonObject());
@@ -746,6 +748,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
                 if (const FLiveLinkSkeletonStaticData* SkeletonData = StaticData->Cast<FLiveLinkSkeletonStaticData>())
                 {
                     TArray<TSharedPtr<FJsonValue>> BoneNamesArray;
+                    BoneNamesArray.Reserve(SkeletonData->BoneNames.Num());
                     for (const FName& BoneName : SkeletonData->BoneNames)
                     {
                         BoneNamesArray.Add(MakeShareable(new FJsonValueString(BoneName.ToString())));
@@ -753,6 +756,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
                     StaticDataObj->SetArrayField(TEXT("boneNames"), BoneNamesArray);
                     
                     TArray<TSharedPtr<FJsonValue>> BoneParentsArray;
+                    BoneParentsArray.Reserve(SkeletonData->BoneParents.Num());
                     for (int32 ParentIdx : SkeletonData->BoneParents)
                     {
                         BoneParentsArray.Add(MakeShareable(new FJsonValueNumber(ParentIdx)));
@@ -852,6 +856,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             TArray<FLiveLinkTime> FrameTimes = LiveLinkClient->GetSubjectFrameTimes(FLiveLinkSubjectName(*SubjectName));
             
             TArray<TSharedPtr<FJsonValue>> TimesArray;
+            TimesArray.Reserve(FrameTimes.Num());
             for (const FLiveLinkTime& Time : FrameTimes)
             {
                 TimesArray.Add(MakeShareable(new FJsonValueNumber(Time.WorldTime)));
@@ -893,6 +898,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
                 TArray<FLiveLinkSubjectKey> SubjectKeys = LiveLinkClient->GetSubjectsSupportingRole(RoleClass, bIncludeDisabled, bIncludeVirtual);
                 
                 TArray<TSharedPtr<FJsonValue>> SubjectsArray;
+                SubjectsArray.Reserve(SubjectKeys.Num());
                 for (const FLiveLinkSubjectKey& Key : SubjectKeys)
                 {
                     TSharedPtr<FJsonObject> SubjectObj = MakeShareable(new FJsonObject());
