@@ -634,16 +634,9 @@ static FEdGraphPinType FMcpAutomationBridge_MakePinType(const FString &InType) {
     } else {
       // Try short name loop for structs (fallback)
       bool bFoundStruct = false;
-      if (!CleanType.Contains(TEXT("/")) && !CleanType.Contains(TEXT("."))) {
-        for (TObjectIterator<UScriptStruct> It; It; ++It) {
-          if (It->GetName().Equals(CleanType, ESearchCase::IgnoreCase)) {
-            PinType.PinCategory = MCP_PC_Struct;
-            PinType.PinSubCategoryObject = *It;
-            bFoundStruct = true;
-            break;
-          }
-        }
-      }
+      // [REMOVED] TObjectIterator fallback. // NOLINT
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+             TEXT("MakePinType: Struct '%s' not found. Please use full path."), *CleanType);
 
       if (!bFoundStruct) {
         // 3. Try Enum

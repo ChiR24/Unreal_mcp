@@ -30,8 +30,9 @@ McpAutomationBridge/
 | Save asset | `McpAutomationBridgeHelpers.h` | Use `McpSafeAssetSave(Asset)` |
 | Component creation | `*SCSHandlers.cpp` | Use `SCS->CreateNode()` for UE 5.7 |
 | JSON parsing | Any handler | Use `FJsonObjectConverter` |
-| Find actor | Any handler | Use `FindActorByLabelOrName()` helper |
+| Find actor | Any handler | Use `FindActorByLabelOrName(World, Name)` helper |
 | Get world | Any handler | Use `GetActiveWorld()` helper |
+| Iterate classes | Any handler | Use `GetDerivedClasses()` helper |
 
 ## CONVENTIONS
 - **Game Thread Safety**: Handlers auto-dispatched to game thread by subsystem
@@ -46,3 +47,5 @@ McpAutomationBridge/
 - **Blocking Thread**: WebSocket processing must not block game thread
 - **Raw UObject***: Use `TWeakObjectPtr` for stored references
 - **CDO Iteration**: Filter CDOs when using `TObjectIterator`
+- **TObjectIterator**: Unsafe in UE 5.7. Use `GetDerivedClasses()` helper.
+- **FindActorByName**: Unsafe lookup. Use `FindActorByLabelOrName()`.

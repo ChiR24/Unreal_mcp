@@ -723,7 +723,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
       TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
       Item->SetStringField(TEXT("name"), Name);
       // Use robust actor lookup that checks label, name, and UAID
-      AActor *Found = Subsystem->FindActorByName(Name);
+      AActor *Found = FindActorByLabelOrName<AActor>(Subsystem->GetActiveWorld(), Name);
 
       if (!Found) {
         Item->SetBoolField(TEXT("success"), false);
@@ -2415,12 +2415,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
     AddedNames.Add(TEXT("audio"));
     AddedNames.Add(TEXT("event"));
 
-    for (TObjectIterator<UClass> It; It; ++It) {
-      if (It->IsChildOf(UMovieSceneTrack::StaticClass()) &&
-          !It->HasAnyClassFlags(CLASS_Abstract) &&
-          !AddedNames.Contains(It->GetName())) {
-        Types.Add(MakeShared<FJsonValueString>(It->GetName()));
-        AddedNames.Add(It->GetName());
+    TArray<UClass*> TrackClasses;
+    GetDerivedClasses(UMovieSceneTrack::StaticClass(), TrackClasses, true);
+    for (UClass* Class : TrackClasses) {
+      if (!Class->HasAnyClassFlags(CLASS_Abstract) &&
+          !AddedNames.Contains(Class->GetName())) {
+        Types.Add(MakeShared<FJsonValueString>(Class->GetName()));
+        AddedNames.Add(Class->GetName());
       }
     }
 

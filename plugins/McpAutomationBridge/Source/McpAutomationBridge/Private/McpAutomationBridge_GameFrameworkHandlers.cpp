@@ -1460,7 +1460,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             PlayerStartTag = FString::Printf(TEXT("Team%d"), TeamIndex);
         }
 
-        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        UWorld* World = GetActiveWorld();
         if (!World)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("No world available."), TEXT("NO_WORLD"));
@@ -1738,7 +1738,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         else
         {
             // Query current world's game mode if available
-            UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+            UWorld* World = GetActiveWorld();
             if (World)
             {
                 AGameModeBase* GM = World->GetAuthGameMode();

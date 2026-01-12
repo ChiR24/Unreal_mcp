@@ -109,7 +109,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWeatherAction(
     return true;
   }
 
-  UWorld *World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GetActiveWorld();
   if (!World) {
     bSuccess = false;
     Message = TEXT("Editor world not available");

@@ -133,7 +133,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
   }
 
   // ... inside HandleCreateLandscape ...
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  if (!GEditor || !GetActiveWorld()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
@@ -175,7 +175,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
 
     if (!GEditor)
       return;
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = GetActiveWorld();
     if (!World)
       return;
 
@@ -1295,7 +1295,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExportHeightmap(
     return true;
   }
 
-  UWorld *World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GetActiveWorld();
   if (!World) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("No world available"),
@@ -1414,7 +1414,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureLandscapeLOD(
     return true;
   }
 
-  UWorld *World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GetActiveWorld();
   if (!World) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("No world available"),
@@ -1499,7 +1499,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetLandscapeInfo(
     return true;
   }
 
-  UWorld *World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GetActiveWorld();
   if (!World) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("No world available"),

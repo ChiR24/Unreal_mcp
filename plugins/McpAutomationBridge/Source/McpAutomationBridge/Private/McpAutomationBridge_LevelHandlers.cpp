@@ -255,7 +255,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
     }
 
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = GetActiveWorld();
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No world loaded"), nullptr,
@@ -336,7 +336,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
             GEditor->GetEditorSubsystem<ULevelEditorSubsystem>()) {
       bool bSaved = false;
 #if __has_include("FileHelpers.h")
-      if (UWorld *World = GEditor->GetEditorWorldContext().World()) {
+      if (UWorld *World = GetActiveWorld()) {
         bSaved = FEditorFileUtils::SaveMap(World, SavePath);
       }
 #endif
@@ -536,7 +536,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     TArray<TSharedPtr<FJsonValue>> LevelsArray;
 
     UWorld *World =
-        GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        GetActiveWorld();
 
     // Add current persistent level
     if (World) {
@@ -640,7 +640,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       // asset. Exporting unloaded level asset usually involves loading it. For
       // now, if levelPath is current, use current. If not, error (or attempt
       // load).
-      UWorld *Current = GEditor->GetEditorWorldContext().World();
+      UWorld *Current = GetActiveWorld();
       if (Current && (Current->GetOutermost()->GetName() == LevelPath ||
                       Current->GetPathName() == LevelPath)) {
         WorldToExport = Current;
@@ -652,7 +652,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       }
     }
     if (!WorldToExport)
-      WorldToExport = GEditor->GetEditorWorldContext().World();
+      WorldToExport = GetActiveWorld();
 
     if (!WorldToExport) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -811,7 +811,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
     }
 
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = GetActiveWorld();
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No world loaded"), nullptr,

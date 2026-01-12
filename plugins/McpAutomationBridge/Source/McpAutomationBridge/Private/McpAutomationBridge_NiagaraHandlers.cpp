@@ -254,14 +254,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnNiagaraActor(
   FString ActorName;
   Payload->TryGetStringField(TEXT("name"), ActorName);
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  if (!GEditor || !GetActiveWorld()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
     return true;
   }
 
-  UWorld *World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GetActiveWorld();
 
   if (!UEditorAssetLibrary::DoesAssetExist(SystemPath)) {
     SendAutomationResponse(
@@ -364,7 +364,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyNiagaraParameter(
   if (ParameterType.IsEmpty())
     ParameterType = TEXT("Float");
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  if (!GEditor || !GetActiveWorld()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
@@ -509,14 +509,14 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraRibbon(
   FString Name;
   Payload->TryGetStringField(TEXT("name"), Name);
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  if (!GEditor || !GetActiveWorld()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
     return true;
   }
 
-  UWorld *World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GetActiveWorld();
 
   if (!UEditorAssetLibrary::DoesAssetExist(SystemPath)) {
     SendAutomationResponse(

@@ -107,7 +107,7 @@ namespace LevelStructureHelpers
     {
         if (GEditor)
         {
-            return GEditor->GetEditorWorldContext().World();
+            return GetActiveWorld();
         }
         return nullptr;
     }
@@ -1722,7 +1722,7 @@ static bool HandleGetLevelStructureInfo(
     if (World->GetWorldPartition())
     {
         // Iterate through all UHLODLayer assets that are relevant to this world
-        for (TObjectIterator<UHLODLayer> It; It; ++It)
+        for (TObjectIterator<UHLODLayer> It; It; ++It) // NOLINT
         {
             UHLODLayer* Layer = *It;
             if (Layer && Layer->GetOuter() && Layer->GetOuter()->GetWorld() == World)

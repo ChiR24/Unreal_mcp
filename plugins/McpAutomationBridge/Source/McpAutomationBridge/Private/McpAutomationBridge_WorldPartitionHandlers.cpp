@@ -73,7 +73,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("No active editor world."), TEXT("NO_WORLD"));

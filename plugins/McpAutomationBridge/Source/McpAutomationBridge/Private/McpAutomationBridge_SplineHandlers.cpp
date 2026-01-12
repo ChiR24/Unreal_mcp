@@ -108,16 +108,8 @@ static FRotator GetJsonRotatorField(const TSharedPtr<FJsonObject>& Payload, cons
 }
 
 // Helper to find actor by name
-static AActor* FindActorByName(UWorld* World, const FString& ActorName)
-{
-    if (!World || ActorName.IsEmpty()) return nullptr;
-    
-    for (TActorIterator<AActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
-        {
-            return *It;
-        }
+// Helper replaced with McpAutomationBridgeHelpers::FindActorByLabelOrName
+
     }
     return nullptr;
 }
@@ -189,7 +181,7 @@ static bool HandleCreateSplineActor(
     bool bClosedLoop = GetJsonBoolField(Payload, TEXT("bClosedLoop"), false);
     FString SplineType = GetJsonStringField(Payload, TEXT("splineType"), TEXT("Curve"));
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -292,7 +284,7 @@ static bool HandleAddSplinePoint(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -300,7 +292,8 @@ static bool HandleAddSplinePoint(
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
     if (!Actor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -357,7 +350,7 @@ static bool HandleRemoveSplinePoint(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -365,7 +358,8 @@ static bool HandleRemoveSplinePoint(
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
     if (!Actor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -419,7 +413,7 @@ static bool HandleSetSplinePointPosition(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -427,7 +421,8 @@ static bool HandleSetSplinePointPosition(
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
     if (!Actor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -481,7 +476,7 @@ static bool HandleSetSplinePointTangents(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -489,7 +484,8 @@ static bool HandleSetSplinePointTangents(
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
     if (!Actor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -551,7 +547,7 @@ static bool HandleSetSplinePointRotation(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -559,7 +555,8 @@ static bool HandleSetSplinePointRotation(
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
     if (!Actor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -612,7 +609,7 @@ static bool HandleSetSplinePointScale(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -620,7 +617,8 @@ static bool HandleSetSplinePointScale(
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
     if (!Actor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -673,7 +671,7 @@ static bool HandleSetSplineType(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -681,7 +679,8 @@ static bool HandleSetSplineType(
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
     if (!Actor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -846,7 +845,7 @@ static bool HandleSetSplineMeshAsset(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -854,7 +853,8 @@ static bool HandleSetSplineMeshAsset(
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
     if (!Actor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -927,7 +927,7 @@ static bool HandleConfigureSplineMeshAxis(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -935,7 +935,8 @@ static bool HandleConfigureSplineMeshAxis(
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
     if (!Actor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1003,7 +1004,7 @@ static bool HandleSetSplineMeshMaterial(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1011,7 +1012,8 @@ static bool HandleSetSplineMeshMaterial(
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
     if (!Actor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1088,7 +1090,7 @@ static bool HandleScatterMeshesAlongSpline(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1096,7 +1098,8 @@ static bool HandleScatterMeshesAlongSpline(
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
     if (!Actor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1216,7 +1219,7 @@ static bool HandleCreateTemplateSpline(
     double Width = GetJsonNumberField(Payload, TEXT("width"), 400.0);
     FString MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1339,7 +1342,7 @@ static bool HandleGetSplinesInfo(
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1352,7 +1355,8 @@ static bool HandleGetSplinesInfo(
     if (!ActorName.IsEmpty())
     {
         // Get info for specific actor
-        AActor* Actor = FindActorByName(World, ActorName);
+        AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
         if (!Actor)
         {
             Self->SendAutomationResponse(Socket, RequestId, false,

@@ -1022,7 +1022,7 @@ static bool HandleExecutePCGGraph(
     FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
     bool bForce = GetJsonBoolField(Payload, TEXT("bForce"), true);
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world"), nullptr, TEXT("NO_WORLD"));
@@ -1078,7 +1078,7 @@ static bool HandleSetPCGPartitionGridSize(
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     int32 GridSize = GetJsonIntField(Payload, TEXT("gridSize"), 25600);
     
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world"), nullptr, TEXT("NO_WORLD"));

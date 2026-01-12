@@ -978,7 +978,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
     if (!bMeshProvided && !bSkeletonProvided && bActorProvided) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
              TEXT("Attempting to find actor by name: '%s'"), *ActorName);
-      AActor *FoundActor = FindActorByName(ActorName);
+      AActor *FoundActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ActorName);
+
       if (FoundActor) {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
                TEXT("Found actor: '%s' (Label: '%s')"), *FoundActor->GetName(),
@@ -2007,7 +2008,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
   double PlayRate = 1.0;
   Payload->TryGetNumberField(TEXT("playRate"), PlayRate);
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  if (!GEditor || !GetActiveWorld()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
@@ -2026,8 +2027,8 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
   TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
   AActor *TargetActor = nullptr;
 
-  if (GEditor && GEditor->GetEditorWorldContext().World()) {
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+  if (GEditor && GetActiveWorld()) {
+    UWorld *World = GetActiveWorld();
     for (TActorIterator<AActor> It(World); It; ++It) {
       AActor *Actor = *It;
       if (Actor) {
@@ -2193,7 +2194,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
     }
   }
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  if (!GEditor || !GetActiveWorld()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
@@ -2212,8 +2213,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
   TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
   AActor *TargetActor = nullptr;
 
-  if (GEditor && GEditor->GetEditorWorldContext().World()) {
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+  if (GEditor && GetActiveWorld()) {
+    UWorld *World = GetActiveWorld();
     for (TActorIterator<AActor> It(World); It; ++It) {
       AActor *Actor = *It;
       if (Actor) {

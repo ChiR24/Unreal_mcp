@@ -168,7 +168,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
         // r.Lumen.Scene.Recapture
         if (GEditor)
         {
-            UWorld* World = GEditor->GetEditorWorldContext().World();
+            UWorld* World = GetActiveWorld();
             if (World)
             {
                 GEngine->Exec(World, TEXT("r.Lumen.Scene.Recapture"));

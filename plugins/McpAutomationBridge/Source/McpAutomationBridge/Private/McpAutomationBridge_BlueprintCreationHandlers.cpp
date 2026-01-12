@@ -457,15 +457,10 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
         }
       }
       if (!ResolvedParent) {
-        for (TObjectIterator<UClass> It; It; ++It) {
-          UClass *C = *It;
-          if (!C)
-            continue;
-          if (C->GetName().Equals(ParentClassSpec, ESearchCase::IgnoreCase)) {
-            ResolvedParent = C;
-            break;
-          }
-        }
+        // [REMOVED] TObjectIterator fallback. User must provide full path. // NOLINT
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+               TEXT("HandleBlueprintCreate: Parent class '%s' not found. Please provide full path."),
+               *ParentClassSpec);
       }
     }
   }

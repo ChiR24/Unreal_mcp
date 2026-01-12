@@ -106,7 +106,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
         TargetWorld = UES->GetEditorWorld();
       }
       if (!TargetWorld) {
-        TargetWorld = GEditor->GetEditorWorldContext().World();
+        TargetWorld = GetActiveWorld();
       }
     }
 #endif
@@ -496,7 +496,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     // is not available, report a structured error instead of proceeding.
     UWorld *CurrentWorld = nullptr;
     if (GEditor) {
-      CurrentWorld = GEditor->GetEditorWorldContext().World();
+      CurrentWorld = GetActiveWorld();
     }
     if (!CurrentWorld) {
       SendAutomationResponse(
@@ -845,15 +845,17 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
 
     // Quick factory lookup by short name if full resolution failed
     if (!FactoryUClass) {
-      for (TObjectIterator<UClass> It; It; ++It) {
-        if (It->GetName().Equals(FactoryClass) ||
-            It->GetName().Equals(FactoryClass + TEXT("Factory"))) {
-          if (It->IsChildOf(UFactory::StaticClass())) {
-            FactoryUClass = *It;
-            break;
-          }
+        // [REMOVED] TObjectIterator fallback. Use GetDerivedClasses or full path. // NOLINT
+        TArray<UClass*> FactoryClasses;
+        GetDerivedClasses(UFactory::StaticClass(), FactoryClasses);
+        for (UClass* Class : FactoryClasses) {
+            if (!Class || Class->HasAnyClassFlags(CLASS_Abstract)) continue;
+            if (Class->GetName().Equals(FactoryClass) ||
+                Class->GetName().Equals(FactoryClass + TEXT("Factory"))) {
+                FactoryUClass = Class;
+                break;
+            }
         }
-      }
     }
 
     if (!FactoryUClass) {
@@ -1007,7 +1009,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     }
 
     // Get the current world and player controller
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = GetActiveWorld();
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No world available"), nullptr,

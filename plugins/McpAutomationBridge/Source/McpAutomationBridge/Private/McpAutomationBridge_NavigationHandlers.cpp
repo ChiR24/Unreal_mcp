@@ -111,7 +111,7 @@ static bool HandleConfigureNavMeshSettings(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -228,7 +228,7 @@ static bool HandleSetNavAgentProperties(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -308,7 +308,7 @@ static bool HandleRebuildNavigation(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -449,7 +449,7 @@ static bool HandleSetNavAreaClass(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -607,7 +607,7 @@ static bool HandleCreateNavLinkProxy(
     FVector StartPoint = GetJsonVectorField(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
     FVector EndPoint = GetJsonVectorField(Payload, TEXT("endPoint"), FVector(100, 0, 0));
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -679,7 +679,7 @@ static bool HandleConfigureNavLink(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -781,7 +781,7 @@ static bool HandleSetNavLinkType(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -845,7 +845,7 @@ static bool HandleCreateSmartLink(
     FVector StartPoint = GetJsonVectorField(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
     FVector EndPoint = GetJsonVectorField(Payload, TEXT("endPoint"), FVector(100, 0, 0));
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -916,7 +916,7 @@ static bool HandleConfigureSmartLinkBehavior(
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1032,7 +1032,7 @@ static bool HandleGetNavigationInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,

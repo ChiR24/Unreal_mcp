@@ -359,7 +359,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
 #if WITH_EDITOR
     if (GEditor)
     {
-      UWorld* World = GEditor->GetEditorWorldContext().World();
+      UWorld* World = GetActiveWorld();
       if (APlayerController* PC = GEngine->GetFirstLocalPlayerController(World))
       {
         PC->SetHapticsByValue(Amplitude * Frequency, Amplitude, Hand);
@@ -383,7 +383,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageXRAction(
 #if WITH_EDITOR
     if (GEditor)
     {
-      UWorld* World = GEditor->GetEditorWorldContext().World();
+      UWorld* World = GetActiveWorld();
       if (APlayerController* PC = GEngine->GetFirstLocalPlayerController(World))
       {
         PC->StopHapticEffect(Hand);

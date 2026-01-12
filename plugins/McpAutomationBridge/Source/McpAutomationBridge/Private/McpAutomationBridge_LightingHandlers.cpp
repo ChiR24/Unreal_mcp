@@ -82,12 +82,13 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     AddedNames.Add(TEXT("SpotLight"));
     AddedNames.Add(TEXT("RectLight"));
 
-    for (TObjectIterator<UClass> It; It; ++It) {
-      if (It->IsChildOf(ALight::StaticClass()) &&
-          !It->HasAnyClassFlags(CLASS_Abstract) &&
-          !AddedNames.Contains(It->GetName())) {
-        Types.Add(MakeShared<FJsonValueString>(It->GetName()));
-        AddedNames.Add(It->GetName());
+    TArray<UClass*> LightClasses;
+    GetDerivedClasses(ALight::StaticClass(), LightClasses, true);
+    for (UClass* Class : LightClasses) {
+      if (!Class->HasAnyClassFlags(CLASS_Abstract) &&
+          !AddedNames.Contains(Class->GetName())) {
+        Types.Add(MakeShared<FJsonValueString>(Class->GetName()));
+        AddedNames.Add(Class->GetName());
       }
     }
 
@@ -318,9 +319,9 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
                            TEXT("SkyLight spawned"), Resp);
     return true;
   } else if (Lower == TEXT("build_lighting")) {
-    if (GEditor && GEditor->GetEditorWorldContext().World()) {
-      if (GEditor && GEditor->GetEditorWorldContext().World())
-        GEditor->Exec(GEditor->GetEditorWorldContext().World(),
+    if (GEditor && GetActiveWorld()) {
+      if (GEditor && GetActiveWorld())
+        GEditor->Exec(GetActiveWorld(),
                       TEXT("BuildLighting Production"));
     }
     SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -644,7 +645,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
 
       // Save the level
       bool bSaved = FEditorFileUtils::SaveLevel(
-          GEditor->GetEditorWorldContext().World()->PersistentLevel, *Path);
+          GetActiveWorld()->PersistentLevel, *Path);
       if (bSaved) {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);

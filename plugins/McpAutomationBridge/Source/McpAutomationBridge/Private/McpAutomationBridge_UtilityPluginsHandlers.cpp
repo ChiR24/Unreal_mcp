@@ -995,7 +995,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageUtilityPluginsAction(
     // Try to execute as console command
     if (GEditor)
     {
-      UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
+      UWorld* EditorWorld = GetActiveWorld();
       if (EditorWorld)
       {
         GEditor->Exec(EditorWorld, *CommandName);

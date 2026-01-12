@@ -99,8 +99,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   // Handle create_effect tool with sub-actions
   if (Lower.Equals(TEXT("clear_debug_shapes"))) {
 #if WITH_EDITOR
-    if (GEditor && GEditor->GetEditorWorldContext().World()) {
-      FlushPersistentDebugLines(GEditor->GetEditorWorldContext().World());
+    if (GEditor && GetActiveWorld()) {
+      FlushPersistentDebugLines(GetActiveWorld());
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -437,7 +437,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
 
       // Get the current world for debug drawing
-      UWorld *World = GEditor->GetEditorWorldContext().World();
+      UWorld *World = GetActiveWorld();
       if (!World) {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), false);

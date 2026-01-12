@@ -926,10 +926,8 @@ private:
                                  const TSharedPtr<FJsonObject> &Payload,
                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
 
-  // Control handlers
-  AActor *FindActorByName(const FString &Target);
-
   // Control Actor Subhandlers
+
   bool HandleControlActorSpawn(const FString &RequestId,
                                const TSharedPtr<FJsonObject> &Payload,
                                TSharedPtr<FMcpBridgeWebSocket> Socket);

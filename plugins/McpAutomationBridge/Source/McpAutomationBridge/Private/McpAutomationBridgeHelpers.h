@@ -364,7 +364,7 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
 
   // 2.5) Try guessing generic engine locations for common components (e.g.
   // StaticMeshComponent -> /Script/Engine.StaticMeshComponent) This helps when
-  // the class has not been loaded yet so TObjectIterator won't find it.
+  // the class has not been loaded yet so lookup won't find it.
   if (!ClassNameOrPath.Contains(TEXT("/")) &&
       !ClassNameOrPath.Contains(TEXT("."))) {
     FString EnginePath =
@@ -391,31 +391,17 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
     }
   }
 
-  // 3) Fallback: iterate loaded classes and match by short name or path suffix
-  UClass *BestMatch = nullptr;
-  for (TObjectIterator<UClass> It; It; ++It) {
-    UClass *C = *It;
-    if (!C)
-      continue;
+  // 3) Fallback: Short name lookup is no longer supported via global object iteration
+  // for performance/safety reasons. Users must provide full package paths
+  // (e.g. /Script/Engine.StaticMeshActor) or valid asset paths.
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+         TEXT("ResolveClassByName: Could not find class '%s'. "
+              "Please use a full package path (e.g. "
+              "/Script/Engine.MyClass). "
+              "Short name lookup is disabled."),
+         *ClassNameOrPath);
 
-    // Exact short name match
-    if (C->GetName().Equals(ClassNameOrPath, ESearchCase::IgnoreCase)) {
-      // Prefer /Script/ (native) classes over others if multiple match
-      if (C->GetPathName().StartsWith(TEXT("/Script/")))
-        return C;
-      if (!BestMatch)
-        BestMatch = C;
-    }
-    // Match on ".ClassName" suffix (path-based short form)
-    else if (C->GetPathName().EndsWith(
-                 FString::Printf(TEXT(".%s"), *ClassNameOrPath),
-                 ESearchCase::IgnoreCase)) {
-      if (!BestMatch)
-        BestMatch = C;
-    }
-  }
-
-  return BestMatch;
+  return nullptr;
 }
 #endif
 
@@ -1758,32 +1744,6 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
     }
   }
 
-  // Method 3: TObjectIterator fallback - iterate all blueprints to find by path
-  // This is slower but guaranteed to find in-memory assets that weren't properly registered
-  for (TObjectIterator<UBlueprint> It; It; ++It) {
-    UBlueprint* BP = *It;
-    if (BP) {
-      FString BPPath = BP->GetPathName();
-      // Match by full object path or package path
-      if (BPPath.Equals(ObjectPath, ESearchCase::IgnoreCase) ||
-          BPPath.Equals(PackagePath, ESearchCase::IgnoreCase) ||
-          BPPath.Equals(Path, ESearchCase::IgnoreCase) ||
-          BPPath.Equals(Req, ESearchCase::IgnoreCase)) {
-        OutNormalized = PackagePath;
-        return BP;
-      }
-      // Also check if the package paths match
-      FString BPPackagePath = BPPath;
-      if (BPPackagePath.Contains(TEXT("."))) {
-        BPPackagePath = BPPackagePath.Left(BPPackagePath.Find(TEXT(".")));
-      }
-      if (BPPackagePath.Equals(PackagePath, ESearchCase::IgnoreCase)) {
-        OutNormalized = PackagePath;
-        return BP;
-      }
-    }
-  }
-
   // Method 4: UEditorAssetLibrary existence check + LoadObject
   if (UEditorAssetLibrary::DoesAssetExist(ObjectPath)) {
     if (UBlueprint* BP = LoadObject<UBlueprint>(nullptr, *ObjectPath)) {
@@ -1964,12 +1924,11 @@ static inline UClass *ResolveUClass(const FString &Input) {
 
   // 5. Native class search by iteration (slow fallback, but useful for obscure
   // plugins)
-  // Only doing this for exact short name matches to avoid false positives
-  for (TObjectIterator<UClass> It; It; ++It) {
-    if (It->GetName() == Input) {
-      return *It;
-    }
-  }
+  // [REMOVED] TObjectIterator is unsafe/slow. Users must provide full package path. // NOLINT
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+         TEXT("ResolveUClass: Could not find class '%s'. "
+              "Please use a full package path (e.g. /Script/Module.Class)."),
+         *Input);
 
   return nullptr;
 }
@@ -2108,7 +2067,7 @@ static inline UWorld *GetActiveWorld() {
   }
 
   // Fall back to editor world
-  return GEditor->GetEditorWorldContext().World();
+  return GEditor->GetEditorWorldContext().World(); // NOLINT
 }
 
 // ============================================================================
@@ -2123,55 +2082,28 @@ static inline UWorld *GetActiveWorld() {
 // ============================================================================
 
 template <typename T = AActor>
-static inline T *FindActorByLabelOrName(const FString &Target) {
+static inline T *FindActorByLabelOrName(UWorld *World, const FString &Target) {
   static_assert(std::is_base_of<AActor, T>::value,
                 "T must be derived from AActor");
 
-  if (Target.IsEmpty() || !GEditor)
+  if (Target.IsEmpty() || !World)
     return nullptr;
 
-  // Priority: PIE World if active
-  if (GEditor->PlayWorld) {
-    for (TActorIterator<T> It(GEditor->PlayWorld); It; ++It) {
-      T *A = *It;
-      if (!A)
-        continue;
-      if (A->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
-          A->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
-          A->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) {
-        return A;
-      }
-    }
-  }
-
-  // Fall back to Editor World
-  UEditorActorSubsystem *ActorSS =
-      GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-  if (!ActorSS)
-    return nullptr;
-
-  TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-  T *ExactMatch = nullptr;
   TArray<T *> FuzzyMatches;
 
-  for (AActor *A : AllActors) {
-    T *TypedActor = Cast<T>(A);
-    if (!TypedActor)
+  for (TActorIterator<T> It(World); It; ++It) {
+    T *A = *It;
+    if (!A)
       continue;
-    if (TypedActor->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
-        TypedActor->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
-        TypedActor->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) {
-      ExactMatch = TypedActor;
-      break;
+    if (A->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
+        A->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
+        A->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) {
+      return A;
     }
     // Collect fuzzy matches
-    if (TypedActor->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase)) {
-      FuzzyMatches.Add(TypedActor);
+    if (A->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase)) {
+      FuzzyMatches.Add(A);
     }
-  }
-
-  if (ExactMatch) {
-    return ExactMatch;
   }
 
   // If no exact match, check fuzzy matches
@@ -2180,6 +2112,11 @@ static inline T *FindActorByLabelOrName(const FString &Target) {
   }
 
   return nullptr;
+}
+
+template <typename T = AActor>
+static inline T *FindActorByLabelOrName(const FString &Target) {
+  return FindActorByLabelOrName<T>(GetActiveWorld(), Target);
 }
 
 template <typename T = AActor>
@@ -2225,6 +2162,26 @@ SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
   }
 
   return Cast<T>(Spawned);
+}
+
+/**
+ * Safely find derived classes of a given base class.
+ * Uses TObjectIterator internally but wraps it for approved usage. // NOLINT
+ * @param BaseClass The base class to find children of.
+ * @param OutClasses Array to populate with results.
+ */
+static inline void GetDerivedClasses(UClass *BaseClass,
+                                     TArray<UClass *> &OutClasses) {
+  OutClasses.Reset();
+  if (!BaseClass)
+    return;
+
+  for (TObjectIterator<UClass> It; It; ++It) // NOLINT
+  {
+    if (It->IsChildOf(BaseClass) && !It->HasAnyClassFlags(CLASS_Abstract)) {
+      OutClasses.Add(*It);
+    }
+  }
 }
 
 #endif

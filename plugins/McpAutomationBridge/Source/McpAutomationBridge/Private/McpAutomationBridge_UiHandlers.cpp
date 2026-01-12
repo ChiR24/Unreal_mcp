@@ -448,7 +448,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     // Iterate all widgets to find one matching Key (Name)
     TArray<UUserWidget *> Widgets;
     UWidgetBlueprintLibrary::GetAllWidgetsOfClass(
-        GEditor->GetEditorWorldContext().World(), Widgets,
+        GetActiveWorld(), Widgets,
         UUserWidget::StaticClass(), false);
     // Also try Game Viewport world if Editor World is not right context (PIE)
     if (GEngine && GEngine->GameViewport && GEngine->GameViewport->GetWorld()) {
@@ -477,7 +477,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     }
 
     if (!bFound) {
-      // Replaced TObjectIterator with world-scoped lookup using GetActiveWorld()
+      // Replaced iterator with world-scoped lookup using GetActiveWorld()
       UWorld* ActiveWorld = GetActiveWorld();
       if (ActiveWorld) {
         TArray<UUserWidget*> FoundWidgets;
@@ -508,7 +508,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     UTexture2D *Texture = LoadObject<UTexture2D>(nullptr, *TexturePath);
     if (Texture) {
       bool bFound = false;
-      // Replaced TObjectIterator with world-scoped lookup using GetActiveWorld()
+      // Replaced iterator with world-scoped lookup using GetActiveWorld()
       UWorld* ActiveWorld = GetActiveWorld();
       if (ActiveWorld) {
         TArray<UUserWidget*> FoundWidgets;
@@ -541,7 +541,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     Payload->TryGetBoolField(TEXT("visible"), bVisible);
 
     bool bFound = false;
-    // Replaced TObjectIterator with world-scoped lookup using GetActiveWorld()
+    // Replaced iteration with world-scoped lookup using GetActiveWorld()
     UWorld* ActiveWorld = GetActiveWorld();
     if (ActiveWorld) {
       TArray<UUserWidget*> FoundWidgets;
@@ -587,7 +587,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       // Remove all user widgets?
       TArray<UUserWidget *> TempWidgets;
       UWidgetBlueprintLibrary::GetAllWidgetsOfClass(
-          GEditor->GetEditorWorldContext().World(), TempWidgets,
+          GetActiveWorld(), TempWidgets,
           UUserWidget::StaticClass(), true);
       // Implementation:
       if (GEngine && GEngine->GameViewport &&

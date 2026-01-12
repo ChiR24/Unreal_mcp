@@ -116,17 +116,8 @@ namespace NetworkingHelpers
     }
 
     // Find actor by name in world
-    AActor* FindActorByName(UWorld* World, const FString& ActorName)
-    {
-        if (!World) return nullptr;
-        
-        for (TActorIterator<AActor> It(World); It; ++It)
-        {
-            AActor* Actor = *It;
-            if (Actor && Actor->GetName() == ActorName)
-            {
-                return Actor;
-            }
+// Helper replaced with McpAutomationBridgeHelpers::FindActorByLabelOrName
+
         }
         return nullptr;
     }
@@ -741,14 +732,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        UWorld* World = GetActiveWorld();
         if (!World)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
             return true;
         }
 
-        AActor* Actor = NetworkingHelpers::FindActorByName(World, ActorName);
+        AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
         if (!Actor)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
@@ -758,7 +750,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         AActor* Owner = nullptr;
         if (!OwnerActorName.IsEmpty())
         {
-            Owner = NetworkingHelpers::FindActorByName(World, OwnerActorName);
+            Owner = FindActorByLabelOrName<AActor>(World, OwnerActorName);
+
         }
 
         Actor->SetOwner(Owner);
@@ -831,14 +824,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        UWorld* World = GetActiveWorld();
         if (!World)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
             return true;
         }
 
-        AActor* Actor = NetworkingHelpers::FindActorByName(World, ActorName);
+        AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
         if (!Actor)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
@@ -865,14 +859,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        UWorld* World = GetActiveWorld();
         if (!World)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
             return true;
         }
 
-        AActor* Actor = NetworkingHelpers::FindActorByName(World, ActorName);
+        AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
         if (!Actor)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
@@ -1368,7 +1363,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         double MaxInternetClientRate = GetNumberField(Payload, TEXT("maxInternetClientRate"), 10000.0);
         double NetServerMaxTickRate = GetNumberField(Payload, TEXT("netServerMaxTickRate"), 30.0);
 
-        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        UWorld* World = GetActiveWorld();
         bool bConfigApplied = false;
 
         if (World && World->GetNetDriver())
@@ -1519,14 +1514,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         }
         else if (!ActorName.IsEmpty())
         {
-            UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+            UWorld* World = GetActiveWorld();
             if (!World)
             {
                 SendAutomationError(RequestingSocket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
                 return true;
             }
 
-            AActor* Actor = NetworkingHelpers::FindActorByName(World, ActorName);
+            AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+
             if (!Actor)
             {
                 SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));

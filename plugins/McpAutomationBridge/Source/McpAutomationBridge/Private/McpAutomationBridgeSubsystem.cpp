@@ -1314,7 +1314,7 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
     return false;
   }
 
-  UWorld *EditorWorld = GEditor->GetEditorWorldContext().World();
+  UWorld *EditorWorld = GetActiveWorld();
   if (!EditorWorld) {
     OutErrorMessage = TEXT("Editor world context not available");
     return false;

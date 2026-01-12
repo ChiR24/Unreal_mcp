@@ -177,43 +177,7 @@ namespace WidgetAuthoringHelpers
             }
         }
         
-        // Method 3: TObjectIterator fallback - iterate all widget blueprints to find by path
-        // This is slower but guaranteed to find in-memory assets that weren't properly registered
-        for (TObjectIterator<UWidgetBlueprint> It; It; ++It)
-        {
-            UWidgetBlueprint* WB = *It;
-            // Safety check: Skip CDOs to avoid ghost assets
-            if (WB->HasAnyFlags(RF_ClassDefaultObject))
-            {
-                continue;
-            }
-
-            if (WB)
-            {
-                FString WBPath = WB->GetPathName();
-                // Match by full object path or package path
-                if (WBPath.Equals(ObjectPath, ESearchCase::IgnoreCase) ||
-                    WBPath.Equals(PackagePath, ESearchCase::IgnoreCase) ||
-                    WBPath.Equals(Path, ESearchCase::IgnoreCase))
-                {
-                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("LoadWidgetBlueprint: Fallback iterator used for %s"), *Path);
-                    return WB;
-                }
-                // Also check if the package paths match
-                FString WBPackagePath = WBPath;
-                if (WBPackagePath.Contains(TEXT(".")))
-                {
-                    WBPackagePath = WBPackagePath.Left(WBPackagePath.Find(TEXT(".")));
-                }
-                if (WBPackagePath.Equals(PackagePath, ESearchCase::IgnoreCase))
-                {
-                    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("LoadWidgetBlueprint: Fallback iterator used for %s"), *Path);
-                    return WB;
-                }
-            }
-        }
-        
-        // Method 4: Asset Registry lookup
+        // Method 3: Asset Registry lookup (Promoted from Method 4)
         IAssetRegistry& Registry = FAssetRegistryModule::GetRegistry();
         FAssetData AssetData = Registry.GetAssetByObjectPath(FSoftObjectPath(ObjectPath));
         if (AssetData.IsValid())
@@ -224,13 +188,13 @@ namespace WidgetAuthoringHelpers
             }
         }
         
-        // Method 5: StaticLoadObject with object path (for disk assets)
+        // Method 4: StaticLoadObject with object path (for disk assets) (Promoted from Method 5)
         if (UWidgetBlueprint* WB = Cast<UWidgetBlueprint>(StaticLoadObject(UWidgetBlueprint::StaticClass(), nullptr, *ObjectPath)))
         {
             return WB;
         }
         
-        // Method 6: StaticLoadObject with package path
+        // Method 5: StaticLoadObject with package path (Promoted from Method 6)
         return Cast<UWidgetBlueprint>(StaticLoadObject(UWidgetBlueprint::StaticClass(), nullptr, *PackagePath));
     }
 

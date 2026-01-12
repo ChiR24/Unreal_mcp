@@ -1158,7 +1158,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
 
   UWorld *World = nullptr;
   if (GEditor) {
-    World = GEditor->GetEditorWorldContext().World();
+    World = GetActiveWorld();
   }
 
   if (!World) {
@@ -1972,17 +1972,18 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
       // Prefer PIE world if active, otherwise Editor world
       TargetWorld = GEditor->PlayWorld;
       if (!TargetWorld) {
-        TargetWorld = GEditor->GetEditorWorldContext().World();
+        TargetWorld = GetActiveWorld();
       }
     }
 #endif
 
-    // Fallback to GWorld if no editor/PIE world found (e.g. game mode)
+    // Fallback to global world if no editor/PIE world found (e.g. game mode)
     if (!TargetWorld && GEngine) {
-      // Note: In some contexts GWorld is a macro for a proxy, but here we need
+      // Note: In some contexts global world is a macro for a proxy, but here we need
       // a raw pointer. We'll rely on Exec handling nullptr if we really can't
       // find one, but explicitly passing the editor world fixes many "command
       // not handled" or crash issues.
+      TargetWorld = GetActiveWorld();
     }
 
     GEngine->Exec(TargetWorld, *Command);
@@ -2047,10 +2048,10 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     // Compatibility: allow passing actor label/name/path as objectPath.
     // Many callers use simple names like "MyActor".
     if (!TargetObject) {
-      if (AActor *FoundActor = FindActorByName(ObjectPath)) {
-        TargetObject = FoundActor;
-        ObjectPath = FoundActor->GetPathName();
-      }
+    if (AActor *FoundActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ObjectPath)) {
+      TargetObject = FoundActor;
+      ObjectPath = FoundActor->GetPathName();
+    }
     }
     if (!TargetObject) {
       SendAutomationResponse(
@@ -2092,10 +2093,10 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
 
     // Compatibility: allow passing actor label/name/path as objectPath.
     if (!TargetObject) {
-      if (AActor *FoundActor = FindActorByName(ObjectPath)) {
-        TargetObject = FoundActor;
-        ObjectPath = FoundActor->GetPathName();
-      }
+    if (AActor *FoundActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ObjectPath)) {
+      TargetObject = FoundActor;
+      ObjectPath = FoundActor->GetPathName();
+    }
     }
     if (!TargetObject) {
       SendAutomationResponse(
@@ -2167,10 +2168,10 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
 
     // Compatibility: allow passing actor label/name/path as objectPath.
     if (!TargetObject) {
-      if (AActor *FoundActor = FindActorByName(ObjectPath)) {
-        TargetObject = FoundActor;
-        ObjectPath = FoundActor->GetPathName();
-      }
+    if (AActor *FoundActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ObjectPath)) {
+      TargetObject = FoundActor;
+      ObjectPath = FoundActor->GetPathName();
+    }
     }
     if (!TargetObject) {
       SendAutomationResponse(
@@ -2470,7 +2471,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
       return true;
     }
 
-    AActor *FoundActor = FindActorByName(ObjectPath);
+  AActor *FoundActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ObjectPath);
+
     if (!FoundActor) {
       if (UObject *Asset = UEditorAssetLibrary::LoadAsset(ObjectPath)) {
         if (UBlueprint *BP = Cast<UBlueprint>(Asset)) {
@@ -2680,10 +2682,12 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
 
     AActor *TargetActor = nullptr;
     if (!ActorName.IsEmpty()) {
-      TargetActor = FindActorByName(ActorName);
+  TargetActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ActorName);
+
     }
     if (!TargetActor && !ObjectPath.IsEmpty()) {
-      TargetActor = FindActorByName(ObjectPath);
+  TargetActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ObjectPath);
+
     }
 
     if (!TargetActor) {
@@ -2771,10 +2775,12 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
 
     AActor *TargetActor = nullptr;
     if (!ActorName.IsEmpty()) {
-      TargetActor = FindActorByName(ActorName);
+  TargetActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ActorName);
+
     }
     if (!TargetActor && !ObjectPath.IsEmpty()) {
-      TargetActor = FindActorByName(ObjectPath);
+  TargetActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ObjectPath);
+
     }
 
     if (!TargetActor) {
@@ -2864,10 +2870,12 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
 
     AActor *TargetActor = nullptr;
     if (!ActorName.IsEmpty()) {
-      TargetActor = FindActorByName(ActorName);
+  TargetActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ActorName);
+
     }
     if (!TargetActor && !ObjectPath.IsEmpty()) {
-      TargetActor = FindActorByName(ObjectPath);
+  TargetActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ObjectPath);
+
     }
 
     if (!TargetActor) {

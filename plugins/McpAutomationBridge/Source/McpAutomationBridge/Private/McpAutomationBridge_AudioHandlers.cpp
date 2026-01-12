@@ -399,7 +399,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
     if (!GEditor)
       return false;
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = GetActiveWorld();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("No world context available"), TEXT("NO_WORLD"));
@@ -449,7 +449,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
     if (!GEditor)
       return true;
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = GetActiveWorld();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
                           TEXT("NO_WORLD"));
@@ -599,9 +599,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
     USoundMix *Mix = ResolveSoundMix(MixName);
     if (Mix) {
-      if (GEditor && GEditor->GetEditorWorldContext().World()) {
+      if (GEditor && GetActiveWorld()) {
         UGameplayStatics::PushSoundMixModifier(
-            GEditor->GetEditorWorldContext().World(), Mix);
+            GetActiveWorld(), Mix);
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("mixName"), MixName);
@@ -628,9 +628,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
     USoundMix *Mix = ResolveSoundMix(MixName);
     if (Mix) {
-      if (GEditor && GEditor->GetEditorWorldContext().World()) {
+      if (GEditor && GetActiveWorld()) {
         UGameplayStatics::PopSoundMixModifier(
-            GEditor->GetEditorWorldContext().World(), Mix);
+            GetActiveWorld(), Mix);
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("mixName"), MixName);
@@ -670,9 +670,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     bool bApply = true;
     Payload->TryGetBoolField(TEXT("applyToChildren"), bApply);
 
-    if (GEditor && GEditor->GetEditorWorldContext().World()) {
+    if (GEditor && GetActiveWorld()) {
       UGameplayStatics::SetSoundMixClassOverride(
-          GEditor->GetEditorWorldContext().World(), Mix, Class, (float)Volume,
+          GetActiveWorld(), Mix, Class, (float)Volume,
           (float)Pitch, (float)FadeTime, bApply);
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);
@@ -701,7 +701,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
     if (!GEditor)
       return true;
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = GetActiveWorld();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
                           TEXT("NO_WORLD"));
@@ -764,7 +764,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
     if (!GEditor)
       return true;
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = GetActiveWorld();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
                           TEXT("NO_WORLD"));
@@ -844,7 +844,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
     if (!GEditor)
       return true;
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = GetActiveWorld();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
                           TEXT("NO_WORLD"));
@@ -912,7 +912,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
     if (!GEditor)
       return true;
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = GetActiveWorld();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
                           TEXT("NO_WORLD"));
@@ -953,9 +953,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     double FadeTime = 1.0;
     Payload->TryGetNumberField(TEXT("fadeOutTime"), FadeTime);
 
-    if (GEditor && GEditor->GetEditorWorldContext().World()) {
+    if (GEditor && GetActiveWorld()) {
       UGameplayStatics::ClearSoundMixClassOverride(
-          GEditor->GetEditorWorldContext().World(), Mix, Class,
+          GetActiveWorld(), Mix, Class,
           (float)FadeTime);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Sound mix override cleared"), nullptr);
@@ -973,9 +973,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
-    if (GEditor && GEditor->GetEditorWorldContext().World()) {
+    if (GEditor && GetActiveWorld()) {
       UGameplayStatics::SetBaseSoundMix(
-          GEditor->GetEditorWorldContext().World(), Mix);
+          GetActiveWorld(), Mix);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Base sound mix set"), nullptr);
     } else {
@@ -1028,7 +1028,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
     UAudioComponent *AudioComp = nullptr;
     UWorld *World =
-        GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        GetActiveWorld();
 
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world"),

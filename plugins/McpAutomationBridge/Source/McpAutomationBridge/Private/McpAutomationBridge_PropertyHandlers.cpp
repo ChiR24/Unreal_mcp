@@ -50,7 +50,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   UObject *RootObject = FindObject<UObject>(nullptr, *ObjectPath);
 #if WITH_EDITOR
   if (!RootObject) {
-    if (AActor *FoundActor = FindActorByName(ObjectPath)) {
+    if (AActor *FoundActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ObjectPath)) {
       RootObject = FoundActor;
       // Normalize for downstream error messages / responses
       ObjectPath = FoundActor->GetPathName();
@@ -311,7 +311,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
   UObject *RootObject = FindObject<UObject>(nullptr, *ObjectPath);
 #if WITH_EDITOR
   if (!RootObject) {
-    if (AActor *FoundActor = FindActorByName(ObjectPath)) {
+    if (AActor *FoundActor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ObjectPath)) {
       RootObject = FoundActor;
       // Normalize for downstream error messages / responses
       ObjectPath = FoundActor->GetPathName();

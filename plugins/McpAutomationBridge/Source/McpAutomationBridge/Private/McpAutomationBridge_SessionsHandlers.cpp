@@ -475,7 +475,7 @@ static bool HandleHostLanServer(
         }
         else if (GEditor)
         {
-            World = GEditor->GetEditorWorldContext().World();
+            World = GetActiveWorld();
         }
         
         if (World)

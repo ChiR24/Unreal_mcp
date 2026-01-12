@@ -1008,7 +1008,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
 
 #if WITH_EDITOR
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = GetActiveWorld();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
       return true;
@@ -1268,7 +1268,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
 
     if (!ActorName.IsEmpty()) {
 #if WITH_EDITOR
-      UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+      UWorld* World = GetActiveWorld();
       if (World) {
         AActor* FoundActor = nullptr;
         for (TActorIterator<AActor> It(World); It; ++It) {

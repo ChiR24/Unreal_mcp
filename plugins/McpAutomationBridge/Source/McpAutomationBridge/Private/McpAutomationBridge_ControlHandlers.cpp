@@ -86,79 +86,10 @@
 // (ExtractVectorField and ExtractRotatorField moved to
 // McpAutomationBridgeHelpers.h)
 
-AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target) {
-#if WITH_EDITOR
-  if (Target.IsEmpty() || !GEditor)
-    return nullptr;
-
-  // Priority: PIE World if active
-  if (GEditor->PlayWorld) {
-    for (TActorIterator<AActor> It(GEditor->PlayWorld); It; ++It) {
-      AActor *A = *It;
-      if (!A)
-        continue;
-      if (A->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
-          A->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
-          A->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) {
-        return A;
-      }
-    }
-    // If not found in PIE, do we fall back to Editor World?
-    // Probably not, because interacting with Editor world during PIE is
-    // confusing. But for "Editor subsystems" usage, we usually want Editor
-    // world. Let's fallback if not found, just in case.
-  }
-
-  UEditorActorSubsystem *ActorSS =
-      GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-  if (!ActorSS)
-    return nullptr;
-
-  TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-  AActor *ExactMatch = nullptr;
-  TArray<AActor *> FuzzyMatches;
-
-  for (AActor *A : AllActors) {
-    if (!A)
-      continue;
-    if (A->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
-        A->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
-        A->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) {
-      ExactMatch = A;
-      break;
-    }
-    // Collect fuzzy matches
-    if (A->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase)) {
-      FuzzyMatches.Add(A);
-    }
-  }
-
-  if (ExactMatch) {
-    return ExactMatch;
-  }
-
-  // If no exact match, check fuzzy matches
-  if (FuzzyMatches.Num() == 1) {
-    return FuzzyMatches[0];
-  } else if (FuzzyMatches.Num() > 1) {
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-           TEXT("FindActorByName: Ambiguous match for '%s'. Found %d matches."),
-           *Target, FuzzyMatches.Num());
-  }
-
-  // Fallback: try to load as asset if it looks like a path
-  if (Target.StartsWith(TEXT("/"))) {
-    if (UObject *Obj = UEditorAssetLibrary::LoadAsset(Target)) {
-      return Cast<AActor>(Obj);
-    }
-  }
-#endif
-  return nullptr;
-}
-
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
+
 #if WITH_EDITOR
   FString ClassPath;
   Payload->TryGetStringField(TEXT("classPath"), ClassPath);
@@ -532,7 +463,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
   TArray<FString> Missing;
 
   for (const FString &Name : Targets) {
-    AActor *Found = FindActorByName(Name);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), Name);
+
     if (!Found) {
       Missing.Add(Name);
       continue;
@@ -594,8 +526,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
   FVector ForceVector =
       ExtractVectorField(Payload, TEXT("force"), FVector::ZeroVector);
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -699,8 +632,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -774,8 +708,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetTransform(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"));
     return true;
@@ -828,8 +763,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   if (Payload->HasField(TEXT("visible")))
     Payload->TryGetBoolField(TEXT("visible"), bVisible);
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -901,8 +837,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   FString ComponentName;
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -1050,8 +987,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -1203,9 +1141,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   // Fallback: Check if it's a Blueprint asset to inspect CDO components
   if (!Found) {
+
     if (UObject *Asset = UEditorAssetLibrary::LoadAsset(TargetName)) {
       if (UBlueprint *BP = Cast<UBlueprint>(Asset)) {
         if (BP->GeneratedClass) {
@@ -1281,8 +1220,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -1343,8 +1283,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
     return true;
   }
 
-  AActor *Child = FindActorByName(ChildName);
-  AActor *Parent = FindActorByName(ParentName);
+  AActor *Child = FindActorByLabelOrName<AActor>(GetActiveWorld(), ChildName);
+  AActor *Parent = FindActorByLabelOrName<AActor>(GetActiveWorld(), ParentName);
+
   if (!Child || !Parent) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Child or parent actor not found"), nullptr,
@@ -1417,8 +1358,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -1537,8 +1479,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -1679,8 +1622,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -1746,8 +1690,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCreateSnapshot(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -1789,8 +1734,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -1833,8 +1779,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorExport(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -1868,8 +1815,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -1910,8 +1858,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetMetadata(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -1964,8 +1913,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;
@@ -2273,7 +2223,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
     return true;
   }
 
-  AActor *Found = FindActorByName(ActorName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), ActorName);
+
   if (!Found) {
     SendAutomationResponse(
         Socket, RequestId, false,
@@ -2628,8 +2579,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGet(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
+  AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), TargetName);
   if (!Found) {
+
     SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
                            nullptr, TEXT("ACTOR_NOT_FOUND"));
     return true;

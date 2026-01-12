@@ -396,7 +396,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         {TEXT("Literal"), TEXT("K2Node_Literal")},
     };
 
-    // Helper: Try to find a UK2Node subclass by name
+      // Helper: Try to find a UK2Node subclass by name
     auto FindNodeClassByName = [](const FString &TypeName) -> UClass * {
       // First check for aliases
       FString ResolvedName = TypeName;
@@ -415,16 +415,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         NamesToTry.Add(FString::Printf(TEXT("UK2Node_%s"), *TypeName));
       }
 
-      for (TObjectIterator<UClass> It; It; ++It) {
-        if (!It->IsChildOf(UEdGraphNode::StaticClass()))
-          continue;
-        if (It->HasAnyClassFlags(CLASS_Abstract))
-          continue;
+      TArray<UClass *> NodeClasses;
+      GetDerivedClasses(UEdGraphNode::StaticClass(), NodeClasses);
 
+      for (UClass *It : NodeClasses) {
         FString ClassName = It->GetName();
         for (const FString &NameToMatch : NamesToTry) {
           if (ClassName.Equals(NameToMatch, ESearchCase::IgnoreCase)) {
-            return *It;
+            return It;
           }
         }
       }
@@ -1069,12 +1067,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
   } else if (SubAction == TEXT("list_node_types")) {
     // List all available UK2Node types for AI discoverability
     TArray<TSharedPtr<FJsonValue>> NodeTypes;
-    for (TObjectIterator<UClass> It; It; ++It) {
-      if (!It->IsChildOf(UK2Node::StaticClass()))
-        continue;
-      if (It->HasAnyClassFlags(CLASS_Abstract))
-        continue;
+    TArray<UClass *> NodeClasses;
+    GetDerivedClasses(UK2Node::StaticClass(), NodeClasses);
 
+    for (UClass *It : NodeClasses) {
       TSharedPtr<FJsonObject> TypeObj = MakeShared<FJsonObject>();
       TypeObj->SetStringField(TEXT("className"), It->GetName());
       TypeObj->SetStringField(TEXT("displayName"),

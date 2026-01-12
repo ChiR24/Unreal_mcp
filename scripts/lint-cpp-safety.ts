@@ -80,6 +80,11 @@ function scanText(fileRel: string, text: string): Finding[] {
       label: 'FindActorByName',
       recommendation: 'Prefer FindActorByLabelOrName<T>(...) from McpAutomationBridgeHelpers.h.',
     },
+    {
+      pattern: /\bTObjectIterator\b/g,
+      label: 'TObjectIterator',
+      recommendation: 'Avoid TObjectIterator for performance; use UWorld-scoped iterators or Asset Registry.',
+    },
   ];
 
   const lines = text.split(/\r?\n/);
@@ -105,10 +110,16 @@ function scanText(fileRel: string, text: string): Finding[] {
   return findings;
 }
 
+import { fileURLToPath } from 'url';
+
+// ...
+
 async function main(): Promise<void> {
   const { format } = parseArgs(process.argv);
 
-  const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const repoRoot = path.resolve(__dirname, '..');
   const pluginRoot = path.join(
     repoRoot,
     'plugins',

@@ -140,14 +140,14 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
     return true;
   }
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  if (!GEditor || !GetActiveWorld()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
     return true;
   }
 
-  UWorld *World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GetActiveWorld();
 
   if (!UEditorAssetLibrary::DoesAssetExist(FoliageTypePath)) {
     SendAutomationError(
@@ -244,14 +244,14 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
   bool bRemoveAll = false;
   Payload->TryGetBoolField(TEXT("removeAll"), bRemoveAll);
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  if (!GEditor || !GetActiveWorld()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
     return true;
   }
 
-  UWorld *World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GetActiveWorld();
   AInstancedFoliageActor *IFA =
       GetOrCreateFoliageActorForWorldSafe(World, false);
   if (!IFA) {
@@ -327,14 +327,14 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
         FString::Printf(TEXT("/Game/Foliage/%s"), *FoliageTypePath);
   }
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  if (!GEditor || !GetActiveWorld()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
     return true;
   }
 
-  UWorld *World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GetActiveWorld();
   AInstancedFoliageActor *IFA =
       GetOrCreateFoliageActorForWorldSafe(World, false);
   if (!IFA) {
@@ -719,14 +719,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
     }
   }
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  if (!GEditor || !GetActiveWorld()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
     return true;
   }
 
-  UWorld *World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GetActiveWorld();
 
   // Use Silent load to avoid engine warnings
   UFoliageType *FoliageType = Cast<UFoliageType>(
@@ -1221,7 +1221,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageTypes(
     return true;
   }
 
-  UWorld *World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GetActiveWorld();
   if (!World) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("No world available"),

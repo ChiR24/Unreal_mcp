@@ -361,16 +361,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             DurationSeconds = 5.0;
         }
 
-        UWorld* World = GetActiveWorld();
-        if (!World)
-        {
-            Result = MakeLiveLinkError(TEXT("No active world available for message bus discovery"), TEXT("WORLD_NOT_FOUND"));
-            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
-            return true;
-        }
-
-        ULiveLinkMessageBusFinder* Finder = ULiveLinkMessageBusFinder::ConstructMessageBusFinder();
-        if (!Finder)
+        UWorld* World = GetActiveWorld();        if (!Finder)
         {
             Result = MakeLiveLinkError(TEXT("Failed to construct LiveLinkMessageBusFinder"), TEXT("FINDER_CREATE_FAILED"));
             SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
@@ -1342,7 +1333,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
         }
         else
         {
-            UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+            UWorld* World = GetActiveWorld();
             if (World)
             {
                 AActor* TargetActor = nullptr;
@@ -1404,7 +1395,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             return true;
         }
 
-        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        UWorld* World = GetActiveWorld();
         if (!World)
         {
             Result = MakeLiveLinkError(TEXT("No editor world available"), TEXT("NO_WORLD"));

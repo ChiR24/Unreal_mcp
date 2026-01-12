@@ -55,7 +55,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
 
     // Execute memreport command
     FString Cmd = bDetailed ? TEXT("memreport -full") : TEXT("memreport");
-    GEngine->Exec(GEditor->GetEditorWorldContext().World(), *Cmd);
+    GEngine->Exec(GetActiveWorld(), *Cmd);
 
     // If output path provided, we might want to move the log file, but
     // memreport writes to a specific location. For now, just acknowledge
@@ -66,14 +66,14 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     return true;
   } else if (Lower == TEXT("start_profiling")) {
     // "stat startfile"
-    GEngine->Exec(GEditor->GetEditorWorldContext().World(),
+    GEngine->Exec(GetActiveWorld(),
                   TEXT("stat startfile"));
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Profiling started"), nullptr);
     return true;
   } else if (Lower == TEXT("stop_profiling")) {
     // "stat stopfile"
-    GEngine->Exec(GEditor->GetEditorWorldContext().World(),
+    GEngine->Exec(GetActiveWorld(),
                   TEXT("stat stopfile"));
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Profiling stopped"), nullptr);
@@ -86,7 +86,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     // want to run the command. For explicit set, we can use "stat fps 1" or
     // "stat fps 0" if supported, but typically it's a toggle. Better: use
     // GAreyouSure? No, just exec.
-    GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat fps"));
+    GEngine->Exec(GetActiveWorld(), TEXT("stat fps"));
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("FPS stat toggled"), nullptr);
     return true;
@@ -94,7 +94,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     FString Category;
     if (Payload->TryGetStringField(TEXT("category"), Category) &&
         !Category.IsEmpty()) {
-      GEngine->Exec(GEditor->GetEditorWorldContext().World(),
+      GEngine->Exec(GetActiveWorld(),
                     *FString::Printf(TEXT("stat %s"), *Category));
       SendAutomationResponse(
           RequestingSocket, RequestId, true,
@@ -201,9 +201,9 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     if (Payload->TryGetBoolField(TEXT("boostPlayerLocation"), bBoost) &&
         bBoost) {
       // Logic to boost streaming around player
-      if (GEditor && GEditor->GetEditorWorldContext().World()) {
+      if (GEditor && GetActiveWorld()) {
         APlayerCameraManager *Cam = UGameplayStatics::GetPlayerCameraManager(
-            GEditor->GetEditorWorldContext().World(), 0);
+            GetActiveWorld(), 0);
         if (Cam) {
           IStreamingManager::Get().AddViewLocation(Cam->GetCameraLocation());
         }
@@ -235,7 +235,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
       return true;
     }
 
-    if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+    if (!GEditor || !GetActiveWorld()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
           TEXT("Editor world not available for merge_actors"), nullptr,
@@ -243,7 +243,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
       return true;
     }
 
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = GetActiveWorld();
     TArray<AActor *> ActorsToMerge;
 
     auto ResolveActorByName = [World](const FString &Name) -> AActor * {

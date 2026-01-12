@@ -65,7 +65,7 @@ namespace VolumeHelpers
     {
         if (GEditor)
         {
-            return GEditor->GetEditorWorldContext().World();
+            return GetActiveWorld();
         }
         return nullptr;
     }
