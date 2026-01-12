@@ -13,15 +13,19 @@
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "McpAutomationBridgeHelpers.h"
 
 // Editor-only includes for ExecuteEditorCommands
 #if WITH_EDITOR
 #include "Editor.h"
-#include "McpAutomationBridgeHelpers.h"
 #endif
 
 // Define the subsystem log category declared in the public header.
 DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
+
+// Static member initialization
+TArray<TSharedPtr<FJsonObject>>* UMcpAutomationBridgeSubsystem::CapturedResponses = nullptr;
+bool UMcpAutomationBridgeSubsystem::bIsCapturingResponses = false;
 
 // Sanitize incoming text for logging: replace control characters with
 // '?' and truncate long messages so logs remain readable and do not
@@ -226,6 +230,22 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
     const bool bSuccess, const FString &Message,
     const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode) {
+  // Intercept responses if we are in a batch capture scope
+  if (bIsCapturingResponses && CapturedResponses) {
+      TSharedPtr<FJsonObject> ResponsePayload = MakeShared<FJsonObject>();
+      ResponsePayload->SetStringField(TEXT("requestId"), RequestId);
+      ResponsePayload->SetBoolField(TEXT("success"), bSuccess);
+      ResponsePayload->SetStringField(TEXT("message"), Message);
+      if (Result.IsValid()) {
+          ResponsePayload->SetObjectField(TEXT("result"), Result);
+      }
+      if (!ErrorCode.IsEmpty()) {
+          ResponsePayload->SetStringField(TEXT("error"), ErrorCode);
+      }
+      CapturedResponses->Add(ResponsePayload);
+      return;
+  }
+
   if (ConnectionManager.IsValid()) {
     ConnectionManager->SendAutomationResponse(TargetSocket, RequestId, bSuccess,
                                               Message, Result, ErrorCode);
@@ -682,6 +702,41 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   });
 
   // Tools & System
+  RegisterHandler(TEXT("get_output_log"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+                    TArray<TSharedPtr<FJsonValue>> LogArray;
+                    if (GGlobalMcpLogCapture) {
+                      for (const FString &Line :
+                           GGlobalMcpLogCapture->GetCapturedLogs()) {
+                        LogArray.Add(MakeShared<FJsonValueString>(Line));
+                      }
+                    }
+                    ResultObj->SetArrayField(TEXT("logs"), LogArray);
+                    return MakeSuccessResponse(TEXT("Logs retrieved"), ResultObj);
+                  });
+
+  RegisterHandler(TEXT("get_editor_status"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) {
+      TSharedPtr<FJsonObject> Status = MakeShared<FJsonObject>();
+      bool bIsPIE = false;
+      #if WITH_EDITOR
+      if (GEditor && GEditor->PlayWorld) bIsPIE = true;
+      #endif
+      Status->SetBoolField(TEXT("isPIE"), bIsPIE);
+      
+      FString MapName = TEXT("Unknown");
+      if (UWorld* World = GetActiveWorld()) {
+          MapName = World->GetMapName();
+      }
+      Status->SetStringField(TEXT("mapName"), MapName);
+      Status->SetStringField(TEXT("engineVersion"), FEngineVersion::Current().ToString());
+      Status->SetNumberField(TEXT("uptimeSeconds"), FPlatformTime::Seconds());
+      
+      return MakeSuccessResponse(TEXT("Editor status retrieved"), Status);
+  });
+
   RegisterHandler(TEXT("console_command"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
@@ -1175,6 +1230,20 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleSetupRagdoll(R, A, P, S);
+                  });
+
+  // Modern AI Handlers
+  RegisterHandler(TEXT("bind_statetree"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleBindStateTree(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("spawn_mass_entity"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleSpawnMassEntity(R, A, P, S);
                   });
 }
 

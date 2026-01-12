@@ -120,6 +120,11 @@ public:
   void RegisterHandler(const FString &Action, FAutomationHandler Handler);
 
 private:
+    // Batch execution support
+    static TArray<TSharedPtr<FJsonObject>>* CapturedResponses;
+    static bool bIsCapturingResponses;
+    friend class FScopedResponseCapture;
+
   // Telemetry structs moved to McpConnectionManager
 
   bool Tick(float DeltaTime);
@@ -839,6 +844,14 @@ private:
   HandleUiAutomationAction(const FString &RequestId, const FString &Action,
                            const TSharedPtr<FJsonObject> &Payload,
                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+  // Modern AI Handlers
+  bool HandleBindStateTree(const FString &RequestId, const FString &Action,
+                           const TSharedPtr<FJsonObject> &Payload,
+                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleSpawnMassEntity(const FString &RequestId, const FString &Action,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
 private:
   // Ticker handle for managing the subsystems tick function
