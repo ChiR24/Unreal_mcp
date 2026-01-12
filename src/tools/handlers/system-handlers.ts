@@ -590,7 +590,20 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       };
     }
     case 'read_log':
-      return cleanObject(await tools.logTools.readOutputLog(args as Record<string, unknown>));
+      return cleanObject(await tools.logTools.readOutputLog(args as Record<string, unknown>)) as HandlerResult;
+    case 'batch_execute': {
+      const requests = (argsTyped as Record<string, unknown>).requests;
+      if (!Array.isArray(requests)) {
+        return {
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'requests must be an array',
+          action: 'batch_execute'
+        };
+      }
+      // Pass through to bridge
+      return cleanObject(await executeAutomationRequest(tools, 'system_control', { action: 'batch_execute', requests }, 'Automation bridge not available')) as HandlerResult;
+    }
     default: {
       const res = await executeAutomationRequest(tools, 'system_control', args, 'Automation bridge not available for system control operations');
       return cleanObject(res) as HandlerResult;

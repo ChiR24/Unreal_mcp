@@ -402,6 +402,12 @@ const testCases = [
   { scenario: 'AssetPlugins: Get Substance outputs (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_substance_outputs', instancePath: '/Game/NonExistent' }, expected: 'success|not available' },
   { scenario: 'AssetPlugins: Get Substance graph info (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_substance_graph_info', assetPath: '/Game/NonExistent' }, expected: 'success|not available' },
   
+  // ==================== Phase 1 Modernization: Batch Execution ====================
+  { scenario: 'System: Batch execute', toolName: 'system_control', arguments: { action: 'batch_execute', requests: [
+    { tool: 'system_control', action: 'execute_command', payload: { command: 'Log Batch Request 1' } },
+    { tool: 'system_control', action: 'execute_command', payload: { command: 'Log Batch Request 2' } }
+  ] }, expected: 'success' },
+
   // Cleanup tests
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }

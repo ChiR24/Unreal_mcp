@@ -27,6 +27,8 @@ export class ResourceRegistry {
                     { uri: 'ue://assets', name: 'Assets', description: 'Project assets', mimeType: 'application/json' },
                     { uri: 'ue://health', name: 'Health Status', description: 'Server health and performance metrics', mimeType: 'application/json' },
                     { uri: 'ue://automation-bridge', name: 'Automation Bridge', description: 'Automation bridge diagnostics and recent activity', mimeType: 'application/json' },
+                    { uri: 'unreal://logs', name: 'Editor Logs', description: 'Recent output logs (last 1000 lines)', mimeType: 'text/plain' },
+                    { uri: 'unreal://editor/status', name: 'Editor Status', description: 'Current editor state (PIE, Map, Version)', mimeType: 'application/json' },
                     { uri: 'ue://version', name: 'Engine Version', description: 'Unreal Engine version and compatibility info', mimeType: 'application/json' }
                 ]
             };

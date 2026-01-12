@@ -242,6 +242,10 @@ function registerDefaultHandlers() {
       const payload = { ...args, subAction: action };
       return cleanObject(await executeAutomationRequest(tools, 'manage_ui', payload, 'Automation bridge not available'));
     }
+    // Route batch_execute to system handlers
+    if (action === 'batch_execute') {
+      return await handleSystemTools(action, args, tools);
+    }
     // Route Enhanced Input actions (merged from manage_input - Phase 54)
     if (INPUT_ACTIONS.has(action)) {
       return await handleInputTools(action, args, tools);

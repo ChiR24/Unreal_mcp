@@ -180,6 +180,40 @@ export class ResourceHandler {
         };
       }
 
+      if (uri === 'unreal://logs') {
+        const ok = await this.ensureConnected();
+        if (!ok) {
+          return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
+        }
+        const response = await this.automationBridge.sendAutomationRequest('get_output_log', {});
+        const result = (response.result as { logs?: string[] }) || {};
+        const logs = result.logs || [];
+        const text = logs.join('\n');
+        return {
+          contents: [{
+            uri,
+            mimeType: 'text/plain',
+            text
+          }]
+        };
+      }
+
+      if (uri === 'unreal://editor/status') {
+        const ok = await this.ensureConnected();
+        if (!ok) {
+          return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
+        }
+        const response = await this.automationBridge.sendAutomationRequest('get_editor_status', {});
+        const result = response.result || {};
+        return {
+          contents: [{
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(result, null, 2)
+          }]
+        };
+      }
+
       throw new Error(`Unknown resource: ${uri}`);
     });
   }

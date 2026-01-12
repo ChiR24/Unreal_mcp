@@ -221,8 +221,15 @@ export async function handleAITools(
       return sendRequest('configure_state_tree_task');
     }
 
+    case 'bind_statetree': {
+      requireNonEmptyString(argsRecord.target, 'target', 'Missing required parameter: target');
+      requireNonEmptyString(argsRecord.assetPath, 'assetPath', 'Missing required parameter: assetPath');
+      return sendRequest('bind_statetree');
+    }
+
     // =========================================================================
     // 16.7 Smart Objects (4 actions)
+
     // =========================================================================
 
     case 'create_smart_object_definition': {
@@ -265,8 +272,15 @@ export async function handleAITools(
       return sendRequest('add_mass_spawner');
     }
 
+    case 'spawn_mass_entity': {
+      requireNonEmptyString(argsRecord.configPath, 'configPath', 'Missing required parameter: configPath');
+      // count is optional, defaults to 1
+      return sendRequest('spawn_mass_entity');
+    }
+
     // =========================================================================
     // Utility (1 action)
+
     // =========================================================================
 
     case 'get_ai_info': {

@@ -216,7 +216,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'profile', 'show_fps', 'set_quality', 'set_resolution', 'set_fullscreen',
             'run_ubt', 'run_tests', 'subscribe', 'unsubscribe', 'spawn_category', 'start_session', 'lumen_update_scene',
             'play_sound', 'create_widget', 'show_widget', 'add_widget_child',
-            'set_cvar', 'get_project_settings', 'validate_assets', 'set_project_setting'
+            'set_cvar', 'get_project_settings', 'validate_assets', 'set_project_setting',
+            'batch_execute'
           ],
           description: 'Editor action'
         },
@@ -255,7 +256,20 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         parentName: commonSchemas.stringProp,
         section: commonSchemas.stringProp,
         value: commonSchemas.stringProp,
-        configName: commonSchemas.stringProp
+        configName: commonSchemas.stringProp,
+        requests: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              tool: { type: 'string' },
+              action: { type: 'string' },
+              payload: { type: 'object' }
+            },
+            required: ['tool', 'action']
+          },
+          description: 'List of requests to execute in batch.'
+        }
       },
       required: ['action']
     },
@@ -2138,7 +2152,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'add_ai_perception_component', 'configure_sight_config', 'configure_hearing_config', 'configure_damage_sense_config', 'set_perception_team',
             'create_state_tree', 'add_state_tree_state', 'add_state_tree_transition', 'configure_state_tree_task',
             'create_smart_object_definition', 'add_smart_object_slot', 'configure_slot_behavior', 'add_smart_object_component',
-            'create_mass_entity_config', 'configure_mass_entity', 'add_mass_spawner',
+            'bind_statetree',
+            'create_mass_entity_config', 'configure_mass_entity', 'add_mass_spawner', 'spawn_mass_entity',
             'get_ai_info',
             // Behavior Tree graph operations (merged from manage_behavior_tree)
             'bt_add_node', 'bt_connect_nodes', 'bt_remove_node', 'bt_break_connections', 'bt_set_node_properties',
@@ -2337,6 +2352,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         },
         slotEnabled: { type: 'boolean', description: 'Whether slot is enabled.' },
         configPath: commonSchemas.configPath,
+        target: { type: 'string', description: 'Target actor name or path.' },
+        count: commonSchemas.numberProp,
         massTraits: {
           type: 'array',
           items: commonSchemas.stringProp,
