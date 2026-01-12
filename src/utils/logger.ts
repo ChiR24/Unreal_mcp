@@ -16,6 +16,10 @@ export class Logger {
     return order.indexOf(level) >= order.indexOf(this.level);
   }
 
+  isDebugEnabled(): boolean {
+    return this.shouldLog('debug');
+  }
+
   debug(...args: unknown[]) {
     if (!this.shouldLog('debug')) return;
     // Write to stderr to avoid corrupting MCP stdout stream

@@ -189,13 +189,17 @@ export class AutomationBridge extends EventEmitter {
             const url = `ws://${this.clientHost}:${this.clientPort}`;
             this.log.info(`Connecting to Unreal Engine automation server at ${url}`);
 
-            this.log.debug(`Negotiated protocols: ${JSON.stringify(this.negotiatedProtocols)}`);
+            if (this.log.isDebugEnabled()) {
+                this.log.debug(`Negotiated protocols: ${JSON.stringify(this.negotiatedProtocols)}`);
+            }
 
             const protocols = this.negotiatedProtocols.length === 1
                 ? this.negotiatedProtocols[0]
                 : this.negotiatedProtocols;
 
-            this.log.debug(`Using WebSocket protocols arg: ${JSON.stringify(protocols)}`);
+            if (this.log.isDebugEnabled()) {
+                this.log.debug(`Using WebSocket protocols arg: ${JSON.stringify(protocols)}`);
+            }
 
             const headers: Record<string, string> | undefined = this.capabilityToken
                 ? {
