@@ -793,6 +793,13 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleControlActorAction(R, A, P, S);
                   });
 
+  RegisterHandler(TEXT("control_editor"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlEditorAction(R, A, P, S);
+                  });
+
   RegisterHandler(TEXT("manage_level"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,

@@ -146,6 +146,46 @@ interface Blueprint {
   scsHierarchy?: Record<string, unknown>;
 }
 
+interface Component {
+  name: string;
+  type: string;
+  properties?: Record<string, unknown>;
+}
+
+interface Level {
+  name: string;
+  path: string;
+  actors: Actor[];
+  streamingLevels: string[];
+  lightingQuality?: string;
+  loaded: boolean;
+}
+
+interface MaterialParameter {
+  name: string;
+  type: string;
+  value?: unknown;
+}
+
+interface SequenceTrack {
+  name: string;
+  type: string;
+  clips: SequenceClip[];
+}
+
+interface SequenceClip {
+  name: string;
+  startTime: number;
+  endTime: number;
+}
+
+interface WorldPartitionCell {
+  name: string;
+  bounds: { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } };
+  isLoaded: boolean;
+  dataLayers?: string[];
+}
+
 import { Logger } from '../utils/logger.js';
 
 const log = new Logger('GraphQL:Resolvers');
@@ -479,7 +519,7 @@ export const resolvers = {
 
         if (response.success && response.result) {
           const resultObj = response.result as Record<string, unknown>;
-          return (resultObj.levels || []) as unknown[];
+          return (resultObj.levels || []) as Level[];
         }
 
         return [];
@@ -600,7 +640,7 @@ export const resolvers = {
 
         if (response.success && response.result) {
           const resultObj = response.result as Record<string, unknown>;
-          return (resultObj.cells || []) as unknown[];
+          return (resultObj.cells || []) as WorldPartitionCell[];
         }
         return [];
       } catch (error: unknown) {
@@ -691,7 +731,7 @@ export const resolvers = {
 
         if (response.success && response.result) {
           const resultObj = response.result as Record<string, unknown>;
-          return (resultObj.results || []) as unknown[];
+          return (resultObj.results || []) as Record<string, unknown>[];
         }
 
         return [];
@@ -1012,7 +1052,7 @@ export const resolvers = {
 
         if (response.success && response.result) {
           const resultObj = response.result as Record<string, unknown>;
-          return (resultObj.components || []) as unknown[];
+          return (resultObj.components || []) as Component[];
         }
 
         return [];
@@ -1054,7 +1094,7 @@ export const resolvers = {
 
         if (response.success && response.result) {
           const resultObj = response.result as Record<string, unknown>;
-          return (resultObj.parameters || []) as unknown[];
+          return (resultObj.parameters || []) as MaterialParameter[];
         }
 
         return [];
@@ -1078,7 +1118,7 @@ export const resolvers = {
 
         if (response.success && response.result) {
           const resultObj = response.result as Record<string, unknown>;
-          return (resultObj.tracks || []) as unknown[];
+          return (resultObj.tracks || []) as SequenceTrack[];
         }
 
         return [];

@@ -191,6 +191,7 @@ export interface IEditorTools {
     jumpToCameraBookmark(name: string): Promise<StandardActionResponse>;
     setEditorPreferences(category: string | undefined, preferences: Record<string, unknown>): Promise<StandardActionResponse>;
     setViewportResolution(width: number, height: number): Promise<StandardActionResponse>;
+    setViewportRealtime(enabled: boolean): Promise<StandardActionResponse>;
     executeConsoleCommand(command: string): Promise<StandardActionResponse>;
 }
 

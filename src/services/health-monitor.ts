@@ -1,5 +1,6 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { Logger } from '../utils/logger.js';
+import { ErrorToolResponse } from '../utils/error-handler.js';
 
 export interface PerformanceMetrics {
   totalRequests: number;
@@ -54,14 +55,14 @@ export class HealthMonitor {
     this.metrics.averageResponseTime = this.metrics.responseTimes.reduce((a, b) => a + b, 0) / this.metrics.responseTimes.length;
   }
 
-  recordError(errorResponse: Record<string, unknown>) {
+  recordError(errorResponse: ErrorToolResponse | Record<string, unknown>) {
       try {
-        const debugObj = errorResponse._debug as Record<string, unknown> | undefined;
+        const debugObj = (errorResponse as ErrorToolResponse)._debug || (errorResponse as Record<string, unknown>)._debug as Record<string, unknown> | undefined;
         this.metrics.recentErrors.push({
           time: new Date().toISOString(),
           scope: typeof errorResponse.scope === 'string' ? errorResponse.scope : 'unknown',
           type: typeof debugObj?.errorType === 'string' ? debugObj.errorType : 'UNKNOWN',
-          message: typeof errorResponse.error === 'string' ? errorResponse.error : (typeof errorResponse.message === 'string' ? errorResponse.message : 'Unknown error'),
+          message: typeof errorResponse.error === 'string' ? errorResponse.error : (typeof (errorResponse as Record<string, unknown>).message === 'string' ? (errorResponse as Record<string, unknown>).message as string : 'Unknown error'),
           retriable: Boolean(errorResponse.retriable)
         });
         if (this.metrics.recentErrors.length > 20) this.metrics.recentErrors.splice(0, this.metrics.recentErrors.length - 20);

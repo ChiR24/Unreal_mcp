@@ -581,8 +581,8 @@ export class IntrospectionTools {
 
         const data = (response?.data ?? response?.result ?? response) as Record<string, unknown>;
         const validObjects = Array.isArray(data?.actors)
-          ? data.actors as unknown[]
-          : (Array.isArray(data?.objects) ? data.objects as unknown[] : (Array.isArray(data) ? data : []));
+          ? data.actors as Record<string, unknown>[]
+          : (Array.isArray(data?.objects) ? data.objects as Record<string, unknown>[] : (Array.isArray(data) ? data : []));
         return {
           success: true,
           message: `Found ${validObjects.length} objects`,

@@ -31,7 +31,7 @@ interface ErrorResponseDebug {
 /**
  * Extended error response with optional debug info
  */
-interface ErrorToolResponse extends BaseToolResponse {
+export interface ErrorToolResponse extends BaseToolResponse {
   // When present, provides machine-actionable details to help callers (LLMs) repair the request.
   errorDetails?: {
     kind: 'validation' | 'parameter' | 'connection' | 'execution' | 'timeout' | 'unknown';
@@ -41,6 +41,7 @@ interface ErrorToolResponse extends BaseToolResponse {
     expected?: Array<{ path: string; hint: string }>;
   };
   _debug?: ErrorResponseDebug;
+  [key: string]: unknown;
 }
 
 /**

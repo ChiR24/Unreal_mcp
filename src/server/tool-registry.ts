@@ -678,9 +678,9 @@ export class ToolRegistry {
                 this.healthMonitor.trackPerformance(startTime, false);
                 const errorResponse = ErrorHandler.createErrorResponse(error, name, { ...args, scope: `tool-call/${name}` });
                 this.logger.error(`Tool execution failed: ${name}`, errorResponse);
-                this.healthMonitor.recordError(errorResponse as unknown as Record<string, unknown>);
+                this.healthMonitor.recordError(errorResponse);
 
-                const sanitizedError = cleanObject(errorResponse) as unknown as Record<string, unknown>;
+                const sanitizedError = cleanObject(errorResponse);
                 try {
                     sanitizedError.isError = true;
                 } catch { /* isError assignment failed - continue */ }

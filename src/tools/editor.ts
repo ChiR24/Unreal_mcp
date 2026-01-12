@@ -6,10 +6,7 @@ import { EditorResponse } from '../types/automation-responses.js';
 import { wasmIntegration } from '../wasm/index.js';
 
 export class EditorTools extends BaseTool implements IEditorTools {
-  private cameraBookmarks = new Map<string, { location: [number, number, number]; rotation: [number, number, number]; savedAt: number }>();
-  private editorPreferences = new Map<string, Record<string, unknown>>();
-  private activeRecording?: { name?: string; options?: Record<string, unknown>; startedAt: number };
-
+  
   async isInPIE(): Promise<boolean> {
     try {
       const response = await this.sendAutomationRequest<EditorResponse>(
@@ -117,33 +114,6 @@ export class EditorTools extends BaseTool implements IEditorTools {
       return { success: true, message: 'Lighting build started' };
     } catch (err: unknown) {
       return { success: false, error: `Failed to build lighting: ${err}` };
-    }
-  }
-
-  private async getViewportCameraInfo(): Promise<{
-    success: boolean;
-    location?: [number, number, number];
-    rotation?: [number, number, number];
-    error?: string;
-    message?: string;
-  }> {
-    try {
-      const resp = await this.sendAutomationRequest<EditorResponse>(
-        'control_editor',
-        { action: 'get_camera' },
-        { timeoutMs: 3000 }
-      );
-      const result = (resp?.result ?? resp) as Record<string, unknown>;
-      const loc = result?.location ?? (result.camera as Record<string, unknown> | undefined)?.location;
-      const rot = result?.rotation ?? (result.camera as Record<string, unknown> | undefined)?.rotation;
-      const locArr: [number, number, number] | undefined = Array.isArray(loc) && loc.length === 3 ? [Number(loc[0]) || 0, Number(loc[1]) || 0, Number(loc[2]) || 0] : undefined;
-      const rotArr: [number, number, number] | undefined = Array.isArray(rot) && rot.length === 3 ? [Number(rot[0]) || 0, Number(rot[1]) || 0, Number(rot[2]) || 0] : undefined;
-      if (resp && resp.success !== false && locArr && rotArr) {
-        return { success: true, location: locArr, rotation: rotArr };
-      }
-      return { success: false, error: 'Failed to get camera information' };
-    } catch (err: unknown) {
-      return { success: false, error: `Camera query failed: ${err}` };
     }
   }
 
@@ -283,128 +253,114 @@ export class EditorTools extends BaseTool implements IEditorTools {
   }
 
   async startRecording(options?: { filename?: string; frameRate?: number; durationSeconds?: number; metadata?: Record<string, unknown> }): Promise<StandardActionResponse> {
-    const startedAt = Date.now();
-    this.activeRecording = {
-      name: typeof options?.filename === 'string' ? options.filename.trim() : undefined,
-      options: options ? { ...options } : undefined,
-      startedAt
-    };
-
-    return {
-      success: true as const,
-      message: 'Recording session started',
-      recording: {
-        name: this.activeRecording.name,
-        startedAt,
-        options: this.activeRecording.options
-      }
-    };
+    try {
+      const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
+        action: 'start_recording',
+        filename: options?.filename,
+        frameRate: options?.frameRate,
+        durationSeconds: options?.durationSeconds,
+        metadata: options?.metadata
+      });
+      return {
+        success: resp.success ?? false,
+        message: resp.message || 'Recording started',
+        recording: (resp.result as Record<string, unknown> | undefined)?.recording
+      };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
   }
 
   async stopRecording(): Promise<StandardActionResponse> {
-    if (!this.activeRecording) {
+    try {
+      const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
+        action: 'stop_recording'
+      });
       return {
-        success: true as const,
-        message: 'No active recording session to stop'
+        success: resp.success ?? false,
+        message: resp.message || 'Recording stopped',
+        recording: (resp.result as Record<string, unknown> | undefined)?.recording
       };
+    } catch (err) {
+      return { success: false, error: String(err) };
     }
-
-    const stoppedRecording = this.activeRecording;
-    this.activeRecording = undefined;
-
-    return {
-      success: true as const,
-      message: 'Recording session stopped',
-      recording: stoppedRecording
-    };
   }
 
   async createCameraBookmark(name: string): Promise<StandardActionResponse> {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      return { success: false as const, error: 'bookmarkName is required' };
-    }
-
-    const cameraInfo = await this.getViewportCameraInfo();
-    if (!cameraInfo.success || !cameraInfo.location || !cameraInfo.rotation) {
+    try {
+      const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
+        action: 'create_bookmark',
+        bookmarkName: name
+      });
       return {
-        success: false as const,
-        error: cameraInfo.error || 'Failed to capture viewport camera'
+        success: resp.success ?? false,
+        message: resp.message || 'Bookmark created',
+        bookmark: (resp.result as Record<string, unknown> | undefined)?.bookmark
       };
+    } catch (err) {
+      return { success: false, error: String(err) };
     }
-
-    this.cameraBookmarks.set(trimmedName, {
-      location: cameraInfo.location,
-      rotation: cameraInfo.rotation,
-      savedAt: Date.now()
-    });
-
-    return {
-      success: true as const,
-      message: `Bookmark '${trimmedName}' saved`,
-      bookmark: {
-        name: trimmedName,
-        location: cameraInfo.location,
-        rotation: cameraInfo.rotation
-      }
-    };
   }
 
   async jumpToCameraBookmark(name: string): Promise<StandardActionResponse> {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      return { success: false as const, error: 'bookmarkName is required' };
-    }
-
-    const bookmark = this.cameraBookmarks.get(trimmedName);
-    if (!bookmark) {
+    try {
+      const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
+        action: 'jump_to_bookmark',
+        bookmarkName: name
+      });
       return {
-        success: false as const,
-        error: `Bookmark '${trimmedName}' not found`
+        success: resp.success ?? false,
+        message: resp.message || 'Jumped to bookmark'
       };
+    } catch (err) {
+      return { success: false, error: String(err) };
     }
-
-    await this.setViewportCamera(
-      { x: bookmark.location[0], y: bookmark.location[1], z: bookmark.location[2] },
-      { pitch: bookmark.rotation[0], yaw: bookmark.rotation[1], roll: bookmark.rotation[2] }
-    );
-
-    return {
-      success: true as const,
-      message: `Jumped to bookmark '${trimmedName}'`
-    };
   }
 
   async setEditorPreferences(category: string | undefined, preferences: Record<string, unknown>): Promise<StandardActionResponse> {
-    const resolvedCategory = typeof category === 'string' && category.trim().length > 0 ? category.trim() : 'General';
-    const existing = this.editorPreferences.get(resolvedCategory) ?? {};
-    this.editorPreferences.set(resolvedCategory, { ...existing, ...preferences });
-
-    return {
-      success: true as const,
-      message: `Preferences stored for ${resolvedCategory}`,
-      preferences: this.editorPreferences.get(resolvedCategory)
-    };
+    try {
+      const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
+        action: 'set_preferences',
+        category: category,
+        preferences: preferences
+      });
+      return {
+        success: resp.success ?? false,
+        message: resp.message || 'Preferences updated'
+      };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
   }
 
   async setViewportResolution(width: number, height: number): Promise<StandardActionResponse> {
     try {
-      // Clamp to reasonable limits
-      const clampedWidth = Math.max(320, Math.min(7680, width));
-      const clampedHeight = Math.max(240, Math.min(4320, height));
-
-      // Use console command directly instead of Python
-      const command = `r.SetRes ${clampedWidth}x${clampedHeight}`;
-      await this.bridge.executeConsoleCommand(command);
-
+      const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
+        action: 'set_viewport_resolution',
+        width,
+        height
+      });
       return {
-        success: true,
-        message: `Viewport resolution set to ${clampedWidth}x${clampedHeight}`,
-        width: clampedWidth,
-        height: clampedHeight
+        success: resp.success ?? false,
+        message: resp.message || `Viewport resolution set to ${width}x${height}`
       };
-    } catch (err: unknown) {
-      return { success: false, error: `Failed to set viewport resolution: ${err}` };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  }
+
+  async setViewportRealtime(enabled: boolean): Promise<StandardActionResponse> {
+    try {
+      const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
+        action: 'set_viewport_realtime',
+        enabled
+      });
+      return {
+        success: resp.success ?? false,
+        message: resp.message || `Viewport realtime set to ${enabled}`
+      };
+    } catch (err) {
+      return { success: false, error: String(err) };
     }
   }
 
