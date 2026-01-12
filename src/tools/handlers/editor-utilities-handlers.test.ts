@@ -46,9 +46,11 @@ describe('handleEditorUtilitiesTools', () => {
     });
 
     it('set_editor_mode succeeds with valid modeName', async () => {
-      const result = await handleEditorUtilitiesTools('set_editor_mode', { modeName: 'Landscape' } as EditorUtilitiesArgs, mockTools);
+      const _result = await handleEditorUtilitiesTools('set_editor_mode', { modeName: 'Landscape' } as EditorUtilitiesArgs, mockTools);
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
       
-      expect(mockTools.automationBridge!.sendAutomationRequest).toHaveBeenCalledWith(
+      expect(bridge.sendAutomationRequest).toHaveBeenCalledWith(
         'manage_editor_utilities',
         expect.objectContaining({ action: 'set_editor_mode', modeName: 'Landscape' }),
         {}
@@ -62,9 +64,11 @@ describe('handleEditorUtilitiesTools', () => {
     });
 
     it('set_grid_settings uses defaults', async () => {
-      const result = await handleEditorUtilitiesTools('set_grid_settings', {} as EditorUtilitiesArgs, mockTools);
+      const _result = await handleEditorUtilitiesTools('set_grid_settings', {} as EditorUtilitiesArgs, mockTools);
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
       
-      expect(mockTools.automationBridge!.sendAutomationRequest).toHaveBeenCalledWith(
+      expect(bridge.sendAutomationRequest).toHaveBeenCalledWith(
         'manage_editor_utilities',
         expect.objectContaining({ 
           action: 'set_grid_settings',
@@ -85,9 +89,11 @@ describe('handleEditorUtilitiesTools', () => {
     });
 
     it('navigate_to_path succeeds with valid path', async () => {
-      const result = await handleEditorUtilitiesTools('navigate_to_path', { path: '/Game/Assets' } as EditorUtilitiesArgs, mockTools);
+      const _result = await handleEditorUtilitiesTools('navigate_to_path', { path: '/Game/Assets' } as EditorUtilitiesArgs, mockTools);
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
       
-      expect(mockTools.automationBridge!.sendAutomationRequest).toHaveBeenCalledWith(
+      expect(bridge.sendAutomationRequest).toHaveBeenCalledWith(
         'manage_editor_utilities',
         expect.objectContaining({ action: 'navigate_to_path', path: '/Game/Assets' }),
         {}
@@ -116,9 +122,11 @@ describe('handleEditorUtilitiesTools', () => {
     });
 
     it('select_actor succeeds with valid actorName', async () => {
-      const result = await handleEditorUtilitiesTools('select_actor', { actorName: 'MyActor' } as EditorUtilitiesArgs, mockTools);
+      const _result = await handleEditorUtilitiesTools('select_actor', { actorName: 'MyActor' } as EditorUtilitiesArgs, mockTools);
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
       
-      expect(mockTools.automationBridge!.sendAutomationRequest).toHaveBeenCalledWith(
+      expect(bridge.sendAutomationRequest).toHaveBeenCalledWith(
         'manage_editor_utilities',
         expect.objectContaining({ 
           action: 'select_actor',
@@ -130,9 +138,11 @@ describe('handleEditorUtilitiesTools', () => {
     });
 
     it('deselect_all requires no params', async () => {
-      const result = await handleEditorUtilitiesTools('deselect_all', {} as EditorUtilitiesArgs, mockTools);
+      const _result = await handleEditorUtilitiesTools('deselect_all', {} as EditorUtilitiesArgs, mockTools);
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
       
-      expect(mockTools.automationBridge!.sendAutomationRequest).toHaveBeenCalledWith(
+      expect(bridge.sendAutomationRequest).toHaveBeenCalledWith(
         'manage_editor_utilities',
         expect.objectContaining({ action: 'deselect_all' }),
         {}
@@ -162,9 +172,11 @@ describe('handleEditorUtilitiesTools', () => {
     });
 
     it('create_physical_material uses default values', async () => {
-      const result = await handleEditorUtilitiesTools('create_physical_material', { materialName: 'PM_Metal' } as EditorUtilitiesArgs, mockTools);
+      const _result = await handleEditorUtilitiesTools('create_physical_material', { materialName: 'PM_Metal' } as EditorUtilitiesArgs, mockTools);
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
       
-      expect(mockTools.automationBridge!.sendAutomationRequest).toHaveBeenCalledWith(
+      expect(bridge.sendAutomationRequest).toHaveBeenCalledWith(
         'manage_editor_utilities',
         expect.objectContaining({
           action: 'create_physical_material',
@@ -209,9 +221,11 @@ describe('handleEditorUtilitiesTools', () => {
     });
 
     it('undo requires no params', async () => {
-      const result = await handleEditorUtilitiesTools('undo', {} as EditorUtilitiesArgs, mockTools);
+      const _result = await handleEditorUtilitiesTools('undo', {} as EditorUtilitiesArgs, mockTools);
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
       
-      expect(mockTools.automationBridge!.sendAutomationRequest).toHaveBeenCalledWith(
+      expect(bridge.sendAutomationRequest).toHaveBeenCalledWith(
         'manage_editor_utilities',
         expect.objectContaining({ action: 'undo' }),
         {}
@@ -219,9 +233,11 @@ describe('handleEditorUtilitiesTools', () => {
     });
 
     it('redo requires no params', async () => {
-      const result = await handleEditorUtilitiesTools('redo', {} as EditorUtilitiesArgs, mockTools);
+      const _result = await handleEditorUtilitiesTools('redo', {} as EditorUtilitiesArgs, mockTools);
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
       
-      expect(mockTools.automationBridge!.sendAutomationRequest).toHaveBeenCalledWith(
+      expect(bridge.sendAutomationRequest).toHaveBeenCalledWith(
         'manage_editor_utilities',
         expect.objectContaining({ action: 'redo' }),
         {}
@@ -240,7 +256,9 @@ describe('handleEditorUtilitiesTools', () => {
 
   describe('automation failure', () => {
     it('propagates bridge errors', async () => {
-      vi.mocked(mockTools.automationBridge!.sendAutomationRequest).mockRejectedValue(new Error('Bridge error'));
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
+      vi.mocked(bridge.sendAutomationRequest).mockRejectedValue(new Error('Bridge error'));
       
       await expect(
         handleEditorUtilitiesTools('set_editor_mode', { modeName: 'Landscape' } as EditorUtilitiesArgs, mockTools)

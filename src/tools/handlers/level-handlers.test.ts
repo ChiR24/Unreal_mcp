@@ -184,7 +184,9 @@ describe('handleLevelTools', () => {
 
   describe('validate_level action', () => {
     it('validates level when bridge is connected', async () => {
-      vi.mocked(mockTools.automationBridge!.sendAutomationRequest).mockResolvedValue({
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
+      vi.mocked(bridge.sendAutomationRequest).mockResolvedValue({
         success: true,
         result: { exists: true, path: '/Game/Maps/TestLevel' }
       });
@@ -196,7 +198,9 @@ describe('handleLevelTools', () => {
     });
 
     it('returns error when bridge is not connected', async () => {
-      vi.mocked(mockTools.automationBridge!.isConnected).mockReturnValue(false);
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
+      vi.mocked(bridge.isConnected).mockReturnValue(false);
       
       const result = await handleLevelTools('validate_level', { action: 'validate_level', levelPath: '/Game/Maps/TestLevel' } as HandlerArgs, mockTools);
       
@@ -207,9 +211,11 @@ describe('handleLevelTools', () => {
 
   describe('default action fallthrough', () => {
     it('routes unknown actions to executeAutomationRequest', async () => {
-      const result = await handleLevelTools('unknown_action', { action: 'unknown_action' } as HandlerArgs, mockTools);
+      const _result = await handleLevelTools('unknown_action', { action: 'unknown_action' } as HandlerArgs, mockTools);
+      const bridge = mockTools.automationBridge;
+      if (!bridge) throw new Error('Test setup error: bridge is null');
       
-      expect(mockTools.automationBridge!.sendAutomationRequest).toHaveBeenCalledWith(
+      expect(bridge.sendAutomationRequest).toHaveBeenCalledWith(
         'manage_level',
         { action: 'unknown_action' },
         {}

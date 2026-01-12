@@ -122,7 +122,9 @@ describe('executeAutomationRequest', () => {
   });
 
   it('throws when bridge is not connected', async () => {
-    vi.mocked(mockTools.automationBridge!.isConnected).mockReturnValue(false);
+    const bridge = mockTools.automationBridge;
+    if (!bridge) throw new Error('Test setup error: bridge is null');
+    vi.mocked(bridge.isConnected).mockReturnValue(false);
     
     await expect(
       executeAutomationRequest(mockTools, 'test_tool', { action: 'test' })
@@ -131,9 +133,11 @@ describe('executeAutomationRequest', () => {
 
   it('returns result when bridge is connected', async () => {
     const result = await executeAutomationRequest(mockTools, 'test_tool', { action: 'test' });
+    const bridge = mockTools.automationBridge;
+    if (!bridge) throw new Error('Test setup error: bridge is null');
     
     expect(result).toEqual({ success: true });
-    expect(mockTools.automationBridge!.sendAutomationRequest).toHaveBeenCalledWith(
+    expect(bridge.sendAutomationRequest).toHaveBeenCalledWith(
       'test_tool',
       { action: 'test' },
       {}
@@ -142,8 +146,10 @@ describe('executeAutomationRequest', () => {
 
   it('passes options to sendAutomationRequest', async () => {
     await executeAutomationRequest(mockTools, 'test_tool', { action: 'test' }, undefined, { timeoutMs: 5000 });
+    const bridge = mockTools.automationBridge;
+    if (!bridge) throw new Error('Test setup error: bridge is null');
     
-    expect(mockTools.automationBridge!.sendAutomationRequest).toHaveBeenCalledWith(
+    expect(bridge.sendAutomationRequest).toHaveBeenCalledWith(
       'test_tool',
       { action: 'test' },
       { timeoutMs: 5000 }
@@ -178,7 +184,9 @@ describe('executeAndClean', () => {
   });
 
   it('throws for non-object response', async () => {
-    vi.mocked(mockTools.automationBridge!.sendAutomationRequest).mockResolvedValue('string result');
+    const bridge = mockTools.automationBridge;
+    if (!bridge) throw new Error('Test setup error: bridge is null');
+    vi.mocked(bridge.sendAutomationRequest).mockResolvedValue('string result');
     
     await expect(
       executeAndClean(mockTools, 'test_tool', { action: 'test' })
@@ -186,7 +194,9 @@ describe('executeAndClean', () => {
   });
 
   it('throws for array response', async () => {
-    vi.mocked(mockTools.automationBridge!.sendAutomationRequest).mockResolvedValue([1, 2, 3]);
+    const bridge = mockTools.automationBridge;
+    if (!bridge) throw new Error('Test setup error: bridge is null');
+    vi.mocked(bridge.sendAutomationRequest).mockResolvedValue([1, 2, 3]);
     
     await expect(
       executeAndClean(mockTools, 'test_tool', { action: 'test' })
@@ -194,7 +204,9 @@ describe('executeAndClean', () => {
   });
 
   it('throws for null response', async () => {
-    vi.mocked(mockTools.automationBridge!.sendAutomationRequest).mockResolvedValue(null);
+    const bridge = mockTools.automationBridge;
+    if (!bridge) throw new Error('Test setup error: bridge is null');
+    vi.mocked(bridge.sendAutomationRequest).mockResolvedValue(null);
     
     await expect(
       executeAndClean(mockTools, 'test_tool', { action: 'test' })
