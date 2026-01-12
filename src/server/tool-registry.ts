@@ -168,9 +168,10 @@ function pruneSchemaForToolList(schema: unknown, parentKey?: string): unknown {
     // Apply simplification after pruning, passing parentKey for action truncation
     const simplified = simplifySchemaObject(out, parentKey);
     
-    // ULTRA-AGGRESSIVE: Remove root type:object (implied for tool inputSchema)
-    if (parentKey === undefined && (simplified as Record<string, unknown>)['type'] === 'object') {
-        delete (simplified as Record<string, unknown>)['type'];
+    // SAFETY: Ensure root inputSchema ALWAYS has type: 'object'
+    // This is required by strict MCP clients (Cursor/Trae)
+    if (parentKey === undefined && isPlainObject(simplified)) {
+        (simplified as Record<string, unknown>)['type'] = 'object';
     }
     
     return simplified;
@@ -501,12 +502,16 @@ export class ToolRegistry {
 
                      if (copy.inputSchema) {
                          copy.inputSchema = pruneSchemaForToolList(copy.inputSchema) as Record<string, unknown>;
+                         // SAFETY: Force type: 'object' on the root inputSchema
+                         // This is required by strict MCP clients and overrides any pruning logic
+                         if (copy.inputSchema && typeof copy.inputSchema === 'object') {
+                             (copy.inputSchema as Record<string, unknown>)['type'] = 'object';
+                         }
                      }
-
-                     // NOTE: outputSchema is removed from tools/list, but we still prune in case any client/tooling
-                     // changes re-introduce it in the future.
-                     if (copy.outputSchema) {
-                         copy.outputSchema = pruneSchemaForToolList(copy.outputSchema) as Record<string, unknown>;
+                     
+                     // DEBUG: Log the first tool's schema to see what's wrong
+                     if (t.name === 'manage_pipeline') {
+                        this.logger.info(`[DEBUG] manage_pipeline schema: ${JSON.stringify(copy.inputSchema)}`);
                      }
 
                      return copy;
