@@ -34,12 +34,15 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async importAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean; save?: boolean }): Promise<StandardActionResponse> {
+    const destinationPath = this.normalizeAssetPath(params.destinationPath);
+
     const res = await this.sendRequest<AssetResponse>('manage_asset', {
       ...params,
+      destinationPath,
       subAction: 'import'
     }, 'manage_asset', { timeoutMs: EXTENDED_ASSET_OP_TIMEOUT_MS });
     if (res && res.success) {
-      return { ...res, asset: this.normalizeAssetPath(params.destinationPath), source: params.sourcePath };
+      return { ...res, asset: destinationPath, source: params.sourcePath };
     }
     return res;
   }
