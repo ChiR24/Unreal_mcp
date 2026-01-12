@@ -112,11 +112,26 @@ public class McpAutomationBridge : ModuleRules
 
             // Phase 16: AI Systems - StateTree, SmartObjects, MassAI (conditional based on plugin availability)
             // These modules may not be available in all UE versions or plugin configurations
-            TryAddConditionalModule(Target, EngineDir, "StateTreeModule", "StateTreeModule");
+            if (TryAddConditionalModule(Target, EngineDir, "StateTreeModule", "StateTreeModule"))
+            {
+                PublicDefinitions.Add("MCP_HAS_STATETREE=1");
+            }
+            else
+            {
+                PublicDefinitions.Add("MCP_HAS_STATETREE=0");
+            }
             TryAddConditionalModule(Target, EngineDir, "StateTreeEditorModule", "StateTreeEditorModule");
             TryAddConditionalModule(Target, EngineDir, "SmartObjectsModule", "SmartObjectsModule");
             TryAddConditionalModule(Target, EngineDir, "SmartObjectsEditorModule", "SmartObjectsEditorModule");
-            TryAddConditionalModule(Target, EngineDir, "MassEntity", "MassEntity");
+            
+            if (TryAddConditionalModule(Target, EngineDir, "MassEntity", "MassEntity"))
+            {
+                PublicDefinitions.Add("MCP_HAS_MASS=1");
+            }
+            else
+            {
+                PublicDefinitions.Add("MCP_HAS_MASS=0");
+            }
             TryAddConditionalModule(Target, EngineDir, "MassSpawner", "MassSpawner");
             TryAddConditionalModule(Target, EngineDir, "MassActors", "MassActors");
 
@@ -402,7 +417,7 @@ public class McpAutomationBridge : ModuleRules
     /// <param name="EngineDir">Absolute path to the engine root directory.</param>
     /// <param name="ModuleName">The module name to add to dependencies if found.</param>
     /// <param name="SearchName">The directory name to search for in engine/plugin paths.</param>
-    private void TryAddConditionalModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName)
+    private bool TryAddConditionalModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName)
     {
         try
         {
@@ -411,7 +426,7 @@ public class McpAutomationBridge : ModuleRules
             if (Directory.Exists(RuntimePath))
             {
                 PrivateDependencyModuleNames.Add(ModuleName);
-                return;
+                return true;
             }
 
             // Check Editor modules
@@ -419,7 +434,7 @@ public class McpAutomationBridge : ModuleRules
             if (Directory.Exists(EditorPath))
             {
                 PrivateDependencyModuleNames.Add(ModuleName);
-                return;
+                return true;
             }
 
             // Check Plugins directory
@@ -481,7 +496,7 @@ public class McpAutomationBridge : ModuleRules
                     if (Directory.Exists(SearchPath))
                     {
                         PrivateDependencyModuleNames.Add(ModuleName);
-                        return;
+                        return true;
                     }
                 }
 
@@ -489,11 +504,12 @@ public class McpAutomationBridge : ModuleRules
                 if (SearchDirectoryBounded(PluginsDir, SearchName, 4))
                 {
                     PrivateDependencyModuleNames.Add(ModuleName);
-                    return;
+                    return true;
                 }
             }
         }
         catch { /* Module not available - this is expected for optional modules */ }
+        return false;
     }
 
     /// <summary>
