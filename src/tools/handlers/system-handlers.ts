@@ -321,31 +321,66 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
         };
       }
 
-      const results: AssetValidationResult[] = [];
-      for (const rawPath of paths) {
+      // Construct batch requests
+      const requests = paths.map((rawPath, index) => {
         const assetPath = typeof rawPath === 'string' ? rawPath : String(rawPath ?? '');
-        try {
-          const res = await tools.assetTools.validate({ assetPath });
-          // Extract error message from potentially complex error object
-          let errorStr: string | null = null;
-          if (res.error) {
-            if (typeof res.error === 'string') {
-              errorStr = res.error;
-            } else if (typeof res.error === 'object' && res.error !== null && 'message' in res.error) {
-              errorStr = String((res.error as { message: string }).message);
-            } else {
-              errorStr = String(res.error);
+        return {
+          action: 'validate_asset',
+          requestId: String(index),
+          assetPath
+        };
+      });
+
+      // Execute batch via system_control
+      const batchRes = await executeAutomationRequest(tools, 'system_control', { 
+        action: 'batch_execute', 
+        requests 
+      }, 'Automation bridge not available') as { results?: Array<{ requestId?: string, success?: boolean, error?: unknown, [key: string]: unknown }> };
+
+      // Map results back to order
+      const resultsMap = new Map<string, AssetValidationResult>();
+      
+      if (Array.isArray(batchRes.results)) {
+        for (const r of batchRes.results) {
+          const reqId = String(r.requestId);
+          const pathIndex = parseInt(reqId, 10);
+          
+          if (!isNaN(pathIndex) && pathIndex >= 0 && pathIndex < paths.length) {
+            const assetPath = requests[pathIndex]?.assetPath ?? 'unknown';
+            
+            // Extract error message
+            let errorStr: string | null = null;
+            if (r.error) {
+              if (typeof r.error === 'string') {
+                errorStr = r.error;
+              } else if (typeof r.error === 'object' && r.error !== null && 'message' in r.error) {
+                errorStr = String((r.error as { message: string }).message);
+              } else {
+                errorStr = String(r.error);
+              }
             }
+
+            resultsMap.set(reqId, {
+              assetPath,
+              success: r.success,
+              error: errorStr
+            });
           }
-          results.push({ assetPath, success: res.success, error: errorStr });
-        } catch (error: unknown) {
-          results.push({
-            assetPath,
-            success: false,
-            error: error instanceof Error ? error.message : String(error)
-          });
         }
       }
+
+      // Reconstruct final results array in original order
+      const results: AssetValidationResult[] = requests.map((req, index) => {
+        const reqId = String(index);
+        if (resultsMap.has(reqId)) {
+          return resultsMap.get(reqId)!;
+        }
+        return {
+          assetPath: req.assetPath,
+          success: false,
+          error: 'Batch execution failed to return result'
+        };
+      });
 
       return {
         success: true,
