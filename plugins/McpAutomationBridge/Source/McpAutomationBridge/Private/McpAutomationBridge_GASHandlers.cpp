@@ -2171,6 +2171,221 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         return true;
     }
 
+    // ============================================================
+    // 13.6 RUNTIME TESTING
+    // ============================================================
+
+    // Helper lambda to find ASC
+    auto FindASC = [&](const FString& ActorName, FString& OutError) -> UAbilitySystemComponent*
+    {
+        UWorld* World = GetActiveWorld();
+        if (!World)
+        {
+            OutError = TEXT("No active world");
+            return nullptr;
+        }
+
+        AActor* Actor = FindActorByLabelOrName(World, ActorName);
+        if (!Actor)
+        {
+            OutError = FString::Printf(TEXT("Actor not found: %s"), *ActorName);
+            return nullptr;
+        }
+
+        UAbilitySystemComponent* ASC = Actor->FindComponentByClass<UAbilitySystemComponent>();
+        if (!ASC)
+        {
+            OutError = FString::Printf(TEXT("Actor %s has no AbilitySystemComponent"), *ActorName);
+            return nullptr;
+        }
+        return ASC;
+    };
+
+    // test_activate_ability
+    if (SubAction == TEXT("test_activate_ability"))
+    {
+        FString ActorName = GetStringFieldGAS(Payload, TEXT("actorName"));
+        if (ActorName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing actorName."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        FString Error;
+        UAbilitySystemComponent* ASC = FindASC(ActorName, Error);
+        if (!ASC)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("ASC_NOT_FOUND"));
+            return true;
+        }
+
+        FString AbilityPath = GetStringFieldGAS(Payload, TEXT("abilityClass"));
+        bool bSuccess = false;
+
+        if (!AbilityPath.IsEmpty())
+        {
+            UClass* AbilityClass = LoadClass<UGameplayAbility>(nullptr, *AbilityPath);
+            if (AbilityClass)
+            {
+                bSuccess = ASC->TryActivateAbilityByClass(AbilityClass);
+            }
+            else
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load ability class"), TEXT("LOAD_FAILED"));
+                return true;
+            }
+        }
+        
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetBoolField(TEXT("activated"), bSuccess);
+        SendAutomationResponse(RequestingSocket, RequestId, true, bSuccess ? TEXT("Ability activated") : TEXT("Failed to activate ability"), Result);
+        return true;
+    }
+
+    // test_apply_effect
+    if (SubAction == TEXT("test_apply_effect"))
+    {
+        FString ActorName = GetStringFieldGAS(Payload, TEXT("actorName"));
+        FString EffectPath = GetStringFieldGAS(Payload, TEXT("effectClass"));
+        
+        if (ActorName.IsEmpty() || EffectPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing actorName or effectClass."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        FString Error;
+        UAbilitySystemComponent* ASC = FindASC(ActorName, Error);
+        if (!ASC)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("ASC_NOT_FOUND"));
+            return true;
+        }
+
+        UClass* EffectClass = LoadClass<UGameplayEffect>(nullptr, *EffectPath);
+        if (!EffectClass)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load effect class"), TEXT("LOAD_FAILED"));
+            return true;
+        }
+
+        FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+        Context.AddSourceObject(ASC->GetOwner());
+        
+        FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, Context);
+        if (SpecHandle.IsValid())
+        {
+            FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+            
+            TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+            Result->SetStringField(TEXT("handle"), ActiveHandle.ToString());
+            Result->SetBoolField(TEXT("applied"), ActiveHandle.WasSuccessfullyApplied());
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Effect applied"), Result);
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create effect spec"), TEXT("SPEC_FAILED"));
+        }
+        return true;
+    }
+
+    // test_get_attribute
+    if (SubAction == TEXT("test_get_attribute"))
+    {
+        FString ActorName = GetStringFieldGAS(Payload, TEXT("actorName"));
+        FString AttributeName = GetStringFieldGAS(Payload, TEXT("attributeName"));
+        FString AttributeSetName = GetStringFieldGAS(Payload, TEXT("attributeSetClass"));
+
+        if (ActorName.IsEmpty() || AttributeName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing actorName or attributeName."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        FString Error;
+        UAbilitySystemComponent* ASC = FindASC(ActorName, Error);
+        if (!ASC)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("ASC_NOT_FOUND"));
+            return true;
+        }
+
+        float FoundValue = 0.0f;
+        bool bFound = false;
+
+        for (const UAttributeSet* Set : ASC->GetSpawnedAttributes())
+        {
+            if (Set)
+            {
+                if (!AttributeSetName.IsEmpty() && !Set->GetClass()->GetName().Contains(AttributeSetName))
+                {
+                    continue;
+                }
+
+                FProperty* Prop = Set->GetClass()->FindPropertyByName(FName(*AttributeName));
+                if (Prop)
+                {
+                    FStructProperty* StructProp = CastField<FStructProperty>(Prop);
+                    if (StructProp && StructProp->Struct == FGameplayAttributeData::StaticStruct())
+                    {
+                        const FGameplayAttributeData* Data = StructProp->ContainerPtrToValuePtr<FGameplayAttributeData>(Set);
+                        FoundValue = Data->GetCurrentValue();
+                        bFound = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (bFound)
+        {
+            TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+            Result->SetStringField(TEXT("attribute"), AttributeName);
+            Result->SetNumberField(TEXT("value"), FoundValue);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attribute value retrieved"), Result);
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Attribute not found on ASC"), TEXT("NOT_FOUND"));
+        }
+        return true;
+    }
+
+    // test_get_gameplay_tags
+    if (SubAction == TEXT("test_get_gameplay_tags"))
+    {
+        FString ActorName = GetStringFieldGAS(Payload, TEXT("actorName"));
+        
+        if (ActorName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing actorName."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        FString Error;
+        UAbilitySystemComponent* ASC = FindASC(ActorName, Error);
+        if (!ASC)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("ASC_NOT_FOUND"));
+            return true;
+        }
+
+        FGameplayTagContainer Tags;
+        ASC->GetOwnedGameplayTags(Tags);
+
+        TArray<TSharedPtr<FJsonValue>> TagsJson;
+        for (const FGameplayTag& Tag : Tags)
+        {
+            TagsJson.Add(MakeShareable(new FJsonValueString(Tag.ToString())));
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetArrayField(TEXT("tags"), TagsJson);
+        Result->SetNumberField(TEXT("count"), Tags.Num());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Gameplay tags retrieved"), Result);
+        return true;
+    }
+
     // Unknown subAction
     SendAutomationError(RequestingSocket, RequestId, 
         FString::Printf(TEXT("Unknown GAS subAction: %s"), *SubAction), TEXT("UNKNOWN_SUBACTION"));

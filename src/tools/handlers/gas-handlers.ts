@@ -210,6 +210,32 @@ export async function handleGASTools(
     }
 
     // =========================================================================
+    // 13.6 Runtime Testing (4 actions)
+    // =========================================================================
+
+    case 'test_activate_ability': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('test_activate_ability');
+    }
+
+    case 'test_apply_effect': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      requireNonEmptyString(argsRecord.effectClass, 'effectClass', 'Missing required parameter: effectClass');
+      return sendRequest('test_apply_effect');
+    }
+
+    case 'test_get_attribute': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      requireNonEmptyString(argsRecord.attributeName, 'attributeName', 'Missing required parameter: attributeName');
+      return sendRequest('test_get_attribute');
+    }
+
+    case 'test_get_gameplay_tags': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('test_get_gameplay_tags');
+    }
+
+    // =========================================================================
     // Default / Unknown Action
     // =========================================================================
 
