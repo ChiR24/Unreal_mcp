@@ -1,5 +1,5 @@
 import { Logger } from '../utils/logger.js';
-import { AutomationBridgeMessage, AutomationBridgeResponseMessage } from './types.js';
+import { AutomationBridgeMessage, AutomationBridgeResponseMessage, AutomationBridgeResponseChunk } from './types.js';
 import { RequestTracker } from './request-tracker.js';
 
 function FStringSafe(val: unknown): string {
@@ -38,6 +38,7 @@ interface ResponseWithAction extends AutomationBridgeResponseMessage {
 
 export class MessageHandler {
     private log = new Logger('MessageHandler');
+    private chunkBuffers = new Map<string, { parts: (string | null)[]; received: number }>();
 
     constructor(
         private requestTracker: RequestTracker
@@ -47,6 +48,9 @@ export class MessageHandler {
         switch (message.type) {
             case 'automation_response':
                 this.handleAutomationResponse(message as AutomationBridgeResponseMessage);
+                break;
+            case 'automation_response_chunk':
+                this.handleAutomationResponseChunk(message as unknown as AutomationBridgeResponseChunk);
                 break;
             case 'bridge_ping':
                 // Handled by connection manager or ignored if client
@@ -188,5 +192,47 @@ export class MessageHandler {
             this.log.debug('enforceActionMatch check skipped', e instanceof Error ? e.message : String(e));
         }
         return response;
+    }
+
+    private handleAutomationResponseChunk(chunk: AutomationBridgeResponseChunk): void {
+        const { requestId, chunkIndex, totalChunks, chunkData } = chunk;
+
+        if (!this.chunkBuffers.has(requestId)) {
+            this.chunkBuffers.set(requestId, {
+                parts: new Array(totalChunks).fill(null),
+                received: 0
+            });
+        }
+
+        const buffer = this.chunkBuffers.get(requestId)!;
+
+        if (buffer.parts.length !== totalChunks) {
+            this.log.error(`Chunk count mismatch for ${requestId}: expected ${buffer.parts.length}, got ${totalChunks} in chunk`);
+            return;
+        }
+
+        if (chunkIndex < 0 || chunkIndex >= totalChunks) {
+            this.log.warn(`Received invalid chunk index ${chunkIndex} for request ${requestId} (total: ${totalChunks})`);
+            return;
+        }
+
+        if (buffer.parts[chunkIndex] === null) {
+            buffer.parts[chunkIndex] = chunkData;
+            buffer.received++;
+        }
+
+        if (buffer.received === totalChunks) {
+            try {
+                const fullJson = buffer.parts.join('');
+                const response = JSON.parse(fullJson) as AutomationBridgeResponseMessage;
+
+                this.chunkBuffers.delete(requestId);
+                this.handleAutomationResponse(response);
+            } catch (e) {
+                this.log.error(`Failed to reassemble chunked response for ${requestId}: ${e}`);
+                this.chunkBuffers.delete(requestId);
+                this.requestTracker.rejectRequest(requestId, new Error(`Failed to reassemble chunked response: ${e}`));
+            }
+        }
     }
 }

@@ -791,6 +791,123 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Material compiled');
       }
 
+      case 'create_substrate_material': {
+        const params = normalizeArgs(args, [
+          { key: 'name', required: true },
+          { key: 'path', aliases: ['directory'], default: '/Game/Materials' },
+          { key: 'blendMode', default: 'Opaque' },
+          { key: 'save', default: true },
+        ]);
+
+        const name = extractString(params, 'name');
+        const path = extractOptionalString(params, 'path') ?? '/Game/Materials';
+        const blendMode = extractOptionalString(params, 'blendMode') ?? 'Opaque';
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'create_substrate_material',
+          name,
+          path,
+          blendMode,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to create Substrate material', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Substrate material '${name}' created`);
+      }
+
+      case 'set_substrate_properties': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'slabType', default: 'Simple' },
+          { key: 'thickness', default: 0.01 },
+          { key: 'fuzzAmount', default: 0.0 },
+          { key: 'save', default: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const slabType = extractOptionalString(params, 'slabType') ?? 'Simple';
+        const thickness = extractOptionalNumber(params, 'thickness') ?? 0.01;
+        const fuzzAmount = extractOptionalNumber(params, 'fuzzAmount') ?? 0.0;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'set_substrate_properties',
+          assetPath,
+          slabType,
+          thickness,
+          fuzzAmount,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to set Substrate properties', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Substrate properties configured');
+      }
+
+      case 'configure_sss_profile': {
+        const params = normalizeArgs(args, [
+          { key: 'name', required: true },
+          { key: 'path', aliases: ['directory'], default: '/Game/Materials/SSS' },
+          { key: 'color', default: { r: 1, g: 0.8, b: 0.8, a: 1 } },
+          { key: 'scatterRadius', default: 10.0 },
+          { key: 'save', default: true },
+        ]);
+
+        const name = extractString(params, 'name');
+        const path = extractOptionalString(params, 'path') ?? '/Game/Materials/SSS';
+        const color = extractOptionalObject(params, 'color') ?? { r: 1, g: 0.8, b: 0.8, a: 1 };
+        const scatterRadius = extractOptionalNumber(params, 'scatterRadius') ?? 10.0;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'configure_sss_profile',
+          name,
+          path,
+          color,
+          scatterRadius,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to configure SSS profile', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `SSS profile '${name}' configured`);
+      }
+
+      case 'configure_exposure': {
+        const params = normalizeArgs(args, [
+          { key: 'postProcessVolumeName', required: true },
+          { key: 'minBrightness', default: 0.03 },
+          { key: 'maxBrightness', default: 2.0 },
+          { key: 'speedUp', default: 3.0 },
+          { key: 'speedDown', default: 1.0 },
+        ]);
+
+        const postProcessVolumeName = extractString(params, 'postProcessVolumeName');
+        const minBrightness = extractOptionalNumber(params, 'minBrightness') ?? 0.03;
+        const maxBrightness = extractOptionalNumber(params, 'maxBrightness') ?? 2.0;
+        const speedUp = extractOptionalNumber(params, 'speedUp') ?? 3.0;
+        const speedDown = extractOptionalNumber(params, 'speedDown') ?? 1.0;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'configure_exposure',
+          postProcessVolumeName,
+          minBrightness,
+          maxBrightness,
+          speedUp,
+          speedDown,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to configure exposure', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Exposure configured');
+      }
+
       case 'get_material_info': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },

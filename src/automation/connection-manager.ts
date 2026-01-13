@@ -6,6 +6,7 @@ import { EventEmitter } from 'node:events';
 
 export class ConnectionManager extends EventEmitter {
     private activeSockets = new Map<WebSocket, SocketInfo>();
+    private socketPool: WebSocket[] = []; // Indexed pool for categorization
     private primarySocket?: WebSocket;
     private heartbeatTimer?: NodeJS.Timeout;
     private lastMessageAt?: Date;
@@ -45,6 +46,7 @@ export class ConnectionManager extends EventEmitter {
         };
 
         this.activeSockets.set(socket, socketInfo);
+        this.socketPool.push(socket);
 
         // Set as primary socket if this is the first connection
         if (!this.primarySocket) {
@@ -71,6 +73,13 @@ export class ConnectionManager extends EventEmitter {
         const info = this.activeSockets.get(socket);
         if (info) {
             this.activeSockets.delete(socket);
+            
+            // Remove from pool
+            const index = this.socketPool.indexOf(socket);
+            if (index !== -1) {
+                this.socketPool.splice(index, 1);
+            }
+
             if (socket === this.primarySocket) {
                 this.primarySocket = this.activeSockets.size > 0 ? this.activeSockets.keys().next().value : undefined;
                 if (this.activeSockets.size === 0) {
@@ -83,6 +92,12 @@ export class ConnectionManager extends EventEmitter {
 
     public getActiveSockets(): Map<WebSocket, SocketInfo> {
         return this.activeSockets;
+    }
+
+    public getSocketByIndex(index: number): WebSocket | undefined {
+        if (this.socketPool.length === 0) return undefined;
+        // Use modulo to wrap around if index > pool size
+        return this.socketPool[index % this.socketPool.length];
     }
 
     public getPrimarySocket(): WebSocket | undefined {

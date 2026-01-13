@@ -2,6 +2,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "UObject/UObjectIterator.h"
+#include "HAL/IConsoleManager.h"
 
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Engine/ExponentialHeightFog.h"
@@ -46,7 +47,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       !Lower.StartsWith(TEXT("configure_shadows")) &&
       !Lower.StartsWith(TEXT("set_exposure")) &&
       !Lower.StartsWith(TEXT("list_light_types")) &&
-      !Lower.StartsWith(TEXT("set_ambient_occlusion"))) {
+      !Lower.StartsWith(TEXT("set_ambient_occlusion")) &&
+      !Lower.StartsWith(TEXT("configure_lumen_gi")) &&
+      !Lower.StartsWith(TEXT("set_lumen_reflections")) &&
+      !Lower.StartsWith(TEXT("tune_lumen_performance")) &&
+      !Lower.StartsWith(TEXT("create_lumen_volume")) &&
+      !Lower.StartsWith(TEXT("set_virtual_shadow_maps"))) {
     return false;
   }
 
@@ -664,6 +670,110 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
                           TEXT("EDITOR_NOT_AVAILABLE"));
     }
     return true;
+  } else if (Lower == TEXT("configure_lumen_gi") || Lower == TEXT("tune_lumen_performance")) {
+      // Handle Lumen GI configuration
+      double Quality;
+      if (Payload->TryGetNumberField(TEXT("quality"), Quality)) {
+          IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.Quality"))->Set((int32)Quality);
+      }
+      
+      bool bDetailTrace;
+      if (Payload->TryGetBoolField(TEXT("detailTrace"), bDetailTrace)) {
+          IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.DetailTrace"))->Set(bDetailTrace ? 1 : 0);
+      }
+
+      double UpdateSpeed;
+      if (Payload->TryGetNumberField(TEXT("updateSpeed"), UpdateSpeed)) {
+          IConsoleManager::Get().FindConsoleVariable(TEXT("r.LumenScene.UpdateSpeed"))->Set((float)UpdateSpeed);
+      }
+
+      double FinalGatherQuality;
+      if (Payload->TryGetNumberField(TEXT("finalGatherQuality"), FinalGatherQuality)) {
+          IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.ScreenProbeGather.Quality"))->Set((float)FinalGatherQuality);
+      }
+
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lumen GI configured"), Resp);
+      return true;
+  } else if (Lower == TEXT("set_lumen_reflections")) {
+      // Handle Lumen Reflections
+      double Quality;
+      if (Payload->TryGetNumberField(TEXT("quality"), Quality)) {
+          IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.Reflections.Quality"))->Set((int32)Quality);
+      }
+
+      bool bDetailTrace;
+      if (Payload->TryGetBoolField(TEXT("detailTrace"), bDetailTrace)) {
+          IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.Reflections.DetailTrace"))->Set(bDetailTrace ? 1 : 0);
+      }
+
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lumen reflections configured"), Resp);
+      return true;
+  } else if (Lower == TEXT("create_lumen_volume")) {
+      // Spawn PostProcessVolume for Lumen
+      FVector Location = FVector::ZeroVector;
+      const TSharedPtr<FJsonObject> *LocObj;
+      if (Payload->TryGetObjectField(TEXT("location"), LocObj)) {
+          Location.X = (*LocObj)->GetNumberField(TEXT("x"));
+          Location.Y = (*LocObj)->GetNumberField(TEXT("y"));
+          Location.Z = (*LocObj)->GetNumberField(TEXT("z"));
+      }
+
+      FVector Size = FVector(1000, 1000, 1000);
+      const TSharedPtr<FJsonObject> *SizeObj;
+      if (Payload->TryGetObjectField(TEXT("size"), SizeObj)) {
+          Size.X = (*SizeObj)->GetNumberField(TEXT("x"));
+          Size.Y = (*SizeObj)->GetNumberField(TEXT("y"));
+          Size.Z = (*SizeObj)->GetNumberField(TEXT("z"));
+      }
+
+      APostProcessVolume* Volume = SpawnActorInActiveWorld<APostProcessVolume>(
+          APostProcessVolume::StaticClass(), Location, FRotator::ZeroRotator);
+      
+      if (Volume) {
+          Volume->SetActorScale3D(Size / 200.0f);
+          Volume->bUnbound = false;
+          Volume->Priority = 100.0f; // High priority for local override
+          
+          // Enable Lumen settings
+          Volume->Settings.bOverride_DynamicGlobalIlluminationMethod = true;
+          Volume->Settings.DynamicGlobalIlluminationMethod = EDynamicGlobalIlluminationMethod::Lumen;
+          
+          Volume->Settings.bOverride_ReflectionMethod = true;
+          Volume->Settings.ReflectionMethod = EReflectionMethod::Lumen;
+
+          FString Name;
+          if (Payload->TryGetStringField(TEXT("name"), Name) && !Name.IsEmpty()) {
+              Volume->SetActorLabel(Name);
+          }
+
+          TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+          Resp->SetBoolField(TEXT("success"), true);
+          Resp->SetStringField(TEXT("actorName"), Volume->GetActorLabel());
+          SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lumen volume created"), Resp);
+      } else {
+          SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to spawn Lumen volume"), TEXT("SPAWN_FAILED"));
+      }
+      return true;
+  } else if (Lower == TEXT("set_virtual_shadow_maps")) {
+      bool bEnable = true;
+      Payload->TryGetBoolField(TEXT("enabled"), bEnable);
+      
+      IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Shadow.Virtual.Enable"));
+      if (CVar) CVar->Set(bEnable ? 1 : 0);
+
+      double Resolution;
+      if (Payload->TryGetNumberField(TEXT("resolution"), Resolution)) {
+           // This might affect r.Shadow.Virtual.ShadowMap.ResolutionLocal usually
+      }
+
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Virtual Shadow Maps configured"), Resp);
+      return true;
   }
 
   return false;

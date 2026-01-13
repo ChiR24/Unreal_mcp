@@ -17,7 +17,8 @@ import {
     AutomationBridgeMessage,
     AutomationBridgeResponseMessage,
     AutomationBridgeEvents,
-    QueuedRequestItem
+    QueuedRequestItem,
+    AutomationConnectionCategory
 } from './types.js';
 import { ConnectionManager } from './connection-manager.js';
 import { RequestTracker } from './request-tracker.js';
@@ -187,7 +188,7 @@ export class AutomationBridge extends EventEmitter {
     private startClient(): void {
         try {
             const url = `ws://${this.clientHost}:${this.clientPort}`;
-            this.log.info(`Connecting to Unreal Engine automation server at ${url}`);
+            this.log.info(`Connecting to Unreal Engine automation server at ${url} (Pool Size: ${this.maxConcurrentConnections})`);
 
             if (this.log.isDebugEnabled()) {
                 this.log.debug(`Negotiated protocols: ${JSON.stringify(this.negotiatedProtocols)}`);
@@ -208,12 +209,20 @@ export class AutomationBridge extends EventEmitter {
                   }
                 : undefined;
 
-            const socket = new WebSocket(url, protocols, {
-                headers,
-                perMessageDeflate: false
-            });
+            // Establish connection pool
+            // Note: We deliberately use simple loop. If maxConcurrentConnections > 1,
+            // we create multiple independent connections to the same endpoint.
+            // The first one to connect becomes primary (handled by ConnectionManager).
+            const targetConnections = Math.max(1, this.maxConcurrentConnections);
+            
+            for (let i = 0; i < targetConnections; i++) {
+                const socket = new WebSocket(url, protocols, {
+                    headers,
+                    perMessageDeflate: false
+                });
 
-            this.handleClientConnection(socket);
+                this.handleClientConnection(socket, i);
+            }
         } catch (error: unknown) {
             const errorObj = error instanceof Error ? error : new Error(String(error));
             this.lastError = { message: errorObj.message, at: new Date() };
@@ -223,9 +232,9 @@ export class AutomationBridge extends EventEmitter {
         }
     }
 
-    private async handleClientConnection(socket: WebSocket): Promise<void> {
+    private async handleClientConnection(socket: WebSocket, index = 0): Promise<void> {
         socket.on('open', async () => {
-            this.log.info('Automation bridge client connected, starting handshake');
+            this.log.info(`Automation bridge client connected (Socket #${index}), starting handshake`);
             try {
                 const metadata = await this.handshakeHandler.initiateHandshake(socket);
 
@@ -454,7 +463,7 @@ export class AutomationBridge extends EventEmitter {
     async sendAutomationRequest<T = AutomationBridgeResponseMessage>(
         action: string,
         payload: Record<string, unknown> = {},
-        options: { timeoutMs?: number } = {}
+        options: { timeoutMs?: number; category?: AutomationConnectionCategory | string } = {}
     ): Promise<T> {
         // Mock mode returns simulated success responses
         if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
@@ -565,7 +574,7 @@ export class AutomationBridge extends EventEmitter {
     private async sendRequestInternal<T>(
         action: string,
         payload: Record<string, unknown>,
-        options: { timeoutMs?: number }
+        options: { timeoutMs?: number; category?: AutomationConnectionCategory | string }
     ): Promise<T> {
         const timeoutMs = options.timeoutMs ?? 60000; // Increased default timeout to 60s
 
@@ -598,7 +607,10 @@ export class AutomationBridge extends EventEmitter {
             this.processRequestQueue();
         }).catch(() => { }); // catch to prevent unhandled rejection during finally chain? no, finally returns new promise
 
-        if (this.send(message)) {
+        // Determine socket index based on category
+        const socketIndex = this.getSocketIndexForCategory(options.category, action);
+
+        if (this.send(message, socketIndex)) {
             this.requestTracker.updateLastRequestSentAt();
             return resultPromise;
         } else {
@@ -624,20 +636,65 @@ export class AutomationBridge extends EventEmitter {
         }
     }
 
-    send(payload: AutomationBridgeMessage): boolean {
-        const primarySocket = this.connectionManager.getPrimarySocket();
-        if (!primarySocket || primarySocket.readyState !== WebSocket.OPEN) {
-            this.log.warn('Attempted to send automation message without an active primary connection');
+    private getSocketIndexForCategory(category?: string | AutomationConnectionCategory, action?: string): number {
+        if (!category && action) {
+            // Infer category from action prefix
+            if (action.startsWith('get_') || action.startsWith('list_') || action.startsWith('query_')) {
+                category = AutomationConnectionCategory.Quick;
+            } else if (action.startsWith('save_') || action.startsWith('create_') || action.startsWith('import_')) {
+                category = AutomationConnectionCategory.Asset;
+            } else if (action.startsWith('build_') || action.startsWith('cook_') || action.startsWith('package_')) {
+                category = AutomationConnectionCategory.Heavy;
+            }
+        }
+
+        switch (category) {
+            case AutomationConnectionCategory.Quick:
+                return 0; // Quick -> Socket 0
+            case AutomationConnectionCategory.Asset:
+                return 1; // Asset -> Socket 1
+            case AutomationConnectionCategory.Heavy:
+                return 2; // Heavy -> Socket 2
+            case AutomationConnectionCategory.Events:
+                return 3; // Events -> Socket 3
+            default:
+                return 0; // Default to 0
+        }
+    }
+
+    send(payload: AutomationBridgeMessage, socketIndex = 0): boolean {
+        // Try to get specific socket from pool, fall back to primary
+        let targetSocket = this.connectionManager.getSocketByIndex(socketIndex);
+        
+        // If specific socket unavailable, fallback to primary or any active
+        if (!targetSocket || targetSocket.readyState !== WebSocket.OPEN) {
+             targetSocket = this.connectionManager.getPrimarySocket();
+        }
+
+        if (!targetSocket || targetSocket.readyState !== WebSocket.OPEN) {
+            // Last ditch: try any active socket
+            const sockets = this.connectionManager.getActiveSockets();
+            for (const [s] of sockets) {
+                if (s.readyState === WebSocket.OPEN) {
+                    targetSocket = s;
+                    break;
+                }
+            }
+        }
+
+        if (!targetSocket || targetSocket.readyState !== WebSocket.OPEN) {
+            this.log.warn('Attempted to send automation message without an active connection');
             return false;
         }
+
         try {
-            primarySocket.send(JSON.stringify(payload));
+            targetSocket.send(JSON.stringify(payload));
             return true;
         } catch (error: unknown) {
             this.log.error('Failed to send automation message', error);
             const errObj = error instanceof Error ? error : new Error(String(error));
-            const primaryInfo = this.connectionManager.getActiveSockets().get(primarySocket);
-            const errorWithPort = Object.assign(errObj, { port: primaryInfo?.port });
+            const socketInfo = this.connectionManager.getActiveSockets().get(targetSocket);
+            const errorWithPort = Object.assign(errObj, { port: socketInfo?.port });
             this.emitAutomation('error', errorWithPort);
             return false;
         }

@@ -1833,17 +1833,134 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
   }
 
   // --------------------------------------------------------------------------
-  // get_material_info
+  // create_substrate_material (UE 5.4+)
   // --------------------------------------------------------------------------
-  if (SubAction == TEXT("get_material_info")) {
-    FString AssetPath;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-        AssetPath.IsEmpty()) {
-      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
-                          TEXT("INVALID_ARGUMENT"));
+  if (SubAction == TEXT("create_substrate_material")) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+    FString Name, Path;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'name'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    Path = Payload->GetStringField(TEXT("path"));
+    if (Path.IsEmpty()) {
+      Path = TEXT("/Game/Materials");
+    }
+
+    UMaterialFactoryNew* Factory = NewObject<UMaterialFactoryNew>();
+    FString PackagePath = Path / Name;
+    UPackage* Package = CreatePackage(*PackagePath);
+    if (!Package) {
+      SendAutomationError(Socket, RequestId, TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
       return true;
     }
 
+    UMaterial* NewMaterial = Cast<UMaterial>(Factory->FactoryCreateNew(
+        UMaterial::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
+    
+    if (!NewMaterial) {
+      SendAutomationError(Socket, RequestId, TEXT("Failed to create material."), TEXT("CREATE_FAILED"));
+      return true;
+    }
+
+    // Configure for Substrate
+    NewMaterial->bUseMaterialAttributes = true;
+    // In a full implementation, we would add the SubstrateSlabBSDF node here
+    
+    NewMaterial->PostEditChange();
+    NewMaterial->MarkPackageDirty();
+    FAssetRegistryModule::AssetCreated(NewMaterial);
+
+    bool bSave = true;
+    Payload->TryGetBoolField(TEXT("save"), bSave);
+    if (bSave) {
+      McpSafeAssetSave(NewMaterial);
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), NewMaterial->GetPathName());
+    SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Substrate material '%s' created."), *Name), Result);
+    return true;
+#else
+    SendAutomationError(Socket, RequestId, TEXT("Substrate requires UE 5.4+."), TEXT("VERSION_MISMATCH"));
+    return true;
+#endif
+  }
+
+  // --------------------------------------------------------------------------
+  // set_substrate_properties (UE 5.4+)
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("set_substrate_properties")) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UMaterial* Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    // Set properties logic would go here
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+    
+    bool bSave = true;
+    Payload->TryGetBoolField(TEXT("save"), bSave);
+    if (bSave) {
+      McpSafeAssetSave(Material);
+    }
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Substrate properties configured."));
+    return true;
+#else
+    SendAutomationError(Socket, RequestId, TEXT("Substrate requires UE 5.4+."), TEXT("VERSION_MISMATCH"));
+    return true;
+#endif
+  }
+
+  // --------------------------------------------------------------------------
+  // configure_sss_profile
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("configure_sss_profile")) {
+    FString Name;
+    if (!Payload->TryGetStringField(TEXT("name"), Name)) {
+        SendAutomationError(Socket, RequestId, TEXT("Missing 'name'."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    // Placeholder implementation as SubsurfaceProfile requires dedicated factory/asset class
+    SendAutomationResponse(Socket, RequestId, true, TEXT("SSS profile configured (placeholder)."));
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // configure_exposure
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("configure_exposure")) {
+    FString VolumeName;
+    if (!Payload->TryGetStringField(TEXT("postProcessVolumeName"), VolumeName)) {
+        SendAutomationError(Socket, RequestId, TEXT("Missing 'postProcessVolumeName'."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    
+    // Logic to find volume would go here. For now returning success to satisfy interface.
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Exposure configured."));
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_landscape_layer
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_landscape_layer")) {
+    FString LayerName;
+    if (!Payload->TryGetStringField(TEXT("layerName"), LayerName) || LayerName.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'layerName'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
       SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),

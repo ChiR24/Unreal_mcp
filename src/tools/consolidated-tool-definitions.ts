@@ -43,7 +43,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'get_dependencies', 'get_source_control_state', 'analyze_graph', 'get_asset_graph', 'create_thumbnail', 'set_tags', 'get_metadata', 'set_metadata', 'validate', 'fixup_redirectors', 'find_by_tag', 'generate_report',
             'create_material', 'create_material_instance', 'create_render_target', 'generate_lods', 'add_material_parameter', 'list_instances', 'reset_instance_parameters', 'exists', 'get_material_stats',
             'nanite_rebuild_mesh',
+            // Nanite (Phase 3G.2)
+            'enable_nanite_mesh', 'set_nanite_settings', 'batch_nanite_convert',
             'add_material_node', 'connect_material_pins', 'remove_material_node', 'break_material_connections', 'get_material_node_details', 'rebuild_material',
+            // MetaSounds (Phase 3C.1 & 3C.2)
+            'create_metasound', 'add_metasound_node', 'connect_metasound_nodes', 'remove_metasound_node', 'set_metasound_variable',
+            'create_oscillator', 'create_envelope', 'create_filter', 'create_sequencer_node', 'create_procedural_music',
+            'import_audio_to_metasound', 'export_metasound_preset', 'configure_audio_modulation',
             // Blueprints (merged from manage_blueprint)
             'bp_create', 'bp_get', 'bp_compile', 'bp_add_component', 'bp_set_default', 'bp_modify_scs', 'bp_get_scs',
             'bp_add_scs_component', 'bp_remove_scs_component', 'bp_reparent_scs_component', 'bp_set_scs_transform', 'bp_set_scs_property',
@@ -104,6 +110,14 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         parentNodeId: commonSchemas.nodeId,
         childNodeId: commonSchemas.nodeId,
         maxDepth: commonSchemas.numberProp,
+        // MetaSound properties
+        metaSoundName: commonSchemas.name,
+        metaSoundPath: commonSchemas.assetPath,
+        // Nanite properties
+        enableNanite: { type: 'boolean', description: 'Enable/Disable Nanite.' },
+        nanitePositionPrecision: { type: 'number', description: 'Nanite position precision.' },
+        nanitePercentTriangles: { type: 'number', description: 'Nanite keep triangle percent.' },
+        naniteFallbackRelativeError: { type: 'number', description: 'Fallback relative error.' },
         refresh: { type: 'boolean', description: 'Force refresh cache.' }
       },
       required: ['action']
@@ -217,6 +231,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             // System control (merged from system_control)
             'profile', 'show_fps', 'set_quality', 'set_resolution', 'set_fullscreen',
             'run_ubt', 'run_tests', 'subscribe', 'unsubscribe', 'spawn_category', 'start_session', 'lumen_update_scene',
+            // Event Push System (Phase 4.1)
+            'subscribe_to_event', 'unsubscribe_from_event', 'get_subscribed_events', 'configure_event_channel', 'get_event_history', 'clear_event_subscriptions',
+            // Background Jobs (Phase 4.3)
+            'start_background_job', 'get_job_status', 'cancel_job', 'get_active_jobs',
             'play_sound', 'create_widget', 'show_widget', 'add_widget_child',
             'set_cvar', 'get_project_settings', 'validate_assets', 'set_project_setting',
             'batch_execute'
@@ -301,6 +319,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'enable_world_partition', 'configure_grid_size', 'create_data_layer', 'assign_actor_to_data_layer',
             'configure_hlod_layer', 'create_minimap_volume', 'open_level_blueprint', 'add_level_blueprint_node',
             'connect_level_blueprint_nodes', 'create_level_instance', 'create_packed_level_actor', 'get_level_structure_info',
+            // World Partition Phase 3H
+            'configure_world_partition', 'create_streaming_volume', 'configure_large_world_coordinates',
+            'create_world_partition_cell', 'configure_runtime_loading', 'configure_world_settings',
             // PCG (merged from manage_pcg)
             'create_pcg_graph', 'create_pcg_subgraph', 'add_pcg_node', 'connect_pcg_pins', 'set_pcg_node_settings',
             'add_landscape_data_node', 'add_spline_data_node', 'add_volume_data_node', 'add_actor_data_node', 'add_texture_data_node',
@@ -309,11 +330,14 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'add_distance_filter', 'add_bounds_filter', 'add_self_pruning',
             'add_transform_points', 'add_project_to_surface', 'add_copy_points', 'add_merge_points',
             'add_static_mesh_spawner', 'add_actor_spawner', 'add_spline_spawner',
-            'execute_pcg_graph', 'set_pcg_partition_grid_size', 'get_pcg_info'
+            'execute_pcg_graph', 'set_pcg_partition_grid_size', 'get_pcg_info',
+            // Advanced PCG (Phase 3A.2)
+            'create_biome_rules', 'blend_biomes', 'export_pcg_to_static', 'import_pcg_preset', 'debug_pcg_execution'
           ],
           description: 'Level action'
         },
         // Core properties
+        graphPath: commonSchemas.directoryPath,
         levelPath: commonSchemas.levelPath,
         levelName: commonSchemas.stringProp,
         streaming: commonSchemas.booleanProp,
@@ -382,6 +406,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         packedLevelName: { type: 'string', description: 'Packed level actor name.' },
         bPackBlueprints: { type: 'boolean', description: 'Include blueprints.' },
         bPackStaticMeshes: { type: 'boolean', description: 'Include static meshes.' },
+        // World Partition Phase 3H properties
+        enableLargeWorlds: { type: 'boolean', description: 'Enable Large World Coordinates.' },
+        defaultGameMode: { type: 'string', description: 'Default game mode class path.' },
+        killZ: { type: 'number', description: 'Kill Z height for level.' },
+        worldGravityZ: { type: 'number', description: 'World gravity Z value.' },
+        runtimeCellSize: { type: 'number', description: 'Runtime World Partition cell size.' },
+        streamingVolumeExtent: commonSchemas.location,
         save: commonSchemas.save
       },
       required: ['action']
@@ -396,7 +427,63 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       }
     }
   },
-{
+  {
+    name: 'manage_motion_design',
+    category: 'authoring',
+    description: 'Motion Design (Avalanche) tools: Cloners, Effectors, Mograph.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'create_cloner', 'configure_cloner_pattern', 'add_effector', 'animate_effector', 'create_mograph_sequence',
+            'create_radial_cloner', 'create_spline_cloner', 'add_noise_effector', 'configure_step_effector', 'export_mograph_to_sequence'
+          ],
+          description: 'Motion Design action'
+        },
+        clonerName: commonSchemas.actorName,
+        clonerType: { type: 'string', enum: ['Grid', 'Linear', 'Radial', 'Honeycomb', 'Mesh'], description: 'Cloner distribution type.' },
+        sourceActor: { type: 'string', description: 'Source actor to clone.' },
+        location: commonSchemas.location,
+        clonerActor: { type: 'string', description: 'Target cloner actor.' },
+        countX: { type: 'number', description: 'Grid count X.' },
+        countY: { type: 'number', description: 'Grid count Y.' },
+        countZ: { type: 'number', description: 'Grid count Z.' },
+        offset: commonSchemas.vector3,
+        rotation: commonSchemas.rotation,
+        scale: commonSchemas.scale,
+        radius: { type: 'number', description: 'Radial radius.' },
+        count: { type: 'number', description: 'Radial count.' },
+        axis: { type: 'string', enum: ['X', 'Y', 'Z'], description: 'Radial axis.' },
+        align: { type: 'boolean', description: 'Radial align.' },
+        splineActor: { type: 'string', description: 'Spline actor for distribution.' },
+        effectorType: { type: 'string', enum: ['Noise', 'Step', 'Push', 'Spherical', 'Plain'], description: 'Effector type.' },
+        effectorName: { type: 'string', description: 'Name of effector.' },
+        effectorActor: { type: 'string', description: 'Target effector actor.' },
+        strength: { type: 'number', description: 'Effector strength.' },
+        frequency: { type: 'number', description: 'Effector frequency.' },
+        stepCount: { type: 'number', description: 'Step count.' },
+        operation: { type: 'string', enum: ['Add', 'Multiply'], description: 'Effector operation.' },
+        propertyName: commonSchemas.propertyName,
+        startValue: { type: 'number', description: 'Start value.' },
+        endValue: { type: 'number', description: 'End value.' },
+        duration: { type: 'number', description: 'Duration in seconds.' },
+        sequencePath: commonSchemas.sequencePath
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        clonerActor: commonSchemas.actorName,
+        effectorActor: commonSchemas.actorName,
+        sequencePath: commonSchemas.sequencePath
+      }
+    }
+  },
+  {
     name: 'animation_physics',
     category: 'utility',
     description: 'Animation BPs, Montages, IK, retargeting + Chaos destruction/vehicles.',
@@ -421,8 +508,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_anim_blueprint', 'add_state_machine', 'add_state', 'add_transition', 'set_transition_rules',
             'add_blend_node', 'add_cached_pose', 'add_slot_node', 'add_layered_blend_per_bone', 'set_anim_graph_node_value',
             'create_control_rig', 'add_control', 'add_rig_unit', 'connect_rig_elements', 'create_pose_library',
-            'create_ik_rig', 'add_ik_chain', 'create_ik_retargeter', 'set_retarget_chain_mapping',
+            'create_ik_rig', 'add_ik_chain', 'add_ik_goal', 'create_ik_retargeter', 'set_retarget_chain_mapping',
             'get_animation_info',
+            // Motion Matching & Advanced (Phase 3F.2)
+            'create_pose_search_database', 'configure_motion_matching', 'add_trajectory_prediction',
+            'create_animation_modifier', 'setup_ml_deformer', 'configure_ml_deformer_training',
             // [PhysicsDestruction] CHAOS DESTRUCTION (29 actions - merged)
             'chaos_create_geometry_collection', 'chaos_fracture_uniform', 'chaos_fracture_clustered', 'chaos_fracture_radial',
             'chaos_fracture_slice', 'chaos_fracture_brick', 'chaos_flatten_fracture', 'chaos_set_geometry_collection_materials',
@@ -602,7 +692,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'add_audio_spectrum_data_interface', 'add_collision_query_data_interface',
             'add_event_generator', 'add_event_receiver', 'configure_event_payload',
             'enable_gpu_simulation', 'add_simulation_stage',
-            'get_niagara_info', 'validate_niagara_system'
+            'get_niagara_info', 'validate_niagara_system',
+            // Niagara Advanced (Phase 3E)
+            'create_niagara_module', 'add_niagara_script', 'add_data_interface',
+            'setup_niagara_fluids', 'create_fluid_simulation', 'add_chaos_integration'
           ],
           description: 'Action'
         },
@@ -624,6 +717,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         type: commonSchemas.stringProp,
         value: commonSchemas.value,
         filter: commonSchemas.filter,
+        // Advanced properties
+        fluidType: { type: 'string', enum: ['2D', '3D'], description: 'Fluid simulation type.' },
+        stage: { type: 'string', description: 'Script usage stage (Spawn, Update, Event, Simulation).' },
+        className: { type: 'string', description: 'Class name for data interfaces.' },
         // Authoring properties (merged from manage_niagara_authoring)
         path: commonSchemas.directoryPathForCreation,
         assetPath: commonSchemas.assetPath,
@@ -1236,7 +1333,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'configure_ray_traced_ao', 'configure_path_tracing',
             'create_scene_capture_2d', 'create_scene_capture_cube', 'capture_scene',
             'set_light_channel', 'set_actor_light_channel',
-            'configure_lightmass_settings', 'build_lighting_quality', 'configure_indirect_lighting_cache', 'configure_volumetric_lightmap'
+            'configure_lightmass_settings', 'build_lighting_quality', 'configure_indirect_lighting_cache', 'configure_volumetric_lightmap',
+            // Lumen (Phase 3G.2)
+            'configure_lumen_gi', 'set_lumen_reflections', 'tune_lumen_performance',
+            'create_lumen_volume', 'set_virtual_shadow_maps'
           ],
           description: 'Action'
         },
@@ -1319,7 +1419,15 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         channel2: commonSchemas.booleanProp,
         numIndirectBounces: commonSchemas.numberProp,
         indirectLightingQuality: commonSchemas.numberProp,
-        volumetricLightmapEnabled: commonSchemas.booleanProp
+        volumetricLightmapEnabled: commonSchemas.booleanProp,
+        // Lumen properties
+        lumenQuality: { type: 'number', description: 'Lumen GI quality.' },
+        lumenDetailTrace: { type: 'boolean', description: 'Lumen detail trace.' },
+        lumenReflectionQuality: { type: 'number', description: 'Lumen reflection quality.' },
+        lumenUpdateSpeed: { type: 'number', description: 'Lumen update speed.' },
+        lumenFinalGatherQuality: { type: 'number', description: 'Lumen final gather quality.' },
+        virtualShadowMapResolution: { type: 'number', description: 'Virtual shadow map resolution.' },
+        virtualShadowMapQuality: { type: 'number', description: 'Virtual shadow map quality.' }
       },
       required: ['action']
     },
@@ -1657,7 +1765,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'invert', 'desaturate', 'channel_pack', 'channel_extract', 'combine_textures',
             'set_compression_settings', 'set_texture_group', 'set_lod_bias',
             'configure_virtual_texture', 'set_streaming_priority',
-            'get_texture_info'
+            'get_texture_info',
+            // Substrate (Phase 3G.1)
+            'create_substrate_material', 'set_substrate_properties',
+            'configure_sss_profile', 'configure_exposure'
           ],
           description: 'Material authoring action to perform'
         },
@@ -1725,7 +1836,17 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         textureGroup: commonSchemas.stringProp,
         lodBias: commonSchemas.numberProp,
         virtualTextureStreaming: commonSchemas.booleanProp,
-        neverStream: commonSchemas.booleanProp
+        neverStream: commonSchemas.booleanProp,
+        // Substrate properties
+        slabType: { type: 'string', enum: ['Simple', 'VerticalLayer', 'HorizontalLayer'], description: 'Substrate slab type.' },
+        thickness: { type: 'number', description: 'Slab thickness.' },
+        fuzzAmount: { type: 'number', description: 'Fuzz amount.' },
+        scatterRadius: { type: 'number', description: 'SSS scatter radius.' },
+        postProcessVolumeName: { type: 'string', description: 'PPV name for exposure.' },
+        minBrightness: { type: 'number', description: 'Auto exposure min brightness.' },
+        maxBrightness: { type: 'number', description: 'Auto exposure max brightness.' },
+        speedUp: { type: 'number', description: 'Exposure speed up.' },
+        speedDown: { type: 'number', description: 'Exposure speed down.' }
       },
       required: ['action']
     },

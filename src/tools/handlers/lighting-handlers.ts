@@ -199,7 +199,42 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
     case 'list_light_types': {
       return cleanObject(await tools.lightingTools.listLightTypes());
     }
+    case 'configure_lumen_gi': {
+      return cleanObject(await tools.lightingTools.configureLumenGI({
+        quality: toNumber(args.lumenQuality),
+        detailTrace: toBoolean(args.lumenDetailTrace),
+        updateSpeed: toNumber(args.lumenUpdateSpeed),
+        finalGatherQuality: toNumber(args.lumenFinalGatherQuality)
+      }));
+    }
+    case 'set_lumen_reflections': {
+      return cleanObject(await tools.lightingTools.setLumenReflections({
+        quality: toNumber(args.lumenReflectionQuality),
+        detailTrace: toBoolean(args.lumenDetailTrace)
+      }));
+    }
+    case 'tune_lumen_performance': {
+      return cleanObject(await tools.lightingTools.tuneLumenPerformance({
+        quality: toNumber(args.lumenQuality),
+        updateSpeed: toNumber(args.lumenUpdateSpeed)
+      }));
+    }
+    case 'create_lumen_volume': {
+      return cleanObject(await tools.lightingTools.createLumenVolume({
+        name: toString(args.name),
+        location: normalizedLocation,
+        size: args.size
+      }));
+    }
+    case 'set_virtual_shadow_maps': {
+      return cleanObject(await tools.lightingTools.setVirtualShadowMaps({
+        enabled: args.enabled !== false,
+        resolution: toNumber(args.virtualShadowMapResolution),
+        quality: toNumber(args.virtualShadowMapQuality)
+      }));
+    }
     default:
       throw new Error(`Unknown lighting action: ${action}`);
   }
 }
+

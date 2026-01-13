@@ -106,9 +106,16 @@ public class McpAutomationBridge : ModuleRules
             string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
 
             // Phase 11: MetaSound modules (conditional - may not be available in all UE versions)
-            TryAddConditionalModule(Target, EngineDir, "MetasoundEngine", "MetasoundEngine");
-            TryAddConditionalModule(Target, EngineDir, "MetasoundFrontend", "MetasoundFrontend");
-            TryAddConditionalModule(Target, EngineDir, "MetasoundEditor", "MetasoundEditor");
+            if (TryAddConditionalModule(Target, EngineDir, "MetasoundEngine", "MetasoundEngine"))
+            {
+                PublicDefinitions.Add("MCP_HAS_METASOUND=1");
+                TryAddConditionalModule(Target, EngineDir, "MetasoundFrontend", "MetasoundFrontend");
+                TryAddConditionalModule(Target, EngineDir, "MetasoundEditor", "MetasoundEditor");
+            }
+            else
+            {
+                PublicDefinitions.Add("MCP_HAS_METASOUND=0");
+            }
 
             // Phase 16: AI Systems - StateTree, SmartObjects, MassAI (conditional based on plugin availability)
             // These modules may not be available in all UE versions or plugin configurations
@@ -146,6 +153,58 @@ public class McpAutomationBridge : ModuleRules
             TryAddConditionalModule(Target, EngineDir, "PCG", "PCG");
             TryAddConditionalModule(Target, EngineDir, "PCGEditor", "PCGEditor");
 
+            // Phase 3B: Motion Design (Avalanche)
+            TryAddConditionalModule(Target, EngineDir, "MotionDesign", "MotionDesign");
+
+            // Phase 3F: Animation & Motion
+            // IK Rig
+            if (TryAddConditionalModule(Target, EngineDir, "IKRig", "IKRig"))
+            {
+                PublicDefinitions.Add("MCP_HAS_IKRIG=1");
+                TryAddConditionalModule(Target, EngineDir, "IKRigEditor", "IKRigEditor");
+                TryAddConditionalModule(Target, EngineDir, "IKRigDeveloper", "IKRigDeveloper");
+            }
+            else
+            {
+                PublicDefinitions.Add("MCP_HAS_IKRIG=0");
+            }
+
+            // Motion Warping
+            if (TryAddConditionalModule(Target, EngineDir, "MotionWarping", "MotionWarping"))
+            {
+                PublicDefinitions.Add("MCP_HAS_MOTION_WARPING=1");
+            }
+            else
+            {
+                PublicDefinitions.Add("MCP_HAS_MOTION_WARPING=0");
+            }
+
+            // Pose Search (Motion Matching)
+            if (TryAddConditionalModule(Target, EngineDir, "PoseSearch", "PoseSearch"))
+            {
+                PublicDefinitions.Add("MCP_HAS_POSE_SEARCH=1");
+                TryAddConditionalModule(Target, EngineDir, "PoseSearchEditor", "PoseSearchEditor");
+            }
+            else
+            {
+                PublicDefinitions.Add("MCP_HAS_POSE_SEARCH=0");
+            }
+
+            // Animation Locomotion Library
+            if (TryAddConditionalModule(Target, EngineDir, "AnimationLocomotionLibraryRuntime", "AnimationLocomotionLibrary"))
+            {
+                PublicDefinitions.Add("MCP_HAS_ANIM_LOCOMOTION=1");
+            }
+            else
+            {
+                PublicDefinitions.Add("MCP_HAS_ANIM_LOCOMOTION=0");
+            }
+
+            // Phase 3F.2: Advanced Animation
+            DefineOptionalPluginMacro(EngineDir, "MLDeformerFramework", "MCP_HAS_MLDEFORMER");
+            DefineOptionalPluginMacro(EngineDir, "AnimationModifiers", "MCP_HAS_ANIM_MODIFIERS");
+            DefineOptionalPluginMacro(EngineDir, "SkeletalMeshModelingTools", "MCP_HAS_SKEL_MESH_MODELING");
+
             // ============================================================================
             // OPTIONAL PLUGIN MODULES - DEFINE MACROS ONLY, NO LINK-TIME DEPENDENCIES
             // ============================================================================
@@ -159,6 +218,11 @@ public class McpAutomationBridge : ModuleRules
 
             // Phase 30: Movie Render Pipeline (usually enabled, but still optional)
             DefineOptionalPluginMacro(EngineDir, "MovieRenderPipelineCore", "MCP_HAS_MOVIE_RENDER_PIPELINE");
+
+            // Phase 3D: Chaos Physics & Vehicles
+            DefineOptionalPluginMacro(EngineDir, "ChaosVehicles", "MCP_HAS_CHAOS_VEHICLES");
+            DefineOptionalPluginMacro(EngineDir, "ChaosCloth", "MCP_HAS_CHAOS_CLOTH");
+            DefineOptionalPluginMacro(EngineDir, "ChaosFlesh", "MCP_HAS_CHAOS_FLESH");
 
             // Phase 30: Media Framework (built-in, safe to add)
             TryAddConditionalModule(Target, EngineDir, "MediaAssets", "MediaAssets");

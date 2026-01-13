@@ -24,6 +24,21 @@ export interface AutomationBridgeMessage {
     [key: string]: unknown;
 }
 
+export interface AutomationBridgeResponseChunk extends AutomationBridgeMessage {
+    type: 'automation_response_chunk';
+    requestId: string;
+    chunkIndex: number;
+    totalChunks: number;
+    chunkData: string;
+}
+
+export enum AutomationConnectionCategory {
+    Quick = 'quick',      // Fast queries (get_, list_)
+    Asset = 'asset',      // Asset operations (save_, create_)
+    Heavy = 'heavy',      // Long running (build_, cook_)
+    Events = 'events'     // Push events
+}
+
 export interface AutomationBridgeResponseMessage extends AutomationBridgeMessage {
     requestId: string;
     success?: boolean;

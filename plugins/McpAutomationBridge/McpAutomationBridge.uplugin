@@ -101,6 +101,11 @@
       "Enabled": true
     },
     {
+      "Name": "MotionDesign",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
       "Name": "IKRig",
       "Enabled": true
     },

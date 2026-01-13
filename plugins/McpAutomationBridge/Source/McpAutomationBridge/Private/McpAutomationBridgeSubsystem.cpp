@@ -957,6 +957,9 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    if (HandleMetaSoundAction(R, A, P, S)) {
+                      return true;
+                    }
                     return HandleAudioAction(R, A, P, S);
                   });
 
@@ -1019,6 +1022,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleManageAnimationAuthoringAction(R, A, P, S);
                   });
 
+  // Phase 3F: Control Rig & Motion Matching
+  RegisterHandler(TEXT("manage_control_rig"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageControlRigAction(R, A, P, S);
+                  });
+
   // Phase 11: Audio Authoring
   RegisterHandler(TEXT("manage_audio_authoring"),
                   [this](const FString &R, const FString &A,
@@ -1033,6 +1044,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageNiagaraAuthoringAction(R, A, P, S);
+                  });
+
+  // Phase 3E: Niagara Advanced
+  RegisterHandler(TEXT("manage_niagara_advanced"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageNiagaraAdvancedAction(R, A, P, S);
                   });
 
   // Phase 13: Gameplay Ability System (GAS)
@@ -1333,6 +1352,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageModdingAction(R, A, P, S);
+                  });
+
+  // Phase 47 (Phase 3B): Motion Design
+  RegisterHandler(TEXT("manage_motion_design"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageMotionDesignAction(R, A, P, S);
                   });
 
   // Animation & Physics actions (direct access to top-level handlers)

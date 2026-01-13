@@ -82,7 +82,36 @@ const testCases = [
   { scenario: 'Splines: Get specific spline info', toolName: 'manage_splines', arguments: { action: 'get_splines_info', actorName: 'IT_SplineActor' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete spline actors', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_SplineActor' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete road spline', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_RoadSpline' }, expected: 'success|not found' },
-  // Phase 27: PCG Framework (existing tests would be here)
+  // Phase 27: PCG Framework
+  // Graph Management
+  { scenario: 'PCG: Create PCG graph', toolName: 'manage_level', arguments: { action: 'create_pcg_graph', graphName: 'PCG_TestGraph', graphPath: TEST_FOLDER }, expected: 'success' },
+  { scenario: 'PCG: Add surface sampler node', toolName: 'manage_level', arguments: { action: 'add_surface_sampler', graphPath: `${TEST_FOLDER}/PCG_TestGraph`, pointsPerSquaredMeter: 0.5 }, expected: 'success|not found' },
+  { scenario: 'PCG: Add density filter node', toolName: 'manage_level', arguments: { action: 'add_density_filter', graphPath: `${TEST_FOLDER}/PCG_TestGraph`, lowerBound: 0.2, upperBound: 0.8 }, expected: 'success|not found' },
+  { scenario: 'PCG: Add transform points node', toolName: 'manage_level', arguments: { action: 'add_transform_points', graphPath: `${TEST_FOLDER}/PCG_TestGraph`, rotationMax: { pitch: 0, yaw: 360, roll: 0 } }, expected: 'success|not found' },
+  { scenario: 'PCG: Add static mesh spawner node', toolName: 'manage_level', arguments: { action: 'add_static_mesh_spawner', graphPath: `${TEST_FOLDER}/PCG_TestGraph`, meshPath: '/Engine/BasicShapes/Cube' }, expected: 'success|not found' },
+  
+  // Connections (Note: node IDs are needed, but this test assumes nodes are added in sequence or we test generic connection failure if nodes missing)
+  // For a reliable test we'd need to parse the node IDs from previous output, but the test runner here is simple list.
+  // We'll skip complex connection tests that depend on dynamic IDs for now, or assume 0/1/2 indices if the handler supported it (it requires UUIDs).
+  
+  // Execution
+  { scenario: 'PCG: Execute PCG graph (on volume)', toolName: 'manage_level', arguments: { action: 'execute_pcg_graph', actorName: 'PCG_TestVolume' }, expected: 'success|not found' },
+  
+  // Advanced Nodes
+  { scenario: 'PCG: Add landscape data node', toolName: 'manage_level', arguments: { action: 'add_landscape_data_node', graphPath: `${TEST_FOLDER}/PCG_TestGraph` }, expected: 'success|not found' },
+  { scenario: 'PCG: Add spline sampler', toolName: 'manage_level', arguments: { action: 'add_spline_sampler', graphPath: `${TEST_FOLDER}/PCG_TestGraph`, dimension: 'OnSpline', mode: 'Distance' }, expected: 'success|not found' },
+  { scenario: 'PCG: Add volume sampler', toolName: 'manage_level', arguments: { action: 'add_volume_sampler', graphPath: `${TEST_FOLDER}/PCG_TestGraph`, voxelSize: { x: 50, y: 50, z: 50 } }, expected: 'success|not found' },
+  { scenario: 'PCG: Add copy points', toolName: 'manage_level', arguments: { action: 'add_copy_points', graphPath: `${TEST_FOLDER}/PCG_TestGraph` }, expected: 'success|not found' },
+  
+  // Phase 3H: World Partition Actions
+  { scenario: 'World Partition: Configure world partition', toolName: 'manage_level', arguments: { action: 'configure_world_partition' }, expected: 'success|not enabled' },
+  { scenario: 'World Partition: Create streaming volume', toolName: 'manage_level', arguments: { action: 'create_streaming_volume', volumeName: 'IT_StreamingVolume', location: { x: 0, y: 0, z: 0 }, extent: { x: 5000, y: 5000, z: 2000 } }, expected: 'success' },
+  { scenario: 'World Partition: Configure large world coordinates', toolName: 'manage_level', arguments: { action: 'configure_large_world_coordinates' }, expected: 'success' },
+  { scenario: 'World Partition: Create world partition cell', toolName: 'manage_level', arguments: { action: 'create_world_partition_cell', cellSize: 12800 }, expected: 'success|not enabled' },
+  { scenario: 'World Partition: Configure runtime loading', toolName: 'manage_level', arguments: { action: 'configure_runtime_loading', runtimeCellSize: 12800 }, expected: 'success|not enabled' },
+  { scenario: 'World Partition: Configure world settings', toolName: 'manage_level', arguments: { action: 'configure_world_settings', killZ: -10000, worldGravityZ: -980 }, expected: 'success' },
+  { scenario: 'Cleanup: delete streaming volume', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_StreamingVolume' }, expected: 'success|not found' },
+  
   // Phase 28: Water & Weather (existing tests would be here)
   // Phase 29: Post-Process & Rendering
   { scenario: 'Post-Process: Create PPV', toolName: 'manage_post_process', arguments: { action: 'create_post_process_volume', volumeName: 'IT_PPVolume', location: { x: 0, y: 0, z: 0 }, infinite: true }, expected: 'success' },
@@ -402,11 +431,61 @@ const testCases = [
   { scenario: 'AssetPlugins: Get Substance outputs (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_substance_outputs', instancePath: '/Game/NonExistent' }, expected: 'success|not available' },
   { scenario: 'AssetPlugins: Get Substance graph info (non-existent)', toolName: 'manage_asset_plugins', arguments: { action: 'get_substance_graph_info', assetPath: '/Game/NonExistent' }, expected: 'success|not available' },
   
+  // ==================== Phase 3G: Rendering & Materials (Substrate) ====================
+  // Substrate Materials (UE 5.4+)
+  { scenario: 'MaterialAuthoring: Create Substrate material', toolName: 'manage_material_authoring', arguments: { action: 'create_substrate_material', name: 'M_SubstrateTest', path: ADV_TEST_FOLDER, slabType: 'Simple', thickness: 0.1, fuzzAmount: 0.5 }, expected: 'success|version mismatch' },
+  { scenario: 'MaterialAuthoring: Set Substrate properties', toolName: 'manage_material_authoring', arguments: { action: 'set_substrate_properties', assetPath: `${ADV_TEST_FOLDER}/M_SubstrateTest`, thickness: 0.2, fuzzAmount: 0.8 }, expected: 'success|not found|version mismatch' },
+  { scenario: 'MaterialAuthoring: Configure SSS Profile', toolName: 'manage_material_authoring', arguments: { action: 'configure_sss_profile', assetPath: `${ADV_TEST_FOLDER}/M_SubstrateTest`, scatterRadius: 1.5, startColor: { r: 1, g: 0.8, b: 0.6, a: 1 } }, expected: 'success|not found|version mismatch' },
+  // Exposure
+  { scenario: 'MaterialAuthoring: Configure Exposure', toolName: 'manage_material_authoring', arguments: { action: 'configure_exposure', postProcessVolumeName: 'IT_PPVolume', minBrightness: 0.5, maxBrightness: 2.0, speedUp: 3.0, speedDown: 3.0 }, expected: 'success|not found' },
+
+  // ==================== Phase 3B: Motion Design ====================
+  { scenario: 'Motion Design: Create cloner', toolName: 'manage_motion_design', arguments: { action: 'create_cloner', clonerName: 'IT_Cloner', clonerType: 'Grid', location: { x: 0, y: 0, z: 200 } }, expected: 'success|not available' },
+  { scenario: 'Motion Design: Configure cloner pattern', toolName: 'manage_motion_design', arguments: { action: 'configure_cloner_pattern', clonerActor: 'IT_Cloner', countX: 3, countY: 3, countZ: 1 }, expected: 'success|not found|not available' },
+  { scenario: 'Motion Design: Add effector', toolName: 'manage_motion_design', arguments: { action: 'add_effector', clonerActor: 'IT_Cloner', effectorType: 'Noise' }, expected: 'success|not found|not available' },
+  { scenario: 'Motion Design: Animate effector', toolName: 'manage_motion_design', arguments: { action: 'animate_effector', effectorName: 'NoiseEffector', animationProperty: 'Strength', duration: 1.0 }, expected: 'success|not found|not available' },
+  { scenario: 'Motion Design: Create mograph sequence', toolName: 'manage_motion_design', arguments: { action: 'create_mograph_sequence', sequencePath: `${ADV_TEST_FOLDER}/LS_MographTest` }, expected: 'success' },
+  { scenario: 'Motion Design: Create radial cloner', toolName: 'manage_motion_design', arguments: { action: 'create_radial_cloner', clonerName: 'IT_RadialCloner', radius: 200, count: 8, location: { x: 500, y: 0, z: 200 } }, expected: 'success|not available' },
+  { scenario: 'Motion Design: Create spline cloner', toolName: 'manage_motion_design', arguments: { action: 'create_spline_cloner', clonerName: 'IT_SplineCloner', location: { x: 1000, y: 0, z: 200 } }, expected: 'success|not available' },
+  { scenario: 'Motion Design: Add noise effector', toolName: 'manage_motion_design', arguments: { action: 'add_noise_effector', clonerActor: 'IT_Cloner', strength: 50 }, expected: 'success|not found|not available' },
+  { scenario: 'Motion Design: Configure step effector', toolName: 'manage_motion_design', arguments: { action: 'configure_step_effector', effectorName: 'StepEffector', delay: 0.1 }, expected: 'success|not found|not available' },
+  { scenario: 'Motion Design: Export to sequence', toolName: 'manage_motion_design', arguments: { action: 'export_mograph_to_sequence', clonerActor: 'IT_Cloner', sequencePath: `${ADV_TEST_FOLDER}/LS_MographExport` }, expected: 'success|not found|not available' },
+  { scenario: 'Motion Design: Cleanup cloner', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_Cloner' }, expected: 'success|not found' },
+  { scenario: 'Motion Design: Cleanup radial cloner', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_RadialCloner' }, expected: 'success|not found' },
+  { scenario: 'Motion Design: Cleanup spline cloner', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_SplineCloner' }, expected: 'success|not found' },
+
   // ==================== Phase 1 Modernization: Batch Execution ====================
   { scenario: 'System: Batch execute', toolName: 'system_control', arguments: { action: 'batch_execute', requests: [
     { tool: 'system_control', action: 'execute_command', payload: { command: 'Log Batch Request 1' } },
     { tool: 'system_control', action: 'execute_command', payload: { command: 'Log Batch Request 2' } }
   ] }, expected: 'success' },
+
+  // ==================== Phase 3G.2: Nanite & Lumen ====================
+  // Nanite
+  { scenario: 'Asset: Duplicate Cube for Nanite', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: '/Engine/BasicShapes/Cube', destinationPath: `${ADV_TEST_FOLDER}/SM_NaniteCube` }, expected: 'success' },
+  { scenario: 'Asset: Enable Nanite', toolName: 'manage_asset', arguments: { action: 'enable_nanite_mesh', assetPath: `${ADV_TEST_FOLDER}/SM_NaniteCube`, enableNanite: true }, expected: 'success' },
+  { scenario: 'Asset: Set Nanite settings', toolName: 'manage_asset', arguments: { action: 'set_nanite_settings', assetPath: `${ADV_TEST_FOLDER}/SM_NaniteCube`, positionPrecision: 2, percentTriangles: 0.5 }, expected: 'success' },
+  { scenario: 'Asset: Batch Nanite convert', toolName: 'manage_asset', arguments: { action: 'batch_nanite_convert', directory: ADV_TEST_FOLDER, enableNanite: true }, expected: 'success' },
+  
+  // Lumen
+  { scenario: 'Lighting: Configure Lumen GI', toolName: 'manage_lighting', arguments: { action: 'configure_lumen_gi', lumenQuality: 2, lumenDetailTrace: true }, expected: 'success' },
+  { scenario: 'Lighting: Set Lumen Reflections', toolName: 'manage_lighting', arguments: { action: 'set_lumen_reflections', lumenReflectionQuality: 2, lumenDetailTrace: true }, expected: 'success' },
+  { scenario: 'Lighting: Create Lumen Volume', toolName: 'manage_lighting', arguments: { action: 'create_lumen_volume', name: 'LumenVolume', location: { x: 0, y: 0, z: 0 }, size: { x: 1000, y: 1000, z: 1000 } }, expected: 'success' },
+  { scenario: 'Lighting: Set VSM', toolName: 'manage_lighting', arguments: { action: 'set_virtual_shadow_maps', enabled: true }, expected: 'success' },
+
+  // ==================== Phase 4.1: Event Push System ====================
+  { scenario: 'Events: Subscribe to asset.saved event', toolName: 'control_editor', arguments: { action: 'subscribe_to_event', eventType: 'asset.saved' }, expected: 'success' },
+  { scenario: 'Events: Subscribe to actor.spawned event', toolName: 'control_editor', arguments: { action: 'subscribe_to_event', eventType: 'actor.spawned' }, expected: 'success' },
+  { scenario: 'Events: Get subscribed events', toolName: 'control_editor', arguments: { action: 'get_subscribed_events' }, expected: 'success' },
+  { scenario: 'Events: Get event history', toolName: 'control_editor', arguments: { action: 'get_event_history', limit: 10 }, expected: 'success' },
+  { scenario: 'Events: Unsubscribe from event', toolName: 'control_editor', arguments: { action: 'unsubscribe_from_event', eventType: 'asset.saved' }, expected: 'success' },
+  { scenario: 'Events: Clear all subscriptions', toolName: 'control_editor', arguments: { action: 'clear_event_subscriptions' }, expected: 'success' },
+
+  // ==================== Phase 4.3: Background Job Management ====================
+  { scenario: 'Jobs: Start background job', toolName: 'control_editor', arguments: { action: 'start_background_job', jobType: 'validate' }, expected: 'success' },
+  { scenario: 'Jobs: Get job status', toolName: 'control_editor', arguments: { action: 'get_job_status', jobId: 'test-job-id' }, expected: 'success' },
+  { scenario: 'Jobs: Get active jobs', toolName: 'control_editor', arguments: { action: 'get_active_jobs' }, expected: 'success' },
+  { scenario: 'Jobs: Cancel job', toolName: 'control_editor', arguments: { action: 'cancel_job', jobId: 'test-job-id' }, expected: 'success' },
 
   // Cleanup tests
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },

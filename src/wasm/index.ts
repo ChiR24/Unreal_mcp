@@ -35,6 +35,10 @@ interface WASMModule {
     findCircularDependencies: (dependencies: string, maxDepth: number) => unknown;
     topologicalSort: (dependencies: string) => unknown;
   };
+  MeshAnalyzer?: new () => {
+    calculateBounds: (vertices: Float32Array) => Float32Array;
+    calculateSurfaceArea: (vertices: Float32Array, indices: Uint32Array) => number;
+  };
   Utils?: unknown;
 }
 
@@ -529,6 +533,109 @@ export class WASMIntegration {
     this.recordMetrics('topological_sort', duration, false);
 
     return this.fallbackTopologicalSort(dependencies);
+  }
+
+  /**
+   * Calculate mesh bounds
+   */
+  calculateMeshBounds(vertices: Float32Array): Float32Array {
+    const start = performance.now();
+
+    if (this.isReady() && this.module && typeof this.module.MeshAnalyzer === 'function') {
+      try {
+        const analyzer = new this.module.MeshAnalyzer();
+        const result = analyzer.calculateBounds(vertices);
+
+        const duration = performance.now() - start;
+        this.recordMetrics('calculate_mesh_bounds', duration, true);
+
+        return new Float32Array(result);
+      } catch (error: unknown) {
+        this.log.warn('WASM mesh bounds calculation failed, falling back to TypeScript:', error);
+      }
+    }
+
+    // Fallback
+    const duration = performance.now() - start;
+    this.recordMetrics('calculate_mesh_bounds', duration, false);
+    return this.fallbackCalculateMeshBounds(vertices);
+  }
+
+  /**
+   * Calculate mesh surface area
+   */
+  calculateMeshSurfaceArea(vertices: Float32Array, indices: Uint32Array): number {
+    const start = performance.now();
+
+    if (this.isReady() && this.module && typeof this.module.MeshAnalyzer === 'function') {
+      try {
+        const analyzer = new this.module.MeshAnalyzer();
+        const result = analyzer.calculateSurfaceArea(vertices, indices);
+
+        const duration = performance.now() - start;
+        this.recordMetrics('calculate_mesh_surface_area', duration, true);
+
+        return result;
+      } catch (error: unknown) {
+        this.log.warn('WASM mesh surface area calculation failed, falling back to TypeScript:', error);
+      }
+    }
+
+    // Fallback
+    const duration = performance.now() - start;
+    this.recordMetrics('calculate_mesh_surface_area', duration, false);
+    return this.fallbackCalculateMeshSurfaceArea(vertices, indices);
+  }
+
+  private fallbackCalculateMeshBounds(vertices: Float32Array): Float32Array {
+    if (vertices.length === 0) return new Float32Array(6);
+
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+    for (let i = 0; i < vertices.length; i += 3) {
+      const x = vertices[i]!;
+      const y = vertices[i + 1]!;
+      const z = vertices[i + 2]!;
+
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (z < minZ) minZ = z;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+      if (z > maxZ) maxZ = z;
+    }
+
+    return new Float32Array([minX, minY, minZ, maxX, maxY, maxZ]);
+  }
+
+  private fallbackCalculateMeshSurfaceArea(vertices: Float32Array, indices: Uint32Array): number {
+    let totalArea = 0;
+
+    for (let i = 0; i < indices.length; i += 3) {
+      const idx0 = (indices[i]!) * 3;
+      const idx1 = (indices[i + 1]!) * 3;
+      const idx2 = (indices[i + 2]!) * 3;
+
+      if (idx0 + 2 < vertices.length && idx1 + 2 < vertices.length && idx2 + 2 < vertices.length) {
+        const v0x = vertices[idx0]!, v0y = vertices[idx0 + 1]!, v0z = vertices[idx0 + 2]!;
+        const v1x = vertices[idx1]!, v1y = vertices[idx1 + 1]!, v1z = vertices[idx1 + 2]!;
+        const v2x = vertices[idx2]!, v2y = vertices[idx2 + 1]!, v2z = vertices[idx2 + 2]!;
+
+        // Edges
+        const e1x = v1x - v0x, e1y = v1y - v0y, e1z = v1z - v0z;
+        const e2x = v2x - v0x, e2y = v2y - v0y, e2z = v2z - v0z;
+
+        // Cross product
+        const cx = e1y * e2z - e1z * e2y;
+        const cy = e1z * e2x - e1x * e2z;
+        const cz = e1x * e2y - e1y * e2x;
+
+        totalArea += 0.5 * Math.sqrt(cx * cx + cy * cy + cz * cz);
+      }
+    }
+
+    return totalArea;
   }
 
   /**

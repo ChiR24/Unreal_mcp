@@ -113,6 +113,28 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     mutableArgs.systemName = systemName;
   }
 
+  // Niagara Advanced (Phase 3E)
+  const advancedActions = [
+    'create_niagara_module', 'add_niagara_script', 'add_data_interface',
+    'setup_niagara_fluids', 'create_fluid_simulation', 'add_chaos_integration'
+  ];
+  
+  if (advancedActions.includes(action)) {
+    mutableArgs.subAction = action;
+    
+    // Map alias
+    if (action === 'create_fluid_simulation') {
+      mutableArgs.subAction = 'setup_niagara_fluids';
+    }
+
+    return cleanObject(await executeAutomationRequest(
+      tools,
+      'manage_niagara_advanced',
+      mutableArgs,
+      'Automation bridge not available for Niagara Advanced operations'
+    )) as HandlerResult;
+  }
+
   // Handle debug cleanup actions
   if (action === 'clear_debug_shapes') {
     return executeAutomationRequest(tools, action, mutableArgs) as Promise<HandlerResult>;

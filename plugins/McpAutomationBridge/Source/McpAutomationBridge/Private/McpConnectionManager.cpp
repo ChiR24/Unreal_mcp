@@ -587,6 +587,36 @@ void FMcpConnectionManager::SendControlMessage(
   SendRawMessage(Serialized);
 }
 
+void FMcpConnectionManager::SendAutomationResponseChunked(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const FString& FullJsonContent)
+{
+    const int32 MaxChunkSize = 64 * 1024; // 64KB chunks
+    const int32 TotalLength = FullJsonContent.Len();
+    const int32 TotalChunks = (TotalLength + MaxChunkSize - 1) / MaxChunkSize;
+
+    for (int32 i = 0; i < TotalChunks; ++i)
+    {
+        int32 StartIndex = i * MaxChunkSize;
+        int32 Count = FMath::Min(MaxChunkSize, TotalLength - StartIndex);
+        FString ChunkData = FullJsonContent.Mid(StartIndex, Count);
+
+        TSharedRef<FJsonObject> ChunkObj = MakeShared<FJsonObject>();
+        ChunkObj->SetStringField(TEXT("type"), TEXT("automation_response_chunk"));
+        ChunkObj->SetStringField(TEXT("requestId"), RequestId);
+        ChunkObj->SetNumberField(TEXT("chunkIndex"), i);
+        ChunkObj->SetNumberField(TEXT("totalChunks"), TotalChunks);
+        ChunkObj->SetStringField(TEXT("chunkData"), ChunkData);
+
+        FString SerializedChunk;
+        const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&SerializedChunk);
+        FJsonSerializer::Serialize(ChunkObj, Writer);
+
+        if (TargetSocket.IsValid() && TargetSocket->IsConnected())
+        {
+            TargetSocket->Send(SerializedChunk);
+        }
+    }
+}
+
 void FMcpConnectionManager::SendAutomationResponse(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
     bool bSuccess, const FString &Message,
@@ -616,47 +646,41 @@ void FMcpConnectionManager::SendAutomationResponse(
   RecordAutomationTelemetry(RequestId, bSuccess, Message, ErrorCode);
 
   bool bSent = false;
-  TArray<FString> AttemptDetails;
-  const int MaxAttempts = 3;
+  TSharedPtr<FMcpBridgeWebSocket> BestSocket = nullptr;
 
-  TSharedPtr<FMcpBridgeWebSocket> MappedSocket;
-  {
-    FScopeLock Lock(&PendingRequestsMutex);
-    if (TSharedPtr<FMcpBridgeWebSocket> *Found =
-            PendingRequestsToSockets.Find(RequestId)) {
-      MappedSocket = *Found;
-    }
+  // 1. Try TargetSocket
+  if (TargetSocket.IsValid() && TargetSocket->IsConnected()) {
+      BestSocket = TargetSocket;
   }
 
-  for (int Attempt = 1; Attempt <= MaxAttempts && !bSent; ++Attempt) {
-    if (TargetSocket.IsValid() && TargetSocket->IsConnected()) {
-      if (TargetSocket->Send(Serialized)) {
-        bSent = true;
-        break;
+  // 2. Try Mapped Socket
+  if (!BestSocket.IsValid()) {
+      FScopeLock Lock(&PendingRequestsMutex);
+      if (TSharedPtr<FMcpBridgeWebSocket>* Found = PendingRequestsToSockets.Find(RequestId)) {
+          if ((*Found).IsValid() && (*Found)->IsConnected()) {
+              BestSocket = *Found;
+          }
       }
-    }
+  }
 
-    if (!bSent && MappedSocket.IsValid() && MappedSocket->IsConnected()) {
-      if (MappedSocket->Send(Serialized)) {
-        bSent = true;
-        break;
+  // 3. Fallback to any active socket
+  if (!BestSocket.IsValid()) {
+      for (const TSharedPtr<FMcpBridgeWebSocket>& Sock : ActiveSockets) {
+          if (Sock.IsValid() && Sock->IsConnected()) {
+              BestSocket = Sock;
+              break;
+          }
       }
-    }
+  }
 
-    if (!bSent) {
-      for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets) {
-        if (!Sock.IsValid() || !Sock->IsConnected())
-          continue;
-        if (Sock == TargetSocket)
-          continue;
-        if (MappedSocket == Sock)
-          continue;
-        if (Sock->Send(Serialized)) {
+  if (BestSocket.IsValid()) {
+      const int32 MaxChunkSize = 64 * 1024;
+      if (Serialized.Len() > MaxChunkSize) {
+          SendAutomationResponseChunked(BestSocket, RequestId, Serialized);
           bSent = true;
-          break;
-        }
+      } else {
+          bSent = BestSocket->Send(Serialized);
       }
-    }
   }
 
   if (!bSent) {

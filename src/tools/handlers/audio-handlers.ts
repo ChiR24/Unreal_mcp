@@ -192,6 +192,26 @@ export async function handleAudioTools(
     case 'fade_sound_out':
       return cleanObject(await tools.automationBridge?.sendAutomationRequest(action, argsRecord, { timeoutMs: getTimeoutMs() })) as HandlerResult;
 
+    // MetaSounds (Phase 3C.1)
+    case 'create_metasound':
+    case 'add_metasound_node':
+    case 'connect_metasound_nodes':
+    case 'remove_metasound_node':
+    case 'set_metasound_variable':
+    case 'create_oscillator':
+    case 'create_envelope':
+    case 'create_filter':
+    case 'create_sequencer_node':
+    case 'create_procedural_music':
+    case 'import_audio_to_metasound':
+    case 'export_metasound_preset':
+    case 'configure_audio_modulation':
+      // Route to manage_audio tool, preserving the action name in the payload
+      return cleanObject(await tools.automationBridge?.sendAutomationRequest('manage_audio', {
+        ...argsRecord,
+        action: action 
+      }, { timeoutMs: getTimeoutMs() })) as HandlerResult;
+
     default:
       return cleanObject({ success: false, error: 'UNKNOWN_ACTION', message: `Unknown audio action: ${action}` });
   }

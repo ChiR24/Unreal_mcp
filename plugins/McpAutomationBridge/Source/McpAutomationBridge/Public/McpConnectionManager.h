@@ -63,8 +63,11 @@ private:
 
 	void EmitAutomationTelemetrySummaryIfNeeded(double NowSeconds);
 
+	void SendAutomationResponseChunked(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const FString& FullJsonContent);
+
 private:
 	TArray<TSharedPtr<FMcpBridgeWebSocket>> ActiveSockets;
+
 	TMap<FString, TSharedPtr<FMcpBridgeWebSocket>> PendingRequestsToSockets;
 	FTSTicker::FDelegateHandle TickerHandle;
 	FMcpMessageReceivedCallback OnMessageReceived;

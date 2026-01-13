@@ -1069,4 +1069,137 @@ export class LightingTools {
       };
     }
   }
+
+  // Configure Lumen GI
+  async configureLumenGI(params: {
+    quality?: number;
+    detailTrace?: boolean;
+    updateSpeed?: number;
+    finalGatherQuality?: number;
+  }) {
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('configure_lumen_gi', params);
+        if (response.success) return { success: true, message: 'Lumen GI configured via bridge', ...(response.result || {}) };
+      } catch (_e) {
+        // Fallback
+      }
+    }
+
+    const commands = [];
+    if (params.quality !== undefined) commands.push(`r.Lumen.Quality ${params.quality}`);
+    if (params.detailTrace !== undefined) commands.push(`r.Lumen.DetailTrace ${params.detailTrace ? 1 : 0}`);
+    if (params.updateSpeed !== undefined) commands.push(`r.LumenScene.UpdateSpeed ${params.updateSpeed}`);
+    if (params.finalGatherQuality !== undefined) commands.push(`r.Lumen.ScreenProbeGather.Quality ${params.finalGatherQuality}`);
+
+    for (const cmd of commands) {
+      await this.bridge.executeConsoleCommand(cmd);
+    }
+    return { success: true, message: 'Lumen GI configured (console)' };
+  }
+
+  // Set Lumen Reflections
+  async setLumenReflections(params: {
+    quality?: number;
+    detailTrace?: boolean;
+  }) {
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('set_lumen_reflections', params);
+        if (response.success) return { success: true, message: 'Lumen reflections configured via bridge', ...(response.result || {}) };
+      } catch (_e) {
+        // Fallback
+      }
+    }
+
+    const commands = [];
+    if (params.quality !== undefined) commands.push(`r.Lumen.Reflections.Quality ${params.quality}`);
+    if (params.detailTrace !== undefined) commands.push(`r.Lumen.Reflections.DetailTrace ${params.detailTrace ? 1 : 0}`);
+
+    for (const cmd of commands) {
+      await this.bridge.executeConsoleCommand(cmd);
+    }
+    return { success: true, message: 'Lumen reflections configured (console)' };
+  }
+
+  // Tune Lumen Performance
+  async tuneLumenPerformance(params: {
+    quality?: number;
+    updateSpeed?: number;
+  }) {
+    return this.configureLumenGI(params);
+  }
+
+  // Create Lumen Volume
+  async createLumenVolume(params: {
+    name?: string;
+    location?: unknown;
+    size?: unknown;
+  }) {
+    const name = this.normalizeName(params.name);
+    const bridge = requireBridge(this.automationBridge, 'Lumen volume creation');
+    
+    // Normalize location/size simply
+    const toVector3 = (val: unknown, defaultVal: [number, number, number]): [number, number, number] => {
+        if (Array.isArray(val) && val.length >= 3) {
+          return [Number(val[0]) || 0, Number(val[1]) || 0, Number(val[2]) || 0];
+        }
+        if (val && typeof val === 'object') {
+          const obj = val as Record<string, unknown>;
+          return [Number(obj.x) || 0, Number(obj.y) || 0, Number(obj.z) || 0];
+        }
+        return defaultVal;
+    };
+    const locArr = toVector3(params.location, [0, 0, 0]);
+    const sizeArr = toVector3(params.size, [1000, 1000, 1000]);
+
+    try {
+        const response = await bridge.sendAutomationRequest('create_lumen_volume', {
+            name,
+            location: { x: locArr[0], y: locArr[1], z: locArr[2] },
+            size: { x: sizeArr[0], y: sizeArr[1], z: sizeArr[2] }
+        });
+        if (response.success === false) {
+            return {
+                success: false,
+                error: response.error || response.message || 'Failed to create Lumen volume'
+            };
+        }
+        return {
+            success: true,
+            message: `Lumen PostProcessVolume '${name}' created`,
+            ...(response.result || {})
+        };
+    } catch (error: unknown) {
+        return {
+            success: false,
+            error: `Failed to create Lumen volume: ${error}`
+        };
+    }
+  }
+
+  // Set Virtual Shadow Maps
+  async setVirtualShadowMaps(params: {
+    enabled?: boolean;
+    resolution?: number;
+    quality?: number;
+  }) {
+    if (this.automationBridge) {
+      try {
+        const response = await this.automationBridge.sendAutomationRequest('set_virtual_shadow_maps', params);
+        if (response.success) return { success: true, message: 'VSM configured via bridge', ...(response.result || {}) };
+      } catch (_e) {
+        // Fallback
+      }
+    }
+
+    const commands = [];
+    if (params.enabled !== undefined) commands.push(`r.Shadow.Virtual.Enable ${params.enabled ? 1 : 0}`);
+    // Fallback approximations for resolution/quality to CVars if needed, but primary is enable
+    
+    for (const cmd of commands) {
+      await this.bridge.executeConsoleCommand(cmd);
+    }
+    return { success: true, message: 'VSM configured (console)' };
+  }
 }

@@ -1,6 +1,7 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, Vector3, Rotator, HandlerResult } from '../../types/handler-types.js';
 import { cleanObject } from '../../utils/safe-json.js';
+import { McpError, McpErrorCode } from '../../types/errors.js';
 
 /**
  * Validates that args is not null/undefined.
@@ -31,6 +32,42 @@ export function requireNonEmptyString(value: unknown, field: string, message?: s
     throw new Error(message ?? `Invalid ${field}: must be a non-empty string`);
   }
   return value;
+}
+
+/**
+ * Map raw error to McpError
+ */
+export function mapToMcpError(error: unknown): McpError {
+  if (error instanceof McpError) return error;
+
+  const msg = error instanceof Error ? error.message : String(error);
+  const lowerMsg = msg.toLowerCase();
+
+  // Connection errors
+  if (lowerMsg.includes('connect') || lowerMsg.includes('refused') || lowerMsg.includes('socket')) {
+    return new McpError(McpErrorCode.UE_NOT_CONNECTED, msg, {
+      retryable: true,
+      suggestedFixes: ['Ensure Unreal Engine is running', 'Check if McpAutomationBridge plugin is enabled', 'Verify port configuration']
+    });
+  }
+  
+  if (lowerMsg.includes('timeout') || lowerMsg.includes('timed out')) {
+    return new McpError(McpErrorCode.BRIDGE_TIMEOUT, msg, {
+      retryable: true,
+      suggestedFixes: ['Increase timeout', 'Check if Editor is paused']
+    });
+  }
+
+  // Common C++ errors
+  if (lowerMsg.includes('asset not found')) {
+    return new McpError(McpErrorCode.ASSET_NOT_FOUND, msg);
+  }
+  
+  if (lowerMsg.includes('invalid argument') || lowerMsg.includes('missing')) {
+    return new McpError(McpErrorCode.INVALID_PARAMS, msg);
+  }
+
+  return new McpError(McpErrorCode.INTERNAL_ERROR, msg, { originalError: error });
 }
 
 /**
@@ -67,14 +104,28 @@ export async function executeAutomationRequest(
   const automationBridge = tools.automationBridge;
   // If the bridge is missing or not a function, we can't proceed with automation requests
   if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
-    throw new Error(errorMessage);
+    throw new McpError(McpErrorCode.UE_NOT_CONNECTED, errorMessage, {
+      retryable: true,
+      suggestedFixes: ['Verify AutomationBridge is initialized', 'Check connection status']
+    });
   }
 
   if (!automationBridge.isConnected()) {
-    throw new Error(`Automation bridge is not connected to Unreal Engine. Please check if the editor is running and the plugin is enabled. Action: ${toolName}`);
+    throw new McpError(
+      McpErrorCode.UE_NOT_CONNECTED,
+      `Automation bridge is not connected to Unreal Engine. Please check if the editor is running and the plugin is enabled. Action: ${toolName}`,
+      {
+        retryable: true,
+        suggestedFixes: ['Start Unreal Engine', 'Enable McpAutomationBridge plugin']
+      }
+    );
   }
 
-  return await automationBridge.sendAutomationRequest(toolName, args, options);
+  try {
+    return await automationBridge.sendAutomationRequest(toolName, args, options);
+  } catch (error) {
+    throw mapToMcpError(error);
+  }
 }
 
 /**
@@ -101,7 +152,7 @@ export async function executeAndClean(
   
   // Type guard: bridge protocol guarantees objects, but enforce at runtime
   if (cleaned === null || typeof cleaned !== 'object' || Array.isArray(cleaned)) {
-    throw new Error(`Bridge returned non-object for ${toolName}: ${typeof cleaned}`);
+    throw new McpError(McpErrorCode.BRIDGE_ERROR, `Bridge returned non-object for ${toolName}: ${typeof cleaned}`);
   }
   
   return cleaned as HandlerResult;

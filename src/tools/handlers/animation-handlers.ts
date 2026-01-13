@@ -281,6 +281,125 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
 
       return cleanObject(await tools.physicsTools.setupPhysicsSimulation(payload));
     }
+
+    // Control Rig & Motion Matching Routing (Phase 3F)
+    case 'create_control_rig':
+    case 'add_control':
+    case 'add_rig_unit':
+    case 'connect_rig_elements':
+    case 'create_ik_rig':
+    case 'add_ik_chain':
+    case 'add_ik_goal':
+    case 'create_ik_retargeter':
+    case 'set_retarget_chain_mapping':
+    case 'create_pose_search_database':
+    case 'configure_motion_matching':
+    case 'setup_ml_deformer':
+    case 'create_animation_modifier':
+    case 'apply_animation_modifier': {
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_control_rig',
+        args,
+        'Automation bridge not available for Control Rig/Animation operations'
+      )) as HandlerResult;
+    }
+
+    // Chaos Destruction / Physics Routing (Phase 3D)
+    case 'chaos_create_geometry_collection':
+    case 'chaos_fracture_uniform':
+    case 'chaos_fracture_clustered':
+    case 'chaos_fracture_radial':
+    case 'chaos_fracture_slice':
+    case 'chaos_fracture_brick':
+    case 'chaos_flatten_fracture':
+    case 'chaos_set_geometry_collection_materials':
+    case 'chaos_set_damage_thresholds':
+    case 'chaos_set_cluster_connection_type':
+    case 'chaos_set_collision_particles_fraction':
+    case 'chaos_set_remove_on_break':
+    case 'chaos_create_field_system_actor':
+    case 'chaos_add_transient_field':
+    case 'chaos_add_persistent_field':
+    case 'chaos_add_construction_field':
+    case 'chaos_add_field_radial_falloff':
+    case 'chaos_add_field_radial_vector':
+    case 'chaos_add_field_uniform_vector':
+    case 'chaos_add_field_noise':
+    case 'chaos_add_field_strain':
+    case 'chaos_create_anchor_field':
+    case 'chaos_set_dynamic_state':
+    case 'chaos_enable_clustering':
+    case 'chaos_get_geometry_collection_stats':
+    case 'chaos_create_geometry_collection_cache':
+    case 'chaos_record_geometry_collection_cache':
+    case 'chaos_apply_cache_to_collection':
+    case 'chaos_remove_geometry_collection_cache':
+    // Chaos Vehicles
+    case 'chaos_create_wheeled_vehicle_bp':
+    case 'chaos_add_vehicle_wheel':
+    case 'chaos_remove_wheel_from_vehicle':
+    case 'chaos_configure_engine_setup':
+    case 'chaos_configure_transmission_setup':
+    case 'chaos_configure_steering_setup':
+    case 'chaos_configure_differential_setup':
+    case 'chaos_configure_suspension_setup':
+    case 'chaos_configure_brake_setup':
+    case 'chaos_set_vehicle_mesh':
+    case 'chaos_set_wheel_class':
+    case 'chaos_set_wheel_offset':
+    case 'chaos_set_wheel_radius':
+    case 'chaos_set_vehicle_mass':
+    case 'chaos_set_drag_coefficient':
+    case 'chaos_set_center_of_mass':
+    case 'chaos_create_vehicle_animation_instance':
+    case 'chaos_set_vehicle_animation_bp':
+    case 'chaos_get_vehicle_config':
+    // Chaos Cloth
+    case 'chaos_create_cloth_config':
+    case 'chaos_create_cloth_shared_sim_config':
+    case 'chaos_apply_cloth_to_skeletal_mesh':
+    case 'chaos_remove_cloth_from_skeletal_mesh':
+    case 'chaos_set_cloth_mass_properties':
+    case 'chaos_set_cloth_gravity':
+    case 'chaos_set_cloth_damping':
+    case 'chaos_set_cloth_collision_properties':
+    case 'chaos_set_cloth_stiffness':
+    case 'chaos_set_cloth_tether_stiffness':
+    case 'chaos_set_cloth_aerodynamics':
+    case 'chaos_set_cloth_anim_drive':
+    case 'chaos_set_cloth_long_range_attachment':
+    case 'chaos_get_cloth_config':
+    case 'chaos_get_cloth_stats':
+    // Chaos Flesh
+    case 'chaos_create_flesh_asset':
+    case 'chaos_create_flesh_component':
+    case 'chaos_set_flesh_simulation_properties':
+    case 'chaos_set_flesh_stiffness':
+    case 'chaos_set_flesh_damping':
+    case 'chaos_set_flesh_incompressibility':
+    case 'chaos_set_flesh_inflation':
+    case 'chaos_set_flesh_solver_iterations':
+    case 'chaos_bind_flesh_to_skeleton':
+    case 'chaos_set_flesh_rest_state':
+    case 'chaos_create_flesh_cache':
+    case 'chaos_record_flesh_simulation':
+    case 'chaos_get_flesh_asset_info':
+    // Utility
+    case 'chaos_get_physics_destruction_info':
+    case 'chaos_list_geometry_collections':
+    case 'chaos_list_chaos_vehicles':
+    case 'chaos_get_plugin_status': {
+      // Remove 'chaos_' prefix for C++ handler which expects cleaner names
+      const mappedAction = animAction.replace(/^chaos_/, '');
+      return cleanObject(await executeAutomationRequest(
+        tools, 
+        'manage_physics_destruction', 
+        { ...argsTyped, action_type: mappedAction }, // Pass action_type override 
+        'Automation bridge not available for Chaos Physics operations'
+      )) as HandlerResult;
+    }
+
     default: {
       const res = await executeAutomationRequest(tools, 'animation_physics', args, 'Automation bridge not available for animation/physics operations');
       return cleanObject(res) as HandlerResult;

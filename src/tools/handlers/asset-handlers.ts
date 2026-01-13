@@ -465,6 +465,61 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         });
         return ResponseFactory.success(res, 'Nanite mesh rebuilt successfully');
       }
+      case 'enable_nanite_mesh': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['meshPath'], required: true },
+          { key: 'enableNanite', default: true }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const enableNanite = extractOptionalBoolean(params, 'enableNanite') ?? true;
+        
+        // Note: Using 'manage_asset' tool for C++ dispatch as these are asset workflow actions
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'enable_nanite_mesh',
+          assetPath,
+          enableNanite
+        });
+        return ResponseFactory.success(res, `Nanite ${enableNanite ? 'enabled' : 'disabled'} successfully`);
+      }
+      case 'set_nanite_settings': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', required: true },
+          { key: 'nanitePositionPrecision' },
+          { key: 'nanitePercentTriangles' },
+          { key: 'naniteFallbackRelativeError' }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const positionPrecision = extractOptionalNumber(params, 'nanitePositionPrecision');
+        const percentTriangles = extractOptionalNumber(params, 'nanitePercentTriangles');
+        const fallbackRelativeError = extractOptionalNumber(params, 'naniteFallbackRelativeError');
+
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'set_nanite_settings',
+          assetPath,
+          positionPrecision,
+          percentTriangles,
+          fallbackRelativeError
+        });
+        return ResponseFactory.success(res, 'Nanite settings configured successfully');
+      }
+      case 'batch_nanite_convert': {
+        const params = normalizeArgs(args, [
+          { key: 'directory', aliases: ['path'], required: true },
+          { key: 'recursive', default: true },
+          { key: 'enableNanite', default: true }
+        ]);
+        const directory = extractString(params, 'directory');
+        const recursive = extractOptionalBoolean(params, 'recursive') ?? true;
+        const enableNanite = extractOptionalBoolean(params, 'enableNanite') ?? true;
+
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'batch_nanite_convert',
+          directory,
+          recursive,
+          enableNanite
+        });
+        return ResponseFactory.success(res, 'Batch Nanite conversion started');
+      }
       case 'fixup_redirectors': {
         const argsTyped = args as AssetArgs;
         const directoryRaw = typeof argsTyped.directory === 'string' && argsTyped.directory.trim().length > 0

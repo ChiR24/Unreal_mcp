@@ -639,6 +639,87 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       // Pass through to bridge
       return cleanObject(await executeAutomationRequest(tools, 'system_control', { action: 'batch_execute', requests }, 'Automation bridge not available')) as HandlerResult;
     }
+    // =========================================================================
+    // PHASE 4.1: EVENT PUSH SYSTEM
+    // =========================================================================
+    case 'subscribe_to_event': {
+      const eventType = (argsTyped as Record<string, unknown>).eventType as string;
+      if (!eventType) {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'eventType is required (e.g., asset.saved, actor.spawned, level.loaded, compile.complete)',
+          action: 'subscribe_to_event'
+        };
+      }
+      return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'subscribe_to_event', eventType }, 'Automation bridge not available')) as HandlerResult;
+    }
+    case 'unsubscribe_from_event': {
+      const eventType = (argsTyped as Record<string, unknown>).eventType as string;
+      if (!eventType) {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'eventType is required',
+          action: 'unsubscribe_from_event'
+        };
+      }
+      return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'unsubscribe_from_event', eventType }, 'Automation bridge not available')) as HandlerResult;
+    }
+    case 'get_subscribed_events':
+      return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'get_subscribed_events' }, 'Automation bridge not available')) as HandlerResult;
+    case 'configure_event_channel': {
+      const channelId = (argsTyped as Record<string, unknown>).channelId as string;
+      return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'configure_event_channel', channelId, ...(argsTyped as Record<string, unknown>) }, 'Automation bridge not available')) as HandlerResult;
+    }
+    case 'get_event_history': {
+      const limit = (argsTyped as Record<string, unknown>).limit as number || 100;
+      const eventType = (argsTyped as Record<string, unknown>).eventType as string;
+      return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'get_event_history', limit, eventType }, 'Automation bridge not available')) as HandlerResult;
+    }
+    case 'clear_event_subscriptions':
+      return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'clear_event_subscriptions' }, 'Automation bridge not available')) as HandlerResult;
+    // =========================================================================
+    // PHASE 4.3: BACKGROUND JOB MANAGEMENT
+    // =========================================================================
+    case 'start_background_job': {
+      const jobType = (argsTyped as Record<string, unknown>).jobType as string;
+      if (!jobType) {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'jobType is required (e.g., cook, validate, bulk_import)',
+          action: 'start_background_job'
+        };
+      }
+      return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'start_background_job', jobType, ...(argsTyped as Record<string, unknown>) }, 'Automation bridge not available')) as HandlerResult;
+    }
+    case 'get_job_status': {
+      const jobId = (argsTyped as Record<string, unknown>).jobId as string;
+      if (!jobId) {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'jobId is required',
+          action: 'get_job_status'
+        };
+      }
+      return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'get_job_status', jobId }, 'Automation bridge not available')) as HandlerResult;
+    }
+    case 'cancel_job': {
+      const jobId = (argsTyped as Record<string, unknown>).jobId as string;
+      if (!jobId) {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'jobId is required',
+          action: 'cancel_job'
+        };
+      }
+      return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'cancel_job', jobId }, 'Automation bridge not available')) as HandlerResult;
+    }
+    case 'get_active_jobs':
+      return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'get_active_jobs' }, 'Automation bridge not available')) as HandlerResult;
     default: {
       const res = await executeAutomationRequest(tools, 'system_control', args, 'Automation bridge not available for system control operations');
       return cleanObject(res) as HandlerResult;

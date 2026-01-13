@@ -10,10 +10,13 @@
 mod property_parser;
 mod transform_math;
 mod dependency_resolver;
+mod mesh_analysis;
 
 pub use property_parser::PropertyParser;
 pub use transform_math::{TransformCalculator, Vector, Rotator, Transform};
 pub use dependency_resolver::DependencyResolver;
+pub use mesh_analysis::MeshAnalyzer;
+
 
 // Re-export wasm-bindgen for convenience
 pub use wasm_bindgen::prelude::*;

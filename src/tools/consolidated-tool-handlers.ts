@@ -1,6 +1,6 @@
 import { cleanObject } from '../utils/safe-json.js';
 import { Logger } from '../utils/logger.js';
-import { ResponseFactory } from '../utils/response-factory.js';
+import { ErrorHandler } from '../utils/error-handler.js';
 import { ITools } from '../types/tool-interfaces.js';
 import { toolRegistry } from './dynamic-handler-registry.js';
 import { executeAutomationRequest, requireAction } from './handlers/common-handlers.js';
@@ -43,6 +43,7 @@ import { handleVolumeTools } from './handlers/volume-handlers.js';
 import { handleNavigationTools } from './handlers/navigation-handlers.js';
 import { handleSplineTools } from './handlers/spline-handlers.js';
 import { handlePCGTools } from './handlers/pcg-handlers.js';
+import { handleMotionDesignTools } from './handlers/motion-design-handlers.js';
 import { handlePostProcessTools } from './handlers/post-process-handlers.js';
 import { handleSequencerTools } from './handlers/sequencer-handlers.js';
 import { handleMovieRenderTools } from './handlers/movie-render-handlers.js';
@@ -258,7 +259,21 @@ function registerDefaultHandlers() {
     'create_sublevel', 'configure_level_streaming', 'set_streaming_distance', 'configure_level_bounds',
     'enable_world_partition', 'configure_grid_size', 'create_data_layer', 'assign_actor_to_data_layer',
     'configure_hlod_layer', 'create_minimap_volume', 'open_level_blueprint', 'add_level_blueprint_node',
-    'connect_level_blueprint_nodes', 'create_level_instance', 'create_packed_level_actor', 'get_level_structure_info'
+    'connect_level_blueprint_nodes', 'create_level_instance', 'create_packed_level_actor', 'get_level_structure_info',
+    // World Partition Phase 3H
+    'configure_world_partition', 'create_streaming_volume', 'configure_large_world_coordinates',
+    'create_world_partition_cell', 'configure_runtime_loading', 'configure_world_settings'
+  ]);
+  const PCG_ACTIONS = new Set([
+    'create_pcg_graph', 'create_pcg_subgraph', 'add_pcg_node', 'connect_pcg_pins', 'set_pcg_node_settings',
+    'add_landscape_data_node', 'add_spline_data_node', 'add_volume_data_node', 'add_actor_data_node', 'add_texture_data_node',
+    'add_surface_sampler', 'add_mesh_sampler', 'add_spline_sampler', 'add_volume_sampler',
+    'add_bounds_modifier', 'add_density_filter', 'add_height_filter', 'add_slope_filter',
+    'add_distance_filter', 'add_bounds_filter', 'add_self_pruning',
+    'add_transform_points', 'add_project_to_surface', 'add_copy_points', 'add_merge_points',
+    'add_static_mesh_spawner', 'add_actor_spawner', 'add_spline_spawner',
+    'execute_pcg_graph', 'set_pcg_partition_grid_size', 'get_pcg_info',
+    'create_biome_rules', 'blend_biomes', 'export_pcg_to_static', 'import_pcg_preset', 'debug_pcg_execution'
   ]);
   toolRegistry.register('manage_level', async (args, tools) => {
     const action = getAction(args);
@@ -270,6 +285,10 @@ function registerDefaultHandlers() {
     // Route level structure actions (merged from manage_level_structure - Phase 54)
     if (LEVEL_STRUCTURE_ACTIONS.has(action)) {
       return await handleLevelStructureTools(action, args, tools);
+    }
+    // Route PCG actions (merged from manage_pcg)
+    if (PCG_ACTIONS.has(action)) {
+      return await handlePCGTools(action, args, tools);
     }
     return await handleLevelTools(action, args, tools);
   });
@@ -635,6 +654,9 @@ function registerDefaultHandlers() {
   // 41. PCG FRAMEWORK (Phase 27)
   toolRegistry.register('manage_pcg', async (args, tools) => await handlePCGTools(getAction(args), args, tools));
 
+  // 41B. MOTION DESIGN (Phase 3B)
+  toolRegistry.register('manage_motion_design', async (args, tools) => await handleMotionDesignTools(getAction(args), args, tools));
+
   // 42. [DEPRECATED] WATER SYSTEM - now merged into build_environment (Phase 54)
   // Backward compatibility alias - logs deprecation warning once per session
   toolRegistry.register('manage_water', async (args, tools) => {
@@ -786,19 +808,7 @@ export async function handleConsolidatedToolCall(
 
   } catch (err: unknown) {
     const duration = Date.now() - startTime;
-    const errObj = err as Record<string, unknown> | null;
-    const errorMessage = typeof errObj?.message === 'string' ? errObj.message : String(err);
-    logger.error(`Failed execution of ${name} after ${duration}ms: ${errorMessage}`);
-    const lowerError = errorMessage.toString().toLowerCase();
-    const isTimeout = lowerError.includes('timeout');
-
-    let text: string;
-    if (isTimeout) {
-      text = `Tool ${name} timed out. Please check Unreal Engine connection.`;
-    } else {
-      text = `Failed to execute ${name}: ${errorMessage}`;
-    }
-
-    return ResponseFactory.error(text);
+    // Let ErrorHandler handle logging and formatting
+    return ErrorHandler.createErrorResponse(err, name, { duration });
   }
 }

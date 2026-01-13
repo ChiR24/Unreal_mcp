@@ -1,5 +1,6 @@
 import { Logger } from './logger.js';
 import { BaseToolResponse } from '../types/tool-types.js';
+import { McpError, McpErrorCode } from '../types/errors.js';
 
 const log = new Logger('ErrorHandler');
 
@@ -32,6 +33,8 @@ interface ErrorResponseDebug {
  * Extended error response with optional debug info
  */
 export interface ErrorToolResponse extends BaseToolResponse {
+  // Machine-readable error code if available
+  code?: string;
   // When present, provides machine-actionable details to help callers (LLMs) repair the request.
   errorDetails?: {
     kind: 'validation' | 'parameter' | 'connection' | 'execution' | 'timeout' | 'unknown';
@@ -113,19 +116,31 @@ export class ErrorHandler {
     context?: Record<string, unknown>
   ): ErrorToolResponse {
     const errorObj = normalizeErrorToLike(error);
-    const errorType = this.categorizeError(errorObj);
+    // Prefer original error for instance checks, otherwise use normalized object
+    const errorToCategorize = (error instanceof Error) ? error : errorObj;
+    const errorType = this.categorizeError(errorToCategorize as Error | ErrorLike);
     const userMessage = this.getUserFriendlyMessage(errorType, errorObj);
-    const retriable = this.isRetriable(errorObj);
+    const retriable = error instanceof McpError ? error.retryable : this.isRetriable(errorObj);
     const scope = (context?.scope as string) || `tool-call/${toolName}`;
     const errorMessage = errorObj.message || String(error);
     const errorStack = errorObj.stack;
+
+    // Extract McpError specifics
+    let code: string | undefined = errorObj.code;
+    let suggestedFixes: string[] | undefined;
+    
+    if (error instanceof McpError) {
+        code = error.code;
+        suggestedFixes = error.suggestedFixes;
+    }
 
     log.error(`Tool ${toolName} failed:`, {
       type: errorType,
       message: errorMessage,
       retriable,
       scope,
-      context
+      context,
+      code
     });
 
     const response: ErrorToolResponse = {
@@ -133,7 +148,8 @@ export class ErrorHandler {
       error: userMessage,
       message: `Failed to execute ${toolName}: ${userMessage}`,
       retriable,
-      scope
+      scope,
+      code
     };
 
     // Attach LLM-actionable details when possible.
@@ -154,6 +170,11 @@ export class ErrorHandler {
       if (typeof errorMessage === 'string') {
         const missingMatch = errorMessage.match(/Missing required parameter:\s*([A-Za-z0-9_\-.]+)/);
         if (missingMatch?.[1]) missing.push(missingMatch[1]);
+      }
+
+      // Add suggested fixes from McpError
+      if (suggestedFixes && suggestedFixes.length > 0) {
+          suggestedFixes.forEach(fix => expected.push({ path: 'generic', hint: fix }));
       }
 
       // Duck-type Zod issues if provided (shape: [{ path, message, ... }]).
@@ -212,6 +233,35 @@ export class ErrorHandler {
    * @param error - The error to categorize
    */
   private static categorizeError(error: ErrorLike | Error | string): ErrorType {
+    if (error instanceof McpError) {
+      switch (error.code) {
+        case McpErrorCode.UE_NOT_CONNECTED:
+        case McpErrorCode.BRIDGE_TIMEOUT:
+        case McpErrorCode.CONNECTION_REFUSED:
+        case McpErrorCode.BRIDGE_ERROR:
+          return ErrorType.CONNECTION;
+        case McpErrorCode.ASSET_NOT_FOUND:
+        case McpErrorCode.ACTOR_NOT_FOUND:
+        case McpErrorCode.ASSET_ALREADY_EXISTS:
+        case McpErrorCode.INVALID_ASSET_PATH:
+        case McpErrorCode.INVALID_ASSET_TYPE:
+        case McpErrorCode.LEVEL_NOT_LOADED:
+        case McpErrorCode.EDITOR_NOT_AVAILABLE:
+          return ErrorType.UNREAL_ENGINE;
+        case McpErrorCode.INVALID_PARAMS:
+        case McpErrorCode.MISSING_REQUIRED_PARAM:
+          return ErrorType.PARAMETER;
+        case McpErrorCode.EXECUTION_FAILED:
+        case McpErrorCode.INTERNAL_ERROR:
+        case McpErrorCode.NOT_IMPLEMENTED:
+          return ErrorType.EXECUTION;
+        case McpErrorCode.UNKNOWN_ERROR:
+        default:
+          return ErrorType.UNKNOWN;
+      }
+    }
+
+    // Try to detect McpError properties on generic ErrorLike
     const errorObj = typeof error === 'object' ? error as ErrorLike : null;
     const explicitType = (errorObj?.type || errorObj?.errorType || '').toString().toUpperCase();
     if (explicitType && Object.values(ErrorType).includes(explicitType as ErrorType)) {
