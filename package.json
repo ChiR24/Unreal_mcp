@@ -52,7 +52,8 @@
     "measure:tokens": "node scripts/measure-tool-tokens.mjs",
     "build:wasm": "echo 'Building WebAssembly module...' && cd wasm && wasm-pack build --target web --out-dir ../src/wasm/pkg && cd .. && node scripts/patch-wasm.js",
     "type-check": "tsc --noEmit",
-    "prebuild": "npm run lint && npm run clean"
+    "prebuild": "npm run lint && npm run clean",
+    "benchmark": "node tests/benchmarks/baseline.mjs"
   },
   "engines": {
     "node": ">=18"
