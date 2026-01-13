@@ -78,6 +78,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleDoesAssetExist(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("get_material_stats"))
     return HandleGetMaterialStats(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("get_source_control_state"))
+    return HandleGetSourceControlState(RequestId, Payload, RequestingSocket);
 
   // Workflow handlers are called directly from ProcessAutomationRequest, but we
   // can fallback here too if needed
@@ -469,6 +471,127 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
 #else
   SendAutomationResponse(RequestingSocket, RequestId, false,
                          TEXT("source_control_submit requires editor build"),
+                         nullptr, TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+// ============================================================================
+// 3b. GET SOURCE CONTROL STATE
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("get_source_control_state"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("get_source_control_state payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  // Support 'assetPath' (string) or 'assetPaths' (array)
+  TArray<FString> AssetPaths;
+  const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
+  if (Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) && AssetPathsArray) {
+    for (const auto &Val : *AssetPathsArray) {
+      if (Val.IsValid() && Val->Type == EJson::String) {
+        AssetPaths.Add(Val->AsString());
+      }
+    }
+  }
+  
+  FString SinglePath;
+  if (Payload->TryGetStringField(TEXT("assetPath"), SinglePath) && !SinglePath.IsEmpty()) {
+    AssetPaths.Add(SinglePath);
+  }
+
+  if (AssetPaths.Num() == 0) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("assetPath or assetPaths required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  if (!ISourceControlModule::Get().IsEnabled()) {
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(TEXT("error"), TEXT("Source control is not enabled"));
+    Result->SetBoolField(TEXT("enabled"), false);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Source control disabled"), Result,
+                           TEXT("SOURCE_CONTROL_DISABLED"));
+    return true;
+  }
+
+  ISourceControlProvider &Provider = ISourceControlModule::Get().GetProvider();
+  
+  TArray<FString> FilesToCheck;
+  TMap<FString, FString> FileToAssetPath;
+
+  for (const FString &AssetPath : AssetPaths) {
+     if (FPackageName::IsValidObjectPath(AssetPath)) {
+         FString PackageName = FPackageName::ObjectPathToPackageName(AssetPath);
+         FString Filename = SourceControlHelpers::PackageFilename(PackageName);
+         FString AbsFilename = FPaths::ConvertRelativePathToFull(Filename);
+         FilesToCheck.Add(AbsFilename);
+         FileToAssetPath.Add(AbsFilename, AssetPath);
+     } else {
+         // Assume it might be a file path
+         FilesToCheck.Add(AssetPath);
+         FileToAssetPath.Add(AssetPath, AssetPath);
+     }
+  }
+
+  // Update status first
+  Provider.Execute(ISourceControlOperation::Create<FUpdateStatus>(), FilesToCheck);
+
+  TArray<TSharedPtr<FJsonValue>> StatesArray;
+
+  for (const FString &File : FilesToCheck) {
+      FSourceControlStatePtr State = Provider.GetState(File, EStateCacheUsage::Use);
+      TSharedPtr<FJsonObject> StateObj = MakeShared<FJsonObject>();
+      
+      FString OriginalAssetPath = FileToAssetPath.FindRef(File);
+      StateObj->SetStringField(TEXT("assetPath"), OriginalAssetPath);
+      
+      if (State.IsValid()) {
+          StateObj->SetBoolField(TEXT("isValid"), true);
+          StateObj->SetBoolField(TEXT("isCheckedOut"), State->IsCheckedOut());
+          StateObj->SetBoolField(TEXT("isOpenForAdd"), State->IsOpenForAdd());
+          StateObj->SetBoolField(TEXT("isCurrent"), State->IsCurrent());
+          StateObj->SetBoolField(TEXT("isAdded"), State->IsAdded());
+          StateObj->SetBoolField(TEXT("isDeleted"), State->IsDeleted());
+          StateObj->SetBoolField(TEXT("isIgnored"), State->IsIgnored());
+          StateObj->SetBoolField(TEXT("canEdit"), State->CanEdit());
+          StateObj->SetBoolField(TEXT("canCheckIn"), State->CanCheckIn());
+          StateObj->SetBoolField(TEXT("canCheckOut"), State->CanCheckout());
+          StateObj->SetStringField(TEXT("owner"), State->GetCheckedOutByUser());
+      } else {
+          StateObj->SetBoolField(TEXT("isValid"), false);
+          StateObj->SetStringField(TEXT("error"), TEXT("State not available"));
+      }
+      StatesArray.Add(MakeShared<FJsonValueObject>(StateObj));
+  }
+
+  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  Result->SetBoolField(TEXT("success"), true);
+  Result->SetBoolField(TEXT("enabled"), true);
+  Result->SetStringField(TEXT("provider"), Provider.GetName().ToString());
+  Result->SetArrayField(TEXT("states"), StatesArray);
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Source control state retrieved"), Result, FString());
+  return true;
+#else
+  SendAutomationResponse(RequestingSocket, RequestId, false,
+                         TEXT("get_source_control_state requires editor build"),
                          nullptr, TEXT("NOT_IMPLEMENTED"));
   return true;
 #endif
