@@ -1,6 +1,7 @@
 import type { GraphQLContext } from './types.js';
 import type { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
+import { sanitizePath } from '../utils/path-security.js';
 
 // GraphQL AST node types for parseLiteral
 interface ASTFieldNode {
@@ -368,6 +369,14 @@ export const resolvers = {
         if (!context.loaders) {
           throw new Error('Loaders not initialized');
         }
+        // Validate path before loading
+        try {
+          sanitizePath(path);
+        } catch {
+          // If path is invalid (e.g. traversal), return null/fail securely
+          // rather than throwing an error that might leak info or cause 500
+          return null;
+        }
         return await context.loaders.assetLoader.load(path);
       } catch (error) {
         log.error('Failed to get asset:', error);
@@ -467,6 +476,7 @@ export const resolvers = {
       if (!context.loaders) {
         throw new Error('Loaders not initialized');
       }
+      sanitizePath(path);
       return await context.loaders.blueprintLoader.load(path);
     },
 
@@ -658,10 +668,11 @@ export const resolvers = {
 
     niagaraSystem: async (_: unknown, { path }: { path: string }, context: GraphQLContext) => {
       try {
+        const sanitizedPath = sanitizePath(path);
         // Check if it's a niagara system
         const asset = await context.automationBridge.sendAutomationRequest(
           'get_asset',
-          { assetPath: path },
+          { assetPath: sanitizedPath },
           { timeoutMs: 10000 }
         );
         const resultObj = (asset.result ?? {}) as Record<string, unknown>;
@@ -707,10 +718,14 @@ export const resolvers = {
   Mutation: {
     duplicateAsset: async (_: unknown, { path, newName }: { path: string; newName: string }, context: GraphQLContext) => {
       try {
+        const sanitizedPath = sanitizePath(path);
+        // newName is typically a simple name, but could be abused.
+        // We rely on the engine or bridge to handle filename validation,
+        // but we ensure the source path is safe.
         const response = await context.automationBridge.sendAutomationRequest(
           'duplicate_asset',
           {
-            assetPath: path,
+            assetPath: sanitizedPath,
             newName
           },
           { timeoutMs: 60000 }
@@ -729,11 +744,13 @@ export const resolvers = {
 
     moveAsset: async (_: unknown, { path, newPath }: { path: string; newPath: string }, context: GraphQLContext) => {
       try {
+        const sanitizedPath = sanitizePath(path);
+        const sanitizedNewPath = sanitizePath(newPath);
         const response = await context.automationBridge.sendAutomationRequest(
           'move_asset',
           {
-            assetPath: path,
-            destinationPath: newPath
+            assetPath: sanitizedPath,
+            destinationPath: sanitizedNewPath
           },
           { timeoutMs: 60000 }
         );
@@ -751,10 +768,11 @@ export const resolvers = {
 
     deleteAsset: async (_: unknown, { path }: { path: string }, context: GraphQLContext) => {
       try {
+        const sanitizedPath = sanitizePath(path);
         const response = await context.automationBridge.sendAutomationRequest(
           'delete_asset',
           {
-            assetPath: path
+            assetPath: sanitizedPath
           },
           { timeoutMs: 30000 }
         );
@@ -826,6 +844,17 @@ export const resolvers = {
 
     createBlueprint: async (_: unknown, { input }: { input: BlueprintInput }, context: GraphQLContext) => {
       try {
+        if (input.path) {
+          input.path = sanitizePath(input.path);
+        }
+        // BlueprintInput in TypeScript definition uses 'path', but the GraphQL schema uses 'savePath'.
+        // We handle both to ensure safety regardless of which property is populated by the runtime.
+        // We use a type assertion here because the generated TS types might not fully align with the runtime schema input.
+        const inputWithSavePath = input as BlueprintInput & { savePath?: string };
+        if (inputWithSavePath.savePath) {
+          inputWithSavePath.savePath = sanitizePath(inputWithSavePath.savePath);
+        }
+
         const response = await context.automationBridge.sendAutomationRequest(
           'create_blueprint',
           { ...input },
@@ -845,10 +874,11 @@ export const resolvers = {
 
     addVariableToBlueprint: async (_: unknown, { path, input }: { path: string; input: VariableInput }, context: GraphQLContext) => {
       try {
+        const sanitizedPath = sanitizePath(path);
         const response = await context.automationBridge.sendAutomationRequest(
           'add_variable_to_blueprint',
           {
-            blueprintPath: path,
+            blueprintPath: sanitizedPath,
             ...input
           },
           { timeoutMs: 30000 }
@@ -867,10 +897,11 @@ export const resolvers = {
 
     addFunctionToBlueprint: async (_: unknown, { path, input }: { path: string; input: FunctionInput }, context: GraphQLContext) => {
       try {
+        const sanitizedPath = sanitizePath(path);
         const response = await context.automationBridge.sendAutomationRequest(
           'add_function_to_blueprint',
           {
-            blueprintPath: path,
+            blueprintPath: sanitizedPath,
             ...input
           },
           { timeoutMs: 30000 }
@@ -889,10 +920,11 @@ export const resolvers = {
 
     loadLevel: async (_: unknown, { path }: { path: string }, context: GraphQLContext) => {
       try {
+        const sanitizedPath = sanitizePath(path);
         const response = await context.automationBridge.sendAutomationRequest(
           'load_level',
           {
-            levelPath: path
+            levelPath: sanitizedPath
           },
           { timeoutMs: 30000 }
         );
@@ -910,10 +942,11 @@ export const resolvers = {
 
     saveLevel: async (_: unknown, { path }: { path?: string }, context: GraphQLContext) => {
       try {
+        const sanitizedPath = path ? sanitizePath(path) : undefined;
         const response = await context.automationBridge.sendAutomationRequest(
           'save_level',
           {
-            levelPath: path
+            levelPath: sanitizedPath
           },
           { timeoutMs: 30000 }
         );
@@ -927,10 +960,11 @@ export const resolvers = {
 
     createMaterialInstance: async (_: unknown, { parentPath, name, parameters }: { parentPath: string; name: string; parameters?: Record<string, unknown> }, context: GraphQLContext) => {
       try {
+        const sanitizedPath = sanitizePath(parentPath);
         const response = await context.automationBridge.sendAutomationRequest(
           'create_material_instance',
           {
-            parentMaterialPath: parentPath,
+            parentMaterialPath: sanitizedPath,
             instanceName: name,
             parameters: parameters || {}
           },
