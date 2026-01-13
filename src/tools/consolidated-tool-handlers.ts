@@ -742,6 +742,12 @@ function registerDefaultHandlers() {
 
   // 64. PIPELINE MANAGEMENT
   toolRegistry.register('manage_pipeline', async (args, tools) => await handlePipelineTools(getAction(args), args, tools));
+
+  // 65. GAMEPLAY ABILITIES (Phase 13 Breakdown)
+  toolRegistry.register('manage_gameplay_abilities', async (args, tools) => await handleGASTools(getAction(args), args, tools));
+  toolRegistry.register('manage_attribute_sets', async (args, tools) => await handleGASTools(getAction(args), args, tools));
+  toolRegistry.register('manage_gameplay_cues', async (args, tools) => await handleGASTools(getAction(args), args, tools));
+  toolRegistry.register('test_gameplay_abilities', async (args, tools) => await handleGASTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

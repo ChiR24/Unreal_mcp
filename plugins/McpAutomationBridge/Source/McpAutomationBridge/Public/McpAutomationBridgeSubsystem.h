@@ -358,6 +358,10 @@ private:
   HandleSourceControlSubmit(const FString &RequestId, const FString &Action,
                             const TSharedPtr<FJsonObject> &Payload,
                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleGetSourceControlState(const FString &RequestId,
+                                   const FString &Action,
+                                   const TSharedPtr<FJsonObject> &Payload,
+                                   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool HandleFixupRedirectors(const FString &RequestId, const FString &Action,
                               const TSharedPtr<FJsonObject> &Payload,
                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);

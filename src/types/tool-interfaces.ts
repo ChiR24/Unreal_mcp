@@ -54,7 +54,7 @@ export interface IActorTools {
     setBlueprintVariables(params: { actorName: string; variables: Record<string, unknown> }): Promise<StandardActionResponse>;
     createSnapshot(params: { actorName: string; snapshotName: string }): Promise<StandardActionResponse>;
     restoreSnapshot(params: { actorName: string; snapshotName: string }): Promise<StandardActionResponse>;
-    listActors(params?: { filter?: string }): Promise<StandardActionResponse>;
+    listActors(params?: { filter?: string; refresh?: boolean }): Promise<StandardActionResponse>;
     getMetadata(actorName: string): Promise<StandardActionResponse>;
     exportActor(params: { actorName: string; destinationPath?: string }): Promise<StandardActionResponse>;
     getBoundingBox(actorName: string): Promise<StandardActionResponse>;
@@ -114,7 +114,7 @@ export interface ISequenceTools {
 }
 
 export interface IAssetResources {
-    list(directory?: string, recursive?: boolean, limit?: number): Promise<Record<string, unknown>>;
+    list(directory?: string, recursive?: boolean, limit?: number, options?: { refresh?: boolean; depth?: number }): Promise<Record<string, unknown>>;
 }
 
 export interface IBlueprintTools {

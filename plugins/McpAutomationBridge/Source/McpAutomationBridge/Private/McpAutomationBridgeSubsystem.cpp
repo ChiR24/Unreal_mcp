@@ -595,6 +595,12 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleSourceControlSubmit(R, A, P, S);
                   });
+  RegisterHandler(TEXT("get_source_control_state"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGetSourceControlState(R, A, P, S);
+                  });
   RegisterHandler(TEXT("bulk_rename_assets"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
