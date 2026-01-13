@@ -176,24 +176,94 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
     return true;
   }
 
-  TArray<FVector> PlacedLocations;
-  for (const FVector &Location : Locations) {
-    FFoliageInstance Instance;
-    Instance.Location = Location;
-    Instance.Rotation = FRotator::ZeroRotator;
-    Instance.DrawScale3D = FVector3f(1.0f);
-    Instance.ZOffset = 0.0f;
+  double Radius = 0.0;
+  Payload->TryGetNumberField(TEXT("radius"), Radius);
+  double Density = 0.0;
+  Payload->TryGetNumberField(TEXT("density"), Density);
 
-    if (FFoliageInfo *Info = IFA->FindInfo(FoliageType)) {
-      Info->AddInstance(FoliageType, Instance, /*InBaseComponent*/ nullptr);
-    } else {
-      IFA->AddFoliageType(FoliageType);
-      if (FFoliageInfo *NewInfo = IFA->FindInfo(FoliageType)) {
-        NewInfo->AddInstance(FoliageType, Instance,
-                             /*InBaseComponent*/ nullptr);
+  bool bAlignToNormal = true;
+  Payload->TryGetBoolField(TEXT("alignToNormal"), bAlignToNormal);
+  bool bRandomYaw = true;
+  Payload->TryGetBoolField(TEXT("randomYaw"), bRandomYaw);
+  double RandomPitch = 0.0;
+  Payload->TryGetNumberField(TEXT("randomPitch"), RandomPitch);
+  double ScaleMin = 1.0, ScaleMax = 1.0;
+  Payload->TryGetNumberField(TEXT("scaleMin"), ScaleMin);
+  Payload->TryGetNumberField(TEXT("scaleMax"), ScaleMax);
+
+  TArray<FVector> PlacedLocations;
+
+  if (Radius > 0.0 && Density > 0.0) {
+    // Scatter Mode
+    int32 CountPerLoc =
+        FMath::Max(1, FMath::RoundToInt((PI * Radius * Radius) * Density));
+
+    for (const FVector &Center : Locations) {
+      for (int32 i = 0; i < CountPerLoc; ++i) {
+        double Angle = FMath::FRand() * 2.0 * PI;
+        double Dist = FMath::Sqrt(FMath::FRand()) * Radius;
+        double OffsetX = Dist * FMath::Cos(Angle);
+        double OffsetY = Dist * FMath::Sin(Angle);
+
+        FVector Start = Center + FVector(OffsetX, OffsetY, 1000.0);
+        FVector End = Center + FVector(OffsetX, OffsetY, -1000.0);
+
+        FHitResult Hit;
+        if (World->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic)) {
+          FFoliageInstance Instance;
+          Instance.Location = Hit.Location;
+
+          FRotator Rotation = FRotator::ZeroRotator;
+          if (bRandomYaw) {
+            Rotation.Yaw = FMath::FRand() * 360.0f;
+          }
+          if (RandomPitch > 0.0) {
+            Rotation.Pitch = (FMath::FRand() * 2.0f - 1.0f) * RandomPitch;
+          }
+
+          if (bAlignToNormal) {
+            FQuat AlignQuat = FQuat::FindBetweenNormals(FVector::UpVector,
+                                                        Hit.ImpactNormal);
+            Rotation = (AlignQuat * Rotation.Quaternion()).Rotator();
+          }
+          Instance.Rotation = Rotation;
+
+          float Scale = FMath::FRandRange(ScaleMin, ScaleMax);
+          Instance.DrawScale3D = FVector3f(Scale);
+          Instance.ZOffset = 0.0f;
+
+          if (FFoliageInfo *Info = IFA->FindInfo(FoliageType)) {
+            Info->AddInstance(FoliageType, Instance, nullptr);
+          } else {
+            IFA->AddFoliageType(FoliageType);
+            if (FFoliageInfo *NewInfo = IFA->FindInfo(FoliageType)) {
+              NewInfo->AddInstance(FoliageType, Instance, nullptr);
+            }
+          }
+          PlacedLocations.Add(Hit.Location);
+        }
       }
     }
-    PlacedLocations.Add(Location);
+  } else {
+    // Exact Placement Mode
+    for (const FVector &Location : Locations) {
+      FFoliageInstance Instance;
+      Instance.Location = Location;
+      Instance.Rotation = FRotator::ZeroRotator;
+      Instance.DrawScale3D = FVector3f(1.0f);
+      Instance.ZOffset = 0.0f;
+
+      if (FFoliageInfo *Info = IFA->FindInfo(FoliageType)) {
+        Info->AddInstance(FoliageType, Instance, /*InBaseComponent*/ nullptr);
+      } else {
+        IFA->AddFoliageType(FoliageType);
+        if (FFoliageInfo *NewInfo = IFA->FindInfo(FoliageType)) {
+          NewInfo->AddInstance(FoliageType, Instance,
+                               /*InBaseComponent*/ nullptr);
+        }
+      }
+      PlacedLocations.Add(Location);
+    }
   }
 
   IFA->Modify();
