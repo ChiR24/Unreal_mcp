@@ -103,6 +103,15 @@ void UMcpAutomationBridgeSubsystem::Initialize(
       0.1f // Tick every 0.1s is sufficient for automation queue processing
   );
 
+#if WITH_EDITOR
+  if (GEngine)
+  {
+      GEngine->OnLevelActorAdded().AddUObject(this, &UMcpAutomationBridgeSubsystem::OnActorSpawned);
+      GEngine->OnLevelActorDeleted().AddUObject(this, &UMcpAutomationBridgeSubsystem::OnActorDestroyed);
+  }
+#endif
+  FWorldDelegates::OnWorldCleanup.AddUObject(this, &UMcpAutomationBridgeSubsystem::OnLevelCleanup);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("McpAutomationBridgeSubsystem Initialized."));
 }
@@ -121,8 +130,19 @@ void UMcpAutomationBridgeSubsystem::Deinitialize() {
     TickHandle.Reset();
   }
 
+#if WITH_EDITOR
+  if (GEngine)
+  {
+      GEngine->OnLevelActorAdded().RemoveAll(this);
+      GEngine->OnLevelActorDeleted().RemoveAll(this);
+  }
+#endif
+  FWorldDelegates::OnWorldCleanup.RemoveAll(this);
+  InvalidateActorCache();
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("McpAutomationBridgeSubsystem deinitializing."));
+
 
   if (ConnectionManager.IsValid()) {
     ConnectionManager->Stop();
@@ -170,6 +190,98 @@ UMcpAutomationBridgeSubsystem::GetBridgeState() const {
     }
   }
   return EMcpAutomationBridgeState::Disconnected;
+}
+
+AActor* UMcpAutomationBridgeSubsystem::FindActorCached(FName Label)
+{
+    if (Label.IsNone())
+    {
+        return nullptr;
+    }
+
+    // 1. Look in cache
+    if (TWeakObjectPtr<AActor>* Found = ActorCache.Find(Label))
+    {
+        if (Found->IsValid())
+        {
+            return Found->Get();
+        }
+        else
+        {
+            ActorCache.Remove(Label); // Cleanup stale
+        }
+    }
+
+    // 2. Fallback scan (O(N)) using existing helper
+    FString LabelStr = Label.ToString();
+    AActor* Result = nullptr;
+    
+    // Use the existing helper which handles Label vs Name logic safely
+    if (UWorld* World = GetActiveWorld())
+    {
+        // Try precise match first
+        Result = FindActorByLabelOrName<AActor>(World, LabelStr);
+    }
+
+    // 3. Update cache if found
+    if (Result)
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, 
+            TEXT("ActorCache Miss: Caching '%s'"), *LabelStr);
+        ActorCache.Add(Label, Result);
+    }
+    
+    return Result;
+}
+
+void UMcpAutomationBridgeSubsystem::InvalidateActorCache()
+{
+    ActorCache.Empty();
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("ActorCache Invalidated"));
+}
+
+void UMcpAutomationBridgeSubsystem::OnActorSpawned(AActor* Actor)
+{
+    if (!Actor) return;
+
+#if WITH_EDITOR
+    const FName Label = FName(*Actor->GetActorLabel());
+#else
+    const FName Label = Actor->GetFName();
+#endif
+
+    if (!Label.IsNone())
+    {
+        ActorCache.Add(Label, Actor);
+    }
+}
+
+void UMcpAutomationBridgeSubsystem::OnActorDestroyed(AActor* Actor)
+{
+    if (!Actor) return;
+
+#if WITH_EDITOR
+    // In editor, actors might already be partially destroyed or unreachable,
+    // so we iterate to find the entry pointing to this actor
+    // This is O(N) on cache size but happens only on deletion.
+    for (auto It = ActorCache.CreateIterator(); It; ++It)
+    {
+        if (It.Value() == Actor)
+        {
+            It.RemoveCurrent();
+            return; 
+        }
+    }
+#else
+    // Runtime optimization if we trust names are stable
+    const FName Label = Actor->GetFName();
+    ActorCache.Remove(Label);
+#endif
+}
+
+void UMcpAutomationBridgeSubsystem::OnLevelCleanup(UWorld* World, bool bSessionEnded, bool bCleanupResources)
+{
+    InvalidateActorCache();
 }
 
 /**

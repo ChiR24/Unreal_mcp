@@ -119,6 +119,17 @@ public:
    */
   void RegisterHandler(const FString &Action, FAutomationHandler Handler);
 
+  /**
+   * Find an actor by label/name using an internal cache to avoid O(N) linear scans.
+   * If the actor is not in the cache, it falls back to a linear scan and caches the result.
+   */
+  AActor* FindActorCached(FName Label);
+
+  /**
+   * Clears the internal actor cache.
+   */
+  void InvalidateActorCache();
+
 private:
     // Batch execution support
     static TArray<TSharedPtr<FJsonObject>>* CapturedResponses;
@@ -131,6 +142,14 @@ private:
 
   // Connection Manager
   TSharedPtr<class FMcpConnectionManager> ConnectionManager;
+
+  // Actor Cache
+  TMap<FName, TWeakObjectPtr<AActor>> ActorCache;
+  
+  // Cache event handlers
+  void OnActorSpawned(AActor* Actor);
+  void OnActorDestroyed(AActor* Actor);
+  void OnLevelCleanup(UWorld* World, bool bSessionEnded, bool bCleanupResources);
 
   // Track a blueprint currently being modified by this subsystem request
   // so scope-exit handlers can reliably clear busy state without
