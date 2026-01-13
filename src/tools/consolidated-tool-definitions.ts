@@ -103,7 +103,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         comment: commonSchemas.stringProp,
         parentNodeId: commonSchemas.nodeId,
         childNodeId: commonSchemas.nodeId,
-        maxDepth: commonSchemas.numberProp
+        maxDepth: commonSchemas.numberProp,
+        refresh: { type: 'boolean', description: 'Force refresh cache.' }
       },
       required: ['action']
     },
@@ -170,7 +171,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         filter: commonSchemas.stringProp,
         destinationPath: commonSchemas.destinationPath,
         outputPath: commonSchemas.outputPath,
-        format: commonSchemas.stringProp
+        format: commonSchemas.stringProp,
+        refresh: { type: 'boolean', description: 'Force refresh cache.' }
       },
       required: ['action']
     },
@@ -6479,6 +6481,181 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         zoneId: commonSchemas.stringProp
       }
     }
+  },
+  {
+    name: 'manage_gameplay_abilities',
+    category: 'gameplay',
+    description: 'Create and configure Gameplay Abilities, Effects, and Ability Tasks.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            // Abilities
+            'create_gameplay_ability', 'set_ability_tags', 'set_ability_costs', 'set_ability_cooldown',
+            'set_ability_targeting', 'add_ability_task', 'set_activation_policy', 'set_instancing_policy',
+            // Effects
+            'create_gameplay_effect', 'set_effect_duration', 'add_effect_modifier', 'set_modifier_magnitude',
+            'add_effect_execution_calculation', 'add_effect_cue', 'set_effect_stacking', 'set_effect_tags',
+            // Common
+            'add_tag_to_asset', 'get_gas_info'
+          ],
+          description: 'Action to perform'
+        },
+        name: commonSchemas.name,
+        path: commonSchemas.directoryPathForCreation,
+        blueprintPath: commonSchemas.blueprintPath,
+        assetPath: commonSchemas.assetPath,
+        // Ability params
+        abilityPath: commonSchemas.assetPath,
+        abilityTags: commonSchemas.arrayOfStrings,
+        cancelAbilitiesWithTags: commonSchemas.arrayOfStrings,
+        blockAbilitiesWithTags: commonSchemas.arrayOfStrings,
+        costEffectPath: commonSchemas.assetPath,
+        cooldownEffectPath: commonSchemas.assetPath,
+        targetingType: { type: 'string', enum: ['self', 'actor', 'location'] },
+        targetingRange: commonSchemas.numberProp,
+        requiresLineOfSight: commonSchemas.booleanProp,
+        targetingAngle: commonSchemas.numberProp,
+        taskType: { type: 'string' },
+        taskClassName: { type: 'string' },
+        policy: { type: 'string' },
+        // Effect params
+        effectPath: commonSchemas.assetPath,
+        durationType: { type: 'string', enum: ['instant', 'infinite', 'has_duration'] },
+        duration: commonSchemas.numberProp,
+        operation: { type: 'string', enum: ['add', 'multiply', 'divide', 'override'] },
+        magnitude: commonSchemas.numberProp,
+        attributeName: { type: 'string' },
+        modifierIndex: commonSchemas.numberProp,
+        magnitudeType: { type: 'string' },
+        value: commonSchemas.value,
+        calculationClass: commonSchemas.assetPath,
+        cueTag: { type: 'string' },
+        stackingType: { type: 'string', enum: ['none', 'aggregate_by_source', 'aggregate_by_target'] },
+        stackLimit: commonSchemas.numberProp,
+        grantedTags: commonSchemas.arrayOfStrings,
+        // Common
+        tag: { type: 'string' },
+        tagName: { type: 'string' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath,
+        variablesAdded: commonSchemas.arrayOfStrings
+      }
+    }
+  },
+  {
+    name: 'manage_attribute_sets',
+    category: 'gameplay',
+    description: 'Create Blueprint AttributeSets and add Ability System Components.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'add_ability_system_component', 'configure_asc',
+            'create_attribute_set', 'add_attribute',
+            'set_attribute_base_value', 'set_attribute_clamping'
+          ],
+          description: 'Action to perform'
+        },
+        blueprintPath: commonSchemas.blueprintPath,
+        name: commonSchemas.name,
+        path: commonSchemas.directoryPathForCreation,
+        componentName: commonSchemas.componentName,
+        replicationMode: { type: 'string', enum: ['full', 'mixed', 'minimal'] },
+        attributeSetPath: commonSchemas.assetPath,
+        attributeName: { type: 'string' },
+        defaultValue: commonSchemas.numberProp,
+        baseValue: commonSchemas.numberProp,
+        minValue: commonSchemas.numberProp,
+        maxValue: commonSchemas.numberProp
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath
+      }
+    }
+  },
+  {
+    name: 'manage_gameplay_cues',
+    category: 'gameplay',
+    description: 'Create and configure Gameplay Cue Notifies (Static/Actor).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'create_gameplay_cue_notify', 'configure_cue_trigger', 'set_cue_effects'
+          ],
+          description: 'Action to perform'
+        },
+        name: commonSchemas.name,
+        path: commonSchemas.directoryPathForCreation,
+        cueType: { type: 'string', enum: ['static', 'actor'] },
+        cueTag: { type: 'string' },
+        cuePath: commonSchemas.assetPath,
+        triggerType: { type: 'string', enum: ['on_execute', 'while_active', 'on_remove'] },
+        particleSystem: commonSchemas.assetPath,
+        sound: commonSchemas.assetPath,
+        cameraShake: commonSchemas.assetPath,
+        blueprintPath: commonSchemas.blueprintPath
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        assetPath: commonSchemas.assetPath
+      }
+    }
+  },
+  {
+    name: 'test_gameplay_abilities',
+    category: 'gameplay',
+    description: 'Runtime testing of GAS: Activate abilities, apply effects, query attributes.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'test_activate_ability', 'test_apply_effect',
+            'test_get_attribute', 'test_get_gameplay_tags'
+          ],
+          description: 'Action to perform'
+        },
+        actorName: commonSchemas.actorName,
+        actorLabel: { type: 'string', description: 'Actor label in the level' },
+        abilityClass: commonSchemas.assetPath,
+        effectClass: commonSchemas.assetPath,
+        attributeName: { type: 'string', description: 'Attribute name (e.g. Health)' },
+        attributeSetClass: { type: 'string', description: 'AttributeSet class name' },
+        payload: commonSchemas.objectProp
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        value: commonSchemas.value,
+        tags: commonSchemas.arrayOfStrings
+      }
+    }
   }
-  // [MERGED] manage_modding actions now in manage_data
 ];

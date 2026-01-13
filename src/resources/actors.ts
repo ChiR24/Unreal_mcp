@@ -1,59 +1,38 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { coerceNumber, coerceString } from '../utils/result-helpers.js';
-
-interface CacheEntry {
-  data: unknown;
-  timestamp: number;
-}
+import { ResourceCache } from '../cache/resource-cache.js';
 
 export class ActorResources {
-  private cache = new Map<string, CacheEntry>();
-  private readonly CACHE_TTL_MS = 5000; // 5 seconds cache for actors (they change more frequently)
+  private cache = new ResourceCache<unknown>(5000); // 5 seconds cache for actors (they change more frequently)
   private automationBridgeAvailable = false;
 
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {
     this.automationBridgeAvailable = Boolean(automationBridge && typeof automationBridge.sendAutomationRequest === 'function');
   }
-  
-  private getFromCache(key: string): unknown | null {
-    const entry = this.cache.get(key);
-    if (entry && (Date.now() - entry.timestamp) < this.CACHE_TTL_MS) {
-      return entry.data;
-    }
-    this.cache.delete(key);
-    return null;
-  }
-  
-  private setCache(key: string, data: unknown): void {
-    this.cache.set(key, { data, timestamp: Date.now() });
-  }
 
-  async listActors() {
-    // Check cache first
-    const cached = this.getFromCache('listActors');
-    if (cached !== null) {
-      return cached;
-    }
-    
+  async listActors(options?: { refresh?: boolean }) {
     try {
-      if (!this.automationBridgeAvailable || !this.automationBridge) {
-        return { success: false, error: 'Automation bridge is not available. Please ensure Unreal Engine is running with the MCP Automation Bridge plugin.' };
-      }
+      return await this.cache.getOrFetch('listActors', async () => {
+        if (!this.automationBridgeAvailable || !this.automationBridge) {
+          throw new Error('Automation bridge is not available. Please ensure Unreal Engine is running with the MCP Automation Bridge plugin.');
+        }
 
-      const resp = await this.automationBridge.sendAutomationRequest('control_actor', { action: 'list' }) as Record<string, unknown>;
-      const resultObj = (resp?.result ?? resp) as Record<string, unknown>;
-      if (resp && resp.success !== false && Array.isArray(resultObj.actors)) {
-        const actors = resultObj.actors as Array<Record<string, unknown>>;
-        const count = coerceNumber(resultObj.count) ?? actors.length;
-        const payload = { success: true as const, count, actors };
-        this.setCache('listActors', payload);
-        return payload;
-      }
+        const resp = await this.automationBridge.sendAutomationRequest('control_actor', { action: 'list' }) as Record<string, unknown>;
+        const resultObj = (resp?.result ?? resp) as Record<string, unknown>;
+        
+        if (resp && resp.success !== false && Array.isArray(resultObj.actors)) {
+          const actors = resultObj.actors as Array<Record<string, unknown>>;
+          const count = coerceNumber(resultObj.count) ?? actors.length;
+          return { success: true as const, count, actors };
+        }
 
-      return { success: false, error: 'Failed to retrieve actor list from automation bridge' };
+        throw new Error('Failed to retrieve actor list from automation bridge');
+      }, { refresh: options?.refresh });
     } catch (err: unknown) {
-      return { success: false, error: `Failed to list actors: ${err}` };
+      // Return error object instead of throwing, to match previous API
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      return { success: false, error: errorMessage };
     }
   }
 

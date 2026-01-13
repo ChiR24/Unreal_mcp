@@ -10,15 +10,8 @@ interface AssetListItem {
   path?: string;
   package?: string;
   name?: string;
-}
-
-/** Response from list/search operations */
-interface AssetListResponse {
-  success?: boolean;
-  assets?: AssetListItem[];
-  result?: { assets?: AssetListItem[]; folders?: string[] };
-  folders?: string[];
-  [key: string]: unknown;
+  isFolder?: boolean;
+  Class?: string;
 }
 
 /** Response from asset operations */
@@ -35,52 +28,46 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
   try {
     switch (action) {
       case 'list': {
-        // Route through C++ HandleListAssets for proper asset enumeration
+        // Route through AssetResources for proper caching
         const params = normalizeArgs(args, [
           { key: 'path', aliases: ['directory', 'assetPath'], default: '/Game' },
           { key: 'limit', default: 50 },
           { key: 'recursive', default: false },
-          { key: 'depth', default: undefined }
+          { key: 'depth', default: undefined },
+          { key: 'refresh', default: false }
         ]);
 
         const path = extractOptionalString(params, 'path') ?? '/Game';
         const limit = extractOptionalNumber(params, 'limit') ?? 50;
         const recursive = extractOptionalBoolean(params, 'recursive') ?? false;
         const depth = extractOptionalNumber(params, 'depth');
+        const refresh = extractOptionalBoolean(params, 'refresh');
 
         const effectiveRecursive = recursive === true || (depth !== undefined && depth > 0);
 
-        const res = await executeAutomationRequest(tools, 'list', {
-          path,
-          recursive: effectiveRecursive,
-          depth
-        }) as AssetListResponse;
+        const res = await tools.assetResources.list(path, effectiveRecursive, limit, { refresh, depth });
 
-        const assets: AssetListItem[] = (Array.isArray(res.assets) ? res.assets :
-          (Array.isArray(res.result) ? res.result : (res.result?.assets || [])));
+        const assets: AssetListItem[] = (Array.isArray(res.assets) ? res.assets : []) as AssetListItem[];
 
-        // New: Handle folders
-        const folders: string[] = Array.isArray(res.folders) ? res.folders : (res.result?.folders || []);
-
-        const totalCount = assets.length;
+        const totalCount = typeof res.count === 'number' ? res.count : assets.length;
+        const folderCount = typeof res.folders === 'number' ? res.folders : 0;
+        const fileCount = typeof res.files === 'number' ? res.files : (totalCount - folderCount);
+        
         const limitedAssets = assets.slice(0, limit);
         const remaining = Math.max(0, totalCount - limit);
 
-        let message = `Found ${totalCount} assets`;
-        if (folders.length > 0) {
-          message += ` and ${folders.length} folders`;
+        let message = `Found ${fileCount} assets`;
+        if (folderCount > 0) {
+          message += ` and ${folderCount} folders`;
         }
-        message += `: ${limitedAssets.map((a) => a.path || a.package || a.name || 'unknown').join(', ')}`;
-
-        if (folders.length > 0 && limitedAssets.length < limit) {
-          const remainingLimit = limit - limitedAssets.length;
-          if (remainingLimit > 0) {
-            const limitedFolders = folders.slice(0, remainingLimit);
-            if (limitedAssets.length > 0) message += ', ';
-            message += `Folders: [${limitedFolders.join(', ')}]`;
-            if (folders.length > remainingLimit) message += '...';
-          }
-        }
+        
+        const names = limitedAssets.map((a) => {
+             const isFolder = a.isFolder || a.package === 'Folder' || a.name?.endsWith('/');
+             const name = a.path || a.package || a.name || 'unknown';
+             return isFolder ? `[${name}]` : name;
+        }).join(', ');
+        
+        message += `: ${names}`;
 
         if (remaining > 0) {
           message += `... and ${remaining} others`;
@@ -88,7 +75,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
 
         return ResponseFactory.success({
           assets: limitedAssets,
-          folders: folders,
+          folders: folderCount, // Return count instead of list
           totalCount: totalCount,
           count: limitedAssets.length
         }, message);

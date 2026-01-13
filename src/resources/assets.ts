@@ -3,15 +3,18 @@ import { IAssetResources } from '../types/tool-interfaces.js';
 import { coerceString } from '../utils/result-helpers.js';
 import { AutomationResponse } from '../types/automation-responses.js';
 import { Logger } from '../utils/logger.js';
+import { ResourceCache } from '../cache/resource-cache.js';
 
 const log = new Logger('AssetResources');
 
 export class AssetResources extends BaseTool implements IAssetResources {
   // Simple in-memory cache for asset listing
-  private cache = new Map<string, { timestamp: number; data: unknown }>();
-  private get ttlMs(): number { return Number(process.env.ASSET_LIST_TTL_MS || 10000); }
-  private makeKey(dir: string, recursive: boolean, page?: number) {
-    return page !== undefined ? `${dir}::${recursive ? 1 : 0}::${page}` : `${dir}::${recursive ? 1 : 0}`;
+  private cache = new ResourceCache<Record<string, unknown>>(Number(process.env.ASSET_LIST_TTL_MS || 10000));
+  
+  private makeKey(dir: string, recursive: boolean, depth: number | undefined, page?: number) {
+    const d = depth !== undefined ? depth : -1;
+    const r = recursive ? 1 : 0;
+    return page !== undefined ? `${dir}::${r}::${d}::${page}` : `${dir}::${r}::${d}`;
   }
 
   // Normalize UE content paths:
@@ -42,11 +45,7 @@ export class AssetResources extends BaseTool implements IAssetResources {
     }
 
     const normalized = this.normalizeDir(dir);
-    for (const key of Array.from(this.cache.keys())) {
-      if (key.startsWith(`${normalized}::`)) {
-        this.cache.delete(key);
-      }
-    }
+    this.cache.invalidate(`${normalized}::`);
   }
 
   invalidateAssetPaths(paths: string[]) {
@@ -72,41 +71,53 @@ export class AssetResources extends BaseTool implements IAssetResources {
     }
   }
 
-  async list(dir = '/Game', _recursive = false, limit = 50) {
-    // ALWAYS use non-recursive listing to show only immediate children
-    // This prevents timeouts and makes navigation clearer
-    // Note: _recursive parameter is intentionally ignored (kept for API compatibility)
-    const recursive = false; // Force non-recursive
-
+  async list(dir = '/Game', recursive = false, limit = 50, options?: { refresh?: boolean; depth?: number }) {
     // Normalize directory first
     dir = this.normalizeDir(dir);
+    const depth = options?.depth;
+    const key = this.makeKey(dir, recursive, depth);
 
-    // Cache fast-path
     try {
-      const key = this.makeKey(dir, recursive);
-      const entry = this.cache.get(key);
-      const now = Date.now();
-      if (entry && (now - entry.timestamp) < this.ttlMs) {
-        const cachedData = entry.data as Record<string, unknown>;
-        return { success: true, ...cachedData };
-      }
-    } catch { /* Cache miss - continue to fetch */ }
+      return await this.cache.getOrFetch(key, async () => {
+        // Check if bridge is connected
+        if (!this.bridge.isConnected) {
+          throw new Error('NOT_CONNECTED');
+        }
 
-    // Check if bridge is connected
-    if (!this.bridge.isConnected) {
+        // Use directory-based listing
+        const listed = await this.listDirectoryOnly(dir, recursive, limit, depth);
+        
+        // Ensure success
+        const listedObj = listed as Record<string, unknown>;
+        if (listed && listedObj.success === false) {
+           throw new Error(String(listedObj.error || 'Asset listing failed'));
+        }
+        
+        return { ...listed, success: true };
+      }, { refresh: options?.refresh });
+
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      
+      if (errorMessage === 'NOT_CONNECTED') {
+        return {
+          success: false,
+          assets: [],
+          warning: 'Unreal Engine is not connected. Please ensure Unreal Engine is running with the MCP server enabled.',
+          connectionStatus: 'disconnected'
+        };
+      }
+
+      // Return error object similar to original implementation
       return {
         success: false,
+        path: dir,
+        summary: { total: 0, folders: 0, assets: 0 },
+        foldersList: [],
         assets: [],
-        warning: 'Unreal Engine is not connected. Please ensure Unreal Engine is running with the MCP server enabled.',
-        connectionStatus: 'disconnected'
+        error: errorMessage
       };
     }
-
-    // Always use directory-only listing (immediate children)
-    const listed = await this.listDirectoryOnly(dir, false, limit);
-    // Ensure a success flag is present so downstream evaluators don't assume success implicitly
-    const listedObj = listed as Record<string, unknown>;
-    return { ...listed, success: listed && listedObj.success === false ? false : true };
   }
 
   /**
@@ -115,149 +126,121 @@ export class AssetResources extends BaseTool implements IAssetResources {
    * @param page Page number (0-based)
    * @param pageSize Number of assets per page (max 50 to avoid socket failures)
    */
-  async listPaged(dir = '/Game', page = 0, pageSize = 30, recursive = false) {
+  async listPaged(dir = '/Game', page = 0, pageSize = 30, recursive = false, options?: { refresh?: boolean; depth?: number }) {
     // Ensure pageSize doesn't exceed safe limit
     const safePageSize = Math.min(pageSize, 50);
     const offset = page * safePageSize;
 
     // Normalize directory and check cache for this specific page
     dir = this.normalizeDir(dir);
-    const cacheKey = this.makeKey(dir, recursive, page);
-    const cached = this.cache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < this.ttlMs) {
-      return cached.data;
-    }
-
-    if (!this.bridge.isConnected) {
-      return {
-        assets: [],
-        page,
-        pageSize: safePageSize,
-        warning: 'Unreal Engine is not connected.',
-        connectionStatus: 'disconnected'
-      };
-    }
+    const depth = options?.depth;
+    const cacheKey = this.makeKey(dir, recursive, depth, page);
 
     try {
-      // Use search API with pagination
-      // Use the same directory listing approach but with pagination
-      const allAssets = await this.listDirectoryOnly(dir, false, 1000);
+      return await this.cache.getOrFetch(cacheKey, async () => {
+        if (!this.bridge.isConnected) {
+          throw new Error('NOT_CONNECTED');
+        }
 
-      // Paginate the results
-      const start = offset;
-      const end = offset + safePageSize;
-      const pagedAssets = allAssets.assets ? allAssets.assets.slice(start, end) : [];
+        // Use search API with pagination
+        // Use the same directory listing approach but with pagination
+        const allAssets = await this.listDirectoryOnly(dir, recursive, 1000, depth);
+        const allAssetsObj = allAssets as unknown as { assets: unknown[] };
 
-      const result = {
-        assets: pagedAssets,
-        page,
-        pageSize: safePageSize,
-        count: pagedAssets.length,
-        totalCount: allAssets.assets ? allAssets.assets.length : 0,
-        hasMore: end < (allAssets.assets ? allAssets.assets.length : 0),
-        method: 'directory_listing_paged'
-      };
+        // Paginate the results
+        const start = offset;
+        const end = offset + safePageSize;
+        const pagedAssets = allAssetsObj.assets ? allAssetsObj.assets.slice(start, end) : [];
 
-      this.cache.set(cacheKey, { timestamp: Date.now(), data: result });
-      return result;
+        return {
+          assets: pagedAssets,
+          page,
+          pageSize: safePageSize,
+          count: pagedAssets.length,
+          totalCount: allAssetsObj.assets ? allAssetsObj.assets.length : 0,
+          hasMore: end < (allAssetsObj.assets ? allAssetsObj.assets.length : 0),
+          method: 'directory_listing_paged'
+        };
+      }, { refresh: options?.refresh });
+
     } catch (err: unknown) {
-      const errObj = err as Record<string, unknown> | null;
-      log.warn(`Asset listing page ${page} failed: ${String(errObj?.message ?? err)}`);
-    }
+       const errorMessage = err instanceof Error ? err.message : String(err);
+       
+       if (errorMessage === 'NOT_CONNECTED') {
+          return {
+            assets: [],
+            page,
+            pageSize: safePageSize,
+            warning: 'Unreal Engine is not connected.',
+            connectionStatus: 'disconnected'
+          };
+       }
 
-    return {
-      assets: [],
-      page,
-      pageSize: safePageSize,
-      error: 'Failed to fetch page'
-    };
+       log.warn(`Asset listing page ${page} failed: ${errorMessage}`);
+       return {
+         assets: [],
+         page,
+         pageSize: safePageSize,
+         error: 'Failed to fetch page'
+       };
+    }
   }
 
   /**
    * Directory-based listing of immediate children using AssetRegistry.
    * Returns both subfolders and assets at the given path.
    */
-  private async listDirectoryOnly(dir: string, _recursive: boolean, limit: number) {
-    // Always return only immediate children to avoid timeout and improve navigation
+  private async listDirectoryOnly(dir: string, recursive: boolean, limit: number, depth?: number) {
     try {
-      // Use the native C++ plugin's list action instead of Python
-      try {
-        const normalizedDir = this.normalizeDir(dir);
-        const response = await this.sendAutomationRequest<AutomationResponse>(
-          'list',
-          { directory: normalizedDir, limit, recursive: false },
-          { timeoutMs: 30000 }
-        );
+      // Use the native C++ plugin's list action
+      const normalizedDir = this.normalizeDir(dir);
+      const payload: Record<string, unknown> = { directory: normalizedDir, limit, recursive };
+      if (depth !== undefined) payload.depth = depth;
 
-        if (response.success !== false && response.result) {
-          const payload = response.result as Record<string, unknown>;
+      const response = await this.sendAutomationRequest<AutomationResponse>(
+        'list',
+        payload,
+        { timeoutMs: 30000 }
+      );
 
-          const foldersList = payload.folders_list as Array<Record<string, unknown>> | undefined;
-          const foldersArr = Array.isArray(foldersList)
-            ? foldersList.map((f) => ({
-              Name: coerceString(f?.n ?? f?.Name ?? f?.name) ?? '',
-              Path: coerceString(f?.p ?? f?.Path ?? f?.path) ?? '',
-              Class: 'Folder',
-              isFolder: true
-            }))
-            : [];
+      if (response.success !== false && response.result) {
+        const payload = response.result as Record<string, unknown>;
 
-          const assetsList = payload.assets as Array<Record<string, unknown>> | undefined;
-          const assetsArr = Array.isArray(assetsList)
-            ? assetsList.map((a) => ({
-              Name: coerceString(a?.n ?? a?.Name ?? a?.name) ?? '',
-              Path: coerceString(a?.p ?? a?.Path ?? a?.path) ?? '',
-              Class: coerceString(a?.c ?? a?.Class ?? a?.class) ?? 'Object'
-            }))
-            : [];
+        const foldersList = payload.folders_list as Array<Record<string, unknown>> | undefined;
+        const foldersArr = Array.isArray(foldersList)
+          ? foldersList.map((f) => ({
+            Name: coerceString(f?.n ?? f?.Name ?? f?.name) ?? '',
+            Path: coerceString(f?.p ?? f?.Path ?? f?.path) ?? '',
+            Class: 'Folder',
+            isFolder: true
+          }))
+          : [];
 
-          const result = {
-            success: true,
-            assets: [...foldersArr, ...assetsArr],
-            count: foldersArr.length + assetsArr.length,
-            folders: foldersArr.length,
-            files: assetsArr.length,
-            path: normalizedDir,
-            recursive: false,
-            method: 'automation_bridge',
-            cached: false
-          };
+        const assetsList = payload.assets as Array<Record<string, unknown>> | undefined;
+        const assetsArr = Array.isArray(assetsList)
+          ? assetsList.map((a) => ({
+            Name: coerceString(a?.n ?? a?.Name ?? a?.name) ?? '',
+            Path: coerceString(a?.p ?? a?.Path ?? a?.path) ?? '',
+            Class: coerceString(a?.c ?? a?.Class ?? a?.class) ?? 'Object'
+          }))
+          : [];
 
-          const key = this.makeKey(dir, false);
-          this.cache.set(key, { timestamp: Date.now(), data: result });
-          return result;
-        }
-      } catch { /* Fallback failed - continue to error handling */ }
+        return {
+          success: true,
+          assets: [...foldersArr, ...assetsArr],
+          count: foldersArr.length + assetsArr.length,
+          folders: foldersArr.length,
+          files: assetsArr.length,
+          path: normalizedDir,
+          recursive,
+          method: 'automation_bridge',
+          cached: false
+        };
+      }
+    } catch { /* Fallback failed */ }
 
-      // No fallback available
-    } catch (err: unknown) {
-      const errObj = err as Record<string, unknown> | null;
-      const errorMessage = errObj?.message ? String(errObj.message) : 'Asset registry request failed';
-      log.warn(`Engine asset listing failed: ${errorMessage}`);
-      return {
-        success: false,
-        path: this.normalizeDir(dir),
-        summary: { total: 0, folders: 0, assets: 0 },
-        foldersList: [],
-        assets: [],
-        error: errorMessage,
-        warning: 'AssetRegistry query failed. Ensure the MCP Automation Bridge is connected.',
-        transport: 'automation_bridge',
-        method: 'asset_registry_alternate'
-      };
-    }
-
-    return {
-      success: false,
-      path: this.normalizeDir(dir),
-      summary: { total: 0, folders: 0, assets: 0 },
-      foldersList: [],
-      assets: [],
-      error: 'Asset registry returned no payload.',
-      warning: 'No items returned from AssetRegistry request.',
-      transport: 'automation_bridge',
-      method: 'asset_registry_empty'
-    };
+    // If we reached here, it failed
+    throw new Error('AssetRegistry query failed or returned no payload');
   }
 
   async find(assetPath: string) {

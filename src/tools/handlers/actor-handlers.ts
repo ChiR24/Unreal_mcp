@@ -3,7 +3,7 @@ import type { HandlerArgs, HandlerResult, ActorArgs, Vector3, ComponentInfo } fr
 import { ACTOR_CLASS_ALIASES, getRequiredComponent } from '../../config/class-aliases.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
-import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber } from './argument-helper.js';
+import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean } from './argument-helper.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
 /** Actor handler function type */
@@ -243,9 +243,15 @@ const handlers: Record<string, ActorActionHandler> = {
         return result;
     },
     list: async (args, tools) => {
-        const result = await tools.actorTools.listActors() as ListActorsResult;
+        const params = normalizeArgs(args, [
+            { key: 'limit', default: 50 },
+            { key: 'refresh', default: false }
+        ]);
+        const refresh = extractOptionalBoolean(params, 'refresh');
+        
+        const result = await tools.actorTools.listActors({ refresh }) as ListActorsResult;
         if (result && result.actors && Array.isArray(result.actors)) {
-            const limit = typeof args.limit === 'number' ? args.limit : 50;
+            const limit = extractOptionalNumber(params, 'limit') ?? 50;
             const count = result.actors.length;
             const names = result.actors.slice(0, limit).map((a) => a.label || a.name || 'unknown').join(', ');
             const remaining = count - limit;
