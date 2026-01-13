@@ -40,21 +40,7 @@
 // Uses class-based filtering instead of iterating all actors
 namespace {
 #if MCP_HAS_WATER_PLUGIN
-static AWaterBody* FindWaterBodyByName(UWorld* World, const FString& ActorName)
-{
-    if (!World || ActorName.IsEmpty()) return nullptr;
-    
-    // Use TActorIterator for more efficient typed iteration
-    for (TActorIterator<AWaterBody> It(World); It; ++It)
-    {
-        AWaterBody* WaterActor = *It;
-        if (WaterActor && WaterActor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
-        {
-            return WaterActor;
-        }
-    }
-    return nullptr;
-}
+// FindWaterBodyByName removed (replaced by FindActorCached)
 
 static void CollectAllWaterBodies(UWorld* World, TArray<AWaterBody*>& OutWaterBodies)
 {
@@ -284,7 +270,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
     } else {
       // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
       UWorld* World = GetActiveWorld();
-      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -361,7 +347,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
     } else {
       // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
       UWorld* World = GetActiveWorld();
-      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -523,7 +509,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
     } else {
       // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
       UWorld* World = GetActiveWorld();
-      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -627,7 +613,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
     } else {
       // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
       UWorld* World = GetActiveWorld();
-      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
 
       if (WaterActor) {
         // Must be a river component for depth/width control
@@ -706,7 +692,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
     } else {
       // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
       UWorld* World = GetActiveWorld();
-      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
 
       if (WaterActor) {
         // Must be an ocean component for extent control
@@ -779,7 +765,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
     } else {
       // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
       UWorld* World = GetActiveWorld();
-      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -850,7 +836,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
     } else {
       // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
       UWorld* World = GetActiveWorld();
-      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
 
       if (WaterActor) {
         // Must be a river component for transition materials
@@ -915,7 +901,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
     } else {
       // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
       UWorld* World = GetActiveWorld();
-      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -923,18 +909,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
           FString WaterZonePath;
           if (Payload->TryGetStringField(TEXT("waterZonePath"), WaterZonePath) && !WaterZonePath.IsEmpty()) {
             // Use TActorIterator for efficient AWaterZone lookup instead of O(N) loop
-            AWaterZone *WaterZone = nullptr;
-            for (TActorIterator<AWaterZone> It(World); It; ++It)
-            {
-              if (AWaterZone* Zone = *It)
-              {
-                if (Zone->GetActorLabel().Equals(WaterZonePath, ESearchCase::IgnoreCase))
-                {
-                  WaterZone = Zone;
-                  break;
-                }
-              }
-            }
+            AWaterZone* WaterZone = Cast<AWaterZone>(Self->FindActorCached(FName(*WaterZonePath)));
             
             if (WaterZone) {
               TSoftObjectPtr<AWaterZone> WaterZonePtr(WaterZone);
@@ -981,7 +956,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
     } else {
       // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
       UWorld* World = GetActiveWorld();
-      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -1060,7 +1035,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
     } else {
       // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
       UWorld* World = GetActiveWorld();
-      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();
@@ -1130,7 +1105,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
     } else {
       // Use optimized TActorIterator-based lookup instead of O(N) GetAllLevelActors()
       UWorld* World = GetActiveWorld();
-      AWaterBody* WaterActor = FindWaterBodyByName(World, ActorName);
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
 
       if (WaterActor) {
         UWaterBodyComponent *WaterComp = WaterActor->FindComponentByClass<UWaterBodyComponent>();

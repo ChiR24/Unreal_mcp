@@ -102,16 +102,7 @@ static int32 GetJsonIntField(const TSharedPtr<FJsonObject>& Payload, const TCHAR
 // Helper: O(N) Actor Lookup by Name/Label
 // ============================================================================
 namespace {
-  template<typename T>
-  T* FindPCGActorByNameOrLabel(UWorld* World, const FString& NameOrLabel) {
-    if (!World || NameOrLabel.IsEmpty()) return nullptr;
-    for (TActorIterator<T> It(World); It; ++It) {
-      if (It->GetName() == NameOrLabel || It->GetActorLabel() == NameOrLabel) {
-        return *It;
-      }
-    }
-    return nullptr;
-  }
+  // FindPCGActorByNameOrLabel removed (replaced by FindActorCached)
 }
 
 static FVector GetJsonVectorField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FVector& Default = FVector::ZeroVector)
@@ -1033,7 +1024,7 @@ static bool HandleExecutePCGGraph(
     UPCGComponent* PCGComp = nullptr;
 
     // First try to find actor by name/label using optimized lookup
-    TargetActor = FindPCGActorByNameOrLabel<AActor>(World, ActorName);
+    TargetActor = Cast<AActor>(Self->FindActorCached(FName(*ActorName)));
     if (TargetActor) {
         TArray<UPCGComponent*> PCGComponents;
         TargetActor->GetComponents<UPCGComponent>(PCGComponents);
@@ -1049,7 +1040,7 @@ static bool HandleExecutePCGGraph(
 
     // Fallback: check PCGVolume actors specifically
     if (!PCGComp) {
-        APCGVolume* Volume = FindPCGActorByNameOrLabel<APCGVolume>(World, ActorName);
+        APCGVolume* Volume = Cast<APCGVolume>(Self->FindActorCached(FName(*ActorName)));
         if (Volume) {
             PCGComp = Volume->FindComponentByClass<UPCGComponent>();
             TargetActor = Volume;
@@ -1088,14 +1079,10 @@ static bool HandleSetPCGPartitionGridSize(
     UPCGComponent* PCGComp = nullptr;
     AActor* TargetActor = nullptr;
     
-    for (TActorIterator<AActor> It(World); It; ++It)
+    TargetActor = Cast<AActor>(Self->FindActorCached(FName(*ActorName)));
+    if (TargetActor)
     {
-        if ((*It)->GetActorLabel() == ActorName || (*It)->GetName() == ActorName)
-        {
-            TargetActor = *It;
-            PCGComp = (*It)->FindComponentByClass<UPCGComponent>();
-            break;
-        }
+        PCGComp = TargetActor->FindComponentByClass<UPCGComponent>();
     }
     
     if (!PCGComp)

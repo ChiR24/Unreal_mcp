@@ -656,13 +656,8 @@ static bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FS
     ADynamicMeshActor* TargetActor = nullptr;
     ADynamicMeshActor* ToolActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == TargetActorName)
-            TargetActor = *It;
-        if (It->GetActorLabel() == ToolActorName)
-            ToolActor = *It;
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*TargetActorName)));
+    ToolActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ToolActorName)));
 
     if (!TargetActor)
     {
@@ -765,14 +760,7 @@ static bool HandleGetMeshInfo(UMcpAutomationBridgeSubsystem* Self, const FString
     }
 
     ADynamicMeshActor* TargetActor = nullptr;
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -832,14 +820,7 @@ static bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const 
     }
 
     ADynamicMeshActor* TargetActor = nullptr;
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -891,14 +872,7 @@ static bool HandleFlipNormals(UMcpAutomationBridgeSubsystem* Self, const FString
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -940,14 +914,7 @@ static bool HandleSimplifyMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1012,14 +979,7 @@ static bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& 
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1075,14 +1035,7 @@ static bool HandleAutoUV(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1135,14 +1088,7 @@ static bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1365,14 +1311,7 @@ static bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1425,14 +1364,7 @@ static bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1484,14 +1416,7 @@ static bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1539,14 +1464,7 @@ static bool HandleOffsetFaces(UMcpAutomationBridgeSubsystem* Self, const FString
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1596,14 +1514,7 @@ static bool HandleShell(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1655,14 +1566,7 @@ static bool HandleBend(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1711,14 +1615,7 @@ static bool HandleTwist(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1768,14 +1665,7 @@ static bool HandleTaper(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1822,14 +1712,7 @@ static bool HandleNoiseDeform(UMcpAutomationBridgeSubsystem* Self, const FString
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1888,14 +1771,7 @@ static bool HandleSmooth(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -1949,14 +1825,7 @@ static bool HandleWeldVertices(UMcpAutomationBridgeSubsystem* Self, const FStrin
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2002,14 +1871,7 @@ static bool HandleFillHoles(UMcpAutomationBridgeSubsystem* Self, const FString& 
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2060,14 +1922,7 @@ static bool HandleRemoveDegenerates(UMcpAutomationBridgeSubsystem* Self, const F
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2114,14 +1969,7 @@ static bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FStri
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2178,14 +2026,7 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2269,14 +2110,7 @@ static bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2348,14 +2182,7 @@ static bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2417,14 +2244,7 @@ static bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2676,14 +2496,7 @@ static bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2728,14 +2541,7 @@ static bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2794,14 +2600,7 @@ static bool HandleRelax(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2855,14 +2654,7 @@ static bool HandleProjectUV(UMcpAutomationBridgeSubsystem* Self, const FString& 
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -2934,14 +2726,7 @@ static bool HandleRecomputeTangents(UMcpAutomationBridgeSubsystem* Self, const F
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -3078,14 +2863,7 @@ static bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -3135,14 +2913,7 @@ static bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& R
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -3236,14 +3007,7 @@ static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString&
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -3389,14 +3153,7 @@ static bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -3451,14 +3208,7 @@ static bool HandleMergeVertices(UMcpAutomationBridgeSubsystem* Self, const FStri
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -3530,14 +3280,7 @@ static bool HandleTransformUVs(UMcpAutomationBridgeSubsystem* Self, const FStrin
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -3684,14 +3427,7 @@ static bool HandleSelfUnion(UMcpAutomationBridgeSubsystem* Self, const FString& 
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -3747,14 +3483,7 @@ static bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -3927,14 +3656,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -4174,14 +3896,7 @@ static bool HandleSweep(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     ADynamicMeshActor* TargetActor = nullptr;
     AActor* SplineActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!SplineActorName.IsEmpty())
     {
@@ -4477,14 +4192,7 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
@@ -4628,14 +4336,7 @@ static bool HandleSplitNormals(UMcpAutomationBridgeSubsystem* Self, const FStrin
     UWorld* World = GetActiveWorld();
     ADynamicMeshActor* TargetActor = nullptr;
 
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
 
     if (!TargetActor)
     {
