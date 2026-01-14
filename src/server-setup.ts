@@ -1,10 +1,10 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-// import { ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { UnrealBridge } from './unreal-bridge.js';
 import { AutomationBridge } from './automation/index.js';
 import { Logger } from './utils/logger.js';
 import { HealthMonitor } from './services/health-monitor.js';
-// import { prompts } from './prompts/index.js';
+import { promptDefinitions, getPromptMessages } from './prompts/index.js';
 import { AssetResources } from './resources/assets.js';
 import { ActorResources } from './resources/actors.js';
 import { LevelResources } from './resources/levels.js';
@@ -73,7 +73,36 @@ export class ServerSetup {
     );
     toolRegistry.register();
 
-    // this.registerPrompts();
+    // Register Prompts (Phase E1)
+    this.registerPrompts();
+  }
+
+  /**
+   * Register MCP Prompts for templated guidance workflows
+   * Phase E1: Enable MCP Prompts feature
+   */
+  private registerPrompts(): void {
+    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+      this.logger.debug(`Serving ${promptDefinitions.length} prompts`);
+      return { prompts: promptDefinitions };
+    });
+
+    this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+      const { name } = request.params;
+      const args = (request.params.arguments || {}) as Record<string, string>;
+      
+      this.logger.debug(`GetPrompt: ${name}`, args);
+      
+      const promptDef = promptDefinitions.find(p => p.name === name);
+      const messages = getPromptMessages(name, args);
+      
+      return {
+        description: promptDef?.description || `Prompt: ${name}`,
+        messages
+      };
+    });
+
+    this.logger.info(`Registered ${promptDefinitions.length} MCP prompts`);
   }
 
   private validateEnvironment() {

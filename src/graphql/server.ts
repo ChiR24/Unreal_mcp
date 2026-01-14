@@ -6,7 +6,9 @@ import { createGraphQLSchema } from './schema.js';
 import type { GraphQLContext } from './types.js';
 import type { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
+import { MAX_REQUEST_BODY_SIZE } from '../constants.js';
 import { createLoaders } from './loaders.js';
+import { HealthResource, createHealthResource } from '../resources/health.js';
 
 export interface GraphQLServerConfig {
   enabled?: boolean;
@@ -25,11 +27,12 @@ export class GraphQLServer {
   private config: Required<GraphQLServerConfig>;
   private bridge: UnrealBridge;
   private automationBridge: AutomationBridge;
+  private healthResource: HealthResource;
 
   // Rate limiting
   private requestCounts = new Map<string, { count: number; resetAt: number }>();
   private readonly RATE_LIMIT_WINDOW_MS = 60000;
-  private readonly RATE_LIMIT_MAX_REQUESTS = 60;
+  private readonly RATE_LIMIT_MAX_REQUESTS = parseInt(process.env.GRAPHQL_RATE_LIMIT ?? '', 10) || 60;
 
   // Depth limiting
   private static readonly MAX_QUERY_DEPTH = 10;
@@ -41,6 +44,7 @@ export class GraphQLServer {
   ) {
     this.bridge = bridge;
     this.automationBridge = automationBridge;
+    this.healthResource = createHealthResource(automationBridge);
     this.config = {
       enabled: config.enabled ?? process.env.GRAPHQL_ENABLED === 'true',
       port: config.port ?? Number(process.env.GRAPHQL_PORT ?? 4000),
@@ -71,6 +75,15 @@ export class GraphQLServer {
           'To allow remote binding, set GRAPHQL_ALLOW_REMOTE=true. Aborting start.'
       );
       return;
+    }
+
+    // Warn if loopback + wildcard CORS (informational, not blocking)
+    if (isLoopback && this.config.cors.origin === '*') {
+      this.log.warn(
+        'GraphQL server is using wildcard CORS origin (*) on loopback. ' +
+          'This allows any website to make requests to your local server. ' +
+          'For production debugging, set GRAPHQL_CORS_ORIGIN to specific origins.'
+      );
     }
 
     if (!isLoopback && allowRemote) {
@@ -120,9 +133,35 @@ export class GraphQLServer {
         }
       });
 
-      this.server = createServer(
-        yoga as RequestListener
-      );
+      // Create wrapper handler to check request body size and serve /health
+      const handler: RequestListener = (req, res) => {
+        // Serve /health endpoint
+        if (req.url === '/health' && req.method === 'GET') {
+          const health = this.healthResource.getHealth();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(health));
+          return;
+        }
+
+        const contentLength = req.headers['content-length'];
+        if (contentLength !== undefined) {
+          const size = parseInt(contentLength, 10);
+          if (!isNaN(size) && size > MAX_REQUEST_BODY_SIZE) {
+            this.log.warn(`Request rejected: body size ${size} exceeds limit ${MAX_REQUEST_BODY_SIZE}`);
+            res.writeHead(413, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              errors: [{
+                message: `Request body size ${size} bytes exceeds maximum allowed size of ${MAX_REQUEST_BODY_SIZE} bytes`,
+                extensions: { code: 'PAYLOAD_TOO_LARGE' }
+              }]
+            }));
+            return;
+          }
+        }
+        (yoga as RequestListener)(req, res);
+      };
+
+      this.server = createServer(handler);
 
       await new Promise<void>((resolve, reject) => {
         if (!this.server) {

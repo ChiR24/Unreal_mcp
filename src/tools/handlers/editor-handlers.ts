@@ -160,6 +160,22 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       });
       return cleanObject(res);
     }
+    case 'capture_viewport': {
+      // G1: Advanced viewport screenshot capture
+      // Supports: base64 return, file output, format options, HDR capture
+      const res = await executeAutomationRequest(tools, 'control_editor', {
+        action: 'capture_viewport',
+        outputPath: args.outputPath,
+        filename: args.filename,
+        format: args.format ?? 'png',
+        width: args.width,
+        height: args.height,
+        returnBase64: args.returnBase64 ?? false,
+        captureHDR: args.captureHDR ?? false,
+        showUI: args.showUI ?? false
+      });
+      return cleanObject(res);
+    }
     default:
       return await executeAutomationRequest(tools, 'control_editor', args);
   }

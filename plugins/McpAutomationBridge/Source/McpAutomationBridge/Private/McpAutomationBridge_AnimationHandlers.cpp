@@ -329,6 +329,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
       TArray<FString> Cleaned;
       TArray<FString> Missing;
       TArray<FString> Failed;
+      // Pre-allocate arrays for artifact cleanup (worst case: all items)
+      const int32 NumArtifacts = ArtifactsArray->Num();
+      Cleaned.Reserve(NumArtifacts);
+      Missing.Reserve(NumArtifacts);
+      Failed.Reserve(NumArtifacts);
 
       for (const TSharedPtr<FJsonValue> &Val : *ArtifactsArray) {
         if (!Val.IsValid() || Val->Type != EJson::String) {
@@ -372,6 +377,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
       }
 
       TArray<TSharedPtr<FJsonValue>> CleanedArray;
+      CleanedArray.Reserve(Cleaned.Num());
       for (const FString &Path : Cleaned) {
         CleanedArray.Add(MakeShared<FJsonValueString>(Path));
       }
@@ -382,6 +388,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 
       if (Missing.Num() > 0) {
         TArray<TSharedPtr<FJsonValue>> MissingArray;
+        MissingArray.Reserve(Missing.Num());
         for (const FString &Path : Missing) {
           MissingArray.Add(MakeShared<FJsonValueString>(Path));
         }
@@ -390,6 +397,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 
       if (Failed.Num() > 0) {
         TArray<TSharedPtr<FJsonValue>> FailedArray;
+        FailedArray.Reserve(Failed.Num());
         for (const FString &Path : Failed) {
           FailedArray.Add(MakeShared<FJsonValueString>(Path));
         }

@@ -27,3 +27,25 @@ export const CONNECTION_TIMEOUT_MS = 15000;
 // Message size limits
 export const MAX_WS_MESSAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
+/** Maximum size for GraphQL request body in bytes (1MB) */
+export const MAX_REQUEST_BODY_SIZE = 1048576;
+
+/**
+ * Category-based request timeouts in milliseconds.
+ * Used by request-tracker to enforce appropriate timeouts per operation type.
+ */
+export const TOOL_CATEGORY_TIMEOUTS: Record<string, number> = {
+  /** Default timeout for most operations */
+  default: 60000,
+  /** Quick queries (get_, list_, query_) */
+  quick: 30000,
+  /** Asset operations (save_, create_, import_) */
+  asset: 120000,
+  /** Build/Cook/Package operations */
+  build: 300000,
+  /** Heavy/long-running operations */
+  heavy: 300000,
+  /** Event subscriptions */
+  events: 60000
+};
+

@@ -1,4 +1,18 @@
 import { commonSchemas } from './tool-definition-utils.js';
+
+/**
+ * Tool annotation schema for MCP 2025-11-25 spec compliance
+ * Phase E4: Add structured metadata to tools
+ */
+export interface ToolAnnotation {
+  /** Target audience for this tool */
+  audience?: string[];
+  /** Priority for sorting (1-10, higher = more important) */
+  priority?: number;
+  /** Semantic tags for categorization and discovery */
+  tags?: string[];
+}
+
 /** MCP Tool Definition type for explicit annotation to avoid TS7056 */
 export interface ToolDefinition {
   category?: 'core' | 'world' | 'authoring' | 'gameplay' | 'utility';
@@ -6,6 +20,8 @@ export interface ToolDefinition {
   description: string;
   inputSchema: Record<string, unknown>;
   outputSchema?: Record<string, unknown>;
+  /** Phase E4: Structured tool annotations */
+  annotations?: ToolAnnotation;
   [key: string]: unknown;
 }
 export const consolidatedToolDefinitions: ToolDefinition[] = [
@@ -13,6 +29,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_pipeline',
     description: 'Filter tools by category (core, world, authoring, gameplay, utility).',
     category: 'core',
+    annotations: {
+      audience: ['developer'],
+      priority: 10,
+      tags: ['system', 'meta', 'configuration']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -33,6 +54,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_asset',
     category: 'core',
     description: 'Assets, Materials, dependencies; Blueprints (SCS, graph nodes).',
+    annotations: {
+      audience: ['developer', 'designer'],
+      priority: 9,
+      tags: ['asset', 'blueprint', 'material', 'metasound', 'nanite']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -139,6 +165,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'control_actor',
     category: 'core',
     description: 'Spawn actors, transforms, physics, components, tags, attachments.',
+    annotations: {
+      audience: ['developer', 'designer'],
+      priority: 9,
+      tags: ['actor', 'spawn', 'transform', 'component', 'physics']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -215,6 +246,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'control_editor',
     category: 'core',
     description: 'PIE, viewport, console, screenshots, profiling, CVars, UBT, widgets.',
+    annotations: {
+      audience: ['developer'],
+      priority: 9,
+      tags: ['editor', 'viewport', 'pie', 'console', 'input']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -237,7 +273,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'start_background_job', 'get_job_status', 'cancel_job', 'get_active_jobs',
             'play_sound', 'create_widget', 'show_widget', 'add_widget_child',
             'set_cvar', 'get_project_settings', 'validate_assets', 'set_project_setting',
-            'batch_execute'
+            'batch_execute',
+            // Viewport capture (G1)
+            'capture_viewport'
           ],
           description: 'Editor action'
         },
@@ -277,6 +315,12 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         section: commonSchemas.stringProp,
         value: commonSchemas.stringProp,
         configName: commonSchemas.stringProp,
+        // capture_viewport options (G1)
+        outputPath: commonSchemas.stringProp,
+        format: { type: 'string', enum: ['png', 'jpg', 'bmp'] },
+        returnBase64: commonSchemas.booleanProp,
+        captureHDR: commonSchemas.booleanProp,
+        showUI: commonSchemas.booleanProp,
         requests: {
           type: 'array',
           items: {
@@ -304,6 +348,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_level',
     category: 'core',
     description: 'Levels, streaming, World Partition, data layers, HLOD; PCG graphs.',
+    annotations: {
+      audience: ['developer', 'designer'],
+      priority: 8,
+      tags: ['level', 'streaming', 'world-partition', 'pcg', 'hlod']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -431,6 +480,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_motion_design',
     category: 'authoring',
     description: 'Motion Design (Avalanche) tools: Cloners, Effectors, Mograph.',
+    annotations: {
+      audience: ['designer'],
+      priority: 6,
+      tags: ['mograph', 'cloner', 'effector', 'animation']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -487,6 +541,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'animation_physics',
     category: 'utility',
     description: 'Animation BPs, Montages, IK, retargeting + Chaos destruction/vehicles.',
+    annotations: {
+      audience: ['developer', 'animator'],
+      priority: 7,
+      tags: ['animation', 'physics', 'chaos', 'vehicle', 'cloth', 'ragdoll']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -513,6 +572,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             // Motion Matching & Advanced (Phase 3F.2)
             'create_pose_search_database', 'configure_motion_matching', 'add_trajectory_prediction',
             'create_animation_modifier', 'setup_ml_deformer', 'configure_ml_deformer_training',
+            // Motion Matching Queries (A4)
+            'get_motion_matching_state', 'set_motion_matching_goal', 'list_pose_search_databases',
+            // Control Rig Queries (A5)
+            'get_control_rig_controls', 'set_control_value', 'reset_control_rig',
             // [PhysicsDestruction] CHAOS DESTRUCTION (29 actions - merged)
             'chaos_create_geometry_collection', 'chaos_fracture_uniform', 'chaos_fracture_clustered', 'chaos_fracture_radial',
             'chaos_fracture_slice', 'chaos_fracture_brick', 'chaos_flatten_fracture', 'chaos_set_geometry_collection_materials',
@@ -666,6 +729,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_effect',
     category: 'utility',
     description: 'Niagara/Cascade particles, debug shapes, VFX graph authoring.',
+    annotations: {
+      audience: ['developer', 'vfx-artist'],
+      priority: 7,
+      tags: ['niagara', 'vfx', 'particles', 'debug', 'fluids']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -815,6 +883,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'build_environment',
     category: 'world',
     description: 'Landscapes, foliage, procedural terrain, sky/fog, water, weather.',
+    annotations: {
+      audience: ['developer', 'environment-artist'],
+      priority: 8,
+      tags: ['landscape', 'foliage', 'terrain', 'sky', 'fog', 'water', 'weather']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -1021,6 +1094,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_sequence',
     category: 'utility',
     description: 'Sequencer cinematics, Level Sequences, keyframes, MRQ renders.',
+    annotations: {
+      audience: ['developer', 'cinematographer'],
+      priority: 7,
+      tags: ['sequencer', 'cinematic', 'mrq', 'keyframe', 'camera']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -1171,6 +1249,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_audio',
     category: 'utility',
     description: 'Audio playback, mixes, MetaSounds + Wwise/FMOD/Bink middleware.',
+    annotations: {
+      audience: ['developer', 'audio-designer'],
+      priority: 7,
+      tags: ['audio', 'sound', 'metasound', 'wwise', 'fmod', 'middleware']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -1230,8 +1313,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'mw_create_bink_texture', 'mw_configure_bink_texture', 'mw_set_bink_texture_player',
             'mw_draw_bink_to_texture', 'mw_configure_bink_buffer_mode', 'mw_configure_bink_sound_track',
             'mw_configure_bink_draw_style', 'mw_get_bink_dimensions',
-            // Audio Middleware - Utility
-            'mw_get_audio_middleware_info'
+// Audio Middleware - Utility
+            'mw_get_audio_middleware_info',
+            // MetaSounds Queries (A6)
+            'list_metasound_assets', 'get_metasound_inputs', 'trigger_metasound'
           ],
           description: 'Action'
         },
@@ -1313,6 +1398,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_lighting',
     category: 'world',
     description: 'Lights (point, spot, rect, sky), GI, shadows, volumetric fog.',
+    annotations: {
+      audience: ['developer', 'lighting-artist'],
+      priority: 8,
+      tags: ['lighting', 'gi', 'shadows', 'lumen', 'post-process', 'fog']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -1445,6 +1535,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_performance',
     category: 'utility',
     description: 'Profiling, benchmarks, scalability, LOD, Nanite optimization.',
+    annotations: {
+      audience: ['developer'],
+      priority: 6,
+      tags: ['profiling', 'performance', 'lod', 'nanite', 'optimization']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -1502,6 +1597,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_geometry',
     category: 'world',
     description: 'Procedural meshes via Geometry Script: booleans, UVs, collision.',
+    annotations: {
+      audience: ['developer', 'tech-artist'],
+      priority: 6,
+      tags: ['geometry', 'procedural', 'mesh', 'boolean', 'uv']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -1625,6 +1725,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_skeleton',
     category: 'authoring',
     description: 'Skeletal meshes, sockets, physics assets; media players/sources.',
+    annotations: {
+      audience: ['developer', 'animator', 'tech-artist'],
+      priority: 6,
+      tags: ['skeleton', 'socket', 'physics-asset', 'media', 'morph']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -1741,6 +1846,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_material_authoring',
     category: 'authoring',
     description: 'Materials, expressions, parameters, landscape layers, textures.',
+    annotations: {
+      audience: ['developer', 'material-artist'],
+      priority: 7,
+      tags: ['material', 'texture', 'shader', 'substrate', 'landscape-layer']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -1879,6 +1989,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_character',
     category: 'gameplay',
     description: 'Characters, movement, locomotion + Inventory (items, equipment).',
+    annotations: {
+      audience: ['developer', 'game-designer'],
+      priority: 7,
+      tags: ['character', 'movement', 'inventory', 'interaction', 'locomotion']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -2077,6 +2192,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_combat',
     category: 'gameplay',
     description: 'Weapons, projectiles, damage, melee; GAS abilities and effects.',
+    annotations: {
+      audience: ['developer', 'game-designer'],
+      priority: 7,
+      tags: ['combat', 'weapon', 'projectile', 'gas', 'damage', 'melee']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -2262,6 +2382,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_ai',
     category: 'gameplay',
     description: 'AI Controllers, BT, EQS, perception, State Trees, MassAI, NPCs.',
+    annotations: {
+      audience: ['developer', 'designer'],
+      priority: 8,
+      tags: ['ai', 'behavior-tree', 'eqs', 'perception', 'state-tree', 'npc', 'navigation']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -2277,6 +2402,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_smart_object_definition', 'add_smart_object_slot', 'configure_slot_behavior', 'add_smart_object_component',
             'bind_statetree',
             'create_mass_entity_config', 'configure_mass_entity', 'add_mass_spawner', 'spawn_mass_entity',
+            'destroy_mass_entity', 'query_mass_entities', 'set_mass_entity_fragment',
+            // StateTree Query/Control (A2)
+            'get_statetree_state', 'trigger_statetree_transition', 'list_statetree_states',
+            // Smart Objects Integration (A3)
+            'create_smart_object', 'query_smart_objects', 'claim_smart_object', 'release_smart_object',
             'get_ai_info',
             // Behavior Tree graph operations (merged from manage_behavior_tree)
             'bt_add_node', 'bt_connect_nodes', 'bt_remove_node', 'bt_break_connections', 'bt_set_node_properties',
@@ -2565,6 +2695,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_widget_authoring',
     category: 'utility',
     description: 'UMG widgets: buttons, text, sliders. Layouts, bindings, HUDs.',
+    annotations: {
+      audience: ['developer', 'designer'],
+      priority: 6,
+      tags: ['widget', 'umg', 'ui', 'layout', 'hud', 'binding']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -2976,6 +3111,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_networking',
     category: 'utility',
     description: 'Replication, RPCs, prediction, sessions; GameModes, teams.',
+    annotations: {
+      audience: ['developer'],
+      priority: 7,
+      tags: ['networking', 'replication', 'rpc', 'sessions', 'multiplayer']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -3237,6 +3377,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_volumes',
     category: 'world',
     description: 'Volumes (trigger, physics, audio, nav) and splines (meshes).',
+    annotations: {
+      audience: ['developer', 'level-designer'],
+      priority: 6,
+      tags: ['volume', 'trigger', 'spline', 'navigation', 'blocking']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -3384,6 +3529,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_data',
     category: 'utility',
     description: 'Data assets, tables, save games, tags, config; modding/PAK/UGC.',
+    annotations: {
+      audience: ['developer'],
+      priority: 6,
+      tags: ['data', 'save-game', 'data-table', 'config', 'modding']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -3504,6 +3654,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_build',
     category: 'utility',
     description: 'UBT, cook/package, plugins, DDC; tests, profiling, validation.',
+    annotations: {
+      audience: ['developer'],
+      priority: 6,
+      tags: ['build', 'cook', 'package', 'plugin', 'ddc', 'testing']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -3674,6 +3829,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_editor_utilities',
     description: 'Editor modes, content browser, selection, collision, subsystems.',
+    annotations: {
+      audience: ['developer'],
+      priority: 5,
+      tags: ['editor', 'selection', 'collision', 'subsystem', 'timer']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -3871,6 +4031,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_gameplay_systems',
     category: 'gameplay',
     description: 'Targeting, checkpoints, objectives, photo mode, dialogue, HLOD.',
+    annotations: {
+      audience: ['developer', 'designer'],
+      priority: 7,
+      tags: ['targeting', 'checkpoint', 'dialogue', 'photo-mode', 'hlod']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -4396,6 +4561,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_character_avatar',
     category: 'authoring',
     description: 'MetaHuman, Groom/Hair, Mutable, Ready Player Me avatar systems.',
+    annotations: {
+      audience: ['developer', 'artist'],
+      priority: 6,
+      tags: ['metahuman', 'groom', 'hair', 'mutable', 'rpm', 'avatar']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -4704,6 +4874,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_asset_plugins',
     category: 'utility',
     description: 'Import plugins (USD, Alembic, glTF, Datasmith, Houdini, Substance).',
+    annotations: {
+      audience: ['developer'],
+      priority: 6,
+      tags: ['usd', 'alembic', 'gltf', 'datasmith', 'houdini', 'substance']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -5132,6 +5307,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_livelink',
     category: 'utility',
     description: 'Live Link motion capture: sources, subjects, presets, face tracking.',
+    annotations: {
+      audience: ['developer'],
+      priority: 6,
+      tags: ['livelink', 'mocap', 'face-tracking', 'motion-capture']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -5493,6 +5673,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_xr',
     description: 'XR (VR/AR/MR) + Virtual Production (nDisplay, Composure, DMX).',
+    annotations: {
+      audience: ['developer'],
+      priority: 6,
+      tags: ['xr', 'vr', 'ar', 'ndisplay', 'virtual-production', 'dmx']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -6156,6 +6341,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_accessibility',
     category: 'utility',
     description: 'Accessibility: colorblind, subtitles, audio, motor, cognitive.',
+    annotations: {
+      audience: ['developer', 'designer'],
+      priority: 6,
+      tags: ['accessibility', 'colorblind', 'subtitles', 'motor', 'cognitive']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -6417,6 +6607,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_ui',
     category: 'utility',
     description: 'Runtime UI management: spawn widgets, hierarchy, viewport control.',
+    annotations: {
+      audience: ['developer', 'designer'],
+      priority: 6,
+      tags: ['ui', 'widget', 'viewport', 'hud', 'runtime']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -6452,6 +6647,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_gameplay_primitives',
     category: 'gameplay',
     description: 'Universal gameplay building blocks: state machines, values, factions, zones, conditions, spawners, schedules, and interactions.',
+    annotations: {
+      audience: ['developer', 'designer'],
+      priority: 7,
+      tags: ['state-machine', 'faction', 'zone', 'spawner', 'interaction', 'schedule', 'condition']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -6607,6 +6807,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_gameplay_abilities',
     category: 'gameplay',
     description: 'Create and configure Gameplay Abilities, Effects, and Ability Tasks.',
+    annotations: {
+      audience: ['developer', 'designer'],
+      priority: 7,
+      tags: ['gas', 'gameplay-ability', 'gameplay-effect', 'ability-task']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -6676,6 +6881,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_attribute_sets',
     category: 'gameplay',
     description: 'Create Blueprint AttributeSets and add Ability System Components.',
+    annotations: {
+      audience: ['developer'],
+      priority: 6,
+      tags: ['gas', 'attribute-set', 'ability-system-component', 'attributes']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -6714,6 +6924,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'manage_gameplay_cues',
     category: 'gameplay',
     description: 'Create and configure Gameplay Cue Notifies (Static/Actor).',
+    annotations: {
+      audience: ['developer', 'artist'],
+      priority: 5,
+      tags: ['gas', 'gameplay-cue', 'vfx', 'audio', 'feedback']
+    },
     inputSchema: {
       type: 'object',
       properties: {
@@ -6749,6 +6964,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     name: 'test_gameplay_abilities',
     category: 'gameplay',
     description: 'Runtime testing of GAS: Activate abilities, apply effects, query attributes.',
+    annotations: {
+      audience: ['developer'],
+      priority: 4,
+      tags: ['gas', 'testing', 'debug', 'runtime', 'ability', 'effect']
+    },
     inputSchema: {
       type: 'object',
       properties: {

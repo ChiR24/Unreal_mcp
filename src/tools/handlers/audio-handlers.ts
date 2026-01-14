@@ -212,6 +212,51 @@ export async function handleAudioTools(
         action: action 
       }, { timeoutMs: getTimeoutMs() })) as HandlerResult;
 
+    // MetaSounds Queries (A6)
+    case 'list_metasound_assets': {
+      // assetPath filter is optional
+      return cleanObject(await tools.automationBridge?.sendAutomationRequest('manage_audio', {
+        ...argsRecord,
+        action: 'list_metasound_assets'
+      }, { timeoutMs: getTimeoutMs() })) as HandlerResult;
+    }
+
+    case 'get_metasound_inputs': {
+      if (!argsRecord.assetPath) {
+        return cleanObject({
+          success: false,
+          error: 'MISSING_PARAMETER',
+          message: 'Missing required parameter: assetPath'
+        });
+      }
+      return cleanObject(await tools.automationBridge?.sendAutomationRequest('manage_audio', {
+        ...argsRecord,
+        action: 'get_metasound_inputs'
+      }, { timeoutMs: getTimeoutMs() })) as HandlerResult;
+    }
+
+    case 'trigger_metasound': {
+      if (!argsRecord.actorName) {
+        return cleanObject({
+          success: false,
+          error: 'MISSING_PARAMETER',
+          message: 'Missing required parameter: actorName'
+        });
+      }
+      if (!argsRecord.inputName) {
+        return cleanObject({
+          success: false,
+          error: 'MISSING_PARAMETER',
+          message: 'Missing required parameter: inputName'
+        });
+      }
+      // value can be number, boolean, or string
+      return cleanObject(await tools.automationBridge?.sendAutomationRequest('manage_audio', {
+        ...argsRecord,
+        action: 'trigger_metasound'
+      }, { timeoutMs: getTimeoutMs() })) as HandlerResult;
+    }
+
     default:
       return cleanObject({ success: false, error: 'UNKNOWN_ACTION', message: `Unknown audio action: ${action}` });
   }

@@ -225,6 +225,13 @@ static const FName MCP_PC_Wildcard(TEXT("wildcard"));
 static const FName MCP_PC_Text(TEXT("text"));
 static const FName MCP_PC_Struct(TEXT("struct"));
 #endif
+
+// Cycle stats for Blueprint handlers.
+// Use `stat McpBridge` in the UE console to view these stats.
+DECLARE_CYCLE_STAT(TEXT("Blueprint:Action"), STAT_MCP_BlueprintAction, STATGROUP_McpBridge);
+DECLARE_CYCLE_STAT(TEXT("Blueprint:Create"), STAT_MCP_BlueprintCreate, STATGROUP_McpBridge);
+DECLARE_CYCLE_STAT(TEXT("Blueprint:ListBlueprints"), STAT_MCP_ListBlueprints, STATGROUP_McpBridge);
+
 #if WITH_EDITOR
 namespace {
 #if MCP_HAS_EDGRAPH_SCHEMA_K2

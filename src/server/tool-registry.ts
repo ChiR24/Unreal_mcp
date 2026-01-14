@@ -40,6 +40,7 @@ import { LogTools } from '../tools/logs.js';
 import { getProjectSetting } from '../utils/ini-reader.js';
 import { config } from '../config.js';
 import { mcpClients } from 'mcp-client-capabilities';
+import { CustomToolDefinition, CustomToolSchema, CUSTOM_TOOL_CONSTRAINTS } from '../types/custom-tool.js';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -221,6 +222,7 @@ function clientSupportsListChanged(clientName: string | undefined): boolean {
 export class ToolRegistry {
     private defaultElicitationTimeoutMs = 60000;
     private currentCategories: string[] = parseDefaultCategories();
+    private customTools: Map<string, CustomToolDefinition> = new Map();
 
     constructor(
         private server: Server,
@@ -233,6 +235,41 @@ export class ToolRegistry {
         private levelResources: LevelResources,
         private ensureConnected: () => Promise<boolean>
     ) { }
+
+    /**
+     * Register a custom tool with validation
+     * @throws Error if validation fails or security constraints violated
+     */
+    public registerCustomTool(definition: CustomToolDefinition): void {
+        const result = CustomToolSchema.safeParse(definition);
+        if (!result.success) {
+            throw new Error(`Invalid custom tool schema: ${result.error.message}`);
+        }
+
+        if (this.customTools.size >= CUSTOM_TOOL_CONSTRAINTS.maxTools) {
+            throw new Error(`Maximum custom tools limit (${CUSTOM_TOOL_CONSTRAINTS.maxTools}) reached`);
+        }
+
+        for (const reserved of CUSTOM_TOOL_CONSTRAINTS.reservedNames) {
+            if (definition.name.startsWith(reserved)) {
+                throw new Error(`Tool name cannot start with reserved prefix: ${reserved}`);
+            }
+        }
+
+        if (this.customTools.has(definition.name)) {
+            throw new Error(`Custom tool already registered: ${definition.name}`);
+        }
+
+        this.customTools.set(definition.name, definition);
+        this.logger.info(`Registered custom tool: ${definition.name}`);
+    }
+
+    /**
+     * Get all registered custom tools
+     */
+    public getCustomTools(): CustomToolDefinition[] {
+        return Array.from(this.customTools.values());
+    }
     
     private normalizeToolArgs(_toolName: string, args: Record<string, unknown>): Record<string, unknown> {
         // Normalize common path-like parameters and accept a few common aliases.
@@ -467,15 +504,37 @@ export class ToolRegistry {
             let supportsListChanged = false;
             let clientName: string | undefined;
             try {
-                // Get client info - the server stores this from the initialize request
-                // Note: _clientVersion is a private SDK property (fragile but necessary)
+                // Phase E3: Robust client info detection with fallback chain
+                // Try documented APIs first, then fall back to private property
                 const serverObj = this.server as unknown as Record<string, unknown>;
-                const clientInfo = serverObj._clientVersion as { name?: string } | undefined;
-                clientName = clientInfo?.name;
+                
+                // Try getClientInfo() - future documented API
+                if (typeof serverObj.getClientInfo === 'function') {
+                    const clientInfo = (serverObj.getClientInfo as () => { name?: string } | undefined)();
+                    clientName = clientInfo?.name;
+                }
+                // Try getClientVersion() - alternate API name
+                else if (typeof serverObj.getClientVersion === 'function') {
+                    const clientInfo = (serverObj.getClientVersion as () => { name?: string } | undefined)();
+                    clientName = clientInfo?.name;
+                }
+                // Fallback: access private _clientVersion (current SDK behavior)
+                else if ('_clientVersion' in serverObj) {
+                    const clientInfo = serverObj._clientVersion as { name?: string } | undefined;
+                    clientName = clientInfo?.name;
+                }
+                // Last resort: check _clientInfo
+                else if ('_clientInfo' in serverObj) {
+                    const clientInfo = serverObj._clientInfo as { name?: string } | undefined;
+                    clientName = clientInfo?.name;
+                }
+                
                 supportsListChanged = clientSupportsListChanged(clientName);
                 this.logger.debug(`Client detection: name=${clientName}, supportsListChanged=${supportsListChanged}`);
             } catch (_e) {
+                // Graceful degradation - assume no listChanged support for unknown clients
                 supportsListChanged = false;
+                this.logger.debug('Client version detection failed, assuming no listChanged support');
             }
 
             // If client doesn't support dynamic loading, show ALL tools (backward compatibility)
@@ -509,9 +568,9 @@ export class ToolRegistry {
                          }
                      }
                      
-                     // DEBUG: Log the first tool's schema to see what's wrong
-                     if (t.name === 'manage_pipeline') {
-                        this.logger.info(`[DEBUG] manage_pipeline schema: ${JSON.stringify(copy.inputSchema)}`);
+                      // DEBUG: Log the first tool's schema to see what's wrong
+                      if (t.name === 'manage_pipeline' && this.logger.isDebugEnabled()) {
+                         this.logger.debug(`manage_pipeline schema: ${JSON.stringify(copy.inputSchema)}`);
                      }
 
                      return copy;

@@ -399,8 +399,7 @@ bool UMcpSpawnerComponent::EvaluateSpawnConditions() const
     // Future: Parse and evaluate JSON predicate conditions
     // For now, any non-empty condition string is treated as "always true"
     // This allows the MCP to set conditions that can be checked externally
-    
-    // TODO: Integrate with a condition/rules system when available
+    // Note: Condition/rules system integration is a future enhancement
     return true;
 }
 

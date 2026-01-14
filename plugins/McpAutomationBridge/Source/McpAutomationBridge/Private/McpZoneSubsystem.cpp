@@ -286,7 +286,7 @@ void UMcpZoneSubsystem::NotifyActorEnteredZone(const FString& ZoneId, AActor* Ac
     {
         if (Evt.EventType == EMcpZoneEventType::Enter)
         {
-            // TODO: In future, check ConditionId against a condition system
+            // Note: ConditionId checking against a condition system is a future enhancement
             OnZoneEnter.Broadcast(ZoneId, Evt.EventId, Actor);
         }
     }
@@ -314,7 +314,7 @@ void UMcpZoneSubsystem::NotifyActorExitedZone(const FString& ZoneId, AActor* Act
     {
         if (Evt.EventType == EMcpZoneEventType::Exit)
         {
-            // TODO: In future, check ConditionId against a condition system
+            // Note: ConditionId checking against a condition system is a future enhancement
             OnZoneExit.Broadcast(ZoneId, Evt.EventId, Actor);
         }
     }

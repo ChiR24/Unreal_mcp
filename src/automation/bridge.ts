@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { WebSocket } from 'ws';
+import { randomUUID } from 'node:crypto';
 import { Logger } from '../utils/logger.js';
 import {
     DEFAULT_AUTOMATION_HOST,
@@ -463,14 +464,18 @@ export class AutomationBridge extends EventEmitter {
     async sendAutomationRequest<T = AutomationBridgeResponseMessage>(
         action: string,
         payload: Record<string, unknown> = {},
-        options: { timeoutMs?: number; category?: AutomationConnectionCategory | string } = {}
+        options: { timeoutMs?: number; category?: AutomationConnectionCategory | string; requestId?: string } = {}
     ): Promise<T> {
+        // Generate or use provided correlation ID
+        const correlationId = options.requestId ?? randomUUID();
+        
         // Mock mode returns simulated success responses
         if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
-            this.log.debug(`[MOCK] Simulating response for action: ${action}`);
+            this.log.debug(`[MOCK] [${correlationId}] Simulating response for action: ${action}`);
             const mockResponse = {
                 success: true,
                 action,
+                requestId: correlationId,
                 result: {
                     success: true,
                     message: `Mock response for ${action}`,
@@ -574,7 +579,7 @@ export class AutomationBridge extends EventEmitter {
     private async sendRequestInternal<T>(
         action: string,
         payload: Record<string, unknown>,
-        options: { timeoutMs?: number; category?: AutomationConnectionCategory | string }
+        options: { timeoutMs?: number; category?: AutomationConnectionCategory | string; requestId?: string }
     ): Promise<T> {
         const timeoutMs = options.timeoutMs ?? 60000; // Increased default timeout to 60s
 
@@ -588,6 +593,9 @@ export class AutomationBridge extends EventEmitter {
         }
 
         const { requestId, promise } = this.requestTracker.createRequest(action, payload, timeoutMs);
+        
+        // Log request with correlation ID for tracing
+        this.log.debug(`[${requestId}] Sending automation request: ${action}`);
 
         if (coalesceKey) {
             this.requestTracker.setCoalescedRequest(coalesceKey, promise);

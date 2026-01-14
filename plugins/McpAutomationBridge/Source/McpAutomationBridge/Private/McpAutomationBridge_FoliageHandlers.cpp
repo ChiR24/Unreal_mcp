@@ -107,6 +107,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
   if ((Payload->TryGetArrayField(TEXT("locations"), LocationsArray) ||
        Payload->TryGetArrayField(TEXT("location"), LocationsArray)) &&
       LocationsArray && LocationsArray->Num() > 0) {
+    Locations.Reserve(LocationsArray->Num());
     for (const TSharedPtr<FJsonValue> &Val : *LocationsArray) {
       if (Val.IsValid() && Val->Type == EJson::Object) {
         const TSharedPtr<FJsonObject> *Obj = nullptr;
@@ -774,6 +775,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
     const TArray<TSharedPtr<FJsonValue>> *LocationsArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("locations"), LocationsArray) &&
         LocationsArray) {
+      ParsedTransforms.Reserve(LocationsArray->Num());
       for (const TSharedPtr<FJsonValue> &Val : *LocationsArray) {
         if (Val.IsValid() && Val->Type == EJson::Object) {
           const TSharedPtr<FJsonObject> *Obj = nullptr;

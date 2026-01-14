@@ -4,10 +4,7 @@
 
 import { toRotTuple, toVec3Tuple } from './normalize.js';
 import { sanitizePath as sanitizePathStrict } from './path-security.js';
-import { Logger } from './logger.js';
-
-// Security logger for path validation
-const securityLogger = new Logger('security', 'warn');
+import { SecurityLogger } from './security-logger.js';
 
 /**
  * Maximum path length allowed in Unreal Engine
@@ -119,6 +116,7 @@ export function sanitizePathSafe(path: string): SanitizePathResult {
     
     // Check for path traversal - this is a security issue that must be reported
     if (normalized.includes('..')) {
+      SecurityLogger.pathTraversalAttempt(normalized, 'sanitizePathSafe');
       return { success: false, error: 'Path traversal sequences (..) are not allowed' };
     }
     
@@ -174,7 +172,7 @@ export function sanitizePath(path: string): string {
   // For security-critical code, use sanitizePathSafe() instead.
   if (segments.some(s => s === '..' || s === '.')) {
     // Log warning for security monitoring
-    securityLogger.warn('[SECURITY] Path traversal attempt blocked:', path);
+    SecurityLogger.pathTraversalAttempt(path, 'sanitizePath');
     return '/Game';
   }
 

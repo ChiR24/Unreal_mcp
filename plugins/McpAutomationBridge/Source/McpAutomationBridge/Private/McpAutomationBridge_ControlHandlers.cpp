@@ -79,6 +79,12 @@
 
 #endif
 
+// Cycle stats for actor control handlers.
+// Use `stat McpBridge` in the UE console to view these stats.
+DECLARE_CYCLE_STAT(TEXT("ControlActor:Spawn"), STAT_MCP_ControlActorSpawn, STATGROUP_McpBridge);
+DECLARE_CYCLE_STAT(TEXT("ControlActor:Delete"), STAT_MCP_ControlActorDelete, STATGROUP_McpBridge);
+DECLARE_CYCLE_STAT(TEXT("ControlActor:Transform"), STAT_MCP_ControlActorTransform, STATGROUP_McpBridge);
+
 // Helper class for capturing export output
 /* UE5.6: Use built-in FStringOutputDevice from UnrealString.h */
 
@@ -89,6 +95,7 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  SCOPE_CYCLE_COUNTER(STAT_MCP_ControlActorSpawn);
 
 #if WITH_EDITOR
   FString ClassPath;
@@ -461,6 +468,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   TArray<FString> Deleted;
   TArray<FString> Missing;
+  Deleted.Reserve(Targets.Num());
+  Missing.Reserve(Targets.Num());
 
   for (const FString &Name : Targets) {
   AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), Name);
@@ -484,12 +493,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
   Resp->SetNumberField(TEXT("deletedCount"), Deleted.Num());
 
   TArray<TSharedPtr<FJsonValue>> DeletedArray;
+  DeletedArray.Reserve(Deleted.Num());
   for (const FString &Name : Deleted)
     DeletedArray.Add(MakeShared<FJsonValueString>(Name));
   Resp->SetArrayField(TEXT("deleted"), DeletedArray);
 
   if (Missing.Num() > 0) {
     TArray<TSharedPtr<FJsonValue>> MissingArray;
+    MissingArray.Reserve(Missing.Num());
     for (const FString &Name : Missing)
       MissingArray.Add(MakeShared<FJsonValueString>(Name));
     Resp->SetArrayField(TEXT("missing"), MissingArray);

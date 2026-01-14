@@ -36,7 +36,7 @@
     "lint:c": "echo \"Running C lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C lint')",
     "lint:csharp": "echo \"Running C# lint (dotnet format)\" && (dotnet tool run dotnet-format --verify-no-changes || echo 'dotnet-format not available or formatting required; skipping C# lint')",
     "clean": "rimraf dist tsconfig.tsbuildinfo",
-    "prepare": "npm run build",
+    "prepare": "husky || true",
     "automation:sync": "node scripts/sync-mcp-plugin.js",
     "automation:verify-handler-sync": "node --loader ts-node/esm scripts/verify-handler-sync.ts",
     "automation:lint-cpp-safety": "node --loader ts-node/esm scripts/lint-cpp-safety.ts",
@@ -94,6 +94,13 @@
     "tiktoken": "^1.0.22",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --max-warnings=0"
+    ]
   }
 }

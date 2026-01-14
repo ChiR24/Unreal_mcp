@@ -1,5 +1,5 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { ListResourcesRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { ListResourcesRequestSchema, ListResourceTemplatesRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { HealthMonitor } from '../services/health-monitor.js';
@@ -7,6 +7,7 @@ import { ResourceHandler } from '../handlers/resource-handlers.js';
 import { AssetResources } from '../resources/assets.js';
 import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
+import { resourceTemplates } from '../resources/templates.js';
 
 export class ResourceRegistry {
     constructor(
@@ -21,6 +22,7 @@ export class ResourceRegistry {
     ) { }
 
     register() {
+        // List static resources
         this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
             return {
                 resources: [
@@ -32,6 +34,11 @@ export class ResourceRegistry {
                     { uri: 'ue://version', name: 'Engine Version', description: 'Unreal Engine version and compatibility info', mimeType: 'application/json' }
                 ]
             };
+        });
+
+        // List resource templates (Phase E2)
+        this.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+            return { resourceTemplates };
         });
 
         const resourceHandler = new ResourceHandler(

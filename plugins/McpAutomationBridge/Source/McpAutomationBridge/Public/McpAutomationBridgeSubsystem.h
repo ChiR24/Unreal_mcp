@@ -7,10 +7,17 @@
 #include "HAL/CriticalSection.h"
 #include "Templates/SharedPointer.h"
 #include "Engine/DataAsset.h"
+#include "Stats/Stats.h"
 #include "McpAutomationBridgeSubsystem.generated.h"
 
 // Forward declare USkeleton to avoid including heavy animation headers
 class USkeleton;
+
+/**
+ * Stats group for MCP Automation Bridge profiling.
+ * Use `stat McpBridge` in the UE console to view these stats.
+ */
+DECLARE_STATS_GROUP(TEXT("McpBridge"), STATGROUP_McpBridge, STATCAT_Advanced);
 
 /**
  * Concrete data asset class for MCP inventory/item operations.
@@ -143,8 +150,19 @@ private:
   // Connection Manager
   TSharedPtr<class FMcpConnectionManager> ConnectionManager;
 
-  // Actor Cache
-  TMap<FName, TWeakObjectPtr<AActor>> ActorCache;
+  // Actor Cache with TTL support
+  struct FActorCacheEntry
+  {
+    TWeakObjectPtr<AActor> Actor;
+    double CacheTime;
+    
+    FActorCacheEntry() : CacheTime(0.0) {}
+    FActorCacheEntry(AActor* InActor, double InTime) : Actor(InActor), CacheTime(InTime) {}
+  };
+  TMap<FName, FActorCacheEntry> ActorCache;
+  
+  /** Time-to-live for actor cache entries in seconds. Entries older than this are evicted on access. */
+  static constexpr double ActorCacheTTLSeconds = 30.0;
 
   // Event Push System subscriptions (Phase 4.1)
   TSet<FString> EventSubscriptions;
@@ -907,6 +925,73 @@ private:
   bool HandleSpawnMassEntity(const FString &RequestId, const FString &Action,
                              const TSharedPtr<FJsonObject> &Payload,
                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleDestroyMassEntity(const FString &RequestId, const FString &Action,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleQueryMassEntities(const FString &RequestId, const FString &Action,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleSetMassEntityFragment(const FString &RequestId, const FString &Action,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+  // A2: StateTree Query/Control handlers
+  bool HandleGetStateTreeState(const FString &RequestId, const FString &Action,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleTriggerStateTreeTransition(const FString &RequestId, const FString &Action,
+                                        const TSharedPtr<FJsonObject> &Payload,
+                                        TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleListStateTreeStates(const FString &RequestId, const FString &Action,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+  // A3: Smart Objects Integration handlers
+  bool HandleCreateSmartObject(const FString &RequestId, const FString &Action,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleQuerySmartObjects(const FString &RequestId, const FString &Action,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleClaimSmartObject(const FString &RequestId, const FString &Action,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleReleaseSmartObject(const FString &RequestId, const FString &Action,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+  // A4: Motion Matching Queries handlers
+  bool HandleGetMotionMatchingState(const FString &RequestId, const FString &Action,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleSetMotionMatchingGoal(const FString &RequestId, const FString &Action,
+                                   const TSharedPtr<FJsonObject> &Payload,
+                                   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleListPoseSearchDatabases(const FString &RequestId, const FString &Action,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+  // A5: Control Rig Queries handlers
+  bool HandleGetControlRigControls(const FString &RequestId, const FString &Action,
+                                   const TSharedPtr<FJsonObject> &Payload,
+                                   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleSetControlValue(const FString &RequestId, const FString &Action,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleResetControlRig(const FString &RequestId, const FString &Action,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+  // A6: MetaSounds Queries handlers
+  bool HandleListMetaSoundAssets(const FString &RequestId, const FString &Action,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleGetMetaSoundInputs(const FString &RequestId, const FString &Action,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleTriggerMetaSound(const FString &RequestId, const FString &Action,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
   // Phase 4.1: Event Push System handlers
   bool HandleSubscribeToEvent(const FString &RequestId,

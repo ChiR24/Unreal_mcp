@@ -23,6 +23,12 @@
 // Define the subsystem log category declared in the public header.
 DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
 
+// Cycle stats for top-level subsystem operations.
+// Use `stat McpBridge` in the UE console to view these stats.
+DECLARE_CYCLE_STAT(TEXT("FindActorCached"), STAT_MCP_FindActorCached, STATGROUP_McpBridge);
+DECLARE_CYCLE_STAT(TEXT("SendResponse"), STAT_MCP_SendResponse, STATGROUP_McpBridge);
+DECLARE_CYCLE_STAT(TEXT("Tick"), STAT_MCP_Tick, STATGROUP_McpBridge);
+
 // Static member initialization
 TArray<TSharedPtr<FJsonObject>>* UMcpAutomationBridgeSubsystem::CapturedResponses = nullptr;
 bool UMcpAutomationBridgeSubsystem::bIsCapturingResponses = false;
@@ -194,21 +200,35 @@ UMcpAutomationBridgeSubsystem::GetBridgeState() const {
 
 AActor* UMcpAutomationBridgeSubsystem::FindActorCached(FName Label)
 {
+    SCOPE_CYCLE_COUNTER(STAT_MCP_FindActorCached);
+    
     if (Label.IsNone())
     {
         return nullptr;
     }
 
-    // 1. Look in cache
-    if (TWeakObjectPtr<AActor>* Found = ActorCache.Find(Label))
+    const double CurrentTime = FPlatformTime::Seconds();
+
+    // 1. Look in cache with TTL check
+    if (FActorCacheEntry* Found = ActorCache.Find(Label))
     {
-        if (Found->IsValid())
+        // Check TTL - evict if stale
+        if ((CurrentTime - Found->CacheTime) > ActorCacheTTLSeconds)
         {
-            return Found->Get();
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, 
+                TEXT("ActorCache TTL Expired: Evicting '%s' (age: %.1fs)"), 
+                *Label.ToString(), CurrentTime - Found->CacheTime);
+            ActorCache.Remove(Label);
+        }
+        else if (Found->Actor.IsValid())
+        {
+            // Cache hit - valid and within TTL
+            return Found->Actor.Get();
         }
         else
         {
-            ActorCache.Remove(Label); // Cleanup stale
+            // WeakPtr is stale, remove entry
+            ActorCache.Remove(Label);
         }
     }
 
@@ -223,12 +243,12 @@ AActor* UMcpAutomationBridgeSubsystem::FindActorCached(FName Label)
         Result = FindActorByLabelOrName<AActor>(World, LabelStr);
     }
 
-    // 3. Update cache if found
+    // 3. Update cache if found (with timestamp)
     if (Result)
     {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, 
             TEXT("ActorCache Miss: Caching '%s'"), *LabelStr);
-        ActorCache.Add(Label, Result);
+        ActorCache.Add(Label, FActorCacheEntry(Result, CurrentTime));
     }
     
     return Result;
@@ -252,7 +272,7 @@ void UMcpAutomationBridgeSubsystem::OnActorSpawned(AActor* Actor)
 
     if (!Label.IsNone())
     {
-        ActorCache.Add(Label, Actor);
+        ActorCache.Add(Label, FActorCacheEntry(Actor, FPlatformTime::Seconds()));
     }
 }
 
@@ -266,7 +286,7 @@ void UMcpAutomationBridgeSubsystem::OnActorDestroyed(AActor* Actor)
     // This is O(N) on cache size but happens only on deletion.
     for (auto It = ActorCache.CreateIterator(); It; ++It)
     {
-        if (It.Value() == Actor)
+        if (It.Value().Actor == Actor)
         {
             It.RemoveCurrent();
             return; 
@@ -1396,6 +1416,130 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleSpawnMassEntity(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("destroy_mass_entity"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleDestroyMassEntity(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("query_mass_entities"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleQueryMassEntities(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("set_mass_entity_fragment"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleSetMassEntityFragment(R, A, P, S);
+                  });
+
+  // A2: StateTree Query/Control handlers
+  RegisterHandler(TEXT("get_statetree_state"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGetStateTreeState(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("trigger_statetree_transition"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleTriggerStateTreeTransition(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("list_statetree_states"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleListStateTreeStates(R, A, P, S);
+                  });
+
+  // A3: Smart Objects Integration handlers
+  RegisterHandler(TEXT("create_smart_object"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleCreateSmartObject(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("query_smart_objects"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleQuerySmartObjects(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("claim_smart_object"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleClaimSmartObject(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("release_smart_object"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleReleaseSmartObject(R, A, P, S);
+                  });
+
+  // A4: Motion Matching Queries handlers
+  RegisterHandler(TEXT("get_motion_matching_state"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGetMotionMatchingState(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("set_motion_matching_goal"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleSetMotionMatchingGoal(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("list_pose_search_databases"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleListPoseSearchDatabases(R, A, P, S);
+                  });
+
+  // A5: Control Rig Queries handlers
+  RegisterHandler(TEXT("get_control_rig_controls"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGetControlRigControls(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("set_control_value"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleSetControlValue(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("reset_control_rig"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleResetControlRig(R, A, P, S);
+                  });
+
+  // A6: MetaSounds Queries handlers
+  RegisterHandler(TEXT("list_metasound_assets"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleListMetaSoundAssets(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("get_metasound_inputs"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGetMetaSoundInputs(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("trigger_metasound"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleTriggerMetaSound(R, A, P, S);
                   });
 }
 

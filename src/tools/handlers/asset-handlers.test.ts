@@ -21,6 +21,17 @@ function createMockTools(overrides: Partial<ITools> = {}): ITools {
       isConnected: () => true,
       sendAutomationRequest: vi.fn(),
     },
+    assetResources: {
+      list: vi.fn().mockResolvedValue({
+        assets: [
+          { path: '/Game/Asset1', name: 'Asset1' },
+          { path: '/Game/Asset2', name: 'Asset2' },
+        ],
+        folders: 0,
+        count: 2,
+        files: 2
+      }),
+    },
     assetTools: {
       createFolder: vi.fn().mockResolvedValue({ success: true, path: '/Game/NewFolder' }),
       importAsset: vi.fn().mockResolvedValue({ success: true }),
@@ -56,25 +67,13 @@ describe('handleAssetTools', () => {
   describe('success cases', () => {
     it('handles list action successfully', async () => {
       const mockTools = createMockTools();
-      mockedExecuteAutomationRequest.mockResolvedValue({
-        success: true,
-        assets: [
-          { path: '/Game/Asset1', name: 'Asset1' },
-          { path: '/Game/Asset2', name: 'Asset2' },
-        ],
-        folders: [],
-      });
 
       const result = await handleAssetTools('list', { path: '/Game' }, mockTools);
 
       expect(result).toHaveProperty('success', true);
       // Response wraps assets inside 'data' via ResponseFactory.success
       expect(result).toHaveProperty('data');
-      expect(mockedExecuteAutomationRequest).toHaveBeenCalledWith(
-        mockTools,
-        'list',
-        expect.objectContaining({ path: '/Game' })
-      );
+      expect(mockTools.assetResources.list).toHaveBeenCalled();
     });
 
     it('handles create_folder action successfully', async () => {
@@ -116,9 +115,11 @@ describe('handleAssetTools', () => {
   // ============ AUTOMATION FAILURE TESTS (2+) ============
 
   describe('automation failure cases', () => {
-    it('returns error when executeAutomationRequest rejects for list action', async () => {
+    it('returns error when assetResources.list rejects for list action', async () => {
       const mockTools = createMockTools();
-      mockedExecuteAutomationRequest.mockRejectedValue(new Error('Automation bridge not connected'));
+      (mockTools.assetResources.list as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Automation bridge not connected')
+      );
 
       const result = await handleAssetTools('list', { path: '/Game' }, mockTools);
 

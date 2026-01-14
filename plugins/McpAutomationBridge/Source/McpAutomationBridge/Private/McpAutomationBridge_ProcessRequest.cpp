@@ -7,6 +7,11 @@
 #include "Misc/ScopeExit.h"
 #include "Misc/ScopeLock.h"
 
+// Cycle stats for the top-level request processing function.
+// Use `stat McpBridge` in the UE console to view these stats.
+DECLARE_CYCLE_STAT(TEXT("ProcessRequest"), STAT_MCP_ProcessRequest, STATGROUP_McpBridge);
+DECLARE_CYCLE_STAT(TEXT("HandlerDispatch"), STAT_MCP_HandlerDispatch, STATGROUP_McpBridge);
+
 void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -107,6 +112,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
   bool bDispatchHandled = false;
   FString ConsumedHandlerLabel = TEXT("unknown-handler");
   const double DispatchStartSeconds = FPlatformTime::Seconds();
+  
+  // Profile the entire request processing (visible via `stat McpBridge`)
+  SCOPE_CYCLE_COUNTER(STAT_MCP_ProcessRequest);
 
   auto HandleAndLog = [&](const TCHAR *HandlerLabel, auto &&Callable) -> bool {
     const bool bResult = Callable();

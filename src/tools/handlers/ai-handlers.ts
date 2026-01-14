@@ -278,6 +278,79 @@ export async function handleAITools(
       return sendRequest('spawn_mass_entity');
     }
 
+    case 'destroy_mass_entity': {
+      requireNonEmptyString(argsRecord.entityHandle, 'entityHandle', 'Missing required parameter: entityHandle');
+      return sendRequest('destroy_mass_entity');
+    }
+
+    case 'query_mass_entities': {
+      // All parameters are optional: bounds, fragmentFilter, limit
+      return sendRequest('query_mass_entities');
+    }
+
+    case 'set_mass_entity_fragment': {
+      requireNonEmptyString(argsRecord.entityHandle, 'entityHandle', 'Missing required parameter: entityHandle');
+      requireNonEmptyString(argsRecord.fragmentType, 'fragmentType', 'Missing required parameter: fragmentType');
+      if (!argsRecord.value) {
+        return cleanObject({
+          success: false,
+          error: 'MISSING_PARAMETER',
+          message: 'Missing required parameter: value'
+        });
+      }
+      return sendRequest('set_mass_entity_fragment');
+    }
+
+    // =========================================================================
+    // StateTree Query/Control (A2 - 3 actions)
+    // =========================================================================
+
+    case 'get_statetree_state': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      // componentName is optional
+      return sendRequest('get_statetree_state');
+    }
+
+    case 'trigger_statetree_transition': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      requireNonEmptyString(argsRecord.eventTag, 'eventTag', 'Missing required parameter: eventTag');
+      // payload is optional
+      return sendRequest('trigger_statetree_transition');
+    }
+
+    case 'list_statetree_states': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('list_statetree_states');
+    }
+
+    // =========================================================================
+    // Smart Objects Integration (A3 - 4 actions)
+    // =========================================================================
+
+    case 'create_smart_object': {
+      requireNonEmptyString(argsRecord.definitionAsset, 'definitionAsset', 'Missing required parameter: definitionAsset');
+      // transform and tags are optional
+      return sendRequest('create_smart_object');
+    }
+
+    case 'query_smart_objects': {
+      // All parameters are optional: bounds, tagFilter, availableOnly
+      return sendRequest('query_smart_objects');
+    }
+
+    case 'claim_smart_object': {
+      requireNonEmptyString(argsRecord.objectHandle, 'objectHandle', 'Missing required parameter: objectHandle');
+      requireNonEmptyString(argsRecord.claimantActor, 'claimantActor', 'Missing required parameter: claimantActor');
+      // slotIndex is optional
+      return sendRequest('claim_smart_object');
+    }
+
+    case 'release_smart_object': {
+      requireNonEmptyString(argsRecord.objectHandle, 'objectHandle', 'Missing required parameter: objectHandle');
+      requireNonEmptyString(argsRecord.claimantActor, 'claimantActor', 'Missing required parameter: claimantActor');
+      return sendRequest('release_smart_object');
+    }
+
     // =========================================================================
     // Utility (1 action)
 

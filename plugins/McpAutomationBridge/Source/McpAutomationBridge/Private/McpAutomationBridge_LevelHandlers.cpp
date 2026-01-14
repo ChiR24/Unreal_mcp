@@ -29,10 +29,16 @@
 #endif
 #endif
 
+// Cycle stats for Level handlers.
+// Use `stat McpBridge` in the UE console to view these stats.
+DECLARE_CYCLE_STAT(TEXT("Level:Action"), STAT_MCP_LevelAction, STATGROUP_McpBridge);
+
 bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  SCOPE_CYCLE_COUNTER(STAT_MCP_LevelAction);
+  
   const FString Lower = Action.ToLower();
   const bool bIsLevelAction =
       (Lower == TEXT("manage_level") || Lower == TEXT("save_current_level") ||
@@ -161,6 +167,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       TArray<FString> LevelPaths;
       
       if (Payload->TryGetArrayField(TEXT("levelPaths"), LevelPathsArray)) {
+        LevelPaths.Reserve(LevelPathsArray->Num());
         for (const auto& Val : *LevelPathsArray) {
           FString PathStr;
           if (Val->TryGetString(PathStr) && !PathStr.IsEmpty()) {
@@ -181,6 +188,8 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
 #if WITH_EDITOR
       TArray<FString> DeletedLevels;
       TArray<FString> FailedLevels;
+      DeletedLevels.Reserve(LevelPaths.Num());
+      FailedLevels.Reserve(LevelPaths.Num());
       
       for (const FString& LevelPath : LevelPaths) {
         // Normalize path to package name

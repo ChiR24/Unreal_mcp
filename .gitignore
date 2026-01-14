@@ -69,3 +69,4 @@ plugins/McpAutomationBridge/.clangd
 plugins/McpAutomationBridge/Source/McpAutomationBridge/ue_stubs.h
 .opencode/
 .sisyphus/
+nul

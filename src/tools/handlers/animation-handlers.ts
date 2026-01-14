@@ -305,6 +305,109 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       )) as HandlerResult;
     }
 
+    // Motion Matching Queries (A4)
+    case 'get_motion_matching_state': {
+      if (!argsTyped.actorName) {
+        return cleanObject({
+          success: false,
+          error: 'MISSING_PARAMETER',
+          message: 'Missing required parameter: actorName'
+        });
+      }
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'animation_physics',
+        args,
+        'Automation bridge not available for Motion Matching operations'
+      )) as HandlerResult;
+    }
+
+    case 'set_motion_matching_goal': {
+      if (!argsTyped.actorName) {
+        return cleanObject({
+          success: false,
+          error: 'MISSING_PARAMETER',
+          message: 'Missing required parameter: actorName'
+        });
+      }
+      // goalLocation, goalRotation, speed are all optional
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'animation_physics',
+        args,
+        'Automation bridge not available for Motion Matching operations'
+      )) as HandlerResult;
+    }
+
+    case 'list_pose_search_databases': {
+      // assetPath filter is optional
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'animation_physics',
+        args,
+        'Automation bridge not available for Motion Matching operations'
+      )) as HandlerResult;
+    }
+
+    // Control Rig Queries (A5)
+    case 'get_control_rig_controls': {
+      if (!argsTyped.actorName) {
+        return cleanObject({
+          success: false,
+          error: 'MISSING_PARAMETER',
+          message: 'Missing required parameter: actorName'
+        });
+      }
+      // rigAsset is optional
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'animation_physics',
+        args,
+        'Automation bridge not available for Control Rig operations'
+      )) as HandlerResult;
+    }
+
+    case 'set_control_value': {
+      if (!argsTyped.actorName) {
+        return cleanObject({
+          success: false,
+          error: 'MISSING_PARAMETER',
+          message: 'Missing required parameter: actorName'
+        });
+      }
+      if (!argsTyped.controlName) {
+        return cleanObject({
+          success: false,
+          error: 'MISSING_PARAMETER',
+          message: 'Missing required parameter: controlName'
+        });
+      }
+      // value can be Transform or number
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'animation_physics',
+        args,
+        'Automation bridge not available for Control Rig operations'
+      )) as HandlerResult;
+    }
+
+    case 'reset_control_rig': {
+      if (!argsTyped.actorName) {
+        return cleanObject({
+          success: false,
+          error: 'MISSING_PARAMETER',
+          message: 'Missing required parameter: actorName'
+        });
+      }
+      // rigAsset is optional
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'animation_physics',
+        args,
+        'Automation bridge not available for Control Rig operations'
+      )) as HandlerResult;
+    }
+
     // Chaos Destruction / Physics Routing (Phase 3D)
     case 'chaos_create_geometry_collection':
     case 'chaos_fracture_uniform':
@@ -335,7 +438,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     case 'chaos_record_geometry_collection_cache':
     case 'chaos_apply_cache_to_collection':
     case 'chaos_remove_geometry_collection_cache':
-    // Chaos Vehicles
+    // Chaos Vehicles - eslint-disable-next-line no-fallthrough
     case 'chaos_create_wheeled_vehicle_bp':
     case 'chaos_add_vehicle_wheel':
     case 'chaos_remove_wheel_from_vehicle':
@@ -355,7 +458,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     case 'chaos_create_vehicle_animation_instance':
     case 'chaos_set_vehicle_animation_bp':
     case 'chaos_get_vehicle_config':
-    // Chaos Cloth
+    // Chaos Cloth - eslint-disable-next-line no-fallthrough
     case 'chaos_create_cloth_config':
     case 'chaos_create_cloth_shared_sim_config':
     case 'chaos_apply_cloth_to_skeletal_mesh':
@@ -371,7 +474,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     case 'chaos_set_cloth_long_range_attachment':
     case 'chaos_get_cloth_config':
     case 'chaos_get_cloth_stats':
-    // Chaos Flesh
+    // Chaos Flesh - eslint-disable-next-line no-fallthrough
     case 'chaos_create_flesh_asset':
     case 'chaos_create_flesh_component':
     case 'chaos_set_flesh_simulation_properties':
@@ -385,7 +488,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     case 'chaos_create_flesh_cache':
     case 'chaos_record_flesh_simulation':
     case 'chaos_get_flesh_asset_info':
-    // Utility
+    // Utility - eslint-disable-next-line no-fallthrough
     case 'chaos_get_physics_destruction_info':
     case 'chaos_list_geometry_collections':
     case 'chaos_list_chaos_vehicles':

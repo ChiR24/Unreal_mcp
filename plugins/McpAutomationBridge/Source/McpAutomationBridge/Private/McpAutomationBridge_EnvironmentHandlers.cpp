@@ -3091,6 +3091,16 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
   const float StepY = SizeY / Subdivisions;
   const float UVStep = 1.0f / Subdivisions;
 
+  // Pre-allocate arrays for known grid size
+  const int32 NumVertices = (Subdivisions + 1) * (Subdivisions + 1);
+  const int32 NumTriangles = Subdivisions * Subdivisions * 6;
+  Vertices.Reserve(NumVertices);
+  Normals.Reserve(NumVertices);
+  UV0.Reserve(NumVertices);
+  VertexColors.Reserve(NumVertices);
+  Tangents.Reserve(NumVertices);
+  Triangles.Reserve(NumTriangles);
+
   for (int32 Y = 0; Y <= Subdivisions; Y++) {
     for (int32 X = 0; X <= Subdivisions; X++) {
       float Z = 0.0f;

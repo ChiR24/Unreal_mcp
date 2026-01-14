@@ -1,9 +1,47 @@
 import { PendingRequest, AutomationBridgeResponseMessage } from './types.js';
 import { randomUUID, createHash } from 'node:crypto';
+import { TOOL_CATEGORY_TIMEOUTS } from '../constants.js';
 
 // Note: The two-phase event pattern was disabled because C++ handlers send a single response,
 // not request+event. All actions now use simple request-response. The PendingRequest interface
 // retains waitForEvent/eventTimeout fields for potential future use.
+
+/**
+ * Infer the timeout category from an action name.
+ * Used when no explicit category is provided.
+ */
+function inferCategoryFromAction(action: string): string {
+    if (action.startsWith('get_') || action.startsWith('list_') || action.startsWith('query_')) {
+        return 'quick';
+    }
+    if (action.startsWith('save_') || action.startsWith('create_') || action.startsWith('import_')) {
+        return 'asset';
+    }
+    if (action.startsWith('build_') || action.startsWith('cook_') || action.startsWith('package_')) {
+        return 'build';
+    }
+    return 'default';
+}
+
+/**
+ * Get the timeout for a given category.
+ * Falls back to environment variable override, then to constants.
+ */
+export function getCategoryTimeout(category?: string, action?: string): number {
+    const effectiveCategory = category || (action ? inferCategoryFromAction(action) : 'default');
+    
+    // Check for environment variable override (e.g., TOOL_TIMEOUT_BUILD=600000)
+    const envKey = `TOOL_TIMEOUT_${effectiveCategory.toUpperCase()}`;
+    const envValue = process.env[envKey];
+    if (envValue) {
+        const parsed = parseInt(envValue, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+            return parsed;
+        }
+    }
+    
+    return TOOL_CATEGORY_TIMEOUTS[effectiveCategory] ?? TOOL_CATEGORY_TIMEOUTS['default'] ?? 60000;
+}
 
 export class RequestTracker {
     private pendingRequests = new Map<string, PendingRequest>();
@@ -62,7 +100,11 @@ export class RequestTracker {
             const timeout = setTimeout(() => {
                 if (this.pendingRequests.has(requestId)) {
                     this.pendingRequests.delete(requestId);
-                    reject(new Error(`Request ${requestId} timed out after ${timeoutMs}ms`));
+                    const timeoutSec = Math.round(timeoutMs / 1000);
+                    const errorMsg = `Request '${action}' timed out after ${timeoutSec}s. ` +
+                        'This may indicate the Unreal Editor is busy or the operation is taking longer than expected. ' +
+                        `You can increase the timeout by setting TOOL_TIMEOUT_${inferCategoryFromAction(action).toUpperCase()} environment variable.`;
+                    reject(new Error(errorMsg));
                 }
             }, timeoutMs);
 

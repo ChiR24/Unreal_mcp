@@ -79,7 +79,9 @@ export class HandshakeHandler extends EventEmitter {
                         type: 'bridge_hello',
                         capabilityToken: this.capabilityToken || undefined
                     };
-                    this.log.debug(`Sending bridge_hello (delayed): ${JSON.stringify(helloPayload)}`);
+                    if (this.log.isDebugEnabled()) {
+                        this.log.debug(`Sending bridge_hello (delayed): ${JSON.stringify(helloPayload)}`);
+                    }
                     socket.send(JSON.stringify(helloPayload));
                 } else {
                     this.log.warn('Socket closed before bridge_hello could be sent');

@@ -14,6 +14,7 @@ import { ServerSetup } from './server-setup.js';
 import { startMetricsServer } from './services/metrics-server.js';
 import { config } from './config.js';
 import { GraphQLServer } from './graphql/server.js';
+import { HTTP_TRANSPORT_ENABLED, logExperimentalWarning } from './transports/http.js';
 
 const require = createRequire(import.meta.url);
 const packageInfo: { name?: string; version?: string } = (() => {
@@ -182,6 +183,11 @@ export default function createServerDefault({ config }: { config?: Record<string
 }
 
 export async function startStdioServer() {
+  // Log experimental warning if HTTP transport is requested
+  if (HTTP_TRANSPORT_ENABLED) {
+    logExperimentalWarning();
+  }
+
   const { server, bridge, automationBridge, graphqlServer, metricsServer } = createServer();
   const transport = new StdioServerTransport();
   let shuttingDown = false;
