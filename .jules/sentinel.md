@@ -17,3 +17,8 @@
 **Vulnerability:** The `CommandValidator` used simple string inclusion (`includes('rm ')`) to block dangerous commands. This could be bypassed using tabs (`rm\t`) or other separators, allowing execution of forbidden commands if the underlying system normalized the whitespace.
 **Learning:** Simple string matching with hardcoded spaces is insufficient for blocking commands in systems that accept flexible whitespace.
 **Prevention:** Use Regular Expressions with word boundaries (`\b`) or explicit whitespace classes (`\s+`) to match tokens robustly.
+
+## 2025-05-27 - [Unsanitized GraphQL Resolver Paths]
+**Vulnerability:** GraphQL resolvers for asset manipulation (e.g., `duplicateAsset`, `moveAsset`) passed file paths directly to `AutomationBridge` without sanitization. This allowed directory traversal attacks (e.g., `../Secret`) to bypass security controls.
+**Learning:** GraphQL resolvers are an entry point for user input and must independently validate and sanitize all inputs before passing them to internal services, even if those services have their own checks (Defense in Depth).
+**Prevention:** Explicitly use `sanitizePath` for all path arguments and `sanitizeAssetName` for name arguments in every GraphQL resolver before calling `AutomationBridge`.
