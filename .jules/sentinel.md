@@ -17,3 +17,8 @@
 **Vulnerability:** The `CommandValidator` used simple string inclusion (`includes('rm ')`) to block dangerous commands. This could be bypassed using tabs (`rm\t`) or other separators, allowing execution of forbidden commands if the underlying system normalized the whitespace.
 **Learning:** Simple string matching with hardcoded spaces is insufficient for blocking commands in systems that accept flexible whitespace.
 **Prevention:** Use Regular Expressions with word boundaries (`\b`) or explicit whitespace classes (`\s+`) to match tokens robustly.
+
+## 2025-05-27 - [Path Traversal in GraphQL Resolvers]
+**Vulnerability:** GraphQL asset management resolvers (`duplicateAsset`, `moveAsset`, etc.) directly passed user-supplied file paths to the `AutomationBridge` without sanitization. This allowed potential path traversal attacks (e.g., `../../Secret`) if the underlying automation bridge or Unreal Engine instance did not strictly validate paths.
+**Learning:** Architectural gaps often exist where one layer assumes another layer handles security. Here, the GraphQL layer assumed the Automation Bridge or Engine would handle it, or simply missed the requirement. "Defense in depth" requires validating inputs at the earliest entry point (GraphQL resolvers) regardless of downstream checks.
+**Prevention:** Implement strict input sanitization (`sanitizePath`, `sanitizeAssetName`) within the GraphQL resolvers before passing data to the automation bridge. Ensure all entry points (Mutations and Queries) validate file paths against allowed roots.
