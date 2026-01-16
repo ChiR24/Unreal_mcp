@@ -1,3 +1,11 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#include "McpAutomationBridgeSubsystem.h"
+#include "McpAutomationBridgeHelpers.h"
+#include "McpBridgeWebSocket.h"
+#include "EditorAssetLibrary.h"
+#include "Engine/StaticMesh.h"
+
 // ============================================================================
 // 8. NANITE HANDLERS
 // ============================================================================
@@ -207,6 +215,160 @@ bool UMcpAutomationBridgeSubsystem::HandleBatchNaniteConvert(
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          FString::Printf(TEXT("Updated %d meshes"), UpdatedCount),
                          Resp);
+  return true;
+#else
+  return false;
+#endif
+}
+
+// ============================================================================
+// ASSET WORKFLOW HANDLERS (Source Control, Bulk Operations, etc.)
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  // This is a catch-all for asset-related actions that may be routed here
+  // Most asset actions are now handled by specific handlers
+  SendAutomationError(RequestingSocket, RequestId,
+                      FString::Printf(TEXT("Asset action '%s' not implemented in native bridge"), *Action),
+                      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  FString AssetPath;
+  if (!Payload.IsValid() || !Payload->TryGetStringField(TEXT("assetPath"), AssetPath)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Source control checkout - requires source control to be enabled
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Source control checkout not yet implemented in native bridge"),
+                      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Source control submit not yet implemented in native bridge"),
+                      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Get source control state not yet implemented in native bridge"),
+                      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Fixup redirectors not yet implemented in native bridge"),
+                      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Bulk rename assets not yet implemented in native bridge"),
+                      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Bulk delete assets not yet implemented in native bridge"),
+                      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Generate thumbnail not yet implemented in native bridge"),
+                      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Rebuild material not yet implemented in native bridge"),
+                      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Generate LODs not yet implemented in native bridge"),
+                      TEXT("NOT_IMPLEMENTED"));
   return true;
 #else
   return false;

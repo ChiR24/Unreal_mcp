@@ -252,7 +252,18 @@ bool UMcpZoneSubsystem::AddZoneExitEvent(const FString& ZoneId, const FString& E
     return true;
 }
 
-FMcpZoneDefinition* UMcpZoneSubsystem::FindZone(const FString& ZoneId)
+bool UMcpZoneSubsystem::FindZone(const FString& ZoneId, FMcpZoneDefinition& OutZone)
+{
+    FMcpZoneDefinition* Found = Zones.Find(ZoneId);
+    if (Found)
+    {
+        OutZone = *Found;
+        return true;
+    }
+    return false;
+}
+
+FMcpZoneDefinition* UMcpZoneSubsystem::FindZoneInternal(const FString& ZoneId)
 {
     return Zones.Find(ZoneId);
 }

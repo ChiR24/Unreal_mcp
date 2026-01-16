@@ -366,19 +366,21 @@ float UMcpConditionSubsystem::ResolveOperandValue(const TSharedPtr<FJsonObject>&
             }
             
             // Check label or name match
-            if (Actor->GetActorLabel() == ActorId || Actor->GetName() == ActorId)
-            {
-                UMcpValueTrackerComponent* ValueTracker = Actor->FindComponentByClass<UMcpValueTrackerComponent>();
-                if (ValueTracker)
-                {
-                    float Value = 0.0f;
-                    if (ValueTracker->GetValue(Key, Value))
-                    {
-                        return Value;
-                    }
-                }
-                break;
-            }
+			if (Actor->GetActorLabel() == ActorId || Actor->GetName() == ActorId)
+			{
+				// Find a value tracker component with matching key
+				TArray<UMcpValueTrackerComponent*> ValueTrackers;
+				Actor->GetComponents<UMcpValueTrackerComponent>(ValueTrackers);
+				
+				for (UMcpValueTrackerComponent* ValueTracker : ValueTrackers)
+				{
+					if (ValueTracker && ValueTracker->TrackerKey == Key)
+					{
+						return ValueTracker->GetValue();
+					}
+				}
+				break;
+			}
         }
         
         UE_LOG(LogMcpCondition, Warning, TEXT("ResolveOperandValue: value_tracker - Actor '%s' or key '%s' not found"), *ActorId, *Key);

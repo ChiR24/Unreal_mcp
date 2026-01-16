@@ -74,6 +74,7 @@ protected:
     void OnActorSpawned(AActor* Actor);
     
     /** Called when a registered actor is destroyed */
+    UFUNCTION()
     void OnActorDestroyed(AActor* DestroyedActor);
 
 private:
@@ -83,6 +84,6 @@ private:
     /** Delegate handle for actor spawn notifications */
     FDelegateHandle OnActorSpawnedHandle;
     
-    /** Per-actor destruction delegate handles for cleanup */
-    TMap<TWeakObjectPtr<AActor>, FDelegateHandle> OnDestroyedHandles;
+    /** Set of actors we're tracking destruction for */
+    TSet<TWeakObjectPtr<AActor>> TrackedActors;
 };

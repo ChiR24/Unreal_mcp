@@ -491,7 +491,7 @@ struct FMcpOutputCapture : public FOutputDevice {
     // Enforce MaxLines limit if set
     if (MaxLines > 0 && Lines.Num() > MaxLines) {
       int32 NumToRemove = Lines.Num() - MaxLines;
-      Lines.RemoveAt(0, NumToRemove, false); // false = no shrinking for perf
+      Lines.RemoveAt(0, NumToRemove, EAllowShrinking::No); // No shrinking for perf
     }
   }
 

@@ -105,7 +105,10 @@ public:
     bool AddZoneExitEvent(const FString& ZoneId, const FString& EventId, const FString& ConditionId = TEXT(""));
 
     UFUNCTION(BlueprintCallable, Category = "MCP Zone")
-    FMcpZoneDefinition* FindZone(const FString& ZoneId);
+    bool FindZone(const FString& ZoneId, FMcpZoneDefinition& OutZone);
+    
+    // Internal non-UFUNCTION pointer version for C++ use
+    FMcpZoneDefinition* FindZoneInternal(const FString& ZoneId);
 
     UFUNCTION(BlueprintCallable, Category = "MCP Zone")
     TArray<FString> GetAllZoneIds() const;

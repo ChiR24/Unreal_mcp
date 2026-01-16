@@ -40,14 +40,14 @@ void UMcpActorIdRegistrySubsystem::Deinitialize()
     }
     
     // Remove all OnDestroyed bindings
-    for (auto& Pair : OnDestroyedHandles)
+    for (auto& WeakActor : TrackedActors)
     {
-        if (AActor* Actor = Pair.Key.Get())
+        if (AActor* Actor = WeakActor.Get())
         {
-            Actor->OnDestroyed.Remove(Pair.Value);
+            Actor->OnDestroyed.RemoveDynamic(this, &UMcpActorIdRegistrySubsystem::OnActorDestroyed);
         }
     }
-    OnDestroyedHandles.Empty();
+    TrackedActors.Empty();
     Registry.Empty();
     
     UE_LOG(LogMcpActorIdRegistry, Log, TEXT("MCP Actor ID Registry deinitialized"));
@@ -83,11 +83,10 @@ void UMcpActorIdRegistrySubsystem::RegisterActor(AActor* Actor, const FString& M
     
     // Bind OnDestroyed if not already bound
     TWeakObjectPtr<AActor> WeakActor(Actor);
-    if (!OnDestroyedHandles.Contains(WeakActor))
+    if (!TrackedActors.Contains(WeakActor))
     {
-        FDelegateHandle Handle = Actor->OnDestroyed.AddUObject(
-            this, &UMcpActorIdRegistrySubsystem::OnActorDestroyed);
-        OnDestroyedHandles.Add(WeakActor, Handle);
+        Actor->OnDestroyed.AddDynamic(this, &UMcpActorIdRegistrySubsystem::OnActorDestroyed);
+        TrackedActors.Add(WeakActor);
     }
     
     UE_LOG(LogMcpActorIdRegistry, Verbose, TEXT("Registered actor '%s' with McpId '%s'"), 
@@ -101,10 +100,10 @@ void UMcpActorIdRegistrySubsystem::UnregisterActor(const FString& McpId)
         if (AActor* Actor = Found->Get())
         {
             TWeakObjectPtr<AActor> WeakActor(Actor);
-            if (FDelegateHandle* Handle = OnDestroyedHandles.Find(WeakActor))
+            if (TrackedActors.Contains(WeakActor))
             {
-                Actor->OnDestroyed.Remove(*Handle);
-                OnDestroyedHandles.Remove(WeakActor);
+                Actor->OnDestroyed.RemoveDynamic(this, &UMcpActorIdRegistrySubsystem::OnActorDestroyed);
+                TrackedActors.Remove(WeakActor);
             }
         }
         Registry.Remove(McpId);
@@ -156,7 +155,7 @@ void UMcpActorIdRegistrySubsystem::OnActorSpawned(AActor* Actor)
     
     // IDEMPOTENT: Check if already registered
     TWeakObjectPtr<AActor> WeakActor(Actor);
-    if (OnDestroyedHandles.Contains(WeakActor))
+    if (TrackedActors.Contains(WeakActor))
     {
         return; // Already bound, skip to avoid duplicate bindings
     }
@@ -188,7 +187,7 @@ void UMcpActorIdRegistrySubsystem::OnActorDestroyed(AActor* DestroyedActor)
         }
     }
     
-    // Remove from handles map
+    // Remove from tracked actors set
     TWeakObjectPtr<AActor> WeakActor(DestroyedActor);
-    OnDestroyedHandles.Remove(WeakActor);
+    TrackedActors.Remove(WeakActor);
 }

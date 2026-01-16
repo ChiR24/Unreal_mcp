@@ -64,7 +64,7 @@ struct FMcpActorReputation
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TMap<FString, float> FactionReputations;  // FactionId -> Reputation value
 
-    UPROPERTY()
+    // Internal: TMap with TArray value not supported by UPROPERTY, so no reflection macro
     TMap<FString, TArray<FMcpReputationThreshold>> FactionThresholds;
 };
 

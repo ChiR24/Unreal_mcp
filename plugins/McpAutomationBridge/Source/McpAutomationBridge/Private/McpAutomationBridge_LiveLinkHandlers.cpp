@@ -936,12 +936,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
         UClass* VirtualSubjectClass = nullptr;
         if (!VirtualSubjectClassName.IsEmpty())
         {
-            VirtualSubjectClass = FindObject<UClass>(nullptr, *VirtualSubjectClassName);
-            if (!VirtualSubjectClass)
-            {
-                // Try with common script prefix.
-                VirtualSubjectClass = FindObject<UClass>(nullptr, *(FString(TEXT("/Script/LiveLinkInterface.")) + VirtualSubjectClassName));
-            }
+            VirtualSubjectClass = ResolveClassByName(VirtualSubjectClassName);
         }
         if (!VirtualSubjectClass)
         {

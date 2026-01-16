@@ -18,6 +18,7 @@
 #include "EngineUtils.h"
 #include "Engine/Engine.h"
 #include "Engine/Level.h"
+#include "GameFramework/GameModeBase.h"
 #include "Engine/LevelStreaming.h"
 #include "Engine/LevelStreamingDynamic.h"
 #include "LevelEditor.h"

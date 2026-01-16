@@ -750,7 +750,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
           }
         }
         
-        TArray<TSharedPtr<FJsonValue>> TracksArray;
+        // TracksArray already declared above on line 737
         TracksArray.Reserve(TracksToList.Num());
         for (UMovieSceneTrack* Track : TracksToList) {
           TSharedPtr<FJsonObject> TrackObj = MakeShared<FJsonObject>();

@@ -107,12 +107,7 @@ static FRotator GetJsonRotatorField(const TSharedPtr<FJsonObject>& Payload, cons
     return Default;
 }
 
-// Helper to find actor by name
-// Helper replaced with McpAutomationBridgeHelpers::FindActorByLabelOrName
-
-    }
-    return nullptr;
-}
+// Helper to find actor by name - replaced with McpAutomationBridgeHelpers::FindActorByLabelOrName
 
 // Helper to find spline component on actor
 static USplineComponent* FindSplineComponent(AActor* Actor, const FString& ComponentName = TEXT(""))

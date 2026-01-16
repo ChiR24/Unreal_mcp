@@ -723,7 +723,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
       TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
       Item->SetStringField(TEXT("name"), Name);
       // Use robust actor lookup that checks label, name, and UAID
-      AActor *Found = FindActorByLabelOrName<AActor>(Subsystem->GetActiveWorld(), Name);
+      AActor *Found = FindActorByLabelOrName<AActor>(GetActiveWorld(), Name);
 
       if (!Found) {
         Item->SetBoolField(TEXT("success"), false);

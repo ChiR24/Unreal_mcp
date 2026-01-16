@@ -3,6 +3,8 @@
 #include "McpScheduleComponent.h"
 #include "McpWorldTimeSubsystem.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/Actor.h"
+#include "Engine/World.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpSchedule, Log, All);
 
@@ -19,8 +21,8 @@ UMcpScheduleComponent::UMcpScheduleComponent()
     ScheduleId = TEXT("");
     CurrentEntryId = TEXT("");
     PreviousEntryId = TEXT("");
-    bIsActive = true;
-    bPreviousIsActive = true;
+    bScheduleActive = true;
+    bPreviousScheduleActive = true;
     bLooping = true;
 }
 
@@ -31,7 +33,7 @@ void UMcpScheduleComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
     DOREPLIFETIME(UMcpScheduleComponent, ScheduleId);
     DOREPLIFETIME(UMcpScheduleComponent, Entries);
     DOREPLIFETIME(UMcpScheduleComponent, CurrentEntryId);
-    DOREPLIFETIME(UMcpScheduleComponent, bIsActive);
+    DOREPLIFETIME(UMcpScheduleComponent, bScheduleActive);
     DOREPLIFETIME(UMcpScheduleComponent, bLooping);
 }
 
@@ -56,17 +58,17 @@ void UMcpScheduleComponent::OnRep_CurrentEntry()
         *OldEntry, *CurrentEntryId, *ActivityName);
 }
 
-void UMcpScheduleComponent::OnRep_IsActive()
+void UMcpScheduleComponent::OnRep_ScheduleActive()
 {
-    bool bOldActive = bPreviousIsActive;
-    bPreviousIsActive = bIsActive;
+    bool bOldActive = bPreviousScheduleActive;
+    bPreviousScheduleActive = bScheduleActive;
     
     // Broadcast active change event
-    OnScheduleActiveChanged.Broadcast(bIsActive);
+    OnScheduleActiveChanged.Broadcast(bScheduleActive);
     
     UE_LOG(LogMcpSchedule, Verbose, TEXT("Schedule active replicated: %s -> %s"), 
         bOldActive ? TEXT("true") : TEXT("false"),
-        bIsActive ? TEXT("true") : TEXT("false"));
+        bScheduleActive ? TEXT("true") : TEXT("false"));
 }
 
 void UMcpScheduleComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -81,7 +83,7 @@ void UMcpScheduleComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
     }
     
     // Skip if not active
-    if (!bIsActive)
+    if (!bScheduleActive)
     {
         return;
     }
@@ -196,29 +198,29 @@ void UMcpScheduleComponent::RemoveEntry(const FString& EntryId)
     UE_LOG(LogMcpSchedule, Warning, TEXT("Schedule entry '%s' not found for removal"), *EntryId);
 }
 
-void UMcpScheduleComponent::SetActive(bool bActive)
+void UMcpScheduleComponent::SetScheduleActive(bool bActive)
 {
     // Only allow server to set active
     AActor* Owner = GetOwner();
     if (!Owner || !Owner->HasAuthority())
     {
-        UE_LOG(LogMcpSchedule, Warning, TEXT("SetActive called on client - ignored"));
+        UE_LOG(LogMcpSchedule, Warning, TEXT("SetScheduleActive called on client - ignored"));
         return;
     }
     
-    if (bIsActive == bActive)
+    if (bScheduleActive == bActive)
     {
         return; // No change
     }
     
-    bPreviousIsActive = bIsActive;
-    bIsActive = bActive;
+    bPreviousScheduleActive = bScheduleActive;
+    bScheduleActive = bActive;
     
     // Broadcast on server
-    OnScheduleActiveChanged.Broadcast(bIsActive);
+    OnScheduleActiveChanged.Broadcast(bScheduleActive);
     
     UE_LOG(LogMcpSchedule, Log, TEXT("Schedule active set: %s"), 
-        bIsActive ? TEXT("true") : TEXT("false"));
+        bScheduleActive ? TEXT("true") : TEXT("false"));
 }
 
 FMcpScheduleEntry UMcpScheduleComponent::GetCurrentEntry() const

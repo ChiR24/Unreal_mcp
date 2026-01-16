@@ -2,6 +2,8 @@
 
 #include "McpStateMachineComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/Actor.h"
+#include "Engine/World.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpStateMachine, Log, All);
 

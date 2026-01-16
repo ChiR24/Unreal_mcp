@@ -56,7 +56,8 @@ public class McpAutomationBridge : ModuleRules
             "Core","CoreUObject","Engine","Json","JsonUtilities",
             "LevelSequence", "MovieScene", "MovieSceneTracks", "GameplayTags",
             "CinematicCamera",  // For ACineCameraActor and UCineCameraComponent
-            "DesktopPlatform"   // Phase 32: Build & Deployment (GenerateProjectFiles, RunUBT)
+            "DesktopPlatform",   // Phase 32: Build & Deployment (GenerateProjectFiles, RunUBT)
+            "NetCore"            // For FFastArraySerializer networking support
         });
 
         if (Target.bBuildEditor)

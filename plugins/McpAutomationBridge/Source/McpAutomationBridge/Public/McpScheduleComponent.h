@@ -77,8 +77,8 @@ public:
     FString CurrentEntryId;
 
     // Is schedule active - uses ReplicatedUsing for OnRep callback
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing=OnRep_IsActive, Category = "Schedule")
-    bool bIsActive = true;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing=OnRep_ScheduleActive, Category = "Schedule")
+    bool bScheduleActive = true;
 
     // Repeat schedule daily
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Schedule")
@@ -99,7 +99,7 @@ public:
     void OnRep_CurrentEntry();
 
     UFUNCTION()
-    void OnRep_IsActive();
+    void OnRep_ScheduleActive();
 
     // Tick for time-based updates
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -112,7 +112,7 @@ public:
     void RemoveEntry(const FString& EntryId);
 
     UFUNCTION(BlueprintCallable, Category = "Schedule")
-    void SetActive(bool bActive);
+    void SetScheduleActive(bool bActive);
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Schedule")
     FMcpScheduleEntry GetCurrentEntry() const;
@@ -131,12 +131,12 @@ public:
     FString GetScheduleId() const { return ScheduleId; }
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Schedule")
-    bool IsActive() const { return bIsActive; }
+    bool IsScheduleActive() const { return bScheduleActive; }
 
 private:
     // Cache for OnRep comparison
     FString PreviousEntryId;
-    bool bPreviousIsActive = true;
+    bool bPreviousScheduleActive = true;
 
     // Helper to find entry definition
     const FMcpScheduleEntry* FindEntry(const FString& EntryId) const;

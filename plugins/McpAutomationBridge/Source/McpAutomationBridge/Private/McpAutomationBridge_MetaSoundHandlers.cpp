@@ -6,7 +6,12 @@
 #include "MetasoundSource.h"
 #include "Interfaces/MetasoundFrontendInterfaceRegistry.h"
 #include "MetasoundBuilderSubsystem.h"
+#if __has_include("MetasoundSourceBuilder.h")
 #include "MetasoundSourceBuilder.h"
+#define MCP_HAS_METASOUND_SOURCE_BUILDER 1
+#else
+#define MCP_HAS_METASOUND_SOURCE_BUILDER 0
+#endif
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
@@ -40,15 +45,28 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
         FString PackagePath = TEXT("/Game/Audio/MetaSounds");
         Payload->TryGetStringField(TEXT("packagePath"), PackagePath);
         
-        // CreateSourceBuilder returns result via out parameter
+        // UE 5.7 CreateSourceBuilder API:
+        // CreateSourceBuilder(FName BuilderName, FMetaSoundBuilderNodeOutputHandle& OnPlayNodeOutput,
+        //   FMetaSoundBuilderNodeInputHandle& OnFinishedNodeInput, TArray<FMetaSoundBuilderNodeInputHandle>& AudioOutNodeInputs,
+        //   EMetaSoundBuilderResult& OutResult, EMetaSoundOutputAudioFormat AudioOutputFormat = EMetaSoundOutputAudioFormat::Mono, 
+        //   bool bIsOneShot = true)
         EMetaSoundBuilderResult BuilderResult;
-        TScriptInterface<IMetaSoundDocumentBuilder> Builder = BuilderSubsystem->CreateSourceBuilder(
-            FName(*Name), 
-            FName(*PackagePath), 
-            BuilderResult
+        FMetaSoundBuilderNodeOutputHandle OnPlayNodeOutput;
+        FMetaSoundBuilderNodeInputHandle OnFinishedNodeInput;
+        TArray<FMetaSoundBuilderNodeInputHandle> AudioOutNodeInputs;
+        
+        UMetaSoundSourceBuilder* Builder = BuilderSubsystem->CreateSourceBuilder(
+            FName(*Name),
+            OnPlayNodeOutput,
+            OnFinishedNodeInput,
+            AudioOutNodeInputs,
+            BuilderResult,
+            EMetaSoundOutputAudioFormat::Stereo,  // Default to stereo output
+            true  // bIsOneShot
         );
+        bool bBuilderValid = (Builder != nullptr);
 
-        if (Builder && BuilderResult == EMetaSoundBuilderResult::Succeeded)
+        if (bBuilderValid && BuilderResult == EMetaSoundBuilderResult::Succeeded)
         {
             FString FullPath = FPaths::Combine(PackagePath, Name + TEXT(".") + Name);
             UObject* Asset = LoadObject<UObject>(nullptr, *FullPath);

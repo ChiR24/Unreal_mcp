@@ -7,6 +7,15 @@
 #include "Components/ActorComponent.h"
 #include "Engine/NetSerialization.h"
 #include "Net/UnrealNetwork.h"
+
+// FFastArraySerializer moved in UE 5.7+ to Net/Serialization/FastArraySerializer.h
+#if __has_include("Net/Serialization/FastArraySerializer.h")
+#include "Net/Serialization/FastArraySerializer.h"
+#define MCP_HAS_FAST_ARRAY_SERIALIZER 1
+#else
+#define MCP_HAS_FAST_ARRAY_SERIALIZER 1  // Older UE versions have it in NetSerialization.h
+#endif
+
 #include "McpGameplayReplication.generated.h"
 
 // ============================================================================

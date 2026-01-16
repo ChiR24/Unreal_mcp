@@ -1961,6 +1961,12 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       return true;
     }
     
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
       SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),

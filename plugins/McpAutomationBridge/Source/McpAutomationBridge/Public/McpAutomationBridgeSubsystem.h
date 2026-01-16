@@ -8,6 +8,7 @@
 #include "Templates/SharedPointer.h"
 #include "Engine/DataAsset.h"
 #include "Stats/Stats.h"
+#include "GameFramework/Actor.h"
 #include "McpAutomationBridgeSubsystem.generated.h"
 
 // Forward declare USkeleton to avoid including heavy animation headers

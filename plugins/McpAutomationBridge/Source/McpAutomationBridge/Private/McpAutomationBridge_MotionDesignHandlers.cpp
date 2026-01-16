@@ -5,10 +5,15 @@
 #if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
-#include "Engine/LevelSequence.h"
+#include "LevelSequence.h"
 #include "LevelSequenceActor.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#if __has_include("ILevelSequenceEditorModule.h")
 #include "ILevelSequenceEditorModule.h"
+#define MCP_HAS_LEVEL_SEQUENCE_EDITOR 1
+#else
+#define MCP_HAS_LEVEL_SEQUENCE_EDITOR 0
+#endif
 
 // Motion Design (Avalanche) includes
 // We use a macro from Build.cs or __has_include check

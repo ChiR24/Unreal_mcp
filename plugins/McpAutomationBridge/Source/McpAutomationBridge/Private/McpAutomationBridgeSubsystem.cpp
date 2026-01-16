@@ -853,7 +853,8 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                       }
                     }
                     ResultObj->SetArrayField(TEXT("logs"), LogArray);
-                    return MakeSuccessResponse(TEXT("Logs retrieved"), ResultObj);
+                    SendAutomationResponse(S, R, true, TEXT("Logs retrieved"), ResultObj);
+                    return true;
                   });
 
   RegisterHandler(TEXT("get_editor_status"), [this](const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) {
@@ -872,7 +873,8 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
       Status->SetStringField(TEXT("engineVersion"), FEngineVersion::Current().ToString());
       Status->SetNumberField(TEXT("uptimeSeconds"), FPlatformTime::Seconds());
       
-      return MakeSuccessResponse(TEXT("Editor status retrieved"), Status);
+      SendAutomationResponse(S, R, true, TEXT("Editor status retrieved"), Status);
+      return true;
   });
 
   RegisterHandler(TEXT("console_command"),

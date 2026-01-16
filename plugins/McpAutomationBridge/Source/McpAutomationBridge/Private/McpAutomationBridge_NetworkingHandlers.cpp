@@ -11,6 +11,7 @@
 // - Utility (info queries)
 
 #include "McpAutomationBridgeSubsystem.h"
+#include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
 #include "Misc/EngineVersionComparison.h"
 
@@ -111,13 +112,6 @@ namespace NetworkingHelpers
                 BP = Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *CleanPath));
             }
             return BP;
-        }
-        return nullptr;
-    }
-
-    // Find actor by name in world
-// Helper replaced with McpAutomationBridgeHelpers::FindActorByLabelOrName
-
         }
         return nullptr;
     }

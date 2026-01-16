@@ -209,9 +209,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageBuildAction(
   // GET TARGET PLATFORMS
   // ========================================================================
   else if (LowerSub == TEXT("get_target_platforms")) {
-    TArray<TSharedPtr<FJsonValue>> PlatformsArray;
-    PlatformsArray.Reserve(PlatformNames.Num());
-    
     // Get common target platforms
     TArray<FString> PlatformNames = {
         TEXT("Win64"),
@@ -222,6 +219,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageBuildAction(
         TEXT("IOS"),
         TEXT("TVOS"),
     };
+    
+    TArray<TSharedPtr<FJsonValue>> PlatformsArray;
+    PlatformsArray.Reserve(PlatformNames.Num());
     
     for (const FString& PlatformName : PlatformNames) {
       TSharedPtr<FJsonObject> PlatformObj = MakeShared<FJsonObject>();

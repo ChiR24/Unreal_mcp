@@ -127,8 +127,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAdvancedAction(
         UPackage* Package = CreatePackage(*PackageName);
 
         UNiagaraScriptFactoryNew* Factory = NewObject<UNiagaraScriptFactoryNew>();
-        // Default to Module usage
-        Factory->ScriptUsage = ENiagaraScriptUsage::Module;
+        // UE 5.7 removed ScriptUsage from factory - the script usage is set on the created asset instead
+        // Factory->ScriptUsage = ENiagaraScriptUsage::Module; // Not available in UE 5.7
         
         UNiagaraScript* NewScript = Cast<UNiagaraScript>(Factory->FactoryCreateNew(
             UNiagaraScript::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));

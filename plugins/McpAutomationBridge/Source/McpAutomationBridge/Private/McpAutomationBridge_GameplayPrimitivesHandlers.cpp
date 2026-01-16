@@ -1982,7 +1982,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplayPrimitivesAction(
                     Resp->SetStringField(TEXT("actorName"), ActorName);
                     Resp->SetStringField(TEXT("scheduleId"), ScheduleId);
                     Resp->SetBoolField(TEXT("looping"), bLooping);
-                    Resp->SetBoolField(TEXT("active"), Comp->bIsActive);
+                    Resp->SetBoolField(TEXT("active"), Comp->bScheduleActive);
                     Message = FString::Printf(TEXT("Created schedule '%s' on '%s'"), *ScheduleId, *ActorName);
                 }
                 else
@@ -2080,10 +2080,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplayPrimitivesAction(
             }
             else
             {
-                Comp->SetActive(bActive);
+                Comp->SetScheduleActive(bActive);
                 
                 Resp->SetStringField(TEXT("scheduleId"), ScheduleId);
-                Resp->SetBoolField(TEXT("active"), Comp->bIsActive);
+                Resp->SetBoolField(TEXT("active"), Comp->IsScheduleActive());
                 Message = FString::Printf(TEXT("Schedule '%s' %s"), *ScheduleId, bActive ? TEXT("activated") : TEXT("deactivated"));
             }
         }
@@ -2122,7 +2122,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplayPrimitivesAction(
                 Resp->SetNumberField(TEXT("startHour"), Entry.StartHour);
                 Resp->SetNumberField(TEXT("endHour"), Entry.EndHour);
                 Resp->SetStringField(TEXT("activityData"), Entry.ActivityData);
-                Resp->SetBoolField(TEXT("active"), Comp->bIsActive);
+                Resp->SetBoolField(TEXT("active"), Comp->IsScheduleActive());
                 
                 Message = FString::Printf(TEXT("Current activity: '%s' (%s)"), *Entry.ActivityName, *Entry.EntryId);
             }
@@ -2705,7 +2705,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplayPrimitivesAction(
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(TEXT("message"), Message);
         Resp->SetStringField(TEXT("errorCode"), ErrorCode);
-        SendAutomationError(RequestingSocket, RequestId, Message, ErrorCode, Resp);
+        SendAutomationError(RequestingSocket, RequestId, Message, ErrorCode);
     }
     
     return true;
